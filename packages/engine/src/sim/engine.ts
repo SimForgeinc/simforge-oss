@@ -49,6 +49,7 @@ import {
   type ResolvedPhysicsConfig,
   type StaticProp,
   type TurnRelation,
+  type VehiclePhysicsProfile,
 } from '../schema/input.js';
 import { ENGINE_VERSION } from '../version.js';
 import {
@@ -126,10 +127,38 @@ import { checkFeasibility } from '../solve/guards.js';
 import { resolveArrivalTriggers, type ArrivalSolution } from '../solve/arrival.js';
 import type { StaticMapCollider } from './static-colliders.js';
 
+export type EgoControllerProfile = 'sensor-limited' | 'omniscient-legacy';
+
+/** Deterministic forward perception envelope used by the safety governor. */
+export const EGO_SENSOR_RANGE_M = 80;
+export const EGO_SENSOR_HALF_ANGLE_RAD = Math.PI / 3;
+
+export const CHILD_PEDESTRIAN_MOTION_PROFILE = {
+  massKg: 32,
+  walkSpeedMps: 1,
+  runSpeedMps: 3,
+} as const;
+
+const CHILD_PEDESTRIAN_PHYSICS_PROFILE: VehiclePhysicsProfile = {
+  massKg: CHILD_PEDESTRIAN_MOTION_PROFILE.massKg,
+  yawInertiaKgM2: 3.2,
+  cgHeightM: 0.58,
+  maxDriveForceN: 145,
+  maxBrakeForceN: 205,
+};
+
 export interface RunOptions {
   readonly graph: LaneGraph;
   /** Deterministic low-complexity collision proxies extracted from the map. */
   readonly staticColliders?: readonly StaticMapCollider[];
+  /**
+   * Hazard-perception policy for the designated ego (`role:ego`, then actor id
+   * `ego`, then `metricSubject`). The default is label-trustworthy:
+   * hazards affect control only after entering the forward sensor envelope
+   * with an unobstructed line of sight. The legacy profile is explicit and is
+   * retained solely to reproduce historical corpora.
+   */
+  readonly egoControllerProfile?: EgoControllerProfile;
   /**
    * `throw` (default) aborts on any error-severity feasibility issue, `collect`
    * runs anyway and returns them, `skip` does not check.
@@ -745,6 +774,8 @@ class Simulation {
    * the trace it produced before this layer existed.
    */
   private readonly perception: PerceptionRuntime | null;
+  private readonly egoControllerProfile: EgoControllerProfile;
+  private readonly egoActorId: string | null;
   /** Preserve the authored-only engine path byte-for-byte unless ambient traffic exists. */
   private readonly hasAmbientTraffic: boolean;
   /**
@@ -774,6 +805,13 @@ class Simulation {
   constructor(rawInput: SimScenarioInput, private readonly opts: RunOptions) {
     this.graph = opts.graph;
     this.live = opts.mode === 'live';
+    this.egoControllerProfile = opts.egoControllerProfile ?? 'sensor-limited';
+    const taggedEgo = rawInput.actors
+      .filter((actor) => actor.tags.includes('role:ego'))
+      .map((actor) => actor.id)
+      .sort()[0];
+    this.egoActorId = taggedEgo
+      ?? (rawInput.actors.some((actor) => actor.id === 'ego') ? 'ego' : rawInput.metricSubject ?? null);
 
     const normalized = normalizeSimScenarioInput(rawInput);
     const controlResolution = resolveOverlappingControlLanes(normalized, this.graph);
@@ -943,6 +981,12 @@ class Simulation {
       activeCollisions: new Set(),
     };
   }
+
+  private physicsProfileFor(actor: Pick<ActorRuntime, 'id' | 'tags'>): VehiclePhysicsProfile | undefined {
+    const authored = this.physicsConfig.vehicleProfiles?.[actor.id];
+    if (!actor.tags.includes('catalog:pedestrian.child')) return authored;
+    return { ...CHILD_PEDESTRIAN_PHYSICS_PROFILE, ...authored };
+  }
   private registerActor(spec: SimActor): ActorRuntime {
     const rt = this.buildActor(spec);
     const insertAt = this.actors.findIndex((actor) => actor.id > rt.id);
@@ -962,7 +1006,7 @@ class Simulation {
           yawRad: rt.headingRad,
           longitudinalVelocityMps: rt.speedMps,
         },
-        profile: this.physicsConfig.vehicleProfiles?.[rt.id],
+        profile: this.physicsProfileFor(rt),
       });
     }
     this.tracks.set(rt.id, {
@@ -1425,6 +1469,74 @@ class Simulation {
           });
       });
     return [...this.occluders, ...dynamic, ...attached];
+  }
+
+  /**
+   * Complete coarse visibility geometry for ego control. Unlike authored
+   * occlusion metrics, the controller must not know which bodies were declared
+   * as occluders: every live actor bound, collidable prop/map proxy, authored
+   * LOS box, and attached blocker can hide a hazard.
+   */
+  private controllerOccluders(observerId: string, targetId: string): readonly OccluderShape[] {
+    const endpointIds = new Set([observerId, targetId]);
+    const actors = this.actors
+      .filter((actor) => !endpointIds.has(actor.id) && actor.present && !actor.retired)
+      .map((actor) => {
+        const obb = this.obbOf(actor);
+        return {
+          id: `actor:${actor.id}`,
+          obb,
+          heightM: actor.dims.h,
+          corners: obbCorners(obb),
+        } satisfies OccluderShape;
+      });
+    const colliders = this.collidableProps.map((shape) => ({
+      id: shape.id,
+      obb: shape.obb,
+      heightM: Number.POSITIVE_INFINITY,
+      corners: obbCorners(shape.obb),
+    } satisfies OccluderShape));
+    const attached = [...this.attachedPropsByActor.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .flatMap(([actorId, props]) => {
+        const carrier = this.byId.get(actorId);
+        if (!carrier?.present || carrier.retired) return [];
+        return props
+          .filter((prop) => this.attachedOccluderIds.has(prop.id))
+          .map((prop) => {
+            const obb = this.attachedPropObb(carrier, prop);
+            return {
+              id: prop.id,
+              obb,
+              heightM: prop.dims.h * prop.scale,
+              corners: obbCorners(obb),
+            } satisfies OccluderShape;
+          });
+      });
+    return [...this.occluders, ...actors, ...colliders, ...attached]
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  private egoCanPerceive(observer: ActorRuntime, targetId: string): boolean {
+    if (this.egoControllerProfile === 'omniscient-legacy' || observer.id !== this.egoActorId) return true;
+    const target = this.byId.get(targetId);
+    if (!target?.present || target.retired) return false;
+    const dx = target.position.x - observer.position.x;
+    const dy = target.position.y - observer.position.y;
+    const rangeM = Math.hypot(dx, dy);
+    const maxRangeM = Math.min(
+      EGO_SENSOR_RANGE_M,
+      this.resolvedInput.operationalConditions.effects.visibilityRangeM,
+    );
+    if (rangeM > maxRangeM) return false;
+    const bearing = Math.atan2(dy, dx);
+    if (Math.abs(normalizeAngle(bearing - observer.headingRad)) > EGO_SENSOR_HALF_ANGLE_RAD) return false;
+    return hasLineOfSight(
+      observer.position,
+      target.position,
+      this.controllerOccluders(observer.id, target.id),
+      maxRangeM,
+    );
   }
 
   private detectCollisions(t: number): Set<string> {
@@ -2238,7 +2350,7 @@ class Simulation {
           dimensions: { l: a.dims.l, w: a.dims.w },
           motionDirection: next,
           state: { x: a.position.x, y: a.position.y, yawRad: a.headingRad, longitudinalVelocityMps: 0 },
-          profile: this.physicsConfig.vehicleProfiles?.[a.id],
+          profile: this.physicsProfileFor(a),
         });
       }
     }
@@ -2667,10 +2779,10 @@ class Simulation {
    * lives in `map-intel`'s `conflictPairs`). It is enough to make `rules.yield`
    * behave sensibly at intersections without importing that index.
    */
-  private findConflict(a: ActorRuntime): { distM: number; deltaT: number; otherKind: ActorRuntime['kind'] } | null {
+  private findConflict(a: ActorRuntime): { distM: number; deltaT: number; otherKind: ActorRuntime['kind']; otherId: string } | null {
     const mine = this.conflictSamples.get(a.id);
     if (!mine || a.speedMps < 0.2) return null;
-    let best: { distM: number; deltaT: number; otherKind: ActorRuntime['kind'] } | null = null;
+    let best: { distM: number; deltaT: number; otherKind: ActorRuntime['kind']; otherId: string } | null = null;
     const candidates = this.hasAmbientTraffic
       ? (this.conflictCandidates.get(a.id) ?? [])
       : this.actors;
@@ -2702,7 +2814,7 @@ class Simulation {
           const delta = authoredHasPriority ? Math.abs(myT - theirT) : myT - theirT;
           if (delta > CONFLICT_WINDOW_S) continue;
           if (best === null || myDist < best.distM) {
-            best = { distM: myDist, deltaT: delta, otherKind: b.kind };
+            best = { distM: myDist, deltaT: delta, otherKind: b.kind, otherId: b.id };
           }
           break;
         }
@@ -2890,7 +3002,9 @@ class Simulation {
           (controlId, coordinationId, actorId, at) => this.canReleaseStop(controlId, coordinationId, actorId, at),
         );
     const conflict = a.bestEffortWorldPath ? null : this.findConflict(a);
-    const gov = governorCap(a, nearestLeader, stopLineDist, conflict);
+    const governorLeader = nearestLeader && this.egoCanPerceive(a, nearestLeader.id) ? nearestLeader : null;
+    const governorConflict = conflict && this.egoCanPerceive(a, conflict.otherId) ? conflict : null;
+    const gov = governorCap(a, governorLeader, stopLineDist, governorConflict);
     if (gov.accelCap < accel) accel = gov.accelCap;
     if (corner.accelerationCapMps2 < accel) accel = corner.accelerationCapMps2;
     const frictionScale = this.frictionScaleFor(a);
@@ -3521,6 +3635,9 @@ class Simulation {
         ...(this.ambientActorIds.length > 0 ? { ambientActorIds: [...this.ambientActorIds] } : {}),
         metricSubject: input.metricSubject ?? null,
         operationalConditions: input.operationalConditions,
+        ego: {
+          controllerProfile: this.egoControllerProfile,
+        },
         physics: {
           mode: this.physicsConfig.mode,
           solver: 'uniscenarios-sim-engine',
@@ -3530,8 +3647,9 @@ class Simulation {
             ? contentHash(this.physicsConfig.vehicleProfiles)
             : null,
           resolvedProfileDigest: contentHash({
-            version: 1,
+            version: 2,
             profiles: ACTOR_PHYSICS_PROFILES,
+            catalogProfiles: { 'pedestrian.child': CHILD_PEDESTRIAN_PHYSICS_PROFILE },
             overrides: this.physicsConfig.vehicleProfiles ?? {},
           }),
           actorBackends: actorPhysicsBackends(this.actors, this.physicsConfig),

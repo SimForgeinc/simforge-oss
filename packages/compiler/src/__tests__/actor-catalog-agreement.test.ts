@@ -229,6 +229,18 @@ describe.skipIf(!HAVE_MAP)('the catalog model carries the footprint', () => {
     expect(deer.dims).not.toEqual({ l: 1.2, w: 0.5, h: 1 });
   });
 
+  it('propagates the child catalog stature and footprint into simulation input', () => {
+    const child = actor(
+      run(templateWith({ class: 'pedestrian', catalogId: 'pedestrian.child' })),
+      'subject',
+    );
+    expect(child.kind).toBe('pedestrian');
+    expect(child.dims).toEqual({ l: 0.24, w: 0.35, h: 1.2 });
+    expect(child.dims.h).toBeGreaterThanOrEqual(1.15);
+    expect(child.dims.h).toBeLessThanOrEqual(1.35);
+    expect(child.tags).toContain('catalog:pedestrian.child');
+  });
+
   it('resolves an author-facing object id to the real prop footprint', () => {
     const tyre = actor(
       run(templateWith({ class: 'static_object', catalogId: 'object.tyre', static: true })),

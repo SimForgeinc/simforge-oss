@@ -455,10 +455,17 @@ export const CATALOG = [
     label: 'Child pedestrian',
     class: 'pedestrian',
     description:
-      'Child pedestrian, 1.20 m — short enough to be hidden by a parked sedan. Motion is authored separately in the timeline.',
+      'Child pedestrian with a 1.20 m stature and child-scaled physical/motion profile. Short enough to be hidden by a parked sedan.',
     dims: { l: 0.24, w: 0.35, h: 1.2 },
     tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.2, pose: 'standing' },
+    defaultParams: {
+      height: 1.2,
+      pose: 'standing',
+      massKg: 32,
+      walkSpeedMps: 1,
+      runSpeedMps: 3,
+      directionChangeImpulsiveness: 0.75,
+    },
     model: {
       kind: 'glb',
       url: '/catalog/pedestrians-carla/models/pedestrian_0049.glb',

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  actorCatalogMismatch,
+  builtInActorCatalogResolver,
+  catalogActorDims,
   createActorCatalogResolver,
   propBehavior,
   propDims,
@@ -22,6 +25,23 @@ describe('campaign prop materialization metadata', () => {
       'construction.long_pipe',
       'street.shopping_cart',
     ]) expect(propBehavior(id), id).toEqual({ collidable: true, occluder: true });
+  });
+});
+
+describe('child pedestrian actor catalog', () => {
+  it('resolves the author-facing id to child-scale simulation and motion metadata', () => {
+    expect(actorCatalogMismatch('pedestrian', 'pedestrian.child')).toBeNull();
+    expect(catalogActorDims('pedestrian.child')).toEqual({
+      length: 0.24,
+      width: 0.35,
+      height: 1.2,
+    });
+    expect(builtInActorCatalogResolver('pedestrian.child')?.defaultParams).toMatchObject({
+      massKg: 32,
+      walkSpeedMps: 1,
+      runSpeedMps: 3,
+      directionChangeImpulsiveness: 0.75,
+    });
   });
 });
 

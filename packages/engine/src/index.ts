@@ -128,7 +128,13 @@ export {
 export type { PlacementRouteOptions, RouteLeg, RoutePose, RouteBuildError, SeededPlacementRouteOptions, SeededPlacementRouteResult } from './map/route.js';
 
 /* ------------------------------------------------------------------ engine */
-export { createFixedStepSimulation, runSimulation } from './sim/engine.js';
+export {
+  createFixedStepSimulation,
+  runSimulation,
+  EGO_SENSOR_RANGE_M,
+  EGO_SENSOR_HALF_ANGLE_RAD,
+  CHILD_PEDESTRIAN_MOTION_PROFILE,
+} from './sim/engine.js';
 export type { StaticColliderClass, StaticMapCollider } from './sim/static-colliders.js';
 export type {
   ActionHook,
@@ -138,6 +144,7 @@ export type {
   EngineTickObservation,
   FixedStepSimulationProgress,
   FixedStepSimulationSession,
+  EgoControllerProfile,
   RunOptions,
   SessionActorSnapshot,
   SessionPairMinima,

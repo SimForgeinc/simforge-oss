@@ -342,6 +342,13 @@ export interface TraceHeader {
   /** Optional catalog-cell provenance attached by batch/materialization layers. */
   readonly catalogSlot?: unknown;
   readonly metricSubject: string | null;
+  /**
+   * Ego-control provenance. Optional only so historical readable traces remain
+   * representable; every native simulation now emits it.
+   */
+  readonly ego?: {
+    readonly controllerProfile: 'sensor-limited' | 'omniscient-legacy';
+  };
   /** Exact hash-covered ambient conditions executed by this trace. */
   readonly operationalConditions?: OperationalConditions;
   /**

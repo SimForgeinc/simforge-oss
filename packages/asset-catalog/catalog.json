@@ -852,7 +852,7 @@
     "id": "pedestrian.child",
     "label": "Child pedestrian",
     "class": "pedestrian",
-    "description": "Child pedestrian, 1.20 m — short enough to be hidden by a parked sedan. Motion is authored separately in the timeline.",
+    "description": "Child pedestrian with a 1.20 m stature and child-scaled physical/motion profile. Short enough to be hidden by a parked sedan.",
     "dims": {
       "l": 0.24,
       "w": 0.35,
@@ -865,7 +865,11 @@
     ],
     "defaultParams": {
       "height": 1.2,
-      "pose": "standing"
+      "pose": "standing",
+      "massKg": 32,
+      "walkSpeedMps": 1,
+      "runSpeedMps": 3,
+      "directionChangeImpulsiveness": 0.75
     },
     "model": {
       "kind": "glb",
