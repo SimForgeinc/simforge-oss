@@ -255,44 +255,64 @@ def vista_author(args):
 
 
 def gate(args):
+    import provenance_gate
     import tg_gate
 
     request = load(args.request)
+    brief = load(request['briefFile']) if request.get('briefFile') else request.get('brief', {})
+    if isinstance(brief, str):
+        brief = {'brief': brief}
     rows = []
     for cell in request['cells']:
         trace = cell.get('traceFile')
+        instance = cell.get('instanceFile')
         if not trace or not os.path.isfile(trace):
             rows.append({'cellId': cell['cellId'], 'pass': False, 'firstFailure': 'NOTRACE',
                          'error': 'trace missing'})
             continue
-        verdict = cell.get('verdict')
-        band = cell.get('band')
-        result = tg_gate.gate_cell(trace, verdict=verdict, band=band,
-                                   brief=request.get('brief'), version=2)
+        if not instance or not os.path.isfile(instance):
+            rows.append({'cellId': cell['cellId'], 'pass': False, 'firstFailure': 'NOPROVENANCE',
+                         'error': 'instance missing for provenance attribution'})
+            continue
+        result = tg_gate.gate_cell(trace, verdict=cell.get('verdict'), band=cell.get('band'),
+                                   brief=brief.get('brief'), version=2)
+        provenance = provenance_gate.gate_files(trace, instance, brief)
+        atomic_json(pathlib.Path(instance).with_name('provenance-verdict.json'), provenance)
+        result['provenance'] = provenance
+        result['pass'] = bool(result.get('pass')) and provenance['pass']
         result['cellId'] = cell['cellId']
         result['mapId'] = cell.get('mapId')
         result['siteId'] = cell.get('siteId')
         result['drawIndex'] = cell.get('drawIndex')
-        result['firstFailure'] = tg_gate.first_failure(result)
+        result['firstFailure'] = ('PROVENANCE' if not provenance['pass']
+                                  else tg_gate.first_failure(result))
         rows.append(result)
-    emit({'implementation': 'tools/gates/tg_gate.py:gate_cell', 'version': 2, 'cells': rows})
+    emit({'implementation': 'tools/gates/tg_gate.py + provenance_gate.py',
+          'version': 3, 'cells': rows})
 
 
 def judge(args):
-    sys.path.insert(0, str(FOOTAGE))
-    import judge as module
+    import judge_ensemble
 
     cell = pathlib.Path(args.cell)
-    render = pathlib.Path(args.render)
-    with tempfile.TemporaryDirectory(prefix='showcase-judge-') as tmp:
-        staged = pathlib.Path(tmp)
-        shutil.copyfile(cell / 'meta.json', staged / 'meta.json')
-        os.symlink(render, staged / 'render', target_is_directory=True)
-        result = module.judge_cell(str(staged), args.model, args.effort, module.STRATEGIES[0],
-                                   require_redacted=True)
-    # The blind judge never sees the brief, so its verdict is presentation-tier evidence only.
-    result['tier'] = '2d'
-    emit(result)
+    brief = load(args.brief)
+    instance = load(cell / 'instance.json')
+    provenance_path = cell / 'provenance-verdict.json'
+    provenance = load(provenance_path) if provenance_path.is_file() else {
+        'pass': False, 'reasons': [{'code': 'provenance-verdict-missing'}],
+    }
+    models = tuple(model.strip() for model in args.escalation_models.split(',') if model.strip())
+    audit = judge_ensemble.review(
+        brief, instance, provenance, args.render, args.cache,
+        primary_model=args.model, escalation_models=models,
+        admission_boundary=args.admission_boundary,
+    )
+    atomic_json(cell / 'judge-audit.json', audit)
+    emit({'cellId': args.cell_id, 'tier': '2d', 'auditFile': str(cell / 'judge-audit.json'),
+          'contentHash': audit['contentHash'], 'advisoryPass': audit['advisoryPass'],
+          'answers': audit['answers'], 'escalated': audit['escalated'],
+          'escalationReasons': audit['escalationReasons'], 'models': audit['models'],
+          'records': audit['records']})
 
 
 # Loop-control oracle for the generation benchmark: brief-aware review of the
@@ -677,9 +697,17 @@ def main():
 
     cmd = sub.add_parser('judge')
     cmd.add_argument('--cell', required=True)
+    cmd.add_argument('--cell-id', required=True)
     cmd.add_argument('--render', required=True)
-    cmd.add_argument('--model', default='gpt-5.6-sol')
-    cmd.add_argument('--effort', default='medium')
+    cmd.add_argument('--brief', required=True)
+    cmd.add_argument('--cache', required=True)
+    cmd.add_argument('--model', default='openrouter/google/gemini-3.7-flash')
+    cmd.add_argument('--escalation-models', default=','.join((
+        'openrouter/google/gemini-3.7-flash',
+        'openai-codex/gpt-5.6-sol',
+        'openrouter/anthropic/claude-sonnet-4.6',
+    )))
+    cmd.add_argument('--admission-boundary', action='store_true')
     cmd.set_defaults(func=judge)
 
     cmd = sub.add_parser('semantic2d')

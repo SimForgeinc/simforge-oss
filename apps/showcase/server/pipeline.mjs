@@ -128,6 +128,7 @@ export const DEFAULT_AUTHOR_MODEL = 'gpt-5.6-luna';
 export const DEFAULT_AUTHOR_EFFORT = 'medium';
 export const DEFAULT_REVIEW_MODEL = 'gpt-5.6-sol';
 export const DEFAULT_REVIEW_EFFORT = 'medium';
+export const DEFAULT_JUDGE_PRIMARY_MODEL = 'openrouter/google/gemini-3.7-flash';
 
 const effortVocabulary = (model) => {
   if (model === 'openrouter/stealth/ox-alpha') return ['low', 'high', 'max'];
@@ -221,10 +222,8 @@ function authorUsageInto(document, usage) {
  * Provider-recorded token usage for one job, attributed to the stage that spent it.
  *
  * Author usage is deduplicated by evidence-file content hash; vision usage is
- * deduplicated by the reviewer's `rawResponseSha256`, so the same verdict copied
- * out of a repair attempt is billed exactly once. The `70-judge` bucket exists
- * only for jobs recorded before the 3D product review was removed: no stage
- * writes that artifact any more, and no new attempt bills the bucket.
+ * deduplicated by response hash. Cached ensemble records remain in the audit
+ * but do not add spend because their original response hash is counted once.
  */
 export async function collectJobUsage(jobDir) {
   const byStage = {
@@ -269,6 +268,13 @@ export async function collectJobUsage(jobDir) {
       if (row?._meta?.tokens && !seenVision.has(twoDKey)) {
         seenVision.add(twoDKey);
         addUsage(byStage['60-render2d'], row._meta.tokens, row._meta.latencyS);
+      }
+      for (const record of row?.records ?? []) {
+        const ensembleKey = `ensemble:${record?.responseSha256 ?? ''}`;
+        if (!record?.cacheHit && record?.tokens && !seenVision.has(ensembleKey)) {
+          seenVision.add(ensembleKey);
+          addUsage(byStage['60-render2d'], record.tokens, record.latencyS);
+        }
       }
       const review = row?.threeDReview;
       const threeDKey = `3d:${review?.version ?? ''}:${review?.rawResponseSha256 ?? row?.cellId ?? ''}`;
@@ -737,29 +743,40 @@ export function rankCandidates(cells, qualityRows) {
 /**
  * Decide acceptance for every row of one attempt, in place.
  *
- * The predicate is deterministic and has one semantic authority. A cell is accepted when the frozen
- * gate admitted it, the 2D semantic oracle matched it, and its deterministic render completed --
- * 3D when the job renders 3D, else the 2D clip. Nothing else is consulted, and nothing is rationed:
- * `topK` limits how many cells a job pays to render, never how many true verdicts it may hold.
+ * The 2D semantic oracle remains the semantic authority. A cell is accepted only when the frozen
+ * and provenance gates admit it, the oracle matches it, the contract-scoped ensemble does not
+ * identify a blocking defect, and its deterministic render completes. `topK` limits render spend,
+ * never how many evidence-backed verdicts may pass.
  *
  * A cell the oracle never screened is reported as unsupported rather than given a verdict no
  * evidence backs.
  */
-export function applyProductDecision(rows, { job, passing, gateRows, validityByCell, renderByCell, semanticByCell }) {
+export function applyProductDecision(rows, {
+  job, passing, gateRows, validityByCell, renderByCell, semanticByCell, ensembleByCell,
+}) {
   for (const row of rows) {
     const semantic = semanticByCell?.get(row.cellId) ?? null;
     const screened = semantic?.status === 'complete';
     const gatePassed = passing.has(row.cellId);
     const render = renderByCell?.get(row.cellId) ?? null;
     const semanticAccepted = semantic?.semanticMatch === true;
+    const ensemble = ensembleByCell?.get(row.cellId) ?? null;
+    const ensembleAccepted = ensemble ? ensemble.advisoryPass === true : true;
     row.semanticAccepted = semanticAccepted;
-    row.accepted = gatePassed && semanticAccepted && render?.status === 'complete';
-    // Every code the deterministic stages and the oracle actually attributed. The gate contributes
-    // its own verdict for a cell it rejected; nothing here re-attributes free text.
+    row.ensembleAccepted = ensembleAccepted;
+    row.accepted = gatePassed && semanticAccepted && ensembleAccepted && render?.status === 'complete';
+    // Every code the deterministic stages, ensemble, and oracle actually attributed.
+    const ensembleDefects = ensembleAccepted ? [] : [
+      ensemble?.answers?.['physical-plausibility'] === 'no' ? 'scenario.plausibility' : null,
+      ensemble?.answers?.['mechanism-match'] === 'no' ? 'scenario.mechanism' : null,
+      ensemble?.answers?.['criticality-visible'] === 'no' ? 'render.camera.framing' : null,
+      ensemble?.answers?.['label-answer-consistency'] === 'no' ? 'judge.uncertain' : null,
+    ].filter(Boolean);
     row.defectCodes = mergeDefectCodes(
       validityByCell?.get(row.cellId)?.defectCodes,
       render?.defectCodes,
       screened ? semantic.scenarioDefectCodes : [],
+      ensembleDefects,
       gatePassed ? [] : [GATE_DEFECT_CODE],
     );
     row.unsupportedReason = screened ? null : NEVER_SCREENED_REASON;
@@ -769,6 +786,8 @@ export function applyProductDecision(rows, { job, passing, gateRows, validityByC
       gateFirstFailure: gateRows?.get(row.cellId)?.firstFailure ?? null,
       semanticScreened: screened,
       semanticConfidence: screened ? Number(semantic.confidence ?? 0) : null,
+      ensembleScreened: ensemble !== null,
+      ensembleAccepted,
       renderTier: job.render3d ? '3d' : '2d',
       renderStatus: render?.status ?? null,
     };
@@ -1377,10 +1396,11 @@ export class ShowcasePipeline {
     const gate = await stage(context, '50-gate', [gatePath], async () => {
       const requestPath = join(context.jobDir, '.gate-request.json');
       await atomicJson(requestPath, {
-        brief: job.requestedBrief ?? job.brief,
+        briefFile: briefPath,
         cells: cells.map((cell) => ({
           cellId: cell.cellId,
           traceFile: cell.traceFile,
+          instanceFile: cell.instanceFile,
           verdict: cell.verdict,
           band: cell.band,
           mapId: cell.mapId,
@@ -1483,8 +1503,8 @@ export class ShowcasePipeline {
     context.benchmark.counts.render2dComplete = render2d.filter((row) => row.status === 'complete').length;
     if (context.benchmark.counts.render2dComplete > 0) context.benchmark.funnel['2d-ok'] = true;
 
-    // The blind 2D footage pass: realism and dynamism over redacted frames. It ranks
-    // 3D spend for a job the oracle could not screen and decides nothing.
+    // Escalation-only decomposed ensemble over redacted 2D evidence. It can block only
+    // axes already delegated to the review contract; the 2D semantic oracle remains mandatory.
     let qualityRows = [];
     if (await gateway()) {
       if (await exists(render2dQualityPath)) {
@@ -1496,10 +1516,10 @@ export class ShowcasePipeline {
           async (item) => this.review.run(async () => {
             const cell = cells.find((candidate) => candidate.cellId === item.cellId);
             const result = await command(this.python, [
-              this.bridge, 'judge', '--cell', cell.cellDir,
-              '--render', join(render2dDir, item.redacted),
-              '--model', job.reviewModel ?? DEFAULT_REVIEW_MODEL,
-              '--effort', job.reviewEffort ?? DEFAULT_REVIEW_EFFORT,
+              this.bridge, 'judge', '--cell', cell.cellDir, '--cell-id', cell.cellId,
+              '--render', join(render2dDir, item.redacted), '--brief', briefPath,
+              '--cache', join(context.jobDir, '.judge-cache'),
+              '--model', DEFAULT_JUDGE_PRIMARY_MODEL,
             ], {
               cwd: this.root,
               timeout: 600_000,
@@ -1640,10 +1660,11 @@ export class ShowcasePipeline {
         await rm(batchDir, { recursive: true, force: true });
         const gateRequestPath = join(roundDir, '.gate-request.json');
         await atomicJson(gateRequestPath, {
-          brief: job.requestedBrief ?? job.brief,
+          briefFile: briefPath,
           cells: roundCells.map((cell) => ({
-            cellId: cell.cellId, traceFile: cell.traceFile, verdict: cell.verdict,
-            band: cell.band, mapId: cell.mapId, siteId: cell.siteId, drawIndex: cell.drawIndex,
+            cellId: cell.cellId, traceFile: cell.traceFile, instanceFile: cell.instanceFile,
+            verdict: cell.verdict, band: cell.band, mapId: cell.mapId,
+            siteId: cell.siteId, drawIndex: cell.drawIndex,
           })),
         });
         const gateResult = await command(this.python, [this.bridge, 'gate', '--request', gateRequestPath], { cwd: this.root, timeout: 600_000 });
@@ -1868,11 +1889,11 @@ export class ShowcasePipeline {
     if (context.benchmark.counts.render3dComplete > 0) context.benchmark.funnel['3d-ok'] = true;
 
     // ---- the deterministic product decision --------------------------------
-    // Every cell the decision is accountable for: the ones the oracle screened and
-    // the ones a deterministic render was spent on. Nothing is reviewed here; the
-    // oracle's verdict and the render outcome are the whole evidence.
+    // Every cell the decision is accountable for: oracle-screened or rendered cells.
+    // The oracle remains mandatory; the ensemble can only add contract-defined blockers.
     const gateRows = new Map([...(gate.cells ?? []), ...extraGateCells].map((row) => [row.cellId, row]));
     const semanticByCell = new Map(semanticRows.map((row) => [row.cellId, row]));
+    const ensembleByCell = new Map(qualityRows.map((row) => [row.cellId, row]));
     const renderByCell = new Map((job.render3d ? render3d?.cells ?? [] : render2d)
       .map((row) => [row.cellId, row]));
     let productRows = [...new Set([...semanticByCell.keys(), ...renderByCell.keys()])].sort()
@@ -1886,6 +1907,7 @@ export class ShowcasePipeline {
       }));
     applyProductDecision(productRows, {
       job, passing, gateRows, validityByCell: eligibilityByCell, renderByCell, semanticByCell,
+      ensembleByCell,
     });
 
     const plan = planRetry(route, job, semantic2d, productRows);
