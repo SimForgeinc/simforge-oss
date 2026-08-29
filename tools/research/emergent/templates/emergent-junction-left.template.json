@@ -1,0 +1,47 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Emergent harvest: ego turns left at a junction in dense ambient traffic",
+    "description": "World scaffolding for emergence harvesting (rethink stream C). Ego performs a LEFT turn at a 3-4 arm junction with NO scripted challenger; dense seeded ambient traffic owns every other vehicle. Targets the owner-list negotiation family (unprotected left across traffic, hesitation) organically: the crossing/oncoming ambient streams conflict with the ego's turn path. Clip 16 s, ego <=38 kph for runway feasibility. Mined offline with pre-registered PREREG M3 thresholds.",
+    "createdAt": "2026-08-16T00:00:00.000Z",
+    "modifiedAt": "2026-08-16T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "emergent.junction-left",
+    "tags": ["emergent", "harvest", "ambient", "junction", "left-turn", "negotiation"],
+    "author": "agent/rethink-emergent",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "emergent-junction-left",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 5], "essentiality": "required" },
+      "runwayUpstreamM": { "value": [40, null], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [60, null], "essentiality": "required" }
+    },
+    "features": [
+      {
+        "id": "harvest-junction-left", "kind": "junction", "essentiality": "required",
+        "atM": { "value": [0, 0], "essentiality": "required" },
+        "arms": { "value": [3, 4], "essentiality": "required" },
+        "control": { "value": ["signalized", "all_way_stop", "minor_stop", "yield", "uncontrolled"], "essentiality": "preferred", "weight": 1 },
+        "egoTurn": { "value": ["left"], "essentiality": "required" }
+      }
+    ],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle turning left through ambient streams",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": -35, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.55 * lane.speedLimitKph, 18, 38)"
+    }
+  ],
+  "props": [],
+  "choreography": { "clipSeconds": 16, "warmupSeconds": 2, "interactions": [] },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

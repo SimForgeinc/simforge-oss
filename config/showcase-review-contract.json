@@ -1,0 +1,600 @@
+{
+  "schema": "uniscenarios.showcase-review-contract/v1",
+  "version": "showcase-acceptance-contract-v1",
+  "reviewVersion": "showcase-3d-review-v5",
+  "supersedes": [
+    "showcase-3d-product-review-v2",
+    "showcase-3d-product-review-v3",
+    "showcase-3d-product-review-v4"
+  ],
+  "sha256": "ab1ab5408b022bee6c0fefc66a3cd981c5b58d1318ce88bd698d8c7ad1df5f7f",
+  "canonicalization": "sha256 of the JSON body with the sha256 field removed, keys sorted at every depth, separators ',' and ':', and every character outside printable ASCII escaped as \\uXXXX. Numbers must be integers or have a non-zero fraction so both runtimes emit identical text.",
+  "acceptance": {
+    "semantic": {
+      "axes": {
+        "mechanismFidelity": [
+          "yes"
+        ],
+        "actorFidelity": [
+          "pass"
+        ],
+        "eventSequence": [
+          "pass"
+        ]
+      },
+      "requirePlausible": true,
+      "realismMin": 6,
+      "confidenceMin": 0.6,
+      "blockingPrefixes": [
+        "scenario."
+      ]
+    },
+    "presentation": {
+      "requiresSemantic": true,
+      "axes": {
+        "visualGrounding": [
+          "pass"
+        ]
+      },
+      "blockingPrefixes": [
+        "simulation.",
+        "render.",
+        "capture."
+      ]
+    },
+    "unsupported": {
+      "requireEvidenceText": true,
+      "blockingCodes": [
+        "judge.uncertain"
+      ],
+      "tiers": {
+        "3d": "full",
+        "2d": "blind"
+      },
+      "blindTierReason": "a blind 2D review never sees the brief and cannot attest mechanism, actors, or event sequence"
+    }
+  },
+  "defects": {
+    "prefixes": [
+      "scenario.",
+      "simulation.",
+      "render.camera.",
+      "render.asset.",
+      "capture.",
+      "judge."
+    ],
+    "codes": [
+      "capture.empty",
+      "capture.encoding",
+      "capture.duration",
+      "capture.frame",
+      "render.camera.motion",
+      "render.camera.exposure",
+      "render.camera.occlusion",
+      "render.camera.framing",
+      "render.asset.missing",
+      "render.asset.grounding",
+      "render.asset.geometry",
+      "render.asset.material",
+      "render.asset.lod",
+      "simulation.collision",
+      "simulation.kinematics",
+      "simulation.pose",
+      "simulation.trajectory",
+      "scenario.mechanism",
+      "scenario.actors",
+      "scenario.sequence",
+      "scenario.trigger",
+      "scenario.plausibility",
+      "scenario.realism",
+      "scenario.gate",
+      "judge.uncertain"
+    ],
+    "fallbackCode": "judge.uncertain",
+    "maxDefects": 16,
+    "maxTextLength": 240,
+    "axisCodes": {
+      "mechanismFidelity": "scenario.mechanism",
+      "actorFidelity": "scenario.actors",
+      "eventSequence": "scenario.sequence",
+      "plausible": "scenario.plausibility",
+      "realism": "scenario.realism",
+      "confidence": "judge.uncertain",
+      "visualGrounding": "render.asset.grounding",
+      "gate": "scenario.gate"
+    },
+    "rules": [
+      {
+        "code": "capture.empty",
+        "pattern": "\\b(?:empty (?:scene|frame|render|footage)|blank (?:frame|screen|video)|nothing (?:is )?(?:visible|rendered)|black (?:frame|screen))\\b"
+      },
+      {
+        "code": "capture.encoding",
+        "pattern": "\\b(?:encoding|codec|bitrate|compression artefact|compression artifact|unreadable (?:video|mp4|file)|corrupt(?:ed)? (?:video|mp4|file))\\b"
+      },
+      {
+        "code": "capture.duration",
+        "pattern": "\\b(?:truncated|too short|clip (?:ends|cuts) (?:early|off)|cuts off before|only [a-z0-9]+ frames|dropped frames)\\b"
+      },
+      {
+        "code": "capture.frame",
+        "pattern": "\\b(?:frame (?:order|ordering|timing|rate)|out of order|duplicate frames?|frozen frame|stutter(?:s|ing)?|fps)\\b"
+      },
+      {
+        "code": "render.camera.motion",
+        "pattern": "\\b(?:camera (?:shake|shakes|jitter|jitters|jump|jumps|cut|cuts)|jerky camera|motion blur)\\b"
+      },
+      {
+        "code": "render.camera.exposure",
+        "pattern": "\\b(?:exposure|overexposed|underexposed|too (?:dark|bright)|washed out|blown out|lighting (?:is )?(?:wrong|flat|broken)|shadows? (?:are|is) (?:missing|wrong))\\b"
+      },
+      {
+        "code": "render.camera.occlusion",
+        "pattern": "\\b(?:view (?:is )?(?:blocked|obstructed)|obscures? the (?:view|event|conflict)|not visible (?:in|from) the (?:frame|view|camera|shot))\\b"
+      },
+      {
+        "code": "render.camera.framing",
+        "pattern": "\\b(?:camera|framing|framed|out of frame|off[- ]?screen|crops?|cropped|zoom(?:ed)?|field of view|fov|viewpoint|vantage|too far (?:away|from|back)|too close)\\b"
+      },
+      {
+        "code": "render.asset.missing",
+        "pattern": "\\b(?:missing (?:asset|model|mesh|texture)|(?:asset|model|mesh|texture) (?:is )?missing|placeholder (?:asset|model|mesh|box)|untextured|no (?:3d )?model)\\b"
+      },
+      {
+        "code": "render.asset.grounding",
+        "pattern": "\\b(?:floats?|floating|hovers?|hovering|levitat(?:es|ing)|sinks?|sinking|sunk|half[- ]?buried|embedded in the (?:ground|road)|(?:below|beneath|above) the (?:ground|road|surface)|not (?:resting|sitting) on|off the ground)\\b"
+      },
+      {
+        "code": "render.asset.geometry",
+        "pattern": "\\b(?:clips? (?:through|into)|clipping|intersects? the (?:geometry|building|wall|curb|kerb)|z[- ]?fighting|inside (?:a|the) (?:building|wall)|overlapping geometry|wrong(?:ly)? scale[d]?|scale is (?:wrong|off)|wrong size|stretched|deformed)\\b"
+      },
+      {
+        "code": "render.asset.material",
+        "pattern": "\\b(?:texture (?:is )?(?:wrong|stretched|flicker(?:s|ing)?)|material (?:is )?(?:wrong|missing|broken)|shading (?:is )?(?:wrong|broken)|wrong colou?r)\\b"
+      },
+      {
+        "code": "render.asset.lod",
+        "pattern": "\\b(?:low[- ]?poly|level of detail|lod pop|pops? in|blurry (?:model|mesh|geometry))\\b"
+      },
+      {
+        "code": "simulation.collision",
+        "pattern": "\\b(?:collision|collides?|collided|crash(?:es|ed)?|rear[- ]?end(?:s|ed)?|drives? into|struck|unintended contact)\\b"
+      },
+      {
+        "code": "simulation.kinematics",
+        "pattern": "\\b(?:teleport(?:s|ing|ed)?|jumps? (?:forward|backward|position)|frozen (?:actor|vehicle|pedestrian|car)|(?:actor|vehicle|pedestrian|car) (?:is )?(?:frozen|static|stuck)|does not move|never moves|impossible (?:speed|acceleration|decelerat\\w*)|unrealistic (?:speed|acceleration|decelerat\\w*)|instant(?:ly|aneous)? stop)\\b"
+      },
+      {
+        "code": "simulation.pose",
+        "pattern": "\\b(?:facing the wrong (?:way|direction)|wrong heading|heading (?:is )?wrong|travels? sideways|slides? sideways|driving backwards|orientation (?:is )?wrong)\\b"
+      },
+      {
+        "code": "simulation.trajectory",
+        "pattern": "\\b(?:off[- ]?road|leaves the (?:road|lane|drivable surface)|(?:drives?|drifts?|rolls?|slides?|passes?|moves?) (?:through|over|across) the (?:curb|kerb|sidewalk|median|wall|building|fence)|wrong lane|oncoming lane|invalid path|path (?:is )?wrong)\\b"
+      },
+      {
+        "code": "scenario.mechanism",
+        "pattern": "\\b(?:wrong mechanism|different mechanism|generic near[- ]?miss|near[- ]?miss instead|routes? around|routed around|route[- ]around|does not implement|not the requested (?:mechanism|scenario|manoeuvre|maneuver)|requested mechanism (?:is )?(?:absent|missing)|no (?:conflict|interaction) (?:occurs|happens)|unrelated scenario)\\b"
+      },
+      {
+        "code": "scenario.actors",
+        "pattern": "\\b(?:wrong actor|actor type|requested actor|missing actor|(?:motorcycle|motorbike|scooter|bicycle|cyclist|truck|bus|suv|sedan|van|pedestrian|child|vehicle) (?:instead of|rather than)|instead of (?:a |an |the )?(?:motorcycle|motorbike|scooter|bicycle|cyclist|truck|bus|suv|sedan|van|pedestrian|child)|(?:motorcycle|motorbike|scooter|bicycle|cyclist|truck|bus|suv|sedan|van|pedestrian|child) (?:is |are )?(?:missing|absent|not present|never appears))\\b"
+      },
+      {
+        "code": "scenario.sequence",
+        "pattern": "\\b(?:out of sequence|wrong order|sequence (?:is )?(?:wrong|broken|incomplete)|(?:reveal|onset|conflict|reaction) (?:never|does not|did not|is not) (?:occur|occurs|happen|happens|appear|appears)|never (?:crosses|brakes|reacts|enters|emerges|yields|stops|arrives)|no reaction|reacts too (?:early|late)|before the (?:conflict|reveal|onset) instead)\\b"
+      },
+      {
+        "code": "scenario.trigger",
+        "pattern": "\\b(?:trigger (?:never|did not|does not|fails?|skipped)|skipped trigger|condition never)\\b"
+      },
+      {
+        "code": "scenario.plausibility",
+        "pattern": "\\b(?:implausible|impossible (?:behaviou?r|traffic|scene|situation)|could not happen|nonsensical|unnatural behaviou?r|violates traffic)\\b"
+      },
+      {
+        "code": "scenario.realism",
+        "pattern": "\\b(?:unrealistic|toy[- ]?like|game[- ]?like|staged|synthetic looking|looks fake|cartoon\\w*)\\b"
+      }
+    ],
+    "legacyCodes": {
+      "teleport": "simulation.kinematics",
+      "frozen_actor": "simulation.kinematics",
+      "unnatural_speed": "simulation.kinematics",
+      "overlap": "simulation.collision",
+      "off_road": "simulation.trajectory"
+    },
+    "legacyTextPrefixes": [
+      "other:"
+    ],
+    "pipelineCodes": [
+      "scenario.gate"
+    ]
+  },
+  "retry": {
+    "priority": [
+      "scenario.",
+      "simulation.",
+      "render.asset.",
+      "render.camera.",
+      "capture.",
+      "judge."
+    ],
+    "actions": {
+      "scenario.": "reauthor",
+      "simulation.": "resimulate",
+      "render.asset.": "recompose",
+      "render.camera.": "recompose",
+      "capture.": "recapture",
+      "judge.": "rereview"
+    },
+    "noEvidenceAction": "reauthor",
+    "authorActions": [
+      "reauthor"
+    ],
+    "noEvidenceReason": "no reviewable presentation evidence"
+  },
+  "prompt": "You are the acceptance reviewer for a generated autonomous-driving scenario.\nYou receive the user's exact requested edge case followed by time-ordered frames from the REAL 3D render.\nReject aggressively: this is training-data QA, not a creativity exercise.\n\nJudge SCENARIO FIDELITY and 3D PRESENTATION separately. A scene can implement the requested\nmechanism exactly and still be unusable footage, and it can look flawless while showing the wrong\nscenario. Never let one verdict contaminate the other.\n\nSCENARIO FIDELITY -- what the traffic does:\n1. mechanismFidelity: Does the visible scene implement the exact requested causal mechanism, actors, road\n   structure, and event sequence? A generic near-miss or route-around is \"no\", even if physically critical.\n2. actorFidelity: Are the requested actor types visibly present (for example motorcycle vs car, SUV vs sedan)?\n3. eventSequence: Across the frames, does the requested event onset (or reveal when requested), conflict,\n   and reaction actually occur in order?\n4. plausible / realism: Could this exact scene exist and behave this way in real traffic?\n\n3D PRESENTATION -- whether the footage is usable training data:\n5. visualGrounding: Are every vehicle and actor correctly resting on the visible road/ground, without\n   sinking, floating, clipping through geometry, or occupying an impossible surface?\n\nReport every defect you can actually SEE and attribute each one to exactly one code:\n  scenario.mechanism      requested causal mechanism absent, replaced, or routed around\n  scenario.actors         wrong, missing, or substituted requested actor type\n  scenario.sequence       onset, reveal, conflict, or reaction out of order or absent\n  scenario.trigger        a scripted trigger never fires\n  scenario.plausibility   traffic behaviour that could not happen in the real world\n  scenario.realism        staged, toy-like, or synthetic rather than real traffic\n  simulation.collision    unintended contact between bodies\n  simulation.kinematics   teleporting, frozen, or impossible acceleration\n  simulation.pose         heading or orientation inconsistent with the motion\n  simulation.trajectory   leaves the drivable surface or takes an invalid path\n  render.asset.missing    missing or placeholder model, mesh, or texture\n  render.asset.grounding  actor floating, sinking, or not resting on the surface\n  render.asset.geometry   clipping, intersecting, or wrongly scaled geometry\n  render.asset.material   wrong or broken material, texture, or shading\n  render.asset.lod        low-detail or popping geometry\n  render.camera.motion    camera shake, jitter, or an unintended cut\n  render.camera.exposure  exposure, glare, or lighting that hides the action\n  render.camera.occlusion the incident camera's own view of the event is blocked\n  render.camera.framing   the event is cropped, off-screen, too distant, or badly framed\n  capture.empty           empty, blank, or black footage\n  capture.encoding        corrupt or unreadable encoding\n  capture.duration        clip truncated or too short to contain the event\n  capture.frame           frame ordering, duplication, or timing faults\n  judge.uncertain         you can see something wrong but cannot attribute it\n\nUse scenario.* only for what the traffic does, never for how the render looks.\nUse simulation.*, render.*, and capture.* only for execution or presentation faults, never to reject\na correctly implemented scenario. If you cannot attribute a defect, emit judge.uncertain rather than\nguessing a code or omitting the defect.\n\nThe frames use an external incident camera, not the ego driver's eye point. A target visible to this\ncamera can still be occluded from the ego. Use the supplied trace-grounded ego line-of-sight facts\nto interpret that distinction, but never let metadata excuse a visibly impossible scene.\n\nAnswer STRICT JSON only:\n{\"mechanismFidelity\":\"yes|partial|no\",\"visualGrounding\":\"pass|fail\",\n\"actorFidelity\":\"pass|fail\",\"eventSequence\":\"pass|fail\",\"plausible\":true,\n\"realism\":0,\"confidence\":0.0,\n\"defects\":[{\"code\":\"one code from the list above\",\"text\":\"short visible defect\"}],\n\"explanation\":\"2-5 sentences stating the scenario verdict and the presentation verdict separately\"}",
+  "conformance": [
+    {
+      "name": "clean-3d-review-accepts-both",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.9,
+        "defects": [],
+        "explanation": "The requested cut-in happens on camera and every actor sits on the road."
+      },
+      "expect": {
+        "semanticAccepted": true,
+        "presentationAccepted": true,
+        "defectCodes": [],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "realism-7-mechanism-correct-with-camera-and-asset-defects",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "fail",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 7,
+        "confidence": 0.82,
+        "defects": [
+          {
+            "code": "render.camera.framing",
+            "text": "the conflict is cropped at the right edge"
+          },
+          {
+            "code": "render.asset.grounding",
+            "text": "the lead sedan hovers a few centimetres above the lane"
+          }
+        ],
+        "explanation": "Scenario verdict: the requested mechanism is implemented exactly. Presentation verdict: framing and grounding are unusable."
+      },
+      "expect": {
+        "semanticAccepted": true,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "render.asset.grounding",
+          "render.camera.framing"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "scenario-sequence-defect-fails-both",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "fail",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.88,
+        "defects": [
+          {
+            "code": "scenario.sequence",
+            "text": "the pedestrian never enters the crosswalk"
+          }
+        ],
+        "explanation": "The reveal never happens, so the scenario is wrong even though the render is clean."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "scenario.sequence"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "no-explanatory-text-never-silently-succeeds",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 9,
+        "confidence": 0.95,
+        "defects": [],
+        "explanation": "   "
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "unattributable-defect-text-becomes-judge-uncertain",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.8,
+        "defects": [
+          "something about this scene feels subtly off"
+        ],
+        "explanation": "Everything checks out but one detail bothers me."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "free-text-camera-defect-is-attributed-to-presentation",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 7,
+        "confidence": 0.75,
+        "defects": [
+          "the camera crops the collision out of frame"
+        ],
+        "explanation": "The mechanism is right; the camera hides the moment of conflict."
+      },
+      "expect": {
+        "semanticAccepted": true,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "render.camera.framing"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "low-confidence-review-cannot-certify",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.4,
+        "defects": [],
+        "explanation": "The frames are hard to read but the mechanism looks present."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "realism-below-floor-is-a-scenario-defect",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 4,
+        "confidence": 0.9,
+        "defects": [],
+        "explanation": "The mechanism is present but the traffic looks staged and lifeless."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "scenario.realism"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "partial-mechanism-is-a-scenario-defect",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "partial",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.9,
+        "defects": [],
+        "explanation": "Only half of the requested mechanism is visible in the render."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "scenario.mechanism"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "blind-2d-review-cannot-attest-scenario-fidelity",
+      "review": {
+        "tier": "2d",
+        "plausible": true,
+        "realism": 8,
+        "dynamism": 7,
+        "confidence": 0.85,
+        "defects": [],
+        "mechanismObserved": "A vehicle slows while another crosses ahead of it."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "review-error-is-unsupported-not-rejected",
+      "review": {
+        "tier": "3d",
+        "error": "HTTP 500: upstream review failure"
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "missing-review-is-unsupported",
+      "review": null,
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "judge.uncertain"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "legacy-blind-2d-defect-enum-is-attributed",
+      "review": {
+        "tier": "2d",
+        "plausible": true,
+        "realism": 7,
+        "confidence": 0.8,
+        "defects": [
+          "frozen_actor",
+          "other:the sedan drifts through the kerb"
+        ],
+        "mechanismObserved": "A sedan stops mid-lane while a second car passes."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "simulation.kinematics",
+          "simulation.trajectory"
+        ],
+        "unsupported": true
+      }
+    },
+    {
+      "name": "simulation-defect-fails-presentation-only",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 7,
+        "confidence": 0.8,
+        "defects": [
+          {
+            "code": "simulation.collision",
+            "text": "the ego clips the crossing cyclist"
+          }
+        ],
+        "explanation": "Scenario verdict: correct mechanism. Presentation verdict: an unintended contact makes the clip unusable."
+      },
+      "expect": {
+        "semanticAccepted": true,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "simulation.collision"
+        ],
+        "unsupported": false
+      }
+    },
+    {
+      "name": "pipeline-injected-gate-failure-is-attributable",
+      "review": {
+        "tier": "3d",
+        "mechanismFidelity": "yes",
+        "visualGrounding": "pass",
+        "actorFidelity": "pass",
+        "eventSequence": "pass",
+        "plausible": true,
+        "realism": 8,
+        "confidence": 0.9,
+        "defects": [
+          {
+            "code": "scenario.gate",
+            "text": "frozen gate first failure C4"
+          }
+        ],
+        "explanation": "The render looks right but the frozen physical gate rejected the trace."
+      },
+      "expect": {
+        "semanticAccepted": false,
+        "presentationAccepted": false,
+        "defectCodes": [
+          "scenario.gate"
+        ],
+        "unsupported": false
+      }
+    }
+  ],
+  "historical": {
+    "reviewVersions": [
+      "showcase-3d-product-review-v2",
+      "showcase-3d-product-review-v3",
+      "showcase-3d-product-review-v4"
+    ],
+    "acceptedField": "accepted",
+    "rowField": "productAccepted",
+    "reason": "review predates the semantic/presentation split; its verdict is re-derived from the preserved axes and can never satisfy the current contract"
+  }
+}

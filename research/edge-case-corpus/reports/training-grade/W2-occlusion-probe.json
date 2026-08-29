@@ -1,0 +1,432 @@
+{
+ "gate": "occlusion probe (W2)",
+ "criteria": {
+  "provenShare": ">= 0.50",
+  "maps": ">= 2",
+  "sites": ">= 3",
+  "archetypesPassingGateV2": ">= 5"
+ },
+ "arms": {
+  "baseline": {
+   "archetypes": [
+    {
+     "archetype": "c7-hedge-corner",
+     "cells": 180,
+     "proven": 96,
+     "provenShare": 0.5333,
+     "provenGateV2": 179,
+     "provenGateV2Share": 0.9944,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 26,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 96,
+      "blocked_at_conflict": 83,
+      "pair_unobserved": 1
+     },
+     "medianLateralSepM": 0.0,
+     "gateV2Admitted": 33,
+     "gateV2Maps": 5,
+     "gateV2Sites": 12,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 9,
+      "C3": 9,
+      "C4": 87,
+      "C5": 42
+     }
+    },
+    {
+     "archetype": "c7-parked-row-child",
+     "cells": 180,
+     "proven": 84,
+     "provenShare": 0.4667,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 24,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "blocked_at_conflict": 96,
+      "revealed_before_conflict": 84
+     },
+     "medianLateralSepM": 0.0,
+     "gateV2Admitted": 24,
+     "gateV2Maps": 4,
+     "gateV2Sites": 9,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 9,
+      "C3": 6,
+      "C4": 114,
+      "C5": 27
+     }
+    },
+    {
+     "archetype": "c7-skip-container",
+     "cells": 180,
+     "proven": 156,
+     "provenShare": 0.8667,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 30,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 156,
+      "blocked_at_conflict": 24
+     },
+     "medianLateralSepM": 0.0,
+     "gateV2Admitted": 35,
+     "gateV2Maps": 5,
+     "gateV2Sites": 13,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 9,
+      "C3": 6,
+      "C4": 85,
+      "C5": 45
+     }
+    },
+    {
+     "archetype": "c7-bus-shelter",
+     "cells": 180,
+     "proven": 107,
+     "provenShare": 0.5944,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 27,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 107,
+      "blocked_at_conflict": 73
+     },
+     "medianLateralSepM": 0.0,
+     "gateV2Admitted": 23,
+     "gateV2Maps": 5,
+     "gateV2Sites": 12,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 6,
+      "C3": 6,
+      "C4": 113,
+      "C5": 32
+     }
+    },
+    {
+     "archetype": "c7-fence-run",
+     "cells": 180,
+     "proven": 111,
+     "provenShare": 0.6167,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 29,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 111,
+      "blocked_at_conflict": 69
+     },
+     "medianLateralSepM": 0.0,
+     "gateV2Admitted": 30,
+     "gateV2Maps": 4,
+     "gateV2Sites": 11,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 6,
+      "C3": 2,
+      "C4": 108,
+      "C5": 34
+     }
+    }
+   ],
+   "archetypesMeetingProvenClause": 4,
+   "archetypesMeetingProvenClauseGateV2": 5,
+   "archetypesPassingGateV2": 5,
+   "medianLateralSeparationM": 0.0,
+   "pass": true
+  },
+  "fixed": {
+   "archetypes": [
+    {
+     "archetype": "c7-hedge-corner",
+     "cells": 180,
+     "proven": 132,
+     "provenShare": 0.7333,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 30,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 132,
+      "blocked_at_conflict": 48
+     },
+     "medianLateralSepM": 1.4,
+     "gateV2Admitted": 40,
+     "gateV2Maps": 5,
+     "gateV2Sites": 14,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 7,
+      "C3": 8,
+      "C4": 94,
+      "C5": 31
+     }
+    },
+    {
+     "archetype": "c7-parked-row-child",
+     "cells": 180,
+     "proven": 100,
+     "provenShare": 0.5556,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 23,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 100,
+      "blocked_at_conflict": 80
+     },
+     "medianLateralSepM": 1.2,
+     "gateV2Admitted": 45,
+     "gateV2Maps": 5,
+     "gateV2Sites": 13,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 4,
+      "C3": 3,
+      "C4": 94,
+      "C5": 34
+     }
+    },
+    {
+     "archetype": "c7-skip-container",
+     "cells": 180,
+     "proven": 152,
+     "provenShare": 0.8444,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 30,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 152,
+      "blocked_at_conflict": 28
+     },
+     "medianLateralSepM": 1.1,
+     "gateV2Admitted": 33,
+     "gateV2Maps": 5,
+     "gateV2Sites": 14,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 12,
+      "C3": 10,
+      "C4": 95,
+      "C5": 30
+     }
+    },
+    {
+     "archetype": "c7-bus-shelter",
+     "cells": 180,
+     "proven": 109,
+     "provenShare": 0.6056,
+     "provenGateV2": 180,
+     "provenGateV2Share": 1.0,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 28,
+     "occluderIneffectiveCells": 0,
+     "statuses": {
+      "revealed_before_conflict": 109,
+      "blocked_at_conflict": 71
+     },
+     "medianLateralSepM": 1.4,
+     "gateV2Admitted": 52,
+     "gateV2Maps": 5,
+     "gateV2Sites": 16,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 3,
+      "C3": 6,
+      "C4": 90,
+      "C5": 29
+     }
+    },
+    {
+     "archetype": "c7-fence-run",
+     "cells": 180,
+     "proven": 148,
+     "provenShare": 0.8222,
+     "provenGateV2": 179,
+     "provenGateV2Share": 0.9944,
+     "provenGateV2Maps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenGateV2Sites": 30,
+     "provenMaps": [
+      "belmont-research-center",
+      "easterbrook-discovery-school",
+      "el-camino-road",
+      "richmond-field-station",
+      "yale-street"
+     ],
+     "provenSites": 30,
+     "occluderIneffectiveCells": 1,
+     "statuses": {
+      "revealed_before_conflict": 148,
+      "blocked_at_conflict": 31,
+      "never_blocked_before_conflict": 1
+     },
+     "medianLateralSepM": 1.4,
+     "gateV2Admitted": 35,
+     "gateV2Maps": 5,
+     "gateV2Sites": 14,
+     "gateV2Portable": true,
+     "firstFailure": {
+      "C2": 13,
+      "C3": 13,
+      "C4": 88,
+      "C5": 31
+     }
+    }
+   ],
+   "archetypesMeetingProvenClause": 5,
+   "archetypesMeetingProvenClauseGateV2": 5,
+   "archetypesPassingGateV2": 5,
+   "medianLateralSeparationM": 1.4,
+   "pass": true
+  }
+ },
+ "pass": true
+}

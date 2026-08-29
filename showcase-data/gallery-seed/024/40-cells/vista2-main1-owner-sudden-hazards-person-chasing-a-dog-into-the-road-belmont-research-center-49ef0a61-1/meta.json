@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1",
+ "briefId": "owner-sudden-hazards-person-chasing-a-dog-into-the-road",
+ "stream": "vista",
+ "templateSha256": "6efb105c168a0eea238f1f44159ad3705a2a79ecc15e9e6a2bac2e53f31e854d",
+ "map": "belmont-research-center",
+ "site": "49ef0a61459aa987",
+ "draw": 1,
+ "seed": "7378d50e40873e86",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.226,
+  "tMinClearance": 6.84
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

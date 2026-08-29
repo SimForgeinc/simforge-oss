@@ -1,0 +1,913 @@
+{
+  "entries": [
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/005/60-render2d/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/frames/frame-000.png",
+          "sha256": "738f305a7eef79d30c9aceeaa82c2662f27cafe8ad0dd8ae6634495f05927458"
+        },
+        {
+          "file": "showcase-data/gallery-seed/005/60-render2d/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/frames/frame-001.png",
+          "sha256": "2d15927801c0805f3500abe6484950a98f000b83bee0eb0cfc171567cad5677b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/005/60-render2d/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/frames/frame-002.png",
+          "sha256": "c230422f94a74c27b16e9d61d80fca0dbbee8dd380c72afd5868e8545fd5ea5a"
+        },
+        {
+          "file": "showcase-data/gallery-seed/005/60-render2d/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/frames/frame-003.png",
+          "sha256": "735b0fb2642e29d7bc1b7faceba20d39c14af01251d14a7f194a1bf7c54c5eab"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/005/40-cells/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/instance.json",
+        "sha256": "a61c9366dd51955150b2a78953db5c525dd2a9b1577cd3f50a084777a00d084f"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle drives through the branching junction, passes a green vehicle at very close quarters, and then turns onto a side lane. Several green vehicles circulate through the surrounding lanes while orange cyclists or scooters also move through the area; by the final frame, multiple green vehicles crowd the upper junction and visibly intersect one another.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/005/40-cells/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/trace.json.gz",
+        "sha256": "3f3b3f7fffa25dcc066335ee79077a332268594ffd6a70a1d2cc4e863d4357ba"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/005/60-render2d/emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec/rollout.mp4",
+        "sha256": "189d6c3d04e97341dd1e98bdc580a7752a2ae5ca558a615564d0c2affa49671d"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/frames/frame-000.png",
+          "sha256": "66c2fc20a995f40546463d5ea6810c9e54d677475bf4c805ddce5dbe5974e3d9"
+        },
+        {
+          "file": "showcase-data/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/frames/frame-001.png",
+          "sha256": "1e2398e1f8dfbd208f802d13ad300140f0c482ba14baab0d6bd47a8c20504592"
+        },
+        {
+          "file": "showcase-data/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/frames/frame-002.png",
+          "sha256": "5cb79207f11ee683f75f58e6368f5b8641142b545e71237c43f6f04a4e077cf0"
+        },
+        {
+          "file": "showcase-data/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/frames/frame-003.png",
+          "sha256": "e70dc70bba0a8def845d8d18b770f226e41571506dfc0dd04c8cee5d841a6e84"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/003/40-cells/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/instance.json",
+        "sha256": "44834d64848ba26d6d90e5df8dfbcff29c51cd12c4c33f87f2fe15049e592b90"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle travels down the main road, safely passes an oncoming green vehicle, and turns onto the curved side road. An orange cyclist or scooter rider independently follows the loop in the opposite direction; the actors remain separated and no collision occurs.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/003/40-cells/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/trace.json.gz",
+        "sha256": "ad93031bebd951ec8e31e3c134eeafcc75de160527286f45c12ae20025519b38"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4",
+        "sha256": "9f19430f7dc7738725ecb530c6859f6d5ae601ac23d33b549c1e3a87e2d11918"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/006/60-render2d/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/frames/frame-000.png",
+          "sha256": "002b5bb51bc3ac930edcd794f358b58daeae3a88b79be645a3f7351e0789f755"
+        },
+        {
+          "file": "showcase-data/gallery-seed/006/60-render2d/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/frames/frame-001.png",
+          "sha256": "c76e9453070b8deb8e420b2a68e6ec30827765d72d2c0c20354a42957dae5bd1"
+        },
+        {
+          "file": "showcase-data/gallery-seed/006/60-render2d/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/frames/frame-002.png",
+          "sha256": "d403c309a8e14d21418942c876e5169bd5a16f7ad933c3ff7ec85c4ce08bc2e7"
+        },
+        {
+          "file": "showcase-data/gallery-seed/006/60-render2d/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/frames/frame-003.png",
+          "sha256": "d9827e95d680c0df62b29501816d9aefe3f0b3516f85c319782ef7f096c6bec6"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/006/40-cells/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/instance.json",
+        "sha256": "181f05ad7002bef420382c02c658739766c5fa0cb63a6de597c738f691f2fe15"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle travels along the multilane road into a large intersection, turns toward the median, and then remains stopped near its tip. Several green vehicles move through or bunch around the intersection and crosswalk while orange cyclists pass through; the cluster includes intersecting vehicle footprints and a cyclist ending against a vehicle.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/006/40-cells/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/trace.json.gz",
+        "sha256": "4ae743acff72d7c96f4fb553c5127d5ca4c30cdd80db2323d54a633f3a93118c"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/006/60-render2d/emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66/rollout.mp4",
+        "sha256": "79f8b3cb8e87b3a7dedcb3d2e8245cfec9e554137cbd3cb622c21ceab75078bb"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/frames/frame-000.png",
+          "sha256": "1c65305a1b78b39a09db7a6ce46158769d1285786bca933dafad98b47ceb04e5"
+        },
+        {
+          "file": "showcase-data/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/frames/frame-001.png",
+          "sha256": "8febdb32f6d64f48a48f7c268b8ee1885288f24a0779156769ad5abc45b66ed9"
+        },
+        {
+          "file": "showcase-data/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/frames/frame-002.png",
+          "sha256": "00d06e6481ae5a9e451b93317460322a95df40ede1cd531ef0315687df453a27"
+        },
+        {
+          "file": "showcase-data/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/frames/frame-003.png",
+          "sha256": "a0df3edf90bdf120874eff81c40a37a52e97c85cb105e3fddeccd9c8a8c77c6b"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/002/40-cells/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/instance.json",
+        "sha256": "daea5fd952e179ade7d663c585b0f26c82604dbb2ff59fb7b1a2e01aafe6feff"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle travels along the divided arterial, enters the large junction, turns left, and then waits near a long green vehicle. Several green vehicles and violet motorcycles move through the junction while multiple orange cyclists or scooters approach and cross nearby; no collision occurs.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/002/40-cells/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/trace.json.gz",
+        "sha256": "8dab25b0a6208cac9ff2323758b28c206854c882ff47b46812ba05bbfde0a9e9"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4",
+        "sha256": "174119a194a8a665137d4400574d8a4cceec686e9a50e8e4871a350dd7a335c5"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/frames/frame-000.png",
+          "sha256": "2b412e8f8bafd30480f84326ad0160a686ebda904f50892d6213878a8e129830"
+        },
+        {
+          "file": "showcase-data/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/frames/frame-001.png",
+          "sha256": "8b3314c95a18b79a9643902736882a75f9c2dcac7d18e84ebaa047f4a61aa637"
+        },
+        {
+          "file": "showcase-data/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/frames/frame-002.png",
+          "sha256": "e028bfda2f6180c24d0bc564e62f85348ced19f29a3630382ed560aec44f42f8"
+        },
+        {
+          "file": "showcase-data/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/frames/frame-003.png",
+          "sha256": "f30bc3967abe01c0cdc8c4cdf5e20125a951f46dfa892a5fbb59ee7a38606b48"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/001/40-cells/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/instance.json",
+        "sha256": "0149da3bc101ea4274c9a003c710f4b71d9b9aad3b8a58edd4c5b71d6f612ff0"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle follows a curved approach ramp into a large signal-free intersection and begins a left turn onto the main diagonal road. Several cyclists or scooters move on surrounding approaches, while green vehicles and violet motorcycles travel along the main road; the ego enters after a crossing green vehicle has cleared, with no collision or close conflict.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/001/40-cells/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/trace.json.gz",
+        "sha256": "acea02687a3a7579044184d7c136361e5f6dac9882160b00bef4774df39a502c"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4",
+        "sha256": "d9d479694cfba96895d68e72e6eb94ce81479ee47dd639f045e0473de153f9a2"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/004/60-render2d/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/frames/frame-000.png",
+          "sha256": "b925b3e365b852e184ae55586da1ebc6f05a1703d03165e4446a0ced6330f3c4"
+        },
+        {
+          "file": "showcase-data/gallery-seed/004/60-render2d/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/frames/frame-001.png",
+          "sha256": "2c986129256a49d85e95be985a3ae75269f57e619098b3c6463458cafed5486e"
+        },
+        {
+          "file": "showcase-data/gallery-seed/004/60-render2d/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/frames/frame-002.png",
+          "sha256": "3a1b566a15927fc78bd66d6745fa5846ac761d10baa01111f03cacdef8c1203c"
+        },
+        {
+          "file": "showcase-data/gallery-seed/004/60-render2d/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/frames/frame-003.png",
+          "sha256": "bc9b3d600c7dc2ba421ddc351d9f87e51cf79e2d6a4cc3da1ff53e6d6b1c3535"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/004/40-cells/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/instance.json",
+        "sha256": "ede4113b1745c8ddd03d151aab7bc1fdd758e01cd16cbb3b65df75c9a0da82d6"
+      },
+      "label": null,
+      "requestText": "The blue ego vehicle travels steadily north along the divided road and passes several junctions while green vehicles move in the opposite direction and enter or turn from right-side roads; orange and violet two-wheelers also appear on the surrounding roads. Near the end, multiple green vehicles converge at a side-road junction, and a diagonal turning vehicle visibly overlaps a vehicle alongside the ego, producing an unrealistic pileup.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/004/40-cells/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/trace.json.gz",
+        "sha256": "616b8b4c84b29632e25c6637b0939347067226ce54ee80b6d070a0ff94c1ed18"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/004/60-render2d/emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac/rollout.mp4",
+        "sha256": "4c549a727a0ff9dd2e888ce0f0bb5cd28b8cac4664620b3950aa29934b5454aa"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/011/60-render2d/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/frames/frame-000.png",
+          "sha256": "cd2b6f89211fb5415e68d84912c9f16255a107237ce52d3305daf197f05bef7d"
+        },
+        {
+          "file": "showcase-data/gallery-seed/011/60-render2d/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/frames/frame-001.png",
+          "sha256": "c22e834ee6652344ec03dc4451c2b4bc7029e2f0b418a5388d5abdcb1ae9d42e"
+        },
+        {
+          "file": "showcase-data/gallery-seed/011/60-render2d/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/frames/frame-002.png",
+          "sha256": "706963b0a16ac8090a6e0905247e794a02790d64bd8bb9a8a92170e8711f291a"
+        },
+        {
+          "file": "showcase-data/gallery-seed/011/60-render2d/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/frames/frame-003.png",
+          "sha256": "1ca59a36c9c10dcca824afca5928ad2464a69d9ced33646ade65e5a17d9ce4e4"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/011/40-cells/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/instance.json",
+        "sha256": "331f233d146b61db274d8f1da76150d9e8cacb653cfbe33c5d036f4a3c86445a"
+      },
+      "label": null,
+      "requestText": "c1 lead hard brake",
+      "trace": {
+        "file": "showcase-data/gallery-seed/011/40-cells/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/trace.json.gz",
+        "sha256": "4d84534e843bf556b8efc94ff812fd1b7e13a9736f2c91735d66fa5256cffab6"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/011/60-render2d/emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1/rollout.mp4",
+        "sha256": "e154b377f191eab6c17a05ff3e21575e1dbdcd8bcfe257d01c7adcde18470736"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/frames/frame-000.png",
+          "sha256": "018e150ef959c13002d75d685d31662c7140ee8fa6db8ee306ed14433f8f88ad"
+        },
+        {
+          "file": "showcase-data/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/frames/frame-001.png",
+          "sha256": "fe39b91e28257b9059da5ad572880f36506989178efe72599cb67c181db0e8fb"
+        },
+        {
+          "file": "showcase-data/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/frames/frame-002.png",
+          "sha256": "8212b7833f5cedf6be706b81a8a9ea79c0693efba0ccbce47ed3d7afcc413e99"
+        },
+        {
+          "file": "showcase-data/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/frames/frame-003.png",
+          "sha256": "ccceeba2ca3bdbf2da879593ee0e9238a0ab7411dd426979fa6891e8343a6f4c"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/instance.json",
+        "sha256": "2459810112bcb73f98e323131e03eb0f8fa589d0ce8df09fbfd12a8072afca7e"
+      },
+      "label": null,
+      "requestText": "c11 backing out",
+      "trace": {
+        "file": "showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/trace.json.gz",
+        "sha256": "57abb9ea5247303f28d785abed9b6f5af77ba8c00bf4ed0659435f6dfc94b89d"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4",
+        "sha256": "eb033877a0a99bcf49e8137618ea418cc0757220fa62725d631be2a1cc7bd5d2"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c2-weave.city-yale-street-498b1a48-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/009/60-render2d/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/frames/frame-000.png",
+          "sha256": "7c21274ec9caaa1f5423b234a601d8b4a9ec4eebdab04c132f753f0f85ba06ed"
+        },
+        {
+          "file": "showcase-data/gallery-seed/009/60-render2d/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/frames/frame-001.png",
+          "sha256": "8d9b856df92ac0db103bf28dccc3964170ebd50d66fa58dbdc6b335def00f0a0"
+        },
+        {
+          "file": "showcase-data/gallery-seed/009/60-render2d/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/frames/frame-002.png",
+          "sha256": "0c33bde69e4e44277bc34384be61ecb49faabffb1f3601f3b502921e10baa80e"
+        },
+        {
+          "file": "showcase-data/gallery-seed/009/60-render2d/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/frames/frame-003.png",
+          "sha256": "188c5e9d2b38e7ed57a978ed95bd19c75c36ce7862ad93dd525f7f79bc9ba18a"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/instance.json",
+        "sha256": "51bc070ea18ccd66f032928934956bbf69d01215f6f90c8c6ad5b14ed623b6a5"
+      },
+      "label": null,
+      "requestText": "c2 weave",
+      "trace": {
+        "file": "showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/trace.json.gz",
+        "sha256": "7a4c84d8b53338e5ce24bb9467e50811cb580ca5b2d35241b07607f3868fb614"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/009/60-render2d/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/rollout.mp4",
+        "sha256": "fc6f89a5019f85a39eff8fa8dd4b3fa116fa0ab44a2b23987310156ce57a78ed"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/frames/frame-000.png",
+          "sha256": "456d58da2d9146c1670599a8457e40ebd7b6f92ee848d7ba7be1a6bcab77ecac"
+        },
+        {
+          "file": "showcase-data/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/frames/frame-001.png",
+          "sha256": "00b619d2c577fa8537f70f0c3cfa0c9f65df68c825039a37b140028b072d4c75"
+        },
+        {
+          "file": "showcase-data/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/frames/frame-002.png",
+          "sha256": "4a08c652700c1e7eb4b291d97a761d0960cf3266a6487a5611b32d17c86c3cc7"
+        },
+        {
+          "file": "showcase-data/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/frames/frame-003.png",
+          "sha256": "663e5ca75d838e104021bf71022403b9ad2b99c1c9b8693dc7b5e179c440729d"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/010/40-cells/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/instance.json",
+        "sha256": "ef339df00a92e1f31a42e9707f60160d4ce7f1721669f4cd223b52268419eb1f"
+      },
+      "label": null,
+      "requestText": "c3 left hook ptw",
+      "trace": {
+        "file": "showcase-data/gallery-seed/010/40-cells/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/trace.json.gz",
+        "sha256": "fb58907f7a2e157c3338a4086d44f983b36b3b35e4dda1ef028487b55f5dcfa4"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4",
+        "sha256": "e87381b0b77bbde0f56fef4c0d0d55411de5684c0cf9678d73278ef6a0fa4f5f"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/012/60-render2d/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/frames/frame-000.png",
+          "sha256": "d179a4e8b92434691fabf48eebd8067d378c4516c400769d933750f7883f0e5b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/012/60-render2d/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/frames/frame-001.png",
+          "sha256": "6c80bc4a7892e92fc9d957eb6de46547b2ead63e9504fbb538579dde51e532e1"
+        },
+        {
+          "file": "showcase-data/gallery-seed/012/60-render2d/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/frames/frame-002.png",
+          "sha256": "4488807dd34dcfa7bb61cb718556a642b75b910bfa33a6c4678fe1776c40217a"
+        },
+        {
+          "file": "showcase-data/gallery-seed/012/60-render2d/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/frames/frame-003.png",
+          "sha256": "0f6e5ba9a95e1e2e3fa2288553fdafb48e498ae4be5e13073937ce90ba598775"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/012/40-cells/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/instance.json",
+        "sha256": "852f7e7e223310cfa6a8bd4155785f32193b6c41b1f0cb96f4b195174a6dcee7"
+      },
+      "label": null,
+      "requestText": "c7 bus occludes cyclist",
+      "trace": {
+        "file": "showcase-data/gallery-seed/012/40-cells/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/trace.json.gz",
+        "sha256": "708e745fbd17aab81abdc324dee60eae5db56097ed23ad1b6987279566b88348"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/012/60-render2d/emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0/rollout.mp4",
+        "sha256": "69210a6679d949f734a55711af7f844cb8ecac95c503b1eae4eca1978454ad11"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/frames/frame-000.png",
+          "sha256": "2d3d8e7f55b5e1e8860b702f489cf2ea6ef65f1c53f4ec5d650a3fb711c115fc"
+        },
+        {
+          "file": "showcase-data/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/frames/frame-001.png",
+          "sha256": "e4d89f6cfe8bf25d68aaef28ed907cd46b997c7ed2348bc6fe9c9b59cf9a9c68"
+        },
+        {
+          "file": "showcase-data/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/frames/frame-002.png",
+          "sha256": "5c6edf77eb6a20929c8fcb5e452841cae777ac7bc0e39cfb4d2e584e72cfe0b5"
+        },
+        {
+          "file": "showcase-data/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/frames/frame-003.png",
+          "sha256": "3be5582138beb56810549e5e388834be1738759dcef626a6db575d92e2bb8969"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/008/40-cells/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/instance.json",
+        "sha256": "f070e3b497407853ff47e6305de341288a138b0ba4435610f35185416afd69f0"
+      },
+      "label": null,
+      "requestText": "c8 night zone",
+      "trace": {
+        "file": "showcase-data/gallery-seed/008/40-cells/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/trace.json.gz",
+        "sha256": "01d1deb28909a155d3a308b5515c9e58db366692e7b6786982898bcdade75f4f"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4",
+        "sha256": "b40c4bb89dd4d05255eab17362be0a062bf9aaff8eaeb81010bfdcaa77f73f8e"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/016/60-render2d/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/frames/frame-000.png",
+          "sha256": "6dd0a2aba7d72b46baf496c3eb8bb32bef29df30caa705e7f3072a62e57af498"
+        },
+        {
+          "file": "showcase-data/gallery-seed/016/60-render2d/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/frames/frame-001.png",
+          "sha256": "7a6ca58209322d3bbccbb96eef20148e19590118ae1d0849f62c4e8560fb8874"
+        },
+        {
+          "file": "showcase-data/gallery-seed/016/60-render2d/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/frames/frame-002.png",
+          "sha256": "ef3bce9cf128a803e2e968836e20252b00cea894cf361842fb6d013cc30a646b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/016/60-render2d/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/frames/frame-003.png",
+          "sha256": "ea6e61082cdd24b932196cfd54b30243c46b0df8b2f9b7d6f307dbd1d2ef334c"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/016/40-cells/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/instance.json",
+        "sha256": "eb43569fa0dfe91ea10e4dca17e57c0c3378ce194ab03f9c40c27e11d9250b00"
+      },
+      "label": null,
+      "requestText": "A vehicle crosses the ego lane to reach an exit.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/016/40-cells/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/trace.json.gz",
+        "sha256": "3bd9aff785df6d9c4c42e9330ee7c6b6164711348599a6af634e32946c5faf37"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/016/60-render2d/freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001/rollout.mp4",
+        "sha256": "38dc846cafcf1ab2f4b3c190b90dd9466cbb14483b48b8f027a7329acf6b3468"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/018/60-render2d/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/frames/frame-000.png",
+          "sha256": "63307bb408ea530d1e0a5f210cb1ebe13cfd46ed8bbddc17fa7ad53341692a0f"
+        },
+        {
+          "file": "showcase-data/gallery-seed/018/60-render2d/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/frames/frame-001.png",
+          "sha256": "ee9437c1b6e0dee2a1a2ba35104863367a24d7db1c250239de7ff8df5efaf9ec"
+        },
+        {
+          "file": "showcase-data/gallery-seed/018/60-render2d/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/frames/frame-002.png",
+          "sha256": "3bee2dd9faa800169c36eb3c6c0de51e2f811a32cfd01afb5c2088c13d770535"
+        },
+        {
+          "file": "showcase-data/gallery-seed/018/60-render2d/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/frames/frame-003.png",
+          "sha256": "03d6c879670220659c4d7b0494cb4ee27f633aefd906e77ad0a2d1412de72c1c"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/instance.json",
+        "sha256": "f6424ba7506f2ddb0c0a95651a7d7c6055bd03b0171981b229c8f5336b2f48ba"
+      },
+      "label": null,
+      "requestText": "A vehicle yields late and encroaches into the ego path.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/trace.json.gz",
+        "sha256": "2b5530abceee28e9bea434257d9157be70c25ec3c4d923761a42419935c6c61b"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/018/60-render2d/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/rollout.mp4",
+        "sha256": "dd668e57fc5450e8ff4c8f3c998b644a3c5c928a4f2e4712a75854a2de124ce8"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/frames/frame-000.png",
+          "sha256": "8a17dfdb6fa7734a49c635b04c8a4b63db148e9cab17526bab829464e69b9fc8"
+        },
+        {
+          "file": "showcase-data/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/frames/frame-001.png",
+          "sha256": "5bb63122b37faa5cf2cae2dd9850c93a6b90e6a9f104be50838d59488fbeaac5"
+        },
+        {
+          "file": "showcase-data/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/frames/frame-002.png",
+          "sha256": "3504608f3f1783267a58bd650b73c4d978cd060ac2f13cd4a95c8c0be0d7c120"
+        },
+        {
+          "file": "showcase-data/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/frames/frame-003.png",
+          "sha256": "a13a9e9c034f12f23735fa371c54f70d52bae44414ca473b64a3317048667633"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/015/40-cells/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/instance.json",
+        "sha256": "34268b4110965abf8e715194a9ec915388cdc7d29a7db5896fe9489de9406cea"
+      },
+      "label": null,
+      "requestText": "A cyclist turns left across the ego path.",
+      "trace": {
+        "file": "showcase-data/gallery-seed/015/40-cells/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/trace.json.gz",
+        "sha256": "0ba7bf7a17815c0d4fec8d87e7ee4be6552c25d846c40131c36745023c38574d"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4",
+        "sha256": "c6a1bcef57e7db3ad061accce7e970b42717ba885148bf220bf37067a57d4866"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/014/60-render2d/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/frames/frame-000.png",
+          "sha256": "1e6a271a3a13a62207ab1afc1333c4cf2a8b4078ff0698d0b2eb6ed42f3a55e3"
+        },
+        {
+          "file": "showcase-data/gallery-seed/014/60-render2d/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/frames/frame-001.png",
+          "sha256": "d18fd213e3b83151797e6f186f06cd4e5a887fd4ade3bafde945260aecd88784"
+        },
+        {
+          "file": "showcase-data/gallery-seed/014/60-render2d/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/frames/frame-002.png",
+          "sha256": "55e31e45e6846b233811f12ad98984fb6fdaf903094e670fdb132a409b4b18bb"
+        },
+        {
+          "file": "showcase-data/gallery-seed/014/60-render2d/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/frames/frame-003.png",
+          "sha256": "fce916409e98df39c395e17f40ccdd8403970b105ab875f434a92639b1be7d24"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/instance.json",
+        "sha256": "820d6e1898d08832621d98d63780e1e732dcf3e22afa652802ab57e6080e114f"
+      },
+      "label": null,
+      "requestText": "Driver drifting across a lane while texting",
+      "trace": {
+        "file": "showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/trace.json.gz",
+        "sha256": "3c4f4dabf461c1fbf479ed008c55fc02fbf095c5b4d3d265cfb8b07cfd708e28"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/014/60-render2d/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/rollout.mp4",
+        "sha256": "7da39143e4149b52640bd91bb1d299e158b10367549ddeda200a3afd06b86ae1"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/013/60-render2d/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/frames/frame-000.png",
+          "sha256": "47c3b53806c06146efbdc4e402ae58499a5a571b0939b70d0f2915c300b49a8d"
+        },
+        {
+          "file": "showcase-data/gallery-seed/013/60-render2d/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/frames/frame-001.png",
+          "sha256": "11ea4583fef612a1c129b05a96bece889d73dcce61d452bf9501b359ccd40a91"
+        },
+        {
+          "file": "showcase-data/gallery-seed/013/60-render2d/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/frames/frame-002.png",
+          "sha256": "72e24eb182c96c5aa048cbe488ebc2274d295ae7d7f93ebb9060bda8d7478742"
+        },
+        {
+          "file": "showcase-data/gallery-seed/013/60-render2d/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/frames/frame-003.png",
+          "sha256": "3fa3bcb61743789fe6261ae8df0f20cbedc5a300d35faa9cf2c629d21166881a"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/013/40-cells/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/instance.json",
+        "sha256": "6b8b96d820ff404d6d8855adbbfdbb3826fa00a03c427a166e54e1ed7e14fa8a"
+      },
+      "label": null,
+      "requestText": "Newly painted lanes not reflected in the HD map",
+      "trace": {
+        "file": "showcase-data/gallery-seed/013/40-cells/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/trace.json.gz",
+        "sha256": "0264608a48eb68d574ab4ccce612eabdd345bd7527f138fb90b9992860860b4d"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/013/60-render2d/freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001/rollout.mp4",
+        "sha256": "b532f7ca9604c7455685a5edbf374ae128eb88949d63bfd55bc133f119879131"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/017/60-render2d/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/frames/frame-000.png",
+          "sha256": "7f47507f058356b6f73e0477cf00e31e18a4d10bd34340de685b9c70e3dbea9b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/017/60-render2d/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/frames/frame-001.png",
+          "sha256": "d9550e4d3b33704b93497c1ebfb037753e21e557218ceac1e54dc152047c4387"
+        },
+        {
+          "file": "showcase-data/gallery-seed/017/60-render2d/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/frames/frame-002.png",
+          "sha256": "956e7bc6c18297ccef0b157e9dcff34b27ed800b9ecc56bffa6869f532ba596d"
+        },
+        {
+          "file": "showcase-data/gallery-seed/017/60-render2d/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/frames/frame-003.png",
+          "sha256": "ebdf383974db07e167ef4e0fdb78e8bf68611273e0a1ae06f2837ac270b2c44e"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/instance.json",
+        "sha256": "0fb73558f7da9ebceb0110f9f9f06a0b8645b9cb7e928c93fd57626b4957b18f"
+      },
+      "label": null,
+      "requestText": "Driver reversing on a freeway shoulder",
+      "trace": {
+        "file": "showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/trace.json.gz",
+        "sha256": "a2b84992f93e83343536bf48bbfd7ab39c6a53e418d7ad38b50f67a3985da97e"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/017/60-render2d/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/rollout.mp4",
+        "sha256": "39548c5dbdf99ea8e2175ee4b85a0c761e03e49e32af46d2205c40c5d61f9362"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/021/60-render2d/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/frames/frame-000.png",
+          "sha256": "764d71ea26155fc0e61b7bc985a4476439706f22be80adaa93137cbf13e619ed"
+        },
+        {
+          "file": "showcase-data/gallery-seed/021/60-render2d/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/frames/frame-001.png",
+          "sha256": "d269b131db3a23a4353f61732649ec92ee7fc11242bdef7886d57383f34a5d5b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/021/60-render2d/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/frames/frame-002.png",
+          "sha256": "d669fbb8ec6ce146ccfe72193b0a40fff43fed6b1b64c0dac1af7380a91a9e47"
+        },
+        {
+          "file": "showcase-data/gallery-seed/021/60-render2d/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/frames/frame-003.png",
+          "sha256": "4c3878aa7c9405003384aec88648acd2dfd9af42e1c8c817530b646f24b3f054"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/021/40-cells/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/instance.json",
+        "sha256": "9dec584516b5ab3a41a9380b15540d8506513eec5c7046452fe30e733e2b0744"
+      },
+      "label": null,
+      "requestText": "c4b ped at exit",
+      "trace": {
+        "file": "showcase-data/gallery-seed/021/40-cells/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/trace.json.gz",
+        "sha256": "449e6a9c92ba5969d5f51123afe91ea1b883e67b8590c6440d0d26cf53e2ed75"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/021/60-render2d/vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1/rollout.mp4",
+        "sha256": "153abb137165c1a95dca010c491bfda519a052e1ede885d0b180c8cd19e0a9fb"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/020/60-render2d/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/frames/frame-000.png",
+          "sha256": "9ec12a3b404571a1c0006384f918424978be6c4f3eb6ca9a4964855c21056200"
+        },
+        {
+          "file": "showcase-data/gallery-seed/020/60-render2d/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/frames/frame-001.png",
+          "sha256": "72d8aac7dc7d49a86d6b07a50231a1155cea63c67bedca1bebf84ca6ace4a8ad"
+        },
+        {
+          "file": "showcase-data/gallery-seed/020/60-render2d/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/frames/frame-002.png",
+          "sha256": "58f125adbe899dbb3d2faae2657f5226e626da36d7c12c8fa1af349372e0cd4e"
+        },
+        {
+          "file": "showcase-data/gallery-seed/020/60-render2d/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/frames/frame-003.png",
+          "sha256": "5ffd52ea8d602ee70ed651826d3223543caaee67ca94f3fa4ecd74431d3bbc73"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/instance.json",
+        "sha256": "5b99600613bb3d61ef2c9253e60ee3be0c9252dae98115ca918286396efd2ba4"
+      },
+      "label": null,
+      "requestText": "c5 reversing ped",
+      "trace": {
+        "file": "showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/trace.json.gz",
+        "sha256": "75b9e34e7e86f063d98d5e9c4116d78f834887931919573bba848832bf4dbd50"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/020/60-render2d/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/rollout.mp4",
+        "sha256": "2b7371f61031b0ef95503e9bfaea2d6bffda66c449411fa29e35e18a7aa07037"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/023/60-render2d/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/frames/frame-000.png",
+          "sha256": "d36e9ce621cb7ebc23d131e0ccfff98706453a11450c66923d4f697a5c04d25a"
+        },
+        {
+          "file": "showcase-data/gallery-seed/023/60-render2d/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/frames/frame-001.png",
+          "sha256": "212b4b03271aef0519e06730b7ff8c47e477ad25e421ba6ef4b39672cfb86324"
+        },
+        {
+          "file": "showcase-data/gallery-seed/023/60-render2d/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/frames/frame-002.png",
+          "sha256": "9285db179dff1fd82b592772a90e35ba15b26da567e4f88330f20daa8e20b896"
+        },
+        {
+          "file": "showcase-data/gallery-seed/023/60-render2d/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/frames/frame-003.png",
+          "sha256": "e6148054121161b72bdf38f391ac4ce936b8927def4a22996bbd83a83bd66b65"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/instance.json",
+        "sha256": "b4626bae57a589e73555fde5a8e6668182bfceba4ef0aa47692e895cedf3945d"
+      },
+      "label": null,
+      "requestText": "c9 animal",
+      "trace": {
+        "file": "showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/trace.json.gz",
+        "sha256": "98377437e64783168505f4fc510602b53f8669a7e0ca231c1b8108bc1893c7cf"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/023/60-render2d/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/rollout.mp4",
+        "sha256": "f5b147987d363384ad01cd410086ae993ab9bd89f6a1007e6683793e55fa9532"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/frames/frame-000.png",
+          "sha256": "a3ba213138853fae426b3800e6c1e3ff96b5067da1d44e4e1cafb12765fa27a8"
+        },
+        {
+          "file": "showcase-data/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/frames/frame-001.png",
+          "sha256": "c38508bf8e855d83c73e7410d6d7cf0f0f69cc7896cc4b50dc350cce8e1fc968"
+        },
+        {
+          "file": "showcase-data/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/frames/frame-002.png",
+          "sha256": "c9508ec08af5d5aad5b415bb5be3c3367c2b850f61af8835bea470183d87d7e5"
+        },
+        {
+          "file": "showcase-data/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/frames/frame-003.png",
+          "sha256": "731533ea30ee41f898476205b6cc28a5764f1db8364b24ec0c6c518064cb3c2a"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/019/40-cells/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/instance.json",
+        "sha256": "5a053dbed5d8c1d8668281e8680a2cfe4755b1f8fc6e7fea17f24ea83e396cbc"
+      },
+      "label": null,
+      "requestText": "owner erratic behavior scooter weaving between cars",
+      "trace": {
+        "file": "showcase-data/gallery-seed/019/40-cells/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/trace.json.gz",
+        "sha256": "1008679bb236bd6447ffc3d1c9848981e6d6020de8cc892c8c78de4063e6fc2a"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4",
+        "sha256": "d9b6232027b92935f65838f9ff3e01100fddb2d28186a3e87bb48daf66ea5a26"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/frames/frame-000.png",
+          "sha256": "b5e65908137469aaee13e4dc050f6e49f61f5f14a89fbd50c07a38054486f036"
+        },
+        {
+          "file": "showcase-data/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/frames/frame-001.png",
+          "sha256": "75e9a150096988755ab1d67480173972a288807377e576e19112241c8913152b"
+        },
+        {
+          "file": "showcase-data/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/frames/frame-002.png",
+          "sha256": "480e34717ac7fde1eecec97eac7f33a262ca9e1922420041d2361a414541e69f"
+        },
+        {
+          "file": "showcase-data/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/frames/frame-003.png",
+          "sha256": "58e539db85e22036d5ab388f59c4380e2c9bbf8e41b0788ac3818df1630d9d7d"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/instance.json",
+        "sha256": "9cfef80a3c7e72b54e71e44eaf57a8d84ad9333fddf4f72677c10187dab8762b"
+      },
+      "label": null,
+      "requestText": "owner map divergence faded lane markings",
+      "trace": {
+        "file": "showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/trace.json.gz",
+        "sha256": "3a62b0ad8a2a0429c139baad23f96e036b69dc4c4125a06b959574888904de09"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4",
+        "sha256": "69647b86ba1c33371da6998dd13f855e996d2be9959ac355a9327d92ca19544b"
+      }
+    },
+    {
+      "caseId": null,
+      "evidenceId": "vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1",
+      "frames": [
+        {
+          "file": "showcase-data/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/frames/frame-000.png",
+          "sha256": "373f8d452dcea3d4310d2a0b9d64757f34be5037e0d6128e1da7fd6d89318c56"
+        },
+        {
+          "file": "showcase-data/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/frames/frame-001.png",
+          "sha256": "0614adba69b606b9b21ee36f06bd6678c7b2f0e189d410198efc3ef7553cfdba"
+        },
+        {
+          "file": "showcase-data/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/frames/frame-002.png",
+          "sha256": "1cfbe11f6c0b0df2b8b5d547ba223a46e6e8bbcb5aa8a950a15894298ac8e19c"
+        },
+        {
+          "file": "showcase-data/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/frames/frame-003.png",
+          "sha256": "411874b7e9d359b0517b6c39a856aa4a8972e330805c8148fe7f0db2977ba18c"
+        }
+      ],
+      "instance": {
+        "file": "showcase-data/gallery-seed/024/40-cells/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/instance.json",
+        "sha256": "fa2739225c6e1be43e494bbb6e8b79057c7d9e720b9bb2a1cd6f2c0c9a86a2e0"
+      },
+      "label": null,
+      "requestText": "owner sudden hazards person chasing a dog into the road",
+      "trace": {
+        "file": "showcase-data/gallery-seed/024/40-cells/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/trace.json.gz",
+        "sha256": "dbbf0f1501fe65dc5125e13363ca13fe8c81287e874760bda6f1c485b466fd1c"
+      },
+      "video": {
+        "file": "showcase-data/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4",
+        "sha256": "cc554df8a3f142578dfa66a83ff55d6dde0ccf7c1413598f570b9c97b17739d9"
+      }
+    }
+  ],
+  "id": "reviewer-gold-v1",
+  "labelInstructions": "Human reviewers only. Watch the exact video referenced by its sha256, then set semanticAccepted (the scene implements the requested mechanism, actors, and event order) and presentationAccepted (grounded, plausible, defect-free render). Use defectCodes from the review contract's vocabulary below and leave unsupportedReason null unless the stack cannot represent the request at all. Any model-produced field makes the entry unusable for calibration.",
+  "labelProvenance": "human",
+  "manifestSha256": "5fde2011a99880ad24d7ef466c721a76a13d23b9643347c695274bad3604e978",
+  "reviewContract": {
+    "confidenceMin": 0.6,
+    "defectCodes": [
+      "capture.empty",
+      "capture.encoding",
+      "capture.duration",
+      "capture.frame",
+      "render.camera.motion",
+      "render.camera.exposure",
+      "render.camera.occlusion",
+      "render.camera.framing",
+      "render.asset.missing",
+      "render.asset.grounding",
+      "render.asset.geometry",
+      "render.asset.material",
+      "render.asset.lod",
+      "simulation.collision",
+      "simulation.kinematics",
+      "simulation.pose",
+      "simulation.trajectory",
+      "scenario.mechanism",
+      "scenario.actors",
+      "scenario.sequence",
+      "scenario.trigger",
+      "scenario.plausibility",
+      "scenario.realism",
+      "scenario.gate",
+      "judge.uncertain"
+    ],
+    "fields": [
+      "semanticAccepted",
+      "presentationAccepted",
+      "defectCodes",
+      "unsupportedReason"
+    ],
+    "realismMin": 6,
+    "reviewVersion": "showcase-3d-review-v5",
+    "sha256": "ab1ab5408b022bee6c0fefc66a3cd981c5b58d1318ce88bd698d8c7ad1df5f7f",
+    "version": "showcase-acceptance-contract-v1"
+  },
+  "schema": "uniscenarios.showcase-reviewer-gold.v1"
+}

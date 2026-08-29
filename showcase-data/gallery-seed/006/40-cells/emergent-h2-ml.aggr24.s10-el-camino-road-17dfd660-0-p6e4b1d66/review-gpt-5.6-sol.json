@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      4.36,
+      8.72,
+      10.26,
+      11.64,
+      12.26,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 19.87,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 931,
+      "reasoning": 811
+    }
+  },
+  "cellId": "emergent-h2-ml.aggr24.s10-el-camino-road-17dfd660-0-p6e4b1d66",
+  "confidence": 0.88,
+  "defects": [
+    "overlap",
+    "frozen_actor",
+    "other:vehicles are chaotically clustered at conflicting angles across the intersection"
+  ],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle travels along the multilane road into a large intersection, turns toward the median, and then remains stopped near its tip. Several green vehicles move through or bunch around the intersection and crosswalk while orange cyclists pass through; the cluster includes intersecting vehicle footprints and a cyclist ending against a vehicle.",
+  "model": "gpt-5.6-sol",
+  "plausible": false,
+  "rawResponseSha256": "79fb984bb7fa266ca92f52dd75b97ecb2fbedf946d348d4dbb67171ffa9760f3",
+  "realism": 4.0,
+  "visionAsserted": true
+}

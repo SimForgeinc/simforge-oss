@@ -1,0 +1,39 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Emergent harvest: ego cruises a multilane corridor in dense ambient traffic",
+    "description": "World scaffolding for emergence harvesting (rethink stream C). Ego cruises a multi-lane (>=2 same-direction) corridor with NO scripted challenger; dense heterogeneous ambient population supplies all other motion. Because ambient candidates are structurally excluded from the ego's own lanes (authored-corridor reservation, traffic.ts), ego-involved events here are limited to adjacent/crossing geometry; the template's main harvest value is ambient-to-ambient merge/queue events for the taxonomy, at low cost. Clip 16 s.",
+    "createdAt": "2026-08-16T00:00:00.000Z",
+    "modifiedAt": "2026-08-16T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "emergent.multilane-corridor",
+    "tags": ["emergent", "harvest", "ambient", "multilane", "merge"],
+    "author": "agent/rethink-emergent",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "emergent-multilane",
+    "corridor": {
+      "throughLanesSameDir": { "value": [2, 6], "essentiality": "required" },
+      "curvatureDegPer10m": { "value": [0, 8], "essentiality": "preferred", "weight": 1 },
+      "runwayDownstreamM": { "value": [200, null], "essentiality": "required" }
+    },
+    "features": [],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle cruising among ambient lanes",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": 20, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.65 * lane.speedLimitKph, 25, 42)"
+    }
+  ],
+  "props": [],
+  "choreography": { "clipSeconds": 16, "warmupSeconds": 2, "interactions": [] },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

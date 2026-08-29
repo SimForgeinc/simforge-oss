@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/008/40-cells/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/instance.json",
+    "judge": "gallery-seed/008/40-cells/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0",
+    "trace": "gallery-seed/008/40-cells/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/trace.json.gz",
+    "video": "gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4"
+  },
+  "brief": "c8 night zone",
+  "cellId": "emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0",
+  "dynamism": 7.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 1.408,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 5.08
+  },
+  "headline": "/artifacts/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4",
+  "id": "seed-008",
+  "jobId": "seed-008",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.2,
+        2.46,
+        3.46,
+        4.46,
+        5.46,
+        7.28,
+        10
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 12.2,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 621,
+        "reasoning": 516
+      }
+    },
+    "cellId": "emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0",
+    "confidence": 0.91,
+    "defects": [],
+    "dynamism": 7.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle travels south on the central road, turns right onto a westbound side street, and continues toward the larger curved arterial. It passes an oncoming green vehicle without contact while several other green vehicles move through nearby roads; an orange cyclist or scooter is also visible on the arterial near the end. No collision or abnormal interaction occurs.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "b804db99f8ad5fd7eff75d2a40f8cd4f9770dcea8cb92f6821f595ec7caa21e1",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "belmont-research-center",
+  "maps": [
+    "belmont-research-center"
+  ],
+  "media": "/artifacts/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.91,
+    "dynamism": 7.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-pair1",
+  "timings": {
+    "render2dWallS": 0.794
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/008/60-render2d/emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0/rollout.mp4"
+}

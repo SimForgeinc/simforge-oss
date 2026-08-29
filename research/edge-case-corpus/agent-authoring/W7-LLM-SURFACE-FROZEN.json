@@ -1,0 +1,14 @@
+{
+ "id": "w7-llm-authoring-surface-v1",
+ "frozenAt": "2026-08-16T03:32:22Z",
+ "file": "tools/gates/author_llm.py",
+ "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb",
+ "model": "gpt-5.6-luna",
+ "reasoningEffort": "medium",
+ "modelHarness": {"file": "research/edge-case-corpus/tools/vista/vlm.py", "sha256": "4b157f249c4aa6687361e7328c7280a3ffcfdac83ae1983a838b5ccf96cda005"},
+ "endpoint": "OPENAI_BASE_URL=http://127.0.0.1:4141/v1 (omp auth-gateway; see the labelled DEVIATION in FINDINGS-TRAINING-GRADE.md)",
+ "protocol": "per brief: author -> (one repair on validation failure) -> probe batch draws=4 maxSites=6 -> (one revise on non-admission, fed the measured per-criterion census and refusal codes) -> final batch draws=10 maxSites=10; admission measured on the final batch only, frozen physical gate v2, all metrics from the raw trace",
+ "policy": "Developed on DEV only (DEV = 51/73 = 0.6986 at freeze). HELDOUT is authored ONCE through this exact file with zero per-brief tuning and no further edits. Any change after this point invalidates the generalization gap and must be re-frozen and re-reported.",
+ "notComparableTo": "the published 0.466 DEV baseline: the round-6 tool surface is not on disk (M0.5/M6 in FINDINGS), so this is a REBUILT surface -- same model, same effort, same frozen gate, same frozen split, different authoring vocabulary. Reported as its own measurement.",
+ "llmNondeterminismNote": "the authoring calls are not deterministic; the ARTIFACTS (templates) are, and replay determinism is measured on them"
+}

@@ -1,0 +1,344 @@
+{
+ "rows": [
+  {
+   "case": "unprotected-left-dense",
+   "title": "Unprotected left turn across dense traffic",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "four-way-stop-behavior",
+   "title": "Four-way stops with hesitant or aggressive drivers",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "wave-through",
+   "title": "Drivers waving you through against right-of-way",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "midblock-will-they",
+   "title": "Pedestrian will-they-won't-they crossing mid-block",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "double-park-negotiation",
+   "title": "Double-parked vehicles forcing informal lane negotiation",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "narrow-residential-parking",
+   "title": "Narrow residential streets with parked cars on both sides",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "hostile-zipper-merge",
+   "title": "Highway zipper merge where drivers refuse to cooperate",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "school-bus-kids",
+   "title": "School bus loading or unloading with unpredictable kids",
+   "evidence": "no video (authoring unsupported)"
+  },
+  {
+   "case": "blind-driveway-backing",
+   "title": "Driver backing out of driveway without clear visibility",
+   "evidence": "no video (authoring unsupported)"
+  },
+  {
+   "case": "procession-escort",
+   "title": "Funeral processions or police escorts ignoring normal rules",
+   "evidence": "no video (authoring unsupported)"
+  },
+  {
+   "case": "suv-crosswalk-occlusion",
+   "title": "Large SUV blocking view of crosswalk",
+   "evidence": "no video (authoring unsupported)"
+  },
+  {
+   "case": "box-truck-turn-occlusion",
+   "title": "Box truck blocking right turn sight line",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "blind-crest-queue",
+   "title": "Blind crest of hill with stopped traffic beyond",
+   "evidence": "no video (authoring unsupported)"
+  },
+  {
+   "case": "construction-visual-tunnel",
+   "title": "Construction barriers creating visual tunnels",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "parked-car-running-child",
+   "title": "Parked cars hiding a running child",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "rain-fog-sunset-glare",
+   "title": "Dense rain fog or glare at sunset",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "snowbank-narrowing",
+   "title": "Snowbanks narrowing the roadway",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "emergency-light-exposure",
+   "title": "Flashing emergency lights overwhelming camera exposure",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "manual-police-direction",
+   "title": "Police manually directing traffic against a signal",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "worker-hand-signals",
+   "title": "Construction worker using hand signals",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "flashing-yellow-arrow",
+   "title": "Flashing yellow arrows changing turn logic",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "reversible-lanes",
+   "title": "Reversible commuter lanes",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "unclear-detour",
+   "title": "Detours with unclear signage",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "signal-blackout-four-way",
+   "title": "Stoplight blackout becoming an implicit four-way stop",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "snow-covered-markings",
+   "title": "Snow-covered lane markings",
+   "evidence": "2D only (camera-composition)"
+  },
+  {
+   "case": "gas-station-chaos",
+   "title": "Gas stations with cars moving in all directions",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "drive-thru-pedestrian",
+   "title": "Drive-thru lanes crossing pedestrian walkways",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "airport-dropoff",
+   "title": "Drop-off zones at airports",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "rv-campground",
+   "title": "RV campgrounds",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "private-road-markings",
+   "title": "Private roads with non-standard markings",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "unmarked-dirt-lot",
+   "title": "Dirt or gravel lots with no lane markings",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "grass-overflow-parking",
+   "title": "Event overflow parking on grass fields",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "tire-debris",
+   "title": "Tire debris in lane",
+   "evidence": "2D only (stacked-decks)"
+  },
+  {
+   "case": "falling-cargo",
+   "title": "Mattress or ladder falling off a truck",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "freeway-animal",
+   "title": "Animal darting into the freeway",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "dog-chase",
+   "title": "Person chasing a dog into the road",
+   "evidence": "2D only (other)"
+  },
+  {
+   "case": "illegal-intersection-uturn",
+   "title": "Car doing an illegal U-turn in an intersection",
+   "evidence": "2D only (camera-composition)"
+  },
+  {
+   "case": "freeway-shoulder-reversing",
+   "title": "Driver reversing on a freeway shoulder",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "runaway-shopping-cart",
+   "title": "Rolling runaway shopping cart",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "fast-lane-splitting",
+   "title": "Motorcycle lane splitting at high speed",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "vehicle-door-traffic",
+   "title": "Driver exiting a vehicle into a traffic lane",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "aggressive-tailgating",
+   "title": "Aggressive tailgating",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "road-rage",
+   "title": "Road rage behavior",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "texting-lane-drift",
+   "title": "Driver drifting across a lane while texting",
+   "evidence": "2D only (stacked-decks)"
+  },
+  {
+   "case": "unpredictable-cyclist",
+   "title": "Cyclist swerving unpredictably",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "weaving-scooter",
+   "title": "Scooter weaving between cars",
+   "evidence": "2D only (camera-composition)"
+  },
+  {
+   "case": "phone-pedestrian",
+   "title": "Pedestrian walking while staring at a phone",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "slow-elderly-crossing",
+   "title": "Elderly pedestrian moving slowly mid-intersection",
+   "evidence": "2D only (no-conflict-pair)"
+  },
+  {
+   "case": "stale-hd-map-lanes",
+   "title": "Newly painted lanes not reflected in the HD map",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "temporary-widening",
+   "title": "Temporary road widening",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "faded-markings",
+   "title": "Faded lane markings",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "misaligned-reflectors",
+   "title": "Misaligned lane reflectors",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "driveway-road-confusion",
+   "title": "Private driveway mistaken for a road",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "adversarial-cutin",
+   "title": "Human drivers testing an AV by cutting in aggressively",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "hyper-cautious-av",
+   "title": "Other AVs behaving hyper-cautiously",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "intentional-av-confusion",
+   "title": "Human intentionally confusing an AV",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "rideshare-curb-chaos",
+   "title": "Ride-share curb chaos",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "delivery-robot-crossing",
+   "title": "Robot delivery carts crossing the street",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "hydroplaning",
+   "title": "Hydroplaning onset",
+   "evidence": "2D only (no-conflict-pair)"
+  },
+  {
+   "case": "black-ice",
+   "title": "Black ice",
+   "evidence": "2D only (camera-composition)"
+  },
+  {
+   "case": "crosswinds",
+   "title": "Sudden crosswinds",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "flash-flooding",
+   "title": "Flash flooding",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "snow-road-geometry",
+   "title": "Snow accumulation altering road geometry",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "fog-sensor-disagreement",
+   "title": "Fog causing sensor disagreement",
+   "evidence": "2D only (preflight-invalid)"
+  },
+  {
+   "case": "school-arrival",
+   "title": "School arrival and departure areas",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "busy-parking-lot",
+   "title": "Parking lot navigation with heavy traffic",
+   "evidence": "3D + 2D"
+  },
+  {
+   "case": "blocked-normal-path",
+   "title": "Accident or construction blocking normal path",
+   "evidence": "3D + 2D"
+  }
+ ],
+ "summary": {
+  "both": 45,
+  "twoDOnly": 17,
+  "none": 5
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C12.school",
+ "originalIntent": "Euro NCAP VRU AEB CPNC child target plus MUTCD 7 school area controls. Child targets are shorter and emerge from between vehicles, so the occlusion and the band both matter. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "School environment: a child or crossing supervisor enters the ego path",
+ "version": 1
+}

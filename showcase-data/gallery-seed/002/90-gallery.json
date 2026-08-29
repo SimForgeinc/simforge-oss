@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/002/40-cells/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/instance.json",
+    "judge": "gallery-seed/002/40-cells/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5",
+    "trace": "gallery-seed/002/40-cells/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/trace.json.gz",
+    "video": "gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4"
+  },
+  "brief": "The blue ego vehicle travels along the divided arterial, enters the large junction, turns left, and then waits near a long green vehicle. Several green vehicles and violet motorcycles move through the junction while multiple orange cyclists or scooters approach and cross nearby; no collision occurs.",
+  "cellId": "emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5",
+  "dynamism": 8.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 0.52,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 11.2
+  },
+  "headline": "/artifacts/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4",
+  "id": "seed-002",
+  "jobId": "seed-002",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.46,
+        4.36,
+        8.72,
+        10.18,
+        11.4,
+        11.9,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 7.26,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 283,
+        "reasoning": 195
+      }
+    },
+    "cellId": "emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5",
+    "confidence": 0.84,
+    "defects": [],
+    "dynamism": 8.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle travels along the divided arterial, enters the large junction, turns left, and then waits near a long green vehicle. Several green vehicles and violet motorcycles move through the junction while multiple orange cyclists or scooters approach and cross nearby; no collision occurs.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "109f5543cc24c673ffa3313cc1dc448fe95a2e9b29ad87f589bb8875d6025ff1",
+    "realism": 7.0,
+    "visionAsserted": true
+  },
+  "map": "el-camino-road",
+  "maps": [
+    "el-camino-road"
+  ],
+  "media": "/artifacts/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4",
+  "realism": 7.0,
+  "scores": {
+    "confidence": 0.84,
+    "dynamism": 8.0,
+    "plausible": true,
+    "realism": 7.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-h2",
+  "timings": {
+    "render2dWallS": 1.221
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/002/60-render2d/emergent-h2-ml.aggr24.s8-el-camino-road-17dfd660-0-pe6e869c5/rollout.mp4"
+}

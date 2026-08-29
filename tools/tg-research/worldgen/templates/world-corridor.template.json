@@ -1,0 +1,39 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "World probe: ego cruises a corridor through ambient traffic",
+    "description": "Minimal world scaffolding for emergence mining: ego drives a straight corridor at cruise speed with NO scripted challenger and NO scripted conflict. All dynamics come from the seeded reactive ambient population. Traces are mined offline for near-critical encounters between ANY actor pair.",
+    "createdAt": "2026-08-15T00:00:00.000Z",
+    "modifiedAt": "2026-08-15T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "worldgen.corridor-cruise",
+    "tags": ["worldgen", "emergence", "ambient", "corridor"],
+    "author": "agent/tg-research-worldgen",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "worldgen-corridor",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 8], "essentiality": "required" },
+      "curvatureDegPer10m": { "value": [0, 8], "essentiality": "preferred", "weight": 1 },
+      "runwayDownstreamM": { "value": [150, null], "essentiality": "required" }
+    },
+    "features": [],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle cruising the corridor",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": 20, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 30, 60)"
+    }
+  ],
+  "props": [],
+  "choreography": { "clipSeconds": 30, "warmupSeconds": 2, "interactions": [] },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/015/40-cells/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/instance.json",
+    "judge": "gallery-seed/015/40-cells/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+    "trace": "gallery-seed/015/40-cells/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/trace.json.gz",
+    "video": "gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4"
+  },
+  "brief": "A cyclist turns left across the ego path.",
+  "cellId": "freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+  "dynamism": 4.0,
+  "engine": "freeform",
+  "gate": {
+    "clearanceM": 0.872,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 7.62
+  },
+  "headline": "/artifacts/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4",
+  "id": "seed-015",
+  "jobId": "seed-015",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.64,
+        4.9,
+        8,
+        9,
+        10,
+        13.1,
+        18
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 7.51,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 332,
+        "reasoning": 238
+      }
+    },
+    "cellId": "freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+    "confidence": 0.94,
+    "defects": [],
+    "dynamism": 4.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle drives south along the winding road, turns left from its perspective onto the eastbound road, and passes an orange cyclist or scooter traveling west in the opposite lane. The two pass safely without contact, after which the ego continues east and begins turning north at a later intersection.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "a787630408b86504c19cdb4c30a81b711b113f57139da1cd8eeaf9ba2e5d3e50",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "belmont-research-center",
+  "maps": [
+    "belmont-research-center"
+  ],
+  "media": "/artifacts/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.94,
+    "dynamism": 4.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-freeform-base1",
+  "timings": {
+    "render2dWallS": 0.623
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/015/60-render2d/freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002/rollout.mp4"
+}

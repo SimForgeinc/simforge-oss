@@ -2,7 +2,7 @@
 import base64, json, os, re, time
 import httpx
 
-URL = 'https://api.openai.com/v1/responses'
+URL = os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1').rstrip('/') + '/responses'
 MODEL = 'gpt-5.6-luna'
 
 

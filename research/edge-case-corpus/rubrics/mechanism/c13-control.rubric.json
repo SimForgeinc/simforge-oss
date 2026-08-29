@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "path_ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the conflict must be caused by the control change rather than coincide with it",
+   "id": "R-control-provokes",
+   "kind": "unsupported",
+   "reason": "causality between a signal phase and an encounter is not expressible in this vocabulary; it is what the blind mechanism-provenance judge is for",
+   "required": false
+  }
+ ],
+ "intentId": "C13.control",
+ "originalIntent": "This category is where the corpus was weakest. A signal phase change is not by itself an encounter: the census records C13.control as having no conflict mechanism at all, and 93% of its cells failed C3 clearance. The rubric therefore requires a genuine two-actor conflict in addition to whatever the control does. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Traffic control: a control change must PROVOKE a second actor, not merely occur",
+ "version": 1
+}

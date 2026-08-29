@@ -1,0 +1,225 @@
+{
+ "gate": "rubric replay (W4)",
+ "rubricFiles": 15,
+ "rubricLimit": 20,
+ "preRegistrationDrift": [],
+ "archetypesReplayed": 98,
+ "tracesEvaluated": 303,
+ "acceptedByBoth": 64,
+ "rejectedByOldToo": 6,
+ "newlyRejected": 28,
+ "newlyRejectedDetail": [
+  {
+   "archetype": "c1-crest-queue",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c1-lead-stopped",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c1-queue-tail",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c1-tailgated-brake",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c10-narrow-road",
+   "category": "C10.oncoming",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c11b-trolley",
+   "category": "C11.parking",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c14b-wet-braking",
+   "category": "C14.loss-of-control",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c1b-lead-stalls",
+   "category": "C1.car-following",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c2-cut-in-brake",
+   "category": "C2.cut-in-merge",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c3-scp",
+   "category": "C3.intersection",
+   "failedCriteria": [
+    "R-criticality"
+   ]
+  },
+  {
+   "archetype": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c5b-phone-distracted",
+   "category": "C5.pedestrian",
+   "failedCriteria": [
+    "R-criticality"
+   ]
+  },
+  {
+   "archetype": "c6-contraflow",
+   "category": "C6.cyclist-ptw",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c6-cyclist-crossing",
+   "category": "C6.cyclist-ptw",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c6-dooring",
+   "category": "C6.cyclist-ptw",
+   "failedCriteria": [
+    "R-criticality"
+   ]
+  },
+  {
+   "archetype": "c6-escooter",
+   "category": "C6.cyclist-ptw",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c7-double-parked-truck",
+   "category": "C7.occlusion",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c7-queue-occludes",
+   "category": "C7.occlusion",
+   "failedCriteria": [
+    "R-criticality"
+   ]
+  },
+  {
+   "archetype": "c7b-hedge-driveway",
+   "category": "C7.occlusion",
+   "failedCriteria": [
+    "R-criticality"
+   ]
+  },
+  {
+   "archetype": "c7b-parked-row-child",
+   "category": "C7.occlusion",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c8-moving-workzone",
+   "category": "C8.workzone",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c8b-plant-crossing",
+   "category": "C8.workzone",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c9-accident-scene",
+   "category": "C9.hazard",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c9-animal",
+   "category": "C9.hazard",
+   "failedCriteria": [
+    "R-ego-drives"
+   ]
+  },
+  {
+   "archetype": "c9-disabled-vehicle",
+   "category": "C9.hazard",
+   "failedCriteria": [
+    "R-criticality",
+    "R-ego-drives"
+   ]
+  }
+ ],
+ "pass": true
+}

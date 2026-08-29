@@ -1,0 +1,1801 @@
+{
+ "model": "claude-sonnet-5",
+ "effort": "low",
+ "pipeline": {
+  "file": "tools/gates/author_llm.py",
+  "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb"
+ },
+ "n": 20,
+ "admitted": 11,
+ "admissionRate": 0.55,
+ "authorErrorCount": 0,
+ "firstFailureCells": {
+  "C2": 1450,
+  "C4": 475,
+  "C5": 1017,
+  "C1": 186,
+  "C3": 391
+ },
+ "wallS": 220.7,
+ "usageTotals": {
+  "llmCalls": 38,
+  "llmWallS": 122.1,
+  "inputTokens": 84732,
+  "outputTokens": 9387,
+  "reasoningTokens": 0
+ },
+ "determinismRepeats": [
+  {
+   "id": "c1-lead-hard-brake",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "9dbcde32d24f1cb13dbeacff2e261bf3fc6c40e5661a72981dd41a0e5214242d",
+   "shaSecond": "dd5832095eab8379246153282a0b04e7923e388eabfe915aa04bf580271e15fa"
+  },
+  {
+   "id": "c1-stop-and-go",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "d0a6274896546dca9af9a16d41910d88b6a54efde51af9f5964d9871e9fa64a3",
+   "shaSecond": "c6faa4f47f7697f84825fc622a663c8a4a0d5ee718380c4d4d38eb1eed8d02ac"
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "6a3983fe9f055a62160756d436218d0c0fbf2ad634ae20e17855c9a74c3854a4",
+   "shaSecond": "5d3da22ee2269d1a1c1bc167c6549d88599165398e51f0ea20949ba6b367d9e9"
+  },
+  {
+   "id": "c11-contested-spot",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "b15969faf9d378c855dc2e86bc096c4f1a88fd6547c19d71e6d6ff84c49684d9",
+   "shaSecond": "034592fedb8fdf87354d870c5d82123a902229d4f11b47a59b234a1f74d57573"
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "baf0313b781693d96bd8c32cc9405ee7c87fc6ac6e396d77ba41d11e4eb97bb7",
+   "shaSecond": "149332254fbc24d4ca39bc1be64b0adc227c6629cde131f1030ab6a852108ff7"
+  }
+ ],
+ "rows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 117,
+   "maps": 5,
+   "sites": 13,
+   "firstFailure": {
+    "C2": 69,
+    "C4": 2,
+    "C5": 12
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 48.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.6,
+    "inputTokens": 2071,
+    "outputTokens": 241,
+    "reasoningTokens": 0
+   },
+   "templateSha": "9dbcde32d24f1cb13dbeacff2e261bf3fc6c40e5661a72981dd41a0e5214242d",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c1-lead-hard-brake-1786863425864",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": [
+      55,
+      65
+     ],
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      55,
+      65
+     ],
+     "challengerStatic": false,
+     "leadBrakes": true,
+     "gapM": [
+      25,
+      35
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "brakeAtS": [
+      3.0,
+      4.5
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Normal-headway car-following at flow speed with a hard-braking lead and human-like delayed reaction, tuned to reach critical TTC/decel without contact."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 290,
+   "feasibleCells": 190,
+   "passingCells": 9,
+   "maps": 4,
+   "sites": 7,
+   "firstFailure": {
+    "C2": 167,
+    "C5": 14
+   },
+   "refusalCodes": {
+    "unknown_site": 100
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 44.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 6.2,
+    "inputTokens": 4606,
+    "outputTokens": 472,
+    "reasoningTokens": 0
+   },
+   "templateSha": "d0a6274896546dca9af9a16d41910d88b6a54efde51af9f5964d9871e9fa64a3",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c1-stop-and-go-1786863427188",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "leadBrakes": false,
+     "gapM": [
+      18,
+      30
+     ],
+     "reactAtTtcS": [
+      1.8,
+      2.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Stop-and-go car-following: a stopped lead vehicle at moderate ego speed with a modest gap window forces a late-triggered but non-colliding critical braking event, satisfying the tight C2/C4 admissible-gap band for a stopped lead at 55 kph."
+    },
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "leadBrakes": false,
+     "gapM": [
+      30,
+      38
+     ],
+     "reactAtTtcS": [
+      2.2,
+      3.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Widened gap and later reaction window push closest approach past 2.5 s while keeping the stopped-lead scenario within the narrow C2/C4 admissible band at 55 kph, avoiding both premature closest-approach and collision."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 1,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 221,
+    "C3": 3,
+    "C4": 56,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 130
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 49.7,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 6.2,
+    "inputTokens": 4627,
+    "outputTokens": 489,
+    "reasoningTokens": 0
+   },
+   "templateSha": "6a3983fe9f055a62160756d436218d0c0fbf2ad634ae20e17855c9a74c3854a4",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c10b-distracted-drift-1786863428240",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "oncomingStartM": 90,
+     "reactAtTtcS": 1.6,
+     "corridorSpeedKph": 70,
+     "rationale": "An oncoming sedan drifts over the centreline into ego's lane at combined closing speed, with late avoidance release to force a critical but collision-free encroachment."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "oncomingStartM": 150,
+     "reactAtTtcS": 2.2,
+     "corridorSpeedKph": 70,
+     "rationale": "Oncoming sedan drifts over centreline; larger start offset delays closest approach past 2.5 s while late avoidance release keeps braking demand and clearance tight without collision."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 7,
+   "maps": 1,
+   "sites": 2,
+   "firstFailure": {
+    "C2": 53,
+    "C4": 10,
+    "C5": 220
+   },
+   "refusalCodes": {
+    "unknown_site": 160
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 49.4,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.5,
+    "inputTokens": 4561,
+    "outputTokens": 454,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b15969faf9d378c855dc2e86bc096c4f1a88fd6547c19d71e6d6ff84c49684d9",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c11-contested-spot-1786863427704",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 10,
+     "gapM": [
+      14,
+      22
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A parked sedan pulls out into ego's path as if contesting the same bay another vehicle is approaching, forcing a late-detected lateral incursion into the ego lane."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      28,
+      40
+     ],
+     "eventLeadS": [
+      1.6,
+      2.4
+     ],
+     "reactAtTtcS": [
+      1.8,
+      2.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A parked sedan pulls out into ego's path contesting the same bay, with a wider gap and later event lead so closest approach develops after 2.5 s while still forcing a late, critical brake."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 50,
+   "maps": 4,
+   "sites": 14,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 28,
+    "C3": 5,
+    "C4": 75,
+    "C5": 132
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 41.6,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.0,
+    "inputTokens": 2046,
+    "outputTokens": 240,
+    "reasoningTokens": 0
+   },
+   "templateSha": "baf0313b781693d96bd8c32cc9405ee7c87fc6ac6e396d77ba41d11e4eb97bb7",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c12-stop-arm-bus-1786863424223",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "pedestrian.child_walking",
+     "vruSpeedKph": 8,
+     "conflictS": 55,
+     "reactAtTtcS": 1.6,
+     "eventLeadS": 1.2,
+     "corridorSpeedKph": 60,
+     "rationale": "Nearest hostable analogue for a school-bus stop-arm event: a child crosses ego's lane on an ordinary corridor, with ego's avoidance released late enough (reactAtTtcS=1.6s) to reach a critical minTTC while keeping enough eventLead to avoid contact."
+    }
+   ]
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 90,
+   "feasibleCells": 90,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C1": 40,
+    "C2": 6,
+    "C3": 34,
+    "C4": 10
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 26.9,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.5,
+    "inputTokens": 4538,
+    "outputTokens": 387,
+    "reasoningTokens": 0
+   },
+   "templateSha": "9ba3e658efee5abe9948d0e4c71060e8a59222aea14dadb6d92d9b8625c59adb",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c13b-stop-sign-rolling-1786863461287",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 20,
+     "junctionControl": "stop",
+     "arrivalTtcS": 1.2,
+     "reactAtTtcS": 1.6,
+     "corridorSpeedKph": 60,
+     "rationale": "A cross-street vehicle rolls its stop sign and enters the junction just as ego arrives, forcing a late, critical avoidance without contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 25,
+     "junctionControl": "stop",
+     "arrivalTtcS": 0.9,
+     "reactAtTtcS": 1.3,
+     "corridorSpeedKph": 70,
+     "rationale": "A cross-street vehicle rolls its stop sign and enters the junction just ahead of ego's arrival, forcing a late, close, critical avoidance without contact."
+    }
+   ]
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 122,
+   "maps": 4,
+   "sites": 14,
+   "firstFailure": {
+    "C2": 43,
+    "C4": 13,
+    "C5": 22
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 37.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 2.9,
+    "inputTokens": 2053,
+    "outputTokens": 243,
+    "reasoningTokens": 0
+   },
+   "templateSha": "9953b708bf938626cc91006b783ced55bd46425ab91bdcc7f278238027e40afb",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c14-friction-patch-1786863465046",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 58,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 20,
+     "challengerStatic": false,
+     "leadBrakes": true,
+     "gapM": [
+      25,
+      40
+     ],
+     "brakeAtS": [
+      3.0,
+      4.0
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "Lead vehicle sharply decelerates as if losing traction on a friction patch, forcing ego into a late, critical braking response consistent with a CCRb-style rear-end conflict."
+    }
+   ]
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 27,
+   "maps": 5,
+   "sites": 10,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 161,
+    "C3": 1,
+    "C4": 23,
+    "C5": 78
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 33.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.0,
+    "inputTokens": 2056,
+    "outputTokens": 228,
+    "reasoningTokens": 0
+   },
+   "templateSha": "de9e56fea5417b9de520823aa7c7835a2b4148e683010fb82af787ba47a2b4bf",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c15-curb-standing-1786863468198",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": 3,
+     "conflictS": [
+      40,
+      60
+     ],
+     "eventLeadS": [
+      3.5,
+      4.0
+     ],
+     "reactAtTtcS": [
+      2.8,
+      3.5
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Negative control: pedestrian remains at kerb without crossing intent, so ego should never see a critical closest-approach event; intended to be rejected/trivial under the gate as a sanity check on false-positive rate."
+    }
+   ]
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 300,
+   "feasibleCells": 200,
+   "passingCells": 74,
+   "maps": 4,
+   "sites": 15,
+   "firstFailure": {
+    "C2": 20,
+    "C4": 36,
+    "C5": 70
+   },
+   "refusalCodes": {
+    "unknown_site": 100
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 38.8,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 10.0,
+    "inputTokens": 4663,
+    "outputTokens": 687,
+    "reasoningTokens": 0
+   },
+   "templateSha": "db46d21fe93b8d2f325e666e4031d110602d855d4e795e0bc36ea95f51743262",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c2-cut-out-reveals-1786863476761",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "leadBrakes": false,
+     "gapM": [
+      25,
+      40
+     ],
+     "reactAtTtcS": [
+      1.8,
+      2.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A moving vehicle ahead of a stopped car cuts out laterally, revealing the stationary lead late; ego at 55 kph with a modest gap must brake hard once the occlusion by the departing vehicle clears, driving minTTC below 3 s without contact."
+    },
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "leadBrakes": false,
+     "gapM": [
+      48,
+      60
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A moving vehicle ahead of a stopped car cuts out laterally, revealing the stationary lead late; ego at 55 kph with a wider gap develops closest approach after 2.5 s while the delayed reactAtTtcS window still forces hard braking below 3 s TTC without contact."
+    }
+   ]
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 17,
+   "maps": 2,
+   "sites": 5,
+   "firstFailure": {
+    "C5": 33
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 14.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 2.9,
+    "inputTokens": 2051,
+    "outputTokens": 224,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b03b0a01523babd6d27450d55110cba858d1fa1c4a4e1b06950914ffc61e8c75",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c2-lane-drop-1786863462924",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": [
+      55,
+      65
+     ],
+     "challengerCatalog": "vehicle.suv",
+     "challengerSpeedKph": [
+      45,
+      55
+     ],
+     "gapM": [
+      15,
+      30
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A late lane-drop forces an adjacent-lane vehicle to cut into the ego lane close ahead, modeling a forced merge with a governor that reacts only once TTC is already tight."
+    }
+   ]
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 224,
+   "passingCells": 1,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 26,
+    "C2": 34,
+    "C3": 128,
+    "C4": 5,
+    "C5": 30
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 36,
+    "arrival_conflict_unclosed": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 66.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 6.0,
+    "inputTokens": 4744,
+    "outputTokens": 470,
+    "reasoningTokens": 0
+   },
+   "templateSha": "e2310f2c191970b52a79d5f0b2787948a52462a8653766e1a50bee790c0346c7",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c3-ltap-od-1786863500802",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 25,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      1.0,
+      2.0
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Ego executes an unprotected left turn across a through junction as an oncoming vehicle arrives at the conflict point within a short window, forcing a late-braking, near-miss crossing conflict."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 35,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      1.5,
+      2.5
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Ego at moderate turning speed crosses an unprotected junction as a faster oncoming through vehicle arrives 1.5-2.5s later, with ego's avoidance released only at TTC 1.0-1.6s to force a late, close-clearance braking conflict that develops well after 2.5s."
+    }
+   ]
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 100,
+   "feasibleCells": 90,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C2": 17,
+    "C3": 73
+   },
+   "refusalCodes": {
+    "unknown_site": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 29.9,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.9,
+    "inputTokens": 4536,
+    "outputTokens": 410,
+    "reasoningTokens": 0
+   },
+   "templateSha": "4c67b5df2e016bca976967e4f8ae9bd3b788cb1de666ef73e032fe1d54a8f860",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c3b-permissive-left-1786863489620",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 30,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "junctionControl": "signalized",
+     "arrivalTtcS": 1.6,
+     "reactAtTtcS": 1.8,
+     "corridorSpeedKph": 60,
+     "rationale": "Ego commits to a permissive left turn as an oncoming vehicle arrives at the shared conflict point sooner than the closing gap allows, forcing a late-braking near-collision."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 25,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 55,
+     "junctionControl": "signalized",
+     "arrivalTtcS": 2.6,
+     "reactAtTtcS": 2.2,
+     "corridorSpeedKph": 60,
+     "rationale": "Ego turns slowly across the conflict point while a faster oncoming vehicle arrives later but closes rapidly, producing a genuine close-approach after 2.5 s with tight clearance."
+    }
+   ]
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 13,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 70,
+    "C2": 1,
+    "C3": 134,
+    "C4": 23,
+    "C5": 19
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 70.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.6,
+    "inputTokens": 4737,
+    "outputTokens": 430,
+    "reasoningTokens": 0
+   },
+   "templateSha": "a05e144e2abcaec4722440276f6d8ee179a0b7c240095e885b62ba5c5ba1d28a",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c4b-mini-roundabout-1786863522064",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.suv",
+     "challengerSpeedKph": 30,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.8,
+      1.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "No roundabout geometry exists on the corpus maps, so a give-way junction with simultaneous conflicting arrival hosts the nearest equivalent to a mini-roundabout entry conflict, tuned to reach criticality without forcing contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.suv",
+     "challengerSpeedKph": 25,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKql": null,
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Widened arrival window and corridor bounds to give the solver convergent placements across more sites/maps, while keeping arrival TTC tight enough for genuine braking demand and close OBB clearance without forcing collisions."
+    }
+   ]
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 21,
+   "maps": 5,
+   "sites": 11,
+   "firstFailure": {
+    "C2": 119,
+    "C3": 9,
+    "C4": 58,
+    "C5": 93
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 37.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 2.7,
+    "inputTokens": 2049,
+    "outputTokens": 220,
+    "reasoningTokens": 0
+   },
+   "templateSha": "c7ef838d0b20055c81ce1f3f8ad25519624856e86062ee43c4a310d6affffef9",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c5-adult-midblock-1786863503667",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      8,
+      14
+     ],
+     "conflictS": [
+      35,
+      70
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Adult pedestrian crosses mid-block into ego's lane; ego reacts late enough (TTC 1.2-2.0s) to reach critical band while retaining stopping margin at 50 kph on a 60+ kph corridor."
+    }
+   ]
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 48,
+   "maps": 5,
+   "sites": 13,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 168,
+    "C4": 42,
+    "C5": 32
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 34.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 2.9,
+    "inputTokens": 2062,
+    "outputTokens": 227,
+    "reasoningTokens": 0
+   },
+   "templateSha": "dcd4387f1ce982057ff4cb9a91f0bfdef2433d4ae7d11a5978ff5ccf7459c143",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c5-multiple-threat-1786863509042",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      8,
+      14
+     ],
+     "conflictS": [
+      35,
+      55
+     ],
+     "occluder": "occluder.covered_car",
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Pedestrian hidden behind a stopped adjacent-lane vehicle steps into ego's path, revealed shortly before the conflict point; ego reacts late enough to reach critical TTC without contact."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 300,
+   "feasibleCells": 200,
+   "passingCells": 65,
+   "maps": 4,
+   "sites": 15,
+   "firstFailure": {
+    "C2": 82,
+    "C3": 1,
+    "C4": 43,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 100
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 40.6,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.0,
+    "inputTokens": 2059,
+    "outputTokens": 243,
+    "reasoningTokens": 0
+   },
+   "templateSha": "4378a721d06a907b6548f06ac9295fa32196b394b58066c8c340769d2634219b",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c6b-cargo-bike-1786863522872",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 8,
+     "challengerStatic": false,
+     "leadBrakes": false,
+     "gapM": 25,
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A slow cargo bike (modeled as a low-speed cyclist lead) blocks the ego lane on a narrow street; ego at moderate speed closes on it with a late-triggered avoidance to force a critical but non-colliding rear-end conflict."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "family": "lateral_incursion",
+   "admitted": false,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C2": 35,
+    "C4": 10,
+    "C5": 1
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 20.4,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 6.7,
+    "inputTokens": 4623,
+    "outputTokens": 577,
+    "reasoningTokens": 0
+   },
+   "templateSha": "1f7e34549b8f2de20cf16dbccf7066c65d30e38d82b03a1e9a61af3f2ade7776",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c6b-cyclist-ahead-swerve-1786863536748",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 18,
+     "gapM": [
+      14,
+      22
+     ],
+     "eventLeadS": [
+      0.8,
+      1.4
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Cyclist swerves around a drain into the ego lane at close gap, forcing late TTC-triggered braking while keeping enough separation to avoid contact."
+    },
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 16,
+     "gapM": [
+      26,
+      36
+     ],
+     "eventLeadS": [
+      1.6,
+      2.3
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.3
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Cyclist swerves around a drain into the ego lane from a larger initial gap so closest approach develops after 2.5 s while still forcing a late, critical TTC-triggered brake without contact."
+    }
+   ]
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 31,
+   "maps": 5,
+   "sites": 8,
+   "firstFailure": {
+    "C2": 169,
+    "C3": 3,
+    "C4": 66,
+    "C5": 31
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 35.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.6,
+    "inputTokens": 2051,
+    "outputTokens": 238,
+    "reasoningTokens": 0
+   },
+   "templateSha": "4d0ecf531b98b752960ffc7f4fe2fe82a767289796712b2d7573a3e73bc73cfc",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c7b-bus-shelter-1786863544858",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      8,
+      14
+     ],
+     "conflictS": [
+      35,
+      55
+     ],
+     "occluder": "street.bus_shelter",
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Pedestrian is hidden behind a bus shelter until briefly before crossing into the ego lane, forcing a late but non-collision critical reveal at moderate corridor speed."
+    }
+   ]
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "admitted": false,
+   "cells": 420,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {},
+   "refusalCodes": {
+    "closure_lane_too_narrow": 200,
+    "closure_exceeds_route": 90,
+    "unknown_site": 130
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 25.6,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.7,
+    "inputTokens": 4566,
+    "outputTokens": 443,
+    "reasoningTokens": 0
+   },
+   "templateSha": "d370bc0fed2e66f2c2b91d95a5b1e1e3a7045ba56dc8440f45a07e09bb48da14",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c8-worker-intrusion-1786863551880",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "workzone",
+     "egoSpeedKph": 50,
+     "worksStartM": [
+      40,
+      60
+     ],
+     "worksLengthM": [
+      30,
+      50
+     ],
+     "closedWidthM": [
+      2.5,
+      3.5
+     ],
+     "workerSpeedKph": [
+      3,
+      6
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Ego travels a solved lane-closure taper at 50 kph; a worker steps from the closed segment into the live lane late enough that the governor's TTC-triggered reaction still yields a critical but collision-free close approach."
+    },
+    {
+     "family": "workzone",
+     "egoSpeedKph": 50,
+     "worksStartM": [
+      30,
+      45
+     ],
+     "worksLengthM": [
+      15,
+      25
+     ],
+     "closedWidthM": [
+      1.5,
+      2.2
+     ],
+     "workerSpeedKph": [
+      3,
+      6
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Shorter, narrower closure taper fits within route/lane bounds while a worker steps from the closed segment into the live lane late enough that the governor's TTC-triggered reaction yields a critical but collision-free close approach."
+    }
+   ]
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 8,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 57,
+    "C4": 3,
+    "C5": 212
+   },
+   "refusalCodes": {
+    "unknown_site": 160
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 35.7,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 7.6,
+    "inputTokens": 4638,
+    "outputTokens": 632,
+    "reasoningTokens": 0
+   },
+   "templateSha": "c3f537f6a88fd13af0f1b52ffcf2997774e9436483733d100869df594547f5cf",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c9b-open-door-parked-1786863565338",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 0,
+     "gapM": [
+      15,
+      30
+     ],
+     "eventLeadS": [
+      0.8,
+      1.5
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      40,
+      60
+     ],
+     "rationale": "Model a door-into-lane hazard as a near-instant kerbside encroachment from a stationary parked vehicle, using a short eventLead to mimic the abrupt lateral intrusion of an opening door into the ego's path."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 0,
+     "gapM": [
+      30,
+      50
+     ],
+     "eventLeadS": [
+      1.8,
+      2.8
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Widen the initial gap and delay the door-opening event so the lateral encroachment matures into a conflict after 2.5 s, while a late reactAtTtcS window keeps the ego genuinely surprised without causing contact."
+    }
+   ]
+  }
+ ],
+ "repeatRows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 120,
+   "maps": 5,
+   "sites": 14,
+   "firstFailure": {
+    "C1": 7,
+    "C2": 63,
+    "C4": 2,
+    "C5": 8
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 42.4,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.2,
+    "inputTokens": 2071,
+    "outputTokens": 239,
+    "reasoningTokens": 0
+   },
+   "templateSha": "dd5832095eab8379246153282a0b04e7923e388eabfe915aa04bf580271e15fa",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c1-lead-hard-brake-1786863597530",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": [
+      55,
+      65
+     ],
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      55,
+      65
+     ],
+     "leadBrakes": true,
+     "brakeAtS": [
+      3.0,
+      4.0
+     ],
+     "gapM": [
+      20,
+      30
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Flowing-traffic car-following at normal headway; lead executes a hard CCRb brake and ego reacts after a human-like delay, producing a late-critical rear-end conflict without contact."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 8,
+   "maps": 4,
+   "sites": 5,
+   "firstFailure": {
+    "C2": 164,
+    "C5": 28
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 36.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.0,
+    "inputTokens": 2057,
+    "outputTokens": 205,
+    "reasoningTokens": 0
+   },
+   "templateSha": "c6faa4f47f7697f84825fc622a663c8a4a0d5ee718380c4d4d38eb1eed8d02ac",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c1-stop-and-go-1786863596093",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "leadBrakes": false,
+     "gapM": [
+      20,
+      35
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Ego closes on a repeatedly-stopping lead at 55 kph with a moderate gap window, forcing late-but-survivable reaction to reach critical TTC without contact."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 350,
+   "feasibleCells": 270,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 89,
+    "C3": 42,
+    "C4": 87,
+    "C5": 42
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 45.9,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 8.8,
+    "inputTokens": 4657,
+    "outputTokens": 691,
+    "reasoningTokens": 0
+   },
+   "templateSha": "5d3da22ee2269d1a1c1bc167c6549d88599165398e51f0ea20949ba6b367d9e9",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c10b-distracted-drift-1786863602815",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "oncomingStartM": [
+      70,
+      110
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "An oncoming sedan encroaches over the centreline at moderate closing speed; ego reacts late enough (TTC 1.6-2.2s) to reach a critical band without forcing contact, per the sum-of-speeds closing-rate physics of oncoming conflicts."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "oncomingStartM": [
+      120,
+      155
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "Larger oncoming start distance ensures the drift-induced closest approach develops after 2.5s (avoiding spawn-artifact rejection) while still forcing a late, high-severity brake response given the summed closing speed of ~95 kph."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 3,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C2": 60,
+    "C4": 11,
+    "C5": 216
+   },
+   "refusalCodes": {
+    "unknown_site": 160
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 45.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 5.6,
+    "inputTokens": 4564,
+    "outputTokens": 461,
+    "reasoningTokens": 0
+   },
+   "templateSha": "034592fedb8fdf87354d870c5d82123a902229d4f11b47a59b234a1f74d57573",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c11-contested-spot-1786863600185",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 10,
+     "gapM": [
+      14,
+      22
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A parked sedan pulls out into a contested kerbside bay just as ego arrives, forcing a late-braking near-miss consistent with a two-vehicle parking-space contest."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      28,
+      38
+     ],
+     "eventLeadS": [
+      1.6,
+      2.4
+     ],
+     "reactAtTtcS": [
+      1.8,
+      2.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A parked sedan pulls into a contested kerbside bay well ahead of ego, with a larger gap and higher ego speed so closest approach develops later (>2.5s) while still forcing a late-braking near-miss."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 22,
+   "maps": 4,
+   "sites": 10,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 82,
+    "C3": 4,
+    "C4": 65,
+    "C5": 117
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 35.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 3.0,
+    "inputTokens": 2046,
+    "outputTokens": 236,
+    "reasoningTokens": 0
+   },
+   "templateSha": "149332254fbc24d4ca39bc1be64b0adc227c6629cde131f1030ab6a852108ff7",
+   "outdir": "/tmp/tg-w8-claude-sonnet-5-low-c12-stop-arm-bus-1786863594887",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "pedestrian.child_walking",
+     "vruSpeedKph": 8,
+     "conflictS": [
+      40,
+      70
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "eventLeadS": [
+      1.0,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "No school-zone map exists, so a stopped school bus with deployed stop arm is hosted as a child-crossing scenario on an ordinary corridor at moderate speed, with late-released ego reaction to reach criticality without forcing contact."
+    }
+   ]
+  }
+ ]
+}

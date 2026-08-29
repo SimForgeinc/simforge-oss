@@ -1,0 +1,288 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "c3b-late-yield",
+      "templateVersion": 2,
+      "templateDigest": "372a7fb6f0863de0",
+      "mapId": "richmond-field-station",
+      "matcherIndexDigest": "c7be1a65a96dc814001de69821c8199c34e8a0c68dd08ea25df49ddbcbac8505",
+      "engineGraphDigest": "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
+      "siteId": "6bb6028740ba8bac",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "979dccbcb14fd3379b1851e42fb598ce9c90d0a031cc8040d96dc919cc43909e",
+      "drawIndex": 0,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "6bb6028740ba8bac#0",
+    "archetype": "w7.junction.c3b-late-yield",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "6bb6028740ba8bac",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "junction:269",
+      "entryLaneRsl": "9:0:1",
+      "egoTurn": "right",
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 1.78)",
+        "258.45 m of runway available, 200 m needed",
+        "313.86 m of runway available, 110 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)",
+        "origin feature sits at s = 0 by construction",
+        "chal: bound to gate 269:4:-1--1 (from_left straight), crossing at 0° (template 90°)"
+      ]
+    },
+    "params": {
+      "values": {
+        "arrivalTtc": 0.8159143334720285,
+        "reactAtTtcS": 1.1865680779563264
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "chal",
+        "actorKind": "car",
+        "roleKind": "conflicting_gate",
+        "laneRsl": "319:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 8.333333333333334,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "9:0:1",
+        "spawnS": 243.86055733895142,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [
+      {
+        "interactionId": "role:chal",
+        "actorId": "chal",
+        "referenceActorId": "ego",
+        "spawnDeltaS": 172.96435379693122,
+        "spawnS": 172.96435379693122,
+        "targetDeltaT": -0.8159143334720285,
+        "achievedDeltaT": -0.8159051096137633,
+        "achievedTtc": 0.8159051096137633,
+        "fireTime": 5.109135115758739,
+        "iterations": 18,
+        "converged": true
+      }
+    ],
+    "inputHash": "d610cd84160ff889de11c865fe9a4f03b51913e891b193a3cac8bd5571feef99",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ego-inattentive",
+        "actorId": "ego",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "chal-commits",
+        "actorId": "chal",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "richmond-field-station",
+    "clipSeconds": 18,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "979dccbcb14fd337",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "chal",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "319:0:-1",
+            "s": 19.75973053076578,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 78.7291135811074,
+            "z": -172.11933082326624,
+            "headingRad": -1.9057630271431734
+          },
+          "speedMps": 8.333333333333334
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": false,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "185:0:-1",
+              "27:0:-1",
+              "237:0:-1",
+              "28:0:-1",
+              "228:0:-1",
+              "29:0:-1",
+              "319:0:-1",
+              "30:0:-1",
+              "208:0:-1",
+              "31:0:-1",
+              "274:0:-1",
+              "22:0:-1",
+              "84:0:-1",
+              "23:0:-1",
+              "283:0:-1",
+              "24:0:-1",
+              "133:0:-1",
+              "10:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 8.333333333333334
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:chal",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:conflicting_gate",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "9:0:1",
+            "s": 70.00002848185254,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -14.3168272584876,
+            "z": -151.61961945562535,
+            "headingRad": -0.33945331741904106
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "26:0:1",
+              "145:0:1",
+              "55:0:1",
+              "168:0:1",
+              "9:0:1",
+              "272:0:1",
+              "22:0:-1",
+              "84:0:-1",
+              "23:0:-1",
+              "283:0:-1",
+              "24:0:-1",
+              "133:0:-1",
+              "10:0:-1",
+              "91:0:-1",
+              "11:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-reacts",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 5.1134382220499734
+        },
+        "verb": "set",
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": true
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

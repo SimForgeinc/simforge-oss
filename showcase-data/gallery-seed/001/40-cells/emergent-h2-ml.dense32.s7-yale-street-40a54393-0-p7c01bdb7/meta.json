@@ -1,0 +1,17 @@
+{
+ "cellId": "emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7",
+ "briefId": "emergent-h2-ml.dense32.s7-yale-street-40a54393-0",
+ "stream": "emergent",
+ "kind": "tag-strip-promotion",
+ "counterpart": "ambient:v1:21211a777c01bdb7",
+ "map": "street",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 4.281,
+  "tMinClearance": 6.62
+ },
+ "verdict": "accept",
+ "band": "critical",
+ "notes": "tag-strip promoted cell; parent=emergent-h2-ml.dense32.s7-yale-street-40a54393-0; gate=PASS"
+}

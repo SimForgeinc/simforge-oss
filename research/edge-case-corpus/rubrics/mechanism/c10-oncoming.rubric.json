@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.0,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C10.oncoming",
+ "originalIntent": "NHTSA pre-crash typology 13-15 (opposite direction). Closing speed is the sum of both speeds, so a given TTC is far more severe than in a following conflict. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Head-on or oncoming-lane conflict: closing speeds are the sum, so the band is tightest here",
+ "version": 1
+}

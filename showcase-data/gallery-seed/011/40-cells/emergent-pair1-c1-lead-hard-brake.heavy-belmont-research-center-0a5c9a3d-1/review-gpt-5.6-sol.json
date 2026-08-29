@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.2,
+      3.28,
+      4.36,
+      5.28,
+      6.54,
+      8.72,
+      12
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 14.96,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 608,
+      "reasoning": 516
+    }
+  },
+  "cellId": "emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1",
+  "confidence": 0.86,
+  "defects": [],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle travels north on a vertical roadway while several green vehicles move independently on adjacent ramps and lanes. On the right-hand curved approach, multiple vehicles round the bend and merge toward the ego's roadway; one draws alongside the ego near the end, but no collision occurs.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "885a77875bfe2694851d1efc950861d8a0fc62f356267540325ffbe5258d9071",
+  "realism": 8.0,
+  "visionAsserted": true
+}

@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the ego must not strike any channelizing device",
+   "id": "R-no-device-contact",
+   "kind": "unsupported",
+   "reason": "collision criteria take actor pairs; prop contacts are namespaced prop:<id> and are checked by tools/gates/probe_workzone.py instead",
+   "required": false
+  }
+ ],
+ "intentId": "C8.workzone",
+ "originalIntent": "MUTCD Part 6 temporary traffic control. A work-zone scenario in which the ego drives through the devices is not a work-zone scenario; contact with a cone is a failed negotiation. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Work zone: the ego must negotiate the closure without striking the channelizing devices",
+ "version": 1
+}

@@ -60,12 +60,12 @@ Usage
 import os, sys, json, gzip, math, glob, argparse, collections
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = '/Users/michaelvu-simforge/Documents/Programming/SimForge-vista'
+REPO = '/Users/michaelvu-simforge/Documents/Programming/UniScenarios-vista'
 DEV = os.path.join(REPO, 'dev-assets')
 
 TARGET_RATE = 0.95
 
-#: Mirrors `LOCATION_KIND_MAP` in packages/compiler/src/normalize.ts. If that table changes,
+#: Mirrors `LOCATION_KIND_MAP` in packages/anchor-matcher/src/normalize.ts. If that table changes,
 #: this one has to change with it or the audit stops describing the same world as the matcher.
 LOCATION_KIND = {
     'crosswalk': 'crossing', 'crossing': 'crossing',

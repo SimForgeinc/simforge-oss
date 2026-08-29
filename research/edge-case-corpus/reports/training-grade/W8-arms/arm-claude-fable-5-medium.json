@@ -1,0 +1,1812 @@
+{
+ "model": "claude-fable-5",
+ "effort": "medium",
+ "pipeline": {
+  "file": "tools/gates/author_llm.py",
+  "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb"
+ },
+ "n": 20,
+ "admitted": 13,
+ "admissionRate": 0.65,
+ "authorErrorCount": 0,
+ "firstFailureCells": {
+  "C1": 305,
+  "C2": 699,
+  "C4": 774,
+  "C5": 1195,
+  "C3": 543
+ },
+ "wallS": 239.5,
+ "usageTotals": {
+  "llmCalls": 35,
+  "llmWallS": 248.6,
+  "inputTokens": 77636,
+  "outputTokens": 15827,
+  "reasoningTokens": 0
+ },
+ "determinismRepeats": [
+  {
+   "id": "c1-lead-hard-brake",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "dcf96a0af42ee3d348dd00e4f05f6ec2ed0989c80aa360d1b0479169e78ee6e2",
+   "shaSecond": "51d5724b731aceba09360cee77de94f3679bfa1b83c98229356b001fd47fcc35"
+  },
+  {
+   "id": "c1-stop-and-go",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "77bde06380b5c1298f978cf820c9a538bd9142c0f3015d58cebce87f22d1f059",
+   "shaSecond": "ed68c3407a38e87e124d5e4293f0c9465148bb6f56fe06396f6fad613832b770"
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "2c4683a30b4f4dc1797ccc757026f74c4dd04dfda6ecc2471eedbc26bf447368",
+   "shaSecond": "d38f6a9ba0a86106107a4670b3fe012dfcf0f1858322f00e97648297d93ee573"
+  },
+  {
+   "id": "c11-contested-spot",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "a597fadd0a0e24c3f437af8414029495182f2dabc6b7b6aa1da2a516465d36a5",
+   "shaSecond": "cca10636d94c1be20757259c076a750e4255061aec5f4b2df4685624fd569003"
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "5d98ede89a99ebc1aaa78a93e233b25625d4dd62a90463f8fca1fb6a774b869b",
+   "shaSecond": "b0bed71e0486ff40eafd7ad603265e6ef040aac74542d680ccb6e79ded1b9fd4"
+  }
+ ],
+ "rows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 360,
+   "feasibleCells": 240,
+   "passingCells": 145,
+   "maps": 5,
+   "sites": 16,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 60,
+    "C4": 8,
+    "C5": 7
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 51.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 4.9,
+    "inputTokens": 2071,
+    "outputTokens": 324,
+    "reasoningTokens": 0
+   },
+   "templateSha": "dcf96a0af42ee3d348dd00e4f05f6ec2ed0989c80aa360d1b0479169e78ee6e2",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c1-lead-hard-brake-1786862752706",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "leadBrakes": true,
+     "gapM": [
+      22,
+      40
+     ],
+     "brakeAtS": [
+      3.0,
+      4.5
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "rationale": "CCRb car-following: ego at 60 kph trails a 50 kph sedan at a normal 22-40 m headway; the lead brakes hard mid-trace and a human-like late reaction (TTC 1.4-2.2 s) drives minTTC under 3 s without forcing contact, satisfying C2/C4/C5."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 169,
+   "maps": 5,
+   "sites": 19,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 31,
+    "C5": 20
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 49.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 4.8,
+    "inputTokens": 2057,
+    "outputTokens": 325,
+    "reasoningTokens": 0
+   },
+   "templateSha": "77bde06380b5c1298f978cf820c9a538bd9142c0f3015d58cebce87f22d1f059",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c1-stop-and-go-1786862752162",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 20,
+     "leadBrakes": true,
+     "gapM": [
+      20,
+      40
+     ],
+     "brakeAtS": [
+      2.8,
+      4.5
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "rationale": "Stop-and-go is hosted as a CCRb slow lead that brakes hard mid-run; ego at 55 kph with a moderate gap and late reaction reaches critical TTC without forcing contact, satisfying the C2/C4 speed-gap constraint."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 350,
+   "feasibleCells": 270,
+   "passingCells": 6,
+   "maps": 1,
+   "sites": 2,
+   "firstFailure": {
+    "C2": 104,
+    "C3": 41,
+    "C4": 85,
+    "C5": 34
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 52.6,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 14.9,
+    "inputTokens": 4721,
+    "outputTokens": 887,
+    "reasoningTokens": 0
+   },
+   "templateSha": "2c4683a30b4f4dc1797ccc757026f74c4dd04dfda6ecc2471eedbc26bf447368",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c10b-distracted-drift-1786862760486",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "oncomingStartM": [
+      70,
+      130
+     ],
+     "eventLeadS": [
+      1.5,
+      3.0
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "High closing speed (ego 55 + oncoming 45 kph) with a moderate drift lead and a late-but-recoverable reaction window drives minTTC under 3 s while leaving enough margin to avoid contact, on corridors the maps actually publish (>=60 kph)."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "oncomingStartM": [
+      110,
+      160
+     ],
+     "eventLeadS": [
+      2.0,
+      3.5
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Lower combined closing speed (50+35 kph ~= 23.6 m/s) and a farther oncoming start (110-160 m) push the closest approach well past the 2.5 s C2 threshold, while a tighter late-reaction window (1.2-1.8 s TTC) preserves genuine braking demand for C4 without forcing contact, on the >=60 kph corridors the maps publish."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C4": 9,
+    "C5": 277
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 53.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 15.6,
+    "inputTokens": 4659,
+    "outputTokens": 913,
+    "reasoningTokens": 0
+   },
+   "templateSha": "a597fadd0a0e24c3f437af8414029495182f2dabc6b7b6aa1da2a516465d36a5",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c11-contested-spot-1786862762121",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 12,
+     "gapM": [
+      18,
+      40
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No parking aisles exist on the maps, so the contested-space dispute is hosted as its nearest mechanism: a kerbside parked sedan pulls out into the ego's path as ego approaches the same bay, with a moderate gap and late release tuned to reach minTTC <= 3.0 s without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 10,
+     "gapM": [
+      40,
+      75
+     ],
+     "eventLeadS": [
+      1.8,
+      3.0
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.4
+     ],
+     "rationale": "Contested parking space hosted as kerbside pullout: gap widened and event lead lengthened so the conflict matures after 2.5 s without forcing contact, reaction release kept late enough for real braking demand, and the corridor constraint dropped entirely to recover portability across maps and sites."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 46,
+   "maps": 5,
+   "sites": 12,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 35,
+    "C3": 13,
+    "C4": 116,
+    "C5": 70
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 46.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.1,
+    "inputTokens": 2046,
+    "outputTokens": 550,
+    "reasoningTokens": 0
+   },
+   "templateSha": "5d98ede89a99ebc1aaa78a93e233b25625d4dd62a90463f8fca1fb6a774b869b",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c12-stop-arm-bus-1786862754449",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.child_walking",
+     "occluder": "street.bus_shelter",
+     "vruSpeedKph": [
+      5,
+      9
+     ],
+     "conflictS": [
+      45,
+      90
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No school zones or bus-occluder assets exist on the maps, so the stop-arm brief is hosted as its core mechanism: a child pedestrian hidden by a kerbside shelter (standing in for the stopped bus) is revealed and crosses into the ego lane, with a late reaction window to reach the critical band without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 90,
+   "feasibleCells": 90,
+   "passingCells": 2,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 30,
+    "C3": 48,
+    "C4": 10
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 35.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 13.4,
+    "inputTokens": 4601,
+    "outputTokens": 750,
+    "reasoningTokens": 0
+   },
+   "templateSha": "1e625de5c6ba44f6d22988908274d063d8da885fb9e85add36d18f12961eba45",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c13b-stop-sign-rolling-1786862796425",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 20,
+     "junctionControl": "stop",
+     "arrivalTtcS": [
+      0.8,
+      1.6
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.9
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A sedan rolls a stop-controlled junction at ~20 kph into the path of a 55 kph ego, arriving just ahead of ego with a late-release reaction window that reaches minTTC<=3.0s while avoiding forced contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 20,
+     "junctionControl": "stop",
+     "arrivalTtcS": [
+      0.4,
+      1.0
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "rationale": "Dropped the corridor speed requirement that matched zero sites, and tightened the arrival and reaction windows so the rolling-stop sedan arrives just ahead of the 55 kph ego, forcing genuine braking demand and sub-5 m closest approach without guaranteed contact."
+    }
+   ]
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 310,
+   "feasibleCells": 190,
+   "passingCells": 98,
+   "maps": 4,
+   "sites": 11,
+   "firstFailure": {
+    "C1": 11,
+    "C2": 61,
+    "C4": 11,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 39.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.6,
+    "inputTokens": 2053,
+    "outputTokens": 361,
+    "reasoningTokens": 0
+   },
+   "templateSha": "3fed7271f51484a3052730b2f015ed7245ea8813b951f6a34b81613c5b3ecd56",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c14-friction-patch-1786862796211",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 62,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "leadBrakes": true,
+     "gapM": [
+      22,
+      45
+     ],
+     "brakeAtS": [
+      2.8,
+      4.5
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No friction-patch primitive exists, so the traction-loss vehicle is authored as a moving lead that suddenly decelerates hard (CCRb) mid-corridor, with a late ego reaction window tuned to reach minTTC <= 3.0 s without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 24,
+   "maps": 5,
+   "sites": 9,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 78,
+    "C3": 6,
+    "C4": 94,
+    "C5": 88
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 41.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 11.5,
+    "inputTokens": 2056,
+    "outputTokens": 834,
+    "reasoningTokens": 0
+   },
+   "templateSha": "ceff3898610c73bac3681b3946832230ba2ee3f4abaaa292324a991e31248d17",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c15-curb-standing-1786862804723",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      3,
+      5
+     ],
+     "eventLeadS": [
+      1.0,
+      1.6
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.2
+     ],
+     "conflictS": [
+      40,
+      80
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A truly non-crossing pedestrian can never satisfy the frozen critical gate (minTTC<=3.0s requires an in-lane conflict), so the negative-control intent is hosted as the nearest admissible mechanism: a near-stationary pedestrian (3-5 kph, short event lead) making only a minimal kerb-edge step into the lane, with a late ego reaction to reach criticality without contact."
+    }
+   ]
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 220,
+   "feasibleCells": 150,
+   "passingCells": 73,
+   "maps": 4,
+   "sites": 11,
+   "firstFailure": {
+    "C4": 13,
+    "C5": 64
+   },
+   "refusalCodes": {
+    "unknown_site": 70
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 35.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.2,
+    "inputTokens": 2062,
+    "outputTokens": 444,
+    "reasoningTokens": 0
+   },
+   "templateSha": "5496548ca36937ed2edb5e78e811c6da787418b8bdc755324b9fc43a3e7dffff",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c2-cut-out-reveals-1786862799876",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "gapM": [
+      60,
+      110
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "The cut-out reveal is modeled as a stopped lead with a late-release reaction window standing in for the moment of revelation; ego speed 60 kph keeps the stopped-lead admissible gap window wide (C2/C4 compatible), and reactAtTtcS 1.6-2.4 s is late enough to force minTTC <= 3.0 s and requiredDecel >= 1.5 m/s^2 without driving cells into collision."
+    }
+   ]
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 17,
+   "maps": 2,
+   "sites": 3,
+   "firstFailure": {
+    "C2": 4,
+    "C3": 22,
+    "C4": 1,
+    "C5": 6
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 19.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.1,
+    "inputTokens": 2051,
+    "outputTokens": 466,
+    "reasoningTokens": 0
+   },
+   "templateSha": "6dcbb873a3b8e80517b7a17cec140a294328a3d71300262f17e469744ab7cb3d",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c2-lane-drop-1786862795701",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "gapM": [
+      14,
+      32
+     ],
+     "eventLeadS": [
+      0.9,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A lane-drop late merge is hosted as an adjacent slower sedan forcing a late cut-in ahead of a faster ego, with a short event lead and late release so closure reaches minTTC<=3.0s without contact."
+    }
+   ]
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 230,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C1": 90,
+    "C2": 12,
+    "C3": 70,
+    "C4": 5,
+    "C5": 53
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 30,
+    "arrival_conflict_unclosed": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 74.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 15.5,
+    "inputTokens": 4697,
+    "outputTokens": 823,
+    "reasoningTokens": 0
+   },
+   "templateSha": "179d68323fb6c633fd67331152ad21d0159fee5839f0e7f2ecdb2d68c003bd22",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c3-ltap-od-1786862842915",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.8,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Left-turn-across-path authored as a junction conflict with an oncoming through sedan arriving just before ego, with a late ego reaction window tuned to reach minTTC<=3.0s without forcing contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.4,
+      1.2
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.7
+     ],
+     "rationale": "Dropped the corridor constraint to recover portability, tightened arrivalTtcS and reactAtTtcS so the through sedan crosses closer and the ego reacts later (fixing C3/C4), and raised speeds slightly to ensure the ego genuinely drives and the arrival solver converges."
+    }
+   ]
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 5,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 24,
+    "C2": 30,
+    "C3": 173,
+    "C4": 1,
+    "C5": 27
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 61.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 15.9,
+    "inputTokens": 4593,
+    "outputTokens": 1026,
+    "reasoningTokens": 0
+   },
+   "templateSha": "81d3ace3f0b7a6189b4b14d352834f1ad1c435cbeebec6147ea84679f0076201",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c3b-permissive-left-1786862835484",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "junctionControl": "signalized",
+     "arrivalTtcS": [
+      0.6,
+      1.5
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Permissive left at a signalized junction is hosted as a junction conflict where a fast oncoming sedan arrives at the conflict point just before the ego, with a late ego reaction window tight enough to reach minTTC<=3.0s but not so late as to force contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 40,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.3,
+      0.8
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "rationale": "Tightened arrivalTtcS so the sedan reaches the conflict point barely before the ego (closing the C3 clearance to <=5 m), slowed the ego so the encounter develops after the 2.5 s C2 threshold, and dropped the corridor requirement and signal restriction to recover portability across maps and sites."
+    }
+   ]
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C1": 70,
+    "C2": 12,
+    "C3": 110,
+    "C4": 10,
+    "C5": 58
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 79.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 15.9,
+    "inputTokens": 4813,
+    "outputTokens": 1184,
+    "reasoningTokens": 0
+   },
+   "templateSha": "62cb0dbe959ad88ce1e76d3f459efa1978e85348bb3d4316045c73549918afc6",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c4b-mini-roundabout-1786862859743",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 30,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.4,
+      1.0
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No roundabouts exist on these maps, so the simultaneous-arrival conflict is hosted as a junction_conflict with a near-zero arrival offset so both vehicles reach the conflict point together, a late ego reaction window to push minTTC under 3 s without forcing contact, and ego speed 50 kph on a >=60 kph corridor to satisfy C2/C4 and portability."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 25,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.3,
+      0.6
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "rationale": "Roundabout brief hosted as an ordinary junction conflict: corridor constraint dropped entirely to recover portability, arrival offset tightened to 0.3-0.6 s so the sedan is still occupying the conflict point when ego arrives (fixing the >5 m clearance failures), a slightly lower challenger speed to help the arrival solver converge, and a later ego reaction window at 55 kph to force real braking demand under 3 s TTC without collisions."
+    }
+   ]
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 48,
+   "maps": 5,
+   "sites": 13,
+   "firstFailure": {
+    "C2": 39,
+    "C3": 18,
+    "C4": 93,
+    "C5": 102
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 34.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 4.2,
+    "inputTokens": 2049,
+    "outputTokens": 266,
+    "reasoningTokens": 0
+   },
+   "templateSha": "2fd5d5b16ab2d6f5afabb368ff3579753cd99bf9ebefaa984bd9928a9f67649b",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c5-adult-midblock-1786862834626",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      5,
+      9
+     ],
+     "eventLeadS": [
+      1.5,
+      2.5
+     ],
+     "conflictS": [
+      50,
+      90
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Mid-block adult crossing in plain view; moderate walking speed with a late-release reaction window drives minTTC below 3.0 s while the eventLead margin avoids forced contact, and the corridor bound matches posted speeds actually published on the maps."
+    }
+   ]
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 50,
+   "maps": 5,
+   "sites": 15,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 53,
+    "C3": 23,
+    "C4": 106,
+    "C5": 58
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 35.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.2,
+    "inputTokens": 2062,
+    "outputTokens": 396,
+    "reasoningTokens": 0
+   },
+   "templateSha": "d12ce9efd70c5d8b78d3d2cc23a8d671fda3557d2121d2c76e1dc8bdfb7ebc0e",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c5-multiple-threat-1786862838984",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "occluder": "occluder.covered_car",
+     "conflictS": [
+      40,
+      90
+     ],
+     "vruSpeedKph": [
+      5,
+      9
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.1,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Pedestrian hidden behind a kerbside stopped vehicle (covered_car occluder) is revealed late; moderate walk speed and mid eventLead keep the reveal genuine while late reactAtTtcS drives minTTC under 3 s without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 300,
+   "feasibleCells": 200,
+   "passingCells": 75,
+   "maps": 4,
+   "sites": 15,
+   "firstFailure": {
+    "C2": 69,
+    "C3": 1,
+    "C4": 46,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 100
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 45.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.9,
+    "inputTokens": 2059,
+    "outputTokens": 442,
+    "reasoningTokens": 0
+   },
+   "templateSha": "0be9801ca6d746d9fa035f27cab7b050e9089cc053a2e59a77d466b844b3b9c2",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c6b-cargo-bike-1786862875592",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 10,
+     "challengerStatic": false,
+     "leadBrakes": false,
+     "gapM": [
+      35,
+      70
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A slow cargo bike is authored as a moving bicycle lead at ~10 kph with a moderate closing speed from a 55 kph ego; the mid-range gap and late reactAtTtcS window push minTTC under 3.0 s and requiredDecel past the gate without forcing contact, and the >=60 kph corridor bound matches the maps' published postings."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 9,
+   "maps": 2,
+   "sites": 4,
+   "firstFailure": {
+    "C2": 25,
+    "C4": 10,
+    "C5": 6
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 18.9,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 4.9,
+    "inputTokens": 2058,
+    "outputTokens": 332,
+    "reasoningTokens": 0
+   },
+   "templateSha": "078e6e3aa93569c0a4eb12fedd1f5d051eed58fc0a1398c4cd71c4ebb5c5735a",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c6b-cyclist-ahead-swerve-1786862868576",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 15,
+     "gapM": [
+      18,
+      40
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.1,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A slow cyclist abruptly cutting from the adjacent lane edge into the ego lane models the drain-swerve; a 55 kph ego with a modest gap and late reaction window drives minTTC below 3 s without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 53,
+   "maps": 5,
+   "sites": 13,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 81,
+    "C3": 18,
+    "C4": 95,
+    "C5": 43
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 34.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.8,
+    "inputTokens": 2051,
+    "outputTokens": 403,
+    "reasoningTokens": 0
+   },
+   "templateSha": "934d8ed23ff40881ce279ef33f856b8fd7760a7b1163b8a5a80f6177544378b9",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c7b-bus-shelter-1786862892441",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "occluder": "street.bus_shelter",
+     "conflictS": [
+      40,
+      80
+     ],
+     "eventLeadS": [
+      1.4,
+      2.4
+     ],
+     "vruSpeedKph": [
+      4,
+      8
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Adult pedestrian hidden behind a bus shelter is revealed shortly before crossing; moderate ego speed with a late-but-survivable reaction window drives minTTC under 3 s without forcing contact, and the >=60 kph corridor bound keeps all five maps hostable."
+    }
+   ]
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "admitted": false,
+   "cells": 420,
+   "feasibleCells": 58,
+   "passingCells": 1,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C4": 38,
+    "C5": 19
+   },
+   "refusalCodes": {
+    "closure_lane_too_narrow": 230,
+    "unknown_site": 130,
+    "closure_exceeds_route": 2
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 32.3,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 11.7,
+    "inputTokens": 4696,
+    "outputTokens": 863,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b0659a3f2b4ccc2d168af1917ad0b98a4a808b63d9415ad0a0bbafa36eb8cbde",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c8-worker-intrusion-1786862900410",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "worksStartM": [
+      60,
+      100
+     ],
+     "worksLengthM": [
+      40,
+      80
+     ],
+     "closedWidthM": [
+      2.8,
+      3.5
+     ],
+     "workerSpeedKph": [
+      4,
+      8
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A worker steps from the closed lane into the shifted running lane with a modest lead time and late ego release, keeping minTTC under 3 s without forcing contact, on corridors the maps actually post (>=60 kph)."
+    },
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "worksStartM": [
+      60,
+      100
+     ],
+     "worksLengthM": [
+      40,
+      80
+     ],
+     "closedWidthM": [
+      1.6,
+      2.4
+     ],
+     "workerSpeedKph": [
+      5,
+      9
+     ],
+     "eventLeadS": [
+      0.8,
+      1.5
+     ],
+     "reactAtTtcS": [
+      0.9,
+      1.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Narrower closure width so the solver can keep a viable running lane, plus a shorter worker lead and a later ego release so real braking demand appears (C4) without forcing contact, on >=60 kph corridors the maps actually post."
+    }
+   ]
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "parking_pullout",
+   "admitted": true,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 17,
+   "maps": 3,
+   "sites": 4,
+   "firstFailure": {
+    "C2": 5,
+    "C4": 23,
+    "C5": 245
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 42.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 14.9,
+    "inputTokens": 4648,
+    "outputTokens": 955,
+    "reasoningTokens": 0
+   },
+   "templateSha": "89403899729722af357dc5ff46095bef41c0ea9bda48b5a400007f3b23a6014a",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c9b-open-door-parked-1786862907209",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      25,
+      55
+     ],
+     "eventLeadS": [
+      1.0,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No door-swing primitive exists, so the dooring hazard is hosted as its nearest mechanism: a kerbside parked sedan intruding slowly into the ego lane at short lead time, with late ego release to reach a critical minTTC without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 6,
+     "gapM": [
+      45,
+      85
+     ],
+     "eventLeadS": [
+      1.4,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.4
+     ],
+     "rationale": "Dooring hosted as a slow kerbside pull-out; the gap is widened and ego speed raised so the conflict matures after 2.5 s, the reaction window is shifted up to trade collision cells for hard-braking admissions, and the corridor constraint is dropped entirely to recover multi-map, multi-site portability."
+    }
+   ]
+  }
+ ],
+ "repeatRows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 116,
+   "maps": 5,
+   "sites": 14,
+   "firstFailure": {
+    "C2": 72,
+    "C4": 3,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 43.9,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.7,
+    "inputTokens": 2071,
+    "outputTokens": 306,
+    "reasoningTokens": 0
+   },
+   "templateSha": "51d5724b731aceba09360cee77de94f3679bfa1b83c98229356b001fd47fcc35",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c1-lead-hard-brake-1786862938672",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "leadBrakes": true,
+     "gapM": [
+      20,
+      40
+     ],
+     "brakeAtS": [
+      3.0,
+      5.0
+     ],
+     "reactAtTtcS": [
+      1.2,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Euro NCAP CCRb-style hard-braking lead in flowing traffic at normal highway headway, with a human-scale late reaction window tuned to reach minTTC <= 3.0 s without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 174,
+   "maps": 5,
+   "sites": 19,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 31,
+    "C5": 15
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 46.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.8,
+    "inputTokens": 2057,
+    "outputTokens": 402,
+    "reasoningTokens": 0
+   },
+   "templateSha": "ed68c3407a38e87e124d5e4293f0c9465148bb6f56fe06396f6fad613832b770",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c1-stop-and-go-1786862939243",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 18,
+     "leadBrakes": true,
+     "brakeAtS": [
+      2.8,
+      4.5
+     ],
+     "gapM": [
+      22,
+      45
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "rationale": "Stop-and-go is hosted as a slow lead that brakes hard to a stop (CCRb) while ego closes at corridor speed; late TTC-triggered reaction drives minTTC under 3 s without forcing contact, and ego >= 50 kph keeps C2/C4 jointly satisfiable."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 350,
+   "feasibleCells": 270,
+   "passingCells": 3,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 97,
+    "C3": 44,
+    "C4": 83,
+    "C5": 33
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 47.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 14.9,
+    "inputTokens": 4704,
+    "outputTokens": 875,
+    "reasoningTokens": 0
+   },
+   "templateSha": "d38f6a9ba0a86106107a4670b3fe012dfcf0f1858322f00e97648297d93ee573",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c10b-distracted-drift-1786862944977",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "oncomingStartM": [
+      80,
+      130
+     ],
+     "eventLeadS": [
+      1.5,
+      2.8
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "High combined closing speed (~100 kph) with a mid-range drift lead and a moderately late reaction window drives minTTC under 3 s without forcing contact, while the 60+ kph corridor bound matches published sites for portability."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "oncomingStartM": [
+      120,
+      160
+     ],
+     "eventLeadS": [
+      2.0,
+      3.2
+     ],
+     "reactAtTtcS": [
+      1.1,
+      1.7
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Longer oncoming start distance and lower closing speed (~90 kph combined) push the closest approach past the 2.5 s spawn-artifact cutoff (fixing dominant C2), while a slightly later drift and tighter reaction window preserve real braking demand and sub-3 s minTTC without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C4": 10,
+    "C5": 276
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 50.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 17.1,
+    "inputTokens": 4655,
+    "outputTokens": 1086,
+    "reasoningTokens": 0
+   },
+   "templateSha": "cca10636d94c1be20757259c076a750e4255061aec5f4b2df4685624fd569003",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c11-contested-spot-1786862950736",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 48,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 12,
+     "gapM": [
+      25,
+      60
+     ],
+     "eventLeadS": [
+      1.2,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No parking aisles exist on the maps, so the space-contest brief is hosted as a kerbside pull-out: a rival sedan claims the ego's path by pulling out of the bay just ahead, with mid-range gaps and moderate event lead so late ego release reaches critical TTC without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 10,
+     "gapM": [
+      40,
+      80
+     ],
+     "eventLeadS": [
+      1.8,
+      3.0
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.1
+     ],
+     "rationale": "Hosting the space-contest as a kerbside pull-out: dominant C5 collisions are fixed by raising the reactAtTtcS floor to 1.6 and giving the pulling-out rival a longer event lead and slower exit speed so contact is avoidable, C2 early-conflict cells are fixed by pushing the gap window out to 40-80 m at 50 kph, C4 is kept live by capping reactAtTtcS at 2.1 so the ego is still surprised, and the corridor constraint is dropped entirely to recover portability across maps and sites."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 44,
+   "maps": 4,
+   "sites": 9,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 59,
+    "C3": 13,
+    "C4": 120,
+    "C5": 54
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 46.9,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 10.1,
+    "inputTokens": 2046,
+    "outputTokens": 614,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b0bed71e0486ff40eafd7ad603265e6ef040aac74542d680ccb6e79ded1b9fd4",
+   "outdir": "/tmp/tg-w8-claude-fable-5-medium-c12-stop-arm-bus-1786862942060",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 48,
+     "challengerCatalog": "pedestrian.child_walking",
+     "occluder": "street.bus_shelter",
+     "conflictS": [
+      40,
+      80
+     ],
+     "vruSpeedKph": [
+      4,
+      8
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      1.9
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No school zones or bus stop-arm actors exist on these maps, so the brief is hosted as its core mechanism: a child pedestrian hidden by a large kerbside occluder (bus-shelter proxy for the stopped bus) revealed late into the ego lane, with a moderate child walking speed and a late-but-collision-avoidable reaction window to reach critical TTC without contact."
+    }
+   ]
+  }
+ ]
+}

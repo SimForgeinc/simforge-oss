@@ -1,0 +1,357 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "vista2-owner-sudden-hazards-person-chasing-a-dog-into-the-road",
+      "templateVersion": 2,
+      "templateDigest": "b94f514c8824f846",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "49ef0a61459aa987",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "7378d50e40873e86ebea3ef8864fd83f820578e08d4a278d6f16099d4d36535a",
+      "drawIndex": 1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "49ef0a61459aa987#1",
+    "archetype": "OWNER.sudden-hazards",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "49ef0a61459aa987",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_9be6f89df5f1f7d6",
+      "entryLaneRsl": "18:0:1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "every required adjacency present along the corridor",
+        "353.74 m of runway available, 120 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "chaser",
+        "actorKind": "pedestrian",
+        "roleKind": "relative_to",
+        "laneRsl": "17:0:1",
+        "spawnS": 110.0000308023456,
+        "initialSpeedMps": 3.3333333333333335,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "dog",
+        "actorKind": "animal",
+        "roleKind": "relative_to",
+        "laneRsl": "17:0:1",
+        "spawnS": 110.0000308023456,
+        "initialSpeedMps": 5,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "228:0:1",
+        "spawnS": 40.00005284777893,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "5716188f378ae24e7cad79959bc1556042cdc3d8526e82c9282e80f3397c8572",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 16,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "7378d50e40873e86",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "chaser",
+        "kind": "pedestrian",
+        "dims": {
+          "l": 0.85,
+          "w": 0.5,
+          "h": 1.75
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "17:0:1",
+            "s": 38.836496948835915,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 70.170093588031,
+            "z": -73.4859436207426,
+            "headingRad": -1.5742425019872925
+          },
+          "speedMps": 3.3333333333333335
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "488:0:-1",
+              "45:0:-1",
+              "524:0:-1",
+              "30:0:-1",
+              "151:0:-1",
+              "85:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 3.3333333333333335
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:chaser",
+          "class:pedestrian",
+          "binding:relative_to",
+          "catalog:pedestrian.adult_walking"
+        ]
+      },
+      {
+        "id": "dog",
+        "kind": "animal",
+        "dims": {
+          "l": 1.07,
+          "w": 0.3,
+          "h": 0.75
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "17:0:1",
+            "s": 38.836496948835915,
+            "tFrac": 1
+          },
+          "pose": {
+            "x": 67.83959551695783,
+            "z": -73.4939749571748,
+            "headingRad": -1.5742425019872925
+          },
+          "speedMps": 5
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "488:0:-1",
+              "45:0:-1",
+              "524:0:-1",
+              "30:0:-1",
+              "151:0:-1",
+              "85:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 5
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:dog",
+          "class:animal",
+          "binding:relative_to",
+          "catalog:animal.stray_dog"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "228:0:1",
+            "s": 6.531878651790805,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 41.29737399147344,
+            "z": -135.06423532376337,
+            "headingRad": -0.7943045512598159
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "488:0:-1",
+              "45:0:-1",
+              "524:0:-1",
+              "30:0:-1",
+              "151:0:-1",
+              "85:0:-1",
+              "616:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "i5",
+        "actorId": "dog",
+        "trigger": {
+          "kind": "at",
+          "t": 2.4
+        },
+        "verb": "route",
+        "target": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 67.83959549906778,
+              "z": -73.49400575976497
+            },
+            {
+              "x": 64.17012932251617,
+              "z": -73.5066514331325
+            },
+            {
+              "x": 60.500663145964566,
+              "z": -73.51929710650003
+            }
+          ]
+        }
+      },
+      {
+        "id": "i6",
+        "actorId": "chaser",
+        "trigger": {
+          "kind": "at",
+          "t": 2.8
+        },
+        "verb": "route",
+        "target": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 67.83959549906778,
+              "z": -73.49400575976497
+            },
+            {
+              "x": 64.17012932251617,
+              "z": -73.5066514331325
+            },
+            {
+              "x": 60.500663145964566,
+              "z": -73.51929710650003
+            }
+          ]
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

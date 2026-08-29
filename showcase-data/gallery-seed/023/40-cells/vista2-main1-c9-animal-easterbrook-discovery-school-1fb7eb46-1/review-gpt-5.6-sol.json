@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      2.2,
+      3.2,
+      4.36,
+      8.72,
+      11.64,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 25.65,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 1106,
+      "reasoning": 1026
+    }
+  },
+  "cellId": "vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1",
+  "confidence": 0.9,
+  "defects": [],
+  "dynamism": 4.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle travels south toward the intersection, slows, and turns right to head west. An orange cyclist or scooter approaches from the south, also turns west through the junction, and follows behind the ego without contact.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "887efafce515cbc9ceb87b2d4ca9a5546ce3d9f7077d244ef3e466cad8afe667",
+  "realism": 8.0,
+  "visionAsserted": true
+}

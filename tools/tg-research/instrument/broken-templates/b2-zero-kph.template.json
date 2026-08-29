@@ -1,0 +1,212 @@
+{
+ "scenarioVersion": 2,
+ "meta": {
+  "name": "BROKEN zero-kph: disabled vehicle authored at 0 kph without static",
+  "description": "Known-broken class reproduction (pre-TG-A1): the disabled vehicle and the stranded occupant are authored at initialSpeedKph 0 WITHOUT actor.static, so the warm-up lane-following controller drives them off at ~20 kph. Calibration arm B+ for the realism instrument.",
+  "createdAt": "2026-08-01T00:00:00.000Z",
+  "modifiedAt": "2026-08-01T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "broken.zero-kph.disabled-vehicle",
+  "tags": [
+   "broken",
+   "pre-tg-a1-class",
+   "zero-kph-warmup"
+  ],
+  "author": "agent/obstacle-mechanisms",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "previewDistanceM",
+    "type": "continuous",
+    "description": "Preview at which ego begins its controlled stop.",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     40,
+     58
+    ],
+    "default": 49,
+    "distribution": "uniform"
+   },
+   {
+    "id": "brakeDurationS",
+    "type": "continuous",
+    "description": "Time allotted for ego's controlled stop.",
+    "unit": "s",
+    "tier": 1,
+    "range": [
+     2.8,
+     4.0
+    ],
+    "default": 3.4,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "overcast",
+  "timeOfDay": "afternoon"
+ },
+ "anchor": {
+  "id": "broken-zero-kph",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     4
+    ],
+    "essentiality": "required"
+   },
+   "laneWidthM": {
+    "value": [
+     2.8,
+     4.5
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     30,
+     70
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     12
+    ],
+    "essentiality": "preferred"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     120,
+     null
+    ],
+    "essentiality": "required"
+   }
+  },
+  "features": [],
+  "policy": {
+   "allowMirror": true,
+   "maxSitesPerMap": 12,
+   "diversity": "moderate",
+   "minScore": 0.5
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "pose": {
+    "laneOffset": 0,
+    "s": 15,
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "clamp(0.8 * lane.speedLimitKph, 28, 52)"
+  },
+  {
+   "id": "disabled-vehicle",
+   "kind": "relative_to",
+   "label": "disabled vehicle occupying most of the live lane",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.suv"
+   },
+   "ref": "ego",
+   "dLane": 0,
+   "dsM": 34,
+   "tFrac": 0.12,
+   "headingOffsetRad": 0.04,
+   "initialSpeedKph": 0
+  },
+  {
+   "id": "stranded-occupant",
+   "kind": "relative_to",
+   "label": "stranded pedestrian standing beside and behind the disabled vehicle",
+   "actor": {
+    "class": "pedestrian",
+    "catalogId": "pedestrian.adult_standing"
+   },
+   "ref": "disabled-vehicle",
+   "dLane": 0,
+   "dsM": -3.2,
+   "tFrac": 0.96,
+   "headingOffsetRad": 0,
+   "initialSpeedKph": 0
+  }
+ ],
+ "props": [],
+ "choreography": {
+  "clipSeconds": 6,
+  "warmupSeconds": 1,
+  "interactions": [
+   {
+    "id": "disabled-hazards-on",
+    "actor": "disabled-vehicle",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": -1
+    },
+    "target": {
+     "key": "lights.indicator",
+     "value": "hazard"
+    }
+   },
+   {
+    "id": "occupant-warns",
+    "actor": "stranded-occupant",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "pose.gesture",
+     "value": "halt"
+    }
+   },
+   {
+    "id": "ego-stops-for-disabled-vehicle",
+    "actor": "ego",
+    "verb": "speed",
+    "trigger": {
+     "kind": "when",
+     "condition": {
+      "kind": "distance",
+      "from": "ego",
+      "to": {
+       "role": "disabled-vehicle"
+      },
+      "measure": "alongLane",
+      "op": "<=",
+      "valueM": "param.previewDistanceM"
+     },
+     "byLatest": 8,
+     "ifNever": "fire"
+    },
+    "target": {
+     "mode": "stop"
+    },
+    "dynamics": {
+     "shape": "linear",
+     "constraint": "time",
+     "value": "param.brakeDurationS"
+    }
+   }
+  ]
+ },
+ "invariants": [],
+ "variants": [],
+ "metricSubject": "ego"
+}

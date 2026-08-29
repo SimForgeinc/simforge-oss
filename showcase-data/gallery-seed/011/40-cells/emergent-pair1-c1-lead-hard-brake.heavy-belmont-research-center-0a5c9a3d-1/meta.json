@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c1-lead-hard-brake.heavy-belmont-research-center-0a5c9a3d-1",
+ "briefId": "c1-lead-hard-brake",
+ "stream": "emergent",
+ "templateSha256": "0b65d297f6ca0f86eb840c80f6a852ee58028cf6bb516edb1e5efdb99cc756e8",
+ "arm": "heavy",
+ "map": "belmont-research-center",
+ "site": "0a5c9a3d6746db63",
+ "draw": 1,
+ "seed": "c1072d65903a2130bd312b0c7cfe067d85fc2079c787002e3ca23a1d8a6407ad",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.207,
+  "tMinClearance": 11.72
+ },
+ "notes": "arm(i) paired cell; arm=heavy; band=critical; ambient=40"
+}

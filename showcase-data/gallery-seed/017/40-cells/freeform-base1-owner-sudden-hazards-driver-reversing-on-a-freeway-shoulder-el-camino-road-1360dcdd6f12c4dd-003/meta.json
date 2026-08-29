@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003",
+ "briefId": "owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "6f4c15366689db0bae03c1cc5d8ce1cca7ea0e87868070ae42e880f6a901ba2b",
+ "map": "el-camino-road",
+ "site": "1360dcdd6f12c4dd",
+ "draw": 3,
+ "seed": "a526ee44633f7804",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 3.385,
+  "tMinClearance": 12.72
+ },
+ "notes": "brief: Driver reversing on a freeway shoulder"
+}

@@ -10,9 +10,9 @@ import os, json, subprocess, time, hashlib
 
 import critic, gate, scene, vlm
 
-REPO = '/Users/michaelvu-simforge/Documents/Programming/SimForge-vista'
+REPO = '/Users/michaelvu-simforge/Documents/Programming/UniScenarios-vista'
 DEV_ASSETS = REPO + '/dev-assets'
-CLI = ['node', REPO + '/packages/cli/bin/simforge.js']
+CLI = ['node', REPO + '/packages/cli/bin/uniscenarios.js']
 HERE = os.path.dirname(os.path.abspath(__file__))
 SURFACE = open(HERE + '/surface.md').read()
 GOLD = open(REPO + '/research/edge-case-corpus/templates/'

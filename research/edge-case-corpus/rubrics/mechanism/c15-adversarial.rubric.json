@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C15.adversarial",
+ "originalIntent": "NHTSA pre-crash typology 22-24 plus the UK Highway Code definition of inconsiderate driving. The provocation must produce a genuine conflict; an aggressive-looking manoeuvre 20 m away is not an edge case. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Adversarial road user: a deliberate provocation the ego must survive without contact",
+ "version": 1
+}

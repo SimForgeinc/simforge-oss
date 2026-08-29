@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      4.36,
+      7.38,
+      8.72,
+      9.88,
+      11.64,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 14.89,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 519,
+      "reasoning": 440
+    }
+  },
+  "cellId": "vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0",
+  "confidence": 0.88,
+  "defects": [],
+  "dynamism": 6.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle proceeds along the road, passing a stationary amber vehicle while a pedestrian crosses close behind it and continues away. A green vehicle approaches from the opposite direction, and the two vehicles pass safely without contact.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "23920eea07c4790fb2229a43232009a0f279e314bdec27fe4066356069d741e8",
+  "realism": 8.0,
+  "visionAsserted": true
+}

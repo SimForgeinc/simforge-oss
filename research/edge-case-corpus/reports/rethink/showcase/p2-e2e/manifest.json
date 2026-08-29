@@ -1,0 +1,6591 @@
+{
+  "schema": "uniscenarios.scenario-visual-evidence.v1",
+  "generatedAt": null,
+  "deterministic": true,
+  "evidenceClass": "scenario-instance-incident",
+  "coverageEligibility": "pending-human-review",
+  "countsTowardScenarioCoverage": false,
+  "renderer": {
+    "path": "UniScenarios CityViewer + EditorController.ActorRenderer",
+    "realMapGeometry": true,
+    "realCatalogModels": true,
+    "frame": "scene-y-up",
+    "stats": {
+      "actorRenderer": {
+        "batches": 24,
+        "drawCalls": 25
+      }
+    }
+  },
+  "scenarioId": "1fe43cbbb2e2fe0c#2",
+  "catalogSlot": null,
+  "templateId": "occluded-parking-aisle-reverse-conflict",
+  "archetypeId": "C11.parking",
+  "siteId": "1fe43cbbb2e2fe0c",
+  "drawId": 2,
+  "drawSeed": "73fe66b08e8a2ee60b157e1786240e809b2bec2820b2ee8c27dadae802cf5202",
+  "mapId": "belmont-research-center",
+  "inputHash": "08c8d8e449b4e606bb6c3cc24279340590de94fc45a368502043ad27b53cb185",
+  "traceDigest": "f5c6f6fb111b2e58bcb33be126fc2480cbaac9c3443c13aa60c89f633ca8c1c1",
+  "physics": {
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "profile": "car",
+        "reason": "selected"
+      },
+      "reversingVan": {
+        "mode": "dynamic-v1",
+        "profile": "van",
+        "reason": "selected"
+      }
+    },
+    "crashes": {},
+    "mode": "dynamic-v1",
+    "resolvedProfileDigest": "ee8f3d50a3688f1bb14c4a122d31804cb88c3f5929dfaf7422415e57bea3c87d",
+    "solver": "uniscenarios-sim-engine",
+    "solverVersion": "0.4.0",
+    "substepS": 0.005,
+    "vehicleProfileDigest": null
+  },
+  "topologyDomains": {
+    "authoringMatcherTopology": {
+      "domain": "anchor matching and lane topology index",
+      "digest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "artifact": "dev-assets/belmont-research-center/topology-index.json.gz"
+    },
+    "simulationRoadGraph": {
+      "domain": "simulation graph derived from source OpenDRIVE",
+      "digest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "traceLegacyTopologyDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "artifact": "dev-assets/belmont-research-center/map.xodr"
+    },
+    "studioRenderScene": {
+      "domain": "streamed 3D city and road render manifest",
+      "digest": "dd32e9ad17c28d74447749c1967b87cbbf770d2416830814f69c6a8a05413dd4",
+      "artifact": "dev-assets/belmont-research-center/3d/manifest.json"
+    }
+  },
+  "actors": {
+    "count": 2,
+    "ids": [
+      "ego",
+      "reversingVan"
+    ],
+    "models": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "static": false,
+        "catalogId": "vehicle.sedan",
+        "modelBasis": "input-tag",
+        "renderIdentity": {
+          "source": "catalog",
+          "catalogId": "vehicle.sedan"
+        },
+        "simulationDims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        }
+      },
+      {
+        "id": "reversingVan",
+        "kind": "van",
+        "static": false,
+        "catalogId": "vehicle.van",
+        "modelBasis": "input-tag",
+        "renderIdentity": {
+          "source": "catalog",
+          "catalogId": "vehicle.van"
+        },
+        "simulationDims": {
+          "l": 5.3,
+          "w": 2,
+          "h": 2.4
+        }
+      }
+    ],
+    "staticInvariant": []
+  },
+  "props": {
+    "count": 1,
+    "ids": [
+      "parked-occluding-vehicle"
+    ],
+    "models": [
+      {
+        "id": "parked-occluding-vehicle",
+        "catalogId": "vehicle.box_truck",
+        "dims": {
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
+        },
+        "scale": 0.8,
+        "attachedTo": null,
+        "essentiality": "preferred"
+      }
+    ]
+  },
+  "metricPair": [
+    "ego",
+    "reversingVan"
+  ],
+  "metrics": {
+    "minTTC": {
+      "pair": [
+        "ego",
+        "reversingVan"
+      ],
+      "t": 4.84,
+      "value": 2.019112
+    },
+    "revealToConflict": null,
+    "minDistance": [
+      {
+        "minDistanceM": 7.603329,
+        "pair": [
+          "ego",
+          "reversingVan"
+        ],
+        "t": 4.84
+      }
+    ],
+    "collisions": []
+  },
+  "viewport": {
+    "width": 1600,
+    "height": 960,
+    "deviceScaleFactor": 1,
+    "includeUi": false
+  },
+  "frameTimes": [
+    {
+      "phase": "pre-event",
+      "t": 3.3
+    },
+    {
+      "phase": "reveal",
+      "t": 3.5
+    },
+    {
+      "phase": "conflict",
+      "t": 4.84
+    },
+    {
+      "phase": "aftermath",
+      "t": 5.34
+    }
+  ],
+  "frames": [
+    {
+      "phase": "pre-event",
+      "requestedT": 3.3,
+      "index": 165,
+      "t": 3.3,
+      "poses": [
+        {
+          "id": "ego",
+          "x": 43.5744,
+          "z": -204.2142,
+          "headingRad": -0.006932,
+          "speedMps": 7.3347,
+          "present": true,
+          "y": 2.305493622070823
+        },
+        {
+          "id": "reversingVan",
+          "x": 65.294,
+          "z": -210.0189,
+          "headingRad": 0.043022,
+          "speedMps": 0,
+          "present": true,
+          "y": 2.2746333085293764
+        }
+      ],
+      "props": [
+        {
+          "id": "parked-occluding-vehicle",
+          "x": 59.81942127263275,
+          "z": -209.37123219619056,
+          "headingRad": 0.19087587503952363,
+          "present": true,
+          "y": 2.2252438068389893
+        }
+      ],
+      "camera": {
+        "basis": "ego-sightline-low-oblique",
+        "frozenAtT": null,
+        "pair": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingActorIds": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingPropIds": [
+          "parked-occluding-vehicle"
+        ],
+        "visibleFramingActorIds": [
+          "ego",
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "fovDeg": 46.31099585605353,
+        "eye": [
+          30.054765521274767,
+          5.5900634653001,
+          -200.85976673641204
+        ],
+        "target": [
+          56.22927375754424,
+          3.6400634653001,
+          -207.86811073206354
+        ],
+        "searchOffset": {
+          "azimuthDeg": 0,
+          "heightGain": 1
+        }
+      },
+      "cameraActorClearance": {
+        "actorId": "ego",
+        "clearanceM": 11.431377171876713
+      },
+      "composition": {
+        "viewport": {
+          "width": 1040,
+          "height": 918
+        },
+        "boundsNdc": {
+          "x": 0.94,
+          "y": 0.9
+        },
+        "minimumRequiredSeparationPx": 4,
+        "minPairSeparationPx": 26.809901492607793,
+        "closestPair": [
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "actors": [
+          {
+            "id": "ego",
+            "ndc": [
+              0.03762298801276959,
+              -0.24570361163545593,
+              0.929085622831319
+            ],
+            "pixel": [
+              539.5639537666402,
+              571.7779577406742
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "reversingVan",
+            "ndc": [
+              0.015108681866793202,
+              0.03535297322376772,
+              0.9727397677356574
+            ],
+            "pixel": [
+              527.8565145707324,
+              442.7729852902906
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "parked-occluding-vehicle",
+            "ndc": [
+              -0.034831918154782315,
+              0.020839826574181625,
+              0.967919909734531
+            ],
+            "pixel": [
+              501.88740255951325,
+              449.4345196024506
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          }
+        ],
+        "passed": true
+      },
+      "artifact": {
+        "file": "frames/frame-000.png",
+        "sha256": "0ba4124075c43c9d897f71fab4f5d84aed8e7a2ece19d44f4907301bd8a26ea4"
+      }
+    },
+    {
+      "phase": "reveal",
+      "requestedT": 3.5,
+      "index": 175,
+      "t": 3.5,
+      "poses": [
+        {
+          "id": "ego",
+          "x": 45.0413,
+          "z": -204.2034,
+          "headingRad": -0.007253,
+          "speedMps": 7.3347,
+          "present": true,
+          "y": 2.2995545573650857
+        },
+        {
+          "id": "reversingVan",
+          "x": 65.294,
+          "z": -210.0189,
+          "headingRad": 0.043022,
+          "speedMps": 0,
+          "present": true,
+          "y": 2.2746333085293764
+        }
+      ],
+      "props": [
+        {
+          "id": "parked-occluding-vehicle",
+          "x": 59.81942127263275,
+          "z": -209.37123219619056,
+          "headingRad": 0.19087587503952363,
+          "present": true,
+          "y": 2.2252438068389893
+        }
+      ],
+      "camera": {
+        "basis": "ego-sightline-low-oblique",
+        "frozenAtT": null,
+        "pair": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingActorIds": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingPropIds": [
+          "parked-occluding-vehicle"
+        ],
+        "visibleFramingActorIds": [
+          "ego",
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "fovDeg": 47.338828058068934,
+        "eye": [
+          31.990072647852074,
+          5.587093932947231,
+          -200.71588308344437
+        ],
+        "target": [
+          56.71824042421091,
+          3.637093932947231,
+          -207.86451073206354
+        ],
+        "searchOffset": {
+          "azimuthDeg": 0,
+          "heightGain": 1
+        }
+      },
+      "cameraActorClearance": {
+        "actorId": "ego",
+        "clearanceM": 11.004919139421892
+      },
+      "composition": {
+        "viewport": {
+          "width": 1040,
+          "height": 918
+        },
+        "boundsNdc": {
+          "x": 0.94,
+          "y": 0.9
+        },
+        "minimumRequiredSeparationPx": 4,
+        "minPairSeparationPx": 31.347977536349617,
+        "closestPair": [
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "actors": [
+          {
+            "id": "ego",
+            "ndc": [
+              0.0404371882662564,
+              -0.24394232176603436,
+              0.9269310280818899
+            ],
+            "pixel": [
+              541.0273378984533,
+              570.9695256906098
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "reversingVan",
+            "ndc": [
+              0.018139853038745466,
+              0.03645122145053994,
+              0.9712914203959723
+            ],
+            "pixel": [
+              529.4327235801477,
+              442.2688893542022
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "parked-occluding-vehicle",
+            "ndc": [
+              -0.04042379451445742,
+              0.020249247713786476,
+              0.9659198509054222
+            ],
+            "pixel": [
+              498.9796268524821,
+              449.705595299372
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          }
+        ],
+        "passed": true
+      },
+      "artifact": {
+        "file": "frames/frame-001.png",
+        "sha256": "14215b960c07cfd6b8a7632083c03c8ee6b909bccb62305e1090ffa1d26dc68a"
+      }
+    },
+    {
+      "phase": "conflict",
+      "requestedT": 4.84,
+      "index": 242,
+      "t": 4.84,
+      "poses": [
+        {
+          "id": "ego",
+          "x": 54.4913,
+          "z": -204.7178,
+          "headingRad": 0.130575,
+          "speedMps": 6.7645,
+          "present": true,
+          "y": 2.2696516233867503
+        },
+        {
+          "id": "reversingVan",
+          "x": 66.5414,
+          "z": -209.4767,
+          "headingRad": -0.200306,
+          "speedMps": 1.8141,
+          "present": true,
+          "y": 2.287232453205364
+        }
+      ],
+      "props": [
+        {
+          "id": "parked-occluding-vehicle",
+          "x": 59.81942127263275,
+          "z": -209.37123219619056,
+          "headingRad": 0.19087587503952363,
+          "present": true,
+          "y": 2.2252438068389893
+        }
+      ],
+      "camera": {
+        "basis": "ego-sightline-low-oblique",
+        "frozenAtT": null,
+        "pair": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingActorIds": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingPropIds": [
+          "parked-occluding-vehicle"
+        ],
+        "visibleFramingActorIds": [
+          "ego",
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "fovDeg": 52,
+        "eye": [
+          32.19261409813155,
+          7.078442038296057,
+          -201.2872596562913
+        ],
+        "target": [
+          60.28404042421092,
+          3.628442038296057,
+          -207.85524406539685
+        ],
+        "searchOffset": {
+          "azimuthDeg": 0,
+          "heightGain": 1
+        }
+      },
+      "cameraActorClearance": {
+        "actorId": "ego",
+        "clearanceM": 20.205532427886748
+      },
+      "composition": {
+        "viewport": {
+          "width": 1040,
+          "height": 918
+        },
+        "boundsNdc": {
+          "x": 0.94,
+          "y": 0.9
+        },
+        "minimumRequiredSeparationPx": 24,
+        "minPairSeparationPx": 50.62794482810473,
+        "closestPair": [
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "actors": [
+          {
+            "id": "ego",
+            "ndc": [
+              0.1377499677504637,
+              -0.11769472199848988,
+              0.9563245096111354
+            ],
+            "pixel": [
+              591.6299832302411,
+              513.0218773973069
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "reversingVan",
+            "ndc": [
+              -0.0078690413116447,
+              0.03899174539020176,
+              0.9719811271957659
+            ],
+            "pixel": [
+              515.9080985179447,
+              441.10278886589737
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "parked-occluding-vehicle",
+            "ndc": [
+              -0.09890587840851926,
+              -0.00011444244965335344,
+              0.9656175985631023
+            ],
+            "pixel": [
+              468.56894322757,
+              459.05252908439087
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          }
+        ],
+        "passed": true
+      },
+      "artifact": {
+        "file": "frame.png",
+        "sha256": "56502b7bb0eef6104ff414c841d56d267b155439e0338da1cde1714ecfda3f2f"
+      }
+    },
+    {
+      "phase": "aftermath",
+      "requestedT": 5.34,
+      "index": 267,
+      "t": 5.34,
+      "poses": [
+        {
+          "id": "ego",
+          "x": 57.866,
+          "z": -205.4108,
+          "headingRad": 0.213869,
+          "speedMps": 7.2698,
+          "present": true,
+          "y": 2.2289262644210175
+        },
+        {
+          "id": "reversingVan",
+          "x": 66.5414,
+          "z": -209.4767,
+          "headingRad": -0.200306,
+          "speedMps": 0,
+          "present": true,
+          "y": 2.287232453205364
+        }
+      ],
+      "props": [
+        {
+          "id": "parked-occluding-vehicle",
+          "x": 59.81942127263275,
+          "z": -209.37123219619056,
+          "headingRad": 0.19087587503952363,
+          "present": true,
+          "y": 2.2252438068389893
+        }
+      ],
+      "camera": {
+        "basis": "conflict-frozen-low-oblique",
+        "frozenAtT": 4.84,
+        "pair": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingActorIds": [
+          "ego",
+          "reversingVan"
+        ],
+        "framingPropIds": [
+          "parked-occluding-vehicle"
+        ],
+        "visibleFramingActorIds": [
+          "ego",
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "fovDeg": 52,
+        "eye": [
+          32.19261409813155,
+          7.05807935881319,
+          -201.2872596562913
+        ],
+        "target": [
+          60.28404042421092,
+          3.6080793588131908,
+          -207.85524406539685
+        ],
+        "searchOffset": {
+          "azimuthDeg": 0,
+          "heightGain": 1
+        }
+      },
+      "cameraActorClearance": {
+        "actorId": "ego",
+        "clearanceM": 23.619154141709775
+      },
+      "composition": {
+        "viewport": {
+          "width": 1040,
+          "height": 918
+        },
+        "boundsNdc": {
+          "x": 0.94,
+          "y": 0.9
+        },
+        "minimumRequiredSeparationPx": 24,
+        "minPairSeparationPx": 50.589330991360605,
+        "closestPair": [
+          "reversingVan",
+          "parked-occluding-vehicle"
+        ],
+        "actors": [
+          {
+            "id": "ego",
+            "ndc": [
+              0.12623247016740555,
+              -0.07196146180713335,
+              0.9620434241703636
+            ],
+            "pixel": [
+              585.6408844870509,
+              492.0303109694742
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "reversingVan",
+            "ndc": [
+              -0.007869577578647827,
+              0.04016279746847747,
+              0.9719792063795403
+            ],
+            "pixel": [
+              515.9078196591031,
+              440.56527596196884
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          },
+          {
+            "id": "parked-occluding-vehicle",
+            "ndc": [
+              -0.09891414065188682,
+              0.0013177565196319655,
+              0.9656147124563497
+            ],
+            "pixel": [
+              468.56464686101884,
+              458.3951497574889
+            ],
+            "inFrame": true,
+            "sceneryClear": true,
+            "blockerLayer": null,
+            "blockerDistanceM": null
+          }
+        ],
+        "passed": true
+      },
+      "artifact": {
+        "file": "frames/frame-003.png",
+        "sha256": "59b930f5015148afe1a91947e30b61299a4287ebb3a7cedf28af9879e132b054"
+      }
+    }
+  ],
+  "videoSequence": {
+    "startT": 2.5,
+    "endT": 5.64,
+    "fps": 12,
+    "frameCount": 39,
+    "frames": [
+      {
+        "sequenceIndex": 0,
+        "index": 125,
+        "requestedT": 2.5,
+        "t": 2.5,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 37.6952,
+            "z": -204.2554,
+            "headingRad": -0.006321,
+            "speedMps": 7.3747,
+            "present": true,
+            "y": 2.3291586765213927
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 42.1369234304986,
+          "eye": [
+            22.960850602806044,
+            5.601895992525384,
+            -201.4337962288425
+          ],
+          "target": [
+            54.26954042421092,
+            3.6518959925253847,
+            -207.88184406539688
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.52765519086772
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 15.044456372991057,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03159979948020629,
+                -0.26686440467916955,
+                0.9340383134349867
+              ],
+              "pixel": [
+                536.4318957297072,
+                581.4907617477388
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.0069254827058023395,
+                0.03329929647326378,
+                0.9770386402643945
+              ],
+              "pixel": [
+                523.6012510070171,
+                443.71562291877194
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.020591508472304572,
+                0.02317551486431582,
+                0.9736754880944534
+              ],
+              "pixel": [
+                509.2924155944016,
+                448.36243867727904
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 1,
+        "index": 129,
+        "requestedT": 2.5833333333333335,
+        "t": 2.58,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 38.2872,
+            "z": -204.2513,
+            "headingRad": -0.00655,
+            "speedMps": 7.4165,
+            "present": true,
+            "y": 2.3267811399531726
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 42.560130112707924,
+          "eye": [
+            23.565776480014637,
+            5.600707224241274,
+            -201.36301512048726
+          ],
+          "target": [
+            54.46687375754425,
+            3.6507072242412746,
+            -207.88047739873016
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.525204602643187
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 15.880715444758144,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03176685798403174,
+                -0.2622342548510712,
+                0.9340434402794837
+              ],
+              "pixel": [
+                536.5187661516966,
+                579.3655229766417
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.007545345122706621,
+                0.03323566783502204,
+                0.9767254100111119
+              ],
+              "pixel": [
+                523.9235794638074,
+                443.74482846372484
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.021582864799948368,
+                0.022838342783706018,
+                0.9732655042157149
+              ],
+              "pixel": [
+                508.77691030402684,
+                448.5172006622789
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 2,
+        "index": 133,
+        "requestedT": 2.6666666666666665,
+        "t": 2.66,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 38.8804,
+            "z": -204.2471,
+            "headingRad": -0.006757,
+            "speedMps": 7.4054,
+            "present": true,
+            "y": 2.324398787700219
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 42.983651650569854,
+          "eye": [
+            24.172815187923618,
+            5.599516048114797,
+            -201.28915324666244
+          ],
+          "target": [
+            54.66460709087758,
+            3.6495160481147977,
+            -207.87907739873017
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.5227296546494
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 16.765320650971805,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.031968132785176843,
+                -0.2576464320428536,
+                0.9340486445291927
+              ],
+              "pixel": [
+                536.623429048292,
+                577.2597123076698
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.008195955318377683,
+                0.03317480923298705,
+                0.9764032694804698
+              ],
+              "pixel": [
+                524.2618967655563,
+                443.7727625620589
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.02263540215026199,
+                0.022492506425561578,
+                0.9728424068896658
+              ],
+              "pixel": [
+                508.22959088186377,
+                448.67593955066724
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 3,
+        "index": 137,
+        "requestedT": 2.75,
+        "t": 2.74,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 39.4707,
+            "z": -204.2429,
+            "headingRad": -0.006923,
+            "speedMps": 7.3465,
+            "present": true,
+            "y": 2.32202808296225
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 43.404535677543066,
+          "eye": [
+            24.777838251922873,
+            5.598330695745813,
+            -201.21266673308935
+          ],
+          "target": [
+            54.86137375754425,
+            3.648330695745813,
+            -207.87767739873019
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.520258902376273
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 17.695050037057506,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03220364066510338,
+                -0.2531297260151283,
+                0.9340538893129016
+              ],
+              "pixel": [
+                536.7458931458538,
+                575.1865442409439
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.008874550086627521,
+                0.03311687871994442,
+                0.97607416636956
+              ],
+              "pixel": [
+                524.6147660450464,
+                443.7993526675455
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.02374572683161032,
+                0.022139664879651598,
+                0.9724086569309572
+              ],
+              "pixel": [
+                507.6522220475626,
+                448.8378938202399
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 4,
+        "index": 142,
+        "requestedT": 2.8333333333333335,
+        "t": 2.84,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 40.202,
+            "z": -204.2376,
+            "headingRad": -0.007065,
+            "speedMps": 7.2934,
+            "present": true,
+            "y": 2.319091111756044
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 43.925092937173666,
+          "eye": [
+            25.622995095906013,
+            5.59686221014271,
+            -201.13508726175377
+          ],
+          "target": [
+            55.10514042421092,
+            3.6468622101427104,
+            -207.87591073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.42067164170251
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 18.976704231243925,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.032767616851049244,
+                -0.24969636996379432,
+                0.9336377835518528
+              ],
+              "pixel": [
+                537.0391607625456,
+                573.6106338133816
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.009782411240370754,
+                0.03325628453699778,
+                0.9755960331732966
+              ],
+              "pixel": [
+                525.0868538449928,
+                443.735365397518
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.025287184222236157,
+                0.02181958144172112,
+                0.9717753640489714
+              ],
+              "pixel": [
+                506.8506642044372,
+                448.98481211825
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 5,
+        "index": 146,
+        "requestedT": 2.9166666666666665,
+        "t": 2.92,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 40.7858,
+            "z": -204.2335,
+            "headingRad": -0.007121,
+            "speedMps": 7.3102,
+            "present": true,
+            "y": 2.316746509540536
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 44.339953860523856,
+          "eye": [
+            26.388822266095882,
+            5.595689909034956,
+            -201.0918238824562
+          ],
+          "target": [
+            55.29974042421092,
+            3.645689909034956,
+            -207.87454406539686
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.248692661031447
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 20.126791460203396,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03347763326471515,
+                -0.2489931874845172,
+                0.9328878401010084
+              ],
+              "pixel": [
+                537.4083692976518,
+                573.2878730553934
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.010573471753586836,
+                0.03357986449140876,
+                0.9751432084549129
+              ],
+              "pixel": [
+                525.4982053118651,
+                443.5868421984434
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.02667896611010087,
+                0.02167843141231222,
+                0.9711721355433784
+              ],
+              "pixel": [
+                506.1269376227475,
+                449.0495999817487
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 6,
+        "index": 150,
+        "requestedT": 3,
+        "t": 3,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 41.3724,
+            "z": -204.2293,
+            "headingRad": -0.007094,
+            "speedMps": 7.3529,
+            "present": true,
+            "y": 2.3143906654251323
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 44.756087543220744,
+          "eye": [
+            27.15883548427635,
+            5.594511986977254,
+            -201.0464948017173
+          ],
+          "target": [
+            55.49527375754425,
+            3.6445119869772546,
+            -207.87314406539687
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.076184903262721
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 21.360433408262182,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.034241214925753514,
+                -0.24829485831548043,
+                0.9321187283524586
+              ],
+              "pixel": [
+                537.8054317613919,
+                572.9673399668055
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.011418246778845061,
+                0.03392073446182021,
+                0.9746717963474478
+              ],
+              "pixel": [
+                525.9374883249994,
+                443.4303828820245
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.028175773043777854,
+                0.021526209332659207,
+                0.9705409243818826
+              ],
+              "pixel": [
+                505.34859801723553,
+                449.1194699163094
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 7,
+        "index": 154,
+        "requestedT": 3.0833333333333335,
+        "t": 3.08,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 41.9609,
+            "z": -204.2253,
+            "headingRad": -0.007011,
+            "speedMps": 7.3493,
+            "present": true,
+            "y": 2.3120261973113703
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 45.17284463376227,
+          "eye": [
+            27.93189325588812,
+            5.593329752920373,
+            -200.9994942057422
+          ],
+          "target": [
+            55.69144042421092,
+            3.643329752920373,
+            -207.87181073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.903411518748364
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 22.681764748173144,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03506029213375686,
+                -0.24759985297948733,
+                0.9313309711212121
+              ],
+              "pixel": [
+                538.2313519095535,
+                572.6483325175847
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.012318870271864246,
+                0.03427921173907198,
+                0.9741814018521392
+              ],
+              "pixel": [
+                526.4058125413694,
+                443.26584181176594
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.029783243214617613,
+                0.0213617015429054,
+                0.9698808140904746
+              ],
+              "pixel": [
+                504.5127135283989,
+                449.1949789918064
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 8,
+        "index": 158,
+        "requestedT": 3.1666666666666665,
+        "t": 3.16,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 42.5476,
+            "z": -204.2213,
+            "headingRad": -0.006931,
+            "speedMps": 7.3276,
+            "present": true,
+            "y": 2.3096508272893397
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 45.58750199866881,
+          "eye": [
+            28.703202054435504,
+            5.592142067909358,
+            -200.9506340352229
+          ],
+          "target": [
+            55.88700709087758,
+            3.6421420679093583,
+            -207.87047739873017
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.731476443174767
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 24.091823530531666,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03593535357286923,
+                -0.24691122109356037,
+                0.9305292274010943
+              ],
+              "pixel": [
+                538.686383857892,
+                572.3322504819442
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.013275683596800793,
+                0.034654143356449896,
+                0.9736742315801178
+              ],
+              "pixel": [
+                526.9033554703365,
+                443.0937481993895
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.03150334626739789,
+                0.021185176394894364,
+                0.9691944109628781
+              ],
+              "pixel": [
+                503.61825994095307,
+                449.2760040347435
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 9,
+        "index": 162,
+        "requestedT": 3.25,
+        "t": 3.24,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 43.1343,
+            "z": -204.2172,
+            "headingRad": -0.006903,
+            "speedMps": 7.3371,
+            "present": true,
+            "y": 2.3072754532188546
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 46.00124880919756,
+          "eye": [
+            29.475192866508365,
+            5.590954380874115,
+            -200.89949292477792
+          ],
+          "target": [
+            56.08257375754425,
+            3.6409543808741156,
+            -207.86911073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.55987308819374
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 25.603906756352377,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.036874274390222755,
+                -0.24622240120718272,
+                0.929710785437653
+              ],
+              "pixel": [
+                539.1746226829159,
+                572.0160821540969
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.014297202092181225,
+                0.03504662979797448,
+                0.9731478640867977
+              ],
+              "pixel": [
+                527.4345450879342,
+                442.9135969227297
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.03335303028187423,
+                0.020993958999047185,
+                0.9684780632819863
+              ],
+              "pixel": [
+                502.6564242534254,
+                449.3637728194373
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 10,
+        "index": 167,
+        "requestedT": 3.3333333333333335,
+        "t": 3.34,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 43.8678,
+            "z": -204.2121,
+            "headingRad": -0.006975,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.3043057305903467
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 46.517153402518915,
+          "eye": [
+            30.44140279924418,
+            5.589469519559861,
+            -200.83237690313152
+          ],
+          "target": [
+            56.32707375754425,
+            3.6394695195598614,
+            -207.86741073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.34584270239792
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 27.65156911448264,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.038145463044357335,
+                -0.24535603981451662,
+                0.9286634768258328
+              ],
+              "pixel": [
+                539.8356407830659,
+                571.6184222748632
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.015673494680497533,
+                0.03556299986651335,
+                0.9724611727730308
+              ],
+              "pixel": [
+                528.1502172338587,
+                442.6765830612704
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.03586588477622719,
+                0.020731583747237863,
+                0.9675375032474272
+              ],
+              "pixel": [
+                501.34973991636184,
+                449.4842030600178
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 11,
+        "index": 171,
+        "requestedT": 3.4166666666666665,
+        "t": 3.42,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 44.4545,
+            "z": -204.2078,
+            "headingRad": -0.007102,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.3019303484229496
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 46.928556204682394,
+          "eye": [
+            31.215198283644394,
+            5.588281828476163,
+            -200.7755550161533
+          ],
+          "target": [
+            56.52264042421092,
+            3.638281828476163,
+            -207.86597739873017
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.17514110519939
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 29.430512228364943,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.03924910617563411,
+                -0.2446548779046681,
+                0.9278062078988308
+              ],
+              "pixel": [
+                540.4095352113297,
+                571.2965889582428
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.016863256097484562,
+                0.03599727611207489,
+                0.9718877394487121
+              ],
+              "pixel": [
+                528.768893170692,
+                442.4772502645576
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.03805607095787179,
+                0.020500841605854414,
+                0.9667469129726625
+              ],
+              "pixel": [
+                500.2108431019067,
+                449.59011370291284
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 12,
+        "index": 175,
+        "requestedT": 3.5,
+        "t": 3.5,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 45.0413,
+            "z": -204.2034,
+            "headingRad": -0.007253,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.2995545573650857
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.294,
+            "z": -210.0189,
+            "headingRad": 0.043022,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.2746333085293764
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 47.338828058068934,
+          "eye": [
+            31.990072647852074,
+            5.587093932947231,
+            -200.71588308344437
+          ],
+          "target": [
+            56.71824042421091,
+            3.637093932947231,
+            -207.86451073206354
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.004919139421892
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 31.347977536349617,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.0404371882662564,
+                -0.24394232176603436,
+                0.9269310280818899
+              ],
+              "pixel": [
+                541.0273378984533,
+                570.9695256906098
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.018139853038745466,
+                0.03645122145053994,
+                0.9712914203959723
+              ],
+              "pixel": [
+                529.4327235801477,
+                442.2688893542022
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.04042379451445742,
+                0.020249247713786476,
+                0.9659198509054222
+              ],
+              "pixel": [
+                498.9796268524821,
+                449.705595299372
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 13,
+        "index": 179,
+        "requestedT": 3.583333333333333,
+        "t": 3.58,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 45.6281,
+            "z": -204.199,
+            "headingRad": -0.007383,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.297178766307221
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.2953,
+            "z": -210.016,
+            "headingRad": 0.04131,
+            "speedMps": 0.0276,
+            "present": true,
+            "y": 2.274647287043578
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 47.747682831059166,
+          "eye": [
+            32.05521916933587,
+            5.675465265481369,
+            -200.74095872091365
+          ],
+          "target": [
+            56.914273757544244,
+            3.6359130266753996,
+            -207.8620773987302
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 11.505872151825235
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 31.297360320392368,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.05822850285188719,
+                -0.2344791043270584,
+                0.929538060980146
+              ],
+              "pixel": [
+                550.2788214829814,
+                566.6259088861199
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.01369272825376918,
+                0.037071112492244415,
+                0.9712386770373579
+              ],
+              "pixel": [
+                527.12021869196,
+                441.98435936605983
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.04454338603316356,
+                0.01985040504677994,
+                0.9658436680542821
+              ],
+              "pixel": [
+                496.83743926275497,
+                449.888664083528
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 14,
+        "index": 183,
+        "requestedT": 3.666666666666667,
+        "t": 3.66,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 46.2148,
+            "z": -204.1945,
+            "headingRad": -0.007459,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.2948033760429127
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.2995,
+            "z": -210.0083,
+            "headingRad": 0.036895,
+            "speedMps": 0.0762,
+            "present": true,
+            "y": 2.2746924483971513
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 48.15460530426945,
+          "eye": [
+            32.11886264805663,
+            5.763852389831973,
+            -200.75467369874488
+          ],
+          "target": [
+            57.11124042421091,
+            3.6347479122200324,
+            -207.85801073206355
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.01242342328365
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 31.46408605697338,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.07338421238792658,
+                -0.22517430790771287,
+                0.9319895040799723
+              ],
+              "pixel": [
+                558.1597904417218,
+                562.3550073296402
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.00974325337951902,
+                0.037580903843932034,
+                0.9711908321246873
+              ],
+              "pixel": [
+                525.0664917573499,
+                441.75036513563515
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.04858550122789577,
+                0.01935014743059805,
+                0.9657730151557111
+              ],
+              "pixel": [
+                494.7355393614942,
+                450.1182823293555
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 15,
+        "index": 187,
+        "requestedT": 3.75,
+        "t": 3.74,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 46.8016,
+            "z": -204.1903,
+            "headingRad": -0.007395,
+            "speedMps": 7.3347,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.3089,
+            "z": -209.9973,
+            "headingRad": 0.030557,
+            "speedMps": 0.153,
+            "present": true,
+            "y": 2.274793523807531
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 48.558780064902926,
+          "eye": [
+            32.18110490280307,
+            5.853453738293295,
+            -200.75651429004387
+          ],
+          "target": [
+            57.30997375754425,
+            3.6347970218753844,
+            -207.85294406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 12.524342909682796
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 31.824120948756853,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.08620929466292905,
+                -0.21587770476891677,
+                0.9342984837231743
+              ],
+              "pixel": [
+                564.8288332247232,
+                558.0878664889328
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.00625896308077267,
+                0.03791447705553132,
+                0.9711502853981301
+              ],
+              "pixel": [
+                523.2546608020017,
+                441.5972550315111
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.05253268035114019,
+                0.01865484687232356,
+                0.9657081646382886
+              ],
+              "pixel": [
+                492.68300621740707,
+                450.43742528560347
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 16,
+        "index": 192,
+        "requestedT": 3.833333333333333,
+        "t": 3.84,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 47.5351,
+            "z": -204.1865,
+            "headingRad": -0.006311,
+            "speedMps": 7.3346,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.3312,
+            "z": -209.9803,
+            "headingRad": 0.020771,
+            "speedMps": 0.2938,
+            "present": true,
+            "y": 2.275033309089601
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 49.058878082769475,
+          "eye": [
+            32.25642539253289,
+            5.965513929441792,
+            -200.74269110132917
+          ],
+          "target": [
+            57.56190709087758,
+            3.634916914516419,
+            -207.84601073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 13.171902977560713
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 32.520960865866535,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.09938239385044059,
+                -0.2045571087155023,
+                0.9370032600220013
+              ],
+              "pixel": [
+                571.6788448022292,
+                552.8917129004155
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                0.0025196640733784,
+                0.038207951849148235,
+                0.9711131144781436
+              ],
+              "pixel": [
+                521.3102253181568,
+                441.46255010124094
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.0573264405214529,
+                0.017636139094580706,
+                0.9656356275802324
+              ],
+              "pixel": [
+                490.19025092884453,
+                450.90501215558743
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 17,
+        "index": 196,
+        "requestedT": 3.916666666666667,
+        "t": 3.92,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 48.1218,
+            "z": -204.187,
+            "headingRad": -0.003421,
+            "speedMps": 7.3344,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.3608,
+            "z": -209.9649,
+            "headingRad": 0.011926,
+            "speedMps": 0.4441,
+            "present": true,
+            "y": 2.2753515891052642
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 49.45407250995284,
+          "eye": [
+            32.31399759441055,
+            6.055225308255594,
+            -200.72265832790694
+          ],
+          "target": [
+            57.767340424210914,
+            3.635076054524251,
+            -207.84104406539686
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 13.69652722241979
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 33.25631016115021,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1079299255581013,
+                -0.19575867637583957,
+                0.9390345100408035
+              ],
+              "pixel": [
+                576.1235612902126,
+                548.8532324565105
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.000012772105622473515,
+                0.03835962438670229,
+                0.9710968390299339
+              ],
+              "pixel": [
+                519.9933585050763,
+                441.3929324065037
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.06104124382813956,
+                0.016695009035873776,
+                0.9655839402803076
+              ],
+              "pixel": [
+                488.2585532093674,
+                451.336990852534
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 18,
+        "index": 200,
+        "requestedT": 4,
+        "t": 4,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 48.7071,
+            "z": -204.1933,
+            "headingRad": 0.002292,
+            "speedMps": 7.2795,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.4036,
+            "z": -209.9483,
+            "headingRad": 0.00248,
+            "speedMps": 0.6264,
+            "present": true,
+            "y": 2.2758118048035874
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 49.84372299726736,
+          "eye": [
+            32.3668539328188,
+            6.145007654910725,
+            -200.70024823280755
+          ],
+          "target": [
+            57.976707090877575,
+            3.6353061623734124,
+            -207.8376107320635
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 14.227785971548604
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 34.12627386756012,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1149382341550536,
+                -0.18720549133006348,
+                0.9409586006184789
+              ],
+              "pixel": [
+                579.7678817606278,
+                544.927320520499
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.0021726947916907665,
+                0.038451383720877315,
+                0.9710955272204337
+              ],
+              "pixel": [
+                518.8701987083208,
+                441.3508148721173
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.06463401530360366,
+                0.015636907373667245,
+                0.9655386340314355
+              ],
+              "pixel": [
+                486.3903120421261,
+                451.8226595154867
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 19,
+        "index": 204,
+        "requestedT": 4.083333333333333,
+        "t": 4.08,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 49.2867,
+            "z": -204.2074,
+            "headingRad": 0.011168,
+            "speedMps": 7.197,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.4612,
+            "z": -209.9304,
+            "headingRad": -0.007445,
+            "speedMps": 0.8128,
+            "present": true,
+            "y": 2.2764311605097416
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 50.22499525672926,
+          "eye": [
+            32.40881367184206,
+            6.234869571569773,
+            -200.68158410680286
+          ],
+          "target": [
+            58.18910709087759,
+            3.6356158402264893,
+            -207.83634406539684
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 14.767034398616467
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 35.10036798545659,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.120597730692513,
+                -0.17891961223000638,
+                0.9427864963908738
+              ],
+              "pixel": [
+                582.7108199601067,
+                541.1241020135728
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.0039983026541717745,
+                0.0384933620954207,
+                0.9711140786676071
+              ],
+              "pixel": [
+                517.9208826198306,
+                441.33154679820194
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.06808004727197524,
+                0.014464298351528362,
+                0.965504619396188
+              ],
+              "pixel": [
+                484.59837541857286,
+                452.36088705664844
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 20,
+        "index": 208,
+        "requestedT": 4.166666666666667,
+        "t": 4.16,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 49.8587,
+            "z": -204.2305,
+            "headingRad": 0.022866,
+            "speedMps": 7.0961,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.5327,
+            "z": -209.9085,
+            "headingRad": -0.01918,
+            "speedMps": 0.9812,
+            "present": true,
+            "y": 2.277199978790819
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 50.597807859306045,
+          "eye": [
+            32.43697866152311,
+            6.324806219516281,
+            -200.67360631958846
+          ],
+          "target": [
+            58.403607090877586,
+            3.636000249367028,
+            -207.83674406539686
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 15.314328659883087
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 36.19635192389176,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12510408433727505,
+                -0.1709071332014739,
+                0.94452424452412
+              ],
+              "pixel": [
+                585.0541238553831,
+                537.4463741394766
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.005490689353252141,
+                0.03848976026752684,
+                0.9711518612408744
+              ],
+              "pixel": [
+                517.1448415363088,
+                441.3332000372052
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.07141847741275612,
+                0.013186502865045305,
+                0.9654827005463136
+              ],
+              "pixel": [
+                482.86239174536684,
+                452.9473951849442
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 21,
+        "index": 212,
+        "requestedT": 4.25,
+        "t": 4.24,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 50.421,
+            "z": -204.2626,
+            "headingRad": 0.036385,
+            "speedMps": 6.9927,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.6173,
+            "z": -209.8811,
+            "headingRad": -0.033347,
+            "speedMps": 1.1491,
+            "present": true,
+            "y": 2.277884319440788
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 50.96149439782657,
+          "eye": [
+            32.44833749846,
+            6.414700628647237,
+            -200.68082388124859
+          ],
+          "target": [
+            58.619240424210915,
+            3.6363424196920127,
+            -207.83831073206352
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 15.869584472766027
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 37.40766297606348,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12861974644230367,
+                -0.16316283177408736,
+                0.9461781247107234
+              ],
+              "pixel": [
+                586.8822681499978,
+                533.8917397843061
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.006667503354238362,
+                0.03843823539977166,
+                0.9712092101653194
+              ],
+              "pixel": [
+                516.532898255796,
+                441.35684995150484
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.07466069419301995,
+                0.011821771234047623,
+                0.9654746689850218
+              ],
+              "pixel": [
+                481.17643901962964,
+                453.57380700357214
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 22,
+        "index": 217,
+        "requestedT": 4.333333333333333,
+        "t": 4.34,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 51.1136,
+            "z": -204.3142,
+            "headingRad": 0.054164,
+            "speedMps": 6.9024,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.7409,
+            "z": -209.8382,
+            "headingRad": -0.054445,
+            "speedMps": 1.359,
+            "present": true,
+            "y": 2.2783456093213243
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 51.405939957736585,
+          "eye": [
+            32.44316961859031,
+            6.526871572094967,
+            -200.71341535806835
+          ],
+          "target": [
+            58.89130709087758,
+            3.6365730646322807,
+            -207.8412107320635
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 16.572823075484422
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 39.08441310512954,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13182785721305681,
+                -0.15383397331411944,
+                0.9481323057649377
+              ],
+              "pixel": [
+                588.5504857507896,
+                529.6097937511809
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007717468382008514,
+                0.03830887708932873,
+                0.9713036663321409
+              ],
+              "pixel": [
+                515.9869164413556,
+                441.4162254159981
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.07860670338948293,
+                0.010007003248247054,
+                0.9654784843702416
+              ],
+              "pixel": [
+                479.1245142374689,
+                454.4067855090546
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 23,
+        "index": 221,
+        "requestedT": 4.416666666666667,
+        "t": 4.42,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 51.6616,
+            "z": -204.3634,
+            "headingRad": 0.067944,
+            "speedMps": 6.8484,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.8536,
+            "z": -209.7964,
+            "headingRad": -0.073983,
+            "speedMps": 1.5136,
+            "present": true,
+            "y": 2.2789456863685293
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 51.75495322584516,
+          "eye": [
+            32.42627278263195,
+            6.61672384942454,
+            -200.75939427648692
+          ],
+          "target": [
+            59.111540424210915,
+            3.6368731031558834,
+            -207.8436773987302
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 17.14124961404635
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 40.55994478414627,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13358549677647247,
+                -0.14667178808155723,
+                0.9496097424846751
+              ],
+              "pixel": [
+                589.4644583237657,
+                526.3223507294348
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.008241044044202093,
+                0.038177287318837475,
+                0.9713944362998275
+              ],
+              "pixel": [
+                515.7146570970149,
+                441.4766251206536
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.08169508108634133,
+                0.008451127594284789,
+                0.9654892122704225
+              ],
+              "pixel": [
+                477.5185578351025,
+                455.1209324342233
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 24,
+        "index": 225,
+        "requestedT": 4.5,
+        "t": 4.5,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 52.2055,
+            "z": -204.4185,
+            "headingRad": 0.080739,
+            "speedMps": 6.8157,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 65.9759,
+            "z": -209.7477,
+            "headingRad": -0.095575,
+            "speedMps": 1.6301,
+            "present": true,
+            "y": 2.280419183873829
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.40019853156967,
+            6.70701283698316,
+            -200.82280972031617
+          ],
+          "target": [
+            59.333607090877585,
+            3.637609851908533,
+            -207.84581073206354
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 17.713530924580816
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 42.234146354518174,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13501064919433609,
+                -0.14010453253748892,
+                0.951014671050934
+              ],
+              "pixel": [
+                590.2055375810548,
+                523.3079804347075
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.008529293066181104,
+                0.03812412435671737,
+                0.9714948348328722
+              ],
+              "pixel": [
+                515.5647676055859,
+                441.5010269202667
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.08489860347286199,
+                0.006803293920974431,
+                0.9655045465286708
+              ],
+              "pixel": [
+                475.8527261941117,
+                455.8772880902727
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 25,
+        "index": 229,
+        "requestedT": 4.583333333333334,
+        "t": 4.58,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 52.7466,
+            "z": -204.479,
+            "headingRad": 0.092551,
+            "speedMps": 6.7919,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.1049,
+            "z": -209.6926,
+            "headingRad": -0.118752,
+            "speedMps": 1.7179,
+            "present": true,
+            "y": 2.2819734044640465
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.367268881765604,
+            6.797342186084239,
+            -200.90313951985075
+          ],
+          "target": [
+            59.556973757544256,
+            3.638386962203642,
+            -207.84761073206354
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 18.28868466330051
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 44.212807982193745,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13658930367353148,
+                -0.1344531212019401,
+                0.9523502659004266
+              ],
+              "pixel": [
+                591.0264379102364,
+                520.7139826316906
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.008644554912473379,
+                0.03824308124628097,
+                0.971601073999607
+              ],
+              "pixel": [
+                515.5048314455138,
+                441.446425707957
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.08847916390039917,
+                0.00510465397355943,
+                0.9655221558169303
+              ],
+              "pixel": [
+                473.9908347717924,
+                456.65696382613623
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 26,
+        "index": 233,
+        "requestedT": 4.666666666666666,
+        "t": 4.66,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 53.2854,
+            "z": -204.5451,
+            "headingRad": 0.103866,
+            "speedMps": 6.7742,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.2381,
+            "z": -209.6317,
+            "headingRad": -0.143116,
+            "speedMps": 1.7783,
+            "present": true,
+            "y": 2.2835782275851084
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.32862731989968,
+            6.88769683645074,
+            -201.0014845432705
+          ],
+          "target": [
+            59.78097375754425,
+            3.639189373764173,
+            -207.84934406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 18.866403678864437
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 46.23333661923359,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13762600077891252,
+                -0.12891603744094976,
+                0.9536201996095486
+              ],
+              "pixel": [
+                591.5655204050345,
+                518.172461185396
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.008576716145399482,
+                0.03832488062908004,
+                0.9717103698895424
+              ],
+              "pixel": [
+                515.5401076043922,
+                441.4088797912523
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09194417582070799,
+                0.0033166676320223105,
+                0.9655405918351064
+              ],
+              "pixel": [
+                472.18902857323184,
+                457.4776495569018
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 27,
+        "index": 237,
+        "requestedT": 4.75,
+        "t": 4.74,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 53.822,
+            "z": -204.6174,
+            "headingRad": 0.115303,
+            "speedMps": 6.7624,
+            "present": true,
+            "y": 2.2948005199432373
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.3732,
+            "z": -209.5656,
+            "headingRad": -0.168288,
+            "speedMps": 1.8113,
+            "present": true,
+            "y": 2.2852059423272664
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.2848201510331,
+            6.97806293262779,
+            -201.12006344308426
+          ],
+          "target": [
+            60.00487375754425,
+            3.640003231135252,
+            -207.85141073206353
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 19.446724343524362
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 4,
+          "minPairSeparationPx": 48.24843238415572,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13813911236160512,
+                -0.12348641474701329,
+                0.9548281609230114
+              ],
+              "pixel": [
+                591.8323384280346,
+                515.6802643688792
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.00836188834340752,
+                0.038366919771663,
+                0.9718204546897945
+              ],
+              "pixel": [
+                515.6518180614281,
+                441.3895838248067
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09523561893779868,
+                0.001446030423966497,
+                0.965558783922917
+              ],
+              "pixel": [
+                470.4774781523447,
+                458.33627203539936
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 28,
+        "index": 242,
+        "requestedT": 4.833333333333334,
+        "t": 4.84,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 54.4913,
+            "z": -204.7178,
+            "headingRad": 0.130575,
+            "speedMps": 6.7645,
+            "present": true,
+            "y": 2.2696516233867503
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 1.8141,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "ego-sightline-low-oblique",
+          "frozenAtT": null,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.078442038296057,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.628442038296057,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 20.205532427886748
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.62794482810473,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1377499677504637,
+                -0.11769472199848988,
+                0.9563245096111354
+              ],
+              "pixel": [
+                591.6299832302411,
+                513.0218773973069
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.0078690413116447,
+                0.03899174539020176,
+                0.9719811271957659
+              ],
+              "pixel": [
+                515.9080985179447,
+                441.10278886589737
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09890587840851926,
+                -0.00011444244965335344,
+                0.9656175985631023
+              ],
+              "pixel": [
+                468.56894322757,
+                459.05252908439087
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 29,
+        "index": 246,
+        "requestedT": 4.916666666666666,
+        "t": 4.92,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 55.0256,
+            "z": -204.8072,
+            "headingRad": 0.143901,
+            "speedMps": 6.7772,
+            "present": true,
+            "y": 2.2654622626505505
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.076347357927957,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.626347357927957,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 20.751763174889295
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.623961493272574,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1372626998778055,
+                -0.10953294377475949,
+                0.9573329570040241
+              ],
+              "pixel": [
+                591.3766039364589,
+                509.27562119261455
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869096473309018,
+                0.03911220251559781,
+                0.971980929616166
+              ],
+              "pixel": [
+                515.9080698338793,
+                441.0474990453406
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09890672827025124,
+                0.00003287481545268036,
+                0.965617301695584
+              ],
+              "pixel": [
+                468.56850129946935,
+                458.98491045970724
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 30,
+        "index": 250,
+        "requestedT": 5,
+        "t": 5,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 55.5591,
+            "z": -204.9052,
+            "headingRad": 0.158205,
+            "speedMps": 6.7746,
+            "present": true,
+            "y": 2.2646814800602875
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.075956966632825,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.6259569666328257,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 21.294669078611186
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.62321939154876,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13614350985575216,
+                -0.10157679764716436,
+                0.9582977526149711
+              ],
+              "pixel": [
+                590.7946251249912,
+                505.6237501200485
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869106754024396,
+                0.039134652625405095,
+                0.9719808927924108
+              ],
+              "pixel": [
+                515.9080644879073,
+                441.0371944449391
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.0989068866629156,
+                0.00006033101596486073,
+                0.9656172463670109
+              ],
+              "pixel": [
+                468.5684189352839,
+                458.97230806367213
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 31,
+        "index": 254,
+        "requestedT": 5.083333333333334,
+        "t": 5.08,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 56.0917,
+            "z": -205.0119,
+            "headingRad": 0.173211,
+            "speedMps": 6.8063,
+            "present": true,
+            "y": 2.26422970733298
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.075731080269172,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.6257310802691722,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 21.833398103392273
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.62279004081233,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13442478870194277,
+                -0.09394230588469958,
+                0.9592218485982588
+              ],
+              "pixel": [
+                589.9008901250103,
+                502.1195184010771
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869112702615538,
+                0.03914764262848697,
+                0.9719808714855798
+              ],
+              "pixel": [
+                515.9080613946398,
+                441.03123203352453
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09890697831156108,
+                0.00007621763293044824,
+                0.9656172143529727
+              ],
+              "pixel": [
+                468.56837127798826,
+                458.96501610648494
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 32,
+        "index": 258,
+        "requestedT": 5.166666666666666,
+        "t": 5.16,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 56.6271,
+            "z": -205.1274,
+            "headingRad": 0.188287,
+            "speedMps": 6.8902,
+            "present": true,
+            "y": 2.2600221633911133
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.073627308298239,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.623627308298239,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 22.371422179238163
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.61879275343154,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.13217925925464521,
+                -0.08672746176944833,
+                0.9601139265253325
+              ],
+              "pixel": [
+                588.7332148124154,
+                498.8079049521767
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869168104706585,
+                0.03926862477634072,
+                0.9719806730448127
+              ],
+              "pixel": [
+                515.9080325855525,
+                440.9757012276596
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.0989078318809891,
+                0.00022417759981244458,
+                0.965616916190309
+              ],
+              "pixel": [
+                468.5679274218857,
+                458.8971024816861
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 33,
+        "index": 262,
+        "requestedT": 5.25,
+        "t": 5.24,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 57.1699,
+            "z": -205.2505,
+            "headingRad": 0.201945,
+            "speedMps": 7.027,
+            "present": true,
+            "y": 2.2600221633911133
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.073627308298239,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.623627308298239,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 22.915661590214235
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.61879275343154,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1295802520585578,
+                -0.07954027643239361,
+                0.960981205213422
+              ],
+              "pixel": [
+                587.3817310704501,
+                495.50898688246866
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869168104706585,
+                0.03926862477634072,
+                0.9719806730448127
+              ],
+              "pixel": [
+                515.9080325855525,
+                440.9757012276596
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.0989078318809891,
+                0.00022417759981244458,
+                0.965616916190309
+              ],
+              "pixel": [
+                468.5679274218857,
+                458.8971024816861
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 34,
+        "index": 267,
+        "requestedT": 5.333333333333334,
+        "t": 5.34,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 57.866,
+            "z": -205.4108,
+            "headingRad": 0.213869,
+            "speedMps": 7.2698,
+            "present": true,
+            "y": 2.2289262644210175
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.05807935881319,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.6080793588131908,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 23.619154141709775
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.589330991360605,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12623247016740555,
+                -0.07196146180713335,
+                0.9620434241703636
+              ],
+              "pixel": [
+                585.6408844870509,
+                492.0303109694742
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869577578647827,
+                0.04016279746847747,
+                0.9719792063795403
+              ],
+              "pixel": [
+                515.9078196591031,
+                440.56527596196884
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09891414065188682,
+                0.0013177565196319655,
+                0.9656147124563497
+              ],
+              "pixel": [
+                468.56464686101884,
+                458.3951497574889
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 35,
+        "index": 271,
+        "requestedT": 5.416666666666666,
+        "t": 5.42,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 58.4414,
+            "z": -205.5395,
+            "headingRad": 0.217014,
+            "speedMps": 7.4409,
+            "present": true,
+            "y": 2.2252438068389893
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.056238130022177,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.606238130022177,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 24.20585618192547
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.58585142266751,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12385920216509638,
+                -0.06517753601818116,
+                0.9628759235432102
+              ],
+              "pixel": [
+                584.4067851258501,
+                488.91648903234517
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869626072443604,
+                0.040268693896933695,
+                0.9719790326830994
+              ],
+              "pixel": [
+                515.9077944423293,
+                440.51666950130743
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09891488780631273,
+                0.0014472702305089941,
+                0.9656144514658005
+              ],
+              "pixel": [
+                468.56425834071734,
+                458.3357029641964
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 36,
+        "index": 275,
+        "requestedT": 5.5,
+        "t": 5.5,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 59.0277,
+            "z": -205.6627,
+            "headingRad": 0.21348,
+            "speedMps": 7.5228,
+            "present": true,
+            "y": 2.2252438068389893
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.056238130022177,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.606238130022177,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 24.807931383040984
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.58585142266751,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.1220645089019159,
+                -0.05844425384282036,
+                0.9636849246271507
+              ],
+              "pixel": [
+                583.4735446289963,
+                485.8259125138545
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869626072443604,
+                0.040268693896933695,
+                0.9719790326830994
+              ],
+              "pixel": [
+                515.9077944423293,
+                440.51666950130743
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09891488780631273,
+                0.0014472702305089941,
+                0.9656144514658005
+              ],
+              "pixel": [
+                468.56425834071734,
+                458.3357029641964
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 37,
+        "index": 279,
+        "requestedT": 5.583333333333334,
+        "t": 5.58,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 59.6199,
+            "z": -205.7765,
+            "headingRad": 0.203827,
+            "speedMps": 7.5467,
+            "present": true,
+            "y": 2.2252438068389893
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.056238130022177,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.606238130022177,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "ego",
+          "clearanceM": 25.419407312640253
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.58585142266751,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12100881034657629,
+                -0.05195894089583454,
+                0.9644641323102926
+              ],
+              "pixel": [
+                582.9245813802197,
+                482.84915387118804
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869626072443604,
+                0.040268693896933695,
+                0.9719790326830994
+              ],
+              "pixel": [
+                515.9077944423293,
+                440.51666950130743
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09891488780631273,
+                0.0014472702305089941,
+                0.9656144514658005
+              ],
+              "pixel": [
+                468.56425834071734,
+                458.3357029641964
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "sequenceIndex": 38,
+        "index": 282,
+        "requestedT": 5.64,
+        "t": 5.64,
+        "poses": [
+          {
+            "id": "ego",
+            "x": 60.0654,
+            "z": -205.8544,
+            "headingRad": 0.193709,
+            "speedMps": 7.5282,
+            "present": true,
+            "y": 2.2252438068389893
+          },
+          {
+            "id": "reversingVan",
+            "x": 66.5414,
+            "z": -209.4767,
+            "headingRad": -0.200306,
+            "speedMps": 0,
+            "present": true,
+            "y": 2.287232453205364
+          }
+        ],
+        "props": [
+          {
+            "id": "parked-occluding-vehicle",
+            "x": 59.81942127263275,
+            "z": -209.37123219619056,
+            "headingRad": 0.19087587503952363,
+            "present": true,
+            "y": 2.2252438068389893
+          }
+        ],
+        "camera": {
+          "basis": "conflict-frozen-low-oblique",
+          "frozenAtT": 4.84,
+          "pair": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "framingPropIds": [
+            "parked-occluding-vehicle"
+          ],
+          "visibleFramingActorIds": [
+            "ego",
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "fovDeg": 52,
+          "eye": [
+            32.19261409813155,
+            7.056238130022177,
+            -201.2872596562913
+          ],
+          "target": [
+            60.28404042421092,
+            3.606238130022177,
+            -207.85524406539685
+          ],
+          "searchOffset": {
+            "azimuthDeg": 0,
+            "heightGain": 1
+          }
+        },
+        "cameraActorClearance": {
+          "actorId": "parked-occluding-vehicle",
+          "clearanceM": 25.676406405835177
+        },
+        "composition": {
+          "viewport": {
+            "width": 1040,
+            "height": 918
+          },
+          "boundsNdc": {
+            "x": 0.94,
+            "y": 0.9
+          },
+          "minimumRequiredSeparationPx": 24,
+          "minPairSeparationPx": 50.58585142266751,
+          "closestPair": [
+            "reversingVan",
+            "parked-occluding-vehicle"
+          ],
+          "actors": [
+            {
+              "id": "ego",
+              "ndc": [
+                0.12072862066836339,
+                -0.04727778901746015,
+                0.9650265707831006
+              ],
+              "pixel": [
+                582.7788827475489,
+                480.70050515901414
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "reversingVan",
+              "ndc": [
+                -0.007869626072443604,
+                0.040268693896933695,
+                0.9719790326830994
+              ],
+              "pixel": [
+                515.9077944423293,
+                440.51666950130743
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            },
+            {
+              "id": "parked-occluding-vehicle",
+              "ndc": [
+                -0.09891488780631273,
+                0.0014472702305089941,
+                0.9656144514658005
+              ],
+              "pixel": [
+                468.56425834071734,
+                458.3357029641964
+              ],
+              "inFrame": true,
+              "sceneryClear": true,
+              "blockerLayer": null,
+              "blockerDistanceM": null
+            }
+          ],
+          "passed": true
+        }
+      }
+    ]
+  },
+  "video": {
+    "file": "video.mp4",
+    "fps": 12,
+    "durationSeconds": 3.25,
+    "frameCount": 39,
+    "sha256": "dca68b036bc9191fa3c8a4b23cac4b5adde455beab682a59398bff8b0b90d777"
+  },
+  "artifacts": {
+    "instance": {
+      "file": "source/instance.json",
+      "source": "../../../tmp/tgr-emergent-pair1/cells/emergent-pair1-c11-aisle-conflict.off-belmont-research-center-1fe43cbb-2/instance.json",
+      "sha256": "4d122d63d77261786ec5d447b802a880fbebec69416cde1a6822205172890463"
+    },
+    "traceFile": {
+      "file": "source/trace.json.gz",
+      "source": "../../../tmp/tgr-emergent-pair1/cells/emergent-pair1-c11-aisle-conflict.off-belmont-research-center-1fe43cbb-2/trace.json.gz",
+      "sha256": "5483930599ca2456ed892eb9d36dae92c2e83dcb06f6aa063ed9cdfc4fd993f9"
+    }
+  },
+  "machineAssessment": {
+    "verdict": "pass",
+    "gates": [
+      {
+        "id": "four-distinct-incident-phases",
+        "status": "pass",
+        "evidence": {
+          "expected": [
+            "pre-event",
+            "reveal",
+            "conflict",
+            "aftermath"
+          ],
+          "actual": [
+            "pre-event",
+            "reveal",
+            "conflict",
+            "aftermath"
+          ],
+          "distinctTickCount": 4
+        }
+      },
+      {
+        "id": "phase-times-bracket-reveal-and-conflict",
+        "status": "pass",
+        "evidence": {
+          "revealT": 3.5,
+          "conflictT": 4.84,
+          "frameTimes": {
+            "pre-event": 3.3,
+            "reveal": 3.5,
+            "conflict": 4.84,
+            "aftermath": 5.34
+          }
+        }
+      },
+      {
+        "id": "every-key-frame-carries-all-actor-poses",
+        "status": "pass",
+        "evidence": {
+          "expectedActorIds": [
+            "ego",
+            "reversingVan"
+          ],
+          "frames": [
+            {
+              "phase": "pre-event",
+              "actorIds": [
+                "ego",
+                "reversingVan"
+              ]
+            },
+            {
+              "phase": "reveal",
+              "actorIds": [
+                "ego",
+                "reversingVan"
+              ]
+            },
+            {
+              "phase": "conflict",
+              "actorIds": [
+                "ego",
+                "reversingVan"
+              ]
+            },
+            {
+              "phase": "aftermath",
+              "actorIds": [
+                "ego",
+                "reversingVan"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "every-key-frame-carries-all-fixed-props",
+        "status": "pass",
+        "evidence": {
+          "frames": [
+            {
+              "phase": "pre-event",
+              "expectedPropIds": [
+                "parked-occluding-vehicle"
+              ],
+              "propIds": [
+                "parked-occluding-vehicle"
+              ]
+            },
+            {
+              "phase": "reveal",
+              "expectedPropIds": [
+                "parked-occluding-vehicle"
+              ],
+              "propIds": [
+                "parked-occluding-vehicle"
+              ]
+            },
+            {
+              "phase": "conflict",
+              "expectedPropIds": [
+                "parked-occluding-vehicle"
+              ],
+              "propIds": [
+                "parked-occluding-vehicle"
+              ]
+            },
+            {
+              "phase": "aftermath",
+              "expectedPropIds": [
+                "parked-occluding-vehicle"
+              ],
+              "propIds": [
+                "parked-occluding-vehicle"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "incident-pair-present-in-aftermath",
+        "status": "pass",
+        "evidence": {
+          "metricPair": [
+            "ego",
+            "reversingVan"
+          ],
+          "presence": {
+            "ego": true,
+            "reversingVan": true
+          },
+          "rationale": "An aftermath frame must show the incident participants; despawning at conflict is a visible teleport."
+        }
+      },
+      {
+        "id": "key-frame-composition",
+        "status": "pass",
+        "evidence": {
+          "frames": [
+            {
+              "phase": "pre-event",
+              "passed": true
+            },
+            {
+              "phase": "reveal",
+              "passed": true
+            },
+            {
+              "phase": "conflict",
+              "passed": true
+            },
+            {
+              "phase": "aftermath",
+              "passed": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "camera-outside-actor-footprints",
+        "status": "pass",
+        "evidence": {
+          "minimumM": 2,
+          "frames": [
+            {
+              "phase": "pre-event",
+              "actorId": "ego",
+              "clearanceM": 11.431377171876713
+            },
+            {
+              "phase": "reveal",
+              "actorId": "ego",
+              "clearanceM": 11.004919139421892
+            },
+            {
+              "phase": "conflict",
+              "actorId": "ego",
+              "clearanceM": 20.205532427886748
+            },
+            {
+              "phase": "aftermath",
+              "actorId": "ego",
+              "clearanceM": 23.619154141709775
+            }
+          ]
+        }
+      },
+      {
+        "id": "key-frame-artifacts-valid-and-distinct",
+        "status": "pass",
+        "evidence": {
+          "files": [
+            "frames/frame-000.png",
+            "frames/frame-001.png",
+            "frame.png",
+            "frames/frame-003.png"
+          ],
+          "hashesValid": true,
+          "distinctHashCount": 4
+        }
+      },
+      {
+        "id": "mp4-encoded-and-probed",
+        "status": "pass",
+        "evidence": {
+          "file": "video.mp4",
+          "sha256": "dca68b036bc9191fa3c8a4b23cac4b5adde455beab682a59398bff8b0b90d777",
+          "fps": 12,
+          "frameCount": 39,
+          "unavailable": false,
+          "reason": null
+        }
+      },
+      {
+        "id": "video-covers-reveal-through-aftermath",
+        "status": "pass",
+        "evidence": {
+          "startT": 2.5,
+          "revealT": 3.5,
+          "conflictT": 4.84,
+          "endT": 5.64
+        }
+      },
+      {
+        "id": "three-domain-topology-provenance",
+        "status": "pass",
+        "evidence": {
+          "domains": {
+            "authoringMatcherTopology": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+            "simulationRoadGraph": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+            "studioRenderScene": "dd32e9ad17c28d74447749c1967b87cbbf770d2416830814f69c6a8a05413dd4"
+          }
+        }
+      },
+      {
+        "id": "browser-diagnostics-empty",
+        "status": "pass",
+        "evidence": {
+          "count": 0,
+          "diagnostics": []
+        }
+      }
+    ]
+  },
+  "humanReview": {
+    "status": "pending",
+    "verdict": null,
+    "required": true,
+    "template": "review.json"
+  },
+  "integrity": {
+    "instanceInputHashMatches": true,
+    "traceInputHashMatches": true,
+    "mapIdsExactMatch": true,
+    "actorIdsExactMatch": true,
+    "staticActorsInvariant": true
+  },
+  "simulationNotices": []
+}

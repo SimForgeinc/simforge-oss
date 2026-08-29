@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      2.24,
+      3.24,
+      4.36,
+      8.72,
+      11.64,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 18.22,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 552,
+      "reasoning": 434
+    }
+  },
+  "cellId": "emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac",
+  "confidence": 0.93,
+  "defects": [
+    "overlap"
+  ],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle travels steadily north along the divided road and passes several junctions while green vehicles move in the opposite direction and enter or turn from right-side roads; orange and violet two-wheelers also appear on the surrounding roads. Near the end, multiple green vehicles converge at a side-road junction, and a diagonal turning vehicle visibly overlaps a vehicle alongside the ego, producing an unrealistic pileup.",
+  "model": "gpt-5.6-sol",
+  "plausible": false,
+  "rawResponseSha256": "6afdf565b5ad8455db6e5af58e08840a555e7354ab27a746f986c869240a6d8d",
+  "realism": 5.0,
+  "visionAsserted": true
+}

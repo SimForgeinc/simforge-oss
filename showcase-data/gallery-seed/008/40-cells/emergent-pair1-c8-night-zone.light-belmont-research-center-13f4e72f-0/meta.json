@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c8-night-zone.light-belmont-research-center-13f4e72f-0",
+ "briefId": "c8-night-zone",
+ "stream": "emergent",
+ "templateSha256": "c490a8ad6870a150b3167ff25fb87552d9a287e7dc3732210f284b51a2bfa248",
+ "arm": "light",
+ "map": "belmont-research-center",
+ "site": "13f4e72f4af2b46c",
+ "draw": 0,
+ "seed": "ebc34b9bb562431ce27b0a4d5c40e83cce853ad2213b390b6c7650375569afd2",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 1.408,
+  "tMinClearance": 5.08
+ },
+ "notes": "arm(i) paired cell; arm=light; band=critical; ambient=11"
+}

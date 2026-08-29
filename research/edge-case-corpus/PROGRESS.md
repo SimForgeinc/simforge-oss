@@ -60,7 +60,7 @@ t=5.50 s, zero collisions; **realized PET 0.940 s** — inside the authored band
 Across one 240-cell batch, **63 of 110 `pet` invariant rejections were false rejections**
 (58 with zero collisions).
 
-Fix: `packages/engine/src/trace/realized-pet.ts` (+ 4 tests). Implements the textbook
+Fix: `packages/sim-engine/src/trace/realized-pet.ts` (+ 4 tests). Implements the textbook
 definition, and follows Westhofen et al. in reporting PET as **undefined** when both actors occupy
 the conflict area at once (that case is an encroachment; path-TTC describes it).
 
@@ -71,7 +71,7 @@ exactly **0 m clearance alongside zero collisions**. True footprint clearance on
 This makes `clearance` intent criteria unfalsifiable at close range and would export false
 near-miss distances as ML training labels.
 
-Fix: `packages/engine/src/trace/min-clearance.ts` (+ 4 tests). Exact oriented-footprint separation.
+Fix: `packages/sim-engine/src/trace/min-clearance.ts` (+ 4 tests). Exact oriented-footprint separation.
 
 Both modules are additive, exported from `sim-engine`, 8/8 tests pass, `tsc --noEmit` clean.
 
@@ -212,7 +212,7 @@ current matcher, across 37 incident types. `catalog verify` failing is *correct 
 recomputing the 6 digests would be the silent re-bind `retargeting.md` explicitly forbids and would
 hide the other 372.
 
-`simforge catalog create` re-derives cleanly (verify exit 0, 0 issues). Re-derived catalog and a
+`uniscenarios catalog create` re-derives cleanly (verify exit 0, 0 issues). Re-derived catalog and a
 full drift report are in `catalog-drift/`. **Not applied automatically** — the committed catalog is a
 provenance artifact. Nothing downstream depends on it (`generated 0, simulated 0, visuallyAccepted 0`).
 

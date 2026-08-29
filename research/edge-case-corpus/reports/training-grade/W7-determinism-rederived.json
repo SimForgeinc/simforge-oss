@@ -1,0 +1,19 @@
+{
+ "derivation": "independent (does not import verify_replay.py)",
+ "comparison": "full result record minus volatile fields; decompressed trace bytes",
+ "brief": "c8-taper-merge",
+ "template": "/tmp/tg-rederive/workzone-c8-taper-merge.template.json",
+ "draws": 3,
+ "maxSites": 4,
+ "cells": 60,
+ "asymmetricCells": [],
+ "tracePairs": 15,
+ "tracePairsBitIdentical": 15,
+ "refusalPairs": 45,
+ "refusalPairsFullyIdentical": 45,
+ "refusalCodes": {
+  "closure_lane_too_narrow": 45
+ },
+ "failures": [],
+ "verdict": "DETERMINISTIC"
+}

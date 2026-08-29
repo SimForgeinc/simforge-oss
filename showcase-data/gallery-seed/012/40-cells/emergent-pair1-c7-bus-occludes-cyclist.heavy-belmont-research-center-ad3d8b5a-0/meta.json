@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0",
+ "briefId": "c7-bus-occludes-cyclist",
+ "stream": "emergent",
+ "templateSha256": "322bbb6817f2ad1b09a2ac7f5e6ab11137cb7ae14e2a0edb63eb67391d48bd9b",
+ "arm": "heavy",
+ "map": "belmont-research-center",
+ "site": "ad3d8b5a3f09e3d8",
+ "draw": 0,
+ "seed": "f182af4d2099757d187fd5c5ee6cde4ac66886bb7c938b30f9f09a5e03e53c9c",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 1.251,
+  "tMinClearance": 9.98
+ },
+ "notes": "arm(i) paired cell; arm=heavy; band=critical; ambient=40"
+}

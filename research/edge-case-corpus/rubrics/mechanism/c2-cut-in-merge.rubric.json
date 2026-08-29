@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the challenger must cross the ego lane boundary during the clip",
+   "id": "R-lateral-incursion",
+   "kind": "unsupported",
+   "reason": "no criterion expresses \"actor crossed into the reference lane\" without a concrete laneRsl",
+   "required": false
+  }
+ ],
+ "intentId": "C2.cut-in-merge",
+ "originalIntent": "Euro NCAP AEB Car-to-Car Front Turn-Across-Path / cut-in family and UN R157 ALKS cut-in scenario (a vehicle entering the ego lane at a lateral distance that leaves <2 s to collision). A cut-in that leaves the ego untouched at >3 s TTC is a lane change happening nearby. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Lateral incursion into the ego lane: the cut-in must happen and must force a response",
+ "version": 1
+}

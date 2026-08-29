@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/019/40-cells/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/instance.json",
+    "judge": "gallery-seed/019/40-cells/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+    "trace": "gallery-seed/019/40-cells/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/trace.json.gz",
+    "video": "gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4"
+  },
+  "brief": "owner erratic behavior scooter weaving between cars",
+  "cellId": "vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+  "dynamism": 7.0,
+  "engine": "vista",
+  "gate": {
+    "clearanceM": 2.079,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 16
+  },
+  "headline": "/artifacts/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4",
+  "id": "seed-019",
+  "jobId": "seed-019",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.46,
+        4.36,
+        5.82,
+        6.94,
+        8.72,
+        11.64,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 12.04,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 497,
+        "reasoning": 405
+      }
+    },
+    "cellId": "vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+    "confidence": 0.88,
+    "defects": [],
+    "dynamism": 7.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle follows an orange cyclist or scooter toward a large intersection while several green vehicles move through and turn across the junction. As the orange road user reaches the crosswalk area, the ego slows and then remains stopped behind it; the other vehicles clear the intersection without collision.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "ab706b275eda17915c1a6cc1fe02ce5705f57c91a3eb81c37b2572b15a1556c7",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "yale-street",
+  "maps": [
+    "yale-street"
+  ],
+  "media": "/artifacts/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.88,
+    "dynamism": 7.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-vista-main1",
+  "timings": {
+    "render2dWallS": 0.736
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/019/60-render2d/vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0/rollout.mp4"
+}

@@ -1,0 +1,1143 @@
+{
+ "gate": "frozen re-gate of the published corpus (W7, deterministic part)",
+ "corpus": "research/edge-case-corpus/gold-corpus-v3",
+ "archetypes": 98,
+ "tracesEvaluated": 303,
+ "note": "Only three traces per archetype were retained, so an archetype counts as admitted when a RETAINED trace passes. Portability is read from the manifest.",
+ "byReading": {
+  "admittedStrict": {
+   "label": "corrected gate (v2 manifest reading of C2)",
+   "admitted": 83,
+   "total": 98,
+   "DEV": {
+    "admitted": 31,
+    "n": 36,
+    "rate": 0.8611
+   },
+   "HELDOUT": {
+    "admitted": 52,
+    "n": 62,
+    "rate": 0.8387
+   },
+   "generalizationGap": 0.0224,
+   "pValue": 0.7665
+  },
+  "admittedPublishedReading": {
+   "label": "corrected gate (published closest-approach-only C2)",
+   "admitted": 87,
+   "total": 98,
+   "DEV": {
+    "admitted": 32,
+    "n": 36,
+    "rate": 0.8889
+   },
+   "HELDOUT": {
+    "admitted": 55,
+    "n": 62,
+    "rate": 0.8871
+   },
+   "generalizationGap": 0.0018,
+   "pValue": 0.9784
+  }
+ },
+ "perCategory": {
+  "C1.car-following": {
+   "total": 8,
+   "admitted": 2
+  },
+  "C10.oncoming": {
+   "total": 2,
+   "admitted": 2
+  },
+  "C11.parking": {
+   "total": 11,
+   "admitted": 11
+  },
+  "C12.school": {
+   "total": 6,
+   "admitted": 5
+  },
+  "C13.control": {
+   "total": 2,
+   "admitted": 2
+  },
+  "C14.loss-of-control": {
+   "total": 8,
+   "admitted": 8
+  },
+  "C15.adversarial": {
+   "total": 5,
+   "admitted": 5
+  },
+  "C2.cut-in-merge": {
+   "total": 7,
+   "admitted": 6
+  },
+  "C3.intersection": {
+   "total": 4,
+   "admitted": 3
+  },
+  "C4.roundabout": {
+   "total": 4,
+   "admitted": 4
+  },
+  "C5.pedestrian": {
+   "total": 10,
+   "admitted": 9
+  },
+  "C6.cyclist-ptw": {
+   "total": 9,
+   "admitted": 7
+  },
+  "C7.occlusion": {
+   "total": 4,
+   "admitted": 3
+  },
+  "C8.workzone": {
+   "total": 8,
+   "admitted": 8
+  },
+  "C9.hazard": {
+   "total": 10,
+   "admitted": 8
+  }
+ },
+ "categoriesCovered": 15,
+ "firstFailureAmongRejected": {
+  "C2": 15,
+  "C6": 1
+ },
+ "rows": [
+  {
+   "archetype": "c1-ccrm",
+   "category": "C1.car-following",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 10,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c1-crest-queue",
+   "category": "C1.car-following",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": false,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c1-lead-stopped",
+   "category": "C1.car-following",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 20,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c1-queue-tail",
+   "category": "C1.car-following",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c1-tailgated-brake",
+   "category": "C1.car-following",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c10-narrow-road",
+   "category": "C10.oncoming",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c10-overtake-oncoming",
+   "category": "C10.oncoming",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11-backing-out",
+   "category": "C11.parking",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11-contested-spot",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11-double-park",
+   "category": "C11.parking",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 18,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11-driveway",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c11b-delivery-blocks",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-kerbside-loading",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-parked-protrude",
+   "category": "C11.parking",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-pedestrian-behind",
+   "category": "C11.parking",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 12,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-pulling-out-fast",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-reverse-bay",
+   "category": "C11.parking",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c11b-trolley",
+   "category": "C11.parking",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c12-ball-then-child",
+   "category": "C12.school",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 8,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c12b-child-between-cars",
+   "category": "C12.school",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 5,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c12b-double-parked-school",
+   "category": "C12.school",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 12,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c12b-guard-steps-out",
+   "category": "C12.school",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c12b-reversing-parent",
+   "category": "C12.school",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c12b-scooter-child",
+   "category": "C12.school",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 11,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c13-rail-crossing",
+   "category": "C13.control",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 11,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c13b-temp-signal-workzone",
+   "category": "C13.control",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14-third-party-spin",
+   "category": "C14.loss-of-control",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-avoidance-swerve",
+   "category": "C14.loss-of-control",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-blowout",
+   "category": "C14.loss-of-control",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 8,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-gravel",
+   "category": "C14.loss-of-control",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-ice-patch",
+   "category": "C14.loss-of-control",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-oversteer",
+   "category": "C14.loss-of-control",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c14b-wet-braking",
+   "category": "C14.loss-of-control",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c15-protest",
+   "category": "C15.adversarial",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 11,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c15-shedding-load",
+   "category": "C15.adversarial",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c15b-debris-thrown",
+   "category": "C15.adversarial",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c15b-road-rage",
+   "category": "C15.adversarial",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c15b-tailgate-flash",
+   "category": "C15.adversarial",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c1b-lead-stalls",
+   "category": "C1.car-following",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c1b-slow-truck",
+   "category": "C1.car-following",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 8,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c2-blind-spot",
+   "category": "C2.cut-in-merge",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c2-cut-in-brake",
+   "category": "C2.cut-in-merge",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c2-ramp-merge",
+   "category": "C2.cut-in-merge",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c2b-aggressive-merge",
+   "category": "C2.cut-in-merge",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c2b-slip-road",
+   "category": "C2.cut-in-merge",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c2b-zip-merge-fail",
+   "category": "C2.cut-in-merge",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c3-ltap-ld",
+   "category": "C3.intersection",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c3-scp",
+   "category": "C3.intersection",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c3b-ped-on-turn",
+   "category": "C3.intersection",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 12,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c4-entry-yield",
+   "category": "C4.roundabout",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c4b-entry-conflict",
+   "category": "C4.roundabout",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 12,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5-cpfa",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c5-cpna",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5-crossing-far-side",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 6,
+   "admittedStrict": false,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c5-reversing-ped",
+   "category": "C5.pedestrian",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5b-crossing-late",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 15,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5b-phone-distracted",
+   "category": "C5.pedestrian",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 10,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5b-runner",
+   "category": "C5.pedestrian",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 12,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5b-umbrella",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c5b-wheelchair",
+   "category": "C5.pedestrian",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6-cbna",
+   "category": "C6.cyclist-ptw",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 11,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6-contraflow",
+   "category": "C6.cyclist-ptw",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6-cyclist-crossing",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6-dooring",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c6-escooter",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 9,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6-ptw-filtering",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "split": "DEV",
+   "maps": 5,
+   "sites": 11,
+   "admittedStrict": false,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c6b-ptw-overtake",
+   "category": "C6.cyclist-ptw",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c7-double-parked-truck",
+   "category": "C7.occlusion",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 10,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C6"
+   ]
+  },
+  {
+   "archetype": "c7-queue-occludes",
+   "category": "C7.occlusion",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 12,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2",
+    "C6"
+   ]
+  },
+  {
+   "archetype": "c7b-hedge-driveway",
+   "category": "C7.occlusion",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c7b-parked-row-child",
+   "category": "C7.occlusion",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C6"
+   ]
+  },
+  {
+   "archetype": "c8-moving-workzone",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8-night-zone",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 13,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8-shifted-alignment",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8b-lane-shift",
+   "category": "C8.workzone",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8b-mobile-works",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8b-plant-crossing",
+   "category": "C8.workzone",
+   "split": "DEV",
+   "maps": 4,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c8b-worker-in-lane",
+   "category": "C8.workzone",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 9,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9-accident-scene",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 5,
+   "sites": 30,
+   "admittedStrict": false,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c9-animal",
+   "category": "C9.hazard",
+   "split": "DEV",
+   "maps": 3,
+   "sites": 6,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9-debris",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 7,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9-disabled-vehicle",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": false,
+   "admittedPublishedReading": false,
+   "firstFailures": [
+    "C2"
+   ]
+  },
+  {
+   "archetype": "c9-fallen-cargo",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 4,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9b-deer",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9b-flood",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "split": "DEV",
+   "maps": 2,
+   "sites": 3,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9b-pothole-swerve",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 4,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": []
+  },
+  {
+   "archetype": "c9b-recovery-truck",
+   "category": "C9.hazard",
+   "split": "HELDOUT",
+   "maps": 3,
+   "sites": 5,
+   "admittedStrict": true,
+   "admittedPublishedReading": true,
+   "firstFailures": [
+    "C2"
+   ]
+  }
+ ]
+}

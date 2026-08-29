@@ -1,5 +1,6 @@
 packages:
   - apps/*
+  - apps/showcase/web
   - packages/*
   - services/*
   - studio

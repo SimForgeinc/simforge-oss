@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/003/40-cells/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/instance.json",
+    "judge": "gallery-seed/003/40-cells/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20",
+    "trace": "gallery-seed/003/40-cells/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/trace.json.gz",
+    "video": "gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4"
+  },
+  "brief": "The blue ego vehicle travels down the main road, safely passes an oncoming green vehicle, and turns onto the curved side road. An orange cyclist or scooter rider independently follows the loop in the opposite direction; the actors remain separated and no collision occurs.",
+  "cellId": "emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20",
+  "dynamism": 6.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 2.467,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 8.4
+  },
+  "headline": "/artifacts/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4",
+  "id": "seed-003",
+  "jobId": "seed-003",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.46,
+        4.36,
+        5.48,
+        6.48,
+        8.72,
+        11.64,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 19.12,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 924,
+        "reasoning": 838
+      }
+    },
+    "cellId": "emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20",
+    "confidence": 0.87,
+    "defects": [],
+    "dynamism": 6.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle travels down the main road, safely passes an oncoming green vehicle, and turns onto the curved side road. An orange cyclist or scooter rider independently follows the loop in the opposite direction; the actors remain separated and no collision occurs.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "083f98599af54cb53341f3994360697cd7215c6b1909e30d0da251131a9a3697",
+    "realism": 7.0,
+    "visionAsserted": true
+  },
+  "map": "yale-street",
+  "maps": [
+    "yale-street"
+  ],
+  "media": "/artifacts/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4",
+  "realism": 7.0,
+  "scores": {
+    "confidence": 0.87,
+    "dynamism": 6.0,
+    "plausible": true,
+    "realism": 7.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-h2",
+  "timings": {
+    "render2dWallS": 0.853
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/003/60-render2d/emergent-h2-jL.heavy16.s8-yale-street-0da5332e-0-p9ddd9f20/rollout.mp4"
+}

@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      4.36,
+      5.82,
+      6.94,
+      8.72,
+      11.64,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 12.04,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 497,
+      "reasoning": 405
+    }
+  },
+  "cellId": "vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+  "confidence": 0.88,
+  "defects": [],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle follows an orange cyclist or scooter toward a large intersection while several green vehicles move through and turn across the junction. As the orange road user reaches the crosswalk area, the ego slows and then remains stopped behind it; the other vehicles clear the intersection without collision.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "ab706b275eda17915c1a6cc1fe02ce5705f57c91a3eb81c37b2572b15a1556c7",
+  "realism": 8.0,
+  "visionAsserted": true
+}

@@ -1,0 +1,316 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "c6b-cyclist-left-turn",
+      "templateVersion": 2,
+      "templateDigest": "339f2b356198220c",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "0f1f1d8b94d34c14",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "edf60a6271db688348c6534cad7e1f6540d2c2ed5a86a5a4647ab132dcd76770",
+      "drawIndex": 2,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "0f1f1d8b94d34c14#2",
+    "archetype": "w7.crossing.c6b-cyclist-left-turn",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "0f1f1d8b94d34c14",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_323e050cb7a5da29",
+      "entryLaneRsl": "37:0:-1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 3.55)",
+        "236.27 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {
+        "conflictS": 77.0705480943434,
+        "vruSpeedKph": 12.699516139924526,
+        "crossLeadS": 1.672479386581108
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "788:0:1",
+        "spawnS": 23.465801114155298,
+        "initialSpeedMps": 15.277777777777779,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "vru",
+        "actorKind": "bicycle",
+        "roleKind": "on_reference",
+        "laneRsl": "426:0:-1",
+        "spawnS": 77.07057513205694,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "2f5380e119b1bc552cdb8fc6736ca10c3de25d25fe78ebeda3d4ea10aa2216ed",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [],
+    "notes": [
+      {
+        "path": "roles.ego.route",
+        "reason": "lane chain extended upstream by 1 lane(s) to reach the site-evaluated spawn at frame s=0.0 m",
+        "impact": "informational"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 18,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "edf60a6271db6883",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "788:0:1",
+            "s": 0.00001954441935225759,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -114.03973865457212,
+            "z": -240.63539244336422,
+            "headingRad": -1.2128370147418268
+          },
+          "speedMps": 15.277777777777779
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "788:0:1",
+              "37:0:-1",
+              "1018:0:-1",
+              "38:0:-1",
+              "38:1:-1",
+              "858:0:-1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "426:0:-1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "339:0:1",
+              "69:0:-1",
+              "4359:0:-1",
+              "89:0:1",
+              "776:0:1",
+              "40:0:1",
+              "857:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "791:0:1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 15.277777777777779
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "vru",
+        "kind": "bicycle",
+        "dims": {
+          "l": 1.75,
+          "w": 0.5,
+          "h": 1.71
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "426:0:-1",
+            "s": 15.927685164234326,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -105.18677476660211,
+            "z": -164.51798169402537,
+            "headingRad": -0.04253866212828128
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "37:0:-1",
+              "1018:0:-1",
+              "38:0:-1",
+              "38:1:-1",
+              "858:0:-1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "426:0:-1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "339:0:1",
+              "69:0:-1",
+              "4359:0:-1",
+              "89:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:vru",
+          "class:bicycle",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.bicycle"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "vru-crosses",
+        "actorId": "vru",
+        "trigger": {
+          "kind": "at",
+          "t": 3.3721309692517605
+        },
+        "verb": "route",
+        "target": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -105.1868018206499,
+              "z": -164.5179818854321
+            },
+            {
+              "x": -103.79417868676019,
+              "z": -165.3849191297235
+            },
+            {
+              "x": -102.4657503819019,
+              "z": -167.44551919485198
+            },
+            {
+              "x": -101.0541707117807,
+              "z": -171.03386507961307
+            }
+          ]
+        }
+      },
+      {
+        "id": "vru-walks",
+        "actorId": "vru",
+        "trigger": {
+          "kind": "at",
+          "t": 3.3721309692517605
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 3.5276433722012572
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 2
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

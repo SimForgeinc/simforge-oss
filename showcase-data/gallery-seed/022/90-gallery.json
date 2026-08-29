@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/instance.json",
+    "judge": "gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0",
+    "trace": "gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/trace.json.gz",
+    "video": "gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4"
+  },
+  "brief": "owner map divergence faded lane markings",
+  "cellId": "vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0",
+  "dynamism": 4.0,
+  "engine": "vista",
+  "gate": {
+    "clearanceM": 2.421,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 16
+  },
+  "headline": "/artifacts/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4",
+  "id": "seed-022",
+  "jobId": "seed-022",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.46,
+        4.36,
+        8.72,
+        10.78,
+        11.78,
+        12.78,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 10.78,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 500,
+        "reasoning": 423
+      }
+    },
+    "cellId": "vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0",
+    "confidence": 0.92,
+    "defects": [],
+    "dynamism": 4.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle travels through the first junction and continues northwest along the connecting road. It catches up to a green vehicle slowing at the next junction, then decelerates and queues behind it without contact.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "7da337dbd218c6715d1ef9d6927b6c5b690adb61b07b6475281bcacac9146c6a",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "yale-street",
+  "maps": [
+    "yale-street"
+  ],
+  "media": "/artifacts/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.92,
+    "dynamism": 4.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-vista-main1",
+  "timings": {
+    "render2dWallS": 0.603
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/022/60-render2d/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/rollout.mp4"
+}

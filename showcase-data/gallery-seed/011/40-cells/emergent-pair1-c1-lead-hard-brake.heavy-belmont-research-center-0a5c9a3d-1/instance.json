@@ -1,0 +1,5332 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "single-lane-flowing-following-corridor",
+      "templateVersion": 2,
+      "templateDigest": "a67a9f7414380e18",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "0a5c9a3d6746db63",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "c1072d65903a2130bd312b0c7cfe067d85fc2079c787002e3ca23a1d8a6407ad",
+      "drawIndex": 1,
+      "ambientProfileHash": "bd48c795567010c0e6d54b0140f36c505450fc2a4a5a13b493cecce2934d75d3+settle20"
+    },
+    "instanceId": "0a5c9a3d6746db63#1",
+    "archetype": "C1.car-following",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "0a5c9a3d6746db63",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_64c3ecbdc0bef755",
+      "entryLaneRsl": "76:0:1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.01)",
+        "243.62 m of runway available, 220 m needed",
+        "60 m of runway available, 60 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {
+        "followGapM": 45.04180685104802,
+        "reactionDelayS": 1.6398722345475107,
+        "brakeRateMps2": 6.7165149345994,
+        "flowSpeedKph": 59.39972342620604
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ambient:v1:04c3b533da80c096",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1313:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 3.808503748684065,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:0c061de50c621455",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "4264:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 7.783006808171376,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:0dab6d1d08dfef18",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "446:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:2dfde3d8bc1b4213",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "917:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0024084246835128632,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:2f61ae5739456d4d",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "335:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0022446582290084867,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:36789f5c5da9f83b",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "333:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0015184565450377975,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:39f02b854f6cf89d",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1755:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 10.939906008979568,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:3d407b030ff9ff52",
+        "actorKind": "van",
+        "roleKind": "ambient",
+        "laneRsl": "1:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 7.797110401119458,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:42332d9a5ab99d3e",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "426:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:423861898d35f0f4",
+        "actorKind": "van",
+        "roleKind": "ambient",
+        "laneRsl": "887:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.005419801791258213,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:4725555c551a07b0",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1031:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:4ce22177f9e5cbd1",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "109:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0022446582290084867,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:4ef9f9993410217a",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "4357:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0776011850443646,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:5aec899d05b4334c",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "57:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:6b10d5d4fb182493",
+        "actorKind": "motorcycle",
+        "roleKind": "ambient",
+        "laneRsl": "125:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:6bbe9050959726e4",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1043:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 10.503629275049656,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:6f578de971b97799",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "887:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.018385418383236707,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:701cac7c876a18cf",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1019:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0011398535623167092,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:7eb0b79bfe89825c",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "334:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0022446582290084867,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:83c8504a7ab13175",
+        "actorKind": "motorcycle",
+        "roleKind": "ambient",
+        "laneRsl": "914:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0009662545999735624,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:8462a26ae847c4e7",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "0:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 9.738652184907831,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:888266f0e332674b",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "875:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:9012c3ed7e936fc1",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "368:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 3.862219367584037,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:924a70e747b652ea",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "887:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0016572719024760174,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:96c91986c8b6b680",
+        "actorKind": "van",
+        "roleKind": "ambient",
+        "laneRsl": "308:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:a3be18244a51257c",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1193:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:a74672955a7d86db",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "1018:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.0012612491590164958,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:b4d9cd576d8de1ad",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "0:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:ba6242b469b4a603",
+        "actorKind": "motorcycle",
+        "roleKind": "ambient",
+        "laneRsl": "1313:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:c343a0ede0f5fb2b",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "327:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0.002244658229008487,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:c4a74b4115a9f186",
+        "actorKind": "van",
+        "roleKind": "ambient",
+        "laneRsl": "401:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:c5bceee42ef2cdc3",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "898:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 4.785477980394685,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:d4bb7a4ffcaca38a",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "22:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 10.233319984742323,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:d7cfc277cdc8a71e",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "914:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 3.3835706038355173,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:e61039580080d6b1",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "26:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 14.79264535048889,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:f496d183d0e32d2c",
+        "actorKind": "motorcycle",
+        "roleKind": "ambient",
+        "laneRsl": "314:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:f4999bc67a3d9364",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "5:0:-2",
+        "spawnS": 0,
+        "initialSpeedMps": 3.32777456607611,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:f6401a008ea82edc",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "317:0:1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:f6ad74e994e7c544",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "805:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 0,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ambient:v1:fb14881eb4e434c6",
+        "actorKind": "car",
+        "roleKind": "ambient",
+        "laneRsl": "374:0:-1",
+        "spawnS": 0,
+        "initialSpeedMps": 5.498602312322745,
+        "bindingStatus": "generated"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "119:0:1",
+        "spawnS": 130.00002629626067,
+        "initialSpeedMps": 16.499923173946122,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "lead",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "119:0:1",
+        "spawnS": 175.04177704328686,
+        "initialSpeedMps": 16.499923173946122,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "c33265323dda3504b15578b6d71e54da5b6ab7190ea0eb406dcd4552bbe2655c",
+    "feasible": true,
+    "issues": [
+      {
+        "code": "decel_budget_exceeded",
+        "severity": "warning",
+        "path": "interactions.lead-hard-stop.dynamics",
+        "reason": "implies 6.72 m/s² of braking, above the 5.5 m/s² comfort limit",
+        "detail": {
+          "impliedDecel": 6.7165149345994,
+          "budget": 5.5
+        }
+      }
+    ],
+    "ambient": {
+      "version": 1,
+      "profile": {
+        "version": 1,
+        "preset": "heavy",
+        "flows": {
+          "through": 0.7,
+          "left": 0.12,
+          "right": 0.16,
+          "uTurn": 0.02
+        },
+        "vehicleMix": {
+          "car": 0.72,
+          "van": 0.1,
+          "truck": 0.08,
+          "bus": 0.04,
+          "motorcycle": 0.06
+        },
+        "pedestrianShare": 0,
+        "cyclistShare": 0.04,
+        "aggressiveness": 0.35,
+        "speedVariance": 0.12,
+        "seed": "pairseed1",
+        "maxActors": 40,
+        "radiusM": 250,
+        "exclusionRadiusM": 12,
+        "densityVehiclesPerKm": 16
+      },
+      "profileHash": "bd48c795567010c0e6d54b0140f36c505450fc2a4a5a13b493cecce2934d75d3",
+      "candidatePoolKey": "980f39810c3a47bde9abd7467249882d6344734501845652181c2b13219f80c8",
+      "mapGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "baseInputHash": "d42faa6f23bcbecd818381e27493b9b01f798f64a31f901a076e23fac341856a",
+      "generatedInputHash": "7902386329344c2f15578a9155361b96c6fc9717c2784c3331a3dcf41d80be99",
+      "actors": [
+        {
+          "id": "ambient:v1:6bbe9050959726e4",
+          "kind": "car",
+          "routeLaneRsls": [
+            "105:0:2",
+            "3017:0:1",
+            "127:0:2",
+            "368:0:1",
+            "22:0:1",
+            "435:0:1",
+            "21:0:1",
+            "1043:0:1",
+            "20:0:1",
+            "333:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1163:0:1",
+            "42:0:-1",
+            "413:0:-1",
+            "3:0:-1",
+            "253:0:-1",
+            "113:0:-1",
+            "1186:0:-1",
+            "47:0:1",
+            "1183:0:1"
+          ],
+          "seedKey": "6bbe9050959726e4",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:04c3b533da80c096",
+          "kind": "car",
+          "routeLaneRsls": [
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "832:0:1",
+            "34:0:-1",
+            "1313:0:-1",
+            "124:0:1",
+            "401:0:1",
+            "119:0:-1",
+            "1244:0:-1",
+            "75:0:-1",
+            "475:0:-1",
+            "76:0:-1",
+            "1308:0:-1",
+            "93:0:1"
+          ],
+          "seedKey": "04c3b533da80c096",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:d4bb7a4ffcaca38a",
+          "kind": "car",
+          "routeLaneRsls": [
+            "118:0:2",
+            "1230:0:1",
+            "105:0:2",
+            "3149:0:1",
+            "127:0:2",
+            "368:0:1",
+            "22:0:1",
+            "437:0:1",
+            "6:0:1",
+            "768:0:1",
+            "40:0:1",
+            "857:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1020:0:1",
+            "109:0:-1",
+            "1284:0:-1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "327:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1160:0:1",
+            "92:0:-1",
+            "914:0:-1",
+            "67:0:-1"
+          ],
+          "seedKey": "d4bb7a4ffcaca38a",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:6b10d5d4fb182493",
+          "kind": "motorcycle",
+          "routeLaneRsls": [
+            "126:0:1",
+            "450:0:1",
+            "125:0:1",
+            "315:0:1",
+            "1:0:1",
+            "305:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "500:0:1",
+            "108:0:1",
+            "850:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1019:0:1",
+            "37:0:1",
+            "791:0:1"
+          ],
+          "seedKey": "6b10d5d4fb182493",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:c4a74b4115a9f186",
+          "kind": "van",
+          "routeLaneRsls": [
+            "124:0:1",
+            "401:0:1",
+            "119:0:-1",
+            "1244:0:-1",
+            "75:0:-1",
+            "481:0:-1",
+            "10:0:1",
+            "1031:0:1",
+            "20:0:1",
+            "333:0:1",
+            "19:0:1",
+            "133:0:1",
+            "81:0:1",
+            "801:0:1",
+            "90:0:1",
+            "460:0:1",
+            "96:0:-1",
+            "1225:0:-1",
+            "63:0:-1",
+            "795:0:-1"
+          ],
+          "seedKey": "c4a74b4115a9f186",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:f6401a008ea82edc",
+          "kind": "car",
+          "routeLaneRsls": [
+            "125:0:1",
+            "317:0:1",
+            "14:0:1",
+            "1197:0:1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "466:0:-1",
+            "95:0:-1",
+            "4264:0:-1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "261:0:1",
+            "120:0:-2",
+            "59:0:-2",
+            "4323:0:-2",
+            "60:0:-2",
+            "286:0:-1",
+            "36:0:-1",
+            "1125:0:-1",
+            "92:0:-1"
+          ],
+          "seedKey": "f6401a008ea82edc",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:36789f5c5da9f83b",
+          "kind": "car",
+          "routeLaneRsls": [
+            "22:0:1",
+            "435:0:1",
+            "21:0:1",
+            "1043:0:1",
+            "20:0:1",
+            "333:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1154:0:1",
+            "17:0:-1",
+            "229:0:-1",
+            "18:0:-1",
+            "136:0:-1",
+            "81:0:1",
+            "801:0:1",
+            "90:0:1",
+            "460:0:1",
+            "96:0:-1",
+            "1225:0:-1",
+            "63:0:-1",
+            "795:0:-1"
+          ],
+          "seedKey": "36789f5c5da9f83b",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:0dab6d1d08dfef18",
+          "kind": "car",
+          "routeLaneRsls": [
+            "102:0:-1",
+            "446:0:-1",
+            "126:0:-1",
+            "468:0:-1",
+            "77:0:1",
+            "291:0:1",
+            "122:0:1",
+            "1193:0:1",
+            "13:0:-1",
+            "1200:0:-1",
+            "87:0:1",
+            "309:0:1",
+            "1:0:-1",
+            "319:0:-1",
+            "14:0:1",
+            "1197:0:1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "469:0:-1",
+            "126:0:1",
+            "450:0:1",
+            "125:0:1",
+            "315:0:1",
+            "1:0:1",
+            "305:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "868:0:-1"
+          ],
+          "seedKey": "0dab6d1d08dfef18",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:9012c3ed7e936fc1",
+          "kind": "car",
+          "routeLaneRsls": [
+            "68:0:-3",
+            "1074:0:-1",
+            "118:0:2",
+            "1230:0:1",
+            "105:0:2",
+            "3085:0:1",
+            "127:0:2",
+            "368:0:1",
+            "22:0:1",
+            "437:0:1",
+            "6:0:1",
+            "768:0:1",
+            "40:0:1",
+            "857:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1019:0:1",
+            "37:0:1",
+            "791:0:1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1273:0:1",
+            "109:0:1",
+            "1022:0:1"
+          ],
+          "seedKey": "9012c3ed7e936fc1",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:a3be18244a51257c",
+          "kind": "car",
+          "routeLaneRsls": [
+            "77:0:1",
+            "291:0:1",
+            "122:0:1",
+            "1193:0:1",
+            "13:0:-1",
+            "1198:0:-1",
+            "14:0:-1",
+            "320:0:-1",
+            "1:0:1",
+            "305:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "500:0:1",
+            "108:0:1",
+            "850:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1019:0:1",
+            "37:0:1",
+            "791:0:1"
+          ],
+          "seedKey": "a3be18244a51257c",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:f496d183d0e32d2c",
+          "kind": "motorcycle",
+          "routeLaneRsls": [
+            "107:0:-1",
+            "314:0:-1",
+            "14:0:1",
+            "1197:0:1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "466:0:-1",
+            "95:0:-1",
+            "4269:0:-1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1062:0:1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1054:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "272:0:1",
+            "50:0:-1",
+            "50:1:-1",
+            "1111:0:-1",
+            "52:0:-1"
+          ],
+          "seedKey": "f496d183d0e32d2c",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:0c061de50c621455",
+          "kind": "car",
+          "routeLaneRsls": [
+            "14:0:-1",
+            "318:0:-1",
+            "125:0:-1",
+            "451:0:-1",
+            "126:0:-1",
+            "465:0:-1",
+            "95:0:-1",
+            "4264:0:-1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "902:0:1",
+            "117:0:3",
+            "648:0:1",
+            "80:0:-3",
+            "204:0:-1",
+            "46:0:-3",
+            "1255:0:-1",
+            "28:0:-3",
+            "1083:0:-1",
+            "94:0:-3",
+            "1257:0:-1",
+            "41:0:-3"
+          ],
+          "seedKey": "0c061de50c621455",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:42332d9a5ab99d3e",
+          "kind": "car",
+          "routeLaneRsls": [
+            "6:0:-1",
+            "426:0:-1",
+            "21:0:1",
+            "1043:0:1",
+            "20:0:1",
+            "339:0:1",
+            "69:0:-1",
+            "4358:0:-1",
+            "70:0:-1",
+            "504:0:-1",
+            "71:0:-1",
+            "1282:0:-1",
+            "72:0:-1",
+            "1026:0:-1",
+            "9:0:1",
+            "781:0:1",
+            "27:0:1",
+            "864:0:1",
+            "26:0:1",
+            "301:0:1",
+            "0:0:-1",
+            "306:0:-1",
+            "1:0:-1",
+            "316:0:-1",
+            "125:0:-1",
+            "451:0:-1",
+            "126:0:-1",
+            "468:0:-1",
+            "77:0:1",
+            "293:0:1",
+            "102:0:-1",
+            "454:0:-1"
+          ],
+          "seedKey": "42332d9a5ab99d3e",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:e61039580080d6b1",
+          "kind": "car",
+          "routeLaneRsls": [
+            "1:0:1",
+            "305:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "500:0:1",
+            "108:0:1",
+            "853:0:1",
+            "40:0:-1",
+            "771:0:-1",
+            "6:0:-1",
+            "443:0:-1",
+            "22:0:-1",
+            "376:0:-1",
+            "121:0:2",
+            "1745:0:1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1"
+          ],
+          "seedKey": "e61039580080d6b1",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:ba6242b469b4a603",
+          "kind": "motorcycle",
+          "routeLaneRsls": [
+            "34:0:-1",
+            "1313:0:-1",
+            "124:0:1",
+            "401:0:1",
+            "119:0:-1",
+            "1244:0:-1",
+            "75:0:-1",
+            "475:0:-1",
+            "76:0:-1",
+            "1308:0:-1",
+            "93:0:1"
+          ],
+          "seedKey": "ba6242b469b4a603",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:4725555c551a07b0",
+          "kind": "car",
+          "routeLaneRsls": [
+            "10:0:1",
+            "1031:0:1",
+            "20:0:1",
+            "333:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1163:0:1",
+            "42:0:-1",
+            "417:0:-1",
+            "43:0:-1",
+            "974:0:-1",
+            "44:0:-1",
+            "491:0:-1",
+            "32:0:1",
+            "979:0:1",
+            "33:0:-1",
+            "1311:0:-1",
+            "35:0:-1",
+            "510:0:-1",
+            "58:0:-1",
+            "4320:0:-1",
+            "110:0:-1",
+            "163:0:-1",
+            "111:0:-1",
+            "1210:0:-1",
+            "112:0:-1",
+            "255:0:-1",
+            "3:0:1",
+            "414:0:1"
+          ],
+          "seedKey": "4725555c551a07b0",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:96c91986c8b6b680",
+          "kind": "van",
+          "routeLaneRsls": [
+            "87:0:1",
+            "308:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "421:0:-1",
+            "6:0:1",
+            "768:0:1",
+            "40:0:1",
+            "854:0:1",
+            "108:0:-1",
+            "501:0:-1",
+            "71:0:-1",
+            "1282:0:-1",
+            "72:0:-1",
+            "1026:0:-1"
+          ],
+          "seedKey": "96c91986c8b6b680",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:39f02b854f6cf89d",
+          "kind": "car",
+          "routeLaneRsls": [
+            "40:0:-1",
+            "771:0:-1",
+            "6:0:-1",
+            "443:0:-1",
+            "22:0:-1",
+            "376:0:-1",
+            "121:0:2",
+            "1755:0:1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "261:0:1",
+            "120:0:-2",
+            "59:0:-2",
+            "4323:0:-2",
+            "60:0:-2",
+            "286:0:-1",
+            "36:0:-1",
+            "1125:0:-1",
+            "92:0:-1",
+            "914:0:-1",
+            "67:0:-1",
+            "818:0:-1",
+            "34:0:-1"
+          ],
+          "seedKey": "39f02b854f6cf89d",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:701cac7c876a18cf",
+          "kind": "car",
+          "routeLaneRsls": [
+            "89:0:1",
+            "776:0:1",
+            "40:0:1",
+            "857:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1019:0:1",
+            "37:0:1",
+            "784:0:1",
+            "27:0:1",
+            "864:0:1",
+            "26:0:1",
+            "301:0:1",
+            "0:0:-1",
+            "306:0:-1",
+            "1:0:-1",
+            "316:0:-1",
+            "125:0:-1",
+            "451:0:-1",
+            "126:0:-1",
+            "468:0:-1",
+            "77:0:1",
+            "291:0:1",
+            "122:0:1",
+            "1193:0:1",
+            "13:0:-1",
+            "1198:0:-1",
+            "14:0:-1",
+            "318:0:-1"
+          ],
+          "seedKey": "701cac7c876a18cf",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:f6ad74e994e7c544",
+          "kind": "car",
+          "routeLaneRsls": [
+            "67:0:-1",
+            "805:0:-1",
+            "68:0:-3",
+            "1074:0:-1",
+            "118:0:2",
+            "1230:0:1",
+            "105:0:2",
+            "3051:0:1",
+            "127:0:2",
+            "377:0:1",
+            "107:0:-1",
+            "313:0:-1",
+            "1:0:1",
+            "310:0:1",
+            "87:0:-1",
+            "1199:0:-1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "466:0:-1",
+            "95:0:-1",
+            "4269:0:-1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1"
+          ],
+          "seedKey": "f6ad74e994e7c544",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:b4d9cd576d8de1ad",
+          "kind": "car",
+          "routeLaneRsls": [
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "327:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1163:0:1",
+            "42:0:-1",
+            "417:0:-1",
+            "43:0:-1",
+            "976:0:-1",
+            "79:0:1",
+            "843:0:1",
+            "5:0:-3",
+            "898:0:-1",
+            "92:0:1",
+            "1180:0:1"
+          ],
+          "seedKey": "b4d9cd576d8de1ad",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:fb14881eb4e434c6",
+          "kind": "car",
+          "routeLaneRsls": [
+            "38:1:-1",
+            "858:0:-1",
+            "40:0:-1",
+            "771:0:-1",
+            "6:0:-1",
+            "443:0:-1",
+            "22:0:-1",
+            "374:0:-1",
+            "107:0:-1",
+            "314:0:-1",
+            "14:0:1",
+            "1197:0:1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "466:0:-1",
+            "95:0:-1",
+            "4269:0:-1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "902:0:1",
+            "117:0:3",
+            "648:0:1",
+            "80:0:-3",
+            "204:0:-1"
+          ],
+          "seedKey": "fb14881eb4e434c6",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:4ce22177f9e5cbd1",
+          "kind": "car",
+          "routeLaneRsls": [
+            "8:0:-1",
+            "1013:0:-1",
+            "109:0:-1",
+            "1275:0:-1",
+            "72:0:-1",
+            "1026:0:-1",
+            "9:0:1",
+            "788:0:1",
+            "37:0:-1",
+            "1018:0:-1",
+            "38:0:-1",
+            "38:1:-1",
+            "858:0:-1",
+            "40:0:-1",
+            "771:0:-1",
+            "6:0:-1",
+            "443:0:-1",
+            "22:0:-1",
+            "374:0:-1",
+            "107:0:-1",
+            "314:0:-1",
+            "14:0:1",
+            "1201:0:1",
+            "87:0:1",
+            "308:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "786:0:-1"
+          ],
+          "seedKey": "4ce22177f9e5cbd1",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:5aec899d05b4334c",
+          "kind": "car",
+          "routeLaneRsls": [
+            "57:0:-1",
+            "875:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "421:0:-1",
+            "6:0:1",
+            "768:0:1",
+            "40:0:1",
+            "857:0:1",
+            "38:1:1",
+            "38:0:1",
+            "1019:0:1",
+            "37:0:1",
+            "791:0:1"
+          ],
+          "seedKey": "5aec899d05b4334c",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:888266f0e332674b",
+          "kind": "car",
+          "routeLaneRsls": [
+            "57:0:-1",
+            "875:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "421:0:-1",
+            "6:0:1",
+            "761:0:1",
+            "89:0:-1",
+            "4364:0:-1",
+            "70:0:-1",
+            "504:0:-1",
+            "71:0:-1",
+            "1282:0:-1",
+            "72:0:-1",
+            "1026:0:-1",
+            "9:0:1",
+            "781:0:1",
+            "27:0:1",
+            "864:0:1"
+          ],
+          "seedKey": "888266f0e332674b",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:4ef9f9993410217a",
+          "kind": "car",
+          "routeLaneRsls": [
+            "109:0:-1",
+            "1284:0:-1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "436:0:-1",
+            "22:0:-1",
+            "374:0:-1",
+            "107:0:-1",
+            "313:0:-1",
+            "1:0:1",
+            "310:0:1",
+            "87:0:-1",
+            "1199:0:-1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "292:0:-1",
+            "77:0:-1",
+            "466:0:-1",
+            "95:0:-1",
+            "466:0:-1"
+          ],
+          "seedKey": "4ef9f9993410217a",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:2f61ae5739456d4d",
+          "kind": "car",
+          "routeLaneRsls": [
+            "109:0:-1",
+            "1284:0:-1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "436:0:-1",
+            "22:0:-1",
+            "376:0:-1",
+            "121:0:2",
+            "1745:0:1",
+            "105:0:-1",
+            "1242:0:-1",
+            "129:0:2",
+            "1065:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "261:0:1",
+            "120:0:-2",
+            "59:0:-2",
+            "4323:0:-2",
+            "60:0:-2"
+          ],
+          "seedKey": "2f61ae5739456d4d",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:a74672955a7d86db",
+          "kind": "car",
+          "routeLaneRsls": [
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "786:0:-1",
+            "37:0:-1",
+            "1018:0:-1",
+            "38:0:-1",
+            "38:1:-1",
+            "858:0:-1",
+            "40:0:-1",
+            "771:0:-1",
+            "6:0:-1",
+            "426:0:-1",
+            "21:0:1",
+            "1043:0:1",
+            "20:0:1",
+            "333:0:1",
+            "19:0:1",
+            "133:0:1",
+            "81:0:1",
+            "794:0:1",
+            "63:0:1",
+            "1227:0:1",
+            "62:0:1",
+            "1219:0:1",
+            "16:0:1",
+            "399:0:1",
+            "86:0:1",
+            "404:0:1",
+            "2:0:-1",
+            "391:0:-1",
+            "15:0:1"
+          ],
+          "seedKey": "a74672955a7d86db",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:7eb0b79bfe89825c",
+          "kind": "car",
+          "routeLaneRsls": [
+            "19:0:-1",
+            "334:0:-1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "436:0:-1",
+            "22:0:-1",
+            "374:0:-1",
+            "107:0:-1",
+            "314:0:-1",
+            "14:0:1",
+            "1201:0:1",
+            "87:0:1",
+            "308:0:1",
+            "0:0:1",
+            "302:0:1",
+            "26:0:-1",
+            "865:0:-1",
+            "27:0:-1",
+            "778:0:-1",
+            "9:0:-1",
+            "1025:0:-1",
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "335:0:1"
+          ],
+          "seedKey": "7eb0b79bfe89825c",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:8462a26ae847c4e7",
+          "kind": "car",
+          "routeLaneRsls": [
+            "9:0:1",
+            "781:0:1",
+            "27:0:1",
+            "864:0:1",
+            "26:0:1",
+            "301:0:1",
+            "0:0:-1",
+            "306:0:-1",
+            "1:0:-1",
+            "319:0:-1",
+            "14:0:1",
+            "1197:0:1",
+            "13:0:1",
+            "1194:0:1",
+            "122:0:-1",
+            "296:0:-1",
+            "102:0:-1",
+            "454:0:-1",
+            "125:0:1",
+            "317:0:1"
+          ],
+          "seedKey": "8462a26ae847c4e7",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:3d407b030ff9ff52",
+          "kind": "van",
+          "routeLaneRsls": [
+            "26:0:1",
+            "301:0:1",
+            "0:0:-1",
+            "306:0:-1",
+            "1:0:-1",
+            "316:0:-1",
+            "125:0:-1",
+            "451:0:-1",
+            "126:0:-1",
+            "468:0:-1",
+            "77:0:1",
+            "291:0:1",
+            "122:0:1",
+            "1193:0:1",
+            "13:0:-1",
+            "1198:0:-1",
+            "14:0:-1",
+            "318:0:-1"
+          ],
+          "seedKey": "3d407b030ff9ff52",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:2dfde3d8bc1b4213",
+          "kind": "car",
+          "routeLaneRsls": [
+            "92:0:-1",
+            "917:0:-1",
+            "117:0:2",
+            "670:0:1",
+            "80:0:-2",
+            "205:0:-1",
+            "46:0:-2",
+            "1271:0:-1",
+            "41:0:-2"
+          ],
+          "seedKey": "2dfde3d8bc1b4213",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:c343a0ede0f5fb2b",
+          "kind": "car",
+          "routeLaneRsls": [
+            "72:0:1",
+            "1283:0:1",
+            "71:0:1",
+            "503:0:1",
+            "70:0:1",
+            "4357:0:1",
+            "69:0:1",
+            "327:0:1",
+            "19:0:1",
+            "148:0:1",
+            "18:0:1",
+            "228:0:1",
+            "17:0:1",
+            "1163:0:1",
+            "42:0:-1",
+            "417:0:-1",
+            "43:0:-1",
+            "974:0:-1",
+            "44:0:-1",
+            "488:0:-1",
+            "45:0:-1",
+            "524:0:-1",
+            "30:0:-1",
+            "151:0:-1",
+            "85:0:-1",
+            "616:0:-1",
+            "80:0:-2",
+            "205:0:-1",
+            "46:0:-2",
+            "1271:0:-1",
+            "41:0:-2"
+          ],
+          "seedKey": "c343a0ede0f5fb2b",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:924a70e747b652ea",
+          "kind": "car",
+          "routeLaneRsls": [
+            "4:0:-2",
+            "836:0:-2",
+            "5:0:-2",
+            "887:0:-1",
+            "67:0:-1",
+            "813:0:-1",
+            "68:0:-1",
+            "1063:0:-1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1055:0:1",
+            "118:0:2",
+            "1230:0:1",
+            "105:0:2",
+            "3051:0:1",
+            "127:0:2",
+            "368:0:1",
+            "22:0:1",
+            "437:0:1",
+            "6:0:1",
+            "761:0:1",
+            "89:0:-1",
+            "4363:0:-1",
+            "69:0:1",
+            "335:0:1",
+            "20:0:-1",
+            "1044:0:-1",
+            "21:0:-1",
+            "436:0:-1",
+            "22:0:-1",
+            "374:0:-1"
+          ],
+          "seedKey": "924a70e747b652ea",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:423861898d35f0f4",
+          "kind": "van",
+          "routeLaneRsls": [
+            "91:0:3",
+            "537:0:1",
+            "4:0:-2",
+            "836:0:-2",
+            "5:0:-2",
+            "887:0:-1",
+            "67:0:-1",
+            "805:0:-1",
+            "68:0:-3",
+            "1074:0:-1",
+            "118:0:2",
+            "1230:0:1",
+            "105:0:2",
+            "3124:0:1",
+            "127:0:2",
+            "368:0:1",
+            "22:0:1",
+            "435:0:1",
+            "21:0:1",
+            "1043:0:1",
+            "20:0:1",
+            "339:0:1",
+            "69:0:-1",
+            "4358:0:-1",
+            "70:0:-1",
+            "504:0:-1",
+            "71:0:-1",
+            "1282:0:-1",
+            "72:0:-1",
+            "1026:0:-1",
+            "9:0:1",
+            "781:0:1"
+          ],
+          "seedKey": "423861898d35f0f4",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:83c8504a7ab13175",
+          "kind": "motorcycle",
+          "routeLaneRsls": [
+            "36:0:-1",
+            "1125:0:-1",
+            "92:0:-1",
+            "914:0:-1",
+            "67:0:-1",
+            "813:0:-1",
+            "68:0:-1",
+            "1063:0:-1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1054:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "272:0:1",
+            "50:0:-1",
+            "50:1:-1",
+            "1107:0:-1",
+            "49:0:-1"
+          ],
+          "seedKey": "83c8504a7ab13175",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:d7cfc277cdc8a71e",
+          "kind": "car",
+          "routeLaneRsls": [
+            "50:1:1",
+            "50:0:1",
+            "274:0:1",
+            "36:0:-1",
+            "1125:0:-1",
+            "92:0:-1",
+            "914:0:-1",
+            "67:0:-1",
+            "813:0:-1",
+            "68:0:-1",
+            "1063:0:-1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1054:0:1",
+            "68:0:1",
+            "832:0:1",
+            "34:0:-1",
+            "1313:0:-1",
+            "124:0:1",
+            "401:0:1",
+            "119:0:-1",
+            "1244:0:-1",
+            "75:0:-1",
+            "475:0:-1",
+            "76:0:-1",
+            "1308:0:-1",
+            "93:0:1"
+          ],
+          "seedKey": "d7cfc277cdc8a71e",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:6f578de971b97799",
+          "kind": "car",
+          "routeLaneRsls": [
+            "61:0:3",
+            "166:0:1",
+            "91:0:3",
+            "537:0:1",
+            "4:0:-2",
+            "836:0:-2",
+            "5:0:-2",
+            "887:0:-1",
+            "67:0:-1",
+            "813:0:-1",
+            "68:0:-1",
+            "1063:0:-1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1054:0:1",
+            "68:0:1",
+            "832:0:1",
+            "34:0:-1",
+            "1313:0:-1",
+            "124:0:1",
+            "401:0:1",
+            "119:0:-1",
+            "1244:0:-1",
+            "75:0:-1",
+            "475:0:-1",
+            "76:0:-1",
+            "1308:0:-1",
+            "93:0:1"
+          ],
+          "seedKey": "6f578de971b97799",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:c5bceee42ef2cdc3",
+          "kind": "car",
+          "routeLaneRsls": [
+            "99:0:3",
+            "1328:0:1",
+            "61:0:4",
+            "170:0:1",
+            "91:0:4",
+            "535:0:1",
+            "4:0:-3",
+            "836:0:-3",
+            "5:0:-3",
+            "898:0:-1",
+            "92:0:1",
+            "1123:0:1",
+            "36:0:1",
+            "261:0:1",
+            "120:0:-2",
+            "59:0:-2",
+            "4323:0:-2",
+            "60:0:-2",
+            "286:0:-1",
+            "36:0:-1",
+            "1118:0:-1",
+            "17:0:-1",
+            "229:0:-1",
+            "18:0:-1",
+            "136:0:-1",
+            "81:0:1",
+            "801:0:1",
+            "90:0:1",
+            "460:0:1",
+            "96:0:-1",
+            "1222:0:-1",
+            "62:0:1"
+          ],
+          "seedKey": "c5bceee42ef2cdc3",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        },
+        {
+          "id": "ambient:v1:f4999bc67a3d9364",
+          "kind": "car",
+          "routeLaneRsls": [
+            "99:0:2",
+            "1326:0:1",
+            "61:0:3",
+            "166:0:1",
+            "91:0:3",
+            "537:0:1",
+            "4:0:-2",
+            "836:0:-2",
+            "5:0:-2",
+            "887:0:-1",
+            "67:0:-1",
+            "813:0:-1",
+            "68:0:-1",
+            "1063:0:-1",
+            "12:0:2",
+            "883:0:1",
+            "11:0:2",
+            "1054:0:1",
+            "68:0:1",
+            "812:0:1",
+            "67:0:1",
+            "909:0:1",
+            "92:0:1",
+            "1180:0:1",
+            "42:0:-1",
+            "417:0:-1",
+            "43:0:-1",
+            "974:0:-1",
+            "44:0:-1",
+            "488:0:-1",
+            "45:0:-1",
+            "524:0:-1"
+          ],
+          "seedKey": "f4999bc67a3d9364",
+          "origin": "ambient",
+          "timelineVisible": false,
+          "editable": false
+        }
+      ],
+      "rejectedSpawnCount": 601,
+      "authoredCorridorRejects": 58,
+      "authoredCorridorLaneRsls": [
+        "1161:0:1",
+        "119:0:1",
+        "1245:0:1",
+        "124:0:-1",
+        "1315:0:-1",
+        "17:0:-1",
+        "34:0:1",
+        "402:0:1",
+        "476:0:1",
+        "67:0:1",
+        "75:0:1",
+        "76:0:1",
+        "816:0:1",
+        "909:0:1",
+        "92:0:1"
+      ],
+      "eligibleLaneKm": 5.436225075711778,
+      "placementTarget": 40,
+      "screening": {
+        "evaluated": false,
+        "passes": 0,
+        "maxAchievableDecelMps2": null,
+        "count": 0,
+        "actorIds": [],
+        "reasons": []
+      },
+      "warnings": [
+        "Placed 122/160 ambient actors; reservations and route feasibility rejected the remainder.",
+        "58 candidate(s) rejected for entering the authored corridor (15 lane(s))."
+      ]
+    },
+    "ambientSettle": {
+      "version": 1,
+      "settleSeconds": 20,
+      "dt": 0.02,
+      "settledActorIds": [
+        "ambient:v1:04c3b533da80c096",
+        "ambient:v1:0c061de50c621455",
+        "ambient:v1:0dab6d1d08dfef18",
+        "ambient:v1:2dfde3d8bc1b4213",
+        "ambient:v1:2f61ae5739456d4d",
+        "ambient:v1:36789f5c5da9f83b",
+        "ambient:v1:39f02b854f6cf89d",
+        "ambient:v1:3d407b030ff9ff52",
+        "ambient:v1:42332d9a5ab99d3e",
+        "ambient:v1:423861898d35f0f4",
+        "ambient:v1:4725555c551a07b0",
+        "ambient:v1:4ce22177f9e5cbd1",
+        "ambient:v1:4ef9f9993410217a",
+        "ambient:v1:5aec899d05b4334c",
+        "ambient:v1:6b10d5d4fb182493",
+        "ambient:v1:6bbe9050959726e4",
+        "ambient:v1:6f578de971b97799",
+        "ambient:v1:701cac7c876a18cf",
+        "ambient:v1:7eb0b79bfe89825c",
+        "ambient:v1:83c8504a7ab13175",
+        "ambient:v1:8462a26ae847c4e7",
+        "ambient:v1:888266f0e332674b",
+        "ambient:v1:9012c3ed7e936fc1",
+        "ambient:v1:924a70e747b652ea",
+        "ambient:v1:96c91986c8b6b680",
+        "ambient:v1:a3be18244a51257c",
+        "ambient:v1:a74672955a7d86db",
+        "ambient:v1:b4d9cd576d8de1ad",
+        "ambient:v1:ba6242b469b4a603",
+        "ambient:v1:c343a0ede0f5fb2b",
+        "ambient:v1:c4a74b4115a9f186",
+        "ambient:v1:c5bceee42ef2cdc3",
+        "ambient:v1:d4bb7a4ffcaca38a",
+        "ambient:v1:d7cfc277cdc8a71e",
+        "ambient:v1:e61039580080d6b1",
+        "ambient:v1:f496d183d0e32d2c",
+        "ambient:v1:f4999bc67a3d9364",
+        "ambient:v1:f6401a008ea82edc",
+        "ambient:v1:f6ad74e994e7c544",
+        "ambient:v1:fb14881eb4e434c6"
+      ],
+      "cohortSize": 122,
+      "keep": 40,
+      "droppedActorIds": [],
+      "authoredClearanceRejects": 11,
+      "budgetRejects": 71,
+      "unresolvedActorIds": [],
+      "signalProgramsShifted": 0,
+      "finalSpeedMps": {
+        "min": 0,
+        "median": 0.0022446582290084867,
+        "max": 14.79264535048889,
+        "belowHalfMps": 27
+      },
+      "inputHashBefore": "7902386329344c2f15578a9155361b96c6fc9717c2784c3331a3dcf41d80be99",
+      "inputHashAfter": "c33265323dda3504b15578b6d71e54da5b6ab7190ea0eb406dcd4552bbe2655c",
+      "warnings": []
+    },
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ego-retain-avoidance",
+        "actorId": "ego",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "lead-defensive-failure",
+        "actorId": "lead",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "choreography.interactions.ego-human-reaction.target.key",
+        "reason": "set key \"rules.reactionTimeS\" has no engine counterpart; interaction dropped"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 12,
+    "warmupSeconds": 0.5,
+    "dt": 0.02,
+    "seed": "c1072d65903a2130",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ambient:v1:04c3b533da80c096",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1313:0:-1",
+            "s": 6.6182995464176635,
+            "tFrac": 0.045964652375994675
+          },
+          "pose": {
+            "x": -85.16507908913124,
+            "z": -35.954873149350355,
+            "headingRad": 1.8251315102352546
+          },
+          "speedMps": 3.808503748684065
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9763201354257762
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "832:0:1",
+              "34:0:-1",
+              "1313:0:-1",
+              "124:0:1",
+              "401:0:1",
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "475:0:-1",
+              "76:0:-1",
+              "1308:0:-1",
+              "93:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 17.356802407569354
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:04c3b533da80c096"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:0c061de50c621455",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "4264:0:-1",
+            "s": 20.221233156592024,
+            "tFrac": -0.029530408846083232
+          },
+          "pose": {
+            "x": -165.97453392470973,
+            "z": -85.93995128777918,
+            "headingRad": -1.542014781472334
+          },
+          "speedMps": 7.783006808171376
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.116734081786126
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "14:0:-1",
+              "318:0:-1",
+              "125:0:-1",
+              "451:0:-1",
+              "126:0:-1",
+              "465:0:-1",
+              "95:0:-1",
+              "4264:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "902:0:1",
+              "117:0:3",
+              "648:0:1",
+              "80:0:-3",
+              "204:0:-1",
+              "46:0:-3",
+              "1255:0:-1",
+              "28:0:-3",
+              "1083:0:-1",
+              "94:0:-3",
+              "1257:0:-1",
+              "41:0:-3"
+            ]
+          },
+          "cruiseSpeedMps": 19.853050342864464
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:0c061de50c621455"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:0dab6d1d08dfef18",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "446:0:-1",
+            "s": 7.91949537054036,
+            "tFrac": 0.3543257943412147
+          },
+          "pose": {
+            "x": -187.2609769361058,
+            "z": -131.27780404730046,
+            "headingRad": -0.25548096748676874
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9376207501254976
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "102:0:-1",
+              "446:0:-1",
+              "126:0:-1",
+              "468:0:-1",
+              "77:0:1",
+              "291:0:1",
+              "122:0:1",
+              "1193:0:1",
+              "13:0:-1",
+              "1200:0:-1",
+              "87:0:1",
+              "309:0:1",
+              "1:0:-1",
+              "319:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "469:0:-1",
+              "126:0:1",
+              "450:0:1",
+              "125:0:1",
+              "315:0:1",
+              "1:0:1",
+              "305:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "868:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.6688133355644
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:0dab6d1d08dfef18"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:2dfde3d8bc1b4213",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "917:0:-1",
+            "s": 30.78456368813471,
+            "tFrac": -0.0013689613643449589
+          },
+          "pose": {
+            "x": -37.0654112582272,
+            "z": -13.918913429262822,
+            "headingRad": -2.760084843910497
+          },
+          "speedMps": 0.0024084246835128632
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0783858769387007
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "92:0:-1",
+              "917:0:-1",
+              "117:0:2",
+              "670:0:1",
+              "80:0:-2",
+              "205:0:-1",
+              "46:0:-2",
+              "1271:0:-1",
+              "41:0:-2"
+            ]
+          },
+          "cruiseSpeedMps": 19.171304478910237
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:2dfde3d8bc1b4213"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:2f61ae5739456d4d",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "335:0:1",
+            "s": 14.283580880834318,
+            "tFrac": 0.015369109644202976
+          },
+          "pose": {
+            "x": -36.39873670249104,
+            "z": -178.46404473380753,
+            "headingRad": -1.6348490396296547
+          },
+          "speedMps": 0.0022446582290084867
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0681149788387119
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "109:0:-1",
+              "1284:0:-1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "376:0:-1",
+              "121:0:2",
+              "1745:0:1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "261:0:1",
+              "120:0:-2",
+              "59:0:-2",
+              "4323:0:-2",
+              "60:0:-2"
+            ]
+          },
+          "cruiseSpeedMps": 18.988710734910434
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:2f61ae5739456d4d"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:36789f5c5da9f83b",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "333:0:1",
+            "s": 11.534008659572828,
+            "tFrac": -0.022557198260919186
+          },
+          "pose": {
+            "x": -37.363852133655485,
+            "z": -166.92798557908176,
+            "headingRad": 0.050631333184094664
+          },
+          "speedMps": 0.0015184565450377975
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.06191665481776
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "22:0:1",
+              "435:0:1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "333:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1154:0:1",
+              "17:0:-1",
+              "229:0:-1",
+              "18:0:-1",
+              "136:0:-1",
+              "81:0:1",
+              "801:0:1",
+              "90:0:1",
+              "460:0:1",
+              "96:0:-1",
+              "1225:0:-1",
+              "63:0:-1",
+              "795:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.867980534243287
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:36789f5c5da9f83b"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:39f02b854f6cf89d",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1755:0:1",
+            "s": 47.22516080149996,
+            "tFrac": 0.000049697358748754494
+          },
+          "pose": {
+            "x": -165.63136189285456,
+            "z": -120.1984995293929,
+            "headingRad": -1.5770411865353273
+          },
+          "speedMps": 10.939906008979568
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9367085420712828
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "443:0:-1",
+              "22:0:-1",
+              "376:0:-1",
+              "121:0:2",
+              "1755:0:1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "261:0:1",
+              "120:0:-2",
+              "59:0:-2",
+              "4323:0:-2",
+              "60:0:-2",
+              "286:0:-1",
+              "36:0:-1",
+              "1125:0:-1",
+              "92:0:-1",
+              "914:0:-1",
+              "67:0:-1",
+              "818:0:-1",
+              "34:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.652596303489474
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:39f02b854f6cf89d"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:3d407b030ff9ff52",
+        "kind": "van",
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-1",
+            "s": 2.7269077528042094,
+            "tFrac": 0.004228259203027614
+          },
+          "pose": {
+            "x": -207.89570927419118,
+            "z": -155.57221683341763,
+            "headingRad": -0.44297834042021067
+          },
+          "speedMps": 7.797110401119458
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0875409212708473
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "26:0:1",
+              "301:0:1",
+              "0:0:-1",
+              "306:0:-1",
+              "1:0:-1",
+              "316:0:-1",
+              "125:0:-1",
+              "451:0:-1",
+              "126:0:-1",
+              "468:0:-1",
+              "77:0:1",
+              "291:0:1",
+              "122:0:1",
+              "1193:0:1",
+              "13:0:-1",
+              "1198:0:-1",
+              "14:0:-1",
+              "318:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 19.334060822592843
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.van",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:3d407b030ff9ff52"
+        ],
+        "dims": {
+          "l": 5.5,
+          "w": 2,
+          "h": 2.2
+        }
+      },
+      {
+        "id": "ambient:v1:42332d9a5ab99d3e",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "426:0:-1",
+            "s": 9.159394021758818,
+            "tFrac": -0.3828249529349532
+          },
+          "pose": {
+            "x": -111.62984451992824,
+            "z": -170.64738916035404,
+            "headingRad": -1.245909483430535
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0560938962176443
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "6:0:-1",
+              "426:0:-1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "339:0:1",
+              "69:0:-1",
+              "4358:0:-1",
+              "70:0:-1",
+              "504:0:-1",
+              "71:0:-1",
+              "1282:0:-1",
+              "72:0:-1",
+              "1026:0:-1",
+              "9:0:1",
+              "781:0:1",
+              "27:0:1",
+              "864:0:1",
+              "26:0:1",
+              "301:0:1",
+              "0:0:-1",
+              "306:0:-1",
+              "1:0:-1",
+              "316:0:-1",
+              "125:0:-1",
+              "451:0:-1",
+              "126:0:-1",
+              "468:0:-1",
+              "77:0:1",
+              "293:0:1",
+              "102:0:-1",
+              "454:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 18.775002599424788
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:42332d9a5ab99d3e"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:423861898d35f0f4",
+        "kind": "van",
+        "initial": {
+          "laneRef": {
+            "rsl": "887:0:-1",
+            "s": 8.329691886276978,
+            "tFrac": 0.0018786615811070117
+          },
+          "pose": {
+            "x": -31.98023891849745,
+            "z": 1.1633644804894856,
+            "headingRad": 1.5644493859615012
+          },
+          "speedMps": 0.005419801791258213
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9430531250499189
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "91:0:3",
+              "537:0:1",
+              "4:0:-2",
+              "836:0:-2",
+              "5:0:-2",
+              "887:0:-1",
+              "67:0:-1",
+              "805:0:-1",
+              "68:0:-3",
+              "1074:0:-1",
+              "118:0:2",
+              "1230:0:1",
+              "105:0:2",
+              "3124:0:1",
+              "127:0:2",
+              "368:0:1",
+              "22:0:1",
+              "435:0:1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "339:0:1",
+              "69:0:-1",
+              "4358:0:-1",
+              "70:0:-1",
+              "504:0:-1",
+              "71:0:-1",
+              "1282:0:-1",
+              "72:0:-1",
+              "1026:0:-1",
+              "9:0:1",
+              "781:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.765388889776336
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.van",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:423861898d35f0f4"
+        ],
+        "dims": {
+          "l": 5.5,
+          "w": 2,
+          "h": 2.2
+        }
+      },
+      {
+        "id": "ambient:v1:4725555c551a07b0",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1031:0:1",
+            "s": 5.950261251214938,
+            "tFrac": 0.34122303650514757
+          },
+          "pose": {
+            "x": -67.5326706618719,
+            "z": -165.98273422385577,
+            "headingRad": 1.287003385124587
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9107102056406439
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "10:0:1",
+              "1031:0:1",
+              "20:0:1",
+              "333:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "491:0:-1",
+              "32:0:1",
+              "979:0:1",
+              "33:0:-1",
+              "1311:0:-1",
+              "35:0:-1",
+              "510:0:-1",
+              "58:0:-1",
+              "4320:0:-1",
+              "110:0:-1",
+              "163:0:-1",
+              "111:0:-1",
+              "1210:0:-1",
+              "112:0:-1",
+              "255:0:-1",
+              "3:0:1",
+              "414:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.19040365583367
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:4725555c551a07b0"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:4ce22177f9e5cbd1",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "109:0:-1",
+            "s": 2.1916185174833878,
+            "tFrac": -0.8883532319033742
+          },
+          "pose": {
+            "x": -100.36595268100677,
+            "z": -227.78212202065183,
+            "headingRad": -2.949517594907136
+          },
+          "speedMps": 0.0022446582290084867
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9269810688495637
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "8:0:-1",
+              "1013:0:-1",
+              "109:0:-1",
+              "1275:0:-1",
+              "72:0:-1",
+              "1026:0:-1",
+              "9:0:1",
+              "788:0:1",
+              "37:0:-1",
+              "1018:0:-1",
+              "38:0:-1",
+              "38:1:-1",
+              "858:0:-1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "443:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1201:0:1",
+              "87:0:1",
+              "308:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "786:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.479663446214467
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:4ce22177f9e5cbd1"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:4ef9f9993410217a",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "4357:0:1",
+            "s": 2.151305114347011,
+            "tFrac": -0.000612302975037793
+          },
+          "pose": {
+            "x": -36.33316584588733,
+            "z": -185.42716594039445,
+            "headingRad": -1.5869781291280225
+          },
+          "speedMps": 0.0776011850443646
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0523461102694274
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "109:0:-1",
+              "1284:0:-1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "313:0:-1",
+              "1:0:1",
+              "310:0:1",
+              "87:0:-1",
+              "1199:0:-1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "466:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 18.70837529367871
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:4ef9f9993410217a"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:5aec899d05b4334c",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "57:0:-1",
+            "s": 19.844575996583906,
+            "tFrac": 0.3486690768731253
+          },
+          "pose": {
+            "x": -142.16798084288345,
+            "z": -234.02429514996695,
+            "headingRad": 2.808415206789417
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0913901798240842
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "57:0:-1",
+              "875:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "421:0:-1",
+              "6:0:1",
+              "768:0:1",
+              "40:0:1",
+              "857:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "791:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 19.402492085761498
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:5aec899d05b4334c"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:6b10d5d4fb182493",
+        "kind": "motorcycle",
+        "initial": {
+          "laneRef": {
+            "rsl": "125:0:1",
+            "s": 7.383014455210457,
+            "tFrac": 0.5154970735140535
+          },
+          "pose": {
+            "x": -186.04073703638662,
+            "z": -142.5047064943308,
+            "headingRad": -2.761241049359932
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0137810164690018
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "126:0:1",
+              "450:0:1",
+              "125:0:1",
+              "315:0:1",
+              "1:0:1",
+              "305:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "500:0:1",
+              "108:0:1",
+              "850:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "791:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 18.022773626115587
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.motorcycle",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:6b10d5d4fb182493"
+        ],
+        "dims": {
+          "l": 2.2,
+          "w": 0.8,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:6bbe9050959726e4",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1043:0:1",
+            "s": 12.651852333244499,
+            "tFrac": 0.0015197368288555233
+          },
+          "pose": {
+            "x": -73.86315152271571,
+            "z": -167.2288570832079,
+            "headingRad": -0.006735356002294594
+          },
+          "speedMps": 10.503629275049656
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.8998039238527418
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "105:0:2",
+              "3017:0:1",
+              "127:0:2",
+              "368:0:1",
+              "22:0:1",
+              "435:0:1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "333:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "413:0:-1",
+              "3:0:-1",
+              "253:0:-1",
+              "113:0:-1",
+              "1186:0:-1",
+              "47:0:1",
+              "1183:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 15.996514201826521
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:6bbe9050959726e4"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:6f578de971b97799",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "887:0:-1",
+            "s": 0.33658302518480815,
+            "tFrac": 0.0008127824093720562
+          },
+          "pose": {
+            "x": -32.044494884691964,
+            "z": 9.156106659842008,
+            "headingRad": 1.560247571821442
+          },
+          "speedMps": 0.018385418383236707
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0462901577912271
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "61:0:3",
+              "166:0:1",
+              "91:0:3",
+              "537:0:1",
+              "4:0:-2",
+              "836:0:-2",
+              "5:0:-2",
+              "887:0:-1",
+              "67:0:-1",
+              "813:0:-1",
+              "68:0:-1",
+              "1063:0:-1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1054:0:1",
+              "68:0:1",
+              "832:0:1",
+              "34:0:-1",
+              "1313:0:-1",
+              "124:0:1",
+              "401:0:1",
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "475:0:-1",
+              "76:0:-1",
+              "1308:0:-1",
+              "93:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 18.600713916288484
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:6f578de971b97799"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:701cac7c876a18cf",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1019:0:1",
+            "s": 13.566838518685644,
+            "tFrac": -0.1594820646337556
+          },
+          "pose": {
+            "x": -106.27321564069274,
+            "z": -227.53137785960374,
+            "headingRad": 1.814288078509697
+          },
+          "speedMps": 0.0011398535623167092
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9443652170524002
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "89:0:1",
+              "776:0:1",
+              "40:0:1",
+              "857:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "784:0:1",
+              "27:0:1",
+              "864:0:1",
+              "26:0:1",
+              "301:0:1",
+              "0:0:-1",
+              "306:0:-1",
+              "1:0:-1",
+              "316:0:-1",
+              "125:0:-1",
+              "451:0:-1",
+              "126:0:-1",
+              "468:0:-1",
+              "77:0:1",
+              "291:0:1",
+              "122:0:1",
+              "1193:0:1",
+              "13:0:-1",
+              "1198:0:-1",
+              "14:0:-1",
+              "318:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.788714969820447
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:701cac7c876a18cf"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:7eb0b79bfe89825c",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "334:0:-1",
+            "s": 2.255468144986697,
+            "tFrac": 0.038865136907963706
+          },
+          "pose": {
+            "x": -28.073674382865573,
+            "z": -170.4410944272691,
+            "headingRad": 2.9183025795851942
+          },
+          "speedMps": 0.0022446582290084867
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.8982596292160452
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "19:0:-1",
+              "334:0:-1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1201:0:1",
+              "87:0:1",
+              "308:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 10.03894961611852
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:7eb0b79bfe89825c"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:83c8504a7ab13175",
+        "kind": "motorcycle",
+        "initial": {
+          "laneRef": {
+            "rsl": "914:0:-1",
+            "s": 25.35824264792685,
+            "tFrac": 0.039530286568505754
+          },
+          "pose": {
+            "x": -32.181698469515375,
+            "z": -16.13262125117246,
+            "headingRad": 2.881250220887154
+          },
+          "speedMps": 0.0009662545999735624
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9169009758345783
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "36:0:-1",
+              "1125:0:-1",
+              "92:0:-1",
+              "914:0:-1",
+              "67:0:-1",
+              "813:0:-1",
+              "68:0:-1",
+              "1063:0:-1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1054:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "272:0:1",
+              "50:0:-1",
+              "50:1:-1",
+              "1107:0:-1",
+              "49:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 10.247285305927248
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.motorcycle",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:83c8504a7ab13175"
+        ],
+        "dims": {
+          "l": 2.2,
+          "w": 0.8,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:8462a26ae847c4e7",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "0:0:-1",
+            "s": 60.67151683281353,
+            "tFrac": -0.00237699090559081
+          },
+          "pose": {
+            "x": -238.73341782719896,
+            "z": -182.41233510179518,
+            "headingRad": -1.387803078765089
+          },
+          "speedMps": 9.738652184907831
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.046594155393541
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "9:0:1",
+              "781:0:1",
+              "27:0:1",
+              "864:0:1",
+              "26:0:1",
+              "301:0:1",
+              "0:0:-1",
+              "306:0:-1",
+              "1:0:-1",
+              "319:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "296:0:-1",
+              "102:0:-1",
+              "454:0:-1",
+              "125:0:1",
+              "317:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 18.606118318107395
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:8462a26ae847c4e7"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:888266f0e332674b",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "875:0:-1",
+            "s": 4.363286415017077,
+            "tFrac": 0.363598697563513
+          },
+          "pose": {
+            "x": -156.20582403321197,
+            "z": -250.3653194133263,
+            "headingRad": 2.26042215004497
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9758364258520306
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "57:0:-1",
+              "875:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "421:0:-1",
+              "6:0:1",
+              "761:0:1",
+              "89:0:-1",
+              "4364:0:-1",
+              "70:0:-1",
+              "504:0:-1",
+              "71:0:-1",
+              "1282:0:-1",
+              "72:0:-1",
+              "1026:0:-1",
+              "9:0:1",
+              "781:0:1",
+              "27:0:1",
+              "864:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 17.348203126258323
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:888266f0e332674b"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:9012c3ed7e936fc1",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "368:0:1",
+            "s": 26.28825889009252,
+            "tFrac": -0.059214456892747735
+          },
+          "pose": {
+            "x": -156.55414833201377,
+            "z": -158.22518704454322,
+            "headingRad": 1.3152407892075486
+          },
+          "speedMps": 3.862219367584037
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.953905279468745
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "68:0:-3",
+              "1074:0:-1",
+              "118:0:2",
+              "1230:0:1",
+              "105:0:2",
+              "3085:0:1",
+              "127:0:2",
+              "368:0:1",
+              "22:0:1",
+              "437:0:1",
+              "6:0:1",
+              "768:0:1",
+              "40:0:1",
+              "857:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "791:0:1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1273:0:1",
+              "109:0:1",
+              "1022:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.95831607944436
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:9012c3ed7e936fc1"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:924a70e747b652ea",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "887:0:-1",
+            "s": 16.387927155867406,
+            "tFrac": 0.0235479082650807
+          },
+          "pose": {
+            "x": -32.03995205554716,
+            "z": -6.894915013825361,
+            "headingRad": 1.6160107782152515
+          },
+          "speedMps": 0.0016572719024760174
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0744792812503874
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "4:0:-2",
+              "836:0:-2",
+              "5:0:-2",
+              "887:0:-1",
+              "67:0:-1",
+              "813:0:-1",
+              "68:0:-1",
+              "1063:0:-1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1055:0:1",
+              "118:0:2",
+              "1230:0:1",
+              "105:0:2",
+              "3051:0:1",
+              "127:0:2",
+              "368:0:1",
+              "22:0:1",
+              "437:0:1",
+              "6:0:1",
+              "761:0:1",
+              "89:0:-1",
+              "4363:0:-1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "374:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 19.101853888895775
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:924a70e747b652ea"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:96c91986c8b6b680",
+        "kind": "van",
+        "initial": {
+          "laneRef": {
+            "rsl": "308:0:1",
+            "s": 11.168300612664915,
+            "tFrac": -0.33893766061241004
+          },
+          "pose": {
+            "x": -215.79546331049917,
+            "z": -157.9650074340958,
+            "headingRad": 1.3023459361867264
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.079901341572404
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "87:0:1",
+              "308:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "335:0:1",
+              "20:0:-1",
+              "1044:0:-1",
+              "21:0:-1",
+              "421:0:-1",
+              "6:0:1",
+              "768:0:1",
+              "40:0:1",
+              "854:0:1",
+              "108:0:-1",
+              "501:0:-1",
+              "71:0:-1",
+              "1282:0:-1",
+              "72:0:-1",
+              "1026:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 19.19824607239829
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.van",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:96c91986c8b6b680"
+        ],
+        "dims": {
+          "l": 5.5,
+          "w": 2,
+          "h": 2.2
+        }
+      },
+      {
+        "id": "ambient:v1:a3be18244a51257c",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1193:0:1",
+            "s": 7.422600477220534,
+            "tFrac": 0.358000744321556
+          },
+          "pose": {
+            "x": -239.1342724966556,
+            "z": -107.551996422952,
+            "headingRad": 2.2142588596771433
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.8811671173758805
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "77:0:1",
+              "291:0:1",
+              "122:0:1",
+              "1193:0:1",
+              "13:0:-1",
+              "1198:0:-1",
+              "14:0:-1",
+              "320:0:-1",
+              "1:0:1",
+              "305:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "500:0:1",
+              "108:0:1",
+              "850:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1019:0:1",
+              "37:0:1",
+              "791:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 15.665193197793432
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:a3be18244a51257c"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:a74672955a7d86db",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "1018:0:-1",
+            "s": 4.302500980952972,
+            "tFrac": -0.10327304449536247
+          },
+          "pose": {
+            "x": -112.64338512314512,
+            "z": -235.17409120578245,
+            "headingRad": -1.0858562621690138
+          },
+          "speedMps": 0.0012612491590164958
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.061809999011457
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "786:0:-1",
+              "37:0:-1",
+              "1018:0:-1",
+              "38:0:-1",
+              "38:1:-1",
+              "858:0:-1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "426:0:-1",
+              "21:0:1",
+              "1043:0:1",
+              "20:0:1",
+              "333:0:1",
+              "19:0:1",
+              "133:0:1",
+              "81:0:1",
+              "794:0:1",
+              "63:0:1",
+              "1227:0:1",
+              "62:0:1",
+              "1219:0:1",
+              "16:0:1",
+              "399:0:1",
+              "86:0:1",
+              "404:0:1",
+              "2:0:-1",
+              "391:0:-1",
+              "15:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 18.876622204648122
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:a74672955a7d86db"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:b4d9cd576d8de1ad",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "0:0:1",
+            "s": 68.92828206635465,
+            "tFrac": 0.3393150452899586
+          },
+          "pose": {
+            "x": -234.34580688875064,
+            "z": -174.580283069671,
+            "headingRad": 2.3595227154260026
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9099344060756266
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "327:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "976:0:-1",
+              "79:0:1",
+              "843:0:1",
+              "5:0:-3",
+              "898:0:-1",
+              "92:0:1",
+              "1180:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.176611663566696
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:b4d9cd576d8de1ad"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:ba6242b469b4a603",
+        "kind": "motorcycle",
+        "initial": {
+          "laneRef": {
+            "rsl": "1313:0:-1",
+            "s": 9.674560983028828,
+            "tFrac": -0.5156420333974892
+          },
+          "pose": {
+            "x": -85.42778094691131,
+            "z": -39.910998367385446,
+            "headingRad": 2.2997605814033304
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9701230088993907
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "34:0:-1",
+              "1313:0:-1",
+              "124:0:1",
+              "401:0:1",
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "475:0:-1",
+              "76:0:-1",
+              "1308:0:-1",
+              "93:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 17.246631269322503
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.motorcycle",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:ba6242b469b4a603"
+        ],
+        "dims": {
+          "l": 2.2,
+          "w": 0.8,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:c343a0ede0f5fb2b",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "327:0:1",
+            "s": 15.172936527803373,
+            "tFrac": -0.016337917857437687
+          },
+          "pose": {
+            "x": -36.800223807859986,
+            "z": -172.86864619586274,
+            "headingRad": -1.6459505608583536
+          },
+          "speedMps": 0.002244658229008487
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0952792592346667
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "327:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1163:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "488:0:-1",
+              "45:0:-1",
+              "524:0:-1",
+              "30:0:-1",
+              "151:0:-1",
+              "85:0:-1",
+              "616:0:-1",
+              "80:0:-2",
+              "205:0:-1",
+              "46:0:-2",
+              "1271:0:-1",
+              "41:0:-2"
+            ]
+          },
+          "cruiseSpeedMps": 19.471631275282967
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:c343a0ede0f5fb2b"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:c4a74b4115a9f186",
+        "kind": "van",
+        "initial": {
+          "laneRef": {
+            "rsl": "401:0:1",
+            "s": 8.684946041018746,
+            "tFrac": 0.3456069811301009
+          },
+          "pose": {
+            "x": -138.5519646665438,
+            "z": -40.46478436402461,
+            "headingRad": 2.619589706906487
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.986823266223073
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "124:0:1",
+              "401:0:1",
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "481:0:-1",
+              "10:0:1",
+              "1031:0:1",
+              "20:0:1",
+              "333:0:1",
+              "19:0:1",
+              "133:0:1",
+              "81:0:1",
+              "801:0:1",
+              "90:0:1",
+              "460:0:1",
+              "96:0:-1",
+              "1225:0:-1",
+              "63:0:-1",
+              "795:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 17.54352473285463
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.van",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:c4a74b4115a9f186"
+        ],
+        "dims": {
+          "l": 5.5,
+          "w": 2,
+          "h": 2.2
+        }
+      },
+      {
+        "id": "ambient:v1:c5bceee42ef2cdc3",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "898:0:-1",
+            "s": 25.8481276105099,
+            "tFrac": -0.10455882672643048
+          },
+          "pose": {
+            "x": -20.258813214700453,
+            "z": -11.173871681693086,
+            "headingRad": 0.21365391378375626
+          },
+          "speedMps": 4.785477980394685
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.0287921061739325
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "99:0:3",
+              "1328:0:1",
+              "61:0:4",
+              "170:0:1",
+              "91:0:4",
+              "535:0:1",
+              "4:0:-3",
+              "836:0:-3",
+              "5:0:-3",
+              "898:0:-1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "261:0:1",
+              "120:0:-2",
+              "59:0:-2",
+              "4323:0:-2",
+              "60:0:-2",
+              "286:0:-1",
+              "36:0:-1",
+              "1118:0:-1",
+              "17:0:-1",
+              "229:0:-1",
+              "18:0:-1",
+              "136:0:-1",
+              "81:0:1",
+              "801:0:1",
+              "90:0:1",
+              "460:0:1",
+              "96:0:-1",
+              "1222:0:-1",
+              "62:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 18.289637443092133
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:c5bceee42ef2cdc3"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:d4bb7a4ffcaca38a",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "22:0:1",
+            "s": 3.180725976656564,
+            "tFrac": 0.00007058712134469968
+          },
+          "pose": {
+            "x": -121.70532628196962,
+            "z": -167.52028956552937,
+            "headingRad": -0.00663850577006993
+          },
+          "speedMps": 10.233319984742323
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 1.061607673279941
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "118:0:2",
+              "1230:0:1",
+              "105:0:2",
+              "3149:0:1",
+              "127:0:2",
+              "368:0:1",
+              "22:0:1",
+              "437:0:1",
+              "6:0:1",
+              "768:0:1",
+              "40:0:1",
+              "857:0:1",
+              "38:1:1",
+              "38:0:1",
+              "1020:0:1",
+              "109:0:-1",
+              "1284:0:-1",
+              "71:0:1",
+              "503:0:1",
+              "70:0:1",
+              "4357:0:1",
+              "69:0:1",
+              "327:0:1",
+              "19:0:1",
+              "148:0:1",
+              "18:0:1",
+              "228:0:1",
+              "17:0:1",
+              "1160:0:1",
+              "92:0:-1",
+              "914:0:-1",
+              "67:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 18.87302530275451
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:d4bb7a4ffcaca38a"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:d7cfc277cdc8a71e",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "914:0:-1",
+            "s": 15.389961844411827,
+            "tFrac": 0.0002065647267054798
+          },
+          "pose": {
+            "x": -22.212332279073856,
+            "z": -16.2287774650563,
+            "headingRad": 3.131169280471204
+          },
+          "speedMps": 3.3835706038355173
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.8852744860760867
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "50:1:1",
+              "50:0:1",
+              "274:0:1",
+              "36:0:-1",
+              "1125:0:-1",
+              "92:0:-1",
+              "914:0:-1",
+              "67:0:-1",
+              "813:0:-1",
+              "68:0:-1",
+              "1063:0:-1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1054:0:1",
+              "68:0:1",
+              "832:0:1",
+              "34:0:-1",
+              "1313:0:-1",
+              "124:0:1",
+              "401:0:1",
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "475:0:-1",
+              "76:0:-1",
+              "1308:0:-1",
+              "93:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 15.738213085797097
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:d7cfc277cdc8a71e"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:e61039580080d6b1",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "26:0:-1",
+            "s": 54.45004182527588,
+            "tFrac": -0.00005631750601966614
+          },
+          "pose": {
+            "x": -185.93841826908576,
+            "z": -251.31286180821274,
+            "headingRad": -0.0037167808316518752
+          },
+          "speedMps": 14.79264535048889
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9028745361790061
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "1:0:1",
+              "305:0:1",
+              "0:0:1",
+              "302:0:1",
+              "26:0:-1",
+              "865:0:-1",
+              "27:0:-1",
+              "778:0:-1",
+              "9:0:-1",
+              "1025:0:-1",
+              "72:0:1",
+              "1283:0:1",
+              "71:0:1",
+              "500:0:1",
+              "108:0:1",
+              "853:0:1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "443:0:-1",
+              "22:0:-1",
+              "376:0:-1",
+              "121:0:2",
+              "1745:0:1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.051102865404555
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:e61039580080d6b1"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:f496d183d0e32d2c",
+        "kind": "motorcycle",
+        "initial": {
+          "laneRef": {
+            "rsl": "314:0:-1",
+            "s": 15.30323224080553,
+            "tFrac": -0.5197218106464385
+          },
+          "pose": {
+            "x": -202.7607002253719,
+            "z": -149.5928861411288,
+            "headingRad": 1.241309504590633
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9326730998791755
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "4269:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1062:0:1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1054:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "272:0:1",
+              "50:0:-1",
+              "50:1:-1",
+              "1111:0:-1",
+              "52:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.58085510896312
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.motorcycle",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:f496d183d0e32d2c"
+        ],
+        "dims": {
+          "l": 2.2,
+          "w": 0.8,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:f4999bc67a3d9364",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "5:0:-2",
+            "s": 10.028426864361519,
+            "tFrac": -0.0026148136371008544
+          },
+          "pose": {
+            "x": -32.15914393523652,
+            "z": 19.29924273416749,
+            "headingRad": 1.5608120028566153
+          },
+          "speedMps": 3.32777456607611
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.97553770840168
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "99:0:2",
+              "1326:0:1",
+              "61:0:3",
+              "166:0:1",
+              "91:0:3",
+              "537:0:1",
+              "4:0:-2",
+              "836:0:-2",
+              "5:0:-2",
+              "887:0:-1",
+              "67:0:-1",
+              "813:0:-1",
+              "68:0:-1",
+              "1063:0:-1",
+              "12:0:2",
+              "883:0:1",
+              "11:0:2",
+              "1054:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1180:0:1",
+              "42:0:-1",
+              "417:0:-1",
+              "43:0:-1",
+              "974:0:-1",
+              "44:0:-1",
+              "488:0:-1",
+              "45:0:-1",
+              "524:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 17.342892593807644
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:f4999bc67a3d9364"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:f6401a008ea82edc",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "317:0:1",
+            "s": 16.599794449838694,
+            "tFrac": -0.35316382391002626
+          },
+          "pose": {
+            "x": -186.9179904187788,
+            "z": -151.29757088780585,
+            "headingRad": 2.0470916046790597
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9099477755464613
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "125:0:1",
+              "317:0:1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "4264:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1123:0:1",
+              "36:0:1",
+              "261:0:1",
+              "120:0:-2",
+              "59:0:-2",
+              "4323:0:-2",
+              "60:0:-2",
+              "286:0:-1",
+              "36:0:-1",
+              "1125:0:-1",
+              "92:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.176849343048204
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:f6401a008ea82edc"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:f6ad74e994e7c544",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "805:0:-1",
+            "s": 12.845450003644036,
+            "tFrac": 0.3740891098464425
+          },
+          "pose": {
+            "x": -79.23131171124794,
+            "z": -17.30298258799259,
+            "headingRad": 1.8062115370721648
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9393644135817886
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "67:0:-1",
+              "805:0:-1",
+              "68:0:-3",
+              "1074:0:-1",
+              "118:0:2",
+              "1230:0:1",
+              "105:0:2",
+              "3051:0:1",
+              "127:0:2",
+              "377:0:1",
+              "107:0:-1",
+              "313:0:-1",
+              "1:0:1",
+              "310:0:1",
+              "87:0:-1",
+              "1199:0:-1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "4269:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "909:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 16.699811797009577
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:f6ad74e994e7c544"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ambient:v1:fb14881eb4e434c6",
+        "kind": "car",
+        "initial": {
+          "laneRef": {
+            "rsl": "374:0:-1",
+            "s": 46.7210995685912,
+            "tFrac": 0.053399570199111075
+          },
+          "pose": {
+            "x": -176.9440653974055,
+            "z": -171.12133887482477,
+            "headingRad": -2.405887326124928
+          },
+          "speedMps": 5.498602312322745
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.35,
+            "speedFactor": 0.9205418242327869
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "38:1:-1",
+              "858:0:-1",
+              "40:0:-1",
+              "771:0:-1",
+              "6:0:-1",
+              "443:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "4269:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1",
+              "68:0:1",
+              "812:0:1",
+              "67:0:1",
+              "902:0:1",
+              "117:0:3",
+              "648:0:1",
+              "80:0:-3",
+              "204:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.365187986360656
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "ambient",
+          "ambient:v1",
+          "catalog:vehicle.sedan",
+          "ambient-profile:bd48c795567010c0",
+          "ambient-seed:fb14881eb4e434c6"
+        ],
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        }
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "119:0:1",
+            "s": 69.26766932971924,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -144.11288923903209,
+            "z": -118.37691681817978,
+            "headingRad": -1.5780253499364623
+          },
+          "speedMps": 16.499923173946122
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "76:0:1",
+              "476:0:1",
+              "75:0:1",
+              "1245:0:1",
+              "119:0:1",
+              "402:0:1",
+              "124:0:-1",
+              "1315:0:-1",
+              "34:0:1",
+              "816:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1161:0:1",
+              "17:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.499923173946122
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "lead",
+        "kind": "car",
+        "dims": {
+          "l": 4.05,
+          "w": 1.75,
+          "h": 1.46
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "119:0:1",
+            "s": 24.225918582693055,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -144.4437646434249,
+            "z": -73.33638143207358,
+            "headingRad": -1.5780843244946148
+          },
+          "speedMps": 16.499923173946122
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "76:0:1",
+              "476:0:1",
+              "75:0:1",
+              "1245:0:1",
+              "119:0:1",
+              "402:0:1",
+              "124:0:-1",
+              "1315:0:-1",
+              "34:0:1",
+              "816:0:1",
+              "67:0:1",
+              "909:0:1",
+              "92:0:1",
+              "1161:0:1",
+              "17:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 16.499923173946122
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:lead",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.hatchback"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "lead-hard-stop",
+        "actorId": "lead",
+        "trigger": {
+          "kind": "at",
+          "t": 2.5
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 0
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 6.7165149345994
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

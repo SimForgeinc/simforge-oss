@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003",
+ "briefId": "owner-erratic-behavior-driver-drifting-across-a-lane-while-textin",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "398d78a536f84cb098fa966b0130e52b5033c8f1ec86df668cf955633046ebed",
+ "map": "el-camino-road",
+ "site": "6c363ab6fc47ae98",
+ "draw": 3,
+ "seed": "2392e0bce32f0110",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 4.557,
+  "tMinClearance": 10
+ },
+ "notes": "brief: Driver drifting across a lane while texting"
+}

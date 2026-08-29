@@ -1,0 +1,325 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "vista2-owner-map-divergence-faded-lane-markings",
+      "templateVersion": 2,
+      "templateDigest": "d22d6cdab494aaff",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "14b2d76619f7e143",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "f537cff4a09d832c4b3aa7484b703f63b23bdea37c53de7074ce2eea23fc2ba3",
+      "drawIndex": 0,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "14b2d76619f7e143#0",
+    "archetype": "OWNER.map-divergence",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "14b2d76619f7e143",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_84c49159038ffc87",
+      "entryLaneRsl": "89:0:-1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "165.03 m of runway available, 120 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "110:0:1",
+        "spawnS": 39.999967651830076,
+        "initialSpeedMps": 12.444444444444446,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "lead",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "37:0:-1",
+        "spawnS": 94.99995933320193,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "88abb8ef14c0b2dacf7e9ddd8f432662e5296e9a87e8be76d471d87176af5778",
+    "feasible": true,
+    "issues": [
+      {
+        "code": "decel_budget_exceeded",
+        "severity": "warning",
+        "path": "interactions.i4.dynamics",
+        "reason": "implies 6.00 m/s² of braking, above the 5.5 m/s² comfort limit",
+        "detail": {
+          "impliedDecel": 6,
+          "budget": 5.5
+        }
+      }
+    ],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 16,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "f537cff4a09d832c",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "110:0:1",
+            "s": 15.166584971138153,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 625.3410644358312,
+            "z": -1732.832874533142,
+            "headingRad": 2.3236031414266773
+          },
+          "speedMps": 12.444444444444446
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "89:0:-1",
+              "1299:0:-1",
+              "110:0:1",
+              "1075:0:1",
+              "37:0:-1",
+              "945:0:-1",
+              "48:0:1",
+              "1315:0:1",
+              "38:0:1",
+              "1194:0:1",
+              "88:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 12.444444444444446
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "lead",
+        "kind": "car",
+        "dims": {
+          "l": 5.9,
+          "w": 2.03,
+          "h": 1.95
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "37:0:-1",
+            "s": 12.001955482043911,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 580.3955298262001,
+            "z": -1763.9401129108537,
+            "headingRad": 2.558283332861346
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "89:0:-1",
+              "1299:0:-1",
+              "110:0:1",
+              "1075:0:1",
+              "37:0:-1",
+              "945:0:-1",
+              "48:0:1",
+              "1315:0:1",
+              "38:0:1",
+              "1194:0:1",
+              "88:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:lead",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.pickup"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "i1",
+        "actorId": "lead",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 11.11111111111111
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 2.5
+        }
+      },
+      {
+        "id": "i2",
+        "actorId": "lead",
+        "trigger": {
+          "kind": "at",
+          "t": 0.2
+        },
+        "verb": "laneOffset",
+        "target": {
+          "mode": "fraction",
+          "value": -0.65
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "time",
+          "value": 1
+        }
+      },
+      {
+        "id": "i3",
+        "actorId": "lead",
+        "trigger": {
+          "kind": "at",
+          "t": 1.5
+        },
+        "verb": "laneOffset",
+        "target": {
+          "mode": "fraction",
+          "value": 0
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "time",
+          "value": 1.2
+        }
+      },
+      {
+        "id": "i4",
+        "actorId": "lead",
+        "trigger": {
+          "kind": "at",
+          "t": 3
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "stop"
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 6
+        }
+      },
+      {
+        "id": "i5",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 13.88888888888889
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 2.5
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

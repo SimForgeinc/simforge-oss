@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0",
+ "briefId": "c11-backing-out",
+ "stream": "emergent",
+ "templateSha256": "464cfb646689fc3d990976ea1de9f5888f2ab6f527ead8184ef0d5cc92e07231",
+ "arm": "heavy",
+ "map": "belmont-research-center",
+ "site": "1fdc6c5d1af31298",
+ "draw": 0,
+ "seed": "92f6bacbe7362deb98b611da09497ac0b4c8495a048ea852e8702c000911f5fa",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 0.538,
+  "tMinClearance": 3.24
+ },
+ "notes": "arm(i) paired cell; arm=heavy; band=critical; ambient=40"
+}

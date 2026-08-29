@@ -1,0 +1,66 @@
+{
+ "perCategoryCombined": {
+  "C1.car-following": {
+   "total": 14,
+   "admitted": 14
+  },
+  "C10.oncoming": {
+   "total": 13,
+   "admitted": 6
+  },
+  "C11.parking": {
+   "total": 13,
+   "admitted": 11
+  },
+  "C12.school": {
+   "total": 12,
+   "admitted": 12
+  },
+  "C13.control": {
+   "total": 14,
+   "admitted": 2
+  },
+  "C14.loss-of-control": {
+   "total": 10,
+   "admitted": 9
+  },
+  "C15.adversarial": {
+   "total": 13,
+   "admitted": 11
+  },
+  "C2.cut-in-merge": {
+   "total": 15,
+   "admitted": 13
+  },
+  "C3.intersection": {
+   "total": 21,
+   "admitted": 3
+  },
+  "C4.roundabout": {
+   "total": 10,
+   "admitted": 8
+  },
+  "C5.pedestrian": {
+   "total": 16,
+   "admitted": 16
+  },
+  "C6.cyclist-ptw": {
+   "total": 15,
+   "admitted": 13
+  },
+  "C7.occlusion": {
+   "total": 14,
+   "admitted": 14
+  },
+  "C8.workzone": {
+   "total": 14,
+   "admitted": 2
+  },
+  "C9.hazard": {
+   "total": 14,
+   "admitted": 12
+  }
+ },
+ "gap": 0.0582,
+ "pValue": 0.3808
+}
