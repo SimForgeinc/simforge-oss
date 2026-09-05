@@ -1257,7 +1257,10 @@ export class CityViewer {
     phaseStart = performance.now();
     if (!this.renderingSuspended && (dt * 1000 <= ceiling || this.uploadSkips >= 4)) {
       this.uploadSkips = 0;
-      const deadline = now + this.options.uploadBudgetMs;
+      // Budget the upload phase, not the whole frame. Controls and streaming
+      // can already have spent this budget; using `now` then starves every
+      // queued asset even on the forced-progress frame after upload backoff.
+      const deadline = phaseStart + this.options.uploadBudgetMs;
       const pixelBudget = { remaining: this.options.uploadPixelsPerFrame };
       this.roadLayer?.pumpUploads(deadline, pixelBudget, this.camera);
       this.cityLayer?.pumpUploads(deadline, pixelBudget, this.camera);
