@@ -228,7 +228,6 @@ export function ScenarioWorldHost({
     if (!viewer) return;
     const changed = appliedPreferenceRef.current !== preference;
     appliedPreferenceRef.current = preference;
-    viewer.setLiveQuality(quality.live);
     viewer.setAuthoringFidelity({
       ultraLow: quality.ultraLow,
       roadsOnly: quality.roadsOnly,
@@ -276,6 +275,7 @@ export function ScenarioWorldHost({
           loading: stats.loading,
           queued: stats.queued,
           uploading: stats.uploading,
+          pendingTextureUploads: stats.pendingTextureUploads,
           downloads: stats.downloads,
           streamingError: stats.streamingError,
         };
@@ -559,6 +559,7 @@ export function ScenarioWorldHost({
                     loading: stats.loading,
                     queued: stats.queued,
                     uploading: stats.uploading,
+                    pendingTextureUploads: stats.pendingTextureUploads,
                     downloads: stats.downloads,
                     streamingError: stats.streamingError,
                   };

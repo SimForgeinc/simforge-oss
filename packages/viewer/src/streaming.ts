@@ -63,6 +63,7 @@ export interface LayerStats {
   loading: number;
   queued: number;
   uploading: number;
+  pendingTextureUploads: number;
 }
 
 export interface MemoryGovernor {
@@ -189,6 +190,8 @@ export class TileStreamLayer {
       if (entry.loading) loading++;
       else if (entry.preparing === null && !entry.budgetBlocked && entry.desired > this.finestResident(entry)) queued++;
     }
+    let pendingTextureUploads = 0;
+    for (const job of this.uploadQueue) pendingTextureUploads += job.asset.pendingTextures.length;
     return {
       residentTiles,
       residentAssets,
@@ -197,6 +200,7 @@ export class TileStreamLayer {
       loading,
       queued,
       uploading: this.uploadQueue.length + this.compiling.size,
+      pendingTextureUploads,
     };
   }
 

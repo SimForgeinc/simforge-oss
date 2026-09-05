@@ -235,6 +235,8 @@ export interface CityViewerStats {
   queued: number;
   /** Assets parsed and waiting on the paced GPU upload. */
   uploading: number;
+  /** Remaining paced texture uploads; decreases while a large asset is still preparing. */
+  pendingTextureUploads: number;
   /** Live byte-level network telemetry for the current map or preset load. */
   downloads: import('./download-progress').AssetDownloadStats;
   jsHeapMB: number | null;

@@ -1,4 +1,4 @@
-import { Box3, Group, Scene, Vector3 } from 'three';
+import { Box3, DataTexture, Group, Scene, Vector3 } from 'three';
 import type { WebGLRenderer } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { TileStreamLayer, type PreparedAsset } from './streaming';
@@ -131,12 +131,15 @@ describe('essential streaming assets', () => {
     layer.dispose();
   });
 
-  it('keeps compilation observable through disposal so the renderer can be torn down afterward', async () => {
+  it('reports texture progress without marking an asset ready before compilation finishes', async () => {
     let resolveCompile!: () => void;
     const compile = new Promise<void>((resolve) => { resolveCompile = resolve; });
     const compileAsync = vi.fn(() => compile);
-    const renderer = { compileAsync } as unknown as WebGLRenderer;
+    const renderer = { initTexture: () => undefined, compileAsync } as unknown as WebGLRenderer;
     const asset = emptyAsset();
+    const textures = [0, 1].map(() => new DataTexture(new Uint8Array(4), 1, 1));
+    asset.resources.textures = textures;
+    asset.pendingTextures = [...textures];
     const disposeAsset = vi.fn();
     asset.dispose = disposeAsset;
     const layer = new TileStreamLayer({
@@ -156,8 +159,17 @@ describe('essential streaming assets', () => {
 
     layer.update(new Vector3(), 1, 9999);
     await Promise.resolve();
+    expect(layer.stats().pendingTextureUploads).toBe(2);
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    expect(layer.stats().pendingTextureUploads).toBe(1);
+    expect(layer.stats().uploading).toBe(1);
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    expect(layer.stats().pendingTextureUploads).toBe(0);
+    expect(layer.stats().uploading).toBe(1);
     layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
     expect(compileAsync).toHaveBeenCalledOnce();
+    expect(layer.stats().residentAssets).toBe(0);
+    expect(layer.stats().uploading).toBe(1);
 
     layer.dispose();
     let idle = false;
