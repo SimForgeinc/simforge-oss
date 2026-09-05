@@ -1394,6 +1394,7 @@ export class CityViewer {
         + this.auxiliaryLoads + snowStreaming.loading,
       queued: sum((s) => s.queued) + snowStreaming.queued,
       uploading: sum((s) => s.uploading),
+      pendingTextureUploads: sum((s) => s.pendingTextureUploads),
       downloads: this.downloadTracker.snapshot(),
       jsHeapMB: jsHeapMB(),
       cameraMode: this.controls.mode,

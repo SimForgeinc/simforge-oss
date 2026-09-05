@@ -320,6 +320,7 @@ export function ScenarioEditorSurface({
           loading: stats.loading,
           queued: stats.queued,
           uploading: stats.uploading,
+          pendingTextureUploads: stats.pendingTextureUploads,
           downloads: stats.downloads,
           streamingError: stats.streamingError,
         };

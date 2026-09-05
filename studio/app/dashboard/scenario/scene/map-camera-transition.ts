@@ -13,6 +13,7 @@ export type MapModelLoadSnapshot = {
   loading: number;
   queued: number;
   uploading: number;
+  pendingTextureUploads?: number;
   downloads?: AssetDownloadStats;
   streamingError?: string | null;
 };
@@ -127,6 +128,7 @@ function snapshotActivityKey(snapshot: MapModelLoadSnapshot): string {
     snapshot.loading,
     snapshot.queued,
     snapshot.uploading,
+    snapshot.pendingTextureUploads ?? 0,
     snapshot.downloads?.active ?? 0,
     snapshot.downloads?.transferredBytes ?? 0,
     snapshot.downloads?.totalBytes ?? "unknown",
