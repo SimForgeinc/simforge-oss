@@ -24,17 +24,15 @@ RUN apt-get update \
 COPY --from=source /renderer ./renderer
 RUN cargo build --locked --manifest-path renderer/Cargo.toml --release -p service --bin native-render-service
 
-# Star/Moon plates are NASA-derived build products (renderer/tools/prepare_sky_assets.py),
-# not checkout files: they come from the `sky` build context and are admitted only
-# when they hash to what the canonical SOURCES.json declares. The service refuses
-# to build a scene without them, so a missing or stale plate fails the image build.
-FROM node:22.14.0-bookworm-slim AS sky-assets
-WORKDIR /sky
-COPY --from=sky /starmap_2020_8k.skytex /moon_lroc_4k.skytex ./
-COPY --from=source /renderer/render-core/assets/sky/SOURCES.json ./
-RUN node -e 'const s=require("/sky/SOURCES.json");if(s.schema!=="simforge.sky-assets/v1")throw new Error(`unsupported sky schema ${s.schema}`);for(const e of s.sources)process.stdout.write(`${e.product_sha256}  ${e.product}\n`)' > /tmp/SHA256SUMS \
- && sha256sum --strict --check /tmp/SHA256SUMS \
- && rm /tmp/SHA256SUMS
+FROM debian:bookworm-slim AS sky-build
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-numpy python3-pil ffmpeg curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=source /renderer/tools/prepare_sky_assets.py /renderer/tools/prepare_sky_assets.py
+COPY --from=source /renderer/render-core/assets/sky/SOURCES.json /sky-pins.json
+RUN python3 -c 'import hashlib,json,pathlib,urllib.request; root=pathlib.Path("/renderer/assets-src"); root.mkdir(parents=True); pins=json.loads(pathlib.Path("/sky-pins.json").read_text()); [(urllib.request.urlretrieve(item["file_url"], root / item["download"])) for item in pins["sources"]]; assert all((root / item["download"]).stat().st_size == item["download_bytes"] and hashlib.file_digest((root / item["download"]).open("rb"), "sha256").hexdigest() == item["download_sha256"] for item in pins["sources"]), "sky source digest mismatch"' \
+ && python3 /renderer/tools/prepare_sky_assets.py \
+ && python3 -c 'import hashlib,json,pathlib; root=pathlib.Path("/renderer/render-core/assets/sky"); pins=json.loads(pathlib.Path("/sky-pins.json").read_text()); assert all((root / item["product"]).stat().st_size == item["product_bytes"] and hashlib.file_digest((root / item["product"]).open("rb"), "sha256").hexdigest() == item["product_sha256"] for item in pins["sources"]), "sky asset digest mismatch"'
 
 FROM node:22.14.0-bookworm-slim AS runtime
 ARG SOURCE_REVISION
