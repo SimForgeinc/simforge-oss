@@ -17,6 +17,15 @@ RUN apt-get update \
 COPY --from=source /renderer ./renderer
 RUN cargo build --locked --manifest-path renderer/Cargo.toml --release -p service --bin native-render-service
 
+FROM debian:bookworm-slim AS sky-build
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-numpy python3-pil ffmpeg curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=source /renderer/tools/prepare_sky_assets.py /renderer/tools/prepare_sky_assets.py
+COPY --from=source /renderer/render-core/assets/sky/SOURCES.json /sky-pins.json
+RUN python3 /renderer/tools/prepare_sky_assets.py \
+ && python3 -c 'import hashlib,json,pathlib; root=pathlib.Path("/renderer/render-core/assets/sky"); pins=json.loads(pathlib.Path("/sky-pins.json").read_text()); assert all((root / item["product"]).stat().st_size == item["product_bytes"] and hashlib.file_digest((root / item["product"]).open("rb"), "sha256").hexdigest() == item["product_sha256"] for item in pins["sources"]), "sky asset digest mismatch"'
+
 FROM node:22.14.0-bookworm-slim AS runtime
 ARG SOURCE_REVISION
 ARG IMAGE_VERSION
@@ -30,9 +39,11 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && chown -R node:node /scratch /cache /run/simforge
 COPY --from=node-build --chown=node:node /out/worker /opt/simforge/worker
 COPY --from=rust-build /src/renderer/target/release/native-render-service /usr/local/bin/native-render-service
+COPY --from=sky-build /renderer/render-core/assets/sky /opt/simforge/sky
 ENV NODE_ENV=production \
     PORT=8080 \
     SIMFORGE_NATIVE_RENDER_BINARY=/usr/local/bin/native-render-service \
+    SIMFORGE_SKY_ASSETS=/opt/simforge/sky \
     SIMFORGE_SCRATCH_DIR=/scratch \
     SIMFORGE_CACHE_DIR=/cache \
     SIMFORGE_GPU_LOCK=/run/simforge/gpu.lock \
