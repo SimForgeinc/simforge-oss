@@ -269,12 +269,6 @@ pub(super) enum ShapeLabel {
     Prop(u32),
 }
 
-impl ShapeLabel {
-    pub(super) fn is_body(self) -> bool {
-        matches!(self, ShapeLabel::Body)
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub(super) struct Shape {
     pub label: ShapeLabel,

@@ -222,7 +222,7 @@ pub fn help_surface() -> serde_json::Value {
         contract: "stdout: one JSON document; stderr: {code,path?,reason,detail?}; exit 0 ok, 1 cannot run, 2 input rejected; `job attach` streams JSON lines",
         global_flags: vec!["--root <dir>", "--pretty", "--help"],
         environment: vec![
-            "SIMFORGE_NATIVE_RUNTIME_ROOT: worker root (default ${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime)",
+            "SIMFORGE_NATIVE_RUNTIME_STATE_ROOT: writable worker root (default ${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime)",
             "SIMFORGE_RUNTIME_MANIFEST: runtime manifest path (default runtime-manifest.json beside the binary)",
         ],
         commands: vec![
@@ -285,9 +285,8 @@ fn installed_components(runtime: &VerifiedRuntime) -> Vec<serde_json::Value> {
 fn runtime_document(
     runtime: &VerifiedRuntime,
     engines: &EngineRegistry,
-    root: &std::path::Path,
-) -> serde_json::Value {
-    serde_json::json!({
+) -> Result<serde_json::Value> {
+    Ok(serde_json::json!({
         "schema": runtime::RUNTIME_MANIFEST_SCHEMA,
         "runtimeId": runtime.runtime_id,
         "version": runtime.manifest.version,
@@ -300,9 +299,9 @@ fn runtime_document(
         "engines": engines.capabilities(),
         "supportTiers": runtime.manifest.support_tiers,
         "components": installed_components(runtime),
-        "providerPython": crate::provider::python(root),
+        "providerPython": crate::provider::python()?,
         "environment": { ROOT_ENV: std::env::var(ROOT_ENV).ok(), RUNTIME_MANIFEST_ENV: std::env::var(RUNTIME_MANIFEST_ENV).ok() },
-    })
+    }))
 }
 
 /// Runs one invocation, writing the result document (or event stream) to
@@ -332,6 +331,10 @@ pub fn execute(
     if command == Command::Help {
         return emit(out, &help_surface());
     }
+    if command == Command::RuntimeShow {
+        let runtime = load_runtime()?;
+        return emit(out, &runtime_document(&runtime, engines)?);
+    }
     let root = match root {
         Some(root) => root,
         None => default_root()?,
@@ -339,11 +342,7 @@ pub fn execute(
     let worker = Worker::open(&root)?;
 
     match command {
-        Command::Help => unreachable!("handled above"),
-        Command::RuntimeShow => {
-            let runtime = load_runtime()?;
-            emit(out, &runtime_document(&runtime, engines, &root))
-        }
+        Command::Help | Command::RuntimeShow => unreachable!("handled above"),
         Command::JobSubmit { manifest } => emit(out, &to_value(worker.submit(&manifest)?)?),
         Command::JobStart {
             job_id,

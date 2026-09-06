@@ -153,3 +153,55 @@ export function resolveWalkerSpawnClearOfVehicles(
   }
   return null;
 }
+
+// ── Oriented-box overlap (first-frame interpenetration lint) ─────────────────
+
+export interface OrientedBox {
+  center: { x: number; y: number };
+  /** Heading in radians; +x axis is heading 0, CCW positive. */
+  heading: number;
+  halfLength: number;
+  halfWidth: number;
+}
+
+function boxCorners(box: OrientedBox): Array<{ x: number; y: number }> {
+  const c = Math.cos(box.heading);
+  const s = Math.sin(box.heading);
+  const fx = c * box.halfLength;
+  const fy = s * box.halfLength;
+  const rx = -s * box.halfWidth;
+  const ry = c * box.halfWidth;
+  return [
+    { x: box.center.x + fx + rx, y: box.center.y + fy + ry },
+    { x: box.center.x + fx - rx, y: box.center.y + fy - ry },
+    { x: box.center.x - fx - rx, y: box.center.y - fy - ry },
+    { x: box.center.x - fx + rx, y: box.center.y - fy + ry },
+  ];
+}
+
+/** Separating Axis Theorem overlap test for two oriented boxes. */
+export function boxesOverlap(a: OrientedBox, b: OrientedBox): boolean {
+  const ca = boxCorners(a);
+  const cb = boxCorners(b);
+  const axes = [
+    { x: Math.cos(a.heading), y: Math.sin(a.heading) },
+    { x: -Math.sin(a.heading), y: Math.cos(a.heading) },
+    { x: Math.cos(b.heading), y: Math.sin(b.heading) },
+    { x: -Math.sin(b.heading), y: Math.cos(b.heading) },
+  ];
+  for (const axis of axes) {
+    let aMin = Infinity, aMax = -Infinity, bMin = Infinity, bMax = -Infinity;
+    for (const p of ca) {
+      const d = p.x * axis.x + p.y * axis.y;
+      if (d < aMin) aMin = d;
+      if (d > aMax) aMax = d;
+    }
+    for (const p of cb) {
+      const d = p.x * axis.x + p.y * axis.y;
+      if (d < bMin) bMin = d;
+      if (d > bMax) bMax = d;
+    }
+    if (aMax < bMin || bMax < aMin) return false;
+  }
+  return true;
+}

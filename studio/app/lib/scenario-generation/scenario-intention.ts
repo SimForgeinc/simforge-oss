@@ -627,7 +627,7 @@ function normalizedOcclusion(
 }
 
 function isHeavyVehicle(actor: ScenarioEditorActorDraft): boolean {
-  return /(bus|truck|fuso|firetruck|carlacola|sprinter)/i.test(
+  return /(bus|truck|fire_engine|delivery_van|ambulance|fuso|firetruck|carlacola|sprinter)/i.test(
     `${actor.blueprint} ${actor.label}`,
   );
 }

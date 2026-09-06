@@ -16,8 +16,8 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import path from 'node:path';
+import { nativeRuntimeRoot } from '@simforge-oss/native-runtime';
 
 import { CliError, EXIT } from '../errors.js';
 
@@ -26,14 +26,6 @@ export const RUNNER_BINARY = 'simforge-runner';
 /** Command groups forwarded verbatim to the runner. */
 export const RUNNER_GROUPS = ['job', 'worker', 'cas', 'runtime'] as const;
 export type RunnerGroup = (typeof RUNNER_GROUPS)[number];
-
-/** `${SIMFORGE_NATIVE_RUNTIME_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime}`. */
-export function nativeRuntimeRoot(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env['SIMFORGE_NATIVE_RUNTIME_ROOT'];
-  if (explicit) return explicit;
-  const dataHome = env['XDG_DATA_HOME'] || path.join(homedir(), '.local', 'share');
-  return path.join(dataHome, 'simforge', 'native-runtime');
-}
 
 /**
  * Candidate runner paths in discovery order. The bare binary name is last so a

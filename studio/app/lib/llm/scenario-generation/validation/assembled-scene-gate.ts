@@ -18,14 +18,13 @@
  * keeps the scene; only a defect on a PRINCIPAL (subject / conflict actor /
  * occluder) rejects the site.
  */
+import { getEntry, resolveCatalogId } from "@simforge-oss/asset-catalog/metadata";
 import type { ScenarioEditorActorDraft } from "@simforge-oss/studio-shared";
 import {
   boxesOverlap,
-  type OrientedBox,
-} from "@/app/lib/llm/scenario-generation/validation/kinematic-sim";
-import {
   pathClearsObb,
   type ObbFootprint,
+  type OrientedBox,
 } from "@/app/lib/llm/scenario-generation/occluder-clearance";
 
 /** Static-dressing lateral keep-out around the subject's timed_waypoints polyline —
@@ -72,8 +71,8 @@ export interface AssembledSceneGateResult {
 }
 
 // ── Per-class footprints ─────────────────────────────────────────────────────
-// Mirrors draft-validator's blueprint footprint table (not exported there;
-// keep in sync — these are conservative CARLA body envelopes, not exact).
+// Conservative body envelopes for the first-frame overlap lint; the executed
+// dimensions are the catalog's, resolved by the native compiler.
 
 interface Footprint {
   lengthM: number;
@@ -100,6 +99,12 @@ function footprintFor(
   if (actor.kind === "prop") return PROP;
   const placed = actor.blueprint ? vehicleFootprints?.[actor.blueprint] : undefined;
   if (placed) return { lengthM: placed.length, widthM: placed.width };
+  // A catalog identity (what the native lowering executes) has an exact body.
+  const catalogId = actor.blueprint ? resolveCatalogId(actor.blueprint) : null;
+  if (catalogId) {
+    const dims = getEntry(catalogId).dims;
+    return { lengthM: dims.l, widthM: dims.w };
+  }
   const bp = (actor.blueprint ?? "").toLowerCase();
   if (/crossbike|omafiets|diamondback|gazelle|bike|bicycle|cyclist/.test(bp)) {
     return BICYCLE;

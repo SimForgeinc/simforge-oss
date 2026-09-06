@@ -31,7 +31,7 @@
 # against any of them); only the generation this invocation was building is
 # removed, and only when the build did not reach activation. A ROOT/venv that
 # is a real directory (not a symlink) is rejected before anything is modified.
-# Never touches ROOT/jobs, ROOT/cas or ROOT/worker.
+# Never touches writable jobs, CAS or worker state under SIMFORGE_NATIVE_RUNTIME_STATE_ROOT.
 set -euo pipefail
 
 ARCHIVE="${1:-}"
@@ -129,4 +129,4 @@ if [[ -n "$GEN_DIR" ]]; then
   ACTIVATED=1
 fi
 
-SIMFORGE_NATIVE_RUNTIME_ROOT="$ROOT" "$ROOT/bin/simforge-runner" --root "$ROOT" runtime show
+SIMFORGE_NATIVE_RUNTIME_ROOT="$ROOT" "$ROOT/bin/simforge-runner" runtime show

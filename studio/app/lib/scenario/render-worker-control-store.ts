@@ -865,6 +865,7 @@ type CompletionArtifact = {
 
 type NativeReservation = {
   artifact_role: RenderArtifactIdentity["role"]; artifact_actor_id: string | null; artifact_sensor_id: string | null;
+  artifact_modality: RenderArtifactIdentity["modality"];
   media_type: string; expected_sha256: string; expected_size_bytes: number; storage_bucket: string; storage_key: string;
 };
 const NATIVE_EVIDENCE_MAX_BYTES = 16 * 1024 * 1024;

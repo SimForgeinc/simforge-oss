@@ -242,12 +242,20 @@ pub struct SkyAssetProvenance {
 
 /// Resolved and digest-verified star/Moon plates.
 ///
-/// Resolution order: `$SIMFORGE_SKY_ASSETS`, `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky`
-/// (installed runtime), then the crate's `assets/sky` (source checkout).
-/// Every candidate directory must hold `SOURCES.json`; the first one that
-/// does is authoritative and its `product_sha256`/`product_bytes` are
-/// checked against the plates, so a stale or truncated plate fails here
-/// rather than rendering a wrong sky.
+/// Exactly one directory is selected, in this order, and the selection is
+/// final: a selected directory that fails verification is an error, never a
+/// reason to try the next one.
+///
+/// 1. `$SIMFORGE_SKY_ASSETS` (explicit plate directory);
+/// 2. `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky` (explicit install root);
+/// 3. the installed runtime this executable belongs to, recognised by the
+///    standard layout `<root>/bin/<exe>` beside `bin/runtime-manifest.json`,
+///    which puts the plates at `<root>/share/sky`;
+/// 4. the crate's `assets/sky` (source checkout, no installed runtime).
+///
+/// The directory must hold `SOURCES.json`, whose `product_sha256` /
+/// `product_bytes` are checked against the plates, so a stale or truncated
+/// plate fails here rather than rendering a wrong sky.
 #[derive(Debug, Clone)]
 pub struct SkyAssetPaths {
     pub dir: std::path::PathBuf,
@@ -258,34 +266,109 @@ pub struct SkyAssetPaths {
 pub const STAR_PLATE: &str = "starmap_2020_8k.skytex";
 pub const MOON_PLATE: &str = "moon_lroc_4k.skytex";
 
-fn candidate_dirs() -> Vec<std::path::PathBuf> {
-    let mut dirs = Vec::with_capacity(3);
-    if let Ok(dir) = std::env::var("SIMFORGE_SKY_ASSETS") {
-        dirs.push(std::path::PathBuf::from(dir));
+/// Marker beside every binary of an installed native runtime; the cargo
+/// target directory of a source checkout never has one.
+const RUNTIME_MANIFEST_FILE: &str = "runtime-manifest.json";
+
+/// Why a plate directory was selected, for the error a failed verification
+/// reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SkySelection {
+    SkyAssetsEnv,
+    RuntimeRootEnv,
+    InstalledRuntime,
+    SourceCheckout,
+}
+
+impl SkySelection {
+    fn describe(self) -> &'static str {
+        match self {
+            Self::SkyAssetsEnv => "SIMFORGE_SKY_ASSETS",
+            Self::RuntimeRootEnv => "SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky",
+            Self::InstalledRuntime => "installed runtime share/sky beside the executable",
+            Self::SourceCheckout => "source checkout assets/sky",
+        }
     }
-    if let Ok(root) = std::env::var("SIMFORGE_NATIVE_RUNTIME_ROOT") {
-        dirs.push(std::path::Path::new(&root).join("share/sky"));
+}
+
+fn env_path(name: &str) -> Option<std::path::PathBuf> {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from)
+}
+
+/// Install root of the runtime `executable` belongs to, if it is an
+/// installed binary rather than one running out of a cargo target directory.
+fn installed_runtime_root(executable: &std::path::Path) -> Option<std::path::PathBuf> {
+    let bin = executable.parent()?;
+    if !bin.join(RUNTIME_MANIFEST_FILE).is_file() {
+        return None;
     }
-    dirs.push(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"));
-    dirs
+    bin.parent().map(std::path::Path::to_path_buf)
+}
+
+/// Pure selection over the three inputs; see [`SkyAssetPaths`] for the order.
+fn select_dir(
+    sky_assets: Option<std::path::PathBuf>,
+    runtime_root: Option<std::path::PathBuf>,
+    executable: Option<&std::path::Path>,
+) -> (std::path::PathBuf, SkySelection) {
+    if let Some(dir) = sky_assets {
+        return (dir, SkySelection::SkyAssetsEnv);
+    }
+    if let Some(root) = runtime_root {
+        return (root.join("share/sky"), SkySelection::RuntimeRootEnv);
+    }
+    if let Some(root) = executable.and_then(installed_runtime_root) {
+        return (root.join("share/sky"), SkySelection::InstalledRuntime);
+    }
+    (
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"),
+        SkySelection::SourceCheckout,
+    )
 }
 
 impl SkyAssetPaths {
     pub fn resolve() -> anyhow::Result<Self> {
+        let executable = std::env::current_exe().ok();
+        let (dir, selection) = select_dir(
+            env_path("SIMFORGE_SKY_ASSETS"),
+            env_path("SIMFORGE_NATIVE_RUNTIME_ROOT"),
+            executable.as_deref(),
+        );
+        Self::verify(dir, selection)
+    }
+
+    /// Verifies the plates in the selected `dir` against its `SOURCES.json`.
+    fn verify(dir: std::path::PathBuf, selection: SkySelection) -> anyhow::Result<Self> {
         use anyhow::Context;
-        let dirs = candidate_dirs();
-        let Some(dir) = dirs.iter().find(|d| d.join("SOURCES.json").is_file()) else {
+        let sources_path = dir.join("SOURCES.json");
+        if !sources_path.is_file() {
             anyhow::bail!(
-                "sky assets not found: no SOURCES.json in {} (set SIMFORGE_SKY_ASSETS or install the native runtime; \
-                 plates are built by renderer/tools/prepare_sky_assets.py)",
-                dirs.iter().map(|d| d.display().to_string()).collect::<Vec<_>>().join(", ")
+                "sky assets not found: no SOURCES.json in {} (selected via {}; set SIMFORGE_SKY_ASSETS or install the \
+                 native runtime; plates are built by renderer/tools/prepare_sky_assets.py)",
+                dir.display(),
+                selection.describe()
             );
-        };
-        let manifest: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(dir.join("SOURCES.json")).context("read sky SOURCES.json")?,
-        )
-        .context("parse sky SOURCES.json")?;
-        let sources = manifest["sources"].as_array().context("sky SOURCES.json has no sources")?;
+        }
+        let manifest: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&sources_path).with_context(|| {
+                format!(
+                    "read sky {} ({})",
+                    sources_path.display(),
+                    selection.describe()
+                )
+            })?)
+            .with_context(|| {
+                format!(
+                    "parse sky {} ({})",
+                    sources_path.display(),
+                    selection.describe()
+                )
+            })?;
+        let sources = manifest["sources"]
+            .as_array()
+            .context("sky SOURCES.json has no sources")?;
         for product in [STAR_PLATE, MOON_PLATE] {
             let entry = sources
                 .iter()
@@ -293,18 +376,39 @@ impl SkyAssetPaths {
                 .with_context(|| format!("sky SOURCES.json lists no product {product}"))?;
             let path = dir.join(product);
             let len = std::fs::metadata(&path)
-                .with_context(|| format!("sky plate {} missing", path.display()))?
+                .with_context(|| {
+                    format!(
+                        "sky plate {} missing ({})",
+                        path.display(),
+                        selection.describe()
+                    )
+                })?
                 .len();
-            let (want_len, want_sha) = (entry["product_bytes"].as_u64(), entry["product_sha256"].as_str());
+            let (want_len, want_sha) = (
+                entry["product_bytes"].as_u64(),
+                entry["product_sha256"].as_str(),
+            );
             if Some(len) != want_len {
-                anyhow::bail!("sky plate {}: {len} bytes, SOURCES.json expects {want_len:?}", path.display());
+                anyhow::bail!(
+                    "sky plate {}: {len} bytes, SOURCES.json expects {want_len:?} ({})",
+                    path.display(),
+                    selection.describe()
+                );
             }
             let sha = crate::night::sha256_file(&path)?;
             if Some(sha.as_str()) != want_sha {
-                anyhow::bail!("sky plate {}: sha256 {sha} does not match SOURCES.json {want_sha:?}", path.display());
+                anyhow::bail!(
+                    "sky plate {}: sha256 {sha} does not match SOURCES.json {want_sha:?} ({})",
+                    path.display(),
+                    selection.describe()
+                );
             }
         }
-        Ok(Self { star: dir.join(STAR_PLATE), moon: dir.join(MOON_PLATE), dir: dir.clone() })
+        Ok(Self {
+            star: dir.join(STAR_PLATE),
+            moon: dir.join(MOON_PLATE),
+            dir,
+        })
     }
 }
 
@@ -588,14 +692,28 @@ fn prepare_sky_uniforms(
             world_from_clip,
             equ_from_world: sky.equ_from_world,
             camera: camera_pos.extend(sky.altitude_m),
-            moon: sky.moon_dir.normalize_or(Vec3::Y).extend(sky.moon_angular_radius),
-            moon_north: sky.moon_north.normalize_or(Vec3::Y).extend(sky.sub_earth_lon),
-            moon_sun: sky.moon_sun_dir.normalize_or(Vec3::X).extend(sky.sub_earth_lat),
+            moon: sky
+                .moon_dir
+                .normalize_or(Vec3::Y)
+                .extend(sky.moon_angular_radius),
+            moon_north: sky
+                .moon_north
+                .normalize_or(Vec3::Y)
+                .extend(sky.sub_earth_lon),
+            moon_sun: sky
+                .moon_sun_dir
+                .normalize_or(Vec3::X)
+                .extend(sky.sub_earth_lat),
             sun: sky.sun_dir.normalize_or(Vec3::NEG_Y).extend(sky.sun_lux),
             sun_tint: sky.sun_tint.extend(sky.ground_bounce),
             sky_ambient: sky.sky_ambient.extend(sky.aerial_aerosol.y),
             skyglow: sky.skyglow_rgb.extend(sky.skyglow_luminance),
-            p0: Vec4::new(sky.exposure_scene, sky.star_gain, sky.moon_gain, sky.pixel_angle),
+            p0: Vec4::new(
+                sky.exposure_scene,
+                sky.star_gain,
+                sky.moon_gain,
+                sky.pixel_angle,
+            ),
             p1: Vec4::new(
                 sky.cloud_cover,
                 sky.cloud_density,
@@ -708,4 +826,98 @@ fn sky_pass(
 /// compiling if the plates are ever made optional.
 pub fn _assert_render_asset_usage() -> RenderAssetUsages {
     RenderAssetUsages::RENDER_WORLD
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+
+    fn scratch(name: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("simforge-sky-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    /// `<root>/bin/native-render-service` beside `bin/runtime-manifest.json`.
+    fn installed_layout(root: &Path) -> PathBuf {
+        fs::create_dir_all(root.join("bin")).unwrap();
+        fs::write(root.join("bin").join(RUNTIME_MANIFEST_FILE), b"{}").unwrap();
+        root.join("bin/native-render-service")
+    }
+
+    #[test]
+    fn installed_binary_discovers_its_own_share_sky() {
+        let root = scratch("installed");
+        let exe = installed_layout(&root);
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()));
+        assert_eq!(selection, SkySelection::InstalledRuntime);
+        assert_eq!(dir, root.join("share/sky"));
+    }
+
+    #[test]
+    fn binary_without_manifest_beside_it_is_a_source_checkout() {
+        let root = scratch("target-dir");
+        let exe = root.join("release/native-render-service");
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()));
+        assert_eq!(selection, SkySelection::SourceCheckout);
+        assert_eq!(
+            dir,
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky")
+        );
+    }
+
+    #[test]
+    fn explicit_overrides_outrank_installed_discovery() {
+        let root = scratch("precedence");
+        let exe = installed_layout(&root);
+        let (dir, selection) =
+            select_dir(None, Some(PathBuf::from("/opt/rt")), Some(exe.as_path()));
+        assert_eq!(selection, SkySelection::RuntimeRootEnv);
+        assert_eq!(dir, Path::new("/opt/rt/share/sky"));
+        let (dir, selection) = select_dir(
+            Some(PathBuf::from("/plates")),
+            Some(PathBuf::from("/opt/rt")),
+            Some(exe.as_path()),
+        );
+        assert_eq!(selection, SkySelection::SkyAssetsEnv);
+        assert_eq!(dir, Path::new("/plates"));
+    }
+
+    #[test]
+    fn explicit_invalid_override_fails_instead_of_falling_back() {
+        let dir = scratch("invalid-override");
+        let err = SkyAssetPaths::verify(dir.clone(), SkySelection::SkyAssetsEnv)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(&dir.display().to_string()), "{err}");
+        assert!(err.contains("SIMFORGE_SKY_ASSETS"), "{err}");
+    }
+
+    #[test]
+    fn truncated_plate_fails_verification() {
+        let dir = scratch("truncated");
+        fs::write(dir.join(STAR_PLATE), b"abc").unwrap();
+        fs::write(dir.join(MOON_PLATE), b"abc").unwrap();
+        fs::write(
+            dir.join("SOURCES.json"),
+            serde_json::json!({
+                "sources": [
+                    { "product": STAR_PLATE, "product_bytes": 4, "product_sha256": "0" },
+                    { "product": MOON_PLATE, "product_bytes": 3, "product_sha256": "0" },
+                ]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let err = SkyAssetPaths::verify(dir, SkySelection::InstalledRuntime)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("3 bytes, SOURCES.json expects Some(4)"),
+            "{err}"
+        );
+    }
 }

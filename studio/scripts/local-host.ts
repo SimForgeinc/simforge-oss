@@ -1,9 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { lock } from "proper-lockfile";
 import {
+  localHostStateDir,
   readLocalHostState,
   removeLocalHostState,
   waitForLocalHostReady,
@@ -12,6 +15,7 @@ import {
 import { migrate } from "./migrate";
 import { seed } from "./seed";
 import { simforgeEnv } from "../lib/simforge-env";
+import { shutdownDatabase } from "../app/lib/db/data-api";
 
 /**
  * The local Studio supervisor: migrations, seed, the Next server, the optional
@@ -106,8 +110,12 @@ function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>
 
 export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig = localHostConfig()): Promise<number> {
   const { port, hostname, withWorker } = config;
+  const stateDir = localHostStateDir();
+  const runtimeEnv = {
+    SIMFORGE_NATIVE_RUNTIME_STATE_ROOT: process.env.SIMFORGE_NATIVE_RUNTIME_STATE_ROOT?.trim()
+      || resolve(stateDir, "native-runtime"),
+  };
   const baseUrl = `http://${hostname}:${port}`;
-
   const existing = await readLocalHostState();
   if (existing && existing.pid !== process.pid && processAlive(existing.pid)) {
     process.stderr.write(`${JSON.stringify({
@@ -119,62 +127,107 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     return 3;
   }
 
-  await migrate();
-  await seed();
-
   const children: ChildProcess[] = [];
-  const server = spawnHostCommand(plan.server, { PORT: String(port), HOSTNAME: hostname });
-  children.push(server);
-
-  if (withWorker) {
-    children.push(spawnHostCommand(plan.worker, {
-      SIMFORGE_API_BASE_URL: simforgeEnv("API_BASE_URL") ?? `http://127.0.0.1:${port}`,
-    }));
-  }
-
-  const controlToken = randomBytes(24).toString("base64url");
-  const statePath = await writeLocalHostState({
-    schema: "simforge.local-host-state/v1",
-    pid: process.pid,
-    port,
-    baseUrl,
-    controlToken,
-    startedAt: new Date().toISOString(),
-    withWorker,
-  });
-
   let stopping = false;
+  let ownershipError: Error | undefined;
   const stop = (signal: NodeJS.Signals) => {
     if (stopping) return;
     stopping = true;
     for (const child of children) child.kill(signal);
   };
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
-    process.on(signal, () => stop(signal === "SIGHUP" ? "SIGTERM" : signal));
+  await mkdir(stateDir, { recursive: true });
+  let releaseOwnership: () => Promise<void>;
+  try {
+    releaseOwnership = await lock(stateDir, {
+      lockfilePath: join(stateDir, "host.lock"),
+      retries: 0,
+      stale: 30_000,
+      update: 10_000,
+      onCompromised: (error) => {
+        ownershipError = error;
+        stop("SIGTERM");
+      },
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ELOCKED") throw error;
+    process.stderr.write(`${JSON.stringify({
+      component: "simforge-local-host",
+      event: "host.ownership_busy",
+      dataRoot: stateDir,
+    })}\n`);
+    return 3;
   }
 
-  void waitForLocalHostReady(baseUrl, { isAlive: () => server.exitCode === null }).then((ready) => {
-    process.stdout.write(`${JSON.stringify({
-      component: "simforge-local-host",
-      event: ready ? "host.ready" : "host.not_ready",
+  let published = false;
+  const signalHandlers = new Map<NodeJS.Signals, () => void>();
+  try {
+    const current = await readLocalHostState();
+    if (current && current.pid !== process.pid && processAlive(current.pid)) return 3;
+    // Claim ownership before PGlite is opened, including migration and seeding.
+    const statePath = await writeLocalHostState({
+      schema: "simforge.local-host-state/v1",
+      pid: process.pid,
+      port,
       baseUrl,
-      statePath,
+      controlToken: randomBytes(24).toString("base64url"),
+      startedAt: new Date().toISOString(),
       withWorker,
-    })}\n`);
-  });
+    });
+    published = true;
+    try {
+      await migrate();
+      await seed();
+    } finally {
+      // Only the server may own the persistent database after bootstrap.
+      await shutdownDatabase();
+    }
+    if (ownershipError) throw ownershipError;
 
-  const { promise, resolve: resolveExit } = Promise.withResolvers<number>();
-  server.once("exit", (code) => resolveExit(code ?? 1));
-  const exitCode = await promise;
-  stop("SIGTERM");
-  await Promise.all(children.filter((child) => child !== server).map((child) => {
-    if (child.exitCode !== null) return Promise.resolve();
-    const { promise: exited, resolve: done } = Promise.withResolvers<void>();
-    child.once("exit", () => done());
-    return exited;
-  }));
-  await removeLocalHostState();
-  return exitCode;
+    const server = spawnHostCommand(plan.server, { ...runtimeEnv, PORT: String(port), HOSTNAME: hostname });
+    children.push(server);
+    if (withWorker) {
+      children.push(spawnHostCommand(plan.worker, {
+        ...runtimeEnv,
+        SIMFORGE_API_BASE_URL: simforgeEnv("API_BASE_URL") ?? `http://127.0.0.1:${port}`,
+      }));
+    }
+    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+      const handler = () => stop(signal === "SIGHUP" ? "SIGTERM" : signal);
+      signalHandlers.set(signal, handler);
+      process.on(signal, handler);
+    }
+
+    void waitForLocalHostReady(baseUrl, {
+      isAlive: () => !stopping && server.exitCode === null && server.signalCode === null,
+    }).then((ready) => {
+      process.stdout.write(`${JSON.stringify({
+        component: "simforge-local-host",
+        event: ready ? "host.ready" : "host.not_ready",
+        baseUrl,
+        statePath,
+        withWorker,
+      })}\n`);
+    });
+    const { promise, resolve: resolveExit, reject: rejectExit } = Promise.withResolvers<number>();
+    server.once("exit", (code) => resolveExit(code ?? 1));
+    server.once("error", rejectExit);
+    const exitCode = await promise;
+    if (ownershipError) throw ownershipError;
+    return exitCode;
+  } finally {
+    stop("SIGTERM");
+    await Promise.all(children.map((child) => {
+      if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        child.once("exit", () => resolve());
+        child.once("error", () => resolve());
+      });
+    }));
+    for (const [signal, handler] of signalHandlers) process.off(signal, handler);
+    if (published && !ownershipError) await removeLocalHostState();
+    // A compromised lease is already released by proper-lockfile.
+    if (!ownershipError) await releaseOwnership();
+  }
 }
 
 function processAlive(pid: number): boolean {

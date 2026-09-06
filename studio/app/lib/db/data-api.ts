@@ -30,6 +30,7 @@ export type Transaction = {
 type DatabaseState = {
   acceptingOperations: boolean;
   hooksInstalled: boolean;
+  removeHooks?: () => void;
   operationTail: Promise<void>;
   pglitePromise?: Promise<PGlite>;
   pool?: Pool;
@@ -86,7 +87,7 @@ function getPool(): Pool {
   return state.pool;
 }
 
-async function shutdownDatabase(): Promise<void> {
+export async function shutdownDatabase(): Promise<void> {
   if (!state.shutdownPromise) {
     state.acceptingOperations = false;
     state.shutdownPromise = (async () => {
@@ -100,6 +101,9 @@ async function shutdownDatabase(): Promise<void> {
         await state.pool.end();
         state.pool = undefined;
       }
+      state.removeHooks?.();
+      state.removeHooks = undefined;
+      state.hooksInstalled = false;
     })();
   }
   return state.shutdownPromise;
@@ -118,13 +122,17 @@ function handleSignal(): void {
     .finally(() => process.exit(process.exitCode ?? 0));
 }
 
-if (!state.hooksInstalled) {
+if (!state.hooksInstalled && state.acceptingOperations) {
   state.hooksInstalled = true;
+  const beforeExit = () => { void shutdownDatabase().catch(reportShutdownFailure); };
+  state.removeHooks = () => {
+    process.off("SIGINT", handleSignal);
+    process.off("SIGTERM", handleSignal);
+    process.off("beforeExit", beforeExit);
+  };
   process.once("SIGINT", handleSignal);
   process.once("SIGTERM", handleSignal);
-  process.once("beforeExit", () => {
-    void shutdownDatabase().catch(reportShutdownFailure);
-  });
+  process.once("beforeExit", beforeExit);
 }
 
 function bindValue(value: SqlValue | undefined): unknown {

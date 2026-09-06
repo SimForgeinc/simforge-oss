@@ -126,7 +126,7 @@ export { evaluate, combinedEvaluationVerdict, criticalityBand, filtersFor, type 
 export { metricsSummary } from './commands/simulate.js';
 export { debugScenario, type DebugOptions, type DebugPathSample } from './commands/debug.js';
 export { SCHEMAS, type SchemaEntry } from './commands/schemas.js';
-export { RUNNER_BINARY, RUNNER_GROUPS, nativeRuntimeRoot, resolveRunnerBinary, runRunner, runnerCandidates, type RunnerGroup, type RunnerOptions } from './commands/runner.js';
+export { RUNNER_BINARY, RUNNER_GROUPS, resolveRunnerBinary, runRunner, runnerCandidates, type RunnerGroup, type RunnerOptions } from './commands/runner.js';
 export { renderHash, renderRun, type RenderRunOptions } from './commands/render.js';
 export { importOpenScenario, type ImportOptions } from './commands/import.js';
 export { templateNew, type TemplateNewOptions } from './commands/template.js';

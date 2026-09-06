@@ -19,9 +19,8 @@ use crate::types::{
 };
 
 use super::actor::{
-    axis_of, ActorIndex, ActorRuntime, AxisId, GapReference, InteractionIndex, LaneChangeSide,
-    LateralCommand, LateralKind, LongitudinalCommand, LongitudinalKind, MatchReference,
-    PendingRetarget,
+    axis_of, ActorIndex, AxisId, GapReference, InteractionIndex, LaneChangeSide, LateralCommand,
+    LateralKind, LongitudinalCommand, LongitudinalKind, MatchReference, PendingRetarget,
 };
 use super::controllers::{cruise_speed, desired_gap_m, limits_for};
 use super::doors::{

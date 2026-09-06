@@ -1,19 +1,13 @@
 import { execFile } from "node:child_process";
 import { access, constants } from "node:fs/promises";
-import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
+import { nativeRuntimeRoot } from "@simforge-oss/native-runtime";
 import { NATIVE_RUNTIME_MANIFEST_SCHEMA, type NativeRuntimeCapability, type NativeRuntimeManifest } from "../capabilities";
 
 const execFileAsync = promisify(execFile);
 
 export const NATIVE_RUNNER_BINARY = "simforge-runner";
-
-/** `${SIMFORGE_NATIVE_RUNTIME_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime}` */
-export function nativeRuntimeRoot(env: NodeJS.ProcessEnv = process.env): string {
-  return env.SIMFORGE_NATIVE_RUNTIME_ROOT?.trim()
-    || join(env.XDG_DATA_HOME?.trim() || join(homedir(), ".local", "share"), "simforge", "native-runtime");
-}
 
 /**
  * Discovery order fixed by the runner: `SIMFORGE_RUNNER_BIN`, then the runtime

@@ -35,9 +35,10 @@
 
 import { build } from "esbuild";
 import { execFile, spawn } from "node:child_process";
-import { cp, lstat, mkdir, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA } from "./stage-manifest.mjs";
@@ -57,7 +58,7 @@ const stageStudio = join(stageRoot, "studio");
  * of `@simforge-oss/studio` so it resolves from `studio/host/` at runtime;
  * the stage copies the package and its pnpm dependency closure.
  */
-const RUNTIME_ASSET_PACKAGES = ["@electric-sql/pglite", "sharp", "playwright-core"];
+const RUNTIME_ASSET_PACKAGES = ["@electric-sql/pglite", "@simforge-oss/native-runtime", "@simforge-oss/render", "sharp", "playwright-core"];
 /** Externals that are never loaded from the artifact: optional or workspace-plan-only. */
 const NEVER_BUNDLED = ["pg-native", "next", "tsx"];
 
@@ -105,7 +106,10 @@ async function nativeAddon() {
   return names[0];
 }
 
-/** Reuse the verified headless distribution, not paths into Cargo build trees. */
+/**
+ * Reuse the verified headless distribution, not paths into Cargo build trees.
+ * @returns {Promise<{ root: string; archive: string; sha256: string }>}
+ */
 async function stageNativeRuntime() {
   if (process.platform !== "linux" || process.arch !== "x64") {
     fail("the native runtime distribution currently supports Linux x86_64 only");
@@ -137,7 +141,7 @@ async function stageNativeRuntime() {
   for (const entry of ["bin/simforge-runner", "bin/native-render-service", "lib/libsimforge_render.so", "share/sky/SOURCES.json"]) {
     if (!(await exists(join(root, entry)))) fail(`native runtime archive lacks ${entry}`);
   }
-  return "runtime";
+  return { root: "runtime", archive, sha256: expected };
 }
 
 /**
@@ -152,7 +156,18 @@ async function stageMirror(source, filter) {
   const target = join(stageRoot, rel);
   await mkdir(dirname(target), { recursive: true });
   if ((await lstat(source)).isSymbolicLink()) {
-    if (!(await exists(target))) await symlink(await readlink(source), target);
+    const link = await readlink(source);
+    const existing = await lstat(target).catch((error) => {
+      if (error.code === "ENOENT") return null;
+      throw error;
+    });
+    if (existing) {
+      if (!existing.isSymbolicLink() || resolve(dirname(target), await readlink(target)) !== resolve(dirname(target), link)) {
+        fail(`${target} conflicts with the installed dependency link`);
+      }
+    } else {
+      await symlink(link, target);
+    }
     return target;
   }
   await cp(source, target, { recursive: true, verbatimSymlinks: true, force: false, errorOnExist: false, filter });
@@ -160,20 +175,55 @@ async function stageMirror(source, filter) {
 }
 
 /**
- * Stage an installed package by the real directory pnpm keeps it in, then
- * every dependency pnpm links beside it in the same virtual-store
- * `node_modules` (`.pnpm/<pkg>@<v>/node_modules/{<pkg>, <dep> -> …}`), so the
- * copy is a complete runtime closure with the links pnpm resolves through.
+ * Stage published workspace packages and installed virtual-store packages with
+ * their runtime dependency links. Workspace `src/` and development dependencies
+ * never become an accidental desktop runtime: `pnpm pack` supplies the same
+ * files and export conditions as a published consumer receives.
  * @param {string} packageDir real path of the package
  * @param {Set<string>} seen
  */
 async function stagePackageClosure(packageDir, seen) {
+  const packageRelative = relative(repoRoot, packageDir);
+  if (packageRelative.startsWith("..") || isAbsolute(packageRelative)) fail(`${packageDir} is outside the repository`);
   if (seen.has(packageDir)) return;
   seen.add(packageDir);
-  await stageMirror(packageDir);
   const marker = `${sep}node_modules${sep}`;
   const store = join(repoRoot, "node_modules", ".pnpm") + sep;
-  if (!packageDir.startsWith(store)) return;
+  if (!packageDir.startsWith(store)) {
+    const metadata = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
+    const packed = await mkdtemp(join(tmpdir(), "simforge-desktop-package-"));
+    const target = join(stageRoot, packageRelative);
+    try {
+      await promisify(execFile)("pnpm", ["pack", "--pack-destination", packed], {
+        cwd: packageDir,
+        env: { ...process.env, npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" },
+        maxBuffer: 4 * 1024 * 1024,
+      });
+      const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
+      if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
+      await rm(target, { recursive: true, force: true });
+      await mkdir(target, { recursive: true });
+      await run("tar", ["-xzf", join(packed, tarballs[0]), "--strip-components=1", "-C", target]);
+    } finally {
+      await rm(packed, { recursive: true, force: true });
+    }
+    const dependencies = Object.keys({
+      ...metadata.dependencies,
+      ...metadata.peerDependencies,
+      ...metadata.optionalDependencies,
+    }).sort();
+    for (const name of dependencies) {
+      const linkPath = join(packageDir, "node_modules", name);
+      if (!(await exists(linkPath))) {
+        if (metadata.optionalDependencies?.[name] || metadata.peerDependenciesMeta?.[name]?.optional) continue;
+        fail(`${metadata.name} has an uninstalled runtime dependency ${name}`);
+      }
+      await stageMirror(linkPath);
+      await stagePackageClosure(await realpath(linkPath), seen);
+    }
+    return;
+  }
+  await stageMirror(packageDir);
   const linkRoot = packageDir.slice(0, packageDir.lastIndexOf(marker) + marker.length - 1);
   for (const entry of await readdir(linkRoot, { withFileTypes: true })) {
     const names = entry.name.startsWith("@")
@@ -197,16 +247,14 @@ async function ensureStudioLink(name) {
   const source = join(studioRoot, "node_modules", name);
   const target = join(stageStudio, "node_modules", name);
   if (await exists(target)) return;
-  const link = await readlink(source).catch(() => fail(`${name} is not installed under studio/node_modules; add it to studio/package.json and run pnpm install`));
-  await mkdir(dirname(target), { recursive: true });
-  await symlink(link, target);
+  await stageMirror(source);
 }
 
 /**
  * Every symlink in the stage must point inside it: no checkout, no global
  * store. Link text is checked lexically, so a chain cannot escape through an
- * intermediate link either. A dangling link (traced but never resolvable)
- * is reported, not fatal: it cannot reach the checkout.
+ * intermediate link either. A dangling dependency is an incomplete artifact,
+ * so it fails the stage instead of being deferred to runtime.
  */
 async function verifySealed() {
   /** @type {string[]} */
@@ -230,7 +278,7 @@ async function verifySealed() {
       }
     }
   }
-  for (const entry of dangling) process.stderr.write(`desktop stage: dangling link ${entry}\n`);
+  if (dangling.length > 0) fail(`unresolved dependency links: ${dangling.join("; ")}`);
   return symlinks;
 }
 
@@ -270,7 +318,6 @@ const addonName = await nativeAddon();
 for (const [label, path, hint] of [
   ["browser render harness", join(RENDER_DIST, "harness.html"), "pnpm --filter @simforge-oss/render build"],
   ["browser render harness bundle", join(RENDER_DIST, "web", "headless.js"), "pnpm --filter @simforge-oss/render build"],
-  ["OpenSCENARIO schema", join(repoRoot, "packages", "openscenario", "schema", "OpenSCENARIO.xsd"), "restore the checkout"],
 ]) {
   if (!(await exists(path))) fail(`${label} missing at ${path}; run \`${hint}\``);
 }
@@ -324,15 +371,17 @@ for (const name of RUNTIME_ASSET_PACKAGES) {
   await ensureStudioLink(name);
 }
 
-// 4. Workspace assets the bundles read by path.
-await stageMirror(join(repoRoot, "packages", "openscenario", "package.json"));
-await stageMirror(join(repoRoot, "packages", "openscenario", "schema"));
+// 4. Workspace assets the bundles read by path, resolved through the packed
+//    packages exactly as at runtime.
 await ensureStudioLink("@simforge-oss/openscenario");
-for (const part of ["harness.html", "web/headless.js", "basis"]) await stageMirror(join(RENDER_DIST, part));
-const nativeAddonRel = join("native", addonName);
-await mkdir(join(stageRoot, "native"), { recursive: true });
-await cp(join(NATIVE_ADDON_DIR, addonName), join(stageRoot, nativeAddonRel));
-const nativeRuntimeRoot = await stageNativeRuntime();
+const nativeAddonRel = join("packages", "native-runtime", "native", addonName);
+for (const [label, rel] of [
+  ["native addon", nativeAddonRel],
+  ["OpenSCENARIO schema", join("packages", "openscenario", "schema", "OpenSCENARIO.xsd")],
+]) {
+  if (!(await exists(join(stageRoot, rel)))) fail(`${label} missing from the published package: ${rel}`);
+}
+const nativeRuntime = await stageNativeRuntime();
 
 // 5. Seal and describe.
 if (await exists(join(stageStudio, ".next", "cache"))) fail("standalone output carried .next/cache");
@@ -348,7 +397,7 @@ const manifest = {
   studioVersion: studioPackage.version,
   gitRevision,
   nativeAddon: nativeAddonRel,
-  nativeRuntimeRoot,
+  nativeRuntimeRoot: nativeRuntime.root,
   browserHarness: "packages/render/dist/harness.html",
   server: "studio/server.js",
   hostEntry: "studio/host/host.mjs",
@@ -372,4 +421,13 @@ await writeFile(join(appDir, "package.json"), `${JSON.stringify({
   main: "main.mjs",
 }, null, 2)}\n`);
 
-process.stdout.write(`${JSON.stringify({ component: "simforge-desktop-stage", event: "stage.complete", app: appDir, resources: stageRoot, symlinks, ...manifest })}\n`);
+process.stdout.write(`${JSON.stringify({
+  component: "simforge-desktop-stage",
+  event: "stage.complete",
+  app: appDir,
+  resources: stageRoot,
+  symlinks,
+  nativeRuntimeArchive: nativeRuntime.archive,
+  nativeRuntimeSha256: nativeRuntime.sha256,
+  ...manifest,
+})}\n`);

@@ -50,7 +50,11 @@
     "dist"
   ],
   "dependencies": {
+    "@simforge-oss/asset-catalog": "workspace:*",
+    "@simforge-oss/compiler": "workspace:*",
     "@simforge-oss/editor": "workspace:*",
+    "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
     "@simforge-oss/scenario": "workspace:*"
   },
   "peerDependencies": {

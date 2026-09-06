@@ -66,8 +66,8 @@
     ]
   },
   "scripts": {
-    "build:node": "napi build --manifest-path ../../native/crates/simforge-bindings-node/Cargo.toml --platform --release --output-dir native --dts index.d.ts --js false",
-    "build:node:debug": "napi build --manifest-path ../../native/crates/simforge-bindings-node/Cargo.toml --platform --output-dir native --dts index.d.ts --js false",
+    "build:node": "napi build --manifest-path ../../native/crates/simforge-bindings-node/Cargo.toml --platform --release --output-dir native --dts index.d.ts --no-js",
+    "build:node:debug": "napi build --manifest-path ../../native/crates/simforge-bindings-node/Cargo.toml --platform --output-dir native --dts index.d.ts --no-js",
     "build:wasm": "wasm-pack build ../../native/crates/simforge-bindings-wasm --release --target web --out-dir ../../../packages/native-runtime/wasm --out-name simforge_native_runtime --no-pack && node scripts/prepare-wasm.mjs",
     "build:ts": "tsup src/index.ts src/browser.ts src/shared.ts --format esm --dts --sourcemap --clean --out-dir dist --external ../wasm/simforge_native_runtime.js",
     "build": "pnpm run build:node && pnpm run build:wasm && pnpm run build:ts",

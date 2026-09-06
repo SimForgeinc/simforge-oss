@@ -2,6 +2,8 @@ import {
   PRONTO_CHASE_CAMERA_SENSOR_ID,
   RENDER_SPEC_V3_SCHEMA,
   parseRenderSpecV3,
+  renderDefaultSource,
+  templateRenderDefaults,
   type ActorSensor,
   type Environment,
   type RenderModality,
@@ -96,10 +98,16 @@ export function defaultModalities(sensor: ActorSensor): readonly RenderModality[
   return ["radar"];
 }
 
+/**
+ * Capture attributes per source: an explicit video format wins for image sensors; otherwise the
+ * capture configuration the template authored for that sensor (`simforge.render-defaults`);
+ * otherwise the renderer's own defaults.
+ */
 export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): RenderSpecV3 {
   const sensorByKey = new Map(
     authoredRenderSensors(input.content).map((option) => [sensorKey(option.actorId, option.sensor.id), option.sensor]),
   );
+  const defaults = templateRenderDefaults(input.content);
   const sources = input.selections.flatMap((selection) => {
     const sensor = sensorByKey.get(sensorKey(selection.actorId, selection.sensorId));
     if (!sensor) throw new Error(`Unknown authored sensor ${selection.actorId}/${selection.sensorId}.`);
@@ -110,6 +118,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
         if (!supported.has(modality)) {
           throw new Error(`${sensor.type} sensor ${sensor.id} does not support ${modality}.`);
         }
+        const authored = renderDefaultSource(defaults, selection.actorId, sensor.id, modality);
         const common = {
           actorId: selection.actorId,
           sensorId: sensor.id,
@@ -121,13 +130,14 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
           modality,
         };
         if (sensor.type === "dash_camera") {
+          const capture = authored && authored.modality !== "lidar" && authored.modality !== "radar" ? authored.attributes : null;
           return {
             ...common,
             modality,
             attributes: {
-              width: input.video?.width ?? 1280,
-              height: input.video?.height ?? 720,
-              fps: input.video?.fps ?? 24,
+              width: input.video?.width ?? capture?.width ?? 1280,
+              height: input.video?.height ?? capture?.height ?? 720,
+              fps: input.video?.fps ?? capture?.fps ?? 24,
               horizontalFovDeg: sensor.camera.horizontalFovDeg,
               nearM: sensor.camera.nearM,
               farM: sensor.camera.farM,
@@ -135,19 +145,21 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
           };
         }
         if (sensor.type === "lidar") {
+          const capture = authored?.modality === "lidar" ? authored.attributes : null;
           return {
             ...common,
             modality: "lidar" as const,
             attributes: {
-              channels: 32,
+              channels: capture?.channels ?? 32,
               rangeM: sensor.field.farM,
-              pointsPerSecond: 100_000,
-              rotationFrequencyHz: 10,
+              pointsPerSecond: capture?.pointsPerSecond ?? 100_000,
+              rotationFrequencyHz: capture?.rotationFrequencyHz ?? 10,
               upperFovDeg: sensor.field.verticalFovDeg / 2,
               lowerFovDeg: -sensor.field.verticalFovDeg / 2,
             },
           };
         }
+        const capture = authored?.modality === "radar" ? authored.attributes : null;
         return {
           ...common,
           modality: "radar" as const,
@@ -155,7 +167,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
             horizontalFovDeg: sensor.field.horizontalFovDeg,
             verticalFovDeg: sensor.field.verticalFovDeg,
             rangeM: sensor.field.farM,
-            pointsPerSecond: 1_500,
+            pointsPerSecond: capture?.pointsPerSecond ?? 1_500,
           },
         };
       });

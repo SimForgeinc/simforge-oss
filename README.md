@@ -40,6 +40,13 @@ its semantic, web, and native profiles carry matching verified release receipts.
 When no complete installation exists, Studio generates the compact Starter Road
 from checked-in source assets.
 
+Studio claims `host.lock` in `${SIMFORGE_CLOUD_ROOT:-~/.simforge/cloud}` before
+opening the database for migration and seeding. A concurrent start exits with
+code 3 without opening PGlite. The bootstrap database is closed before the
+server starts; normal shutdown waits for the server and worker before releasing
+ownership. After an unclean exit, a stale ownership lease is reclaimable after
+30 seconds without a heartbeat. Detached native jobs are not stopped with Studio.
+
 For a production deployment build the packages and Studio once, then serve the
 build (migrations and seed run on every start, as in development):
 

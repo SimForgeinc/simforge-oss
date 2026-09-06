@@ -18,6 +18,7 @@ import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface"
 import {
   EnvironmentSchema,
   PRONTO_CHASE_CAMERA_SENSOR_ID,
+  templateRenderDefaults,
   type ActorSensor,
   type Environment,
   type RenderModality,
@@ -51,10 +52,9 @@ type RenderBackend = ScenarioRendererEngine | "esmini";
 
 const ESMINI_VALIDATOR_VERSION = "3.6.0";
 
-const CARLA_RESOLUTIONS = [
-  { width: 1280, height: 720, label: "720p" },
-] as const;
-const CARLA_FPS_OPTIONS = [24] as const;
+type VideoResolution = { width: number; height: number; label: string };
+const RENDERER_RESOLUTIONS: readonly VideoResolution[] = [{ width: 1280, height: 720, label: "720p" }];
+const RENDERER_FPS_OPTIONS: readonly number[] = [24];
 const CARLA_QUALITIES = ["preview", "standard", "high", "cinematic"] as const;
 const EXPORT_POLL_MS = 1_000;
 /**
@@ -265,8 +265,33 @@ export function RenderConfigPanel({
   const [selectedSensorKeys, setSelectedSensorKeys] = useState<string[]>([]);
   const [modalitiesBySensor, setModalitiesBySensor] = useState<Record<string, RenderModality[]>>({});
   const [kinds, setKinds] = useState<RenderModality[]>(["rgb", "lidar", "radar"]);
+  /**
+   * The video format the scenario authored as its capture default (`simforge.render-defaults`),
+   * offered first and selected until the author picks another. A carrier that is not a valid
+   * render spec is reported at submit, where `buildCanonicalRenderSpec` reads it again.
+   */
+  const authoredVideo = useMemo(() => {
+    if (!currentContent) return null;
+    try {
+      return templateRenderDefaults(currentContent)?.video ?? null;
+    } catch {
+      return null;
+    }
+  }, [currentContent]);
+  const resolutions = useMemo<readonly VideoResolution[]>(
+    () => authoredVideo && !RENDERER_RESOLUTIONS.some((item) => item.width === authoredVideo.width && item.height === authoredVideo.height)
+      ? [{ width: authoredVideo.width, height: authoredVideo.height, label: "Scenario default" }, ...RENDERER_RESOLUTIONS]
+      : RENDERER_RESOLUTIONS,
+    [authoredVideo],
+  );
+  const fpsOptions = useMemo<readonly number[]>(
+    () => authoredVideo && !RENDERER_FPS_OPTIONS.includes(authoredVideo.fps)
+      ? [authoredVideo.fps, ...RENDERER_FPS_OPTIONS]
+      : RENDERER_FPS_OPTIONS,
+    [authoredVideo],
+  );
   const [resolutionIndex, setResolutionIndex] = useState(0);
-  const [fps, setFps] = useState<(typeof CARLA_FPS_OPTIONS)[number]>(24);
+  const [fps, setFps] = useState<number>(() => authoredVideo?.fps ?? 24);
   const [quality, setQuality] = useState<(typeof CARLA_QUALITIES)[number]>("standard");
   const [outputs, setOutputs] = useState<("video" | "sensorArchive" | "annotations")[]>(["video"]);
   const [durationSeconds, setDurationSeconds] = useState(
@@ -333,7 +358,9 @@ export function RenderConfigPanel({
   useEffect(() => {
     setDurationSeconds(clipSeconds);
     setRenderEnvironment(currentContent?.environment ?? EnvironmentSchema.parse({}));
-  }, [clipSeconds, currentContent]);
+    setResolutionIndex(0);
+    setFps(authoredVideo?.fps ?? 24);
+  }, [authoredVideo, clipSeconds, currentContent]);
   useEffect(() => {
     setSelectedSensorKeys((current) => {
       const available = new Set(sensorOptions.map(sensorOptionKey));
@@ -357,7 +384,7 @@ export function RenderConfigPanel({
     const selected = new Set(selectedSensorKeys);
     return sensorOptions.filter((option) => selected.has(sensorOptionKey(option)));
   }, [selectedSensorKeys, sensorOptions]);
-  const resolution = CARLA_RESOLUTIONS[resolutionIndex] ?? CARLA_RESOLUTIONS[0]!;
+  const resolution = resolutions[resolutionIndex] ?? resolutions[0]!;
   const selectedModalities = useMemo(
     () => selectedSensors.map((option) => ({
       actorId: option.actorId,
@@ -901,7 +928,7 @@ export function RenderConfigPanel({
                       onChange={(event) => setResolutionIndex(Number(event.target.value))}
                       value={String(resolutionIndex)}
                     >
-                      {CARLA_RESOLUTIONS.map((item, index) => (
+                      {resolutions.map((item, index) => (
                         <option key={item.label} value={String(index)}>
                           {item.label} ({item.width}×{item.height})
                         </option>
@@ -913,10 +940,10 @@ export function RenderConfigPanel({
                     <select
                       className="render-glass border px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       disabled={stage != null}
-                      onChange={(event) => setFps(Number(event.target.value) as (typeof CARLA_FPS_OPTIONS)[number])}
+                      onChange={(event) => setFps(Number(event.target.value))}
                       value={String(fps)}
                     >
-                      {CARLA_FPS_OPTIONS.map((value) => (
+                      {fpsOptions.map((value) => (
                         <option key={value} value={String(value)}>
                           {value}
                         </option>

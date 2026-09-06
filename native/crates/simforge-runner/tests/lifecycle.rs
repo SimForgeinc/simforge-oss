@@ -488,3 +488,57 @@ fn manifest_validation_rejects_escapes_and_duplicates() {
         "runner.invalid_json"
     );
 }
+
+#[test]
+fn runtime_inspection_and_worker_state_do_not_write_to_the_installation() {
+    let root = std::env::temp_dir().join(format!(
+        "simforge-runner-install-state-test-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let binary = Path::new(env!("CARGO_BIN_EXE_simforge-runner"));
+    let manifest = RuntimeManifest::describe_binary(
+        binary,
+        &"a".repeat(40),
+        "x86_64-unknown-linux-gnu",
+        "2026-09-06T00:00:00.000Z",
+    )
+    .unwrap();
+    let manifest_path = root.join("runtime-manifest.json");
+    fs::write(&manifest_path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+    // A file cannot contain writable state, even when the test runs as root.
+    let blocked_install = root.join("immutable-installation");
+    fs::write(&blocked_install, b"immutable").unwrap();
+    let inspection = std::process::Command::new(binary)
+        .env("SIMFORGE_RUNTIME_MANIFEST", &manifest_path)
+        .arg("--root")
+        .arg(&blocked_install)
+        .args(["runtime", "show"])
+        .output()
+        .unwrap();
+    assert!(
+        inspection.status.success(),
+        "{}",
+        String::from_utf8_lossy(&inspection.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&inspection.stdout).unwrap();
+    assert_eq!(report["runtimeId"], manifest.runtime_id().unwrap());
+
+    let state_root = root.join("state");
+    let capacity = std::process::Command::new(binary)
+        .env("SIMFORGE_NATIVE_RUNTIME_ROOT", &blocked_install)
+        .env("SIMFORGE_NATIVE_RUNTIME_STATE_ROOT", &state_root)
+        .args(["worker", "capacity"])
+        .output()
+        .unwrap();
+    assert!(
+        capacity.status.success(),
+        "{}",
+        String::from_utf8_lossy(&capacity.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&capacity.stdout).unwrap();
+    assert_eq!(report["root"], state_root.to_string_lossy().as_ref());
+    assert_eq!(fs::read(&blocked_install).unwrap(), b"immutable");
+    fs::remove_dir_all(root).unwrap();
+}

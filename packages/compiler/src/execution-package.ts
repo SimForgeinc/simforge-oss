@@ -104,14 +104,6 @@ export interface ResolvedExecutionInput {
 }
 
 /**
- * Host-side canonicalization of the resolved input before it is digested.
- * Local hashes the raw resolved input, exactly as the native trace header
- * does; Cloud collapses cross-engine transcendental noise first. The digest
- * is a host ↔ browser contract, so the host names its own canonicalization.
- */
-export type DigestCanonicalization = (input: SimScenarioInput) => unknown;
-
-/**
  * A consumer-specific adaptation of the canonical resolved input. The
  * projection is named (`carla`), bound to its own artifact kind and recorded
  * in the manifest and provenance under that name. Returning `null` from
@@ -169,7 +161,6 @@ export interface ExecutionPackageRequest {
   readonly compilerVersion: string;
   readonly xsdPath: string;
   readonly validateXml?: OpenScenarioXmlValidator | undefined;
-  readonly digestCanonicalization?: DigestCanonicalization | undefined;
   readonly projections?: Readonly<Record<string, ExecutionProjection>> | undefined;
 }
 
@@ -284,16 +275,9 @@ export function resolveExecutionInput(
   return { template, axisUntilClamps, concrete, resolvedInput };
 }
 
-/**
- * The revision's source-input digest: sha256 of the canonical JSON of the
- * resolved input, after the host's digest canonicalization. The resolved
- * input itself is never quantized; only the bytes being digested are.
- */
-export function executionSourceInputDigest(
-  resolvedInput: SimScenarioInput,
-  canonicalize: DigestCanonicalization = (input) => input,
-): string {
-  return sha256(canonicalJsonBytes(canonicalize(resolvedInput)));
+/** Exact native resolved-input identity shared by the browser and every host. */
+export function executionSourceInputDigest(resolvedInput: SimScenarioInput): string {
+  return sha256(canonicalJsonBytes(resolvedInput));
 }
 
 interface ExportedDocument {
@@ -372,7 +356,7 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
   if (ambient.mode === 'disabled' && ambient.configSha256 !== EMPTY_AMBIENT_CONFIG_SHA256) {
     throw new Error('disabled_ambient_provenance_mismatch');
   }
-  const sourceInputDigest = executionSourceInputDigest(resolved.resolvedInput, request.digestCanonicalization);
+  const sourceInputDigest = executionSourceInputDigest(resolved.resolvedInput);
   if (ambient.materializedTraffic.sourceInputDigest !== sourceInputDigest) {
     throw new Error('materialized_traffic_source_input_digest_mismatch');
   }

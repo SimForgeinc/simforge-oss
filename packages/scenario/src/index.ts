@@ -172,6 +172,7 @@ export * from './schema/v2/index.js';
 export * from './expr/index.js';
 export * from './semantic-ledger.js';
 export * from './render-spec.js';
+export * from './render-defaults.js';
 export * from './render-intent.js';
 export * from './situation.js';
 export { Sha256 } from './sha256.js';

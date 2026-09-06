@@ -13,8 +13,9 @@ through opaquely.
 
 | What | Where |
 |---|---|
-| Binary | `$SIMFORGE_RUNNER_BIN`, else `<root>/bin/simforge-runner`, else `PATH` |
-| Worker root | `--root`, `$SIMFORGE_NATIVE_RUNTIME_ROOT`, else `${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` |
+| Install root | `$SIMFORGE_NATIVE_RUNTIME_ROOT`, else `${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` |
+| Binary | `$SIMFORGE_RUNNER_BIN`, else `<install-root>/bin/simforge-runner`, else `PATH` |
+| Writable worker root | `--root`, `$SIMFORGE_NATIVE_RUNTIME_STATE_ROOT`, else `${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime` |
 | Runtime manifest | `$SIMFORGE_RUNTIME_MANIFEST`, else `runtime-manifest.json` beside the binary |
 
 The runtime manifest (`simforge.native-runtime/v1`) pins the binary's sha256,
@@ -25,17 +26,20 @@ jobs if the manifest does not describe it. `runtimeId` (canonical sha256 of
 the manifest) is recorded in every job state and artifact manifest;
 checkpoints only resume on the same `runtimeId`. `runtime show` reports each
 component with `installed: true|false` after re-hashing it in place.
+Runtime inspection does not open or create worker state. Local Studio assigns
+its worker state to `<SIMFORGE_CLOUD_ROOT>/native-runtime` unless explicitly
+overridden; packaged assets may remain on a read-only AppImage mount.
 
-Installed bundle layout under the worker root:
+Installed assets and writable worker state are separate:
 
 ```
-<root>/bin/simforge-runner  bin/native-render-service  bin/runtime-manifest.json
-<root>/lib/libsimforge_render.so
-<root>/wheels/*.whl          simforge-oss-gym, -physics, -gpu, -native-renderer, -splat
-<root>/share/sky/            SOURCES.json + NASA-derived .skytex plates for the Bevy renderer
-<root>/venv                  symlink -> venvs/<generation>, the active provider interpreter
-<root>/venvs/<generation>/   provider venvs built in place from wheels/ by install-runtime.sh (immutable, never pruned)
-<root>/cas/  <root>/jobs/  <root>/worker/
+<install-root>/bin/simforge-runner  bin/native-render-service  bin/runtime-manifest.json
+<install-root>/lib/libsimforge_render.so
+<install-root>/wheels/*.whl          simforge-oss-gym, -physics, -gpu, -native-renderer, -splat
+<install-root>/share/sky/            SOURCES.json + NASA-derived .skytex plates for the Bevy renderer
+<install-root>/venv                  symlink -> venvs/<generation>, the active provider interpreter
+<install-root>/venvs/<generation>/   provider venvs built in place from wheels/ by install-runtime.sh (immutable, never pruned)
+<state-root>/cas/  <state-root>/jobs/  <state-root>/worker/
 ```
 
 Build/package/install: `scripts/native-runtime/build-runner.sh` (runner,
@@ -164,11 +168,14 @@ a hashed `checkpoint.json`, `latest.json`), `staging/`, `outputs/`,
 Foreign providers (`src/provider.rs`) run as one supervised child per attempt,
 `<python> -m <module> job --params <params.json> --out-dir <dir> [--resume <checkpoint>]`,
 with `<python>` = `$SIMFORGE_PROVIDER_PYTHON`, else the physical generation
-selected by `<root>/venv` plus `bin/python`. Resolving the directory before
+selected by `<install-root>/venv` plus `bin/python`. The install root is
+`$SIMFORGE_NATIVE_RUNTIME_ROOT` when explicit, otherwise the parent of the
+running binary's `bin/` directory. Resolving the environment directory before
 launch pins later imports to that immutable generation across reinstall; a
 missing environment is an explicit error, not a global `python3` fallback.
-`SIMFORGE_NATIVE_RUNTIME_ROOT` and the granted GPU indexes
-(`CUDA_VISIBLE_DEVICES`) are exported to the child. Protocol: stdout JSON
+`SIMFORGE_NATIVE_RUNTIME_STATE_ROOT` and the granted GPU indexes
+(`CUDA_VISIBLE_DEVICES`) are exported to the child separately from the resolved
+installed-asset root, which is forwarded for library and sky discovery. Protocol: stdout JSON
 lines `progress` / `checkpoint{path}` / `done{artifacts[{relativePath,sha256,sizeBytes}]}`
 / `canceled`; stderr `{"event":"error",code,message}`; exit `0` done, `1` bad
 params, `2` backend/capacity, `130` canceled after SIGTERM (the provider

@@ -18,7 +18,7 @@ use simforge_core::types::{Id, SimActor, SimScenarioInput};
 use simforge_core::ENGINE_VERSION;
 
 use super::routes::{
-    self, build_lanes, build_route_from_points, close_arrival_conflict, cover_constrained_target,
+    build_lanes, build_route_from_points, close_arrival_conflict, cover_constrained_target,
     cover_target, extend_chain_backward, extend_chain_forward, polyline_distance,
     polyline_points_of, route_from_chain, route_intersection_near, rsls_of, SemanticRequirements,
     ENDPOINT_CLAMP_M, LOCAL_ROLE_PROJECTION_MAX_DISTANCE_M,
@@ -434,7 +434,7 @@ impl<'a> Materializer<'a> {
             frame_s_offset + eval_num(Some(&pose.s), scope, &format!("{path}.s"), Some(0.0))?;
         let center = self.frame_point(frame_s)?;
         let ref_route = self.ref_route(path)?;
-        let mut owned: Option<Route> = None;
+        let owned: Route;
         let mut route: &Route = ref_route;
         let mut route_s = frame_s - self.site.frame.s_range.0;
         if pose.lane_offset != 0 {
@@ -493,8 +493,8 @@ impl<'a> Materializer<'a> {
                         .as_findings());
                     };
                     route_s = built.project_point(center.point).s;
-                    owned = Some(built);
-                    route = owned.as_ref().unwrap();
+                    owned = built;
+                    route = &owned;
                 }
             }
         }

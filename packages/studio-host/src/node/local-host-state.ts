@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 export const LOCAL_HOST_STATE_FILE = "host.json";
 
 /**
- * Published by the local host supervisor once the API answers, read by the
+ * Published by the local host supervisor when it claims startup ownership, read by the
  * desktop shell (attach or launch) and by the shutdown route (authorize and
  * signal). Lives under the same data root as the PGlite database so one
  * installation has exactly one host record.

@@ -9,12 +9,11 @@
  * plan WITHOUT re-running the full (DB-bound) actor assembly, and lets
  * tests exercise the exact draft shape the simulator will judge.
  */
-import {
-  CARLA_UE5_WALKER_BLUEPRINTS,
-  type ScenarioEditorActorDraft,
-} from "@simforge-oss/studio-shared";
+import type { ScenarioEditorActorDraft } from "@simforge-oss/studio-shared";
 import {
   ADULT_RUN_SPEED_MPS,
+  CATALOG_WALKER_ADULTS,
+  CATALOG_WALKER_CHILDREN,
   WALKER_ACCELERATION_MPS2,
   conflictWalkerBlueprint,
   walkerProfileSpec,
@@ -684,28 +683,13 @@ function subjectTurnClip(direction: "left" | "right"): GeneratedInteractionClip 
 }
 
 /**
- * Walker blueprints for companion pedestrians (the conflict ped keeps a stable
- * blueprint so the validated pair is undisturbed). A small curated pool gives
- * visible variety — different people at the same crossing.
+ * Catalog pedestrian models for companion pedestrians (the conflict ped keeps a
+ * stable model so the validated pair is undisturbed). Children are deliberately
+ * in this pool: a kid walking with an adult is ordinary street life, and a
+ * COMPANION never carries the family's validated conflict geometry — the
+ * principal walker does, and is untouched here.
  */
-// Drawn from the AVAILABLE 0.10 catalogue, children included. The previous
-// hand-written list (0002..0012) was generation-1 (0.9-era) and every id was
-// below the image's first entry (0015); companions still appeared because the
-// worker substitutes a real walker for an unknown id, but the eight intended
-// models collapsed onto seven (0002 and 0011 both landed on 0020), so "a
-// distinct blueprint per companion" was not actually being delivered.
-//
-// Children are deliberately in this pool: a kid walking with an adult is
-// ordinary street life, and a COMPANION never carries the family's validated
-// conflict geometry — the principal walker does, and is untouched here.
-// See packages/shared/src/carla-ue5-walker-blueprints.ts.
-const COMPANION_WALKER_BLUEPRINTS = CARLA_UE5_WALKER_BLUEPRINTS;
-
-/** Fixed adult for the conflict ped — see conflictWalkerBlueprint(). Retained
- *  as documentation of the pre-profile default: 0019 is what the worker already
- *  substituted the old (nonexistent) 0001 to, so adult scenes do not re-render. */
-const DEFAULT_CONFLICT_WALKER_BLUEPRINT = "walker.pedestrian.0019";
-void DEFAULT_CONFLICT_WALKER_BLUEPRINT;
+const COMPANION_WALKER_BLUEPRINTS: readonly string[] = [...CATALOG_WALKER_ADULTS, ...CATALOG_WALKER_CHILDREN];
 
 /** Deterministic PRNG (mulberry32) so companion offsets/timing are reproducible. */
 function mulberry32(seed: number): () => number {
@@ -1450,7 +1434,7 @@ export function plannedCollisionToDraftActors(
     "subject",
     opts.subjectLabel ?? "Subject",
     "subject",
-    opts.subjectBlueprint ?? "vehicle.lincoln.mkz",
+    opts.subjectBlueprint ?? "vehicle.sedan",
     result.collision.subject,
   );
   if (opts.subjectReactive) {
@@ -1651,7 +1635,7 @@ export function plannedCollisionToDraftActors(
     "npc",
     opts.npcLabel ?? "Conflicting vehicle",
     "traffic",
-    opts.npcBlueprint ?? "vehicle.dodge.charger",
+    opts.npcBlueprint ?? "vehicle.ford_mustang",
     result.collision.npc,
   );
   // The CONTACT subject hits the conflict vehicle and YIELDS TO ORDINARY TRAFFIC. The Traffic

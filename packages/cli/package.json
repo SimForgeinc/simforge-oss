@@ -42,7 +42,7 @@
     "test": "vitest run",
     "test:portable": "vitest run src/__tests__/asam-export.test.ts src/__tests__/esmini-bundle.test.ts src/__tests__/xml14-suite-audit.test.ts src/__tests__/evidence.test.ts src/__tests__/intent-evaluate.test.ts src/__tests__/invariants.test.ts src/__tests__/seeding.test.ts src/__tests__/prop-dims.test.ts",
     "audit:xml14-suite": "tsx src/tools/audit-xml14-suite.ts",
-    "simforge": "tsx src/main.ts"
+    "simforge": "node bin/simforge.js"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.4.2",
@@ -50,6 +50,7 @@
     "@gltf-transform/functions": "^4.4.2",
     "@simforge-oss/compiler": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
     "@simforge-oss/maps": "workspace:*",
     "@simforge-oss/map-registry": "workspace:*",
     "@simforge-oss/map-pipeline": "workspace:*",

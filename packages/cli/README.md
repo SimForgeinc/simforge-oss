@@ -96,6 +96,11 @@ one. A durable compile-and-simulate is one `simforge.compile/v1` job (template
 input, `params.mapId/site/drawIndex/seed`) followed by one `simforge.simulate/v1`
 job whose `scenario.input` is the published instance artifact by content digest.
 
+Writable jobs, CAS and worker state are separate from that installation:
+`--root`, then `$SIMFORGE_NATIVE_RUNTIME_STATE_ROOT`, then
+`${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime`. `runtime show`
+only inspects the installation and does not create worker state.
+
 Only `richmond-field-station` may be promoted publicly. The default read
 registry is the public CloudFront registry; licensed maps need an explicitly
 authorized private registry. Publishing to `s3://simforge-maps-public` enforces

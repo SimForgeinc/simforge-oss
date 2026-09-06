@@ -391,7 +391,7 @@ pub struct SimulationCheckpoint {
     pub perception: Option<PerceptionAccumulator>,
     pub signal_overrides: Vec<Option<crate::types::ControlIndication>>,
     pub active_collisions: Vec<(CollisionParty, CollisionParty)>,
-    pub collision_snapshots: Vec<CollisionSnapshot>,
+    pub(super) collision_snapshots: Vec<CollisionSnapshot>,
     pub previous_collision_t: Option<f64>,
     pub doors: Vec<DoorRuntime>,
     pub arrival: Vec<crate::solve::arrival::ArrivalSolution>,

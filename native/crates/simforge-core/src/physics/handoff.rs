@@ -238,7 +238,12 @@ impl TrafficHandoffWorld {
     /// samples in host order; an actor already released is matched by id and
     /// its sample ignored. Returns the number of provider actors released
     /// during this step. Non-positive or non-finite intervals are ignored.
-    pub fn step(&mut self, dt_s: f64, authored: &[HandoffActor<'_>], traffic: &[HandoffActor<'_>]) -> usize {
+    pub fn step(
+        &mut self,
+        dt_s: f64,
+        authored: &[HandoffActor<'_>],
+        traffic: &[HandoffActor<'_>],
+    ) -> usize {
         if !dt_s.is_finite() || dt_s <= 0.0 {
             return 0;
         }
@@ -289,7 +294,13 @@ impl TrafficHandoffWorld {
                 if toi.is_none() && !obb_overlap(&source_obb, &target_obb) {
                     continue;
                 }
-                if self.handoff(source, prior_source, target, prior_target, toi.unwrap_or(1.0)) {
+                if self.handoff(
+                    source,
+                    prior_source,
+                    target,
+                    prior_target,
+                    toi.unwrap_or(1.0),
+                ) {
                     break;
                 }
             }
@@ -410,7 +421,8 @@ impl TrafficHandoffWorld {
                 };
                 body.x += body.vx * h;
                 body.z += body.vz * h;
-                body.heading_rad = normalize_angle(body.heading_rad + body.angular_velocity_rad_s * h);
+                body.heading_rad =
+                    normalize_angle(body.heading_rad + body.angular_velocity_rad_s * h);
                 let speed = body.speed_mps();
                 let next_speed = ((speed - ROLLING_DECELERATION_MPS2 * h)
                     * exp(-LINEAR_DRAG_PER_SECOND * h))
@@ -500,13 +512,14 @@ impl TrafficHandoffWorld {
             reach = reach.max(hypot(body.length_m, body.width_m) / 2.0);
         }
         reach += MAX_KNOCKBACK_SPEED_MPS * horizon_s + STATIC_QUERY_MARGIN_M;
-        self.near_statics.extend(self.statics.iter().filter(|collider| {
-            let half = hypot(collider.obb.length_m, collider.obb.width_m) / 2.0 + reach;
-            collider.obb.center.x + half >= min_x
-                && collider.obb.center.x - half <= max_x
-                && collider.obb.center.y + half >= min_z
-                && collider.obb.center.y - half <= max_z
-        }));
+        self.near_statics
+            .extend(self.statics.iter().filter(|collider| {
+                let half = hypot(collider.obb.length_m, collider.obb.width_m) / 2.0 + reach;
+                collider.obb.center.x + half >= min_x
+                    && collider.obb.center.x - half <= max_x
+                    && collider.obb.center.y + half >= min_z
+                    && collider.obb.center.y - half <= max_z
+            }));
     }
 
     fn remember(&mut self, authored: &[HandoffActor<'_>], traffic: &[HandoffActor<'_>]) {
@@ -516,7 +529,11 @@ impl TrafficHandoffWorld {
     }
 }
 
-fn remember_samples(previous: &mut HashMap<String, PriorSample>, actors: &[HandoffActor<'_>], stamp: u64) {
+fn remember_samples(
+    previous: &mut HashMap<String, PriorSample>,
+    actors: &[HandoffActor<'_>],
+    stamp: u64,
+) {
     for actor in actors {
         let sample = PriorSample {
             x: actor.x,
@@ -536,7 +553,11 @@ fn remember_samples(previous: &mut HashMap<String, PriorSample>, actors: &[Hando
 
 /// The pose an actor swept from: its previous sample, or for an actor first
 /// seen this interval, its current velocity projected backwards.
-fn prior_pose(previous: &HashMap<String, PriorSample>, actor: &HandoffActor<'_>, dt_s: f64) -> SweepOrigin {
+fn prior_pose(
+    previous: &HashMap<String, PriorSample>,
+    actor: &HandoffActor<'_>,
+    dt_s: f64,
+) -> SweepOrigin {
     match previous.get(actor.id) {
         Some(sample) => SweepOrigin {
             x: sample.x,
@@ -584,7 +605,10 @@ fn contact_normal(delta: Vec2, fallback_heading_rad: f64) -> Vec2 {
 /// struck by a released body.
 #[inline]
 fn initiates_handoff(kind: &str) -> bool {
-    matches!(kind, "vehicle" | "car" | "truck" | "bus" | "van" | "motorcycle")
+    matches!(
+        kind,
+        "vehicle" | "car" | "truck" | "bus" | "van" | "motorcycle"
+    )
 }
 
 /// Footprint-scaled mass with a class multiplier, bounded to road-user range.
@@ -603,7 +627,13 @@ fn vehicle_mass_kg(kind: &str, length_m: f64, width_m: f64) -> f64 {
 mod tests {
     use super::*;
 
-    fn authored(id: &'static str, x: f64, z: f64, heading_rad: f64, speed_mps: f64) -> HandoffActor<'static> {
+    fn authored(
+        id: &'static str,
+        x: f64,
+        z: f64,
+        heading_rad: f64,
+        speed_mps: f64,
+    ) -> HandoffActor<'static> {
         HandoffActor {
             id,
             kind: "car",
@@ -633,7 +663,11 @@ mod tests {
         }
     }
 
-    fn body<'a>(world: &'a TrafficHandoffWorld, id: &str, origin: HandoffOrigin) -> &'a HandoffBody {
+    fn body<'a>(
+        world: &'a TrafficHandoffWorld,
+        id: &str,
+        origin: HandoffOrigin,
+    ) -> &'a HandoffBody {
         world
             .bodies()
             .iter()
@@ -644,25 +678,49 @@ mod tests {
     #[test]
     fn rear_impact_releases_both_vehicles_with_momentum_exchange() {
         let mut world = TrafficHandoffWorld::new();
-        let released = world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+        let released = world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[traffic("t1", 6.0, 0.0, 2.0)],
+        );
         assert_eq!(released, 1);
         assert_eq!(world.traffic_body_count(), 1);
         let struck = body(&world, "t1", HandoffOrigin::Traffic);
-        assert!(struck.speed_mps() > 2.0, "struck car must gain speed: {}", struck.speed_mps());
+        assert!(
+            struck.speed_mps() > 2.0,
+            "struck car must gain speed: {}",
+            struck.speed_mps()
+        );
         assert!(struck.vx > 0.0);
         let striker = body(&world, "ego", HandoffOrigin::Authored);
-        assert!(striker.speed_mps() < 12.0, "striker must lose speed: {}", striker.speed_mps());
+        assert!(
+            striker.speed_mps() < 12.0,
+            "striker must lose speed: {}",
+            striker.speed_mps()
+        );
         assert!(striker.x < struck.x);
     }
 
     #[test]
     fn released_authored_body_ignores_later_trace_commands() {
         let mut world = TrafficHandoffWorld::new();
-        world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+        world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[traffic("t1", 6.0, 0.0, 2.0)],
+        );
         let before = body(&world, "ego", HandoffOrigin::Authored).clone();
-        world.step(0.25, &[authored("ego", 100.0, 40.0, 0.0, 30.0)], &[traffic("t1", 7.0, 0.0, 2.0)]);
+        world.step(
+            0.25,
+            &[authored("ego", 100.0, 40.0, 0.0, 30.0)],
+            &[traffic("t1", 7.0, 0.0, 2.0)],
+        );
         let after = body(&world, "ego", HandoffOrigin::Authored);
-        assert!(after.x < 10.0, "trace teleport must not move the released body: {}", after.x);
+        assert!(
+            after.x < 10.0,
+            "trace teleport must not move the released body: {}",
+            after.x
+        );
         assert!(after.x > before.x);
         assert!(after.speed_mps() < before.speed_mps());
         assert_eq!(world.bodies().len(), 2);
@@ -671,16 +729,30 @@ mod tests {
     #[test]
     fn stationary_overlap_and_creeping_contact_keep_provider_ownership() {
         let mut world = TrafficHandoffWorld::new();
-        assert_eq!(world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 0.0)], &[traffic("t1", 6.0, 0.0, 0.0)]), 0);
+        assert_eq!(
+            world.step(
+                0.05,
+                &[authored("ego", 2.0, 0.0, 0.0, 0.0)],
+                &[traffic("t1", 6.0, 0.0, 0.0)]
+            ),
+            0
+        );
         assert!(world.bodies().is_empty());
 
         let mut creeping = TrafficHandoffWorld::new();
         let mut x = 40.0;
         for _ in 0..400 {
             x += 1.2 * 0.05;
-            creeping.step(0.05, &[authored("ego", x, 0.0, 0.0, 1.2)], &[traffic("t1", 50.0, 0.0, 0.0)]);
+            creeping.step(
+                0.05,
+                &[authored("ego", x, 0.0, 0.0, 1.2)],
+                &[traffic("t1", 50.0, 0.0, 0.0)],
+            );
         }
-        assert!(creeping.bodies().is_empty(), "1.2 m/s is under the impact floor");
+        assert!(
+            creeping.bodies().is_empty(),
+            "1.2 m/s is under the impact floor"
+        );
     }
 
     #[test]
@@ -690,12 +762,19 @@ mod tests {
         let mut contact_step = None;
         for step in 0..200 {
             x += 13.4 * 0.05;
-            world.step(0.05, &[authored("ego", x, 0.0, 0.0, 13.4)], &[traffic("t1", 50.0, 0.0, 0.0)]);
+            world.step(
+                0.05,
+                &[authored("ego", x, 0.0, 0.0, 13.4)],
+                &[traffic("t1", 50.0, 0.0, 0.0)],
+            );
             if contact_step.is_none() && world.traffic_body_count() > 0 {
                 contact_step = Some(step);
             }
         }
-        assert!(contact_step.is_some(), "the authored car drove through the traffic");
+        assert!(
+            contact_step.is_some(),
+            "the authored car drove through the traffic"
+        );
         assert!(body(&world, "t1", HandoffOrigin::Traffic).x > 50.0);
     }
 
@@ -715,7 +794,11 @@ mod tests {
             ..authored("walker", 5.0, 0.0, 0.0, 13.4)
         };
         for _ in 0..20 {
-            world.step(0.05, &[fixed, absent, walker], &[traffic("t1", 6.0, 0.0, 0.0)]);
+            world.step(
+                0.05,
+                &[fixed, absent, walker],
+                &[traffic("t1", 6.0, 0.0, 0.0)],
+            );
         }
         assert!(world.bodies().is_empty());
     }
@@ -725,7 +808,11 @@ mod tests {
         for dt in [0.0, -0.05, f64::NAN, f64::INFINITY] {
             let mut world = TrafficHandoffWorld::new();
             for _ in 0..50 {
-                world.step(dt, &[authored("ego", 50.0, 0.0, 0.0, 13.4)], &[traffic("t1", 50.0, 0.0, 0.0)]);
+                world.step(
+                    dt,
+                    &[authored("ego", 50.0, 0.0, 0.0, 13.4)],
+                    &[traffic("t1", 50.0, 0.0, 0.0)],
+                );
             }
             assert!(world.bodies().is_empty(), "dt {dt} released a body");
         }
@@ -735,7 +822,11 @@ mod tests {
     fn coasting_is_deterministic_and_slows() {
         let run = || {
             let mut world = TrafficHandoffWorld::new();
-            world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+            world.step(
+                0.05,
+                &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+                &[traffic("t1", 6.0, 0.0, 2.0)],
+            );
             let before = body(&world, "t1", HandoffOrigin::Traffic).clone();
             world.step(0.5, &[], &[traffic("t1", 7.0, 0.0, 2.0)]);
             let after = body(&world, "t1", HandoffOrigin::Traffic).clone();
@@ -755,14 +846,23 @@ mod tests {
         let target = traffic("t1", 0.0, 0.0, 0.0);
         world.step(
             0.05,
-            &[authored("ego", 0.7, -3.0, std::f64::consts::FRAC_PI_2, 12.0)],
+            &[authored(
+                "ego",
+                0.7,
+                -3.0,
+                std::f64::consts::FRAC_PI_2,
+                12.0,
+            )],
             &[target],
         );
         assert_eq!(world.traffic_body_count(), 1);
         let before = body(&world, "t1", HandoffOrigin::Traffic).heading_rad;
         world.step(0.2, &[], &[target]);
         let after = body(&world, "t1", HandoffOrigin::Traffic).heading_rad;
-        assert!((after - before).abs() > 0.01, "heading unchanged: {before} -> {after}");
+        assert!(
+            (after - before).abs() > 0.01,
+            "heading unchanged: {before} -> {after}"
+        );
     }
 
     #[test]
@@ -770,7 +870,11 @@ mod tests {
         let mut world = TrafficHandoffWorld::new();
         let first = traffic("t1", 6.0, 0.0, 2.0);
         let second = traffic("t2", 11.0, 0.0, 0.0);
-        world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[first, second]);
+        world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[first, second],
+        );
         let mut steps = 0;
         while world.traffic_body_count() < 2 && steps < 20 {
             world.step(0.1, &[], &[first, second]);
@@ -796,19 +900,35 @@ mod tests {
             width_m: 8.0,
             heading_rad: 0.0,
         }]);
-        world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+        world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[traffic("t1", 6.0, 0.0, 2.0)],
+        );
         for _ in 0..30 {
             world.step(0.1, &[], &[traffic("t1", 6.0, 0.0, 2.0)]);
         }
         let struck = body(&world, "t1", HandoffOrigin::Traffic);
-        assert!(struck.x + struck.length_m / 2.0 <= 10.0 + 0.05, "drove through the barrier: {}", struck.x);
-        assert!(struck.speed_mps() < 1.0, "still moving at {}", struck.speed_mps());
+        assert!(
+            struck.x + struck.length_m / 2.0 <= 10.0 + 0.05,
+            "drove through the barrier: {}",
+            struck.x
+        );
+        assert!(
+            struck.speed_mps() < 1.0,
+            "still moving at {}",
+            struck.speed_mps()
+        );
     }
 
     #[test]
     fn deep_single_frame_overlap_releases_without_a_swept_hit() {
         let mut world = TrafficHandoffWorld::new();
-        world.step(0.05, &[authored("ego", 50.0, 0.0, 0.0, 13.4)], &[traffic("t1", 50.0, 0.0, 0.0)]);
+        world.step(
+            0.05,
+            &[authored("ego", 50.0, 0.0, 0.0, 13.4)],
+            &[traffic("t1", 50.0, 0.0, 0.0)],
+        );
         assert_eq!(world.traffic_body_count(), 1);
     }
 
@@ -821,13 +941,21 @@ mod tests {
             width_m: 8.0,
             heading_rad: 0.0,
         }]);
-        world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+        world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[traffic("t1", 6.0, 0.0, 2.0)],
+        );
         world.clear();
         assert!(world.bodies().is_empty());
         assert_eq!(world.traffic_body_count(), 0);
         assert_eq!(world.statics.len(), 1);
         // The same contact releases again after a clear.
-        world.step(0.05, &[authored("ego", 2.0, 0.0, 0.0, 12.0)], &[traffic("t1", 6.0, 0.0, 2.0)]);
+        world.step(
+            0.05,
+            &[authored("ego", 2.0, 0.0, 0.0, 12.0)],
+            &[traffic("t1", 6.0, 0.0, 2.0)],
+        );
         assert_eq!(world.traffic_body_count(), 1);
     }
 }

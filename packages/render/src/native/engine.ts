@@ -17,6 +17,7 @@ import {
   type RenderExecutionContext,
 } from '../index.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
+import { nativeRuntimeRoot } from '@simforge-oss/native-runtime';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
 import { createNativeCameraSchedule } from './camera-schedule.js';
@@ -74,12 +75,8 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
 export function resolveBinary(options: NativeRenderEngineOptions): string {
   if (options.binary) return options.binary;
   if (process.env.SIMFORGE_NATIVE_RENDER_BINARY) return process.env.SIMFORGE_NATIVE_RENDER_BINARY;
-  const candidates = [
-    path.resolve('renderer/target/release/native-render-service'),
-    path.resolve('renderer/target/debug/native-render-service'),
-  ];
-  for (const candidate of candidates) if (existsSync(candidate)) return candidate;
-  return 'native-render-service';
+  const installed = path.join(nativeRuntimeRoot(), 'bin', 'native-render-service');
+  return existsSync(installed) ? installed : 'native-render-service';
 }
 
 

@@ -36,13 +36,16 @@ pub const INPUT_SPEC: &str = "episode.spec";
 struct Params {
     session: u64,
     policy: String,
-    policy_seed: i64,
+    // Validated here, then forwarded intact in the provider's params document.
+    #[serde(rename = "policySeed")]
+    _policy_seed: i64,
     seeds: Vec<serde_json::Value>,
     steps: u64,
     deadline_ms: Option<f64>,
     fallback: String,
     execution: String,
-    force_miss_at: Vec<u64>,
+    #[serde(rename = "forceMissAt")]
+    _force_miss_at: Vec<u64>,
     decision_hz: Option<u32>,
     checkpoint_every_decisions: u64,
 }

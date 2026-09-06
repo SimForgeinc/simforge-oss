@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
   ],
   cacheComponents: true,
   partialPrefetching: true,
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "@simforge-oss/native-runtime", "@simforge-oss/render"],
   turbopack: {
     rules: {
       "basis_transcoder.wasm": { type: "asset" },
@@ -50,7 +50,6 @@ const nextConfig: NextConfig = {
     "@simforge-oss/compiler",
     "@simforge-oss/maps",
     "@simforge-oss/openscenario",
-    "@simforge-oss/render",
     "@simforge-oss/playback/traffic",
     "@simforge-oss/viewer",
     "@simforge-oss/editor",

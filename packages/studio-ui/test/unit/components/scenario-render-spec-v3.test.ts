@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  RENDER_DEFAULTS_EXTENSION_KEY,
   defaultDashCamera,
   defaultLidar,
   defaultRadar,
@@ -159,5 +160,47 @@ describe("canonical render spec v3 authoring", () => {
     // managed-worker REQUIREMENT above still excludes client-authored videos.
     expect(browserRendererCapabilities(archiveOnly, { staticSemantics: false }))
       .toContain("artifact.sensor_video");
+  });
+
+  it("starts from the scenario's authored capture defaults and lets an explicit video format win", () => {
+    const authored = input();
+    const lidar = { ...defaultLidar({ class: "car" }), id: "roof-lidar" };
+    const content = structuredClone(authored.content);
+    content.roles[0]!.actor.sensors.push(lidar);
+    const camera = content.roles[0]!.actor.sensors[0]!;
+    content.extensions = {
+      [RENDER_DEFAULTS_EXTENSION_KEY]: {
+        schema: "simforge.render-spec/v3",
+        sources: [
+          {
+            actorId: "ego", sensorId: "front-camera", outputName: "ego-front-camera-rgb", modality: "rgb",
+            transform: camera.mount,
+            attributes: { width: 1920, height: 1208, fps: 30, horizontalFovDeg: 90, nearM: 0.05, farM: 1000 },
+          },
+          {
+            actorId: "ego", sensorId: "roof-lidar", outputName: "ego-roof-lidar-lidar", modality: "lidar",
+            transform: lidar.mount,
+            attributes: { channels: 128, rangeM: 250, pointsPerSecond: 1_310_720, rotationFrequencyHz: 10, upperFovDeg: 20, lowerFovDeg: -20 },
+          },
+        ],
+        clip: { startSeconds: 0, endSeconds: 10 },
+        artifacts: ["manifest"],
+        capabilityIntent: { required: [], preferred: [], fidelity: "dataset" },
+        authoredEnvironment: content.environment,
+      },
+    };
+    const selections: CanonicalRenderSpecInput["selections"] = [
+      { actorId: "ego", sensorId: "front-camera", modalities: ["rgb"] },
+      { actorId: "ego", sensorId: "roof-lidar", modalities: ["lidar"] },
+    ];
+    const fromDefaults = buildCanonicalRenderSpec({
+      ...authored, content, selections, video: null, artifacts: ["manifest", "sensorArchive"],
+    });
+    expect(fromDefaults.sources[0]!.attributes).toMatchObject({ width: 1920, height: 1208, fps: 30 });
+    expect(fromDefaults.sources[1]!.attributes).toMatchObject({ channels: 128, pointsPerSecond: 1_310_720, rotationFrequencyHz: 10 });
+
+    const overridden = buildCanonicalRenderSpec({ ...authored, content, selections });
+    expect(overridden.sources[0]!.attributes).toMatchObject({ width: 1280, height: 720, fps: 24 });
+    expect(overridden.sources[1]!.attributes).toMatchObject({ channels: 128 });
   });
 });

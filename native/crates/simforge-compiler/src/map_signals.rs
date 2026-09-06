@@ -1006,7 +1006,7 @@ pub fn resolve_site_signal_program(
     if plan.junction_id.as_deref() != Some(expected) {
         return None;
     }
-    let mut gate_id: Option<String> = None;
+    let mut gate_id: Option<String>;
     if approach == SignalApproach::Subject {
         gate_id = site.frame.ego_gate_id.clone();
     } else {

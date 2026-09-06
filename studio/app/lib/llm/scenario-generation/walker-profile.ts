@@ -25,11 +25,16 @@
  * Speeds are the repo catalogue's own `walkSpeedMps`, which the probe
  * cross-checked against the spawned actors.
  */
-import {
-  CARLA_UE5_WALKER_ADULTS,
-  CARLA_UE5_WALKER_CHILDREN,
-  walkerBlueprintAt,
-} from "@simforge-oss/studio-shared";
+import { walkerBlueprintAt } from "@simforge-oss/studio-shared";
+
+/**
+ * The catalog pedestrian models a generated scene executes as. The native
+ * lowering accepts exact catalog identity only, and the catalog publishes one
+ * adult and one child body; CARLA blueprint variety is the CARLA export's
+ * concern (`carla-object-catalog.json` equivalents), not the draft's.
+ */
+export const CATALOG_WALKER_ADULTS: readonly string[] = ["pedestrian.adult"];
+export const CATALOG_WALKER_CHILDREN: readonly string[] = ["pedestrian.child"];
 
 /**
  * The native engine's pedestrian longitudinal envelope (`PEDESTRIAN_LIMITS.accel_max`
@@ -102,7 +107,7 @@ export const WALKER_PROFILES: Readonly<Record<WalkerProfile, WalkerProfileSpec>>
     profile: "adult",
     speedMps: ADULT_WALKER_SPEED_MPS,
     runSpeedMps: ADULT_RUN_SPEED_MPS,
-    pool: CARLA_UE5_WALKER_ADULTS,
+    pool: CATALOG_WALKER_ADULTS,
     heightM: 1.84,
     label: "Pedestrian",
   },
@@ -110,7 +115,7 @@ export const WALKER_PROFILES: Readonly<Record<WalkerProfile, WalkerProfileSpec>>
     profile: "child",
     speedMps: CHILD_WALKER_SPEED_MPS,
     runSpeedMps: CHILD_RUN_SPEED_MPS,
-    pool: CARLA_UE5_WALKER_CHILDREN,
+    pool: CATALOG_WALKER_CHILDREN,
     heightM: 1.11,
     label: "Child pedestrian",
   },

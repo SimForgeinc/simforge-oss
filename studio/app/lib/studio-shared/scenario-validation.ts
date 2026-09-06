@@ -1,30 +1,28 @@
 import { z } from "zod";
 import { COLLISION_FAMILY_IDS } from "./scenario-families/collision-templates";
+import { ScenarioIntentionOutcomeSchema } from "./scenario-intention";
 
 const CollisionFamilyIdSchema = z.enum(COLLISION_FAMILY_IDS);
 
 /**
  * Scenario validation contract (v1).
  *
- * A `ScenarioValidationReport` is the verdict of replaying a generated
- * collision-scenario draft as a deterministic fixed-dt kinematic simulation
- * (engine `"kinematic-v1"`), entirely in-process without CARLA.
+ * A `ScenarioValidationReport` is the verdict of executing a generated
+ * collision-scenario draft's authored candidate — the map-bound template the
+ * host persists — in the native runtime (engine `"simforge-native"`) and
+ * reading the runtime's contacts, closest approach and pose samples.
  *
  * It exists to close the AI-search evaluation loop: when the LLM agent
- * proposes a draft, the builder replays the planned trajectories and asserts
- * the scenario actually does what the prompt asked — the requested conflict
- * happens, between the intended pair, near the location the user specified —
- * before the draft is ever returned to the agent or the user.
- *
- * The engine validates the *plan* (planned polylines + per-actor speed /
- * timing), not CARLA dynamics. That is deliberate: the failure modes this
- * targets ("the collision didn't happen", "the actor spawned too far from
- * the location") are geometry/timing bugs in the route planner + builder,
- * not physics-fidelity issues. UI must label a pass as "plan-validated" so
- * it is not mistaken for a CARLA simulation pass.
+ * proposes a draft, the builder executes the candidate and asserts the
+ * scenario actually does what the prompt asked — judged against the authored
+ * `outcome`: the requested contact happens between the intended pair near the
+ * specified location (`collision`), or the subject touches nothing while the
+ * pair's native closest approach / TTC proves the conflict it resolved
+ * (`collision_avoidance`, `near_miss`) — before the draft is ever returned to
+ * the agent or the user.
  */
 
-export const SCENARIO_VALIDATION_ENGINE = "kinematic-v1" as const;
+export const SCENARIO_VALIDATION_ENGINE = "simforge-native" as const;
 
 export const ValidationVerdictSchema = z.enum(["pass", "fail"]);
 export type ValidationVerdict = z.infer<typeof ValidationVerdictSchema>;
@@ -38,12 +36,20 @@ export type ValidationCheckStatus = z.infer<typeof ValidationCheckStatusSchema>;
  * parsing prose.
  */
 const ValidationCheckIdEnum = z.enum([
-  /** The intended pair came into contact within the scenario duration. */
+  /** `collision`: the intended pair came into contact within the scenario duration. */
   "collision_occurred",
   /** Contact happened within `regionRadiusM` of the intended location. */
   "collision_in_region",
   /** Contact time is within tolerance of the planned arrival time. */
   "collision_timing",
+  /** Non-contact outcomes: the subject made no contact with any actor. */
+  "contact_absent",
+  /** `collision_avoidance` / `near_miss`: the runtime scored a real conflict between the intended pair. */
+  "conflict_approached",
+  /** The pair's closest approach landed within `regionRadiusM` of the intended location. */
+  "conflict_in_region",
+  /** Closest-approach time is within tolerance of the planned conflict time. */
+  "conflict_timing",
   /** The subject spawned within tolerance of the intended location. */
   "subject_spawn_offset",
   /** The conflicting actor spawned within tolerance of the intended location. */
@@ -53,7 +59,7 @@ const ValidationCheckIdEnum = z.enum([
   /** The subject actually executes the family-defining maneuver (e.g. a left/
    *  right turn — net heading change — rather than a straight head-on). */
   "maneuver_executed",
-  /** Planned actor motion stays within the shared plausibility thresholds. */
+  /** Native actor motion stays within the shared plausibility thresholds. */
   "kinematic_lint",
 ]);
 
@@ -135,11 +141,13 @@ export const ScenarioValidationReportSchema = z.object({
   engine: z.literal(SCENARIO_VALIDATION_ENGINE),
   verdict: ValidationVerdictSchema,
   family: CollisionFamilyIdSchema,
+  /** The authored scenario outcome the verdict judged. */
+  outcome: ScenarioIntentionOutcomeSchema,
   /** Wall-clock of when the report was produced. */
   generatedAt: z.string(),
   /** Simulated horizon, seconds. */
   simulatedDurationS: z.number(),
-  /** Fixed timestep used for the replay, seconds. */
+  /** Fixed timestep the native runtime executed, seconds. */
   fixedDeltaS: z.number(),
   /** The pair whose contact the scenario is meant to produce. */
   intendedPair: z.object({

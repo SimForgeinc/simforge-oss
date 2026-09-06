@@ -22,7 +22,7 @@
 //! attempt fails (not canceled).
 //!
 //! Provider Python resolves to `$SIMFORGE_PROVIDER_PYTHON`, else
-//! the activated environment's physical `<runtime root>/venvs/<generation>/bin/python`.
+//! the activated environment's physical `<install root>/venvs/<generation>/bin/python`.
 //! A missing installed environment is an explicit spawn error, never a fallback
 //! to an unrelated global Python installation.
 
@@ -73,17 +73,38 @@ struct ChildError {
     message: String,
 }
 
-/// Python interpreter for providers. `root` is the worker root.
-pub fn python(root: &Path) -> PathBuf {
+const INSTALL_ROOT_ENV: &str = "SIMFORGE_NATIVE_RUNTIME_ROOT";
+
+fn install_root() -> Result<PathBuf> {
+    if let Some(root) = std::env::var_os(INSTALL_ROOT_ENV).filter(|value| !value.is_empty()) {
+        return Ok(PathBuf::from(root));
+    }
+    let executable = crate::runtime::current_executable()?;
+    executable
+        .parent()
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .ok_or_else(|| RunnerError::Usage {
+            reason: "cannot locate installed runtime assets; set SIMFORGE_NATIVE_RUNTIME_ROOT"
+                .to_owned(),
+        })
+}
+
+fn python_in(install_root: &Path) -> PathBuf {
     if let Some(explicit) = std::env::var_os(PYTHON_ENV).filter(|value| !value.is_empty()) {
         return PathBuf::from(explicit);
     }
-    let activated = root.join("venv");
+    let activated = install_root.join("venv");
     // Resolve the environment directory, not the Python executable symlink:
     // resolving the latter would bypass pyvenv.cfg and select system Python.
     // Pin imports to this generation even if another install activates later.
     let generation = activated.canonicalize().unwrap_or(activated);
     generation.join("bin").join("python")
+}
+
+/// Provider interpreter from installed assets, independent of writable job state.
+pub fn python() -> Result<PathBuf> {
+    Ok(python_in(&install_root()?))
 }
 
 fn provider_error(module: &str, reason: impl std::fmt::Display) -> RunnerError {
@@ -97,8 +118,10 @@ fn provider_error(module: &str, reason: impl std::fmt::Display) -> RunnerError {
 /// `--no-probe` when a dependency-only report is enough; providers whose
 /// availability is only known by probing (NuRec) are called without it.
 pub fn capabilities(root: &Path, module: &str, flags: &[&str]) -> Result<serde_json::Value> {
-    let interpreter = python(root);
+    let installed = install_root()?;
+    let interpreter = python_in(&installed);
     let output = Command::new(&interpreter)
+        .env(INSTALL_ROOT_ENV, &installed)
         .env(crate::job::ROOT_ENV, root)
         .arg("-m")
         .arg(module)
@@ -149,7 +172,8 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
     fs::write(&params_path, params_bytes)
         .map_err(|source| RunnerError::io(&params_path, source))?;
 
-    let interpreter = python(job.root);
+    let installed = install_root()?;
+    let interpreter = python_in(&installed);
     let mut command = Command::new(&interpreter);
     command
         .arg("-m")
@@ -162,7 +186,9 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
     if let Some(point) = ctx.resume {
         command.arg("--resume").arg(point.dir.join(CHECKPOINT_FILE));
     }
-    command.env(crate::job::ROOT_ENV, job.root);
+    command
+        .env(INSTALL_ROOT_ENV, &installed)
+        .env(crate::job::ROOT_ENV, job.root);
     for (key, value) in job.env {
         command.env(key, value);
     }

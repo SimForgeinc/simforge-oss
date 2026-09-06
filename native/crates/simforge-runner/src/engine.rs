@@ -54,7 +54,7 @@ pub struct ResolvedInput {
 }
 
 pub struct AdmissionContext<'a> {
-    /// Worker root (provider interpreters, caches live under it).
+    /// Writable worker root for jobs, checkpoints, and caches.
     pub root: &'a Path,
     pub manifest: &'a JobManifest,
     pub inputs: &'a [ResolvedInput],

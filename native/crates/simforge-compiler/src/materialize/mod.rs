@@ -28,7 +28,7 @@ pub mod routes;
 
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use simforge_core::error::SimIssue;
 use simforge_core::map::{build_follow_route, FollowRouteOptions};
@@ -135,7 +135,8 @@ pub struct AppliedCatalogVariant {
 
 /// A diagnostic predicate lowered in the same map/parameter scope as the
 /// actors. It never becomes an interaction and cannot change the input.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Observation {
     pub id: String,
     pub condition: Condition,

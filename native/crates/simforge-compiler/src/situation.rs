@@ -34,7 +34,7 @@ use simforge_core::types::{self as sim, MotionPhysicsMode, RouteSpec, SimScenari
 use crate::anchor::MatchedSite;
 use crate::bundle::MapBundle;
 use crate::catalog::{CatalogDims, ExternalCatalogEntry};
-use crate::error::{detail, CompileError, CompileResult};
+use crate::error::{CompileError, CompileResult};
 use crate::expr::NumberOrExpr;
 use crate::materialize::{
     materialize, materialize_map_bound, MaterializeOptions, MaterializeResult, Observation,
@@ -2274,9 +2274,16 @@ fn static_geometry_entries(
         if patch.affected.role_ids.len() != 1
             || patch.affected.role_ids[0] != verified.role_id
             || patch.affected.object_ids != d.object_ids
-            || !patch.affected.source_ids.iter().map(String::as_str)
+            || !patch
+                .affected
+                .source_ids
+                .iter()
+                .map(String::as_str)
                 .eq(canonical_sources.iter().map(|(id, _)| *id))
-            || !patch.source_artifacts.iter().map(|pin| (pin.source_id.as_str(), pin.sha256.as_str()))
+            || !patch
+                .source_artifacts
+                .iter()
+                .map(|pin| (pin.source_id.as_str(), pin.sha256.as_str()))
                 .eq(canonical_sources.iter().copied())
             || canonical_sources.is_empty()
         {
@@ -3710,19 +3717,26 @@ mod tests {
         let changed = apply_situation_transaction(&program, &transaction).unwrap();
         assert_eq!(
             changed.digest,
-            fixture["comparison"]["transaction"]["baseDigest"].as_str().unwrap()
+            fixture["comparison"]["transaction"]["baseDigest"]
+                .as_str()
+                .unwrap()
         );
         let mut binding_value: Value = serde_json::from_str(include_str!(
             "../../../../qualification/native-migration/fixtures/generated-geometry/geometry-binding.json"
         ))
         .unwrap();
-        binding_value.as_object_mut().unwrap().remove("descriptorReference");
-        let mut binding: VerifiedStaticGeometryBinding = serde_json::from_value(binding_value).unwrap();
+        binding_value
+            .as_object_mut()
+            .unwrap()
+            .remove("descriptorReference");
+        let mut binding: VerifiedStaticGeometryBinding =
+            serde_json::from_value(binding_value).unwrap();
         static_geometry_entries(&changed.program, std::slice::from_ref(&binding)).unwrap();
         binding.descriptor.source_artifacts[0].sha256 = "0".repeat(64);
         assert_eq!(
             static_geometry_entries(&changed.program, std::slice::from_ref(&binding))
-                .unwrap_err().code,
+                .unwrap_err()
+                .code,
             "geometry_patch_unbound"
         );
         let intervention: SituationTransaction =

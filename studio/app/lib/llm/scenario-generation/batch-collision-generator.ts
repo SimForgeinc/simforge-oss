@@ -4,20 +4,24 @@
  * ready-to-render scenario drafts, with NO LLM in the loop:
  *
  *   findCollisionSites (fit-ranked top-N)  ──▶  per site:
- *     plan actors  ──▶  draft  ──▶  runtime-road snap  ──▶  kinematic gate
+ *     plan actors  ──▶  draft  ──▶  runtime-road snap  ──▶  native gate
  *   ──▶  GeneratedScenario (actors + seeded generation provenance)
  *
  * This is the reusable core the emit harnesses + a future dataset API both call.
  * It does NOT persist — the caller wraps each draft as a render job / dataset
- * row. The kinematic gate ensures only convergent plans are returned (the
+ * row. The native gate (a real runtime execution of each candidate) ensures
+ * only convergent plans are returned (the
  * Phase 2 finding: fit-rank alone floated degenerate roomy sites).
  */
+import { getEntry } from "@simforge-oss/asset-catalog/metadata";
 import {
   normalizeActorBaseClip,
   plannedSubjectActor,
   type GeneratedScenarioMetadata,
   type ScenarioEditorActorDraft,
   type ScenarioIntention,
+  COLLISION_TEMPLATES,
+  type CollisionFamilyId,
 } from "@simforge-oss/studio-shared";
 import {
   type MapTopologyIndex,
@@ -35,7 +39,10 @@ import {
   type SubjectTurn,
 } from "@/app/lib/llm/scenario-generation/validation/planned-to-draft";
 import type { PlannedActor } from "@/app/lib/llm/scenario-generation/collision-route-planner";
-import { validateCollisionDraft } from "@/app/lib/llm/scenario-generation/validation/draft-validator";
+import {
+  validateCollisionDraft,
+  type CollisionDraftMapBinding,
+} from "@/app/lib/llm/scenario-generation/validation/draft-validator";
 import {
   snapDraftActorsToRuntimeRoads,
   type RuntimeRoadSegment,
@@ -106,7 +113,7 @@ const TURN_FAMILIES: ReadonlySet<string> = new Set([
 /**
  * Turn families can't hold a fast schedule THROUGH the junction arc: the
  * timed-path subject lags (measured on Yale — the subject↔NPC closest approach lands at
- * ~8 s vs the planned 6 s, a ~2-3 s turn delay), so the kinematic gate's
+ * ~8 s vs the planned 6 s, a ~2-3 s turn delay), so the gate's
  * on-time assumption breaks and the straight NPC has already passed → 7-8 m
  * misses. Capping the turn approach speed makes the schedule trackable (a ~6 m/s
  * turn the controller can follow vs a ~10 m/s one it can't), so the subject arrives
@@ -133,26 +140,20 @@ const DEFAULT_ARRIVAL_TIME_S = 6;
  */
 const AVOID_CONFLICT_LEAD_S = 2.0;
 const DRAFT_DURATION_S = 20;
-const DRAFT_FIXED_DELTA_S = 0.05;
 
+// Actor identity is exact catalog identity: the native lowering executes the
+// catalog model a draft names and rejects anything else, so every id below is
+// a bundled `@simforge-oss/asset-catalog` id. The CARLA export resolves each
+// catalog model to its measured blueprint equivalent (`carla-object-catalog.json`).
 const NPC_BLUEPRINT: Record<NonNullable<ScenarioRequest["npcVehicleType"]>, string> = {
-  car: "vehicle.lincoln.mkz",
-  bicycle: "vehicle.bh.crossbike",
-  motorcycle: "vehicle.yamaha.yzf",
+  car: "vehicle.sedan",
+  bicycle: "vehicle.bicycle",
+  motorcycle: "vehicle.motorcycle",
 };
 
 // Workstream J — bicyclist conflict (the classic right-hook is a cyclist on the
-// subject's right continuing straight). CARLA's stock bicycles, varied per scene
-// (seeded) for blueprint diversity rather than a single model everywhere.
-// vehicle.gazelle.omafiets is DROPPED (dib 2026-08-02 Munich review,
-// merge-17-5 rated 1): its baked-in rider was the one observed shredding into
-// the giant "paraglider" cloth artifact on 0.10, and the rider skin cannot be
-// controlled from our stack (no rider-attach path in the worker — the bike
-// blueprint spawns as-is). Restore after a re-cook proves the mesh stable.
-const CYCLIST_BLUEPRINTS = [
-  "vehicle.bh.crossbike",
-  "vehicle.diamondback.century",
-] as const;
+// subject's right continuing straight). The catalog publishes one cyclist body.
+const CYCLIST_BLUEPRINTS = ["vehicle.bicycle"] as const;
 // A realistic urban cyclist cruising speed — a bike swapped onto a 30 kph
 // adjacent-lane vehicle would arrive far too fast for the planned conflict.
 // Used as the NPC speed default when npcVehicleType is "bicycle" and the
@@ -160,50 +161,44 @@ const CYCLIST_BLUEPRINTS = [
 const CYCLIST_SPEED_KPH = 16;
 
 // ── Occlusion occluder (workstream D2) ──────────────────────────────────────
-// Image-native ids (UE5.5/0.10 live probe 2026-07-09 — the old 0.9 list ALL
-// substituted to lincoln.mkz, flattening the fleet's variety). SUV included:
-// a taller body occludes better than a sedan.
+// SUV included: a taller body occludes better than a sedan.
 const OCCLUDER_BLUEPRINTS = [
-  "vehicle.lincoln.mkz",
-  "vehicle.dodge.charger",
-  "vehicle.mini.cooper",
-  "vehicle.nissan.patrol",
-  "vehicle.sprinter.mercedes",
+  "vehicle.sedan",
+  "vehicle.ford_mustang",
+  "vehicle.hatchback",
+  "vehicle.suv",
+  "vehicle.delivery_van",
 ];
 /** Context-appropriate occluders by occlusion subtype: a BUS at a bus stop, a
- *  LARGE vehicle (box truck / semi) at street-parking-near-conflict + commercial
- *  delivery bays, else a generic parked car. A bigger body blocks the subject's
- *  sightline to the emerging pedestrian more realistically. */
-const BUS_OCCLUDER_BLUEPRINTS = ["vehicle.fuso.mitsubishi"]; // city bus / coach
+ *  LARGE vehicle (box truck / fire engine) at street-parking-near-conflict +
+ *  commercial delivery bays, else a generic parked car. A bigger body blocks the
+ *  subject's sightline to the emerging pedestrian more realistically. */
+const BUS_OCCLUDER_BLUEPRINTS = ["vehicle.bus"]; // city bus / coach
 const LARGE_OCCLUDER_BLUEPRINTS = [
-  "vehicle.carlacola.actors", // box delivery truck
-  "vehicle.firetruck.actors", // largest spawn-verified UE5 heavy body
+  "vehicle.box_truck", // box delivery truck
+  "vehicle.fire_engine", // largest heavy body
 ];
 /** MEDIUM occluder class (dib 2026-07-17): the large bodies frequently fail to
- *  spawn in 3D at tight sites — the carlacola box truck came back `null_handle`
- *  x8 across many spots (spawn-space too tight for a 6.5x2.4m body), silently
- *  dropping the occlusion the scene is about. The Sprinter is the boxiest/
- *  tallest (~2.4m) spawn-verified UE5 body under truck size: less occlusion
- *  than a truck but far more believable than none, and much likelier to spawn
- *  (it already spawns reliably from the generic OCCLUDER_BLUEPRINTS pool).
- *  Selected per-request via `occluderClass: "medium"` (default "large" keeps
- *  existing batches byte-identical). */
+ *  fit tight sites (spawn-space too tight for a box-truck body), silently
+ *  dropping the occlusion the scene is about. The delivery van is the boxiest/
+ *  tallest body under truck size: less occlusion than a truck but far more
+ *  believable than none, and much likelier to fit. Selected per-request via
+ *  `occluderClass: "medium"` (default "large" keeps existing batches
+ *  byte-identical). */
 const MEDIUM_OCCLUDER_BLUEPRINTS = [
-  "vehicle.sprinter.mercedes", // boxy panel van — canonical medium occluder
+  "vehicle.delivery_van", // boxy panel van — canonical medium occluder
 ];
 /** Occluder footprint (m) used to scale placement so a longer/wider body still
- *  sits between the subject and the ped without clipping the driving lane. Cars fall
- *  through to the default, which reproduces the historical 2.85m / 2.6m constants
- *  exactly, so existing car-occluder scenes stay byte-identical. */
-const OCCLUDER_FOOTPRINT_M: Readonly<Record<string, { length: number; width: number }>> = {
-  "vehicle.fuso.mitsubishi": { length: 12.0, width: 2.5 },
-  "vehicle.firetruck.actors": { length: 10.0, width: 2.6 },
-  "vehicle.carlacola.actors": { length: 6.5, width: 2.4 },
-  // Medium class: Sprinter body ~5.9x2.0m — the placement clearance scales off
-  // this, so the van sits closer to the kerb than a truck and fits sites the
-  // 6.5x2.4m carlacola body can't spawn at.
-  "vehicle.sprinter.mercedes": { length: 5.9, width: 2.0 },
-};
+ *  sits between the subject and the ped without clipping the driving lane: the
+ *  catalog model's own dimensions. Cars fall through to the default, which
+ *  reproduces the historical 2.85m / 2.6m constants exactly, so existing
+ *  car-occluder scenes stay byte-identical. */
+const OCCLUDER_FOOTPRINT_M: Readonly<Record<string, { length: number; width: number }>> = Object.fromEntries(
+  [...BUS_OCCLUDER_BLUEPRINTS, ...LARGE_OCCLUDER_BLUEPRINTS, ...MEDIUM_OCCLUDER_BLUEPRINTS].map((id) => {
+    const dims = getEntry(id).dims;
+    return [id, { length: dims.l, width: dims.w }];
+  }),
+);
 const DEFAULT_OCCLUDER_FOOTPRINT = { length: 4.7, width: 1.9 } as const;
 const OCCLUDER_COLOR = "55,58,64"; // muted "parked" body
 /** Nudge the occluder this far off the sidewalk toward the road (into the parking
@@ -277,12 +272,12 @@ function walkPathOf(a: ScenarioEditorActorDraft): Array<{ x: number; y: number }
 const OCCLUDER_RELOCATE_STEP_M = 0.75;
 const OCCLUDER_RELOCATE_MAX_OFFSET_M = 6;
 /** CAR-class substitution pool: the regular parked-car bodies from
- *  OCCLUDER_BLUEPRINTS (the Sprinter van is the body being substituted AWAY). */
+ *  OCCLUDER_BLUEPRINTS (the delivery van is the body being substituted AWAY). */
 const CAR_CLASS_OCCLUDER_BLUEPRINTS = [
-  "vehicle.lincoln.mkz",
-  "vehicle.dodge.charger",
-  "vehicle.mini.cooper",
-  "vehicle.nissan.patrol",
+  "vehicle.sedan",
+  "vehicle.ford_mustang",
+  "vehicle.hatchback",
+  "vehicle.suv",
 ];
 
 /** Sightline occluder ids from the population step (van or the P-1.4 car). */
@@ -1047,7 +1042,7 @@ function chordHeading(pts: ReadonlyArray<Vec2>, fromStart: boolean): number | nu
 /**
  * Net heading change (deg, absolute) of a planned subject ROUTE — the run-up arc
  * plus the post-conflict continuation (which completes the turn). Null when the
- * route is too short to measure (kept — the kinematic gate judges those).
+ * route is too short to measure (kept — the native gate judges those).
  */
 export function plannedRouteNetHeadingDeg(planned: PlannedActor): number | null {
   // Defensive: synthetic fixtures may omit the arrays — unmeasurable → null (kept).
@@ -1069,6 +1064,8 @@ export function plannedRouteNetHeadingDeg(planned: PlannedActor): number | null 
 
 export interface BatchMapData {
   mapAssetId: string;
+  /** The immutable map every candidate executes on for its native acceptance. */
+  executionMap: CollisionDraftMapBinding;
   /** CARLA/runtime map name (e.g. "Munich_Phase_1A"). Used to strip ambient VEHICLES on
    *  World-Partition maps unconditionally in the generator, so no emit path can ship the
    *  flying/damaged-car spawns (dib 2026-07-25 — the strip was only wired in some callers).
@@ -1106,7 +1103,7 @@ export interface BatchMapData {
   junctionIndex?: JunctionConstraintIndex;
 }
 
-/** One generated, kinematically-validated scenario draft with provenance. */
+/** One generated, natively validated scenario draft with provenance. */
 export interface GeneratedScenario {
   scenarioId: string;
   actors: ScenarioEditorActorDraft[];
@@ -1144,7 +1141,7 @@ export interface BatchGenerationResult {
   scenarios: GeneratedScenario[];
   /** How many fit-ranked sites were considered to fill the request. */
   sitesConsidered: number;
-  /** Sites dropped by the kinematic gate (non-convergent plans). */
+  /** Sites dropped by the native gate (non-convergent plans). */
   rejectedByGate: number;
   /** Countable per-reason rejection tallies for the NAMED site gates (currently
    *  only "tunnel_multilevel_site", M-6). Reasons here are ALSO counted in
@@ -1474,39 +1471,46 @@ export function generateCollisionScenarioBatch(
       ? (draftTimeAtConflict(subjectDraftForTiming, conflictPoint) ?? arrivalTimeS)
       : arrivalTimeS;
 
+    const gateFamily: CollisionFamilyId =
+      request.scenarioFamily === "bicycle_merge"
+        ? "unsafe_cut_in"
+        : request.scenarioFamily === "left_turn_ped_crosswalk" ||
+            request.scenarioFamily === "right_turn_ped_crosswalk"
+          ? "pedestrian_crossing"
+          : request.scenarioFamily;
     const report = validateCollisionDraft({
-      // The kinematic gate validates against a CollisionFamilyId. Two families
+      // The native gate validates against a CollisionFamilyId. Two families
       // aren't in that enum, so map them to the closest gate semantics:
       //  - bicycle_merge → unsafe_cut_in (same-direction lateral cut-in, no turn).
       //  - left/right_turn_ped_crosswalk → pedestrian_crossing: the conflict is a
       //    crossing walker, so the gate checks subject↔walker convergence (a walker,
       //    not a vehicle NPC). The turn correctness is the worker's / 2D-loop's
       //    job — requiring the turn maneuver here would reject the mid-turn arc.
-      family:
-        request.scenarioFamily === "bicycle_merge"
-          ? "unsafe_cut_in"
-          : request.scenarioFamily === "left_turn_ped_crosswalk" ||
-              request.scenarioFamily === "right_turn_ped_crosswalk"
-            ? "pedestrian_crossing"
-            : request.scenarioFamily,
+      family: gateFamily,
+      // The in-loop gate proves the planned conflict geometry converges: it
+      // requests `collision` even for the avoided variant, whose reactive
+      // subject is judged against `collision_avoidance` on the assembled
+      // candidate at acceptance.
+      outcome: "collision",
       actors,
+      map: map.executionMap,
+      environmentPreset: COLLISION_TEMPLATES[gateFamily].defaultEnvironment,
       intendedLocation: conflictPoint,
       conflict: { conflictPoint, arrivalTimeS: plannedConflictTimeS, subjectTurnRelation: null },
       durationS: DRAFT_DURATION_S,
-      fixedDeltaS: DRAFT_FIXED_DELTA_S,
     });
     if (report.verdict !== "pass") {
       rejectedByGate += 1;
-      // Record WHICH kinematic check failed. This gate consumes more sites than
+      // Record WHICH native check failed. This gate consumes more sites than
       // any other and recorded nothing, so a zero-yield run reported "39 rejected
       // by gate" with three of them explained — indistinguishable from a broken
       // generator. The strings are the validator's own; this is pure accounting.
-      const kinReason = report.reasons?.[0] ?? "unspecified";
-      const kinKey = `kinematic_${kinReason
+      const gateReason = report.reasons?.[0] ?? "unspecified";
+      const gateKey = `gate_${gateReason
         .replace(/[^a-z0-9]+/gi, "_")
         .toLowerCase()
         .slice(0, 60)}`;
-      rejectedByReason[kinKey] = (rejectedByReason[kinKey] ?? 0) + 1;
+      rejectedByReason[gateKey] = (rejectedByReason[gateKey] ?? 0) + 1;
       continue;
     }
 
@@ -1519,7 +1523,7 @@ export function generateCollisionScenarioBatch(
     // Advance the vehicle conflict actor so it reaches the crossing ahead of
     // the subject: the threat is inside the subject's detection horizon BEFORE its
     // commit point, and the subject's reactive brake produces the intended yield.
-    // Applied AFTER the kinematic gate (which certifies the conflict geometry
+    // Applied AFTER the native gate (which certifies the conflict geometry
     // converges at the planned point) — same staging as the path extension
     // below. npc-only, per the repair-loop contract: the subject is never re-timed.
     // Walker conflicts keep their solved timing (ped yields already work; the
@@ -1583,7 +1587,7 @@ export function generateCollisionScenarioBatch(
     // D2: spawn the parked-car occluder for occlusion-matched pedestrian sites,
     // so the conflict ped (and its companions, D3) emerge from behind it instead
     // of being visible from a distance (the ops review's core viability gap).
-    // Added AFTER the kinematic gate so it never affects validation; the guard
+    // Added AFTER the native gate so it never affects validation; the guard
     // in buildOccluderCar keeps it off the subject's lane.
     // Occluders exist ONLY for PEDESTRIAN conflicts (dib 2026-07-28: "we need
     // the occluders only for pedestrians, not for avoiding a collision with
@@ -1732,7 +1736,7 @@ export function generateCollisionScenarioBatch(
     ].map((actor) => normalizeActorBaseClip(actor));
 
     // Final assembled-scene plausibility gate (codex review 2026-07-27 #1): the
-    // kinematic gate above validated a clean PRE-population draft; every
+    // native gate above validated a clean PRE-population draft; every
     // mutation since (path extension, population, D2 occluder insert/relocate,
     // culls, walker hygiene) reshaped the scene un-relinted. Principals = subject +
     // conflict actor (planned-to-draft's fixed "ped"/"npc" ids) + kept occluder

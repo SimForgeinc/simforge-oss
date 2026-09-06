@@ -1,6 +1,7 @@
 import {
   behaviorActorRef,
   type BehaviorAction,
+  type Sensor,
 } from "@simforge-oss/scenario/contracts";
 import {
   applyAggressivenessToSpeedKph,
@@ -47,20 +48,22 @@ export type NpcVehicleOverride = {
 } | null;
 
 /**
- * Default sensor rig for an auto-generated subject actor. We attach
- * `PRESET_SDG_AV` (NVIDIA Sensor Config) — the same full-coverage rig used
- * for hand-authored SDG scenarios:
- *   - `TRAILING_CAMERA_SENSOR` (spring-arm preview mount) so the scene is
- *     immediately previewable with a third-person chase view.
+ * Default sensor rig for an auto-generated subject actor: the physical
+ * sensors of `PRESET_SDG_AV` (NVIDIA Sensor Config) — the same full-coverage
+ * rig used for hand-authored SDG scenarios:
  *   - 7× RGB cameras (front center / front left / front right / left side /
- *     right side / rear left / rear right) at 1920×1208, 120° FOV with
- *     depth + segmentation supported.
+ *     right side / rear left / rear right) at 1920×1208, 120° FOV.
  *   - 1× roof-center LiDAR (128 channels, 250 m range).
  *
+ * The preset's spring-arm trailing preview camera rides with the rig: the
+ * native lowering (`lowerCollisionDraftCandidate`) carries it as the
+ * platform's trailing presentation view (`chase-cam-trailing`), an explicit
+ * RGB render view outside the measurement rig, with its authored capture
+ * format in the template's render defaults.
+ *
  * Auto-generated scenarios get the heavy rig by default; users filter down
- * to 1–2 cameras at render-submission time via `sdgCameraMountIds` when
- * iterating. NPC vehicles and walkers stay sensor-less (standard
- * AV data-collection convention).
+ * to 1–2 cameras at render-submission time. NPC vehicles and walkers stay
+ * sensor-less (standard AV data-collection convention).
  *
  * `sensorsFromPreset` mints fresh UUIDs per call, so each subject in a draft
  * gets distinct sensor ids.
@@ -69,12 +72,9 @@ export type NpcVehicleOverride = {
  */
 export function defaultActorSensors(
   isSubject: boolean,
-): ReturnType<typeof sensorsFromPreset> {
+): Sensor[] {
   if (!isSubject) return [];
-  return sensorsFromPreset(PRESET_SDG_AV).map((sensor) => ({
-    ...sensor,
-    attachTo: "subject",
-  }));
+  return sensorsFromPreset(PRESET_SDG_AV).map((sensor) => ({ ...sensor, attachTo: "subject" }));
 }
 
 function timedWaypointsForPlannedActor(

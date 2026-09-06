@@ -70,16 +70,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { messages, maxCandidates } = parseResult.data;
 
   // The propose_scenario_draft + inspect_location_geometry tools require a
-  // logged-in workspace context (the propose path writes to the scenarios
-  // + datasets tables; the inspect path reads runtime road bundles tied
-  // to the map). When the request has no session we leave both unwired —
-  // the LLM still does discovery, matching the unauthed-search behavior
-  // this route had pre-bridge. CARLA-incompatible maps (no carla_map_name)
-  // also disable the tools to avoid the model proposing drafts that can
-  // never run.
+  // logged-in workspace context (the propose path writes scenario documents
+  // + datasets; the inspect path reads runtime road bundles tied to the
+  // map). When the request has no session we leave both unwired — the LLM
+  // still does discovery, matching the unauthed-search behavior this route
+  // had pre-bridge. A map without a published map version fails the
+  // propose tool with `map_unavailable` rather than being pre-filtered.
   const session = await getCurrentSession();
-  const carlaReady = !!asset.carla_map_name?.trim();
-  const collisionToolsEnabled = session != null && carlaReady;
+  const collisionToolsEnabled = session != null;
 
   const inspectGeometryCallable:
     | ((input: InspectLocationGeometryToolInput) => Promise<GeometryReport>)
@@ -103,7 +101,6 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
               mapAsset: {
                 map_asset_id: asset.map_asset_id,
                 name: asset.name,
-                carla_map_name: asset.carla_map_name ?? null,
               },
               documentId: input.documentId,
               documentLabel: input.documentLabel,

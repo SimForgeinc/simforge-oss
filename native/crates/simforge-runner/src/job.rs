@@ -30,24 +30,24 @@ use crate::resources::{ResourceUsage, WorkerCapacity};
 use crate::runtime::VerifiedRuntime;
 use crate::state::{list_job_dirs, Failure, JobDir, JobEvent, JobState, JobStatus};
 
-pub const ROOT_ENV: &str = "SIMFORGE_NATIVE_RUNTIME_ROOT";
+pub const ROOT_ENV: &str = "SIMFORGE_NATIVE_RUNTIME_STATE_ROOT";
 const ATTACH_POLL: Duration = Duration::from_millis(200);
 
-/// Default worker root: `${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime`.
+/// Default worker state: `${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime`.
 pub fn default_root() -> Result<PathBuf> {
     if let Some(root) = std::env::var_os(ROOT_ENV).filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(root));
     }
-    let data_home = match std::env::var_os("XDG_DATA_HOME").filter(|value| !value.is_empty()) {
+    let state_home = match std::env::var_os("XDG_STATE_HOME").filter(|value| !value.is_empty()) {
         Some(dir) => PathBuf::from(dir),
         None => {
             let home = std::env::var_os("HOME").filter(|value| !value.is_empty()).ok_or_else(|| RunnerError::Usage {
-                reason: format!("cannot locate the worker root: set --root, {ROOT_ENV}, XDG_DATA_HOME or HOME"),
+                reason: format!("cannot locate the worker root: set --root, {ROOT_ENV}, XDG_STATE_HOME or HOME"),
             })?;
-            PathBuf::from(home).join(".local").join("share")
+            PathBuf::from(home).join(".local").join("state")
         }
     };
-    Ok(data_home.join("simforge").join("native-runtime"))
+    Ok(state_home.join("simforge").join("native-runtime"))
 }
 
 #[derive(Debug, Clone, Serialize)]

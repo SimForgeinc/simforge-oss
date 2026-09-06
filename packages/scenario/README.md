@@ -240,6 +240,8 @@ establishes. That is the whole retargeting mechanism — see
 | `validate/` | Tier-1 validator, `ClauseResult`, the `MapContext` seam, an in-memory fake. |
 | `migrate-v2.ts` | v1 scene → v2 template, with notes for everything it will not guess. |
 | `json-schema-v2.ts` + `schema/*.v2.schema.json` | Three published schemas. |
+| `render-spec.ts`, `render-intent.ts` | `RenderSpecV3` capture intent, its resolved manifest, the immutable render intent. |
+| `render-defaults.ts` | `extensions["simforge.render-defaults"]`: the capture configuration a template authors for its own sensors, as one validated `RenderSpecV3`. Render creation starts from it; explicit submission choices win. |
 
 ### Expressions, not literals
 

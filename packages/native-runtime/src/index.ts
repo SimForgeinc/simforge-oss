@@ -10,6 +10,7 @@
 
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,6 +29,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** `dist/` and `src/` are both one level under the package root. */
 const PACKAGE_ROOT = join(HERE, '..');
 const BINARY_NAME = 'simforge-native-runtime';
+
+/** Installed runtime root shared by the CLI, Studio hosts and native renderer. */
+export function nativeRuntimeRoot(env: NodeJS.ProcessEnv = process.env): string {
+  return env.SIMFORGE_NATIVE_RUNTIME_ROOT?.trim()
+    || join(env.XDG_DATA_HOME?.trim() || join(homedir(), '.local', 'share'), 'simforge', 'native-runtime');
+}
 
 /** Platform suffix `@napi-rs/cli --platform` uses in the addon file name (`linux-x64-gnu`, `darwin-arm64`, `win32-x64-msvc`). */
 export function addonPlatformSuffix(platform: NodeJS.Platform = process.platform, arch: string = process.arch): string {

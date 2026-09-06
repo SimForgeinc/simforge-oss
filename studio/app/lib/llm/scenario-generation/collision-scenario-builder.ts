@@ -11,12 +11,9 @@
  *   - Anchor each actor in `actorRecipe` to a real lane from the geometry
  *     report (already collected by `inspect_location_geometry`).
  *   - Hydrate timeline clips with role-resolved speeds and target ids.
- *   - Persist a populated draft that opens in the editor ready to preview
- *     and run.
- *
- * v1 reuses the editor draft schema in `packages/shared/src/scenario-editor.ts`
- * verbatim: no new persistence shape, no migrations. The existing native CARLA
- * render path consumes the hydrated draft downstream.
+ *   - Lower the assembled draft actors to the map-bound scenario template the
+ *     native runtime executes, accept it on a real native run, and persist
+ *     that same template as a scenario document that opens in the editor.
  */
 import "server-only";
 import {
@@ -33,18 +30,21 @@ import {
   type ScenarioValidationReport,
 } from "@simforge-oss/studio-shared";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { execute } from "@/app/lib/db/data-api";
-import { ensureDefaultDatasetForWorkspace } from "@/app/lib/db/dataset-store";
-import { datasetScenarioId } from "@/app/lib/db/ids";
 import {
-  resolveScenarioMapReference,
-  type ScenarioMapReference,
-} from "@/app/lib/scenario-editor/scenario-api-store";
+  DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
+  SCENARIO_SCHEMA_VERSION,
+} from "@/app/lib/scenario/contracts";
 import {
-  normalizeScenarioDraft,
-  toPersistedScenarioSetupDraft,
-} from "@/app/lib/scenario-editor/draft-normalization";
-import { buildDashboardScenarioEditorHref } from "@/app/lib/scenario/routes";
+  CollisionDraftMapUnavailableError,
+  loadCollisionDraftMap,
+} from "@/app/lib/scenario/collision-draft-map.server";
+import {
+  lowerCollisionDraftCandidate,
+  type CollisionDraftMapBinding,
+} from "@simforge-oss/studio-host/node";
+import { ensureDefaultScenarioDataset } from "@/app/lib/scenario/dataset-store";
+import { createScenarioDocument } from "@/app/lib/scenario/document-store";
+import { buildDashboardEditorHref } from "@/app/lib/scenario/routes";
 import { ScenarioDraftBridgeError } from "@/app/lib/scenario-editor/draft-generator";
 import type { GeometryLaneSample, GeometryReport } from "@/app/lib/maps/search/server/inspect-location-geometry";
 import type { PlanCollisionRoutesResult } from "@/app/lib/llm/scenario-generation/collision-route-planner";
@@ -75,6 +75,10 @@ export {
 export { defaultActorSensors } from "@/app/lib/llm/scenario-generation/collision-actor-assembly";
 
 const MAX_DISPLAY_NAME_LENGTH = 80;
+/** Generator identity stamped on intention metadata and the document's `appVersion`. */
+const COLLISION_GENERATOR = "simforge.collision_scenario_builder.v2";
+/** Document extension carrying the generator's provenance, intention and metadata. */
+const COLLISION_GENERATOR_EXTENSION = "simforge.collision-generator";
 
 // Spawn heading is derived from the planned path's first segment via
 // `spawnYawDegFromPlannedPath` (collision-route-planner). The former
@@ -85,7 +89,6 @@ const MAX_DISPLAY_NAME_LENGTH = 80;
 export interface CollisionDraftMapAsset {
   map_asset_id: string;
   name: string;
-  carla_map_name: string | null;
 }
 
 export interface BuildCollisionScenarioDraftArgs {
@@ -113,26 +116,21 @@ export interface BuildCollisionScenarioDraftArgs {
 }
 
 /**
- * CARLA blueprint + realistic base speed (kph) for each `npcVehicleType`.
- * Bicycle / motorcycle are CARLA `vehicle` actors in their world model;
- * the kind stays "vehicle" so the rest of the actor schema works
- * unchanged. The blueprints below are stock CARLA models present in every
- * shipped map.
+ * Blueprint + realistic base speed (kph) for each `npcVehicleType`. Bicycle /
+ * motorcycle keep kind "vehicle" so the rest of the actor schema works
+ * unchanged; the lowering resolves each blueprint to its catalog model.
  */
 const NPC_VEHICLE_OVERRIDES: Record<
   "car" | "bicycle" | "motorcycle",
   { blueprint: string; baseSpeedKph: number } | null
 > = {
   car: null,
-  bicycle: { blueprint: "vehicle.bh.crossbike", baseSpeedKph: 18 },
-  // `vehicle.harley-davidson.low_rider` is the UE4/0.9 id and is NOT in the 0.10
-  // image, whose registry entry is Make "Harley" / Model "Lowrider" (live probe
-  // 2026-07-29). The old id missed the library and fell through substitution to
-  // a CAR for every motorcycle.
-  motorcycle: { blueprint: "vehicle.harley.lowrider", baseSpeedKph: 60 },
+  bicycle: { blueprint: "vehicle.bicycle", baseSpeedKph: 18 },
+  motorcycle: { blueprint: "vehicle.motorcycle", baseSpeedKph: 60 },
 };
 
 export interface CollisionScenarioDraftResult {
+  /** The persisted scenario document id. */
   scenarioId: string;
   datasetId: string;
   mapAssetId: string;
@@ -150,8 +148,8 @@ export interface CollisionScenarioDraftResult {
    *  draft-created card so the user can see what the LLM committed to
    *  without opening the editor. Mirrors the draft's `metadata.notes`. */
   description: string;
-  /** Inline kinematic validation of the assembled draft (engine
-   *  `kinematic-v1`) with the Tier-1 auto-repair record attached. The
+  /** Native validation of the persisted candidate (engine
+   *  `simforge-native`) with the Tier-1 auto-repair record attached. The
    *  agent uses `verdict`/`reasons` to decide whether to revise; the
    *  panel renders a pass/fail badge from it. */
   validation: ScenarioValidationReport;
@@ -174,10 +172,8 @@ function buildNotesBlock(
 ): string {
   // Emitted as markdown — the AI Search panel renders this verbatim
   // inside the draft-created card via the same ReactMarkdown pipeline as
-  // assistant replies, so bold labels + bullet structure come through.
-  // The editor's metadata.notes field accepts free-form text and doesn't
-  // surface this string in the UI today, so the markdown syntax is
-  // harmless for the persisted draft.
+  // assistant replies, so bold labels + bullet structure come through. It
+  // is also the persisted document's description.
   const template = COLLISION_TEMPLATES[family];
   const env = template.defaultEnvironment;
   const envLabel = `${env.lighting.toLowerCase()}, ${env.weather.toLowerCase().replace(/_/g, " ")}, ${env.roadSurface.toLowerCase().replace(/_/g, " ")}`;
@@ -289,19 +285,23 @@ export function assertFamilyGeometry(
 export async function buildCollisionScenarioDraft(
   args: BuildCollisionScenarioDraftArgs,
 ): Promise<CollisionScenarioDraftResult> {
-  const backendMapName = args.mapAsset.carla_map_name?.trim() ?? "";
-  if (backendMapName.length === 0) {
-    throw new ScenarioDraftBridgeError(
-      "map_unavailable",
-      "Map asset is not available in CARLA yet.",
-    );
-  }
-
   if (!args.geometry.centerResolved || args.geometry.availableLanes.length === 0) {
     throw new ScenarioDraftBridgeError(
       "geometry_insufficient",
       "The chosen location has no nearby drivable lanes to anchor actors. Pick a junction or street within the map's road network.",
     );
+  }
+
+  // The immutable map the candidate is planned on, executed on and saved
+  // against. No published map version means nothing can execute the draft.
+  let map: CollisionDraftMapBinding;
+  try {
+    map = await loadCollisionDraftMap(args.context, args.mapAsset.map_asset_id);
+  } catch (err) {
+    if (err instanceof CollisionDraftMapUnavailableError) {
+      throw new ScenarioDraftBridgeError("map_unavailable", err.message);
+    }
+    throw err;
   }
 
   const template = COLLISION_TEMPLATES[args.family];
@@ -319,11 +319,11 @@ export async function buildCollisionScenarioDraft(
   // Try the deterministic backward-planner first. It returns concrete
   // spawn points + waypoint polylines so subject + NPC converge at a planned
   // conflict point. When it succeeds, every actor uses `timed_path` with
-  // autopilot OFF, matching the supported editor/worker contract.
+  // autopilot OFF: the authored schedule the native runtime executes.
   //
   // On null return (geometry too sparse, no opposing lane, etc.) we fall
   // through to the legacy heuristic placement below and surface the
-  // failure mode in the draft's metadata.notes.
+  // failure mode in the draft's notes.
   const subjectRecipe = template.actorRecipe.find((r) => r.role === "subject");
   const npcRecipe = template.actorRecipe.find((r) => r.role !== "subject");
   const approachGeometries = args.approachGeometries ?? [];
@@ -345,7 +345,7 @@ export async function buildCollisionScenarioDraft(
   const planning = await planCollisionScenarioDraft({
     family: args.family,
     mapAssetId: args.mapAsset.map_asset_id,
-    backendMapName,
+    map,
     geometry: args.geometry,
     approachGeometries,
     template,
@@ -355,13 +355,7 @@ export async function buildCollisionScenarioDraft(
   });
   const { intendedLocation, plannerResult, plannerError, pedTopo } = planning;
   let { repairAttempts, repairSucceeded } = planning;
-  const {
-    validationFixedDeltaS,
-    repairStrategies,
-    acceptWin,
-    runtimeRoadSegments,
-    pedRepick,
-  } = planning;
+  const { repairStrategies, acceptWin, runtimeRoadSegments, pedRepick } = planning;
   let plannerTrace: PlannerTrace | null = null;
 
   // Resolve placements in recipe order so subject anchors first and subsequent
@@ -431,36 +425,24 @@ export async function buildCollisionScenarioDraft(
     subjectPedestrianDestination,
   });
 
-  // ── CARLA runtime-road snap ───────────────────────────────────────────
+  // ── Execution road-network snap ───────────────────────────────────────
   //
-  // Project every emitted spawn / path waypoint / destination onto CARLA's
-  // runtime road network — `bundle.runtime.road_segments`, the pruned
-  // drivable lanes CARLA actually loads (built from the worker's
-  // `generate_waypoints()` crawl). The Tier-0 planner sources gate geometry
-  // from the XODR topology index and the heuristic / pedestrian paths
-  // project points euclidean-ly; neither is guaranteed to coincide with a
-  // lane CARLA exposes, so without this pass actors can land on roads CARLA
-  // pruned and then fail to spawn / refuse to follow their path at run time.
-  // Snapping happens BEFORE the authoritative validation below so the
-  // kinematic check (and any Tier-2 repair) runs on the on-road geometry.
-  // Throws `ScenarioDraftBridgeError("location_off_runtime_road")` when a
-  // required point is implausibly far from any runtime lane — the LLM
+  // Project every emitted spawn / path waypoint / destination onto the map's
+  // accepted semantic execution road network. The Tier-0 planner sources
+  // gate geometry from the XODR topology index and the heuristic /
+  // pedestrian paths project points euclidean-ly; neither is guaranteed to
+  // coincide with an executable lane, so without this pass actors can land
+  // off the drivable network. Snapping happens BEFORE the authoritative
+  // validation below so the native run (and any Tier-2 repair) executes the
+  // on-road geometry. Throws `ScenarioDraftBridgeError("location_off_runtime_road")`
+  // when a required point is implausibly far from any lane — the LLM
   // service surfaces that so the agent re-picks the location.
-  // `runtimeBundle` / `runtimeRoadSegments` were read once above (the
-  // pedestrian-crossing re-pick probe reuses the same snap), so we don't
-  // re-fetch the central map bundle here.
+  // `runtimeRoadSegments` were read once above (the pedestrian-crossing
+  // re-pick probe reuses the same snap), so we don't re-fetch them here.
   const snapSummary = snapDraftActorsToRuntimeRoads(actors, runtimeRoadSegments);
 
-  const dataset = await ensureDefaultDatasetForWorkspace(
-    args.context.workspaceId,
-    args.context.userId,
-  );
-  const mapReference: ScenarioMapReference = await resolveScenarioMapReference({
-    mapAssetId: args.mapAsset.map_asset_id,
-  });
+  const dataset = await ensureDefaultScenarioDataset(args.context);
 
-  const scenarioId = datasetScenarioId();
-  const now = new Date().toISOString();
   const displayName = composeDisplayName(args.family, args.intent, args.documentLabel);
   const baseNotes = buildNotesBlock(
     args.family,
@@ -473,17 +455,77 @@ export async function buildCollisionScenarioDraft(
   );
   const notes =
     snapSummary.pointsSnapped > 0
-      ? `${baseNotes}\n- **CARLA road snap:** moved ${snapSummary.pointsSnapped} point(s) across ${snapSummary.snappedActorCount} actor(s) onto runtime lanes (max ${snapSummary.maxSnapDistanceM}m).`
+      ? `${baseNotes}\n- **Road snap:** moved ${snapSummary.pointsSnapped} point(s) across ${snapSummary.snappedActorCount} actor(s) onto execution lanes (max ${snapSummary.maxSnapDistanceM}m).`
       : baseNotes;
 
-  // Authoritative validation on the ACTUAL assembled actors (the draft
-  // that will be persisted), not the in-loop proxy. Carries the Tier-1
+  const geometryContext = [
+    args.geometry.documentSubtype,
+    ...args.geometry.scenarioTags,
+  ].join(" ");
+  const subjectActorId = plannedSubjectActor(actors)?.id ?? null;
+  const stamp = () =>
+    stampCollisionGeneratedOutput({
+      generator: COLLISION_GENERATOR,
+      seed: 0,
+      family: args.family,
+      actors,
+      principalActorIds: new Set(
+        actors
+          .filter((actor) => actor.id !== subjectActorId)
+          .map((actor) => actor.id),
+      ),
+      plannedOutcome: FAMILY_ESMINI_OUTCOME[args.family],
+      npcVehicleType: args.npcVehicleType ?? null,
+      weather: `${template.defaultEnvironment.weather} ${template.defaultEnvironment.roadSurface}`,
+      environmentPreset: template.defaultEnvironment,
+      occlusionSubtype: /occlu|bus stop|parking|delivery/i.test(geometryContext)
+        ? geometryContext
+        : null,
+      signalized: /signalized|traffic light/i.test(geometryContext),
+      contextHint:
+        args.family === "pedestrian_crossing" &&
+        /mid.?block|non.?junction/i.test(geometryContext)
+          ? "mid_block"
+          : undefined,
+    });
+
+  // The authored candidate: the map-bound template these draft actors lower
+  // to. It is what the native runtime executes for the verdict below and,
+  // unchanged, what is saved — so the validation and the document agree.
+  const lower = () => {
+    const stamped = stamp();
+    const lowered = lowerCollisionDraftCandidate({
+      name: displayName,
+      appVersion: COLLISION_GENERATOR,
+      actors: stamped.actors,
+      map,
+      durationS: template.durationSeconds,
+      environmentPreset: template.defaultEnvironment,
+      notes,
+      scenarioIntention: stamped.scenarioIntention,
+      extensions: {
+        [COLLISION_GENERATOR_EXTENSION]: {
+          generator: COLLISION_GENERATOR,
+          family: args.family,
+          scenarioIntention: stamped.scenarioIntention,
+          scenarioMetadata: stamped.scenarioMetadata,
+          plannedOutcome: FAMILY_ESMINI_OUTCOME[args.family],
+        },
+      },
+    });
+    return { lowered, outcome: stamped.scenarioIntention.outcome };
+  };
+  let { lowered, outcome } = lower();
+
+  // Authoritative validation on the ACTUAL assembled candidate (the document
+  // that will be persisted), not the in-loop proxy, judged against the
+  // outcome its stamped scenario intention authors. Carries the Tier-1
   // auto-repair record so the agent + panel can show what was tried.
   //
   // Pedestrian-crossing carries an absolute accept window so the
   // `collision_occurred` check accepts any contact in `[min,max]` (instead
   // of the relative ±tolerance) — the planner solves the walker hold to the
-  // template ideal, but joint-gap arc-length and runtime snapping shift the
+  // template ideal, but joint-gap arc-length and road snapping shift the
   // real contact a second or two either way, all of which is a legitimate
   // ped crossing. Other families leave this undefined (legacy behavior).
   const acceptWindowS =
@@ -498,11 +540,14 @@ export async function buildCollisionScenarioDraft(
     : null;
   let validation: ScenarioValidationReport = validateCollisionDraft({
     family: args.family,
+    outcome,
     actors,
+    map,
+    environmentPreset: template.defaultEnvironment,
+    lowered,
     intendedLocation,
     conflict: conflictHint,
     durationS: template.durationSeconds,
-    fixedDeltaS: validationFixedDeltaS,
   });
 
   // ── Tier-2 deterministic auto-repair: pedestrian-crossing timing solve ──
@@ -512,8 +557,8 @@ export async function buildCollisionScenarioDraft(
   // timing (subject reaches the crossing a fraction of a second off the
   // walker's hardcoded step-off) survives the whole speed grid. Re-time
   // the walker so it reaches the crossing centre exactly when the subject
-  // does, then re-validate. We adopt the re-timed walker ONLY if the
-  // authoritative report flips to pass — the solver bails (null) on
+  // does, then re-execute. We adopt the re-timed walker ONLY if the
+  // authoritative native report flips to pass — the solver bails (null) on
   // geometry/region misses, which then fall through to the LLM revise
   // loop instead of being papered over. Repaired drafts pass but are
   // flagged for review since the timing was machine-derived.
@@ -534,16 +579,21 @@ export async function buildCollisionScenarioDraft(
       if (solved) {
         const previousWaypoints = walkerActor.timed_waypoints;
         walkerActor.timed_waypoints = solved.waypoints;
+        const relowered = lower();
         const reprobe = validateCollisionDraft({
           family: args.family,
+          outcome: relowered.outcome,
           actors,
+          map,
+          environmentPreset: template.defaultEnvironment,
+          lowered: relowered.lowered,
           intendedLocation,
           conflict: conflictHint,
           durationS: template.durationSeconds,
-          fixedDeltaS: validationFixedDeltaS,
         });
         if (reprobe.verdict === "pass") {
           validation = reprobe;
+          ({ lowered, outcome } = relowered);
           tier2Repaired = true;
           repairStrategies.push(
             `tier2: pedestrian timing solve (hold ${solved.previousHoldS.toFixed(
@@ -554,7 +604,7 @@ export async function buildCollisionScenarioDraft(
           repairSucceeded = true;
         } else {
           // Re-timing didn't fix it (e.g. region miss). Revert so the
-          // persisted draft + report stay consistent with the failure
+          // persisted document + report stay consistent with the failure
           // we surface to the agent.
           walkerActor.timed_waypoints = previousWaypoints;
         }
@@ -607,128 +657,17 @@ export async function buildCollisionScenarioDraft(
           validation.reasons[0] ?? "see report"
         }`;
 
-  const geometryContext = [
-    args.geometry.documentSubtype,
-    ...args.geometry.scenarioTags,
-  ].join(" ");
-  const subjectActorId = plannedSubjectActor(actors)?.id;
-  const stamped = stampCollisionGeneratedOutput({
-    generator: "simforge.collision_scenario_builder.v1",
-    seed: 0,
-    family: args.family,
-    actors,
-    principalActorIds: new Set(
-      actors
-        .filter((actor) => actor.id !== subjectActorId)
-        .map((actor) => actor.id),
-    ),
-    plannedOutcome: FAMILY_ESMINI_OUTCOME[args.family],
-    npcVehicleType: args.npcVehicleType ?? null,
-    weather: `${template.defaultEnvironment.weather} ${template.defaultEnvironment.roadSurface}`,
-    environmentPreset: template.defaultEnvironment,
-    occlusionSubtype: /occlu|bus stop|parking|delivery/i.test(geometryContext)
-      ? geometryContext
-      : null,
-    signalized: /signalized|traffic light/i.test(geometryContext),
-    contextHint:
-      args.family === "pedestrian_crossing" &&
-      /mid.?block|non.?junction/i.test(geometryContext)
-        ? "mid_block"
-        : undefined,
+  // Persist the validated candidate as a scenario document: the same
+  // template the native runtime just executed, described for the panel.
+  const document = await createScenarioDocument(args.context, {
+    title: displayName,
+    description: notesWithValidation,
+    schemaVersion: SCENARIO_SCHEMA_VERSION,
+    content: lowered.template,
+    mapVersionId: map.mapVersionId,
+    datasetId: dataset.id,
+    authoringQualityId: DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
   });
-
-  // Hand-build the persisted draft. We don't go through
-  // `buildInitialScenarioDraft` because this generator already has the full
-  // validated actor list and persists it directly.
-  const normalized = normalizeScenarioDraft(
-    {
-      map_name: mapReference.mapName ?? backendMapName,
-      actors: stamped.actors,
-      selectedActorId: stamped.actors[0]?.id ?? null,
-      duration_seconds: template.durationSeconds,
-    },
-    {
-      fallbackMapName: mapReference.mapName ?? backendMapName,
-      scenarioId,
-      mapAssetId: mapReference.mapAssetId,
-      backendMapName: mapReference.backendMapName ?? backendMapName,
-      createdAt: now,
-      updatedAt: now,
-    },
-  );
-
-  // Declared validation intent: the esmini-in-the-loop verdict + repair read
-  // this so they reflect the family's planned outcome (a contact at the
-  // validated time-of-impact) instead of a hardcoded assumption.
-  const conflictTimeS =
-    (typeof validation.collision?.timeS === "number"
-      ? validation.collision.timeS
-      : null) ??
-    template.collisionTimeWindow?.ideal ??
-    TARGET_COLLISION_TIME_S;
-
-  const persisted = toPersistedScenarioSetupDraft(
-    {
-      ...normalized,
-      metadata: {
-        ...normalized.metadata,
-        notes: notesWithValidation,
-        validationIntent: {
-          expectedOutcome: FAMILY_ESMINI_OUTCOME[args.family],
-          conflictTimeS,
-        },
-        scenarioIntention: stamped.scenarioIntention,
-        scenarioMetadata: stamped.scenarioMetadata,
-      },
-    },
-    null,
-    {
-      fallbackMapName: mapReference.mapName ?? backendMapName,
-      scenarioId,
-      mapAssetId: mapReference.mapAssetId,
-      backendMapName: mapReference.backendMapName ?? backendMapName,
-      createdAt: now,
-      updatedAt: now,
-    },
-  );
-
-  await execute(
-    `
-      INSERT INTO scenarios (
-        id,
-        workspace_id,
-        map_asset_id,
-        display_name,
-        status,
-        dataset_id,
-        draft_json,
-        created_by_user_id,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        :id,
-        :workspace_id,
-        :map_asset_id,
-        :display_name,
-        'draft',
-        :dataset_id,
-        :draft_json::jsonb,
-        :created_by_user_id,
-        NOW(),
-        NOW()
-      )
-    `,
-    {
-      id: scenarioId,
-      workspace_id: args.context.workspaceId,
-      map_asset_id: mapReference.mapAssetId,
-      display_name: displayName,
-      dataset_id: dataset.id,
-      draft_json: persisted,
-      created_by_user_id: args.context.userId,
-    },
-  );
 
   // Relative by default (resolves against whatever origin serves the link).
   // Optional override: when running locally against a deployed-env S3
@@ -736,9 +675,9 @@ export async function buildCollisionScenarioDraft(
   // deployed origin so generated drafts open there instead of localhost
   // (a localhost origin would direct-fetch cross-origin S3 and CORS-fail
   // on artifact loads). Unset in deployed environments → unchanged.
-  const relativeEditorHref = buildDashboardScenarioEditorHref({
-    scenarioId,
+  const relativeEditorHref = buildDashboardEditorHref({
     datasetId: dataset.id,
+    documentId: document.id,
   });
   const editorBaseUrl = process.env.SCENARIO_EDITOR_BASE_URL?.trim();
   let editorHref = relativeEditorHref;
@@ -754,7 +693,7 @@ export async function buildCollisionScenarioDraft(
   }
 
   return {
-    scenarioId,
+    scenarioId: document.id,
     datasetId: dataset.id,
     mapAssetId: args.mapAsset.map_asset_id,
     documentId: args.documentId,
@@ -763,7 +702,7 @@ export async function buildCollisionScenarioDraft(
     editorHref,
     family: args.family,
     aggressiveness,
-    actorCount: stamped.actors.length,
+    actorCount: actors.length,
     description: notesWithValidation,
     validation,
     plannerDebug: plannerTrace,

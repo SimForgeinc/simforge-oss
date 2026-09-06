@@ -2,16 +2,16 @@ import {
   TARGET_COLLISION_TIME_S,
   type CollisionFamilyId,
 } from "@simforge-oss/studio-shared";
-import {
-  SIMULATION_DEFAULTS,
-} from "@simforge-oss/scenario/contracts";
 import type { GeometryReport } from "@/app/lib/maps/search/server/inspect-location-geometry";
 import {
   loadCollisionLaneGraph,
   planCollisionRoutesWithGraph,
   type PlanCollisionRoutesResult,
 } from "@/app/lib/llm/scenario-generation/collision-route-planner";
-import { validateCollisionDraft } from "@/app/lib/llm/scenario-generation/validation/draft-validator";
+import {
+  validateCollisionDraft,
+  type CollisionDraftMapBinding,
+} from "@/app/lib/llm/scenario-generation/validation/draft-validator";
 import {
   planRearEndTopology,
   planRightTurnHookGated,
@@ -35,18 +35,19 @@ import {
 
 /** Cap on the number of proximity-ranked pedestrian-crossing sites the builder
  *  probes in the topological-reachability re-pick loop. Each probed site costs
- *  exactly one snap + one kinematic validate, so this bounds the per-eval cost
- *  to ≤ MAX_PED_SITE_ATTEMPTS validations for the ped path. */
+ *  exactly one snap + one native validate, so this bounds the per-eval cost
+ *  to ≤ MAX_PED_SITE_ATTEMPTS native runs for the ped path. */
 const MAX_PED_SITE_ATTEMPTS = 6;
 
 type CollisionTemplateForPlanning = {
   durationSeconds: number;
+  /** The environment preset every probe executes under. */
+  defaultEnvironment: unknown;
   collisionTimeWindow?: { min: number; max: number; ideal: number } | null;
 };
 
 export interface CollisionPlanningResult {
   intendedLocation: { x: number; y: number } | null;
-  validationFixedDeltaS: number;
   plannerResult: PlanCollisionRoutesResult | null;
   plannerError: string | null;
   pedTopo: PedTopoResult | null;
@@ -61,7 +62,8 @@ export interface CollisionPlanningResult {
 export async function planCollisionScenarioDraft(input: {
   family: CollisionFamilyId;
   mapAssetId: string;
-  backendMapName: string;
+  /** The immutable map every probe executes on. */
+  map: CollisionDraftMapBinding;
   geometry: GeometryReport;
   approachGeometries: readonly GeometryReport[];
   template: CollisionTemplateForPlanning;
@@ -71,11 +73,10 @@ export async function planCollisionScenarioDraft(input: {
 }): Promise<CollisionPlanningResult> {
   // ── Tier-1 deterministic auto-repair ──────────────────────────────────
   //
-  // Re-plan over a small NPC/subject speed grid and keep the first plan our
-  // in-process kinematic simulator confirms produces the requested
-  // collision near the location. The lane graph is loaded ONCE (S3) and
-  // every attempt is a sync re-plan + in-memory replay — no extra DB rows,
-  // no LLM round trip. The baseline plan is retained as the fallback to
+  // Re-plan over a small NPC/subject speed grid and keep the first plan the
+  // native runtime confirms produces the requested collision near the
+  // location. The lane graph is loaded ONCE (S3) and every attempt is a sync
+  // re-plan + native run — no extra DB rows, no LLM round trip. The baseline plan is retained as the fallback to
   // assemble even if no tune passes (a populated, if imperfect, draft is
   // more useful — and more diagnosable — than none).
   // intendedLocation seeds from the geojson document the user clicked
@@ -87,7 +88,6 @@ export async function planCollisionScenarioDraft(input: {
   let intendedLocation = input.geometry.documentCenter
     ? { x: input.geometry.documentCenter.x, y: input.geometry.documentCenter.y }
     : null;
-  const validationFixedDeltaS = SIMULATION_DEFAULTS.fixedDeltaSeconds;
   const SPEED_TUNE_GRID: ReadonlyArray<{ npc: number; subject: number; label: string }> = [
     { npc: 1, subject: 1, label: "baseline" },
     { npc: 1.25, subject: 1, label: "npc speed +25%" },
@@ -166,9 +166,13 @@ export async function planCollisionScenarioDraft(input: {
           const c = topologyJunctionCentroid(topology, gated.subjectGate.junctionId);
           if (c) intendedLocation = c.center;
         }
+        // A planning probe proves the planned contact converges: always `collision`.
         const probe = validateCollisionDraft({
           family: input.family,
+          outcome: "collision",
           actors: plannedCollisionToDraftActors(candidate),
+          map: input.map,
+          environmentPreset: input.template.defaultEnvironment,
           intendedLocation,
           conflict: {
             conflictPoint: gated.conflictPoint,
@@ -183,7 +187,6 @@ export async function planCollisionScenarioDraft(input: {
             // dispatch (it has its own topology block above).
           },
           durationS: input.template.durationSeconds,
-          fixedDeltaS: validationFixedDeltaS,
         });
         if (probe.verdict === "pass") {
           plannerResult = candidate;
@@ -224,7 +227,7 @@ export async function planCollisionScenarioDraft(input: {
 
   // Read the accepted semantic execution road network ONCE. The pedestrian-crossing re-pick
   // probe (below) snaps each candidate site onto these segments before its
-  // kinematic probe, and the authoritative snap further down reuses the same
+  // native probe, and the authoritative snap further down reuses the same
   // segments, without composing a central runtime bundle.
   const runtimeRoadSegments =
     (await readSemanticRoadSegmentsByMapAssetId(input.mapAssetId)) ?? [];
@@ -257,8 +260,8 @@ export async function planCollisionScenarioDraft(input: {
 
       // Topological-reachability gate. The selector returns the proximity-
       // ranked viable sites (nearest-to-anchor first). We try them in order
-      // and accept the FIRST site whose snapped draft passes a kinematic
-      // probe (subject makes contact with the walker inside the accept window).
+      // and accept the FIRST site whose snapped draft passes a native probe
+      // (subject makes contact with the walker inside the accept window).
       // A site the subject can't actually reach fails the probe → we skip it and
       // try the next-nearest. Reachability thus takes precedence over upstream
       // room / run-up timing / anchor proximity: we never adopt a placement
@@ -276,7 +279,7 @@ export async function planCollisionScenarioDraft(input: {
       );
 
       // Probe a single site: assemble its ped draft, snap onto the runtime
-      // roads, and run the kinematic validator. Exactly one validate per
+      // roads, and run the native validator. Exactly one validate per
       // attempted site (NO Tier-1 speed-tune grid here). Confined to the ped
       // path. A snap that throws `location_off_runtime_road` means this site is
       // unreachable on the runtime network → treat as a probe FAIL (skip it).
@@ -309,7 +312,10 @@ export async function planCollisionScenarioDraft(input: {
         }
         const probe = validateCollisionDraft({
           family: input.family,
+          outcome: "collision",
           actors: probeActors,
+          map: input.map,
+          environmentPreset: input.template.defaultEnvironment,
           intendedLocation: probeIntendedLocation,
           conflict: {
             conflictPoint: plan.collision.conflictPoint,
@@ -318,7 +324,6 @@ export async function planCollisionScenarioDraft(input: {
             acceptWindowS: acceptWin,
           },
           durationS: input.template.durationSeconds,
-          fixedDeltaS: validationFixedDeltaS,
         });
         return { verdict: probe.verdict === "pass" ? "pass" : "fail" };
       };
@@ -395,7 +400,10 @@ export async function planCollisionScenarioDraft(input: {
       if (!plannerResult) plannerResult = candidate; // baseline fallback
       const probe = validateCollisionDraft({
         family: input.family,
+        outcome: "collision",
         actors: plannedCollisionToDraftActors(candidate),
+        map: input.map,
+        environmentPreset: input.template.defaultEnvironment,
         intendedLocation,
         conflict: {
           conflictPoint: candidate.collision.conflictPoint,
@@ -408,7 +416,6 @@ export async function planCollisionScenarioDraft(input: {
             input.family === "pedestrian_crossing" ? acceptWin : undefined,
         },
         durationS: input.template.durationSeconds,
-        fixedDeltaS: validationFixedDeltaS,
       });
       if (tune.label !== "baseline") repairStrategies.push(tune.label);
       if (probe.verdict === "pass") {
@@ -424,7 +431,6 @@ export async function planCollisionScenarioDraft(input: {
 
   return {
     intendedLocation,
-    validationFixedDeltaS,
     plannerResult,
     plannerError,
     pedTopo,

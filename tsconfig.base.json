@@ -19,6 +19,7 @@
       "@simforge-oss/compiler/node": ["./packages/compiler/src/node.ts"],
       "@simforge-oss/editor": ["./packages/editor/src/index.ts"],
       "@simforge-oss/engine": ["./packages/engine/src/index.ts"],
+      "@simforge-oss/engine/node": ["./packages/engine/src/node.ts"],
       "@simforge-oss/engine/scene-state": ["./packages/engine/src/scene-state/index.ts"],
       "@simforge-oss/evaluation": ["./packages/evaluation/src/index.ts"],
       "@simforge-oss/maps": ["./packages/maps/src/index.ts"],

@@ -13,7 +13,7 @@ use simforge_compiler::ambient::{
 use simforge_compiler::map_signals::{
     build_site_signal_plan, resolve_site_signal_program, SiteSignalRef,
 };
-use simforge_compiler::materialize::{instantiate, MaterializeOptions, SiteSelection};
+use simforge_compiler::materialize::{instantiate, MaterializeOptions, Observation, SiteSelection};
 use simforge_compiler::sites::{match_on_map, SiteMatchOptions};
 use simforge_compiler::situation::{
     apply_situation_transaction, compare_situation, compile_situation, parse_situation,
@@ -22,7 +22,10 @@ use simforge_compiler::situation::{
     VerifiedStaticGeometryBinding,
 };
 use simforge_compiler::template::SignalApproach;
-use simforge_compiler::{parse_template, CompileError, MapBundle, MapBundleSources, MatchedSite};
+use simforge_compiler::{
+    parse_template, ActorCatalog, CompileError, ExternalCatalogEntry, MapBundle, MapBundleSources,
+    MatchedSite,
+};
 use simforge_core::engine::ActionOverride;
 use simforge_core::map::TopologyIndex;
 use simforge_core::rng::Seed;
@@ -212,7 +215,7 @@ fn seed_string(seed: Option<Seed>) -> Option<String> {
     })
 }
 
-/// `{drawIndex?, seed?, variant?, ambient?, ambientSettleSeconds?}`.
+/// `{drawIndex?, seed?, variant?, ambient?, ambientSettleSeconds?, catalogEntries?, observations?}`.
 #[derive(Default, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct MaterializeJson {
@@ -221,6 +224,10 @@ struct MaterializeJson {
     variant: Option<VariantJson>,
     ambient: Option<AmbientTrafficProfile>,
     ambient_settle_seconds: Option<f64>,
+    #[serde(default)]
+    catalog_entries: Vec<ExternalCatalogEntry>,
+    #[serde(default)]
+    observations: Vec<Observation>,
 }
 
 /// Wire form of `CatalogVariantApplication` (the compiler type is Serialize-only).
@@ -254,6 +261,9 @@ fn materialize_options(text: Option<&str>, seed: Option<Seed>) -> Result<Materia
         Some(text) => json_arg("materialize options", text)?,
     };
     let mut options = MaterializeOptions::new();
+    options.catalog =
+        ActorCatalog::with_external(&o.catalog_entries).map_err(BindingError::argument)?;
+    options.observations = o.observations;
     if let Some(d) = o.draw_index {
         options.draw_index = d;
     }

@@ -2,7 +2,6 @@ export {
   NATIVE_RUNNER_BINARY,
   locateNativeRunner,
   nativeRunnerCandidates,
-  nativeRuntimeRoot,
   probeNativeRuntime,
 } from "./native-runtime";
 export {
@@ -14,3 +13,37 @@ export {
   waitForLocalHostReady,
   type LocalHostState,
 } from "./local-host-state";
+export {
+  COLLISION_DRAFT_INTENTION_EXTENSION,
+  COLLISION_DRAFT_ROLE_EXTENSION,
+  CollisionDraftCandidateError,
+  lowerCollisionDraftCandidate,
+  type CollisionDraftActor,
+  type CollisionDraftBehaviorClip,
+  type CollisionDraftBehaviorProgram,
+  type CollisionDraftConversionLoss,
+  type CollisionDraftMapBinding,
+  type CollisionDraftPoint,
+  type CollisionDraftReactionProfile,
+  type CollisionDraftRoadAnchor,
+  type CollisionDraftSensor,
+  type CollisionDraftTimedPoint,
+  type CollisionDraftWorldAnchor,
+  type LowerCollisionDraftCandidateInput,
+  type LoweredCollisionDraft,
+} from "./collision-draft-lowering";
+export {
+  COLLISION_DRAFT_VALIDATION_ENGINE,
+  classifyContactTime,
+  validateCollisionDraft,
+  type CollisionConflictHint,
+  type CollisionDraftActorDiagnostic,
+  type CollisionDraftCheck,
+  type CollisionDraftCheckId,
+  type CollisionDraftOutcome,
+  type CollisionDraftFrame,
+  type CollisionDraftLint,
+  type CollisionDraftLintViolation,
+  type CollisionDraftValidationReport,
+  type ValidateCollisionDraftArgs,
+} from "./collision-draft";

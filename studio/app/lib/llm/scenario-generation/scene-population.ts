@@ -15,6 +15,7 @@
  * Default counts are 0 — a request with no population is byte-identical to the
  * primary-only scenario.
  */
+import { getEntry } from "@simforge-oss/asset-catalog/metadata";
 import { plannedSubjectActor, walkerBlueprintAt } from "@simforge-oss/studio-shared";
 import type {
   ScenarioEditorActorDraft,
@@ -23,9 +24,22 @@ import type {
   Vec2,
 } from "@simforge-oss/maps/topology";
 import type { RuntimeRoadSegment } from "@/app/lib/llm/scenario-generation/runtime-road-snap";
+import {
+  CATALOG_WALKER_ADULTS,
+  CATALOG_WALKER_CHILDREN,
+} from "@/app/lib/llm/scenario-generation/walker-profile";
 import { withWorldAnchor, worldAnchorAtFraction } from "@/app/lib/scenario-editor/batch-scenario-generator/routing";
 import type { ParkingLaneRef } from "@/app/lib/maps/topology/parking-lanes";
 import { authorGeneratedActor } from "@/app/lib/scenario-generation/generated-actor-behavior";
+
+/** The catalog model's own body footprint (m) — what the native runtime places. */
+function footprintOf(catalogId: string): { length: number; width: number } {
+  const dims = getEntry(catalogId).dims;
+  return { length: dims.l, width: dims.w };
+}
+
+/** Background pedestrians draw from the whole catalog: a mixed street is the realistic one. */
+const BACKGROUND_WALKER_BLUEPRINTS: readonly string[] = [...CATALOG_WALKER_ADULTS, ...CATALOG_WALKER_CHILDREN];
 
 export interface ScenePopulation {
   /** Background autopilot vehicles on drivable lanes. */
@@ -215,22 +229,21 @@ export interface PopulateSceneInput {
 }
 
 const DRIVABLE_LANE_TYPES = new Set(["driving", "bidirectional"]);
-// Image-native ids (UE5.5/0.10 live probe 2026-07-09): the old 0.9 list ALL
-// substituted to lincoln.mkz, so background traffic rendered near-uniform (dib:
-// "use all car models for variety and realism"). Weighted toward regular cars,
-// with the taxi + police charger as occasional street realism.
+// Exact catalog identity (the native lowering executes the catalog model a
+// draft names). Weighted toward regular cars, with the taxi + police cruiser as
+// occasional street realism.
 const VEHICLE_BLUEPRINTS = [
-  "vehicle.lincoln.mkz",
-  "vehicle.dodge.charger",
-  "vehicle.mini.cooper",
-  "vehicle.nissan.patrol",
-  "vehicle.taxi.ford",
-  "vehicle.lincoln.mkz",
-  "vehicle.dodge.charger",
-  "vehicle.mini.cooper",
-  "vehicle.dodgecop.charger",
+  "vehicle.sedan",
+  "vehicle.ford_mustang",
+  "vehicle.hatchback",
+  "vehicle.suv",
+  "vehicle.taxi",
+  "vehicle.sedan",
+  "vehicle.ford_mustang",
+  "vehicle.hatchback",
+  "vehicle.police_cruiser",
 ];
-const CYCLIST_BLUEPRINT = "vehicle.bh.crossbike";
+const CYCLIST_BLUEPRINT = "vehicle.bicycle";
 const WALK_SPEED_MPS = 1.3;
 const DEFAULT_KEEP_OUT_M = 12;
 const DEFAULT_MAX_RADIUS_M = 70;
@@ -311,35 +324,35 @@ const PARKED_MIN_LANE_LENGTH_M = 6;
 // subject's lane) and within PARKED_NEAR_PATH_M (still at the adjacent curb, in view).
 const PARKED_NEAR_PATH_M = 18;
 const PARKED_COLOR = "90,96,104";
-// Image-native curb mix (cars + SUV + an occasional van; no taxi/police parked).
+// Curb mix (cars + SUV + an occasional van; no taxi/police parked).
 const PARKED_BLUEPRINTS = [
-  "vehicle.lincoln.mkz",
-  "vehicle.dodge.charger",
-  "vehicle.mini.cooper",
-  "vehicle.nissan.patrol",
-  "vehicle.lincoln.mkz",
-  "vehicle.mini.cooper",
-  "vehicle.sprinter.mercedes",
+  "vehicle.sedan",
+  "vehicle.ford_mustang",
+  "vehicle.hatchback",
+  "vehicle.suv",
+  "vehicle.sedan",
+  "vehicle.hatchback",
+  "vehicle.delivery_van",
 ];
 
 // ── Sightline van occluder (P2, dib 2026-07-24 review) ──────────────────────
-// The Sprinter panel van: the boxiest / tallest (~2.4 m) spawn-verified UE5 body
-// under truck size — the SAME body the collision generator's "medium" occluder
-// class uses (batch-collision-generator MEDIUM_OCCLUDER_BLUEPRINTS). A van reads
-// as a real curb obstruction and, being ~5.9 m long, actually blocks the subject's
-// low sightline to a ped stepping out from behind it (a sedan is too short/low).
-export const VAN_OCCLUDER_BLUEPRINT = "vehicle.sprinter.mercedes";
-// Sprinter footprint (m) — mirrors the collision generator's OCCLUDER_FOOTPRINT_M
-// entry so both occluder paths scale placement off the same body dimensions.
-// Exported (with the blueprint) for the A2 occluder↔ped-path clearance pass in
-// batch-collision-generator (dib 2026-07-26 review: peds stuck behind the van).
-export const VAN_OCCLUDER_FOOTPRINT = { length: 5.9, width: 2.0 } as const;
-// CAR-class sightline body (P-1, dib 2026-07-27): the Patrol SUV — the tallest
-// image-native car-class body, so it still blocks the subject's low sightline while
-// its smaller footprint fits narrow-street sites the van cannot (Munich ask:
-// "a regular vehicle is better than no occluder at all").
-export const CAR_OCCLUDER_BLUEPRINT = "vehicle.nissan.patrol";
-export const CAR_OCCLUDER_FOOTPRINT = { length: 4.7, width: 1.9 } as const;
+// The delivery van: the boxiest / tallest body under truck size — the SAME body
+// the collision generator's "medium" occluder class uses
+// (batch-collision-generator MEDIUM_OCCLUDER_BLUEPRINTS). A van reads as a real
+// curb obstruction and, being ~6 m long, actually blocks the subject's low
+// sightline to a ped stepping out from behind it (a sedan is too short/low).
+export const VAN_OCCLUDER_BLUEPRINT = "vehicle.delivery_van";
+// The catalog model's own footprint (m), so both occluder paths scale placement
+// off the body that executes. Exported (with the blueprint) for the A2
+// occluder↔ped-path clearance pass in batch-collision-generator (dib 2026-07-26
+// review: peds stuck behind the van).
+export const VAN_OCCLUDER_FOOTPRINT = footprintOf(VAN_OCCLUDER_BLUEPRINT);
+// CAR-class sightline body (P-1, dib 2026-07-27): the SUV — the tallest car-class
+// body, so it still blocks the subject's low sightline while its smaller footprint
+// fits narrow-street sites the van cannot (Munich ask: "a regular vehicle is
+// better than no occluder at all").
+export const CAR_OCCLUDER_BLUEPRINT = "vehicle.suv";
+export const CAR_OCCLUDER_FOOTPRINT = footprintOf(CAR_OCCLUDER_BLUEPRINT);
 const OCCLUDER_COLOR = "55,58,64"; // muted "parked" body (matches the medocc occluder)
 // Nudge the van off the sidewalk toward the road (into the parking strip) so it
 // actually straddles the subject→ped sightline; capped per-site + guarded below.
@@ -403,9 +416,9 @@ function centerlinePoint(centerline: ReadonlyArray<{ x: number; y: number }>, fr
 // slightly collides with the parked cars right at spawn"), the occluder, and
 // each other.
 const VEHICLE_FOOTPRINT_M: Readonly<Record<string, { length: number; width: number }>> = {
-  "vehicle.sprinter.mercedes": VAN_OCCLUDER_FOOTPRINT,
-  "vehicle.nissan.patrol": CAR_OCCLUDER_FOOTPRINT,
-  "vehicle.bh.crossbike": { length: 1.9, width: 0.6 },
+  [VAN_OCCLUDER_BLUEPRINT]: VAN_OCCLUDER_FOOTPRINT,
+  [CAR_OCCLUDER_BLUEPRINT]: CAR_OCCLUDER_FOOTPRINT,
+  [CYCLIST_BLUEPRINT]: footprintOf(CYCLIST_BLUEPRINT),
 };
 const DEFAULT_VEHICLE_FOOTPRINT_M = { length: 4.7, width: 1.9 } as const;
 /** Clearance margin added around every body pair (mirrors the subject's swept slop). */
@@ -1162,7 +1175,7 @@ export function populateBackgroundScene(input: PopulateSceneInput): ScenarioEdit
     // is every available walker, children included — a mixed pavement is the
     // realistic one, and these are background dressing, never the conflict
     // actor.
-    const blueprint = walkerBlueprintAt(input.seed + pedMade);
+    const blueprint = walkerBlueprintAt(input.seed + pedMade, BACKGROUND_WALKER_BLUEPRINTS);
     placed.push(pedestrianActor(`bg-ped-${input.seed}-${pedMade}`, `Background Pedestrian ${pedMade + 1}`, blueprint, start, end));
     placedPoints.push(start);
     placedPoints.push(end); // register the WHOLE path so later actors avoid the walk, not just the curb

@@ -147,12 +147,15 @@ path; it never probes a source tree.
 The renderer's star/Moon plates (`starmap_2020_8k.skytex`,
 `moon_lroc_4k.skytex`, gitignored derivatives built by
 `renderer/tools/prepare_sky_assets.py` from the NASA sources in
-`renderer/render-core/assets/sky/SOURCES.json`) resolve from
-`$SIMFORGE_SKY_ASSETS`, then `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky`, then
-the source checkout's `renderer/render-core/assets/sky`. The chosen directory
-must hold `SOURCES.json`; each plate's size and sha256 are checked against it
-and any mismatch or absence fails `SceneApp` construction (service prewarm,
-`EmbeddedRenderer(...)`, job) instead of rendering a starless sky.
+`renderer/render-core/assets/sky/SOURCES.json`) resolve from exactly one
+directory: `$SIMFORGE_SKY_ASSETS`, else `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky`,
+else the installed runtime the running binary belongs to (`<root>/bin/<exe>`
+beside `bin/runtime-manifest.json`, plates at `<root>/share/sky`), else the
+source checkout's `renderer/render-core/assets/sky`. The selection is final:
+the directory must hold `SOURCES.json`, each plate's size and sha256 are
+checked against it, and any mismatch or absence fails `SceneApp` construction
+(service prewarm, `EmbeddedRenderer(...)`, job) instead of falling back to
+another directory or rendering a starless sky.
 
 **Runner workload `simforge.render-bundle/v1`** — `python -m simforge_native
 job --params P --out-dir D [--resume C]` renders a scene-state stream through

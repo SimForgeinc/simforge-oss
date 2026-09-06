@@ -156,6 +156,7 @@ export interface MaterializeResult {
 
 /** Options accepted by `compileTemplateWith`; serialised as the native `optionsJson`. */
 export interface MaterializeOptions {
+  /** Diagnostic conditions; unsupported or lossy lowering is always rejected. */
   readonly observations?: readonly { readonly id: string; readonly condition: V2Condition }[];
   readonly drawIndex?: number;
   /** Overrides the derived per-cell seed. `--seed` on the command line. */
@@ -172,8 +173,6 @@ export interface MaterializeOptions {
   readonly ambientSettleSeconds?: number | undefined;
   /** Validated user-imported asset metadata. Entries cannot shadow built-ins. */
   readonly catalogEntries?: readonly CatalogEntry[] | undefined;
-  /** Reject observations the engine cannot evaluate instead of noting them. */
-  readonly strictObservations?: boolean | undefined;
 }
 
 /** One compiled instance: the executable scenario handle plus its evidence. */

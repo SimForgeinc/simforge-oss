@@ -23,13 +23,14 @@ export function buildRevisionHint(
 
   // Priority: an unresolvable route is the most fundamental; a region
   // miss is a placement problem; a plain conflict miss (post auto-repair)
-  // is a conflict-shape problem.
+  // is a conflict-shape problem; a contact in a non-contact scene is a
+  // severity problem.
   if (failed("route_resolvable")) {
     return "No drivable route resolved for a principal actor at this location. Re-propose with a different `documentId` — a junction or street with connected drivable lanes. Adjusting speed, family, or aggressiveness will NOT help.";
   }
-  const region = failed("collision_in_region");
+  const region = failed("collision_in_region") ?? failed("conflict_in_region");
   if (region) {
-    return `The collision landed ${
+    return `The ${validation.outcome === "collision" ? "collision" : "conflict"} landed ${
       region.measuredValue != null ? `${region.measuredValue.toFixed(0)} m ` : ""
     }away from the requested location${
       region.threshold != null ? ` (max ${region.threshold} m)` : ""
@@ -40,8 +41,16 @@ export function buildRevisionHint(
       ? "Ego and the pedestrian still miss after deterministic timing auto-repair — the ego most likely does not drive through this crosswalk. Re-propose at a different crosswalk `documentId` where an approach street feeds straight through it, or pass a simpler `approachStreetIds`."
       : "The two actors never make contact even after speed auto-repair — their planned paths don't intersect. Re-propose with a different `npcVehicleType` or `aggressivenessLabel`, or a different approach (`approachStreetIds`), so the routes actually cross.";
   }
+  if (failed("contact_absent")) {
+    return `The ego made contact in a ${validation.outcome.replaceAll("_", " ")} scenario — the conflict is too severe to resolve without a collision. Re-propose with a lower \`aggressivenessLabel\` or a wider gap (different \`npcVehicleType\` or approach) so the ego can yield in time.`;
+  }
+  if (failed("conflict_approached")) {
+    return validation.outcome === "near_miss"
+      ? "The two actors never came close enough for a near miss — their planned paths don't really conflict. Re-propose with a tighter gap (higher `aggressivenessLabel`) or a different approach (`approachStreetIds`) so the routes actually cross."
+      : "The ego had nothing to avoid — the two actors never entered a conflict. Re-propose with a different `npcVehicleType` or `aggressivenessLabel`, or a different approach (`approachStreetIds`), so the routes actually cross.";
+  }
   return (
     validation.reasons[0] ??
-    "The drafted scenario did not produce the requested collision near the location. Revise the family, NPC aggressiveness, NPC vehicle type, or the chosen approach/anchor and call propose_scenario_draft again."
+    "The drafted scenario did not produce the requested outcome near the location. Revise the family, NPC aggressiveness, NPC vehicle type, or the chosen approach/anchor and call propose_scenario_draft again."
   );
 }

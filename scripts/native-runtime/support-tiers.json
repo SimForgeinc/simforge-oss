@@ -21,7 +21,7 @@
     },
     {
       "tier": "python-provider",
-      "description": "Python providers installed into <root>/venv from the bundled wheels by install-runtime.sh; required by every provider workload.",
+      "description": "Python providers installed into <install-root>/venv from the bundled wheels by install-runtime.sh; required by every provider workload. Writable job state is separate.",
       "requires": {
         "os": "linux",
         "arch": "x86_64",
@@ -110,7 +110,7 @@
     },
     {
       "tier": "nurec-splat-render",
-      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed.",
+      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <install-root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed.",
       "requires": {
         "cuda": ">=12",
         "torch": "CUDA build",

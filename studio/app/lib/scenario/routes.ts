@@ -32,15 +32,19 @@ export function absoluteDashboardHref(path: string): string {
 }
 
 /**
- * Legacy scenario records can identify a dataset, but their scenario ids are
- * not SimForge document ids. Route them only to the canonical v2 surface.
+ * The canonical v2 editor surface: a dataset, optionally opened on one of its
+ * documents. Legacy scenario records have no document id and route to the
+ * dataset alone.
  */
 export function buildDashboardEditorHref(input: {
   datasetId?: string | null;
+  documentId?: string | null;
 }): string {
   const params = new URLSearchParams();
   const datasetId = cleanParam(input.datasetId);
   if (datasetId) params.set("dataset", datasetId);
+  const documentId = cleanParam(input.documentId);
+  if (documentId) params.set("document", documentId);
   return `/dashboard/scenario${params.size ? `?${params}` : ""}`;
 }
 

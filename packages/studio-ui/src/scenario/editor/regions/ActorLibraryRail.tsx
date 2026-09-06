@@ -909,7 +909,9 @@ function writeStoredIds(key: string, values: readonly string[]): void {
 }
 
 const styles: Record<string, CSSProperties> = {
-  rail: { zIndex: 22, flex: "0 0 48px", width: 48, minHeight: 0, maxHeight: "100%", marginLeft: 0, display: "flex", flexDirection: "column", gap: 14, padding: "6px 6px 6px 5px", boxSizing: "border-box", overflowX: "hidden", overflowY: "auto", overscrollBehaviorY: "contain", scrollbarWidth: "thin", scrollbarColor: "rgba(232, 224, 68, 0.38) transparent", borderRadius: "0 22px 22px 0", background: GLASS_BACKGROUND, border: GLASS_BORDER, borderLeft: 0, boxShadow: "0 18px 48px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.14)", backdropFilter: GLASS_BLUR, WebkitBackdropFilter: GLASS_BLUR, userSelect: "none", pointerEvents: "auto" },
+  // Longhands only: `railExpanded` swaps the right edge per render, and React
+  // cannot reconcile a `border` shorthand against a changing `borderRight`.
+  rail: { zIndex: 22, flex: "0 0 48px", width: 48, minHeight: 0, maxHeight: "100%", marginLeft: 0, display: "flex", flexDirection: "column", gap: 14, padding: "6px 6px 6px 5px", boxSizing: "border-box", overflowX: "hidden", overflowY: "auto", overscrollBehaviorY: "contain", scrollbarWidth: "thin", scrollbarColor: "rgba(232, 224, 68, 0.38) transparent", borderRadius: "0 22px 22px 0", background: GLASS_BACKGROUND, borderTop: GLASS_BORDER, borderRight: GLASS_BORDER, borderBottom: GLASS_BORDER, borderLeft: 0, boxShadow: "0 18px 48px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.14)", backdropFilter: GLASS_BLUR, WebkitBackdropFilter: GLASS_BLUR, userSelect: "none", pointerEvents: "auto" },
   // Groups, not a run of eleven glyphs: actors, then props, then the scene
   // itself. The gap plus a hairline is the whole separation — a labelled header
   // would not fit 48px and a tooltip already names each tool.
@@ -927,7 +929,7 @@ const styles: Record<string, CSSProperties> = {
 
   // Width is owned by `usePanelEdgeResize`, applied on the element: the author drags this panel's
   // right edge, and 540 — its only width before that — is now the ceiling.
-  panel: { zIndex: 21, flex: "0 0 auto", position: "relative", display: "flex", flexDirection: "column", minHeight: 0, boxSizing: "border-box", overflow: "hidden", borderRadius: "0 26px 26px 0", background: GLASS_PANEL_BACKGROUND, border: GLASS_BORDER, borderLeft: 0, boxShadow: "26px 24px 70px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.12)", backdropFilter: GLASS_BLUR, WebkitBackdropFilter: GLASS_BLUR, color: "#e6ebf2", pointerEvents: "auto" },
+  panel: { zIndex: 21, flex: "0 0 auto", position: "relative", display: "flex", flexDirection: "column", minHeight: 0, boxSizing: "border-box", overflow: "hidden", borderRadius: "0 26px 26px 0", background: GLASS_PANEL_BACKGROUND, borderTop: GLASS_BORDER, borderRight: GLASS_BORDER, borderBottom: GLASS_BORDER, borderLeft: 0, boxShadow: "26px 24px 70px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.12)", backdropFilter: GLASS_BLUR, WebkitBackdropFilter: GLASS_BLUR, color: "#e6ebf2", pointerEvents: "auto" },
   panelResizeHandle: { position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 30, width: 8, cursor: "col-resize", touchAction: "none", background: "transparent", border: 0, padding: 0, borderRadius: "0 26px 26px 0" },
   panelHeader: { position: "relative", flex: "0 0 auto", display: "flex", alignItems: "flex-start", gap: 11, padding: "16px 44px 12px 18px" },
   panelHeaderIcon: { flex: "0 0 auto", width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 11, border: "1px solid rgba(232,224,68,.34)", background: "rgba(232,224,68,.12)", color: "#E8E044" },
