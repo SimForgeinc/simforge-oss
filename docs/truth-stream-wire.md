@@ -40,7 +40,7 @@ No field is optional.
 | --- | --- |
 | `tick` | Authoritative engine tick index. It includes engine warm-up in the same way as `EngineTickObservation.tickIndex`; a subscription does not renumber it. |
 | `timeSec` | Authoritative simulation time in seconds for `tick`, quantized to six decimal places. No wall-clock value is emitted. |
-| `scene` | One unmodified `scene-state.v1` `SceneFrame`: `{tick, t, actors}`. `scene.tick === tick` and `scene.t === timeSec`. |
+| `scene` | One unmodified `simforge.scene-state.v1` `SceneFrame`: `{tick, t, actors}`. `scene.tick === tick` and `scene.t === timeSec`. |
 | `signals` | Full `signalSnapshotAt(t)` projection for every signal program, ordered by `signalId`. It includes physical head/controller/junction identity, phase, timing source, phase boundaries, remaining ticks, next phase, cycle length, and any failure state. |
 | `actors` | Per-record static identity/dimensions plus acceleration. Entries have the same actor-id order and membership as `scene.actors`. |
 

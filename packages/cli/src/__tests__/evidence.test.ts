@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildLaneGraph,
-  contentHash,
-  parseSimScenarioInput,
-  runSimulation,
-  type TopologyIndex,
-} from '@simforge-oss/engine';
+import { contentHash, parseSimScenarioInput, type SimTrace, type TopologyIndex } from '@simforge-oss/engine';
+import { buildLaneGraph, runSimulation } from '@simforge-oss/engine/node';
 
 import { verifyEvidenceHashes } from '../evidence.js';
 import type { InstanceFile } from '@simforge-oss/compiler/node';
@@ -42,7 +37,7 @@ const topology: TopologyIndex = {
 };
 const graph = buildLaneGraph(topology);
 
-function evidencePair(): { instance: InstanceFile; trace: ReturnType<typeof runSimulation>['trace'] } {
+function evidencePair(): { instance: InstanceFile; trace: SimTrace } {
   const input = parseSimScenarioInput({
     mapId: 'evidence-map',
     clipSeconds: 1,
@@ -62,7 +57,7 @@ function evidencePair(): { instance: InstanceFile; trace: ReturnType<typeof runS
       },
     }],
   });
-  const trace = runSimulation(input, { graph, guards: 'collect' }).trace;
+  const trace = runSimulation(input, { graph }).trace;
   const instance = {
     kind: 'scenario-instance' as const,
     version: 1 as const,
@@ -95,21 +90,6 @@ describe('strict instance/trace evidence provenance', () => {
     expect(report.physicsProvenance).toBe('matched');
   });
 
-  it('replays pre-0.3 omitted-input kinematic evidence without relabeling it dynamic', () => {
-    const { instance, trace } = evidencePair();
-    const legacyTrace = {
-      ...trace,
-      header: {
-        ...trace.header,
-        engineVersion: '0.2.8',
-        physics: { ...trace.header.physics, mode: 'kinematic-v1' as const, solverVersion: '0.2.8' },
-      },
-    };
-    const report = verifyEvidenceHashes(instance, legacyTrace);
-    expect(report.ok).toBe(true);
-    expect(report.physicsMode).toBe('kinematic-v1');
-    expect(report.physicsProvenance).toBe('legacy-kinematic');
-  });
 
   it('rejects a newly generated omitted-input trace silently labeled kinematic', () => {
     const { instance, trace } = evidencePair();
@@ -123,28 +103,6 @@ describe('strict instance/trace evidence provenance', () => {
     expect(report.issues.map((issue) => issue.code)).toContain('physics_mode_mismatch');
   });
 
-  it('never applies the legacy exception to an explicit dynamic selection', () => {
-    const { instance, trace } = evidencePair();
-    const explicitInput = { ...instance.input, physics: { mode: 'dynamic-v1' as const } };
-    const explicitInstance = {
-      ...instance,
-      input: explicitInput,
-      manifest: { ...instance.manifest, inputHash: contentHash(explicitInput) },
-    } as InstanceFile;
-    const falselyKinematic = {
-      ...trace,
-      header: {
-        ...trace.header,
-        inputHash: contentHash(explicitInput),
-        engineVersion: '0.2.8',
-        physics: { ...trace.header.physics, mode: 'kinematic-v1' as const, solverVersion: '0.2.8' },
-      },
-    };
-    const report = verifyEvidenceHashes(explicitInstance, falselyKinematic);
-    expect(report.ok).toBe(false);
-    expect(report.physicsProvenance).toBe('mismatch');
-    expect(report.issues.map((issue) => issue.code)).toContain('physics_mode_mismatch');
-  });
 
   it('accepts semantically identical operational conditions with different property order', () => {
     const { instance, trace } = evidencePair();
@@ -176,7 +134,6 @@ describe('strict instance/trace evidence provenance', () => {
     expect(report.ok).toBe(false);
     expect(report.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining([
       'trace_engine_graph_digest_mismatch',
-      'trace_topology_alias_mismatch',
     ]));
   });
 

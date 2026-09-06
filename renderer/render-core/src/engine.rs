@@ -1,26 +1,24 @@
 //! Reusable headless Bevy rendering engine for SimForge (`native` engine).
 //!
-//! Grown from scripts/renderer-spike/bevy-spike (GO verdict, FINDINGS.md):
 //! DefaultPlugins minus Winit/Audio, no primary window, offscreen `Image`
-//! render targets with GPU->CPU readback via copy_texture_to_buffer +
-//! map_async. Unlike the spike CLI (which drives one App through a fixed
-//! pose sequence), this module exposes a host-controlled [`SceneApp`]: the
-//! owner calls [`SceneApp::render_once`] explicitly, which makes both the
-//! job renderer and the long-lived service trivially sequential and
-//! deterministic.
+//! render targets. This module exposes a host-controlled [`SceneApp`]: the
+//! owner mutates the resident scene (actors, poses, lighting) and then asks
+//! for one [`SceneApp::capture`], which renders exactly one iteration and
+//! returns the requested passes copied from that iteration's submission
+//! under a [`FrameIdentity`]. Rendering and output are separate: an
+//! iteration with nothing requested (warmup, asset loading) performs no
+//! texture copy and no host map.
 //!
-//! Determinism contract (same construction rules as the spike):
-//! MSAA Off, no temporal effects, deterministic instance-ID assignment
-//! (meshes sorted by name then entity bits), fixed clear color, single
-//! blocking readback per rendered frame.
+//! Determinism contract: MSAA Off, no temporal effects on sensor views,
+//! deterministic instance-ID assignment (meshes sorted by name then entity
+//! bits), fixed clear color.
 //!
 //! Lighting/profile routing: the scene is lit by the WSB4 lighting ladder
 //! (`crate::lighting::spawn_lighting` — IBL sky, physical sun via the shared
 //! spec docs/lighting-calibration.md) and every RGB camera gets its render
 //! profile from `crate::profiles::RenderProfile::apply` (fixed EV100,
-//! AgX cinematic stack, GTAO at rung ≥ 3). Temporal effects (TAA, motion
-//! blur, auto-exposure) stay disabled: the host-driven single-step loop
-//! renders exactly one frame per update.
+//! AgX cinematic stack, GTAO at rung ≥ 3). Sensor views keep TAA, motion
+//! blur and auto-exposure disabled.
 use anyhow::{bail, Result};
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::asset::RecursiveDependencyLoadState;
@@ -40,11 +38,10 @@ use bevy::render::camera::ExtractedCamera;
 use bevy::render::render_asset::RenderAssets;
 use bevy::asset::RenderAssetUsages;
 use bevy::render::render_resource::{
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, MapMode,
-    PollType, TexelCopyBufferInfo, TexelCopyBufferLayout, TextureDimension, TextureFormat,
-    TextureUsages,
+    Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode, PollType, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TextureDimension, TextureFormat, TextureUsages,
 };
-use bevy::render::renderer::{RenderContext, RenderDevice, RenderGraph, RenderQueue};
+use bevy::render::renderer::{RenderContext, RenderDevice, RenderGraph, RenderGraphSystems};
 use bevy::render::texture::GpuImage;
 use bevy::render::view::ViewDepthTexture;
 use bevy::render::{Extract, Render, RenderApp, RenderSystems};
@@ -715,7 +712,7 @@ impl PassSet {
 }
 
 /// Static description of one logical rig camera.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CameraSpec {
     pub sensor_id: String,
     pub width: u32,
@@ -727,22 +724,89 @@ pub struct CameraSpec {
     pub passes: PassSet,
 }
 
+/// Identity of one captured frame.
+///
+/// Every pass in a [`CapturedFrame`] was copied out of the same GPU
+/// submission (`generation`) that rendered the resident scene at
+/// `scene_revision` through the camera rig at `rig_revision`. `sim_tick` is
+/// the caller's name for that resident scene state; the engine never
+/// infers it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrameIdentity {
+    /// Simulation tick the caller declared the resident scene to represent.
+    pub sim_tick: u64,
+    /// Bumps on every resident-scene mutation: actor spawn/move/despawn,
+    /// model attach, animation seek, camera pose, lighting, wetness, road
+    /// detail, tile load.
+    pub scene_revision: u64,
+    /// Bumps when a camera is registered, removed, resized or re-hosted.
+    pub rig_revision: u64,
+    /// One per rendered app iteration. The copies that produced this frame
+    /// were encoded after the camera passes and submitted with them.
+    pub generation: u64,
+}
+
+/// One row-padded pass payload copied from a single submission.
+#[derive(Clone, Debug)]
+pub struct CapturedPass {
+    pub width: u32,
+    pub height: u32,
+    /// Bytes per row including wgpu's 256-byte copy alignment.
+    pub padded_row: usize,
+    pub bytes: Vec<u8>,
+}
+
+/// One device-resident output published for a sensor by
+/// [`SceneApp::capture_device`]: the consumer leases `(stream, slot)` for
+/// exactly `generation` (`gpu_interop::ReadyFrame` on the wire).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceReady {
+    pub stream: u64,
+    pub slot: u32,
+    pub generation: u64,
+}
+
+/// Every requested output of one submission. Host passes are keyed
+/// `<sensor>:rgb|id|depth`; device outputs are keyed by sensor.
+#[derive(Debug)]
+pub struct CapturedFrame {
+    pub identity: FrameIdentity,
+    pub passes: HashMap<String, CapturedPass>,
+    pub device: HashMap<String, DeviceReady>,
+}
+
 // ---------------------------------------------------------------------------
-// Main world <-> render world plumbing (adapted from the spike)
+// Main world <-> render world plumbing
 // ---------------------------------------------------------------------------
 
 struct SentPass {
     key: String,
+    generation: u64,
+    width: u32,
+    height: u32,
+    padded_row: usize,
     data: Vec<u8>,
 }
 
 #[derive(Resource, Deref)]
-struct MainReceiver(crossbeam_channel::Receiver<SentPass>);
-#[derive(Resource, Deref)]
 struct RenderSender(crossbeam_channel::Sender<SentPass>);
 
-/// Main-world marker: read back the RGB target (or its view depth texture)
-/// identified by `src_image`, publishing rows under `key`.
+/// Outcome of one device-sink copy for one sensor in one submission.
+#[cfg(feature = "gpu-interop")]
+struct SentDevice {
+    sensor_id: String,
+    generation: u64,
+    result: std::result::Result<crate::gpu_interop::ReadyFrame, String>,
+}
+
+#[cfg(feature = "gpu-interop")]
+#[derive(Resource, Deref)]
+struct DeviceSender(crossbeam_channel::Sender<SentDevice>);
+
+/// Main-world marker: the RGB target (or its view depth texture) identified
+/// by `src_image` can be read back under `key`.
 #[derive(Component, Clone)]
 struct ReadbackTarget {
     key: String,
@@ -750,14 +814,52 @@ struct ReadbackTarget {
     depth: bool,
 }
 
-/// One persistent GPU->CPU staging buffer in the render world.
+/// One plane of a device stream and the resident target it is copied from.
+#[cfg(feature = "gpu-interop")]
+#[derive(Clone)]
+struct DevicePlane {
+    name: &'static str,
+    src_image: Handle<Image>,
+    depth: bool,
+}
+
+/// A sensor's device stream: which planes to fill from which targets, and
+/// how long to wait for a free slot before reporting backpressure.
+#[cfg(feature = "gpu-interop")]
+#[derive(Clone)]
+struct DeviceCopy {
+    sensor_id: String,
+    stream: crate::gpu_interop::StreamId,
+    wait: Option<Duration>,
+    planes: Vec<DevicePlane>,
+}
+
+/// Which outputs the host wants from the next submission. Empty means the
+/// frame renders without any copy or host map. Extracted into the render
+/// world every iteration so the copies are stamped with the generation of
+/// the submission they were encoded into.
+#[derive(Resource, Clone, Default)]
+struct CaptureRequest {
+    generation: u64,
+    keys: Vec<String>,
+    #[cfg(feature = "gpu-interop")]
+    device: Vec<DeviceCopy>,
+}
+
+/// One persistent GPU->CPU staging buffer in the render world. Exists only
+/// for targets that have been requested at least once and is dropped as
+/// soon as its target is unregistered.
 struct StagingBuffer {
     key: String,
     src_image: Handle<Image>,
     depth: bool,
-    padded_row: usize,
+    width: u32,
     height: u32,
+    padded_row: usize,
     buffer: Buffer,
+    /// Set by `copy_passes` when a copy from this submission was encoded;
+    /// `receive_passes` maps only those and clears the flag.
+    copied: bool,
 }
 
 #[derive(Resource, Default)]
@@ -1403,17 +1505,44 @@ struct GroupEntities {
     profile: Profile,
     rgb_entity: Entity,
     id_entity: Option<Entity>,
+    /// Actor this camera is mounted on. Its RGB geometry is excluded from
+    /// this view only; every other view still renders it.
+    host: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
-// SceneApp
-// ---------------------------------------------------------------------------
+/// First render layer handed to a camera host actor. Layer 0 is the shared
+/// scene, layer 1 the instance-ID clones.
+const FIRST_HOST_LAYER: usize = 2;
 
-/// Host-driven headless renderer over a static tile scene.
-///
-/// The Bevy `App` is never `run()`; every [`Self::render_once`] performs one
-/// full main-world + render-world iteration ending in a blocking GPU
-/// readback of all registered passes.
+/// Layers every light must cover: the shared scene plus every host actor's
+/// private layer, so a host still casts shadows into views that exclude
+/// its geometry (a mounted camera sees its own vehicle's shadow).
+#[derive(Resource)]
+struct HostLayerUnion(RenderLayers);
+
+impl Default for HostLayerUnion {
+    fn default() -> Self {
+        Self(RenderLayers::layer(0))
+    }
+}
+
+/// Keep every light on the host-layer union. Lights are respawned by
+/// relights and night-source updates, so this runs every iteration rather
+/// than at the mutation sites.
+fn sync_light_layers(
+    union: Res<HostLayerUnion>,
+    lights: Query<
+        (Entity, Option<&RenderLayers>),
+        Or<(With<DirectionalLight>, With<PointLight>, With<SpotLight>)>,
+    >,
+    mut commands: Commands,
+) {
+    for (entity, layers) in &lights {
+        if layers != Some(&union.0) {
+            commands.entity(entity).insert(union.0.clone());
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Dynamic actors + ground height (V4 SensorRig)
@@ -1510,11 +1639,31 @@ impl GroundField {
     }
 }
 
+// ---------------------------------------------------------------------------
+// SceneApp
+// ---------------------------------------------------------------------------
+
+/// Host-driven headless renderer over a resident tile scene.
+///
+/// The Bevy `App` is never `run()`; every [`Self::capture`] performs one
+/// main-world + render-world iteration and returns the requested passes
+/// copied from that iteration's submission.
 pub struct SceneApp {
     app: App,
     receiver: crossbeam_channel::Receiver<SentPass>,
     groups: Vec<GroupEntities>,
     next_camera_order: isize,
+    /// Private render layer per camera host actor (see [`FIRST_HOST_LAYER`]).
+    host_layers: HashMap<String, usize>,
+    /// See [`FrameIdentity`].
+    scene_revision: u64,
+    rig_revision: u64,
+    generation: u64,
+    #[cfg(feature = "gpu-interop")]
+    device_receiver: crossbeam_channel::Receiver<SentDevice>,
+    /// Open device streams by sensor id (see [`Self::open_device_stream`]).
+    #[cfg(feature = "gpu-interop")]
+    device_streams: HashMap<String, DeviceCopy>,
     ready: bool,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
@@ -1594,8 +1743,13 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<Self> {
         profile_config.cinematic.validate()?;
+        // Star/Moon plates are part of the resident scene's look at every
+        // hour; an engine without them would silently render a starless sky.
+        let sky_assets = crate::sky_pass::SkyAssetPaths::resolve()?;
         std::env::set_var("BEVY_ASSET_ROOT", "/");
         let (tx, rx) = crossbeam_channel::unbounded::<SentPass>();
+        #[cfg(feature = "gpu-interop")]
+        let (device_tx, device_rx) = crossbeam_channel::unbounded::<SentDevice>();
         let mut app = App::new();
         // The reusable job/service engine may render sensor and cinematic
         // views together. PCSS is stochastic on current wgpu/Bevy and made
@@ -1610,9 +1764,15 @@ impl SceneApp {
         // night the clear colour would show straight through the LUT's
         // transmittance as a daylight-blue wash. The cubemap path draws a
         // Skybox over the clear anyway.
+        // Exportable Vulkan memory/semaphores must be negotiated at device
+        // creation; `gpu_interop` owns that configuration.
+        #[cfg(feature = "gpu-interop")]
+        app.insert_resource(crate::gpu_interop::raw_vulkan_init_settings());
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(Legend::default())
+            .init_resource::<CaptureRequest>()
+            .init_resource::<HostLayerUnion>()
             .add_plugins((
                 DefaultPlugins
                     .set(bevy::asset::AssetPlugin {
@@ -1636,7 +1796,7 @@ impl SceneApp {
                     }),
                 ScheduleRunnerPlugin::run_loop(Duration::ZERO),
                 crate::road_detail::RoadDetailPlugin,
-                crate::sky_pass::SkyPassPlugin,
+                crate::sky_pass::SkyPassPlugin { assets: sky_assets },
                 crate::readiness::GpuReadinessPlugin,
             ))
             .add_systems(
@@ -1645,10 +1805,10 @@ impl SceneApp {
                     spawn_loaded_tiles,
                     crate::veg::load_veg_roots,
                     crate::veg::instantiate_veg,
+                    sync_light_layers,
                 )
                     .chain(),
-            )
-            .insert_resource(MainReceiver(rx.clone()));
+            );
 
         // Lighting ladder. Spawned through Commands so the exact same
         // `spawn_lighting` path serves the CLI, the job runner and the
@@ -1704,10 +1864,28 @@ impl SceneApp {
             .insert_resource(RenderSender(tx))
             .init_resource::<Staging>()
             .init_resource::<ExtractedTargets>()
-            .add_systems(ExtractSchedule, extract_targets)
-            .add_systems(RenderGraph, copy_passes)
-            .add_systems(Render, sync_staging.before(copy_passes))
-            .add_systems(Render, receive_passes.after(RenderSystems::Render));
+            .init_resource::<ExtractedCapture>()
+            .add_systems(ExtractSchedule, extract_capture)
+            .add_systems(
+                RenderGraph,
+                copy_passes
+                    .after(RenderGraphSystems::Render)
+                    .before(RenderGraphSystems::Submit),
+            )
+            .add_systems(
+                Render,
+                (
+                    sync_staging.in_set(RenderSystems::Prepare),
+                    receive_passes.after(RenderSystems::Render),
+                ),
+            );
+        #[cfg(feature = "gpu-interop")]
+        render_app.insert_resource(DeviceSender(device_tx)).add_systems(
+            RenderGraph,
+            copy_device_passes
+                .after(RenderGraphSystems::Render)
+                .before(RenderGraphSystems::Submit),
+        );
 
         // Drive the plugin lifecycle to completion manually (we never call
         // app.run()): pump updates until plugins are built, then finish so the
@@ -1722,6 +1900,14 @@ impl SceneApp {
             receiver: rx,
             groups: Vec::new(),
             next_camera_order: 0,
+            host_layers: HashMap::new(),
+            scene_revision: 0,
+            rig_revision: 0,
+            generation: 0,
+            #[cfg(feature = "gpu-interop")]
+            device_receiver: device_rx,
+            #[cfg(feature = "gpu-interop")]
+            device_streams: HashMap::new(),
             ready: false,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
@@ -2060,8 +2246,8 @@ impl SceneApp {
         lighting: &Lighting,
         profile_config: RenderProfileConfig,
     ) -> Result<ResolvedLighting> {
-        let profile_config = profile_config;
         profile_config.cinematic.validate()?;
+        self.scene_revision += 1;
         let rung = LightingRung(lighting.rung.min(3));
         let Relight {
             plan,
@@ -2399,6 +2585,7 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<(ResolvedLighting, bool)> {
         let tier = ladder_tier(lighting.sun_elev_deg);
+        self.scene_revision += 1;
         let same_ladder = {
             // Everything the clock and the camera move is neutralised; the
             // rest must match exactly. The fixture ledger arrives sorted by
@@ -2596,6 +2783,7 @@ impl SceneApp {
     pub fn set_wetness(&mut self, wetness: f32) -> usize {
         const ROAD_MARKERS: [&str; 2] = ["asphalt1_road", "roads_road_layer0"];
         let wetness = wetness.clamp(0.0, 1.0);
+        self.scene_revision += 1;
         let world = self.app.world_mut();
         let mut road_materials: Vec<Handle<StandardMaterial>> = Vec::new();
         {
@@ -2662,6 +2850,7 @@ impl SceneApp {
                 bail!("glb paths must be absolute: {g}");
             }
         }
+        self.scene_revision += 1;
         let server = self.app.world().resource::<AssetServer>().clone();
         for g in glbs {
             let path: String = g.trim_start_matches('/').to_owned();
@@ -2689,10 +2878,18 @@ impl SceneApp {
     /// Register a camera group (RGB target + optional ID camera + depth copy).
     ///
     /// Registration is allowed both before [`Self::wait_until_ready`] and
-    /// after it (V4: per-request dynamic camera registration in the service).
-    /// Post-ready groups join the already-finalized ID-pass layer directly;
-    /// the legend is not re-derived, so IDs stay stable.
+    /// after it. Post-ready groups join the already-finalized ID-pass layer
+    /// directly; the legend is not re-derived, so IDs stay stable. A camera
+    /// already registered under the same `sensor_id` is replaced (its
+    /// targets, staging and host binding are released), which is how a
+    /// resize or profile change is expressed.
     pub fn add_camera(&mut self, spec: CameraSpec, profile: Profile) {
+        let host = self
+            .groups
+            .iter()
+            .find(|g| g.spec.sensor_id == spec.sensor_id)
+            .and_then(|g| g.host.clone());
+        self.remove_camera(&spec.sensor_id);
 
         let rgb_image = {
             let mut images = self.app.world_mut().resource_mut::<Assets<Image>>();
@@ -2815,21 +3012,126 @@ impl SceneApp {
             });
         }
 
-        self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity });
+        self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity, host });
+        self.rig_revision += 1;
+        self.sync_host_layers();
         if self.ready {
             // Post-ready registration: pump updates so extraction and
-            // pipeline compilation happen before the next render_once.
-            // Two frames, not one: a cinematic view brings a whole post
-            // chain with it (AA, bloom, SSAO, SSR), and with only one
-            // warmup the first real frame came back with the anti-aliasing
-            // pass silently missing — byte-identical to `aa: off`.
+            // pipeline compilation happen before the next capture. Two
+            // frames, not one: a cinematic view brings a whole post chain
+            // with it (AA, bloom, SSAO, SSR), and with only one warmup the
+            // first real frame came back with the anti-aliasing pass
+            // silently missing — byte-identical to `aa: off`.
             self.warmup(2);
         }
     }
 
-    /// Registered camera specs (diagnostics).
-    pub fn cameras(&self) -> impl Iterator<Item = &CameraSpec> {
-        self.groups.iter().map(|g| &g.spec)
+    /// Mount a registered camera on an actor: that actor's RGB geometry is
+    /// excluded from this view only. `None` unmounts. The actor need not be
+    /// spawned yet; the exclusion applies once it is.
+    pub fn set_camera_host(&mut self, sensor_id: &str, host: Option<&str>) -> Result<()> {
+        let group = self
+            .groups
+            .iter_mut()
+            .find(|g| g.spec.sensor_id == sensor_id)
+            .ok_or_else(|| anyhow::anyhow!("unknown sensor {sensor_id}"))?;
+        if group.host.as_deref() == host {
+            return Ok(());
+        }
+        group.host = host.map(str::to_owned);
+        self.rig_revision += 1;
+        self.sync_host_layers();
+        Ok(())
+    }
+
+    /// Re-derive host layers from the current mounts and write them onto
+    /// actor visuals, RGB cameras and the light union.
+    ///
+    /// Each host actor owns one private layer: its visuals live there
+    /// instead of layer 0, every camera except the one mounted on it adds
+    /// that layer, and every light covers all of them. Layers are released
+    /// when no camera is mounted on the actor any more.
+    fn sync_host_layers(&mut self) {
+        let mounted: Vec<String> = self
+            .groups
+            .iter()
+            .filter_map(|g| g.host.clone())
+            .collect();
+        self.host_layers.retain(|actor, _| mounted.contains(actor));
+        for actor in &mounted {
+            if self.host_layers.contains_key(actor) {
+                continue;
+            }
+            let layer = (FIRST_HOST_LAYER..)
+                .find(|candidate| !self.host_layers.values().any(|used| used == candidate))
+                .expect("unbounded layer range");
+            self.host_layers.insert(actor.clone(), layer);
+        }
+        let union = RenderLayers::from_layers(
+            &std::iter::once(0)
+                .chain(self.host_layers.values().copied())
+                .collect::<Vec<_>>(),
+        );
+        let views: Vec<(Entity, RenderLayers)> = self
+            .groups
+            .iter()
+            .map(|g| {
+                let layers: Vec<usize> = std::iter::once(0)
+                    .chain(
+                        self.host_layers
+                            .iter()
+                            .filter(|(actor, _)| Some(actor.as_str()) != g.host.as_deref())
+                            .map(|(_, layer)| *layer),
+                    )
+                    .collect();
+                (g.rgb_entity, RenderLayers::from_layers(&layers))
+            })
+            .collect();
+        let actor_ids: Vec<String> = self.actors.keys().cloned().collect();
+        let world = self.app.world_mut();
+        world.insert_resource(HostLayerUnion(union));
+        for (entity, layers) in views {
+            world.entity_mut(entity).insert(layers);
+        }
+        for actor in actor_ids {
+            self.apply_actor_layers(&actor);
+        }
+    }
+
+    /// Put one actor's RGB visuals (fallback cuboid and every mesh under
+    /// its catalog model) on its host layer, or back on layer 0.
+    fn apply_actor_layers(&mut self, actor_id: &str) {
+        let Some((cuboid, _)) = self.actors.get(actor_id).copied() else {
+            return;
+        };
+        let layer = self.host_layers.get(actor_id).copied().unwrap_or(0);
+        let model = self.actor_models.get(actor_id).map(|(entity, _, _)| *entity);
+        let world = self.app.world_mut();
+        let mut targets = vec![cuboid];
+        if let Some(root) = model {
+            let mut stack = vec![root];
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if world.get::<Mesh3d>(entity).is_some() {
+                    targets.push(entity);
+                }
+            }
+        }
+        for entity in targets {
+            if let Ok(mut entity) = world.get_entity_mut(entity) {
+                entity.insert(RenderLayers::layer(layer));
+            }
+        }
+    }
+
+    /// Registered spec and profile of one camera, if it exists.
+    pub fn camera(&self, sensor_id: &str) -> Option<(&CameraSpec, Profile)> {
+        self.groups
+            .iter()
+            .find(|g| g.spec.sensor_id == sensor_id)
+            .map(|g| (&g.spec, g.profile))
     }
 
     /// Frozen legend (static instance ids). Dynamic actors get ids above the
@@ -2853,13 +3155,13 @@ impl SceneApp {
         &mut self,
         sidecar_path: &str,
     ) -> Result<crate::road_detail::RoadDetailStats> {
+        self.scene_revision += 1;
         let stats =
             crate::road_detail::apply(&mut self.app, std::path::Path::new(sidecar_path))
                 .map_err(|e| anyhow::anyhow!("{e:#}"))?;
         // Pump one update so the swapped materials extract before the next
-        // render; drain any passes it produced.
+        // render.
         self.app.update();
-        while self.receiver.try_recv().is_ok() {}
         Ok(stats)
     }
 
@@ -2867,15 +3169,16 @@ impl SceneApp {
     /// `actor:<id>` and carries an instance id above the static legend range
     /// so ID-pass pixels resolve to the actor class.
     ///
-    /// `position` is the actor origin on the ground; when `snap_ground` is
-    /// set the y coordinate is replaced by the sampled ground height (traces
-    /// carry no height channel).
+    /// `position` is the actor origin; when `snap_ground` is set the y
+    /// coordinate is replaced by the sampled ground height (traces without a
+    /// height channel). `rotation` is applied in full: articulated bodies
+    /// carry pitch and wheel spin in it, planar traffic a yaw about +Y.
     pub fn upsert_actor(
         &mut self,
         id: &str,
         class: &str,
         position: [f32; 3],
-        yaw_rad: f32,
+        rotation: Quat,
         dims: [f32; 3],
         color: [f32; 3],
         snap_ground: bool,
@@ -2883,10 +3186,11 @@ impl SceneApp {
         let y = if snap_ground { self.ground.sample(position[0], position[2]) } else { position[1] };
         let transform = Transform {
             translation: Vec3::new(position[0], y, position[2]),
-            rotation: Quat::from_rotation_y(yaw_rad),
+            rotation,
             scale: Vec3::ONE,
         };
         let model = self.actor_models.get(id).copied();
+        self.scene_revision += 1;
         let world = self.app.world_mut();
         if let Some((entity, _)) = self.actors.get(id) {
             if let Some(mut t) = world.get_mut::<Transform>(*entity) {
@@ -2942,26 +3246,16 @@ impl SceneApp {
         ));
         self.actors.insert(id.to_string(), (e, instance_id));
         self.actor_classes.insert(instance_id, class.to_string());
+        self.apply_actor_layers(id);
     }
 
     /// Replace a spawned actor's visible cuboid with a catalog GLB while
     /// retaining its deterministic layer-1 cuboid as the sensor/ID proxy.
+    /// Animated poses are sought from simulation time and paused, so
+    /// wall-clock scheduling cannot affect rendered frames.
     ///
     /// Loading is blocking because the service must not acknowledge a tick
     /// until every modality sees the same fully-resident world.
-    pub fn attach_actor_model(
-        &mut self,
-        actor_id: &str,
-        glb_path: &std::path::Path,
-        uniform_scale: f32,
-        tint: Option<[f32; 3]>,
-    ) -> Result<()> {
-        self.attach_actor_asset(actor_id, glb_path, uniform_scale, tint, None, 0.0)
-    }
-
-    /// Attach a static or skinned GLB. Animated poses are sought from
-    /// simulation time and paused, so wall-clock scheduling cannot affect
-    /// rendered frames.
     pub fn attach_actor_asset(
         &mut self,
         actor_id: &str,
@@ -3108,7 +3402,6 @@ impl SceneApp {
                 ActorAnimationBinding { players, node },
             );
             self.app.update();
-            while self.receiver.try_recv().is_ok() {}
         }
         let tint_materials = if let Some(color) = tint {
             let targets = {
@@ -3176,10 +3469,13 @@ impl SceneApp {
         );
         self.actor_tint_materials
             .insert(actor_id.to_string(), tint_materials);
+        self.apply_actor_layers(actor_id);
+        self.scene_revision += 1;
         Ok(())
     }
     /// Seek a bound actor animation to an explicit simulation timestamp.
     pub fn set_actor_animation_time(&mut self, actor_id: &str, time_s: f32) -> Result<()> {
+        self.scene_revision += 1;
         let binding = self
             .actor_animations
             .get(actor_id)
@@ -3226,39 +3522,10 @@ impl SceneApp {
         self.actors.keys().cloned().collect()
     }
 
-    /// Exclude or restore one actor's RGB geometry without touching its
-    /// scene state or layer-1 instance-ID proxy.
-    ///
-    /// Catalog-backed actors keep their fallback cuboid hidden when restored;
-    /// actors without a catalog model restore that cuboid instead.
-    pub fn set_actor_visual_hidden(&mut self, actor_id: &str, hidden: bool) {
-        let Some((actor, _)) = self.actors.get(actor_id).copied() else {
-            return;
-        };
-        let model = self.actor_models.get(actor_id).map(|(entity, _, _)| *entity);
-        let world = self.app.world_mut();
-        if let Some(mut visibility) = world.get_mut::<Visibility>(actor) {
-            *visibility = if hidden || model.is_some() {
-                Visibility::Hidden
-            } else {
-                Visibility::Inherited
-            };
-        }
-        if let Some(model) = model {
-            if let Some(mut visibility) = world.get_mut::<Visibility>(model) {
-                *visibility = if hidden {
-                    Visibility::Hidden
-                } else {
-                    Visibility::Inherited
-                };
-            }
-        }
-    }
-
-
     /// Remove a despawned scene-state actor (both the visible box and its
     /// layer-1 ID clone).
     pub fn remove_actor(&mut self, id: &str) {
+        self.scene_revision += 1;
         if let Some((entity, instance)) = self.actors.remove(id) {
             let world = self.app.world_mut();
             let name = format!("actor:{id}");
@@ -3348,38 +3615,10 @@ impl SceneApp {
     /// the next render re-registers with fresh attributes). Also prunes the
     /// render-world staging buffers for the removed targets.
     pub fn clear_cameras(&mut self) {
-        let dropped: Vec<GroupEntities> = self.groups.drain(..).collect();
-        if dropped.is_empty() {
-            return;
-        }
         let sensor_ids: Vec<String> =
-            dropped.iter().map(|g| g.spec.sensor_id.clone()).collect();
-        let world = self.app.world_mut();
-        let mut to_despawn: Vec<Entity> = Vec::new();
-        let mut q = world.query::<(Entity, &ReadbackTarget)>();
-        for (e, t) in q.iter(world) {
-            if sensor_ids.iter().any(|s| t.key.starts_with(s.as_str())) {
-                to_despawn.push(e);
-            }
-        }
-        // The camera entities themselves have to go too. Leaving them behind
-        // keeps orphaned views rendering into detached targets, which a
-        // lookdev surface would accumulate on every re-registration.
-        for group in &dropped {
-            to_despawn.push(group.rgb_entity);
-            to_despawn.extend(group.id_entity);
-        }
-        for e in to_despawn {
-            world.despawn(e);
-        }
-        if let Some(render_app) = self.app.get_sub_app_mut(RenderApp) {
-            if let Some(mut staging) = render_app.world_mut().get_resource_mut::<Staging>() {
-                staging.0.retain(|b| {
-                    !sensor_ids
-                        .iter()
-                        .any(|s| b.key.starts_with(format!("{s}:").as_str()))
-                });
-            }
+            self.groups.iter().map(|g| g.spec.sensor_id.clone()).collect();
+        for sensor_id in &sensor_ids {
+            self.remove_camera(sensor_id);
         }
         self.next_camera_order = 0;
     }
@@ -3445,10 +3684,6 @@ impl SceneApp {
                         }
                     }
                 }
-            } else {
-                // Drain any passes produced while loading so they cannot leak
-                // into later captures.
-                while self.receiver.try_recv().is_ok() {}
             }
             if Instant::now() > deadline {
                 let pending = self.app.world().resource::<GpuPending>();
@@ -3567,7 +3802,6 @@ impl SceneApp {
         // One update so the newly spawned ID clones are extracted before the
         // first real render request.
         self.app.update();
-        while self.receiver.try_recv().is_ok() {}
         Ok(())
     }
 
@@ -3581,6 +3815,7 @@ impl SceneApp {
             .find(|g| g.spec.sensor_id == sensor_id)
             .ok_or_else(|| anyhow::anyhow!("unknown sensor {sensor_id}"))?;
         let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
+        self.scene_revision += 1;
         let world = self.app.world_mut();
         if let Some(mut t) = world.get_mut::<Transform>(group.rgb_entity) {
             *t = transform;
@@ -3593,11 +3828,12 @@ impl SceneApp {
         Ok(())
     }
 
-    /// Unregister a camera group and drop its render targets.
-    ///
-    /// Exists for `sky-bench`: an A/B that leaves each resolution's camera
-    /// registered would render all of them every frame and measure the sum
-    /// rather than the configuration under test.
+    /// Unregister a camera group: its cameras and readback targets are
+    /// despawned, the render targets are released with their last handle,
+    /// the render world drops the matching staging buffers on the next
+    /// iteration (`sync_staging` reconciles against registered targets), and
+    /// an open device stream for the sensor is torn down (outstanding
+    /// consumer imports keep their own memory alive).
     pub fn remove_camera(&mut self, sensor_id: &str) -> bool {
         let Some(index) = self
             .groups
@@ -3606,6 +3842,10 @@ impl SceneApp {
         else {
             return false;
         };
+        #[cfg(feature = "gpu-interop")]
+        if let Err(error) = self.close_device_stream(sensor_id, Duration::ZERO) {
+            eprintln!("remove_camera {sensor_id}: {error:#}");
+        }
         let group = self.groups.remove(index);
         let keys: Vec<String> = group.spec.passes.keys(&group.spec.sensor_id);
         let world = self.app.world_mut();
@@ -3623,6 +3863,8 @@ impl SceneApp {
             world.despawn(entity);
         }
         world.flush();
+        self.rig_revision += 1;
+        self.sync_host_layers();
         true
     }
 
@@ -3634,46 +3876,405 @@ impl SceneApp {
             .collect()
     }
 
-    /// Warmup iterations: lets shaders/pipelines compile so subsequent
-    /// captures measure steady state. Discards all readbacks.
-    pub fn warmup(&mut self, iterations: u32) {
-        for _ in 0..iterations {
-            self.app.update();
-            while self.receiver.try_recv().is_ok() {}
-        }
+    /// Current rig revision (see [`FrameIdentity::rig_revision`]).
+    pub fn rig_revision(&self) -> u64 {
+        self.rig_revision
     }
 
-    /// One full app iteration with blocking readback. Returns
-    /// `"<sensor>:<pass>" -> raw row-padded bytes` for every expected key.
+    /// Current scene revision (see [`FrameIdentity::scene_revision`]).
+    pub fn scene_revision(&self) -> u64 {
+        self.scene_revision
+    }
+
+    /// Render one iteration with the given capture request and return its
+    /// generation. Nothing is copied or mapped for an empty request, and
+    /// the request is cleared afterwards so plain `App::update` calls made
+    /// while loading assets never copy.
+    fn submit(&mut self, mut request: CaptureRequest) -> u64 {
+        self.generation += 1;
+        request.generation = self.generation;
+        self.app.world_mut().insert_resource(request);
+        self.app.update();
+        self.app.world_mut().insert_resource(CaptureRequest {
+            generation: self.generation,
+            ..Default::default()
+        });
+        self.generation
+    }
+
+    /// Warmup iterations: lets shaders/pipelines compile so subsequent
+    /// captures measure steady state. Renders without any readback.
+    pub fn warmup(&mut self, iterations: u32) {
+        for _ in 0..iterations {
+            self.submit(CaptureRequest::default());
+        }
+        self.drain_outputs();
+    }
+
+    fn drain_outputs(&mut self) {
+        while self.receiver.try_recv().is_ok() {}
+        #[cfg(feature = "gpu-interop")]
+        while self.device_receiver.try_recv().is_ok() {}
+    }
+
+    /// Capture every registered pass of one submission to host memory.
+    pub fn render_once(&mut self, sim_tick: u64) -> Result<CapturedFrame> {
+        let keys = self.expected_keys();
+        self.capture(sim_tick, &keys)
+    }
+
+    /// Render one submission of the resident scene and return exactly the
+    /// requested host passes, all copied from that submission.
     ///
-    /// A view whose component set just changed can need an extra iteration
-    /// before the graph produces anything: new pipelines are still being
-    /// specialized and the prepass/view-target chain is being rebuilt. That
-    /// used to surface as a hard `readback incomplete` on the first frame
-    /// after e.g. anti-aliasing switched away from TAA. `apply_lighting`
-    /// pays that cost up front with a warmup, and this bounded retry covers
-    /// the same seam for callers that change a view by other means. It
-    /// cannot alter a successful render: it only runs where the previous
-    /// behaviour was an error.
-    pub fn render_once(&mut self) -> Result<HashMap<String, Vec<u8>>> {
-        let expected = self.expected_keys();
-        let mut passes = HashMap::new();
+    /// Instance-ID cameras render only when one of their passes is
+    /// requested; RGB views always render so history-bearing cinematic
+    /// stacks keep their state. Passes that were not requested are neither
+    /// copied nor mapped.
+    ///
+    /// A frame is complete only when every requested output came from one
+    /// submission *and* the render world sampled idle at the end of it:
+    /// Bevy skips any draw whose pipeline is still compiling or whose
+    /// material is not yet bound, so a submission that queued new
+    /// permutations (a view registered after readiness, a relight, a newly
+    /// spawned actor material) is rendered without them. Such a submission
+    /// is withdrawn (its device slots returned), the GPU is settled
+    /// ([`Self::settle_gpu`], bounded) and the request is resubmitted; on a
+    /// steady scene no extra frame is spent. Outputs of an earlier generation
+    /// are discarded, never merged.
+    pub fn capture(&mut self, sim_tick: u64, keys: &[String]) -> Result<CapturedFrame> {
+        self.capture_request(
+            sim_tick,
+            CaptureRequest { keys: keys.to_vec(), ..Default::default() },
+        )
+    }
+
+    /// [`Self::capture`] plus device-resident outputs: every sensor in
+    /// `device_sensors` must have an open stream
+    /// ([`Self::open_device_stream`]); its planes are copied GPU-locally
+    /// into a leased slot of that stream by the same submission, and the
+    /// slot's ready signal is bound to it. The returned
+    /// [`CapturedFrame::device`] entries name the slots to lease. A sensor
+    /// whose slots are all outstanding past its wait is an error for the
+    /// whole capture (bounded backpressure, no silent drop).
+    #[cfg(feature = "gpu-interop")]
+    pub fn capture_device(
+        &mut self,
+        sim_tick: u64,
+        keys: &[String],
+        device_sensors: &[String],
+    ) -> Result<CapturedFrame> {
+        let mut device = Vec::with_capacity(device_sensors.len());
+        for sensor_id in device_sensors {
+            let copy = self
+                .device_streams
+                .get(sensor_id)
+                .ok_or_else(|| anyhow::anyhow!("capture: no device stream open for {sensor_id}"))?;
+            device.push(copy.clone());
+        }
+        self.capture_request(sim_tick, CaptureRequest { keys: keys.to_vec(), device, ..Default::default() })
+    }
+
+    fn capture_request(&mut self, sim_tick: u64, request: CaptureRequest) -> Result<CapturedFrame> {
+        let registered = self.expected_keys();
+        if let Some(unknown) = request.keys.iter().find(|k| !registered.contains(k)) {
+            bail!("capture: pass {unknown:?} is not registered");
+        }
+        let wants_id = |sensor_id: &str| -> bool {
+            let key = format!("{sensor_id}:id");
+            let host = request.keys.iter().any(|k| *k == key);
+            #[cfg(feature = "gpu-interop")]
+            let host = host
+                || request.device.iter().any(|copy| {
+                    copy.sensor_id == sensor_id && copy.planes.iter().any(|p| p.name == "id")
+                });
+            host
+        };
+        let id_activity: Vec<(Entity, bool)> = self
+            .groups
+            .iter()
+            .filter_map(|g| Some((g.id_entity?, wants_id(&g.spec.sensor_id))))
+            .collect();
+        {
+            let world = self.app.world_mut();
+            for (entity, active) in id_activity {
+                if let Some(mut camera) = world.get_mut::<Camera>(entity) {
+                    if camera.is_active != active {
+                        camera.is_active = active;
+                    }
+                }
+            }
+        }
+        self.drain_outputs();
+        let mut stale = 0usize;
         let mut missing: Vec<String> = Vec::new();
         for _ in 0..3 {
-            self.app.update();
+            let generation = self.submit(request.clone());
+            let mut passes: HashMap<String, CapturedPass> =
+                HashMap::with_capacity(request.keys.len());
             while let Ok(p) = self.receiver.try_recv() {
-                passes.insert(p.key, p.data);
+                if p.generation != generation {
+                    stale += 1;
+                    continue;
+                }
+                passes.insert(
+                    p.key,
+                    CapturedPass {
+                        width: p.width,
+                        height: p.height,
+                        padded_row: p.padded_row,
+                        bytes: p.data,
+                    },
+                );
             }
-            missing = expected.iter().filter(|k| !passes.contains_key(*k)).cloned().collect();
-            if missing.is_empty() {
-                return Ok(passes);
+            #[cfg_attr(not(feature = "gpu-interop"), allow(unused_mut))]
+            let mut device: HashMap<String, DeviceReady> = HashMap::new();
+            #[cfg(feature = "gpu-interop")]
+            {
+                while let Ok(sent) = self.device_receiver.try_recv() {
+                    if sent.generation != generation {
+                        stale += 1;
+                        continue;
+                    }
+                    match sent.result {
+                        Ok(ready) => {
+                            device.insert(
+                                sent.sensor_id,
+                                DeviceReady {
+                                    stream: ready.stream_id.0,
+                                    slot: ready.slot,
+                                    generation: ready.generation,
+                                },
+                            );
+                        }
+                        // A slot could not be filled from this submission:
+                        // backpressure, capability or a view that did not
+                        // render. Retrying would only burn slots.
+                        Err(error) => bail!("capture: device stream {}: {error}", sent.sensor_id),
+                    }
+                }
+            }
+            missing = request
+                .keys
+                .iter()
+                .filter(|k| !passes.contains_key(*k))
+                .cloned()
+                .collect();
+            #[cfg(feature = "gpu-interop")]
+            missing.extend(
+                request
+                    .device
+                    .iter()
+                    .filter(|copy| !device.contains_key(&copy.sensor_id))
+                    .map(|copy| format!("device:{}", copy.sensor_id)),
+            );
+            // Bevy silently skips a draw whose pipeline is still compiling
+            // or whose material has no bind group yet. `GpuPending` is
+            // sampled at the end of this frame's render, so a non-idle
+            // sample means this submission may be missing primitives: it
+            // is not a frame of the resident scene. Settle and resubmit.
+            let settled = self.app.world().resource::<GpuPending>().is_idle();
+            if missing.is_empty() && settled {
+                return Ok(CapturedFrame {
+                    identity: FrameIdentity {
+                        sim_tick,
+                        scene_revision: self.scene_revision,
+                        rig_revision: self.rig_revision,
+                        generation,
+                    },
+                    passes,
+                    device,
+                });
+            }
+            #[cfg(feature = "gpu-interop")]
+            self.withdraw_device_frames(device)?;
+            if !settled {
+                missing.push("gpu-settled (pipelines compiling or materials unbound during the frame)".into());
+                self.settle_gpu()?;
             }
         }
         bail!(
-            "readback incomplete after update: got {:?}, missing {:?}",
-            passes.keys().collect::<Vec<_>>(),
+            "capture incomplete: generation {} missing {:?} ({stale} outputs of other generations discarded)",
+            self.generation,
             missing
         )
+    }
+
+    /// Pump empty submissions until the render world reports no pipeline
+    /// compiling and no material unbound for [`GPU_IDLE_FRAMES`]
+    /// consecutive frames. Bounded: a permutation that never compiles is an
+    /// error, not a black frame.
+    fn settle_gpu(&mut self) -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(120);
+        let mut idle = 0u32;
+        while idle < GPU_IDLE_FRAMES {
+            if Instant::now() > deadline {
+                let pending = self.app.world().resource::<GpuPending>();
+                bail!(
+                    "render world failed to settle within 120 s ({} pipelines compiling, {} materials unbound)",
+                    pending.pipelines(),
+                    pending.materials()
+                );
+            }
+            self.submit(CaptureRequest::default());
+            idle = if self.app.world().resource::<GpuPending>().is_idle() { idle + 1 } else { 0 };
+        }
+        self.drain_outputs();
+        Ok(())
+    }
+
+    /// Return device slots filled by a submission that will not be
+    /// published: their `ReadyFrame` never reaches a consumer, so the
+    /// producer withdraws them instead of leaving them outstanding.
+    #[cfg(feature = "gpu-interop")]
+    fn withdraw_device_frames(&mut self, device: HashMap<String, DeviceReady>) -> Result<()> {
+        if device.is_empty() {
+            return Ok(());
+        }
+        let interop = self.device_interop()?;
+        for (sensor_id, ready) in device {
+            interop
+                .withdraw(crate::gpu_interop::ReadyFrame {
+                    stream_id: crate::gpu_interop::StreamId(ready.stream),
+                    slot: ready.slot,
+                    generation: ready.generation,
+                })
+                .map_err(|error| anyhow::anyhow!("withdraw device frame for {sensor_id}: {error}"))?;
+        }
+        Ok(())
+    }
+
+    /// Open (or return the existing) device interop on the render device.
+    /// Fails with the explicit capability rejection when the device cannot
+    /// export memory/semaphores; callers keep the host capture path.
+    #[cfg(feature = "gpu-interop")]
+    fn device_interop(&mut self) -> Result<&mut crate::gpu_interop::GpuInterop> {
+        use bevy::render::renderer::RenderQueue;
+        use crate::gpu_interop::GpuInterop;
+        let world = self.app.sub_app_mut(RenderApp).world_mut();
+        if !world.contains_resource::<GpuInterop>() {
+            let device = world.resource::<RenderDevice>().clone();
+            let queue = world.resource::<RenderQueue>().clone();
+            let interop = GpuInterop::new(&device, &queue)
+                .map_err(|error| anyhow::anyhow!("device interop unavailable: {error}"))?;
+            world.insert_resource(interop);
+        }
+        Ok(world.resource_mut::<GpuInterop>().into_inner())
+    }
+
+    /// Vulkan device identity and export capabilities, opening the interop
+    /// if needed.
+    #[cfg(feature = "gpu-interop")]
+    pub fn device_capabilities(&mut self) -> Result<crate::gpu_interop::InteropCapabilities> {
+        Ok(self.device_interop()?.capabilities().clone())
+    }
+
+    /// Allocate an exportable device stream for a registered camera with
+    /// `slots` independently leasable outputs and one plane per requested
+    /// pass (`rgb`/`id` RGBA8 sRGB, `depth` Depth32Float, all at the
+    /// camera's resolution). `wait` bounds how long a capture blocks for a
+    /// consumer release when every slot is outstanding; `None` fails fast.
+    /// A stream already open for the sensor is replaced.
+    #[cfg(feature = "gpu-interop")]
+    pub fn open_device_stream(
+        &mut self,
+        sensor_id: &str,
+        passes: PassSet,
+        slots: usize,
+        wait: Option<Duration>,
+    ) -> Result<(u64, Vec<crate::gpu_interop::PlaneLayout>)> {
+        use crate::gpu_interop::{PlaneDescriptor, PlaneFormat, StreamDescriptor};
+        let group = self
+            .groups
+            .iter()
+            .find(|g| g.spec.sensor_id == sensor_id)
+            .ok_or_else(|| anyhow::anyhow!("unknown sensor {sensor_id}"))?;
+        if passes.id && group.id_entity.is_none() {
+            bail!("camera {sensor_id} was registered without an instance-ID pass");
+        }
+        if !passes.rgb && !passes.id && !passes.depth {
+            bail!("device stream for {sensor_id} needs at least one plane");
+        }
+        let world = self.app.world();
+        let target_image = |entity: Entity| -> Result<Handle<Image>> {
+            match world.get::<RenderTarget>(entity) {
+                Some(RenderTarget::Image(target)) => Ok(target.handle.clone()),
+                _ => bail!("camera {sensor_id} has no image render target"),
+            }
+        };
+        let rgb_image = target_image(group.rgb_entity)?;
+        let (width, height) = (group.spec.width, group.spec.height);
+        let mut planes = Vec::with_capacity(3);
+        if passes.rgb {
+            planes.push(DevicePlane { name: "rgb", src_image: rgb_image.clone(), depth: false });
+        }
+        if passes.id {
+            let id_image = target_image(group.id_entity.expect("checked above"))?;
+            planes.push(DevicePlane { name: "id", src_image: id_image, depth: false });
+        }
+        if passes.depth {
+            planes.push(DevicePlane { name: "depth", src_image: rgb_image, depth: true });
+        }
+        let descriptor = StreamDescriptor {
+            label: sensor_id.to_string(),
+            slots,
+            planes: planes
+                .iter()
+                .map(|plane| PlaneDescriptor {
+                    name: plane.name.to_string(),
+                    width,
+                    height,
+                    format: if plane.depth {
+                        PlaneFormat::Depth32Float
+                    } else {
+                        PlaneFormat::Rgba8UnormSrgb
+                    },
+                })
+                .collect(),
+        };
+        self.close_device_stream(sensor_id, Duration::ZERO)?;
+        let interop = self.device_interop()?;
+        let stream = interop
+            .create_stream(&descriptor)
+            .map_err(|error| anyhow::anyhow!("create device stream for {sensor_id}: {error}"))?;
+        let layouts = interop
+            .planes(stream)
+            .map_err(|error| anyhow::anyhow!("{error}"))?
+            .to_vec();
+        self.device_streams.insert(
+            sensor_id.to_string(),
+            DeviceCopy { sensor_id: sensor_id.to_string(), stream, wait, planes },
+        );
+        Ok((stream.0, layouts))
+    }
+
+    /// Fresh exportable handles and the manifest of a sensor's stream.
+    #[cfg(feature = "gpu-interop")]
+    pub fn export_device_stream(&mut self, sensor_id: &str) -> Result<crate::gpu_interop::ExportedStream> {
+        let stream = self
+            .device_streams
+            .get(sensor_id)
+            .map(|copy| copy.stream)
+            .ok_or_else(|| anyhow::anyhow!("no device stream open for {sensor_id}"))?;
+        self.device_interop()?
+            .export_stream(stream)
+            .map_err(|error| anyhow::anyhow!("export device stream for {sensor_id}: {error}"))
+    }
+
+    /// Release a sensor's device stream after waiting up to `grace` for
+    /// outstanding consumer leases. Returns `None` when no stream was open.
+    #[cfg(feature = "gpu-interop")]
+    pub fn close_device_stream(
+        &mut self,
+        sensor_id: &str,
+        grace: Duration,
+    ) -> Result<Option<crate::gpu_interop::StreamTeardown>> {
+        let Some(copy) = self.device_streams.remove(sensor_id) else {
+            return Ok(None);
+        };
+        self.device_interop()?
+            .destroy_stream(copy.stream, grace)
+            .map(Some)
+            .map_err(|error| anyhow::anyhow!("close device stream for {sensor_id}: {error}"))
     }
 
     pub fn is_ready(&self) -> bool {
@@ -3718,161 +4319,246 @@ fn spawn_loaded_tiles(
 }
 
 // ---------------------------------------------------------------------------
-// Render-world systems (adapted verbatim from the spike)
+// Render-world systems
 // ---------------------------------------------------------------------------
 
 /// Per-frame extraction of main-world readback targets.
 #[derive(Resource, Default)]
 struct ExtractedTargets(Vec<ReadbackTarget>);
 
-fn extract_targets(
+/// Per-frame extraction of the host's capture request.
+#[derive(Resource, Default)]
+struct ExtractedCapture(CaptureRequest);
+
+fn extract_capture(
     targets: Extract<Query<&ReadbackTarget>>,
+    request: Extract<Res<CaptureRequest>>,
     mut out: ResMut<ExtractedTargets>,
+    mut capture: ResMut<ExtractedCapture>,
 ) {
-    let count = targets.iter().count();
     out.0 = targets.iter().cloned().collect();
-    if std::env::var("NATIVE_DEBUG").is_ok() {
-        eprintln!("extract_targets: {count}");
-    }
+    capture.0 = CaptureRequest::clone(&request);
 }
 
-/// Ensure a staging buffer exists for every registered readback target.
+/// Reconcile staging buffers with the registered targets: drop buffers whose
+/// target is gone (camera removed, resized or cleared) and allocate, on
+/// first request only, a buffer for each target the host asked for.
 fn sync_staging(
     targets: Res<ExtractedTargets>,
+    capture: Res<ExtractedCapture>,
     device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     mut staging: ResMut<Staging>,
 ) {
+    staging.0.retain(|b| {
+        targets
+            .0
+            .iter()
+            .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.key == b.key)
+    });
     for target in targets.0.iter() {
-        if staging.0.iter().any(|b| b.src_image == target.src_image && b.depth == target.depth) {
+        if !capture.0.keys.iter().any(|k| *k == target.key)
+            || staging
+                .0
+                .iter()
+                .any(|b| b.src_image == target.src_image && b.depth == target.depth)
+        {
             continue;
         }
-        // Resolve dimensions from the GPU image (depth views share extents).
+        // Depth views share the colour target's extent.
         let Some(gpu) = gpu_images.get(&target.src_image) else { continue };
-        let width = gpu.texture_descriptor.size.width as usize;
+        let width = gpu.texture_descriptor.size.width;
         let height = gpu.texture_descriptor.size.height;
         let pixel: usize = if target.depth {
             4
         } else {
             gpu.texture_descriptor.format.block_copy_size(None).unwrap_or(4) as usize
         };
-        let padded_row = aligned_row(width, pixel);
-        if std::env::var("NATIVE_DEBUG").is_ok() {
-            eprintln!("sync_staging: push {}", target.key);
-        }
+        let padded_row = aligned_row(width as usize, pixel);
         staging.0.push(StagingBuffer {
             key: target.key.clone(),
             src_image: target.src_image.clone(),
             depth: target.depth,
-            padded_row,
+            width,
             height,
+            padded_row,
             buffer: make_buffer(&device, padded_row * height as usize),
+            copied: false,
         });
     }
 }
 
+fn targets_image(camera: &ExtractedCamera, image: &Handle<Image>) -> bool {
+    matches!(
+        &camera.target,
+        Some(bevy::camera::NormalizedRenderTarget::Image(irt))
+            if irt.handle.id() == image.id()
+    )
+}
+
+/// Encode texture->staging copies for every requested pass whose view was
+/// extracted and rendered in this iteration.
+///
+/// Runs after `RenderGraphSystems::Render` and before `Submit`, recording
+/// into the same pending command stream as the camera passes, so the copy
+/// is ordered after this frame's rendering inside one submission. A
+/// requested pass whose camera was not extracted this frame (just
+/// registered, inactive, or removed) is not copied and therefore never
+/// reported: stale staging bytes cannot be relabelled as this frame.
 fn copy_passes(
-    ctx: RenderContext,
-    queue: Res<RenderQueue>,
-    staging: Res<Staging>,
+    mut ctx: RenderContext,
+    capture: Res<ExtractedCapture>,
+    mut staging: ResMut<Staging>,
     gpu_images: Res<RenderAssets<GpuImage>>,
-    depth_views: Query<(Entity, &ExtractedCamera, &ViewDepthTexture)>,
+    cameras: Query<&ExtractedCamera>,
+    depth_views: Query<(&ExtractedCamera, &ViewDepthTexture)>,
 ) {
-    if staging.0.is_empty() {
+    if capture.0.keys.is_empty() {
         return;
     }
-    let mut encoder = ctx
-        .render_device()
-        .create_command_encoder(&CommandEncoderDescriptor::default());
-
-    for b in staging.0.iter() {
+    for b in staging.0.iter_mut() {
+        b.copied = false;
+        if !capture.0.keys.iter().any(|k| *k == b.key) {
+            continue;
+        }
+        let layout = TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(b.padded_row as u32),
+            rows_per_image: None,
+        };
         if b.depth {
-            // Find the 3D view rendering to this readback's source image.
-            let Some((_, _, view)) = depth_views.iter().find(|(_, cam, _)| {
-                matches!(
-                    cam.target,
-                    Some(bevy::camera::NormalizedRenderTarget::Image(ref irt))
-                        if irt.handle.id() == b.src_image.id()
-                )
-            }) else {
+            let Some((_, view)) = depth_views
+                .iter()
+                .find(|(camera, _)| targets_image(camera, &b.src_image))
+            else {
                 continue;
             };
-            let tex = &view.texture;
-            encoder.copy_texture_to_buffer(
-                tex.as_image_copy(),
-                TexelCopyBufferInfo {
-                    buffer: &b.buffer,
-                    layout: TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(
-                            std::num::NonZero::<u32>::new(b.padded_row as u32).unwrap().into(),
-                        ),
-                        rows_per_image: None,
-                    },
-                },
-                tex.size(),
+            ctx.command_encoder().copy_texture_to_buffer(
+                view.texture.as_image_copy(),
+                TexelCopyBufferInfo { buffer: &b.buffer, layout },
+                view.texture.size(),
             );
         } else {
+            if !cameras.iter().any(|camera| targets_image(camera, &b.src_image)) {
+                continue;
+            }
             let Some(src) = gpu_images.get(&b.src_image) else {
                 continue;
             };
-            encoder.copy_texture_to_buffer(
+            ctx.command_encoder().copy_texture_to_buffer(
                 src.texture.as_image_copy(),
-                TexelCopyBufferInfo {
-                    buffer: &b.buffer,
-                    layout: TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(
-                            std::num::NonZero::<u32>::new(b.padded_row as u32).unwrap().into(),
-                        ),
-                        rows_per_image: None,
-                    },
-                },
+                TexelCopyBufferInfo { buffer: &b.buffer, layout },
                 src.texture_descriptor.size,
             );
         }
+        b.copied = true;
     }
-
-    queue.submit(std::iter::once(encoder.finish()));
 }
 
+/// Map and publish only the buffers `copy_passes` filled from this
+/// submission, stamped with its generation.
 fn receive_passes(
     device: Res<RenderDevice>,
     sender: Res<RenderSender>,
-    staging: Res<Staging>,
+    capture: Res<ExtractedCapture>,
+    mut staging: ResMut<Staging>,
 ) {
-    if staging.0.is_empty() {
+    let pending = staging.0.iter().filter(|b| b.copied).count();
+    if pending == 0 {
         return;
     }
-
-    let (s, r) = crossbeam_channel::bounded::<()>(staging.0.len());
-    for b in &staging.0 {
+    let (s, r) = crossbeam_channel::bounded::<()>(pending);
+    for b in staging.0.iter().filter(|b| b.copied) {
         let tx = s.clone();
-        b.buffer
-            .slice(..)
-            .map_async(MapMode::Read, move |res| {
-                if res.is_err() {
-                    panic!("map buffer failed");
-                }
-                let _ = tx.send(());
-            });
+        b.buffer.slice(..).map_async(MapMode::Read, move |res| {
+            res.expect("map readback buffer");
+            let _ = tx.send(());
+        });
     }
     device
         .poll(PollType::wait_indefinitely())
         .expect("poll device");
-    for _ in &staging.0 {
+    for _ in 0..pending {
         r.recv().expect("map_async result");
     }
-
-    for b in &staging.0 {
+    for b in staging.0.iter_mut().filter(|b| b.copied) {
         let data = b.buffer.slice(..).get_mapped_range().to_vec();
-        let _ = sender.send(SentPass { key: b.key.clone(), data });
         b.buffer.unmap();
+        b.copied = false;
+        let _ = sender.send(SentPass {
+            key: b.key.clone(),
+            generation: capture.0.generation,
+            width: b.width,
+            height: b.height,
+            padded_row: b.padded_row,
+            data,
+        });
     }
 }
 
-fn b_key(b: &StagingBuffer) -> String {
-    format!("{}:{}", if b.depth { "d" } else { "i" }, b.src_image.id())
+/// Fill each requested device stream slot from this submission.
+///
+/// Same ordering contract as `copy_passes`: after the camera passes and
+/// before `Submit`, recording into the pending command stream, so
+/// `GpuInterop::arm_ready` binds the slot's ready signal to the submission
+/// that carries the copies. A plane whose view was not rendered this frame
+/// is reported as an error for the sensor, never as a stale slot.
+#[cfg(feature = "gpu-interop")]
+fn copy_device_passes(
+    mut ctx: RenderContext,
+    capture: Res<ExtractedCapture>,
+    interop: Option<ResMut<crate::gpu_interop::GpuInterop>>,
+    sender: Res<DeviceSender>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    cameras: Query<&ExtractedCamera>,
+    depth_views: Query<(&ExtractedCamera, &ViewDepthTexture)>,
+) {
+    if capture.0.device.is_empty() {
+        return;
+    }
+    let generation = capture.0.generation;
+    let Some(mut interop) = interop else {
+        for copy in &capture.0.device {
+            let _ = sender.send(SentDevice {
+                sensor_id: copy.sensor_id.clone(),
+                generation,
+                result: Err("device interop is not open".into()),
+            });
+        }
+        return;
+    };
+    for copy in &capture.0.device {
+        let result = (|| {
+            let mut sources = Vec::with_capacity(copy.planes.len());
+            for plane in &copy.planes {
+                let src = if plane.depth {
+                    depth_views
+                        .iter()
+                        .find(|(camera, _)| targets_image(camera, &plane.src_image))
+                        .map(|(_, view)| view.texture.as_image_copy())
+                } else if cameras.iter().any(|camera| targets_image(camera, &plane.src_image)) {
+                    gpu_images.get(&plane.src_image).map(|src| src.texture.as_image_copy())
+                } else {
+                    None
+                };
+                let Some(src) = src else {
+                    return Err(format!("{}:{} was not rendered this frame", copy.sensor_id, plane.name));
+                };
+                sources.push((plane.name, src));
+            }
+            let lease = interop
+                .acquire(copy.stream, copy.wait)
+                .map_err(|error| error.to_string())?;
+            for (name, src) in sources {
+                if let Err(error) = interop.encode_copy(ctx.command_encoder(), &lease, name, src) {
+                    let _ = interop.cancel(lease);
+                    return Err(error.to_string());
+                }
+            }
+            interop.arm_ready(lease).map_err(|error| error.to_string())
+        })();
+        let _ = sender.send(SentDevice { sensor_id: copy.sensor_id.clone(), generation, result });
+    }
 }
 
 #[cfg(test)]
@@ -4115,23 +4801,23 @@ mod tests {
             "vehicle-test",
             "car",
             [0.0, 0.0, 0.0],
-            0.0,
+            Quat::IDENTITY,
             [4.5, 1.6, 1.8],
             [0.5, 0.5, 0.5],
             false,
         );
-        app.attach_actor_model("vehicle-test", &vehicle, 1.0, Some([0.56, 0.18, 0.18]))
+        app.attach_actor_asset("vehicle-test", &vehicle, 1.0, Some([0.56, 0.18, 0.18]), None, 0.0)
             .unwrap();
         app.upsert_actor(
             "walker-test",
             "pedestrian",
             [8.0, 0.0, 0.0],
-            0.0,
+            Quat::IDENTITY,
             [0.5, 1.8, 0.5],
             [0.5, 0.5, 0.5],
             false,
         );
-        app.attach_actor_model("walker-test", &pedestrian, 1.0, None)
+        app.attach_actor_asset("walker-test", &pedestrian, 1.0, None, None, 0.0)
             .unwrap();
 
         assert!(app.actor_model_mesh_count("vehicle-test") > 1);
@@ -4144,6 +4830,112 @@ mod tests {
         // Bevy's async asset tasks can still hold the test-only wgpu device
         // when the process tears down; the production service intentionally
         // lives for the process lifetime.
+        std::mem::forget(app);
+    }
+
+    fn test_camera(sensor_id: &str, width: u32, height: u32) -> CameraSpec {
+        CameraSpec {
+            sensor_id: sensor_id.into(),
+            width,
+            height,
+            fov_y_deg: 58.0,
+            near: 0.5,
+            far: 200.0,
+            passes: PassSet { rgb: true, id: true, depth: true },
+        }
+    }
+
+    fn sedan_scene() -> SceneApp {
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        assert!(vehicle.is_file());
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn capture_returns_the_submission_it_names_and_follows_camera_lifecycle() {
+        let mut app = sedan_scene();
+        app.add_camera(test_camera("cam", 96, 64), Profile::Sensor);
+        app.wait_until_ready().unwrap();
+        app.warmup(3);
+        let left = ([6.0, 1.5, 6.0], [0.0, 0.5, 0.0]);
+        let right = ([-6.0, 1.5, 6.0], [0.0, 0.5, 0.0]);
+
+        // Alternating poses on consecutive single captures: each frame must
+        // carry the pose set immediately before it, never the previous one.
+        app.set_pose("cam", &left.0, &left.1).unwrap();
+        let a = app.render_once(1).unwrap();
+        app.set_pose("cam", &right.0, &right.1).unwrap();
+        let b = app.render_once(2).unwrap();
+        app.set_pose("cam", &left.0, &left.1).unwrap();
+        let a_again = app.render_once(3).unwrap();
+        assert_ne!(a.passes["cam:rgb"].bytes, b.passes["cam:rgb"].bytes);
+        assert_eq!(a.passes["cam:rgb"].bytes, a_again.passes["cam:rgb"].bytes);
+        assert_ne!(a.passes["cam:depth"].bytes, b.passes["cam:depth"].bytes);
+        assert_eq!(a.identity.sim_tick, 1);
+        assert!(a.identity.generation < b.identity.generation);
+        assert!(b.identity.generation < a_again.identity.generation);
+        assert!(a.identity.scene_revision < b.identity.scene_revision);
+        assert_eq!(a.identity.rig_revision, b.identity.rig_revision);
+
+        // Sinks are per request: an rgb-only capture copies nothing else.
+        let rgb_only = app.capture(4, &["cam:rgb".into()]).unwrap();
+        assert_eq!(rgb_only.passes.len(), 1);
+        assert_eq!(rgb_only.passes["cam:rgb"].bytes, a.passes["cam:rgb"].bytes);
+        let full = app.render_once(5).unwrap();
+        assert_eq!(full.passes.len(), 3);
+        assert_eq!(full.passes["cam:id"].bytes, a.passes["cam:id"].bytes);
+
+        // Re-registering resizes in place and bumps the rig.
+        let before = app.rig_revision();
+        app.add_camera(test_camera("cam", 128, 64), Profile::Sensor);
+        app.set_pose("cam", &left.0, &left.1).unwrap();
+        let wide = app.render_once(6).unwrap();
+        assert!(wide.identity.rig_revision > before);
+        assert_eq!(wide.passes["cam:rgb"].width, 128);
+        assert_eq!(wide.passes["cam:rgb"].bytes.len(), wide.passes["cam:rgb"].padded_row * 64);
+
+        // Removal makes the pass unknown instead of serving stale bytes.
+        assert!(app.remove_camera("cam"));
+        assert!(app.capture(7, &["cam:rgb".into()]).is_err());
+        assert!(app.render_once(8).unwrap().passes.is_empty());
+        std::mem::forget(app);
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn mounted_camera_excludes_only_its_own_host() {
+        let mut app = sedan_scene();
+        app.add_camera(test_camera("mounted", 96, 64), Profile::Sensor);
+        app.add_camera(test_camera("spectator", 96, 64), Profile::Sensor);
+        app.wait_until_ready().unwrap();
+        app.upsert_actor("ego", "car", [0.0, 0.0, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.9, 0.1, 0.1], false);
+        app.upsert_actor("lead", "car", [0.0, 0.0, -6.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.1, 0.1, 0.9], false);
+        let pose = ([0.0, 2.5, 8.0], [0.0, 0.5, -3.0]);
+        for cam in ["mounted", "spectator"] {
+            app.set_pose(cam, &pose.0, &pose.1).unwrap();
+        }
+        app.set_camera_host("mounted", Some("ego")).unwrap();
+        app.warmup(3);
+
+        let frame = app.render_once(1).unwrap();
+        let hosted = &frame.passes["mounted:rgb"].bytes;
+        let spectator = &frame.passes["spectator:rgb"].bytes;
+        assert_ne!(hosted, spectator, "the mounted view must not render its host");
+        // The instance-ID proxy of the host stays in the mounted view.
+        assert_eq!(frame.passes["mounted:id"].bytes, frame.passes["spectator:id"].bytes);
+
+        app.set_camera_host("mounted", None).unwrap();
+        let unmounted = app.render_once(2).unwrap();
+        assert_eq!(
+            unmounted.passes["mounted:rgb"].bytes,
+            unmounted.passes["spectator:rgb"].bytes,
+            "unmounting restores the host for that view"
+        );
+        assert_eq!(unmounted.passes["spectator:rgb"].bytes, *spectator);
         std::mem::forget(app);
     }
 }

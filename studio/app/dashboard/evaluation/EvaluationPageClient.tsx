@@ -2,18 +2,18 @@
 
 import { FlaskConical, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
-import { useSetPageTitle } from "@/app/components/TopBarSlot";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { EmptyState } from "@/app/components/ui/empty-state";
-import { PageHeader } from "@/app/components/ui/page-header";
+} from "@simforge-oss/studio-ui/components/ui/card";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import {
   Table,
   TableBody,
@@ -21,7 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/app/components/ui/table";
+} from "@simforge-oss/studio-ui/components/ui/table";
 import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import type { ModelVersionRecord } from "@/app/lib/models/contracts";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "./shared";

@@ -4,6 +4,7 @@ packages:
   - services/*
   - studio
   - tools/*
+  - experiments/agentic-3d
 allowBuilds:
   esbuild: true
   sharp: true

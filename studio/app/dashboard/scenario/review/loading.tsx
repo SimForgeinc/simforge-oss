@@ -1,5 +1,5 @@
-import { RouteLoading } from "@/app/components/ui/sim-loader";
+import { ScenarioReviewLoading } from "@simforge-oss/studio-ui/scenario/route-states";
 
-export default function ScenarioReviewLoading() {
-  return <RouteLoading depth={2} label="Review queue" detail="Loading scenarios to review…" />;
+export default function ScenarioReviewRouteLoading() {
+  return <ScenarioReviewLoading />;
 }

@@ -9,8 +9,8 @@ import {
   type ScenarioMapBrowserAsset,
 } from "@/app/lib/scenario/document-store";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
-import { simforgeEnv } from "@/lib/compat-env";
-import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
+import { simforgeEnv } from "@/lib/simforge-env";
+import { browserAssetRedirectCacheControl, objectRedirect } from "@/app/lib/s3/local-object-redirect";
 
 type Context = {
   params: Promise<{ mapVersionId: string; assetPath: string[] }>;
@@ -18,24 +18,6 @@ type Context = {
 
 const DEFAULT_MAX_ASSET_BYTES = 512 * 1024 * 1024;
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
-const DEV_REDIRECT_CACHE_SECONDS = 50 * 60;
-
-export function browserAssetRedirectCacheControl(nodeEnv = process.env.NODE_ENV) {
-  // Development assets are immutable and the redirect target remains valid
-  // for one hour. Reusing it for fifty minutes lets the browser reuse the S3
-  // response cache without risking an expired signature. Shared environments
-  // retain the authenticated no-store boundary.
-  return nodeEnv === "development"
-    ? `private, max-age=${DEV_REDIRECT_CACHE_SECONDS}`
-    : "private, no-store";
-}
-
-function developmentAssetCacheControl(nodeEnv = process.env.NODE_ENV) {
-  return nodeEnv === "development"
-    ? `private, max-age=${DEV_REDIRECT_CACHE_SECONDS}, immutable`
-    : undefined;
-}
-
 function maxAssetBytes() {
   const value = Number(simforgeEnv("BROWSER_ASSET_MAX_BYTES") ?? DEFAULT_MAX_ASSET_BYTES);
   return Number.isSafeInteger(value) && value > 0 ? value : DEFAULT_MAX_ASSET_BYTES;
@@ -65,7 +47,7 @@ async function resolveAsset(route: Context): Promise<ResolvedAsset> {
   return { kind: "asset", asset };
 }
 
-async function redirectAsset(route: Context, headOnly: boolean): Promise<NextResponse> {
+async function redirectAsset(route: Context): Promise<NextResponse> {
   try {
     const asset = await resolveAsset(route);
     if (asset.kind === "response") return asset.response;
@@ -95,9 +77,9 @@ async function redirectAsset(route: Context, headOnly: boolean): Promise<NextRes
 
 /** Resolve the registered immutable object, then let the browser fetch it directly from S3. */
 export async function GET(_request: NextRequest, route: Context) {
-  return redirectAsset(route, false);
+  return redirectAsset(route);
 }
 
 export async function HEAD(_request: NextRequest, route: Context) {
-  return redirectAsset(route, true);
+  return redirectAsset(route);
 }

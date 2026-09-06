@@ -8,23 +8,25 @@
 
 import path from 'node:path';
 
-import { runSimulation, traceDigest, type AmbientTrafficProfile, type SimTrace } from '@simforge-oss/engine';
+import type { AmbientTrafficProfile, InvariantResidualReport, SimTrace } from '@simforge-oss/engine';
+import { parseTrace, runSimulation } from '@simforge-oss/engine/node';
 import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
-import type { InstanceManifest } from '@simforge-oss/compiler/node';
+import {
+  compileTemplate,
+  findSite,
+  loadMap,
+  writeJsonFile,
+  writeTraceFile,
+  type CatalogArtifactProvenance,
+  type InstanceManifest,
+} from '@simforge-oss/compiler/node';
 
 import { criticalityBand, filtersFor, type EvaluateFilterMode } from './commands/evaluate.js';
 import { metricsSummary } from './commands/simulate.js';
-import { evaluateTrace } from '@simforge-oss/engine';
-import { loadMap } from '@simforge-oss/compiler/node';
-import { verifyEvidenceHashes, type EvidenceHashReport } from './evidence.js';
-import { checkInvariants, type InvariantResidualReport } from './invariants.js';
-import { materialize } from './materialize.js';
-import { findSite } from '@simforge-oss/compiler/node';
-import { writeJsonFile, writeTraceFile } from '@simforge-oss/compiler/node';
 import { toStructuredError } from './errors.js';
+import { verifyEvidenceHashes, type EvidenceHashReport } from './evidence.js';
 
 export type { CatalogArtifactProvenance } from '@simforge-oss/compiler/node';
-import type { CatalogArtifactProvenance } from '@simforge-oss/compiler/node';
 
 export interface CellCoords {
   readonly mapId: string;
@@ -161,7 +163,7 @@ export async function runCell(
   try {
     const { bundle, site } = await findSite(template, options.mapId, options.siteId,
       options.exactCatalogSiteResolution ? { exactCatalogSiteResolution: true } : {});
-    const { input, manifest } = materialize(template, bundle, site, {
+    const { input, manifest } = compileTemplate(template, bundle, site, {
       drawIndex: options.drawIndex,
       ...(options.seed === undefined ? {} : { seed: options.seed }),
       ...(options.catalogSlot === undefined ? {} : { variant: options.catalogSlot.variant }),
@@ -179,14 +181,15 @@ export async function runCell(
     };
     await writeJsonFile(paths.instance, instance);
 
-    const run = runSimulation(input, { graph: bundle.graph, guards: 'collect' });
+    const run = runSimulation(input, { graph: bundle.graph });
     const trace = options.catalogSlot === undefined
       ? run.trace
       : { ...run.trace, header: { ...run.trace.header, catalogSlot: options.catalogSlot } };
-    if (options.writeTrace) await writeTraceFile(paths.trace, trace);
+    // One native parse: evaluation, invariants and the digest all read it.
+    const handle = parseTrace(trace);
+    if (options.writeTrace) await writeTraceFile(paths.trace, handle);
 
-    const evaluation = evaluateTrace(
-      trace,
+    const evaluation = handle.evaluate(
       filtersFor(
         template.meta.negativeControl ? 'negative-control' : options.filter,
         {
@@ -196,9 +199,7 @@ export async function runCell(
       ),
     );
     const speedLimitKph = bundle.index.lanes[site.frame.entryLaneRsl]?.speedLimitKph ?? null;
-    const invariants = checkInvariants({
-      template,
-      trace,
+    const invariants = handle.checkInvariants(template, {
       scope: {
         params: manifest.params.values,
         clip: { seconds: trace.header.clipSeconds },
@@ -265,7 +266,7 @@ export async function runCell(
       paramSeed: manifest.replayKey.paramSeed,
       params: manifest.params.values,
       inputHash: manifest.inputHash,
-      traceDigest: traceDigest(trace),
+      traceDigest: handle.digest(),
       instanceFile: paths.instance,
       traceFile: options.writeTrace ? paths.trace : null,
       issues: [...manifest.issues, ...run.issues].map((i) => ({

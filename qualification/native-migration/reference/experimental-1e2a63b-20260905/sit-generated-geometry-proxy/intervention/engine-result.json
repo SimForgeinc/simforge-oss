@@ -1,0 +1,66 @@
+{
+  "issues": [],
+  "arrival": [],
+  "events": [],
+  "constraints": [],
+  "satisfied": false,
+  "actionCalls": {},
+  "authorityIntervals": [
+    {
+      "roleId": "barrier",
+      "intervalIndex": 0,
+      "startS": 0,
+      "endS": 20,
+      "hookCalls": 0,
+      "actionCalls": 0
+    },
+    {
+      "roleId": "observer",
+      "intervalIndex": 0,
+      "startS": 0,
+      "endS": 20,
+      "hookCalls": 0,
+      "actionCalls": 0
+    },
+    {
+      "roleId": "target",
+      "intervalIndex": 0,
+      "startS": 0,
+      "endS": 20,
+      "hookCalls": 0,
+      "actionCalls": 0
+    }
+  ],
+  "authorityTransitions": [],
+  "authority": [
+    {
+      "roleId": "barrier",
+      "kind": "controller",
+      "startS": 0,
+      "endS": 20,
+      "intervalIndex": 0,
+      "routeKind": "polyline",
+      "actionHookAvailable": false
+    },
+    {
+      "roleId": "observer",
+      "kind": "controller",
+      "startS": 0,
+      "endS": 20,
+      "intervalIndex": 0,
+      "routeKind": "polyline",
+      "actionHookAvailable": false
+    },
+    {
+      "roleId": "target",
+      "kind": "controller",
+      "startS": 0,
+      "endS": 20,
+      "intervalIndex": 0,
+      "routeKind": "polyline",
+      "actionHookAvailable": false
+    }
+  ],
+  "observations": [],
+  "programDigest": "0580fec7fd5e27ff3154d2da68d5c6a6a0ec0e5b3847068ed93d1b82041aae3d"
+}

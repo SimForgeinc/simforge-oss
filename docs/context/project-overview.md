@@ -12,7 +12,7 @@ compatibility in both directions. Its portable deterministic core includes:
 - **Scenario documents** (`packages/scenario`): versioned templates, concrete
   instances, schemas, hashing, and storage-neutral types.
 - **Simulation** (`packages/engine`): fixed-step actors, routes, triggers,
-  interactions, physics, traces, and the frozen `scene-state.v1` output. The
+  interactions, physics, traces, and the frozen `simforge.scene-state.v1` output. The
   determinism boundary is editor == sim == replay.
 - **World compilation** (`packages/maps`, `packages/compiler`): OpenDRIVE map
   intelligence, logical anchor matching, site selection, and deterministic
@@ -44,20 +44,21 @@ Studio and Cloud.
 **SimForge Cloud** is the hosted product. Portable behavior is authored here,
 released as one immutable stack, and mechanically synchronized into Cloud. The
 legacy `uniscenario.*` database schemas, `/api/uniscenario/**` routes, scenario
-format identifiers, `scene-state.v1`, and worker environment variables are
-frozen wire contracts, not public branding.
+format identifiers, `simforge.scene-state.v1`, and worker environment variables
+are frozen wire contracts, not public branding.
 
-CARLA interoperability remains two separate adapters:
+CARLA interoperability is one adapter:
 
-- `adapters/carla-api`: drop-in Python `import carla` over SimForge Engine.
-- `adapters/carla-exec`: execute SimForge scenarios in a real CARLA runtime.
+- `adapters/carla-exec`: execute SimForge scenarios in a real CARLA runtime
+  (`simforge-oss-carla-exec`). Local execution is the native Python SDK in
+  `adapters/gym`.
 
 ## Repository layout
 
 - `packages/` — the 13-package `@simforge-oss/*` TypeScript stack.
 - `studio/` — SimForge Studio, the local product and default launch surface.
 - `renderer/` — SimForge Renderer Rust workspace.
-- `adapters/` — Gymnasium, CARLA API, and CARLA execution boundaries.
+- `adapters/` — Gymnasium (native Python SDK) and CARLA execution boundaries.
 - `qualification/` — deterministic release gates, golden harnesses, and frozen
   evaluation assets.
 - `research/` — experimental lanes that do not ship as product code.

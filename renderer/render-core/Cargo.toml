@@ -4,10 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "native-render"
-path = "src/bin/native-render.rs"
-
-[[bin]]
 name = "scen-play"
 path = "src/bin/scen-play.rs"
 
@@ -53,9 +49,17 @@ walkdir = "2"
 
 sha2 = "0.10"
 
+# `gpu-interop` only: raw Vulkan handles for exportable output memory and
+# semaphores (see src/gpu_interop.rs). `ash` must track wgpu-hal's 0.38.
+wgpu = { version = "29.0.4", default-features = false, features = ["vulkan"], optional = true }
+ash = { version = "0.38", default-features = false, optional = true }
+libc = { version = "0.2", optional = true }
+
 [features]
 default = ["pcss"]
 # PCSS soft shadows (lighting ladder rung 4)
 pcss = ["bevy/experimental_pbr_pcss"]
 # Solari raytraced GI (rung 5) — optional RT-hardware quality tier
 solari = ["bevy/bevy_solari"]
+# Exportable Vulkan/CUDA output path (`render_core::gpu_interop`).
+gpu-interop = ["bevy/raw_vulkan_init", "dep:wgpu", "dep:ash", "dep:libc"]

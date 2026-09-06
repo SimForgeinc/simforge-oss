@@ -1,0 +1,514 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "3fcbf3a6a34e08b8ac2e8a3fd4ac9f07d2749d9e5e9efb3030da68207dffe017",
+  "traceDigest": "22d805de08b77c7ce621c38bb1a989e6e1e00764cbcf1dc79b61f899fc47f519",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 0,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ambulance": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "cross-traffic": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "downstream-queue": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "pedestrian": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 10000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ambulance": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 18.12
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.02,
+          "from": "93:0:1",
+          "to": "1145:0:1"
+        },
+        {
+          "t": 0.04,
+          "from": "1145:0:1",
+          "to": "93:0:1"
+        },
+        {
+          "t": 17.04,
+          "from": "93:0:1",
+          "to": "1207:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "cross-traffic": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.6400000000000001,
+          "from": "57:0:1",
+          "to": "1221:0:1"
+        },
+        {
+          "t": 4.42,
+          "from": "1221:0:1",
+          "to": "93:0:-1"
+        },
+        {
+          "t": 6.0600000000000005,
+          "from": "93:0:-1",
+          "to": "1146:0:-1"
+        },
+        {
+          "t": 7.42,
+          "from": "1146:0:-1",
+          "to": "94:0:-1"
+        },
+        {
+          "t": 7.68,
+          "from": "94:0:-1",
+          "to": "995:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "downstream-queue": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "pedestrian": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 10.4,
+          "from": null,
+          "to": "1173:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "cross-green",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:gridlock-junction:left.phase",
+      "value": "green"
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-holds",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-red",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:gridlock-junction:focus-vehicle.phase",
+      "value": "red"
+    },
+    {
+      "t": 0.2,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-siren",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0.2,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "lights.emergency",
+      "value": "flashing_siren"
+    },
+    {
+      "t": 2,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-horn-1-on",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 2,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "audio.horn",
+      "value": true
+    },
+    {
+      "t": 2.36,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-horn-1-off",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 2.36,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "audio.horn",
+      "value": false
+    },
+    {
+      "t": 2.56,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-horn-2-on",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 2.56,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "audio.horn",
+      "value": true
+    },
+    {
+      "t": 2.9,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-horn-2-off",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 2.9,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "audio.horn",
+      "value": false
+    },
+    {
+      "t": 4,
+      "kind": "trigger_fired",
+      "interactionId": "pedestrian-enters",
+      "actorId": "pedestrian",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 7.5,
+      "kind": "trigger_fired",
+      "interactionId": "cross-traffic-clears",
+      "actorId": "cross-traffic",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 8.5,
+      "kind": "trigger_fired",
+      "interactionId": "cross-red",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 8.5,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:gridlock-junction:left.phase",
+      "value": "red"
+    },
+    {
+      "t": 11,
+      "kind": "trigger_fired",
+      "interactionId": "pedestrian-clears",
+      "actorId": "pedestrian",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11,
+      "kind": "preemption",
+      "actorId": "pedestrian",
+      "axis": "longitudinal",
+      "byInteractionId": "pedestrian-clears",
+      "preemptedInteractionId": "pedestrian-enters"
+    },
+    {
+      "t": 11.5,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-nudges-right",
+      "actorId": "focus-vehicle",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 11.5,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "focus-vehicle",
+      "interactionId": "focus-vehicle-nudges-right",
+      "requestedDurationS": 2.2,
+      "effectiveDurationS": 2.7764695792503833,
+      "displacementM": -2.8537603191352883
+    },
+    {
+      "t": 11.9,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-creeps",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11.9,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-creeps",
+      "preemptedInteractionId": "focus-vehicle-holds"
+    },
+    {
+      "t": 12.5,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-enters-refuge",
+      "actorId": "ambulance",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 12.5,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "ambulance",
+      "interactionId": "ambulance-enters-refuge",
+      "requestedDurationS": 1.6,
+      "effectiveDurationS": 1.6,
+      "displacementM": 0.11445313131302023
+    },
+    {
+      "t": 14.08,
+      "kind": "interaction_completed",
+      "interactionId": "ambulance-enters-refuge",
+      "actorId": "ambulance",
+      "finalLateralOffsetM": 0.11440274331970868
+    },
+    {
+      "t": 14.08,
+      "kind": "released",
+      "actorId": "ambulance",
+      "axis": "lateral",
+      "interactionId": "ambulance-enters-refuge",
+      "reason": "complete"
+    },
+    {
+      "t": 14.5,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-stops-pocket",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 14.5,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-stops-pocket",
+      "preemptedInteractionId": "focus-vehicle-creeps"
+    },
+    {
+      "t": 15,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-commits",
+      "actorId": "ambulance",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 15,
+      "kind": "state_set",
+      "actorId": "ambulance",
+      "key": "rules.collisionAvoidance",
+      "value": false
+    },
+    {
+      "t": 15,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-passes",
+      "actorId": "ambulance",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 16,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-centers-for-junction",
+      "actorId": "ambulance",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 16,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "ambulance",
+      "interactionId": "ambulance-centers-for-junction",
+      "requestedDurationS": 1.2,
+      "effectiveDurationS": 1.2,
+      "displacementM": -0.09639383913768194
+    },
+    {
+      "t": 17.04,
+      "kind": "interaction_aborted",
+      "interactionId": "focus-vehicle-nudges-right",
+      "actorId": "focus-vehicle",
+      "reason": "tracking_error"
+    },
+    {
+      "t": 17.18,
+      "kind": "interaction_completed",
+      "interactionId": "ambulance-centers-for-junction",
+      "actorId": "ambulance",
+      "finalLateralOffsetM": 0
+    },
+    {
+      "t": 17.18,
+      "kind": "released",
+      "actorId": "ambulance",
+      "axis": "lateral",
+      "interactionId": "ambulance-centers-for-junction",
+      "reason": "complete"
+    },
+    {
+      "t": 18.14,
+      "kind": "trigger_fired",
+      "interactionId": "ambulance-clears-scene",
+      "actorId": "ambulance",
+      "verb": "exist",
+      "forced": false
+    },
+    {
+      "t": 18.14,
+      "kind": "despawn",
+      "actorId": "ambulance",
+      "reason": "interaction"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "cross-traffic",
+      "focus-vehicle"
+    ],
+    "minDistancePairs": [
+      [
+        "ambulance",
+        "focus-vehicle"
+      ],
+      [
+        "cross-traffic",
+        "focus-vehicle"
+      ],
+      [
+        "focus-vehicle",
+        "pedestrian"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:1426",
+      "reason": "A coincident OpenDRIVE lane was bound to 359:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:1426",
+        "sourceRsl": "71:0:-2",
+        "routeRsl": "359:0:-1",
+        "distanceM": 1.0047638204385039
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:1427",
+      "reason": "A coincident OpenDRIVE lane was bound to 384:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:1427",
+        "sourceRsl": "18:0:-3",
+        "routeRsl": "384:0:-1",
+        "distanceM": 1.0000147876391519
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:1427",
+      "reason": "A coincident OpenDRIVE lane was bound to 380:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:1427",
+        "sourceRsl": "18:0:-8",
+        "routeRsl": "380:0:-1",
+        "distanceM": 1.00001483683883
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:1427",
+      "reason": "A coincident OpenDRIVE lane was bound to 373:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:1427",
+        "sourceRsl": "71:0:-4",
+        "routeRsl": "373:0:-1",
+        "distanceM": 1.0000148958718773
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:1427",
+      "reason": "A coincident OpenDRIVE lane was bound to 374:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:1427",
+        "sourceRsl": "71:0:-5",
+        "routeRsl": "374:0:-1",
+        "distanceM": 1.0013362784558186
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.late-entry.behavior.route",
+      "reason": "route provides 187.4 m ahead of the spawn but the actor covers 210.0 m in 16 s",
+      "detail": {
+        "availableM": 187.3900388520886,
+        "neededM": 210.00000000000074,
+        "clipSeconds": 16
+      }
+    }
+  ],
+  "arrival": []
+}

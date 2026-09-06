@@ -1,6 +1,6 @@
 simforge_bridge:
   ros__parameters:
-    # Episode spec consumed by the env-server (path resolved by the launcher).
+    # Episode spec (simforge_oss_gym episode spec JSON; path resolved by the launcher).
     episodes: ""
     seed: "ros2-bridge"
     session: 0
@@ -13,7 +13,7 @@ simforge_bridge:
     timeout_policy: "hold"        # hold | authored
     max_ticks: 0                  # 0 = run to termination/truncation
 
-    # AckermannDriveStamped -> EnvAction mapping.
+    # AckermannDriveStamped -> engine action mapping.
     control_mode: "passthrough"   # passthrough (pedals+steer) | setpoint (speed/accel, authored steering)
     max_steer_rad: 0.6            # Ackermann steering_angle at full engine steer
     steer_sign: 1.0               # +1: positive angle = left = +yaw (verified against dynamic-v1)

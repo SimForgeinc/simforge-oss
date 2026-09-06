@@ -1,14 +1,14 @@
 "use client";
 
 import { ChevronRight, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+} from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
 
 type EnrichmentSectionProps = {

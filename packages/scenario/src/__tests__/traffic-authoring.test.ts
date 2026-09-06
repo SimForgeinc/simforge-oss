@@ -7,34 +7,24 @@ import {
   DEFAULT_SEEDED_CARS_PER_ACTOR,
   DENSITY_VEHICLE_COUNTS,
   GlobalTrafficAuthoringSchema,
-  LEGACY_ENVIRONMENT_FALLBACK,
   MIXED_VEHICLE_MIX,
   NEW_DOCUMENT_ENVIRONMENT_DEFAULT,
   TRAFFIC_AUTHORING_DEFAULTS,
   TRAFFIC_AUTHORING_LIMITS,
   TrafficAuthoringSchema,
   TrafficVehicleMixWeightsSchema,
-  resolveLegacyEnvironmentFallback,
   resolveNewDocumentEnvironment,
   vehicleMixForPreset,
 } from "../contracts.js";
 
 describe("environment authoring defaults", () => {
-  it("keeps new-document and legacy missing-environment semantics explicit", () => {
+  it("authors new documents from the v2 schema defaults", () => {
     expect(NEW_DOCUMENT_ENVIRONMENT_DEFAULT).toMatchObject({
       weather: "cloudy",
       timeOfDay: "dusk",
     });
     expect(resolveNewDocumentEnvironment()).toEqual(NEW_DOCUMENT_ENVIRONMENT_DEFAULT);
-
-    expect(LEGACY_ENVIRONMENT_FALLBACK).toMatchObject({
-      weather: "clear",
-      timeOfDay: "noon",
-    });
-    expect(resolveLegacyEnvironmentFallback(undefined)).toEqual(
-      LEGACY_ENVIRONMENT_FALLBACK,
-    );
-    expect(resolveLegacyEnvironmentFallback({ weather: "heavy_rain" })).toMatchObject({
+    expect(resolveNewDocumentEnvironment({ weather: "heavy_rain" })).toMatchObject({
       weather: "heavy_rain",
       timeOfDay: "dusk",
     });

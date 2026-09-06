@@ -153,7 +153,7 @@ export async function loadBuiltinRenderEngine(
   }
   const binary = typeof options.binary === 'string'
     ? options.binary
-    : process.env.SIMFORGE_CARLA_BINARY ?? 'simforge-oss-carla-api';
+    : process.env.SIMFORGE_CARLA_BINARY ?? 'simforge-oss-carla-exec';
   const host = typeof options.host === 'string'
     ? options.host
     : process.env.CARLA_HOST ?? '127.0.0.1';

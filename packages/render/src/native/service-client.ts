@@ -7,6 +7,8 @@ import { decode, encode } from '@msgpack/msgpack';
 const HEADER_BYTES = 4;
 const RECORD_HEADER_BYTES = 128;
 const MAX_FRAME_BYTES = 64 * 1024 * 1024;
+/** Wire protocol this client speaks (`renderer/service/src/proto.rs`). */
+export const NATIVE_SERVICE_PROTOCOL = 5;
 
 export interface NativeFrameRecord {
   readonly sensorId: string;
@@ -17,7 +19,19 @@ export interface NativeFrameRecord {
   readonly height: number;
   readonly format: string;
   readonly tickId: number;
-  readonly digest?: string;
+  /** CRC32 (IEEE) of the payload bytes, 8-char lowercase hex. */
+  readonly digest: string;
+}
+
+/**
+ * Identity of the single GPU submission every payload of a response was
+ * copied from (`render_core::engine::FrameIdentity`).
+ */
+export interface NativeFrameIdentity {
+  readonly simTick: number;
+  readonly sceneRevision: number;
+  readonly rigRevision: number;
+  readonly generation: number;
 }
 
 interface NativeResponse {
@@ -27,8 +41,14 @@ interface NativeResponse {
   readonly error?: string;
   readonly protocol?: number;
   readonly shm?: { readonly path: string; readonly size_bytes: number; readonly meta_bytes: number };
+  readonly frame?: Partial<NativeFrameIdentity>;
   readonly frames?: readonly NativeFrameRecord[];
   readonly server_ms?: number;
+}
+
+export interface NativeBundleResponse extends NativeResponse {
+  readonly frame: NativeFrameIdentity;
+  readonly frames: readonly NativeFrameRecord[];
 }
 
 export class NativeServiceClient {
@@ -50,15 +70,28 @@ export class NativeServiceClient {
     await once(socket, 'connect');
     const client = new NativeServiceClient(socket);
     const hello = await client.rpc({ op: 'hello' });
-    // V2 is the floor this client speaks (`load_scene_state`, bundles);
-    // V3 (`set_lighting`) and V4 (lookdev AA readback, `advance`) only add
-    // ops and reply fields, so any later revision serves a V2 client.
-    if (typeof hello.protocol !== 'number' || hello.protocol < 2 || !hello.shm?.path) {
+    if (hello.protocol !== NATIVE_SERVICE_PROTOCOL || !hello.shm?.path) {
       await client.close();
-      throw new Error(`native render service protocol mismatch: ${String(hello.protocol)}`);
+      throw new Error(`native render service protocol ${String(hello.protocol)}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
     }
     client.#shmPath = hello.shm.path;
     return client;
+  }
+
+  /** `render_bundle`: one submission of the resident scene, identity-stamped. */
+  async renderBundle(body: Readonly<Record<string, unknown>>): Promise<NativeBundleResponse> {
+    const value = await this.rpc({ ...body, op: 'render_bundle' });
+    const { frame, frames } = value;
+    if (
+      typeof frame?.simTick !== 'number'
+      || typeof frame.sceneRevision !== 'number'
+      || typeof frame.rigRevision !== 'number'
+      || typeof frame.generation !== 'number'
+      || !Array.isArray(frames)
+    ) {
+      throw new Error('native render service bundle response is missing its frame identity');
+    }
+    return { ...value, frame: frame as NativeFrameIdentity, frames };
   }
 
   async rpc(body: Readonly<Record<string, unknown>>): Promise<NativeResponse> {

@@ -6,7 +6,7 @@ import type {
   ScenarioValidationVerdict,
 } from "@simforge-oss/studio-shared";
 
-import { useVisiblePolling } from "@/app/lib/use-visible-polling";
+import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
 
 /**
  * Drives esmini validation for the AI panel's currently-highlighted scenario.

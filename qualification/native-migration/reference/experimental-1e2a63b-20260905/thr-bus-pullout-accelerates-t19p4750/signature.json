@@ -1,0 +1,180 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "ac876c49562eb4519837c5d2e3ee070a75fa90ebb9af97b34180733343e5e436",
+  "traceDigest": "98891cbbeacb158f7d94beaefc47f473d6dee1a760472c18be2bf1c38c57ba0b",
+  "dt": 0.02,
+  "clipSeconds": 14,
+  "warmupSeconds": 2,
+  "mapId": "belmont-research-center",
+  "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+  "topologyDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+  "tickCount": 701,
+  "firstT": 0,
+  "lastT": 14,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "bus": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bus"
+      },
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "bus": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 14
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 6.58,
+          "from": "374:0:-1",
+          "to": "107:0:-1"
+        },
+        {
+          "t": 9.46,
+          "from": "107:0:-1",
+          "to": "314:0:-1"
+        },
+        {
+          "t": 12.86,
+          "from": "314:0:-1",
+          "to": "14:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 14
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.14,
+          "from": "22:0:-1",
+          "to": "374:0:-1"
+        },
+        {
+          "t": 9.24,
+          "from": "374:0:-1",
+          "to": "107:0:-1"
+        },
+        {
+          "t": 12.18,
+          "from": "107:0:-1",
+          "to": "314:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "bus-signals",
+      "actorId": "bus",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "bus",
+      "key": "lights.indicator",
+      "value": "left"
+    },
+    {
+      "t": 0.72,
+      "kind": "trigger_fired",
+      "interactionId": "bus-accelerates",
+      "actorId": "bus",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0.92,
+      "kind": "trigger_fired",
+      "interactionId": "bus-enters-lane",
+      "actorId": "bus",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 0.92,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "bus",
+      "interactionId": "bus-enters-lane",
+      "requestedDurationS": 3.5,
+      "effectiveDurationS": 6.48744925678664,
+      "displacementM": 3.805970230648162
+    },
+    {
+      "t": 8,
+      "kind": "released",
+      "actorId": "bus",
+      "axis": "longitudinal",
+      "interactionId": "bus-accelerates",
+      "reason": "window"
+    },
+    {
+      "t": 13.88,
+      "kind": "interaction_aborted",
+      "interactionId": "bus-enters-lane",
+      "actorId": "bus",
+      "reason": "tracking_error"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 701,
+    "minTTCPair": [
+      "bus",
+      "ego"
+    ],
+    "minDistancePairs": [
+      [
+        "bus",
+        "ego"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

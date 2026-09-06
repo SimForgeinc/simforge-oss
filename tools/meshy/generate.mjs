@@ -86,7 +86,7 @@ async function loadCatalog() {
     const parsed = JSON.parse(await readFile(candidate, 'utf8'));
     if (!Array.isArray(parsed) || parsed.length === 0) continue;
     validateCatalog(parsed, candidate);
-    return { entries: parsed.filter((entry) => !entry.legacyAliasOf), source: path.relative(REPO_ROOT, candidate) };
+    return { entries: parsed, source: path.relative(REPO_ROOT, candidate) };
   }
   fail(`No non-empty catalog found at ${candidates.map((item) => path.relative(REPO_ROOT, item)).join(' or ')}`);
 }

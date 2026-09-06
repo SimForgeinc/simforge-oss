@@ -14,8 +14,8 @@ import {
   type DatasetExportRecipeId,
 } from "@/app/lib/studio-shared/dataset-export-recipes";
 import type { ExportFormat } from "@/app/lib/studio-shared/dataset";
-import { cn } from "@/app/lib/utils";
-import { useVisiblePolling } from "@/app/lib/use-visible-polling";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
 
 type ExportJob = {
   id: string;

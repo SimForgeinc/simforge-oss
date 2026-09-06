@@ -17,7 +17,13 @@ import {
   DECLARED_FACT_KEYS,
   summariseFactKeys,
 } from '../build/facts.js';
-import { ALL_MAPS, DEV_ASSETS, devAssetsAvailable, miniYaleSources } from './helpers.js';
+import {
+  ALL_MAPS,
+  DEV_ASSETS,
+  devAssetsAvailable,
+  miniYaleSources,
+  straightRoadSources,
+} from './helpers.js';
 
 const build = buildMapIntel(miniYaleSources());
 
@@ -67,10 +73,28 @@ describe('declared fact vocabulary', () => {
     }
   });
 
-  it('fails the build when an `always` key has no producer', () => {
-    expect(() => assertDeclaredFactsProduced('test', [{ facts: {} }])).toThrow(
-      /declared fact keys with no producer/,
+  it('fails the build when a host exists but no producer wrote an `always` key', () => {
+    const junction = { type: 'junction' as const, anchor: { road: null }, facts: {} };
+    expect(() => assertDeclaredFactsProduced('test', [junction])).toThrow(
+      /declared fact keys with no producer: .*\barm_count\b/,
     );
+  });
+
+  it('does not require a key its host type is absent for', () => {
+    const audit = summariseFactKeys([
+      { type: 'junction', anchor: { road: null }, facts: { arm_count: 4 } },
+    ]);
+    const otherJunctionKeys = DECLARED_FACT_KEYS.filter(
+      (s) =>
+        s.scope === 'always' &&
+        s.hosts !== 'anchored' &&
+        s.hosts.includes('junction') &&
+        s.key !== 'arm_count',
+    ).map((s) => s.key);
+    expect(audit.missingAlways).toEqual(otherJunctionKeys.sort());
+    expect(audit.inapplicableAlways).toContain('turn_relation');
+    expect(audit.inapplicableAlways).toContain('lanes_same_dir');
+    expect(audit.inapplicableAlways).toContain('anchor_distance_m');
   });
 
   it('emits fact keys in sorted order', () => {
@@ -78,6 +102,48 @@ describe('declared fact vocabulary', () => {
       const keys = Object.keys(loc.facts);
       expect(keys).toEqual([...keys].sort());
     }
+  });
+});
+
+describe('a valid map with no junction', () => {
+  const straight = buildMapIntel(straightRoadSources());
+
+  it('compiles real corridor topology instead of failing the fact audit', () => {
+    expect(straight.derived.junctions).toEqual([]);
+    expect(straight.derived.segments.length).toBeGreaterThan(0);
+    const midblocks = straight.catalog.locations.filter((l) => l.type === 'midblock_segment');
+    expect(midblocks.length).toBeGreaterThan(0);
+    expect(straight.catalog.locations.some((l) => l.type === 'junction')).toBe(false);
+    for (const loc of midblocks) {
+      expect(loc.facts['lanes_same_dir']).toBe(1);
+      expect(loc.facts['lanes_opposing']).toBe(1);
+      expect(loc.facts['is_one_way']).toBe(false);
+      expect(loc.facts['distance_to_junction_m']).toBe(-1);
+      expect(loc.facts['segment_length_m']).toBe(200);
+      expect(
+        (loc.facts['runway_upstream_m'] as number) + (loc.facts['runway_downstream_m'] as number),
+      ).toBeCloseTo(200, 1);
+      expect(loc.facts['road_name']).toBe('Long Straight');
+    }
+    expect(straight.derived.factIndex.locationsByType['midblock_segment']).toHaveLength(
+      midblocks.length,
+    );
+  });
+
+  it('reports junction and movement keys as inapplicable, and corridor keys as produced', () => {
+    expect(straight.audit.missingAlways).toEqual([]);
+    expect(straight.audit.inapplicableAlways).toEqual(
+      DECLARED_FACT_KEYS.filter(
+        (s) =>
+          s.scope === 'always' &&
+          s.hosts !== 'anchored' &&
+          !s.hosts.some((t) => t === 'midblock_segment' || t === 'work_zone_suitable'),
+      )
+        .map((s) => s.key)
+        .sort(),
+    );
+    expect(straight.audit.produced).toContain('runway_downstream_m');
+    expect(straight.audit.produced).toContain('anchor_heading_deg');
   });
 });
 

@@ -9,18 +9,11 @@
 
 import { readFile } from 'node:fs/promises';
 
-import {
-  createBlindReviewPacket,
-  evaluateIntentRubric,
-  evaluateTrace,
-  intentRubricSchema,
-  type EvaluateFilters,
-  type IntentEvaluation,
-} from '@simforge-oss/engine';
+import { intentRubricSchema, type EvaluateFilters, type IntentEvaluation } from '@simforge-oss/engine';
+import { readTraceHandle, writeJsonFile } from '@simforge-oss/compiler/node';
 
 import { CliError, EXIT } from '../errors.js';
 import { emit, emitLines, fixed, pad } from '../output.js';
-import { readTraceFile, writeJsonFile } from '@simforge-oss/compiler/node';
 import { metricsSummary } from './simulate.js';
 
 export type EvaluateFilterMode = 'critical' | 'negative-control' | 'all';
@@ -101,9 +94,9 @@ export async function evaluate(options: EvaluateOptions): Promise<number> {
       path: '--filter',
     });
   }
-  const trace = await readTraceFile(options.file);
-  const evaluation = evaluateTrace(
-    trace,
+  const handle = await readTraceHandle(options.file);
+  const trace = handle.toTrace();
+  const evaluation = handle.evaluate(
     filtersFor(options.filter, {
       trivialTtcS: options.trivialTtcS,
       rejectCollisions: options.rejectCollisions,
@@ -113,9 +106,9 @@ export async function evaluate(options: EvaluateOptions): Promise<number> {
   let intentEvaluation: IntentEvaluation | null = null;
   if (options.rubric) {
     const rubric = await readIntentRubric(options.rubric);
-    intentEvaluation = evaluateIntentRubric(trace, rubric);
+    intentEvaluation = handle.evaluateIntentRubric(rubric);
     if (options.blindReviewOut) {
-      await writeJsonFile(options.blindReviewOut, createBlindReviewPacket(rubric, intentEvaluation));
+      await writeJsonFile(options.blindReviewOut, handle.blindReviewPacket(rubric));
     }
   } else if (options.blindReviewOut) {
     throw new CliError('missing_argument', '--blind-review-out requires --rubric', { path: '--rubric' });

@@ -12,7 +12,11 @@
  * - **Origin**: ground-centre. The bounding box of a built prop is centred on
  *   the origin in X and Z and starts at `y = 0` (wheels/feet/base touch the
  *   ground plane), so placement is `group.position.set(x, groundY, z)` plus a
- *   yaw about Y — no per-prop offsets to remember.
+ *   yaw about Y — no per-prop offsets to remember. The one exception is
+ *   declared, never inferred: an entry with `origin: 'body-centre'` is a
+ *   rigid-body component whose mesh is centred on the origin in all three
+ *   axes, because a physics solver exports that body's centre pose (position
+ *   plus full quaternion) and the renderer must place the mesh at it verbatim.
  * - **Dims**: `l` is the extent along X, `w` along Z, `h` along Y.
  */
 
@@ -21,6 +25,7 @@ export type PropClass =
   | 'vehicle'
   | 'pedestrian'
   | 'sidewalk_robot'
+  | 'robot'
   | 'drone'
   | 'animal'
   | 'construction'
@@ -32,6 +37,7 @@ export const PROP_CLASSES: readonly PropClass[] = [
   'vehicle',
   'pedestrian',
   'sidewalk_robot',
+  'robot',
   'drone',
   'animal',
   'construction',
@@ -125,6 +131,17 @@ export interface Dims {
   h: number;
 }
 
+/**
+ * Where a built prop's origin sits relative to its bounding box.
+ *
+ * - `ground`: bottom-centre (default for every placeable prop).
+ * - `body-centre`: centre of the box in X, Y and Z. Used by articulated
+ *   rigid-body components (`robot.*`) whose exported scene-state position is
+ *   the solver's body origin, so consumers must not add a ground lift or a
+ *   `h / 2` offset and must apply the exported quaternion in full.
+ */
+export type CatalogOrigin = 'ground' | 'body-centre';
+
 /** Physics/controller family used when a catalog model becomes an actor. */
 export type CatalogActorClass =
   | 'car'
@@ -158,6 +175,13 @@ export const CATALOG_ACTOR_CLASSES: readonly CatalogActorClass[] = [
 /** Build parameters are plain JSON so the catalog can round-trip as data. */
 export type ParamValue = number | string | boolean;
 
+export interface ExternalAnimationAsset {
+  readonly url: string;
+  readonly contentHash: string;
+  /** Additional runtime correction for authored skeletal units. */
+  readonly scale?: number;
+}
+
 /** A model that is not procedurally built. */
 export type ExternalModelBinding =
   | {
@@ -174,6 +198,17 @@ export type ExternalModelBinding =
       readonly animated?: boolean;
       /** Clip names, when animated. */
       readonly clips?: { readonly idle?: string; readonly locomotion?: string };
+      /**
+       * Standalone GLBs carrying deterministic named clips. Meshy animation
+       * exports include the rigged scene as well as the clip, so renderers may
+       * load the selected asset directly.
+       */
+      readonly clipAssets?: {
+        readonly idle: ExternalAnimationAsset;
+        readonly locomotion: ExternalAnimationAsset;
+        readonly run?: ExternalAnimationAsset;
+        readonly rigged?: ExternalAnimationAsset;
+      };
     }
   | { readonly kind: 'proxy'; readonly tint?: string };
 
@@ -197,14 +232,11 @@ export interface CatalogEntry {
   readonly description: string;
   /** Real-world extents of the default build, metres. */
   readonly dims: Dims;
+  /** Origin placement of the built mesh. Absent means `ground`. */
+  readonly origin?: CatalogOrigin;
   readonly tags: readonly PropTag[];
   /** Parameters the builder is called with when none are supplied. */
   readonly defaultParams: Readonly<Record<string, ParamValue>>;
-  /**
-   * Canonical replacement for a compatibility-only id. Legacy aliases remain
-   * resolvable for saved scenarios but are omitted from new-authoring pickers.
-   */
-  readonly legacyAliasOf?: string;
   /** Present for every actor whose authored model must ship with animation. */
   readonly animation?: CatalogAnimationProfile;
   readonly model?: ExternalModelBinding;

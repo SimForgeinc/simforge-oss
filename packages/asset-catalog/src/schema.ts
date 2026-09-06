@@ -30,6 +30,12 @@ const animationProfileSchema = z.strictObject({
   locomotionClip: z.string().min(1),
   hoverHeightM: z.number().nonnegative().optional(),
 });
+const externalAnimationAssetSchema = z.strictObject({
+  url: z.string().min(1),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  scale: z.number().positive().optional(),
+});
+
 
 const externalModelSchema = z.discriminatedUnion('kind', [
   z.strictObject({
@@ -43,6 +49,12 @@ const externalModelSchema = z.discriminatedUnion('kind', [
       idle: z.string().min(1).optional(),
       locomotion: z.string().min(1).optional(),
     }).optional(),
+    clipAssets: z.strictObject({
+      idle: externalAnimationAssetSchema,
+      locomotion: externalAnimationAssetSchema,
+      run: externalAnimationAssetSchema.optional(),
+      rigged: externalAnimationAssetSchema.optional(),
+    }).optional(),
   }),
   z.strictObject({
     kind: z.literal('proxy'),
@@ -50,19 +62,21 @@ const externalModelSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+const CATALOG_ID = /^[a-z_]+(?:\.[a-z0-9_-]+)+$/;
+
+const originSchema = z.enum(['ground', 'body-centre']);
+
 const catalogEntrySchema = z.object({
-  id: z
-    .string()
-    .regex(/^[a-z_]+(?:\.[a-z0-9_]+)+$/, 'id must be a dot-delimited lowercase catalog path'),
+  id: z.string().regex(CATALOG_ID, 'id must be a dot-delimited lowercase catalog path'),
   label: z.string().min(1),
   class: z.enum(PROP_CLASSES as unknown as [string, ...string[]]),
   actorClass: z.enum(CATALOG_ACTOR_CLASSES as unknown as [string, ...string[]]).optional(),
   compatibleActorClasses: z.array(z.enum(CATALOG_ACTOR_CLASSES as unknown as [string, ...string[]])).optional(),
   description: z.string().min(20),
   dims: dimsSchema,
+  origin: originSchema.optional(),
   tags: z.array(z.enum(PROP_TAGS as unknown as [string, ...string[]])).min(1),
   defaultParams: z.record(z.string(), paramValueSchema),
-  legacyAliasOf: z.string().regex(/^[a-z_]+(?:\.[a-z0-9_]+)+$/).optional(),
   animation: animationProfileSchema.optional(),
   model: externalModelSchema.optional(),
 });
@@ -120,9 +134,6 @@ export const catalogSchema = z
         ctx.addIssue({ code: 'custom', message: `duplicate catalog id: ${entry.id}` });
       }
       seen.add(entry.id);
-      if (entry.legacyAliasOf && (!allIds.has(entry.legacyAliasOf) || entry.legacyAliasOf === entry.id)) {
-        ctx.addIssue({ code: 'custom', message: `${entry.id} has invalid legacyAliasOf ${entry.legacyAliasOf}` });
-      }
       if (!entry.id.startsWith(`${entry.class}.`)) {
         // `street` and `occluder` props are addressed by their own prefix, so
         // the id prefix must agree with the class it is filed under.
@@ -161,6 +172,15 @@ export const catalogSchema = z
       }
       if (entry.class === 'drone' && entry.animation?.hoverHeightM === undefined) {
         ctx.addIssue({ code: 'custom', message: `${entry.id} must declare hoverHeightM` });
+      }
+      // Rigid-body components are exported at their solver origin; a
+      // ground-origin `robot.*` entry would be double-lifted by every
+      // consumer, and a body-centre origin on anything else has no exporter.
+      if ((entry.class === 'robot') !== (entry.origin === 'body-centre')) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${entry.id}: only robot.* rigid-body components declare origin body-centre, and every one must`,
+        });
       }
     }
   });

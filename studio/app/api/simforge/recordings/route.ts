@@ -9,7 +9,7 @@ import {
 import {
   CreateBrowserRecordingSchema,
   ReserveBrowserRecordingArtifactsSchema,
-} from "@/app/lib/scenario/recording-contracts";
+} from "@simforge-oss/studio-ui/lib/scenario/recording-contracts";
 import {
   createBrowserRecording,
   listBrowserRecordings,

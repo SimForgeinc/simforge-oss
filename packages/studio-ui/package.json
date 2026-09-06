@@ -1,0 +1,790 @@
+{
+  "name": "@simforge-oss/studio-ui",
+  "version": "0.1.0-rc.61",
+  "description": "The SimForge Studio product: scenario datasets, editor, inspector, timeline, render workflows, Three.js viewport hosting and the native playback worker, shared by local Studio and SimCloud behind @simforge-oss/studio-host services.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
+    "directory": "packages/studio-ui"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      "./package.json": "./package.json",
+      "./styles.css": "./dist/styles.css",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./components/CarlaCompatibilityPill": {
+        "types": "./dist/components/CarlaCompatibilityPill.d.ts",
+        "default": "./dist/components/CarlaCompatibilityPill.js"
+      },
+      "./components/DashboardLoadingCoordinator": {
+        "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
+        "default": "./dist/components/DashboardLoadingCoordinator.js"
+      },
+      "./components/SkyCloudBackdrop": {
+        "types": "./dist/components/SkyCloudBackdrop.d.ts",
+        "default": "./dist/components/SkyCloudBackdrop.js"
+      },
+      "./components/TopBarSlot": {
+        "types": "./dist/components/TopBarSlot.d.ts",
+        "default": "./dist/components/TopBarSlot.js"
+      },
+      "./components/VideoPreviewTile": {
+        "types": "./dist/components/VideoPreviewTile.d.ts",
+        "default": "./dist/components/VideoPreviewTile.js"
+      },
+      "./components/rendering-preference": {
+        "types": "./dist/components/rendering-preference.d.ts",
+        "default": "./dist/components/rendering-preference.js"
+      },
+      "./components/ui/badge": {
+        "types": "./dist/components/ui/badge.d.ts",
+        "default": "./dist/components/ui/badge.js"
+      },
+      "./components/ui/button": {
+        "types": "./dist/components/ui/button.d.ts",
+        "default": "./dist/components/ui/button.js"
+      },
+      "./components/ui/card": {
+        "types": "./dist/components/ui/card.d.ts",
+        "default": "./dist/components/ui/card.js"
+      },
+      "./components/ui/dropdown-menu": {
+        "types": "./dist/components/ui/dropdown-menu.d.ts",
+        "default": "./dist/components/ui/dropdown-menu.js"
+      },
+      "./components/ui/empty-state": {
+        "types": "./dist/components/ui/empty-state.d.ts",
+        "default": "./dist/components/ui/empty-state.js"
+      },
+      "./components/ui/input": {
+        "types": "./dist/components/ui/input.d.ts",
+        "default": "./dist/components/ui/input.js"
+      },
+      "./components/ui/page-header": {
+        "types": "./dist/components/ui/page-header.d.ts",
+        "default": "./dist/components/ui/page-header.js"
+      },
+      "./components/ui/select-menu": {
+        "types": "./dist/components/ui/select-menu.d.ts",
+        "default": "./dist/components/ui/select-menu.js"
+      },
+      "./components/ui/separator": {
+        "types": "./dist/components/ui/separator.d.ts",
+        "default": "./dist/components/ui/separator.js"
+      },
+      "./components/ui/sheet": {
+        "types": "./dist/components/ui/sheet.d.ts",
+        "default": "./dist/components/ui/sheet.js"
+      },
+      "./components/ui/sim-loader": {
+        "types": "./dist/components/ui/sim-loader.d.ts",
+        "default": "./dist/components/ui/sim-loader.js"
+      },
+      "./components/ui/skeleton": {
+        "types": "./dist/components/ui/skeleton.d.ts",
+        "default": "./dist/components/ui/skeleton.js"
+      },
+      "./components/ui/switch": {
+        "types": "./dist/components/ui/switch.d.ts",
+        "default": "./dist/components/ui/switch.js"
+      },
+      "./components/ui/table": {
+        "types": "./dist/components/ui/table.d.ts",
+        "default": "./dist/components/ui/table.js"
+      },
+      "./components/ui/tabs": {
+        "types": "./dist/components/ui/tabs.d.ts",
+        "default": "./dist/components/ui/tabs.js"
+      },
+      "./components/ui/textarea": {
+        "types": "./dist/components/ui/textarea.d.ts",
+        "default": "./dist/components/ui/textarea.js"
+      },
+      "./components/ui/toolbar": {
+        "types": "./dist/components/ui/toolbar.d.ts",
+        "default": "./dist/components/ui/toolbar.js"
+      },
+      "./components/ui/tooltip": {
+        "types": "./dist/components/ui/tooltip.d.ts",
+        "default": "./dist/components/ui/tooltip.js"
+      },
+      "./host": {
+        "types": "./dist/host.d.ts",
+        "default": "./dist/host.js"
+      },
+      "./lib/asset-gallery/catalog-entry": {
+        "types": "./dist/lib/asset-gallery/catalog-entry.d.ts",
+        "default": "./dist/lib/asset-gallery/catalog-entry.js"
+      },
+      "./lib/asset-gallery/contracts": {
+        "types": "./dist/lib/asset-gallery/contracts.d.ts",
+        "default": "./dist/lib/asset-gallery/contracts.js"
+      },
+      "./lib/hifi-preview/contracts": {
+        "types": "./dist/lib/hifi-preview/contracts.d.ts",
+        "default": "./dist/lib/hifi-preview/contracts.js"
+      },
+      "./lib/maps/frontend/map-asset-cache": {
+        "types": "./dist/lib/maps/frontend/map-asset-cache.d.ts",
+        "default": "./dist/lib/maps/frontend/map-asset-cache.js"
+      },
+      "./lib/scenario/ambient/AmbientTrafficPanel": {
+        "types": "./dist/lib/scenario/ambient/AmbientTrafficPanel.d.ts",
+        "default": "./dist/lib/scenario/ambient/AmbientTrafficPanel.js"
+      },
+      "./lib/scenario/ambient/useSumoTraffic": {
+        "types": "./dist/lib/scenario/ambient/useSumoTraffic.d.ts",
+        "default": "./dist/lib/scenario/ambient/useSumoTraffic.js"
+      },
+      "./lib/scenario/carla-compatibility": {
+        "types": "./dist/lib/scenario/carla-compatibility.d.ts",
+        "default": "./dist/lib/scenario/carla-compatibility.js"
+      },
+      "./lib/scenario/carla-objects": {
+        "types": "./dist/lib/scenario/carla-objects.d.ts",
+        "default": "./dist/lib/scenario/carla-objects.js"
+      },
+      "./lib/scenario/contracts": {
+        "types": "./dist/lib/scenario/contracts.d.ts",
+        "default": "./dist/lib/scenario/contracts.js"
+      },
+      "./lib/scenario/editor/profile-map-cache": {
+        "types": "./dist/lib/scenario/editor/profile-map-cache.d.ts",
+        "default": "./dist/lib/scenario/editor/profile-map-cache.js"
+      },
+      "./lib/scenario/editor/use-editor-runtime": {
+        "types": "./dist/lib/scenario/editor/use-editor-runtime.d.ts",
+        "default": "./dist/lib/scenario/editor/use-editor-runtime.js"
+      },
+      "./lib/scenario/execution-package-contracts": {
+        "types": "./dist/lib/scenario/execution-package-contracts.d.ts",
+        "default": "./dist/lib/scenario/execution-package-contracts.js"
+      },
+      "./lib/scenario/maps": {
+        "types": "./dist/lib/scenario/maps.d.ts",
+        "default": "./dist/lib/scenario/maps.js"
+      },
+      "./lib/scenario/parking/stalls": {
+        "types": "./dist/lib/scenario/parking/stalls.d.ts",
+        "default": "./dist/lib/scenario/parking/stalls.js"
+      },
+      "./lib/scenario/playback/scenarioWorkerClient": {
+        "types": "./dist/lib/scenario/playback/scenarioWorkerClient.d.ts",
+        "default": "./dist/lib/scenario/playback/scenarioWorkerClient.js"
+      },
+      "./lib/scenario/recording-contracts": {
+        "types": "./dist/lib/scenario/recording-contracts.d.ts",
+        "default": "./dist/lib/scenario/recording-contracts.js"
+      },
+      "./lib/scenario/review-contracts": {
+        "types": "./dist/lib/scenario/review-contracts.d.ts",
+        "default": "./dist/lib/scenario/review-contracts.js"
+      },
+      "./lib/scenario/session/model": {
+        "types": "./dist/lib/scenario/session/model.d.ts",
+        "default": "./dist/lib/scenario/session/model.js"
+      },
+      "./lib/scenario/signals/plan": {
+        "types": "./dist/lib/scenario/signals/plan.d.ts",
+        "default": "./dist/lib/scenario/signals/plan.js"
+      },
+      "./lib/scenario/signals/reference-cycle": {
+        "types": "./dist/lib/scenario/signals/reference-cycle.d.ts",
+        "default": "./dist/lib/scenario/signals/reference-cycle.js"
+      },
+      "./lib/scenario/signals/stages": {
+        "types": "./dist/lib/scenario/signals/stages.d.ts",
+        "default": "./dist/lib/scenario/signals/stages.js"
+      },
+      "./lib/scenario/signals/timeline": {
+        "types": "./dist/lib/scenario/signals/timeline.d.ts",
+        "default": "./dist/lib/scenario/signals/timeline.js"
+      },
+      "./lib/scenario/signals/types": {
+        "types": "./dist/lib/scenario/signals/types.d.ts",
+        "default": "./dist/lib/scenario/signals/types.js"
+      },
+      "./lib/scenario/sumo-runtime": {
+        "types": "./dist/lib/scenario/sumo-runtime.d.ts",
+        "default": "./dist/lib/scenario/sumo-runtime.js"
+      },
+      "./lib/use-visible-polling": {
+        "types": "./dist/lib/use-visible-polling.d.ts",
+        "default": "./dist/lib/use-visible-polling.js"
+      },
+      "./lib/utils": {
+        "types": "./dist/lib/utils.d.ts",
+        "default": "./dist/lib/utils.js"
+      },
+      "./scenario/ScenarioDatasetsClient": {
+        "types": "./dist/scenario/ScenarioDatasetsClient.d.ts",
+        "default": "./dist/scenario/ScenarioDatasetsClient.js"
+      },
+      "./scenario/editor/EditorSceneEnvironmentBridge": {
+        "types": "./dist/scenario/editor/EditorSceneEnvironmentBridge.d.ts",
+        "default": "./dist/scenario/editor/EditorSceneEnvironmentBridge.js"
+      },
+      "./scenario/editor/ScenarioTimelineDock": {
+        "types": "./dist/scenario/editor/ScenarioTimelineDock.d.ts",
+        "default": "./dist/scenario/editor/ScenarioTimelineDock.js"
+      },
+      "./scenario/editor/authoring-quality": {
+        "types": "./dist/scenario/editor/authoring-quality.d.ts",
+        "default": "./dist/scenario/editor/authoring-quality.js"
+      },
+      "./scenario/editor/inspector/EditorDetailsPanel": {
+        "types": "./dist/scenario/editor/inspector/EditorDetailsPanel.d.ts",
+        "default": "./dist/scenario/editor/inspector/EditorDetailsPanel.js"
+      },
+      "./scenario/editor/inspector/EditorOverlayHost": {
+        "types": "./dist/scenario/editor/inspector/EditorOverlayHost.d.ts",
+        "default": "./dist/scenario/editor/inspector/EditorOverlayHost.js"
+      },
+      "./scenario/editor/inspector/editor-overlay-selection": {
+        "types": "./dist/scenario/editor/inspector/editor-overlay-selection.d.ts",
+        "default": "./dist/scenario/editor/inspector/editor-overlay-selection.js"
+      },
+      "./scenario/editor/regions/ActorLibraryRail": {
+        "types": "./dist/scenario/editor/regions/ActorLibraryRail.d.ts",
+        "default": "./dist/scenario/editor/regions/ActorLibraryRail.js"
+      },
+      "./scenario/editor/regions/EditorHeader": {
+        "types": "./dist/scenario/editor/regions/EditorHeader.d.ts",
+        "default": "./dist/scenario/editor/regions/EditorHeader.js"
+      },
+      "./scenario/editor/regions/EditorModeBanner": {
+        "types": "./dist/scenario/editor/regions/EditorModeBanner.d.ts",
+        "default": "./dist/scenario/editor/regions/EditorModeBanner.js"
+      },
+      "./scenario/editor/regions/PlacementCursorHint": {
+        "types": "./dist/scenario/editor/regions/PlacementCursorHint.d.ts",
+        "default": "./dist/scenario/editor/regions/PlacementCursorHint.js"
+      },
+      "./scenario/editor/regions/actor-catalog": {
+        "types": "./dist/scenario/editor/regions/actor-catalog.d.ts",
+        "default": "./dist/scenario/editor/regions/actor-catalog.js"
+      },
+      "./scenario/editor/regions/slots/RenderingBenchmark": {
+        "types": "./dist/scenario/editor/regions/slots/RenderingBenchmark.d.ts",
+        "default": "./dist/scenario/editor/regions/slots/RenderingBenchmark.js"
+      },
+      "./scenario/editor/scene-time": {
+        "types": "./dist/scenario/editor/scene-time.d.ts",
+        "default": "./dist/scenario/editor/scene-time.js"
+      },
+      "./scenario/editor/shell": {
+        "types": "./dist/scenario/editor/shell/index.d.ts",
+        "default": "./dist/scenario/editor/shell/index.js"
+      },
+      "./scenario/editor/simple-timed-routes": {
+        "types": "./dist/scenario/editor/simple-timed-routes.d.ts",
+        "default": "./dist/scenario/editor/simple-timed-routes.js"
+      },
+      "./scenario/editor/states/EditorStatePanels": {
+        "types": "./dist/scenario/editor/states/EditorStatePanels.d.ts",
+        "default": "./dist/scenario/editor/states/EditorStatePanels.js"
+      },
+      "./scenario/editor/status": {
+        "types": "./dist/scenario/editor/status/index.d.ts",
+        "default": "./dist/scenario/editor/status/index.js"
+      },
+      "./scenario/editor/timeline/V1TimelineRail": {
+        "types": "./dist/scenario/editor/timeline/V1TimelineRail.d.ts",
+        "default": "./dist/scenario/editor/timeline/V1TimelineRail.js"
+      },
+      "./scenario/list/ScenarioMapPickerDialog": {
+        "types": "./dist/scenario/list/ScenarioMapPickerDialog.d.ts",
+        "default": "./dist/scenario/list/ScenarioMapPickerDialog.js"
+      },
+      "./scenario/list/document-map-groups": {
+        "types": "./dist/scenario/list/document-map-groups.d.ts",
+        "default": "./dist/scenario/list/document-map-groups.js"
+      },
+      "./scenario/review/ScenarioReviewQueue": {
+        "types": "./dist/scenario/review/ScenarioReviewQueue.d.ts",
+        "default": "./dist/scenario/review/ScenarioReviewQueue.js"
+      },
+      "./scenario/route-states": {
+        "types": "./dist/scenario/route-states.d.ts",
+        "default": "./dist/scenario/route-states.js"
+      },
+      "./scenario/scene/ScenarioWorldHost": {
+        "types": "./dist/scenario/scene/ScenarioWorldHost.d.ts",
+        "default": "./dist/scenario/scene/ScenarioWorldHost.js"
+      },
+      "./scenario/scene/previewPolicy": {
+        "types": "./dist/scenario/scene/previewPolicy.d.ts",
+        "default": "./dist/scenario/scene/previewPolicy.js"
+      },
+      "./scenario/scene/useIdleStreetTour": {
+        "types": "./dist/scenario/scene/useIdleStreetTour.d.ts",
+        "default": "./dist/scenario/scene/useIdleStreetTour.js"
+      }
+    }
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./styles.css": {
+      "development": "./src/styles.css",
+      "default": "./dist/styles.css"
+    },
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./components/CarlaCompatibilityPill": {
+      "development": "./src/components/CarlaCompatibilityPill.tsx",
+      "types": "./dist/components/CarlaCompatibilityPill.d.ts",
+      "default": "./dist/components/CarlaCompatibilityPill.js"
+    },
+    "./components/DashboardLoadingCoordinator": {
+      "development": "./src/components/DashboardLoadingCoordinator.tsx",
+      "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
+      "default": "./dist/components/DashboardLoadingCoordinator.js"
+    },
+    "./components/SkyCloudBackdrop": {
+      "development": "./src/components/SkyCloudBackdrop.tsx",
+      "types": "./dist/components/SkyCloudBackdrop.d.ts",
+      "default": "./dist/components/SkyCloudBackdrop.js"
+    },
+    "./components/TopBarSlot": {
+      "development": "./src/components/TopBarSlot.tsx",
+      "types": "./dist/components/TopBarSlot.d.ts",
+      "default": "./dist/components/TopBarSlot.js"
+    },
+    "./components/VideoPreviewTile": {
+      "development": "./src/components/VideoPreviewTile.tsx",
+      "types": "./dist/components/VideoPreviewTile.d.ts",
+      "default": "./dist/components/VideoPreviewTile.js"
+    },
+    "./components/rendering-preference": {
+      "development": "./src/components/rendering-preference.ts",
+      "types": "./dist/components/rendering-preference.d.ts",
+      "default": "./dist/components/rendering-preference.js"
+    },
+    "./components/ui/badge": {
+      "development": "./src/components/ui/badge.tsx",
+      "types": "./dist/components/ui/badge.d.ts",
+      "default": "./dist/components/ui/badge.js"
+    },
+    "./components/ui/button": {
+      "development": "./src/components/ui/button.tsx",
+      "types": "./dist/components/ui/button.d.ts",
+      "default": "./dist/components/ui/button.js"
+    },
+    "./components/ui/card": {
+      "development": "./src/components/ui/card.tsx",
+      "types": "./dist/components/ui/card.d.ts",
+      "default": "./dist/components/ui/card.js"
+    },
+    "./components/ui/dropdown-menu": {
+      "development": "./src/components/ui/dropdown-menu.tsx",
+      "types": "./dist/components/ui/dropdown-menu.d.ts",
+      "default": "./dist/components/ui/dropdown-menu.js"
+    },
+    "./components/ui/empty-state": {
+      "development": "./src/components/ui/empty-state.tsx",
+      "types": "./dist/components/ui/empty-state.d.ts",
+      "default": "./dist/components/ui/empty-state.js"
+    },
+    "./components/ui/input": {
+      "development": "./src/components/ui/input.tsx",
+      "types": "./dist/components/ui/input.d.ts",
+      "default": "./dist/components/ui/input.js"
+    },
+    "./components/ui/page-header": {
+      "development": "./src/components/ui/page-header.tsx",
+      "types": "./dist/components/ui/page-header.d.ts",
+      "default": "./dist/components/ui/page-header.js"
+    },
+    "./components/ui/select-menu": {
+      "development": "./src/components/ui/select-menu.tsx",
+      "types": "./dist/components/ui/select-menu.d.ts",
+      "default": "./dist/components/ui/select-menu.js"
+    },
+    "./components/ui/separator": {
+      "development": "./src/components/ui/separator.tsx",
+      "types": "./dist/components/ui/separator.d.ts",
+      "default": "./dist/components/ui/separator.js"
+    },
+    "./components/ui/sheet": {
+      "development": "./src/components/ui/sheet.tsx",
+      "types": "./dist/components/ui/sheet.d.ts",
+      "default": "./dist/components/ui/sheet.js"
+    },
+    "./components/ui/sim-loader": {
+      "development": "./src/components/ui/sim-loader.tsx",
+      "types": "./dist/components/ui/sim-loader.d.ts",
+      "default": "./dist/components/ui/sim-loader.js"
+    },
+    "./components/ui/skeleton": {
+      "development": "./src/components/ui/skeleton.tsx",
+      "types": "./dist/components/ui/skeleton.d.ts",
+      "default": "./dist/components/ui/skeleton.js"
+    },
+    "./components/ui/switch": {
+      "development": "./src/components/ui/switch.tsx",
+      "types": "./dist/components/ui/switch.d.ts",
+      "default": "./dist/components/ui/switch.js"
+    },
+    "./components/ui/table": {
+      "development": "./src/components/ui/table.tsx",
+      "types": "./dist/components/ui/table.d.ts",
+      "default": "./dist/components/ui/table.js"
+    },
+    "./components/ui/tabs": {
+      "development": "./src/components/ui/tabs.tsx",
+      "types": "./dist/components/ui/tabs.d.ts",
+      "default": "./dist/components/ui/tabs.js"
+    },
+    "./components/ui/textarea": {
+      "development": "./src/components/ui/textarea.tsx",
+      "types": "./dist/components/ui/textarea.d.ts",
+      "default": "./dist/components/ui/textarea.js"
+    },
+    "./components/ui/toolbar": {
+      "development": "./src/components/ui/toolbar.tsx",
+      "types": "./dist/components/ui/toolbar.d.ts",
+      "default": "./dist/components/ui/toolbar.js"
+    },
+    "./components/ui/tooltip": {
+      "development": "./src/components/ui/tooltip.tsx",
+      "types": "./dist/components/ui/tooltip.d.ts",
+      "default": "./dist/components/ui/tooltip.js"
+    },
+    "./host": {
+      "development": "./src/host.tsx",
+      "types": "./dist/host.d.ts",
+      "default": "./dist/host.js"
+    },
+    "./lib/asset-gallery/catalog-entry": {
+      "development": "./src/lib/asset-gallery/catalog-entry.ts",
+      "types": "./dist/lib/asset-gallery/catalog-entry.d.ts",
+      "default": "./dist/lib/asset-gallery/catalog-entry.js"
+    },
+    "./lib/asset-gallery/contracts": {
+      "development": "./src/lib/asset-gallery/contracts.ts",
+      "types": "./dist/lib/asset-gallery/contracts.d.ts",
+      "default": "./dist/lib/asset-gallery/contracts.js"
+    },
+    "./lib/hifi-preview/contracts": {
+      "development": "./src/lib/hifi-preview/contracts.ts",
+      "types": "./dist/lib/hifi-preview/contracts.d.ts",
+      "default": "./dist/lib/hifi-preview/contracts.js"
+    },
+    "./lib/maps/frontend/map-asset-cache": {
+      "development": "./src/lib/maps/frontend/map-asset-cache.ts",
+      "types": "./dist/lib/maps/frontend/map-asset-cache.d.ts",
+      "default": "./dist/lib/maps/frontend/map-asset-cache.js"
+    },
+    "./lib/scenario/ambient/AmbientTrafficPanel": {
+      "development": "./src/lib/scenario/ambient/AmbientTrafficPanel.tsx",
+      "types": "./dist/lib/scenario/ambient/AmbientTrafficPanel.d.ts",
+      "default": "./dist/lib/scenario/ambient/AmbientTrafficPanel.js"
+    },
+    "./lib/scenario/ambient/useSumoTraffic": {
+      "development": "./src/lib/scenario/ambient/useSumoTraffic.ts",
+      "types": "./dist/lib/scenario/ambient/useSumoTraffic.d.ts",
+      "default": "./dist/lib/scenario/ambient/useSumoTraffic.js"
+    },
+    "./lib/scenario/carla-compatibility": {
+      "development": "./src/lib/scenario/carla-compatibility.ts",
+      "types": "./dist/lib/scenario/carla-compatibility.d.ts",
+      "default": "./dist/lib/scenario/carla-compatibility.js"
+    },
+    "./lib/scenario/carla-objects": {
+      "development": "./src/lib/scenario/carla-objects.ts",
+      "types": "./dist/lib/scenario/carla-objects.d.ts",
+      "default": "./dist/lib/scenario/carla-objects.js"
+    },
+    "./lib/scenario/contracts": {
+      "development": "./src/lib/scenario/contracts.ts",
+      "types": "./dist/lib/scenario/contracts.d.ts",
+      "default": "./dist/lib/scenario/contracts.js"
+    },
+    "./lib/scenario/editor/profile-map-cache": {
+      "development": "./src/lib/scenario/editor/profile-map-cache.ts",
+      "types": "./dist/lib/scenario/editor/profile-map-cache.d.ts",
+      "default": "./dist/lib/scenario/editor/profile-map-cache.js"
+    },
+    "./lib/scenario/editor/use-editor-runtime": {
+      "development": "./src/lib/scenario/editor/use-editor-runtime.ts",
+      "types": "./dist/lib/scenario/editor/use-editor-runtime.d.ts",
+      "default": "./dist/lib/scenario/editor/use-editor-runtime.js"
+    },
+    "./lib/scenario/execution-package-contracts": {
+      "development": "./src/lib/scenario/execution-package-contracts.ts",
+      "types": "./dist/lib/scenario/execution-package-contracts.d.ts",
+      "default": "./dist/lib/scenario/execution-package-contracts.js"
+    },
+    "./lib/scenario/maps": {
+      "development": "./src/lib/scenario/maps.ts",
+      "types": "./dist/lib/scenario/maps.d.ts",
+      "default": "./dist/lib/scenario/maps.js"
+    },
+    "./lib/scenario/parking/stalls": {
+      "development": "./src/lib/scenario/parking/stalls.ts",
+      "types": "./dist/lib/scenario/parking/stalls.d.ts",
+      "default": "./dist/lib/scenario/parking/stalls.js"
+    },
+    "./lib/scenario/playback/scenarioWorkerClient": {
+      "development": "./src/lib/scenario/playback/scenarioWorkerClient.ts",
+      "types": "./dist/lib/scenario/playback/scenarioWorkerClient.d.ts",
+      "default": "./dist/lib/scenario/playback/scenarioWorkerClient.js"
+    },
+    "./lib/scenario/recording-contracts": {
+      "development": "./src/lib/scenario/recording-contracts.ts",
+      "types": "./dist/lib/scenario/recording-contracts.d.ts",
+      "default": "./dist/lib/scenario/recording-contracts.js"
+    },
+    "./lib/scenario/review-contracts": {
+      "development": "./src/lib/scenario/review-contracts.ts",
+      "types": "./dist/lib/scenario/review-contracts.d.ts",
+      "default": "./dist/lib/scenario/review-contracts.js"
+    },
+    "./lib/scenario/session/model": {
+      "development": "./src/lib/scenario/session/model.ts",
+      "types": "./dist/lib/scenario/session/model.d.ts",
+      "default": "./dist/lib/scenario/session/model.js"
+    },
+    "./lib/scenario/signals/plan": {
+      "development": "./src/lib/scenario/signals/plan.ts",
+      "types": "./dist/lib/scenario/signals/plan.d.ts",
+      "default": "./dist/lib/scenario/signals/plan.js"
+    },
+    "./lib/scenario/signals/reference-cycle": {
+      "development": "./src/lib/scenario/signals/reference-cycle.ts",
+      "types": "./dist/lib/scenario/signals/reference-cycle.d.ts",
+      "default": "./dist/lib/scenario/signals/reference-cycle.js"
+    },
+    "./lib/scenario/signals/stages": {
+      "development": "./src/lib/scenario/signals/stages.ts",
+      "types": "./dist/lib/scenario/signals/stages.d.ts",
+      "default": "./dist/lib/scenario/signals/stages.js"
+    },
+    "./lib/scenario/signals/timeline": {
+      "development": "./src/lib/scenario/signals/timeline.ts",
+      "types": "./dist/lib/scenario/signals/timeline.d.ts",
+      "default": "./dist/lib/scenario/signals/timeline.js"
+    },
+    "./lib/scenario/signals/types": {
+      "development": "./src/lib/scenario/signals/types.ts",
+      "types": "./dist/lib/scenario/signals/types.d.ts",
+      "default": "./dist/lib/scenario/signals/types.js"
+    },
+    "./lib/scenario/sumo-runtime": {
+      "development": "./src/lib/scenario/sumo-runtime.ts",
+      "types": "./dist/lib/scenario/sumo-runtime.d.ts",
+      "default": "./dist/lib/scenario/sumo-runtime.js"
+    },
+    "./lib/use-visible-polling": {
+      "development": "./src/lib/use-visible-polling.ts",
+      "types": "./dist/lib/use-visible-polling.d.ts",
+      "default": "./dist/lib/use-visible-polling.js"
+    },
+    "./lib/utils": {
+      "development": "./src/lib/utils.ts",
+      "types": "./dist/lib/utils.d.ts",
+      "default": "./dist/lib/utils.js"
+    },
+    "./scenario/ScenarioDatasetsClient": {
+      "development": "./src/scenario/ScenarioDatasetsClient.tsx",
+      "types": "./dist/scenario/ScenarioDatasetsClient.d.ts",
+      "default": "./dist/scenario/ScenarioDatasetsClient.js"
+    },
+    "./scenario/editor/EditorSceneEnvironmentBridge": {
+      "development": "./src/scenario/editor/EditorSceneEnvironmentBridge.tsx",
+      "types": "./dist/scenario/editor/EditorSceneEnvironmentBridge.d.ts",
+      "default": "./dist/scenario/editor/EditorSceneEnvironmentBridge.js"
+    },
+    "./scenario/editor/ScenarioTimelineDock": {
+      "development": "./src/scenario/editor/ScenarioTimelineDock.tsx",
+      "types": "./dist/scenario/editor/ScenarioTimelineDock.d.ts",
+      "default": "./dist/scenario/editor/ScenarioTimelineDock.js"
+    },
+    "./scenario/editor/authoring-quality": {
+      "development": "./src/scenario/editor/authoring-quality.ts",
+      "types": "./dist/scenario/editor/authoring-quality.d.ts",
+      "default": "./dist/scenario/editor/authoring-quality.js"
+    },
+    "./scenario/editor/inspector/EditorDetailsPanel": {
+      "development": "./src/scenario/editor/inspector/EditorDetailsPanel.tsx",
+      "types": "./dist/scenario/editor/inspector/EditorDetailsPanel.d.ts",
+      "default": "./dist/scenario/editor/inspector/EditorDetailsPanel.js"
+    },
+    "./scenario/editor/inspector/EditorOverlayHost": {
+      "development": "./src/scenario/editor/inspector/EditorOverlayHost.tsx",
+      "types": "./dist/scenario/editor/inspector/EditorOverlayHost.d.ts",
+      "default": "./dist/scenario/editor/inspector/EditorOverlayHost.js"
+    },
+    "./scenario/editor/inspector/editor-overlay-selection": {
+      "development": "./src/scenario/editor/inspector/editor-overlay-selection.tsx",
+      "types": "./dist/scenario/editor/inspector/editor-overlay-selection.d.ts",
+      "default": "./dist/scenario/editor/inspector/editor-overlay-selection.js"
+    },
+    "./scenario/editor/regions/ActorLibraryRail": {
+      "development": "./src/scenario/editor/regions/ActorLibraryRail.tsx",
+      "types": "./dist/scenario/editor/regions/ActorLibraryRail.d.ts",
+      "default": "./dist/scenario/editor/regions/ActorLibraryRail.js"
+    },
+    "./scenario/editor/regions/EditorHeader": {
+      "development": "./src/scenario/editor/regions/EditorHeader.tsx",
+      "types": "./dist/scenario/editor/regions/EditorHeader.d.ts",
+      "default": "./dist/scenario/editor/regions/EditorHeader.js"
+    },
+    "./scenario/editor/regions/EditorModeBanner": {
+      "development": "./src/scenario/editor/regions/EditorModeBanner.tsx",
+      "types": "./dist/scenario/editor/regions/EditorModeBanner.d.ts",
+      "default": "./dist/scenario/editor/regions/EditorModeBanner.js"
+    },
+    "./scenario/editor/regions/PlacementCursorHint": {
+      "development": "./src/scenario/editor/regions/PlacementCursorHint.tsx",
+      "types": "./dist/scenario/editor/regions/PlacementCursorHint.d.ts",
+      "default": "./dist/scenario/editor/regions/PlacementCursorHint.js"
+    },
+    "./scenario/editor/regions/actor-catalog": {
+      "development": "./src/scenario/editor/regions/actor-catalog.ts",
+      "types": "./dist/scenario/editor/regions/actor-catalog.d.ts",
+      "default": "./dist/scenario/editor/regions/actor-catalog.js"
+    },
+    "./scenario/editor/regions/slots/RenderingBenchmark": {
+      "development": "./src/scenario/editor/regions/slots/RenderingBenchmark.tsx",
+      "types": "./dist/scenario/editor/regions/slots/RenderingBenchmark.d.ts",
+      "default": "./dist/scenario/editor/regions/slots/RenderingBenchmark.js"
+    },
+    "./scenario/editor/scene-time": {
+      "development": "./src/scenario/editor/scene-time.ts",
+      "types": "./dist/scenario/editor/scene-time.d.ts",
+      "default": "./dist/scenario/editor/scene-time.js"
+    },
+    "./scenario/editor/shell": {
+      "development": "./src/scenario/editor/shell/index.ts",
+      "types": "./dist/scenario/editor/shell/index.d.ts",
+      "default": "./dist/scenario/editor/shell/index.js"
+    },
+    "./scenario/editor/simple-timed-routes": {
+      "development": "./src/scenario/editor/simple-timed-routes.ts",
+      "types": "./dist/scenario/editor/simple-timed-routes.d.ts",
+      "default": "./dist/scenario/editor/simple-timed-routes.js"
+    },
+    "./scenario/editor/states/EditorStatePanels": {
+      "development": "./src/scenario/editor/states/EditorStatePanels.tsx",
+      "types": "./dist/scenario/editor/states/EditorStatePanels.d.ts",
+      "default": "./dist/scenario/editor/states/EditorStatePanels.js"
+    },
+    "./scenario/editor/status": {
+      "development": "./src/scenario/editor/status/index.ts",
+      "types": "./dist/scenario/editor/status/index.d.ts",
+      "default": "./dist/scenario/editor/status/index.js"
+    },
+    "./scenario/editor/timeline/V1TimelineRail": {
+      "development": "./src/scenario/editor/timeline/V1TimelineRail.tsx",
+      "types": "./dist/scenario/editor/timeline/V1TimelineRail.d.ts",
+      "default": "./dist/scenario/editor/timeline/V1TimelineRail.js"
+    },
+    "./scenario/list/ScenarioMapPickerDialog": {
+      "development": "./src/scenario/list/ScenarioMapPickerDialog.tsx",
+      "types": "./dist/scenario/list/ScenarioMapPickerDialog.d.ts",
+      "default": "./dist/scenario/list/ScenarioMapPickerDialog.js"
+    },
+    "./scenario/list/document-map-groups": {
+      "development": "./src/scenario/list/document-map-groups.ts",
+      "types": "./dist/scenario/list/document-map-groups.d.ts",
+      "default": "./dist/scenario/list/document-map-groups.js"
+    },
+    "./scenario/review/ScenarioReviewQueue": {
+      "development": "./src/scenario/review/ScenarioReviewQueue.tsx",
+      "types": "./dist/scenario/review/ScenarioReviewQueue.d.ts",
+      "default": "./dist/scenario/review/ScenarioReviewQueue.js"
+    },
+    "./scenario/route-states": {
+      "development": "./src/scenario/route-states.tsx",
+      "types": "./dist/scenario/route-states.d.ts",
+      "default": "./dist/scenario/route-states.js"
+    },
+    "./scenario/scene/ScenarioWorldHost": {
+      "development": "./src/scenario/scene/ScenarioWorldHost.tsx",
+      "types": "./dist/scenario/scene/ScenarioWorldHost.d.ts",
+      "default": "./dist/scenario/scene/ScenarioWorldHost.js"
+    },
+    "./scenario/scene/previewPolicy": {
+      "development": "./src/scenario/scene/previewPolicy.ts",
+      "types": "./dist/scenario/scene/previewPolicy.d.ts",
+      "default": "./dist/scenario/scene/previewPolicy.js"
+    },
+    "./scenario/scene/useIdleStreetTour": {
+      "development": "./src/scenario/scene/useIdleStreetTour.ts",
+      "types": "./dist/scenario/scene/useIdleStreetTour.d.ts",
+      "default": "./dist/scenario/scene/useIdleStreetTour.js"
+    }
+  },
+  "files": [
+    "dist",
+    "public"
+  ],
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@simforge-oss/asset-catalog": "workspace:*",
+    "@simforge-oss/compiler": "workspace:*",
+    "@simforge-oss/editor": "workspace:*",
+    "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/maps": "workspace:*",
+    "@simforge-oss/openscenario": "workspace:*",
+    "@simforge-oss/playback": "workspace:*",
+    "@simforge-oss/scenario": "workspace:*",
+    "@simforge-oss/studio-host": "workspace:*",
+    "@simforge-oss/viewer": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "fflate": "^0.8.2",
+    "lucide-react": "^0.577.0",
+    "tailwind-merge": "^3.5.0",
+    "three": "^0.185.0",
+    "zod": "^3.25.76",
+    "zustand": "^5.0.12"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.185.0",
+    "jsdom": "^29.0.1",
+    "next": "16.3.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run && tsx --test src/scenario/editor/clipboard/actor-clipboard.test.ts src/scenario/editor/scene-time.test.ts"
+  }
+}

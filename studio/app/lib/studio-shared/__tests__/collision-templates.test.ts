@@ -15,7 +15,7 @@ import {
   DEFAULT_CONTACT_GRACE_M,
   DEFAULT_NEAR_MISS_MAX_M,
 } from "../esmini-state-log";
-import { ScenarioEditorTimelineActionSchema } from "../scenario-editor";
+import { BehaviorActionKindSchema } from "@simforge-oss/scenario/contracts";
 
 describe("collision template catalog", () => {
   it("declares one template per family id", () => {
@@ -50,32 +50,32 @@ describe("collision template catalog", () => {
     }
   });
 
-  it("uses only actions from the editor's timeline-action enum", () => {
+  it("uses only actions from the behavior vocabulary", () => {
     for (const id of COLLISION_FAMILY_IDS) {
       const recipe = COLLISION_TEMPLATES[id].actorRecipe;
       for (const role of recipe) {
-        for (const clip of role.timeline) {
-          const parsed = ScenarioEditorTimelineActionSchema.safeParse(clip.action);
+        for (const clip of role.clips) {
+          const parsed = BehaviorActionKindSchema.safeParse(clip.action);
           expect(
             parsed.success,
-            `family '${id}' role '${role.role}' uses unknown timeline action '${clip.action}'`,
+            `family '${id}' role '${role.role}' uses unknown behavior action '${clip.action}'`,
           ).toBe(true);
         }
       }
     }
   });
 
-  it("orders timeline clips by start_time and keeps them within the family duration", () => {
+  it("orders clips by start_time and keeps them within the family duration", () => {
     for (const id of COLLISION_FAMILY_IDS) {
       const template = COLLISION_TEMPLATES[id];
       for (const role of template.actorRecipe) {
-        for (let i = 1; i < role.timeline.length; i++) {
+        for (let i = 1; i < role.clips.length; i++) {
           expect(
-            role.timeline[i]!.start_time,
+            role.clips[i]!.start_time,
             `family '${id}' role '${role.role}' clip ${i} starts before clip ${i - 1}`,
-          ).toBeGreaterThanOrEqual(role.timeline[i - 1]!.start_time);
+          ).toBeGreaterThanOrEqual(role.clips[i - 1]!.start_time);
         }
-        for (const clip of role.timeline) {
+        for (const clip of role.clips) {
           if (clip.end_time != null) {
             expect(clip.end_time).toBeLessThanOrEqual(template.durationSeconds);
             expect(clip.end_time).toBeGreaterThanOrEqual(clip.start_time);
@@ -90,7 +90,7 @@ describe("collision template catalog", () => {
       expect(template.durationSeconds).toBe(SCENARIO_TIMING.defaultDurationSeconds);
       const endTimes: number[] = [];
       for (const role of template.actorRecipe) {
-        for (const clip of role.timeline) {
+        for (const clip of role.clips) {
           if (clip.end_time != null) endTimes.push(clip.end_time);
         }
       }
@@ -197,20 +197,21 @@ describe("near-miss families", () => {
     }
   });
 
-  it("never plants a ram — the converging clip holds a standoff instead", () => {
+  it("never plants an intercept — the converging clip holds a standoff instead", () => {
     for (const id of NEAR_MISS_FAMILY_IDS) {
       const template = COLLISION_TEMPLATES[id];
       const margin = template.nearMissMargin!;
       const pursuitClips = template.actorRecipe.flatMap((role) =>
-        role.timeline.filter((clip) => clip.target_role != null),
+        role.clips.filter((clip) => clip.action !== "cruise"),
       );
+      expect(pursuitClips.length, `family '${id}' must converge on its target`).toBeGreaterThan(0);
       for (const clip of pursuitClips) {
         expect(
           clip.action,
-          `family '${id}' targets another actor with '${clip.action}' — ram_actor pins the standoff to zero and always contacts`,
-        ).not.toBe("ram_actor");
+          `family '${id}' targets another actor with '${clip.action}' — intercept pins the standoff to zero and always contacts`,
+        ).toBe("follow_actor");
         expect(
-          clip.following_distance_m,
+          clip.action === "follow_actor" ? clip.distance_m : undefined,
           `family '${id}' pursuit clip must hold the target miss distance`,
         ).toBe(margin.targetMissDistanceM);
       }
@@ -228,8 +229,8 @@ describe("near-miss families", () => {
       // Closest approach can only happen while a pursuit clip is running, so
       // any family that has one must run it across the planned conflict time.
       for (const role of template.actorRecipe) {
-        for (const clip of role.timeline) {
-          if (clip.target_role == null) continue;
+        for (const clip of role.clips) {
+          if (clip.action === "cruise") continue;
           expect(clip.start_time).toBeLessThanOrEqual(window!.ideal);
           expect(clip.end_time ?? template.durationSeconds).toBeGreaterThanOrEqual(
             window!.ideal,
@@ -239,16 +240,13 @@ describe("near-miss families", () => {
     }
   });
 
-  it("leaves contact families free of near-miss timing fields", () => {
+  it("leaves contact families free of near-miss standoffs", () => {
     for (const id of CONTACT_FAMILY_IDS) {
       const template = COLLISION_TEMPLATES[id];
       expect(template.nearMissMargin, `family '${id}'`).toBeUndefined();
       for (const role of template.actorRecipe) {
-        for (const clip of role.timeline) {
-          expect(
-            clip.following_distance_m,
-            `family '${id}' role '${role.role}'`,
-          ).toBeUndefined();
+        for (const clip of role.clips) {
+          expect(clip.action, `family '${id}' role '${role.role}'`).not.toBe("follow_actor");
         }
       }
     }

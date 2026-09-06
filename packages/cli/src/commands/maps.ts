@@ -25,7 +25,7 @@ export async function mapsList(options: MapsListOptions): Promise<number> {
       const bundle = await loadMap(mapId, DEV_ASSETS);
       entry['catalogRevision'] = bundle.derived.catalogRevision;
       entry['matcherIndexDigest'] = bundle.index.topologyDigest;
-      entry['engineGraphDigest'] = bundle.graph.topologyDigest;
+      entry['engineGraphDigest'] = bundle.graph.digest;
       entry['stats'] = {
         locations: bundle.catalog.locations.length,
         segments: bundle.derived.segments.length,

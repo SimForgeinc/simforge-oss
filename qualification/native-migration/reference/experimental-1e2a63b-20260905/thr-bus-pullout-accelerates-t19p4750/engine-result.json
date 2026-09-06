@@ -1,0 +1,34 @@
+{
+  "issues": [
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.bus-enters-lane.dynamics.value",
+      "reason": "requested 3.50 s lateral manoeuvre is infeasible for bus; clamped to 6.49 s",
+      "detail": {
+        "actorId": "bus",
+        "requestedDurationS": 3.5,
+        "effectiveDurationS": 6.48744925678664,
+        "displacementM": 3.805970230648162,
+        "lateralRateMaxMps": 1.1,
+        "lateralAccelMaxMps2": 1.3,
+        "lateralJerkMaxMps3": 2.2
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.bus-enters-lane",
+      "reason": "dynamic actor bus did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "bus",
+        "interactionId": "bus-enters-lane",
+        "referenceDurationS": 6.48744925678664,
+        "positionErrorM": 0.24527125928913057,
+        "rateErrorMps": 1.3787343145115065,
+        "headingErrorRad": 0.19341064775184647
+      }
+    }
+  ],
+  "arrival": []
+}

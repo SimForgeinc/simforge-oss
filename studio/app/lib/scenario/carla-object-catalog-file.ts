@@ -1,5 +1,5 @@
 import catalog from "@/app/generated/carla-object-catalog.json";
-import type { CarlaObjectDto } from "@/app/lib/scenario/carla-objects";
+import type { CarlaObjectDto } from "@simforge-oss/studio-ui/lib/scenario/carla-objects";
 
 export type CarlaDimensionalAgreement = "exact" | "close" | "loose";
 

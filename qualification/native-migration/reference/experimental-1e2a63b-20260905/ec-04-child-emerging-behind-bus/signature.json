@@ -1,0 +1,412 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "a67d55800dc6ce4dcdc84d0e42a87b657407ee39e37c20509476ba3792a16564",
+  "traceDigest": "2ed0c55d950d1b60cc3620ddb79197def274eb14510cc964d1fe242fb36120f1",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 1,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "adult": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "bus": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "child": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      },
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "trailing-taxi": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "adult": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "bus": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "child": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 10,
+          "from": null,
+          "to": "370:0:1"
+        },
+        {
+          "t": 11.36,
+          "from": "370:0:1",
+          "to": "347:0:1"
+        },
+        {
+          "t": 12.280000000000001,
+          "from": "347:0:1",
+          "to": "360:0:1"
+        },
+        {
+          "t": 12.74,
+          "from": "360:0:1",
+          "to": null
+        },
+        {
+          "t": 13.200000000000001,
+          "from": null,
+          "to": "359:0:-1"
+        },
+        {
+          "t": 13.66,
+          "from": "359:0:-1",
+          "to": "346:0:1"
+        },
+        {
+          "t": 16.3,
+          "from": "346:0:1",
+          "to": null
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.14,
+          "from": "104:0:1",
+          "to": "1367:0:1"
+        },
+        {
+          "t": 3.04,
+          "from": "1367:0:1",
+          "to": "103:0:1"
+        },
+        {
+          "t": 3.44,
+          "from": "103:0:1",
+          "to": "1395:0:1"
+        },
+        {
+          "t": 6.5600000000000005,
+          "from": "1395:0:1",
+          "to": "102:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "trailing-taxi": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.68,
+          "from": "104:0:1",
+          "to": "1367:0:1"
+        },
+        {
+          "t": 5.5600000000000005,
+          "from": "1367:0:1",
+          "to": "103:0:1"
+        },
+        {
+          "t": 5.9,
+          "from": "103:0:1",
+          "to": "1395:0:1"
+        },
+        {
+          "t": 8.74,
+          "from": "1395:0:1",
+          "to": "102:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "signal:1426": {
+      "initial": "red",
+      "transitions": [
+        {
+          "t": 6,
+          "from": "red",
+          "to": "green"
+        },
+        {
+          "t": 18,
+          "from": "green",
+          "to": "yellow"
+        }
+      ]
+    },
+    "signal:1427": {
+      "initial": "red",
+      "transitions": []
+    },
+    "signal:1477": {
+      "initial": "green",
+      "transitions": []
+    }
+  },
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "bus-doors-open",
+      "actorId": "bus",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "bus",
+      "key": "doors.right",
+      "value": "open"
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-controls-approach",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-signal-green",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:signal:1477.phase",
+      "value": "green"
+    },
+    {
+      "t": 5,
+      "kind": "trigger_fired",
+      "interactionId": "adult-waits-at-curb",
+      "actorId": "adult",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 5,
+      "kind": "state_set",
+      "actorId": "adult",
+      "key": "pose.gesture",
+      "value": "halt"
+    },
+    {
+      "t": 8,
+      "kind": "trigger_fired",
+      "interactionId": "child-commits",
+      "actorId": "child",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 8,
+      "kind": "state_set",
+      "actorId": "child",
+      "key": "rules.collisionAvoidance",
+      "value": false
+    },
+    {
+      "t": 8,
+      "kind": "trigger_fired",
+      "interactionId": "child-ignores-pedestrian-phase",
+      "actorId": "child",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 8,
+      "kind": "state_set",
+      "actorId": "child",
+      "key": "rules.obeySignals",
+      "value": false
+    },
+    {
+      "t": 8.2,
+      "kind": "trigger_fired",
+      "interactionId": "child-runs-from-bus",
+      "actorId": "child",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 8.36,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-stops-before-crossing",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 8.36,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-stops-before-crossing",
+      "preemptedInteractionId": "focus-vehicle-controls-approach"
+    },
+    {
+      "t": 9.02,
+      "kind": "trigger_fired",
+      "interactionId": "taxi-brakes-behind",
+      "actorId": "trailing-taxi",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 13.8,
+      "kind": "trigger_fired",
+      "interactionId": "child-hesitates-at-lane-line",
+      "actorId": "child",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 13.8,
+      "kind": "preemption",
+      "actorId": "child",
+      "axis": "longitudinal",
+      "byInteractionId": "child-hesitates-at-lane-line",
+      "preemptedInteractionId": "child-runs-from-bus"
+    },
+    {
+      "t": 15.3,
+      "kind": "trigger_fired",
+      "interactionId": "child-continues",
+      "actorId": "child",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 15.3,
+      "kind": "preemption",
+      "actorId": "child",
+      "axis": "longitudinal",
+      "byInteractionId": "child-continues",
+      "preemptedInteractionId": "child-hesitates-at-lane-line"
+    },
+    {
+      "t": 17,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-holds-for-full-clearance",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 17,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "lights.brake",
+      "value": true
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "child",
+      "focus-vehicle"
+    ],
+    "minDistancePairs": [
+      [
+        "child",
+        "focus-vehicle"
+      ],
+      [
+        "focus-vehicle",
+        "trailing-taxi"
+      ]
+    ],
+    "revealToConflictPair": [
+      "child",
+      "focus-vehicle"
+    ]
+  }
+}

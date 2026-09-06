@@ -1,6 +1,7 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
-import type { RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput } from "@simforge-oss/render/native";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
@@ -8,11 +9,10 @@ import {
   type SubmitScenarioRenderIntent,
   type ScenarioRenderIntent,
 } from "./render-wire-contracts";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 const RTX5080_MAX_SIMULTANEOUS_SOURCES = 18;
 const RTX5080_USABLE_GPU_BYTES = 15_000 * 1024 * 1024;
-const RENDER_INTENT_CONTRACT = "uniscenario.render-intent/v1";
 
 type ImmutableLineageRow = {
   revision_id: string;
@@ -32,8 +32,14 @@ type ImmutableLineageRow = {
   catalog_size: number;
 };
 
-type NativeMapAsset = {
-  inputId: string;
+/**
+ * One native intent asset: a map closure member (`map.tile.000000` /
+ * `map.resource.<sha256(path)>`) or the actor closure (`actors.native-closure`).
+ * Every one is declared by digest so the intent hash binds the served bytes.
+ */
+type NativeAsset = {
+  assetId: string;
+  kind: "map" | "catalog";
   sha256: string;
   sizeBytes: number;
 };
@@ -192,7 +198,7 @@ function selectedSensorHosts(input: SubmitScenarioRenderIntent, lineage: Immutab
 function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
-  nativeMapAssets: readonly NativeMapAsset[],
+  nativeAssets: readonly NativeAsset[],
 ): ScenarioRenderIntent {
   const content = typeof lineage.canonical_content === "string"
     ? JSON.parse(lineage.canonical_content) as Record<string, unknown>
@@ -228,7 +234,7 @@ function buildIntent(
   }
   const intentId = scenarioId("usri");
   return ScenarioRenderIntentSchema.parse({
-    schema: RENDER_INTENT_CONTRACT,
+    schema: RENDER_INTENT_V1_SCHEMA,
     intentId,
     executionPackage: {
       id: lineage.execution_package_id,
@@ -259,12 +265,7 @@ function buildIntent(
         sha256: lineage.catalog_sha256,
         sizeBytes: Number(lineage.catalog_size),
       },
-      ...nativeMapAssets.map((asset) => ({
-        assetId: asset.inputId,
-        kind: "map" as const,
-        sha256: asset.sha256,
-        sizeBytes: asset.sizeBytes,
-      })),
+      ...nativeAssets,
     ],
     seed: Number.parseInt(lineage.scenario_sha256.slice(0, 8), 16),
   });
@@ -348,7 +349,7 @@ export async function createRenderIntentJob(
       },
     );
     if (!lineage) return null;
-    let nativeMapAssets: NativeMapAsset[] = [];
+    let nativeAssets: NativeAsset[] = [];
     if (input.engine === "native") {
       const nativeMembers = await tx.queryRows<NativeMapMemberRow>(
         `SELECT m.relative_path, b.sha256, b.byte_length, s.object_count
@@ -377,18 +378,26 @@ export async function createRenderIntentJob(
         throw new Error("native_map_master_unavailable");
       }
       if (renderMembers.length > 4093) throw new Error("native_map_asset_set_too_large");
-      nativeMapAssets = renderMembers.map((member) => ({
-        inputId: member.relative_path === "master.gltf"
+      nativeAssets = renderMembers.map((member) => ({
+        assetId: member.relative_path === "master.gltf"
           ? "map.tile.000000"
           : `map.resource.${sha256(member.relative_path)}`,
+        kind: "map" as const,
         sha256: member.sha256,
         sizeBytes: Number(member.byte_length),
       }));
-      if (new Set(nativeMapAssets.map((asset) => asset.inputId)).size !== nativeMapAssets.length) {
+      if (new Set(nativeAssets.map((asset) => asset.assetId)).size !== nativeAssets.length) {
         throw new Error("native_map_input_id_conflict");
       }
+      const actorClosure = nativeActorAssetsInput();
+      nativeAssets.push({
+        assetId: NATIVE_ACTOR_ASSETS_INPUT_ID,
+        kind: "catalog",
+        sha256: actorClosure.sha256,
+        sizeBytes: actorClosure.sizeBytes,
+      });
     }
-    const intent = buildIntent(input, lineage, nativeMapAssets);
+    const intent = buildIntent(input, lineage, nativeAssets);
     const intentSha256 = canonicalJsonSha256(intent);
     const controlSha256 = canonicalJsonSha256({
       schema: "uniscenario.render-control-lineage/v1",
@@ -425,7 +434,7 @@ export async function createRenderIntentJob(
           ? { positionM: 0.5, headingDeg: 2, speedMps: 0.5 }
           : null,
         resource_request: resources,
-        request_contract_version: RENDER_INTENT_CONTRACT,
+        request_contract_version: RENDER_INTENT_V1_SCHEMA,
         job_mode: input.engine === "browser" ? "browser_render" : "full_render",
         priority: input.priority ?? 0,
         idempotency_key: input.idempotencyKey,

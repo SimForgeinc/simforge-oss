@@ -1,0 +1,114 @@
+{
+  "id": "cmp-queue-tail-distance",
+  "kind": "compiled",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "a8c5c6ef99e8a4c9e67863de846abcf0b57afdd66d20e00293f30499320d01b9",
+  "traceDigest": "c21e3c6e944931481c324d4f33ea42d0dc8c89c06c8b42678b29b5c427c34430",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 120.05730399999999,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 12.005821999999995,
+      "warm": {
+        "n": 4,
+        "min": 0.899567000000161,
+        "median": 1.0160465000000158,
+        "max": 1.321916999999985,
+        "mean": 1.0633942500000444
+      }
+    },
+    "compile": {
+      "cold": 1143.721657,
+      "warm": {
+        "n": 4,
+        "min": 1.5646440000000439,
+        "median": 1.9892884999999296,
+        "max": 4.067342999999937,
+        "mean": 2.40264099999996
+      }
+    },
+    "mapLoad": {
+      "cold": 345.745151,
+      "warm": {
+        "n": 4,
+        "min": 0.003032000000075641,
+        "median": 0.003531000000066342,
+        "max": 0.004889000000048327,
+        "mean": 0.003745750000064163
+      }
+    },
+    "simulate": {
+      "cold": 100.51865999999995,
+      "warm": {
+        "n": 4,
+        "min": 59.046610999999984,
+        "median": 63.682592500000055,
+        "max": 67.5940579999999,
+        "mean": 63.5014635
+      }
+    },
+    "digest": {
+      "cold": 10.252921000000015,
+      "warm": {
+        "n": 4,
+        "min": 8.11830800000007,
+        "median": 8.362302999999997,
+        "max": 8.585657999999967,
+        "mean": 8.357143000000008
+      }
+    },
+    "serialize": {
+      "cold": 22.69518200000016,
+      "warm": {
+        "n": 4,
+        "min": 9.492925000000014,
+        "median": 9.820867499999963,
+        "max": 13.478278000000046,
+        "mean": 10.653234499999996
+      }
+    }
+  },
+  "tickCount": 651,
+  "events": 2,
+  "issues": 1,
+  "compileIdentity": {
+    "siteId": "414ee1aa2520773c",
+    "siteScore": 0.85,
+    "degradation": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0 at s=160 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+    "inputHash": "a8c5c6ef99e8a4c9e67863de846abcf0b57afdd66d20e00293f30499320d01b9",
+    "instanceId": "414ee1aa2520773c#-1",
+    "replayKey": {
+      "templateId": "queue-tail",
+      "templateVersion": 2,
+      "templateDigest": "08b88f95b5652452",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "414ee1aa2520773c",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "props.inside-curve-screen",
+        "reason": "occlusion declared between ego and queue-tail; reveal-to-conflict is reported by the engine, not solved for",
+        "impact": "informational"
+      }
+    ]
+  },
+  "recordedTrace": null
+}

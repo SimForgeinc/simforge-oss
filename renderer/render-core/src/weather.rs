@@ -2,7 +2,7 @@
 //! lighting + participating media (no post-hoc overlays).
 //!
 //! Driven by the scenario `weather` field; here surfaced as a CLI enum that
-//! WSB5 will later feed from `scene-state.v1`.
+//! WSB5 will later feed from `simforge.scene-state.v1`.
 
 use bevy::color::{Color, LinearRgba};
 use bevy::light::{FogVolume, PointLight, VolumetricFog, VolumetricLight};

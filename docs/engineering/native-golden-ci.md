@@ -15,12 +15,16 @@ goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
 | `qualification/golden-harness/ci-local.sh` | local execution of the exact CI steps |
 | `.github/workflows/native-golden.yml` | self-hosted 5080 runner workflow |
 
-Renderer binary resolution order: `--bin` flag →
-`renderer/target/release/native-render` (production, `renderer/render-core`) →
-spike fallback `scripts/renderer-spike/bevy-spike/target/release/bevy-spike`.
-Today both binaries are byte-identical (the scaffold is the spike verbatim), so
-goldens recorded against either are interchangeable until render-core diverges —
-at which point goldens are re-recorded because the `rendererPath.sha256` pin moves.
+Renderer binary resolution order: `--bin` flag → `scene.binary` →
+`renderer/target/release/native-render-job` (`renderer/render-core`). Scenes
+with `rendererArgs` are turned into a `simforge.native-render-job/v1` job file
+(one sensor camera per `cameras`, `frames` scheduled captures after `warmup`
+warmup iterations); the hashed passes are the last scheduled frame's
+`rgb.png` / `id.png` / `depth.f32.bin`. Every capture is a single GPU
+submission with its copies ordered after the camera passes, so consecutive
+frames never carry the previous frame's pixels. The former `native-render`
+spike CLI (AgX output, unordered readback) is removed; goldens recorded
+against it are retired and must be re-recorded (see `goldens/README.md`).
 
 ## GPU fingerprint policy
 
@@ -156,7 +160,7 @@ Invalidation triggers — any of these means the golden must be re-recorded:
 Re-record procedure:
 
 ```sh
-cargo build --release -p render-core --bin native-render --manifest-path renderer/Cargo.toml
+cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml
 SIMFORGE_SENSOR_CORPUS=<corpus-root> node qualification/golden-harness/golden.mjs record yale-frame0
 node qualification/golden-harness/golden.mjs verify all
 ```

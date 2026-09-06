@@ -5,7 +5,7 @@ import { RenderArtifactIdentitySchema } from "@/app/lib/scenario/render-wire-con
 import type {
   ScenarioPresignedArtifactDto,
   ScenarioRenderArtifactDto,
-} from "./contracts";
+} from "@simforge-oss/studio-host";
 
 /**
  * Artifact reads for the artifacts tab (#146) and the render details tab (#136).

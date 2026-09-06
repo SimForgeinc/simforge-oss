@@ -32,8 +32,10 @@
  */
 
 import {
-  deriveConflictFreeGroups,
   type BehaviorSignalState,
+} from "@simforge-oss/scenario/contracts";
+import {
+  deriveConflictFreeGroups,
   type JunctionMovementBinding,
   type SignalPhaseInterval,
   type SignalPhaseProgram,

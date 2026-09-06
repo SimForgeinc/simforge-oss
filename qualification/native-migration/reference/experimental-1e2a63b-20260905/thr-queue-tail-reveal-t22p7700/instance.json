@@ -1,0 +1,417 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "queue-tail",
+      "templateVersion": 2,
+      "templateDigest": "08b88f95b5652452",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "414ee1aa2520773c",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "414ee1aa2520773c#-1",
+    "archetype": "longitudinal.queue-tail",
+    "negativeControl": false,
+    "metricSubject": null,
+    "operationalVariant": null,
+    "site": {
+      "siteId": "414ee1aa2520773c",
+      "score": 0.85,
+      "verdict": "degraded",
+      "originFeatureId": "seg_da9b2f75e57ee8ec",
+      "entryLaneRsl": "92:1:1",
+      "egoTurn": null,
+      "degradationSummary": "Degraded match (score 0.85). corridor.curvatureDegPer10m worst value 0 at s=160 m, wanted [0.5, 8]. Presentation was relaxed; the scenario still tests what it was written to test.",
+      "matchedReasons": [
+        "222.18 m of runway available, 220 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {
+        "previewDistanceM": 55,
+        "queueSpacingM": 8,
+        "approachSpeedFrac": 0.82
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "92:1:1",
+        "spawnS": 25.000012791373994,
+        "initialSpeedMps": 14.577777777777778,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "queue-lead",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "92:1:1",
+        "spawnS": 87.99999127876877,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "queue-tail",
+        "actorKind": "van",
+        "roleKind": "relative_to",
+        "laneRsl": "92:1:1",
+        "spawnS": 80.00001279137405,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [
+      {
+        "id": "inside-curve-screen",
+        "catalogId": "vehicle.box_truck",
+        "pose": {
+          "x": 1331.2149308110113,
+          "z": -1396.3611111694313,
+          "headingRad": -2.15290126591469
+        },
+        "dims": {
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
+        },
+        "scale": 1,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "queue-tail"
+        },
+        "targetRevealToConflictS": 1.3
+      }
+    ],
+    "arrival": [],
+    "inputHash": "8ea576411c34912e1bb5acfe40d7ab4169aa322a30f7015b10d734e0efca1d31",
+    "feasible": true,
+    "issues": [
+      {
+        "code": "decel_budget_exceeded",
+        "severity": "warning",
+        "path": "interactions.ego-brakes-on-reveal.dynamics",
+        "reason": "implies 8.00 m/s² of braking, above the 5.5 m/s² comfort limit",
+        "detail": {
+          "impliedDecel": 8,
+          "budget": 5.5
+        }
+      }
+    ],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ego-cannot-react-before-reveal",
+        "actorId": "ego",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "props.inside-curve-screen",
+        "reason": "occlusion declared between ego and queue-tail; reveal-to-conflict is reported by the engine, not solved for",
+        "impact": "informational"
+      }
+    ],
+    "derivedFrom": {
+      "entry": "cmp-queue-tail-distance",
+      "interactionId": "ego-brakes-on-reveal",
+      "authoredValue": 22,
+      "threshold": 22.77
+    }
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "el-camino-road",
+    "clipSeconds": 13,
+    "warmupSeconds": 0,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "92:1:1",
+            "s": 67.19763678805025,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1347.8413610008042,
+            "z": -1421.6321127404133,
+            "headingRad": -2.15236096273431
+          },
+          "speedMps": 14.577777777777778
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "92:1:1",
+              "92:0:1",
+              "792:0:1",
+              "33:0:-1",
+              "371:0:-1",
+              "49:0:-1",
+              "968:0:-1",
+              "50:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 14.577777777777778
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "queue-lead",
+        "kind": "car",
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "92:1:1",
+            "s": 4.197658300655462,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1313.2162223391472,
+            "z": -1369.0004025998335,
+            "headingRad": -2.1521961928309175
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "92:1:1",
+              "92:0:1",
+              "792:0:1",
+              "33:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:queue-lead",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.suv"
+        ]
+      },
+      {
+        "id": "queue-tail",
+        "kind": "van",
+        "dims": {
+          "l": 5.3,
+          "w": 2,
+          "h": 2.4
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "92:1:1",
+            "s": 12.19763678805019,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1317.6107407528868,
+            "z": -1375.6853007454565,
+            "headingRad": -2.152492122873923
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "92:1:1",
+              "92:0:1",
+              "792:0:1",
+              "33:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:queue-tail",
+          "class:van",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.van"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-brakes-on-reveal",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "distance",
+            "a": "ego",
+            "b": "queue-tail",
+            "mode": "euclidean",
+            "cmp": "lte",
+            "value": 22.77
+          },
+          "byLatest": 8,
+          "ifNever": "skip"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 8
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "stop"
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 8
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [
+      {
+        "id": "inside-curve-screen",
+        "catalogId": "vehicle.box_truck",
+        "pose": {
+          "x": 1331.2149308110113,
+          "z": -1396.3611111694313,
+          "headingRad": -2.15290126591469
+        },
+        "dims": {
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
+        },
+        "scale": 1,
+        "collidable": false,
+        "essentiality": "required",
+        "occludes": {
+          "observer": "ego",
+          "target": "queue-tail"
+        },
+        "targetRevealToConflictS": 1.3
+      }
+    ],
+    "occluders": [
+      {
+        "id": "inside-curve-screen",
+        "obb": {
+          "center": {
+            "x": 1331.2149308110113,
+            "z": -1396.3611111694313
+          },
+          "lengthM": 7.6,
+          "widthM": 2.44,
+          "headingRad": -2.15290126591469,
+          "heightM": 3.4
+        }
+      }
+    ],
+    "occlusionPairs": [
+      {
+        "observer": "ego",
+        "target": "queue-tail",
+        "occluderId": "inside-curve-screen"
+      }
+    ],
+    "nearMissCriteria": []
+  }
+}

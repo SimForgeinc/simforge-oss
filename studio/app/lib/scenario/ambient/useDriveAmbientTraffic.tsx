@@ -28,13 +28,13 @@ import {
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
 import type { ResolvedAmbientTrafficProfile } from "@simforge-oss/engine";
 
-import { playbackMapEntry } from "../maps";
-import type { StudioSessionMode } from "../session/model";
-import { AmbientTrafficPanel } from "./AmbientTrafficPanel";
+import { playbackMapEntry } from "@simforge-oss/studio-ui/lib/scenario/maps";
+import type { StudioSessionMode } from "@simforge-oss/studio-ui/lib/scenario/session/model";
+import { AmbientTrafficPanel } from "@simforge-oss/studio-ui/lib/scenario/ambient/AmbientTrafficPanel";
 import {
   useSumoTraffic,
   type SumoExternalActorView,
-} from "./useSumoTraffic";
+} from "@simforge-oss/studio-ui/lib/scenario/ambient/useSumoTraffic";
 
 export interface DriveAmbientTrafficOptions {
   readonly document: EditorDocument | null;

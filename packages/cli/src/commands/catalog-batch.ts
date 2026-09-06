@@ -14,7 +14,8 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
 import { MATCH_SEMANTICS_VERSION, type MatchedSite } from '@simforge-oss/compiler/node';
-import { ENGINE_VERSION, traceDigest } from '@simforge-oss/engine';
+import type { SimTrace } from '@simforge-oss/engine';
+import { engine } from '@simforge-oss/engine/node';
 
 import type { CatalogArtifactProvenance, CellOptions, CellResult } from '../batch-cell.js';
 import {
@@ -31,7 +32,7 @@ import { verifyEvidenceHashes } from '../evidence.js';
 import { emit, emitLines } from '../output.js';
 import { CATALOG_EXACT_SITE_OPTIONS, matchOnMap } from '@simforge-oss/compiler/node';
 import { REPO_ROOT } from '@simforge-oss/compiler/node';
-import { readTemplate, readTraceFile, type InstanceFile } from '@simforge-oss/compiler/node';
+import { readTemplate, readTraceHandle, type InstanceFile } from '@simforge-oss/compiler/node';
 import type { EvaluateFilterMode } from './evaluate.js';
 
 export const CATALOG_EXECUTOR_VERSION = '1.0.1' as const;
@@ -392,7 +393,7 @@ function executionPlanDigest(
     taxonomyDigest: catalog.provenance.taxonomyDigest,
     executorVersion: CATALOG_EXECUTOR_VERSION,
     matcherVersion: MATCH_SEMANTICS_VERSION,
-    solverVersion: ENGINE_VERSION,
+    solverVersion: engine().version().engineVersion,
     filter: options.filter,
     collisionPolicy: options.collisionPolicy ?? 'reject',
     trivialTtcS: options.trivialTtcS ?? null,
@@ -442,7 +443,7 @@ function createLedger(
     planDigest,
     executorVersion: CATALOG_EXECUTOR_VERSION,
     matcherVersion: MATCH_SEMANTICS_VERSION,
-    solverVersion: ENGINE_VERSION,
+    solverVersion: engine().version().engineVersion,
     options: {
       maxAttempts: options.maxAttempts,
       concurrency,
@@ -592,7 +593,7 @@ async function planSupportedSlots(
       for (const slot of group) {
         if (!catalogTopologyProvenanceCloses(slot.provenance, {
           matcherIndexDigest: match.bundle.index.topologyDigest,
-          engineGraphDigest: match.bundle.graph.topologyDigest,
+          engineGraphDigest: match.bundle.graph.digest,
         })) {
           plans.set(slot.identity, {
             slot,
@@ -905,7 +906,8 @@ async function validSimulatedResume(
       manifest?: { inputHash?: string; replayKey?: { paramSeed?: string } };
     };
     const result = JSON.parse(await readFile(paths.result, 'utf8')) as CellResult;
-    const trace = await readTraceFile(paths.trace);
+    const traceHandle = await readTraceHandle(paths.trace);
+    const trace = traceHandle.toTrace();
     const traceHeader = trace.header as typeof trace.header & { catalogSlot?: CatalogArtifactProvenance };
     const expectedCatalogSlot = artifactProvenance(slot, final.seed, final.siteId);
     const expectedCatalogSlotJson = JSON.stringify(expectedCatalogSlot);
@@ -923,7 +925,7 @@ async function validSimulatedResume(
       result.artifactHashes?.instanceSha256 === hash(await readFile(paths.instance)) &&
       result.artifactHashes.traceSha256 === hash(await readFile(paths.trace)) &&
       trace.header.inputHash === final.inputHash &&
-      traceDigest(trace) === final.traceDigest;
+      traceHandle.digest() === final.traceDigest;
   } catch {
     return false;
   }
@@ -979,12 +981,12 @@ async function rejectedTraceClosesAttempt(
   expectedCatalogSlot: string,
   attempt: CatalogAttemptRecord,
 ): Promise<boolean> {
-  const trace = await readTraceFile(traceFile);
-  const header = trace.header as typeof trace.header & { catalogSlot?: CatalogArtifactProvenance };
+  const traceHandle = await readTraceHandle(traceFile);
+  const header = traceHandle.toTrace().header as SimTrace['header'] & { catalogSlot?: CatalogArtifactProvenance };
   return attempt.simulated &&
     attempt.traceDigest !== null &&
     JSON.stringify(header.catalogSlot) === expectedCatalogSlot &&
-    traceDigest(trace) === attempt.traceDigest;
+    traceHandle.digest() === attempt.traceDigest;
 }
 
 async function readCatalog(file: string): Promise<ScenarioCatalogManifest> {

@@ -1,5 +1,5 @@
-import { RouteLoading } from "@/app/components/ui/sim-loader";
+import { ScenarioIndexLoading } from "@simforge-oss/studio-ui/scenario/route-states";
 
 export default function ScenarioLoading() {
-  return <RouteLoading label="Scenarios" detail="Loading your scenarios…" />;
+  return <ScenarioIndexLoading />;
 }

@@ -63,7 +63,7 @@
       "id": "pedestrian",
       "kind": "on_crossing",
       "label": "the pedestrian crossing the receiving road",
-      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult_walking" },
+      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult", "dims": { "length": 0.85, "width": 0.5, "height": 1.75 } },
       "essentiality": "required",
       "feature": "xw",
       "startFrac": 0.05,

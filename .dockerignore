@@ -14,15 +14,29 @@ services/*
 !scripts/
 scripts/*
 !scripts/bevy-campaign-parity.py
+!native/
+!native/Cargo.toml
+!native/Cargo.lock
+!native/crates/
+!native/crates/**
 !renderer/
 !renderer/**
-renderer/target/**
-!renderer/target/release/
-!renderer/target/release/native-render-service
 !adapters/
 adapters/*
-!adapters/carla-bridge/
-!adapters/carla-bridge/**
+!adapters/carla-exec/
+!adapters/carla-exec/**
+# Host build outputs and checkout-local derivatives never enter the image
+# context: every native artifact is rebuilt from source inside the build, and
+# the sky plates arrive through the explicit `sky` build context.
+native/target
+renderer/target
+renderer/out
+renderer/test-data
+renderer/assets-src
+renderer/render-core/assets/sky/*.skytex
+packages/native-runtime/native/*.node
+packages/native-runtime/native/false
+packages/native-runtime/wasm
 **/node_modules
 **/dist
 **/.turbo

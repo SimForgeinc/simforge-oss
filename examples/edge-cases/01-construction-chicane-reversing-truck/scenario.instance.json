@@ -5,19 +5,20 @@
     "kind": "scenario-instance-manifest",
     "manifestVersion": 1,
     "replayKey": {
-      "templateId": "ec-01-01-construction-chicane-reversing-truck-v2",
+      "templateId": "blind-chicane-two-way-corridor",
       "templateVersion": 2,
-      "templateDigest": "e19adfb773196dc3",
+      "templateDigest": "4eda553df7f53d5d",
       "mapId": "belmont-research-center",
       "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
       "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
       "siteId": "0a4650e5055bf351",
       "matcherVersion": "1.0.0",
-      "solverVersion": "0.2.5",
+      "solverVersion": "0.6.0",
       "paramSeed": "ec-01-01-construction-chicane-reversing-truck-v2",
-      "drawIndex": 0
+      "drawIndex": 0,
+      "ambientProfileHash": "none"
     },
-    "instanceId": "ec-01-01-construction-chicane-reversing-truck-v2#0",
+    "instanceId": "0a4650e5055bf351#0",
     "archetype": "gallery.01-construction-chicane-reversing-truck",
     "negativeControl": false,
     "metricSubject": "focus-vehicle",
@@ -40,8 +41,8 @@
     },
     "params": {
       "values": {
-        "chicaneSpeedKph": 14,
-        "workerSpeedKph": 5.2
+        "chicaneSpeedKph": 12.58108478737995,
+        "workerSpeedKph": 5.632290104054846
       },
       "categorical": {},
       "rejectedConstraints": []
@@ -50,27 +51,27 @@
       {
         "id": "focus-vehicle",
         "actorKind": "car",
-        "roleKind": "focus",
+        "roleKind": "on_reference",
         "laneRsl": "119:0:1",
-        "spawnS": 49.595410426467964,
+        "spawnS": 197.9999464571892,
         "initialSpeedMps": 7.777777777777779,
         "bindingStatus": "bound"
       },
       {
         "id": "reversing-truck",
         "actorKind": "truck",
-        "roleKind": "supporting",
-        "laneRsl": null,
-        "spawnS": 0,
-        "initialSpeedMps": 1.5,
-        "bindingStatus": "scene-absolute"
+        "roleKind": "opposing",
+        "laneRsl": "119:0:-1",
+        "spawnS": 29.276225108068164,
+        "initialSpeedMps": 3.611111111111111,
+        "bindingStatus": "bound"
       },
       {
         "id": "worker",
         "actorKind": "pedestrian",
-        "roleKind": "supporting",
+        "roleKind": "on_reference",
         "laneRsl": "402:0:1",
-        "spawnS": 6.389371289480245,
+        "spawnS": 259.9999706755842,
         "initialSpeedMps": 0,
         "bindingStatus": "bound"
       }
@@ -302,17 +303,15 @@
       }
     ],
     "arrival": [],
-    "inputHash": "c81054d5d3ce0cc6c20df10459b932d4cca38898a42fdd1b487490c1505df9a5",
+    "inputHash": "921253edf20f45c039b72f0d87259a78a5f15ec60ad8740b8a1c87ab258a6d8e",
     "feasible": true,
     "issues": [],
+    "initialInteractionOutcomes": [],
     "notes": [
       {
-        "path": "roles.reversing-truck.route",
-        "reason": "lane chain extended upstream by 2 lane(s) to reach the site-evaluated spawn at frame s=95.0 m"
-      },
-      {
         "path": "props.excavator",
-        "reason": "occlusion declared between focus-vehicle and worker; reveal-to-conflict is reported by the engine, not solved for"
+        "reason": "occlusion declared between focus-vehicle and worker; reveal-to-conflict is reported by the engine, not solved for",
+        "impact": "informational"
       }
     ]
   },
@@ -322,7 +321,10 @@
     "clipSeconds": 20,
     "warmupSeconds": 1,
     "dt": 0.02,
-    "seed": "ec-01-01-construction-chicane-reversing-truck-v2",
+    "seed": "ec-01-01-constru",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
     "operationalConditions": {
       "weather": "clear",
       "timeOfDay": "day",
@@ -340,9 +342,9 @@
         "id": "focus-vehicle",
         "kind": "car",
         "dims": {
-          "l": 4.8,
-          "w": 1.9,
-          "h": 1.5
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
         },
         "initial": {
           "laneRef": {
@@ -360,7 +362,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -387,6 +388,10 @@
               "92:0:1"
             ]
           },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
           "cruiseSpeedMps": 7.777777777777779
         },
         "presentAtStart": true,
@@ -394,6 +399,7 @@
         "tags": [
           "role:focus-vehicle",
           "class:car",
+          "driver-profile:lawful",
           "binding:on_reference",
           "catalog:vehicle.sedan"
         ]
@@ -402,22 +408,26 @@
         "id": "reversing-truck",
         "kind": "truck",
         "dims": {
-          "l": 6.5,
-          "w": 2.3,
-          "h": 2.8
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
         },
         "initial": {
-          "pose": {
-            "x": -124.7972032366159,
-            "z": -37.50216071128074,
-            "headingRad": 0
+          "laneRef": {
+            "rsl": "119:0:-1",
+            "s": 29.276225108068164,
+            "tFrac": 0.7
           },
-          "speedMps": 1.5
+          "pose": {
+            "x": -143.46648472656494,
+            "z": -78.37658189083699,
+            "headingRad": 1.565443863562167
+          },
+          "speedMps": 3.611111111111111
         },
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -425,27 +435,33 @@
             "speedFactor": 1
           },
           "route": {
-            "kind": "polyline",
-            "points": [
-              {
-                "x": -124.7972032366159,
-                "z": -37.50216071128074
-              },
-              {
-                "x": -112.7972032366159,
-                "z": -37.50216071128074
-              }
+            "kind": "lanePath",
+            "lanes": [
+              "119:0:-1",
+              "1244:0:-1",
+              "75:0:-1",
+              "481:0:-1",
+              "10:0:1",
+              "1038:0:1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1"
             ]
           },
-          "cruiseSpeedMps": 1.5
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 3.611111111111111
         },
         "presentAtStart": true,
         "static": false,
         "tags": [
           "role:reversing-truck",
           "class:truck",
-          "catalog:vehicle.box_truck",
-          "motion:reverse-surrogate"
+          "driver-profile:lawful",
+          "binding:opposing",
+          "catalog:vehicle.box_truck"
         ]
       },
       {
@@ -472,7 +488,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -521,7 +536,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 3.8888888888888893
+          "value": 3.4947457742722086
         },
         "dynamics": {
           "shape": "linear",
@@ -535,6 +550,7 @@
         "trigger": {
           "kind": "after",
           "interactionId": "signal-behind-turns-red",
+          "event": "start",
           "delayS": 0.02
         },
         "verb": "set",
@@ -567,6 +583,7 @@
         "trigger": {
           "kind": "after",
           "interactionId": "worker-clears",
+          "event": "start",
           "delayS": 2.5
         },
         "verb": "speed",
@@ -711,7 +728,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 1.4444444444444446
+          "value": 1.564525028904124
         },
         "dynamics": {
           "shape": "linear",
@@ -767,6 +784,7 @@
       }
     ],
     "roadControls": [],
+    "surfacePatches": [],
     "props": [
       {
         "id": "excavator",
@@ -1165,6 +1183,7 @@
         "target": "worker",
         "occluderId": "excavator"
       }
-    ]
+    ],
+    "nearMissCriteria": []
   }
 }

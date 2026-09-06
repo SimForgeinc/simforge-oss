@@ -13,25 +13,23 @@
  *
  * This module is the single derivation. Every consumer — preview engine, .xosc
  * writer, editor UI, traffic-rule backend, and eventually the worker — reads
- * `resolveActorMotion` and nothing else. Legacy fields remain compiled at the
- * runtime boundary, so the wire contract and the worker are untouched while
+ * `resolveActorMotion` and nothing else. Placement fields remain compiled at
+ * the runtime boundary, so the wire contract and the worker are untouched while
  * the authority moves.
  *
  * ## The precedence is the worker's, not the declaration's
  *
- * A draft can say `autopilot: true` and carry a route; CARLA drives the route
- * (`actor_control.py:378` + `:3235` disable autopilot whenever `route` is
- * non-empty). 257 stored actors are that shape. So the resolution order below is
- * copied from the executor of record rather than from what the draft claims,
- * which is also what makes the migration lossless: the answer is recoverable
- * from geometry even when the declaration was wrong.
+ * A draft can carry a Traffic-Manager base clip AND a route; CARLA drives the
+ * route (`actor_control.py:378` + `:3235` disable autopilot whenever `route` is
+ * non-empty). So the resolution order below is copied from the executor of
+ * record rather than from what the draft claims: the answer is recoverable from
+ * geometry even when the declaration was wrong.
  *
  *   prop / is_static     -> parked
  *   timed_waypoints      -> path  (schedule if walker or path_timing=schedule)
  *   path_placement       -> path  (ordering; polyline is spawn..path..destination)
  *   route                -> drive along the authored anchors
- *   autopilot            -> drive, runway derived from the lane graph
- *   else                 -> drive at the authored speed
+ *   else                 -> drive at the authored speed, runway derived from the lane graph
  *
  * ## What it deliberately does NOT do
  *
@@ -44,7 +42,7 @@
 
 import { baseClip } from "./behavior-base-clip";
 import type { RunwayTurnIntent } from "./semantic-map/derive-runway";
-import type { BehaviorAction } from "./scenario-behavior";
+import type { BehaviorAction } from "@simforge-oss/scenario/contracts";
 import type {
   ScenarioEditorActorDraft,
   ScenarioEditorMapPoint,
@@ -206,8 +204,7 @@ function waypointsToPoints(
 /**
  * Resolve one actor draft to the target model.
  *
- * Pure. Reads the legacy fields when the new ones are absent, which is every
- * stored draft today; prefers the new ones once generators write them.
+ * Pure: a function of the draft's placement fields and its base clip.
  */
 export function resolveActorMotion(actor: ScenarioEditorActorDraft): ResolvedActorMotion {
   const placement = resolvePlacement(actor);

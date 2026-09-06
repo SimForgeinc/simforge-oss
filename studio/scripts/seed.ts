@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,12 +14,13 @@ import { queryRows, withTransaction } from "../app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET, LOCAL_CLOUD_ROOT } from "../app/lib/db/config";
 import {
   publishDevAssetMap,
+  resolveRegistryMapInstallation,
   type DevAssetMap,
-  type MapInstallationReceipt,
   type RegistryMapInstallation,
 } from "../app/lib/map-ingest/server/dev-asset-publication";
 import { registerLocalFile, writeLocalObject } from "../app/lib/s3/s3-object";
-import { SUMO_RUNTIME_VERSION } from "../app/lib/scenario/sumo-runtime";
+import { CATALOG } from "@simforge-oss/asset-catalog";
+import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { migrate } from "./migrate";
 import { ensureStarterMapAssets, STARTER_MAP } from "./starter-map";
 
@@ -30,138 +31,63 @@ const semanticProfilesRoot = resolve(mapsCacheRoot, "dev-assets");
 const webProfilesRoot = resolve(mapsCacheRoot, "map-bundles");
 const nativeProfilesRoot = resolve(mapsCacheRoot, ".corpus");
 const starterAssetsRoot = resolve(LOCAL_CLOUD_ROOT, "starter-map-assets");
-const catalogArtifactId = "artifact_local_catalog_v2";
-const catalogVersionId = "catalog_local_v2";
-const editorReleaseId = "editor_release_local_dev_assets_v2";
-const catalogDraftId = "usmapdraft_00000000000000000000000000000000";
+const catalogSourceSha256 = sha256(JSON.stringify(CATALOG));
+const catalogBody = Buffer.from(JSON.stringify({
+  contractVersion: "uniscenario.asset-catalog/v1",
+  pipelineVersion: "dev-assets-publication/v3",
+  sourceInventorySha256: catalogSourceSha256,
+  entries: CATALOG,
+}));
+const catalogManifestSha256 = sha256(catalogBody);
+const catalogArtifactId = `artifact_local_catalog_${catalogManifestSha256}`;
+const catalogVersionId = `catalog_local_${catalogManifestSha256}`;
+const editorReleaseId = `editor_release_local_dev_assets_${catalogManifestSha256}`;
 
-const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
-
-const SHA256 = /^[a-f0-9]{64}$/;
-const MAP_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function assertSafeMemberPath(path: string): void {
-  if (
-    !path ||
-    path.startsWith("/") ||
-    path.includes("\\") ||
-    path.split("/").some((part) => part === "" || part === "." || part === "..") ||
-    /[\u0000-\u001f\u007f]/u.test(path)
-  ) {
-    throw new Error(`unsafe installation member path: ${path}`);
-  }
+function sha256(value: string | Uint8Array): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
-async function readProfileReceipt(
-  root: string,
-  name: string,
-  profile: MapInstallationReceipt["profile"],
-): Promise<MapInstallationReceipt> {
-  const receipt = JSON.parse(
-    await readFile(resolve(root, ".map-release.json"), "utf8"),
-  ) as MapInstallationReceipt;
-  if (
-    receipt.schema !== "simforge.map-installation.v1" ||
-    receipt.name !== name ||
-    receipt.profile !== profile ||
-    !/^v[1-9][0-9]*$/.test(receipt.version) ||
-    !SHA256.test(receipt.releaseDigest) ||
-    !SHA256.test(receipt.canonicalDigest) ||
-    (receipt.webDigest !== undefined && !SHA256.test(receipt.webDigest)) ||
-    !receipt.members ||
-    typeof receipt.members !== "object" ||
-    Array.isArray(receipt.members)
-  ) {
-    throw new Error(`invalid ${profile} installation receipt`);
+const MAP_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+async function installedMapNames(root: string): Promise<string[]> {
+  try {
+    return (await readdir(root, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && MAP_NAME.test(entry.name))
+      .map((entry) => entry.name);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
-  for (const [relativePath, member] of Object.entries(receipt.members)) {
-    assertSafeMemberPath(relativePath);
-    if (
-      !member ||
-      !SHA256.test(member.sha256) ||
-      !Number.isSafeInteger(member.bytes) ||
-      member.bytes < 0
-    ) {
-      throw new Error(`invalid ${profile} receipt member: ${relativePath}`);
-    }
-    const memberStat = await stat(resolve(root, relativePath));
-    if (!memberStat.isFile() || memberStat.size !== member.bytes) {
-      throw new Error(`incomplete ${profile} receipt member: ${relativePath}`);
-    }
-  }
-  return receipt;
 }
 
 function mapLabel(name: string): string {
   return name.split("-").map((word) => `${word[0]!.toUpperCase()}${word.slice(1)}`).join(" ");
 }
 
+/**
+ * Every map with any installed profile is a candidate; the release contract in
+ * resolveRegistryMapInstallation decides whether it is complete, so a partial
+ * installation is reported instead of silently falling back to Starter Road.
+ */
 async function discoverRegistryMaps(): Promise<Array<{
   map: DevAssetMap;
   installation: RegistryMapInstallation;
 }>> {
-  let names: string[];
-  try {
-    names = (await readdir(webProfilesRoot, { withFileTypes: true }))
-      .filter((entry) => entry.isDirectory() && MAP_NAME.test(entry.name))
-      .map((entry) => entry.name)
-      .sort();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw error;
-  }
+  const names = [...new Set([
+    ...await installedMapNames(semanticProfilesRoot),
+    ...await installedMapNames(webProfilesRoot),
+    ...await installedMapNames(nativeProfilesRoot),
+  ])].sort();
   const installed: Array<{ map: DevAssetMap; installation: RegistryMapInstallation }> = [];
   for (const name of names) {
-    const semanticRoot = resolve(semanticProfilesRoot, name);
-    const webRoot = resolve(webProfilesRoot, name);
-    const nativeRoot = resolve(nativeProfilesRoot, name);
     try {
-      const [semanticReceipt, webReceipt, nativeReceipt] = await Promise.all([
-        readProfileReceipt(semanticRoot, name, "semantic"),
-        readProfileReceipt(webRoot, name, "web"),
-        readProfileReceipt(nativeRoot, name, "native"),
-      ]);
-      if (
-        semanticReceipt.version !== webReceipt.version ||
-        nativeReceipt.version !== webReceipt.version ||
-        semanticReceipt.releaseDigest !== webReceipt.releaseDigest ||
-        nativeReceipt.releaseDigest !== webReceipt.releaseDigest ||
-        semanticReceipt.canonicalDigest !== webReceipt.canonicalDigest ||
-        nativeReceipt.canonicalDigest !== webReceipt.canonicalDigest ||
-        !webReceipt.webDigest ||
-        (semanticReceipt.webDigest !== undefined &&
-          semanticReceipt.webDigest !== webReceipt.webDigest) ||
-        (nativeReceipt.webDigest !== undefined &&
-          nativeReceipt.webDigest !== webReceipt.webDigest) ||
-        ![
-          "map.xodr",
-          "map.geojson.gz",
-          "topology-index.json.gz",
-          "lane-polygons.geojson.gz",
-          "signals.geojson.gz",
-          "derived/topology-derived.json.gz",
-          "derived/locations.json.gz",
-          "derived/roadway-consistency.json.gz",
-          "derived/map-intel-build-receipt.json",
-          "derived/source-capabilities.json.gz",
-          "derived/thumbnail.webp",
-        ].every((path) => semanticReceipt.members[path]) ||
-        !webReceipt.members["3d/manifest.json"] ||
-        !nativeReceipt.members["master.gltf"]
-      ) {
-        throw new Error("installation profiles do not identify one complete release");
-      }
-      installed.push({
-        map: [name, mapLabel(name), "Installed map"],
-        installation: {
-          semanticRoot,
-          webRoot,
-          nativeRoot,
-          semanticReceipt,
-          webReceipt,
-          nativeReceipt,
-        },
+      const installation = await resolveRegistryMapInstallation({
+        name,
+        semanticRoot: resolve(semanticProfilesRoot, name),
+        webRoot: resolve(webProfilesRoot, name),
+        nativeRoot: resolve(nativeProfilesRoot, name),
       });
+      installed.push({ map: [name, mapLabel(name), "Installed map"], installation });
     } catch (error) {
       console.warn(`ignored incomplete installed map ${name}: ${
         error instanceof Error ? error.message : String(error)
@@ -202,34 +128,40 @@ async function seedIdentity(): Promise<void> {
 }
 
 async function seedPublicationBinding(): Promise<void> {
-  const catalogBody = Buffer.from(JSON.stringify({
-    contract: "uniscenario.asset-catalog/v1",
-    pipelineVersion: "dev-assets-publication/v2",
-    assets: [],
-  }));
-  const catalogStorageKey = "catalogs/dev-assets-publication-v2.json";
+  const catalogStorageKey = `catalogs/${catalogManifestSha256}.json`;
   const catalogMetadata = await writeLocalObject(
     LOCAL_ARTIFACT_BUCKET,
     catalogStorageKey,
     catalogBody,
     "application/json",
   );
-  const releaseManifestSha256 = sha256(`dev-assets-publication\0${catalogMetadata.checksumSha256Hex}`);
+  const releaseManifestSha256 = sha256(`dev-assets-publication/v3\0${catalogMetadata.checksumSha256Hex}`);
+  const producerJobId = `artifact-postprocess:editor-assets:${releaseManifestSha256.slice(0, 32)}`;
   await withTransaction(async (tx) => {
     await tx.execute(
-      `INSERT INTO simforge.map_upload_drafts (
-         id, workspace_id, created_by_user_id, label, locality, source_map_id,
-         xodr_sha256, xodr_byte_length, thumbnail_sha256, thumbnail_byte_length,
-         layers, preflight, draft_state
+      `INSERT INTO simforge.artifact_postprocess_jobs (
+         id, workspace_id, postprocess_kind, state, phase, progress, attempt_count,
+         idempotency_key, request_payload, result_payload, started_at, completed_at
        ) VALUES (
-         :id, :workspace_id, :user_id, 'Local asset catalog', 'Local', 'local-catalog',
-         :sha256, 1, :sha256, 1, '[]'::jsonb, '{}'::jsonb, 'published'
+         :id, :workspace_id, 'editor_asset_release', 'succeeded', 'finalized', 1, 1,
+         :idempotency_key, CAST(:request_payload AS jsonb), CAST(:result_payload AS jsonb), NOW(), NOW()
        ) ON CONFLICT (id) DO NOTHING`,
       {
-        id: catalogDraftId,
+        id: producerJobId,
         workspace_id: LOCAL_WORKSPACE_ID,
-        user_id: LOCAL_USER_ID,
-        sha256: sha256(""),
+        idempotency_key: `editor_asset_release:${releaseManifestSha256}`,
+        request_payload: {
+          contractVersion: "simforge.editor-assets-release/v1",
+          releaseId: editorReleaseId,
+          manifestSha256: releaseManifestSha256,
+        },
+        result_payload: {
+          artifactId: catalogArtifactId,
+          storageBucket: LOCAL_ARTIFACT_BUCKET,
+          storageKey: catalogStorageKey,
+          sha256: catalogMetadata.checksumSha256Hex,
+          sizeBytes: catalogMetadata.sizeBytes,
+        },
       },
     );
     await tx.execute(
@@ -240,7 +172,7 @@ async function seedPublicationBinding(): Promise<void> {
        ) VALUES (
          :id, :workspace_id, 'asset-catalog-manifest-v1', 'application/json', :bucket, :key,
          :sha256, :byte_length, 'available', :user_id, NOW(),
-         'stream_sha256', :sha256, 'map_publication', :producer_id, CAST(:provenance AS jsonb)
+         'stream_sha256', :sha256, 'artifact_postprocess', :producer_id, CAST(:provenance AS jsonb)
        ) ON CONFLICT (id) DO NOTHING`,
       {
         id: catalogArtifactId,
@@ -250,11 +182,11 @@ async function seedPublicationBinding(): Promise<void> {
         sha256: catalogMetadata.checksumSha256Hex,
         byte_length: catalogMetadata.sizeBytes,
         user_id: LOCAL_USER_ID,
-        producer_id: catalogDraftId,
+        producer_id: producerJobId,
         provenance: {
           contract: "uniscenario.artifact-provenance/v1",
-          producerJobFamily: "map_publication",
-          producerJobId: catalogDraftId,
+          producerJobFamily: "artifact_postprocess",
+          producerJobId,
         },
       },
     );
@@ -263,16 +195,17 @@ async function seedPublicationBinding(): Promise<void> {
          id, workspace_id, manifest_artifact_id, manifest_sha256, source_inventory_sha256,
          pipeline_version, toolchain, provenance, status
        ) VALUES (
-         :id, :workspace_id, :artifact_id, :sha256, :sha256,
-         'dev-assets-publication/v2', CAST(:toolchain AS jsonb), CAST(:provenance AS jsonb), 'active'
+         :id, :workspace_id, :artifact_id, :sha256, :source_inventory_sha256,
+         'dev-assets-publication/v3', CAST(:toolchain AS jsonb), CAST(:provenance AS jsonb), 'active'
        ) ON CONFLICT (id) DO NOTHING`,
       {
         id: catalogVersionId,
         workspace_id: LOCAL_WORKSPACE_ID,
         artifact_id: catalogArtifactId,
         sha256: catalogMetadata.checksumSha256Hex,
-        toolchain: { source: "local" },
-        provenance: { source: mapsCacheRoot },
+        source_inventory_sha256: catalogSourceSha256,
+        toolchain: { source: "@simforge-oss/asset-catalog" },
+        provenance: { source: "bundled-catalog", entryCount: CATALOG.length },
       },
     );
     await tx.execute(
@@ -281,20 +214,40 @@ async function seedPublicationBinding(): Promise<void> {
          asset_catalog_version_id, source_environment, manifest, release_state, activated_at
        ) VALUES (
          :id, :workspace_id, :manifest_sha256, :source_inventory_sha256,
-         :catalog_version_id, 'dev', CAST(:manifest AS jsonb), 'active', NOW()
+         :catalog_version_id, 'dev', CAST(:manifest AS jsonb), 'available', NULL
        ) ON CONFLICT (id) DO NOTHING`,
       {
         id: editorReleaseId,
         workspace_id: LOCAL_WORKSPACE_ID,
         manifest_sha256: releaseManifestSha256,
-        source_inventory_sha256: catalogMetadata.checksumSha256Hex,
+        source_inventory_sha256: catalogSourceSha256,
         catalog_version_id: catalogVersionId,
         manifest: {
           contractVersion: "simforge.editor-assets-release/v1",
           manifestSha256: releaseManifestSha256,
-          source: mapsCacheRoot,
+          source: "bundled-catalog",
+          assetCatalogVersionId: catalogVersionId,
+          assetCatalogManifestSha256: catalogManifestSha256,
         },
       },
+    );
+    // Bootstrap releases supersede only earlier bootstrap releases. A user's
+    // independently activated release remains the workspace's active pointer.
+    await tx.execute(
+      `UPDATE simforge.editor_asset_releases SET release_state = 'retired'
+        WHERE workspace_id = :workspace_id AND id <> :id
+          AND id LIKE 'editor_release_local_dev_assets_%' AND release_state = 'active'`,
+      { workspace_id: LOCAL_WORKSPACE_ID, id: editorReleaseId },
+    );
+    await tx.execute(
+      `UPDATE simforge.editor_asset_releases
+          SET release_state = 'active', activated_at = COALESCE(activated_at, NOW())
+        WHERE id = :id AND workspace_id = :workspace_id
+          AND NOT EXISTS (
+            SELECT 1 FROM simforge.editor_asset_releases
+             WHERE workspace_id = :workspace_id AND release_state = 'active' AND id <> :id
+          )`,
+      { workspace_id: LOCAL_WORKSPACE_ID, id: editorReleaseId },
     );
   });
 }

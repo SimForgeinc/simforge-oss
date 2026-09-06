@@ -1,0 +1,122 @@
+{
+  "id": "cmp-dooring-cyclist-distance",
+  "kind": "compiled",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "0687676213e1f262f77e1cdf023c517fca89573f5ed8a7a38b86d8cd910e7c60",
+  "traceDigest": "e64a6bcf392b035b64dba77623e34e48af0fa1abe94d4dfde4cb5f45540a795d",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 135.194549,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 7.704240999999996,
+      "warm": {
+        "n": 4,
+        "min": 0.8533769999999095,
+        "median": 0.9350010000000566,
+        "max": 1.0057730000003176,
+        "mean": 0.932288000000085
+      }
+    },
+    "compile": {
+      "cold": 2906.998213,
+      "warm": {
+        "n": 4,
+        "min": 1.6994760000002316,
+        "median": 1.9539865000001555,
+        "max": 4.710117000000082,
+        "mean": 2.579391500000156
+      }
+    },
+    "mapLoad": {
+      "cold": 284.60074499999996,
+      "warm": {
+        "n": 4,
+        "min": 0.0029449999997268606,
+        "median": 0.0031820000001516746,
+        "max": 0.003259000000070955,
+        "mean": 0.0031420000000252912
+      }
+    },
+    "simulate": {
+      "cold": 137.87576199999967,
+      "warm": {
+        "n": 4,
+        "min": 81.42898300000024,
+        "median": 84.92003449999993,
+        "max": 95.40901200000008,
+        "mean": 86.66951600000004
+      }
+    },
+    "digest": {
+      "cold": 8.893300000000181,
+      "warm": {
+        "n": 4,
+        "min": 7.065400999999838,
+        "median": 7.137852500000008,
+        "max": 7.335622999999941,
+        "mean": 7.169182249999949
+      }
+    },
+    "serialize": {
+      "cold": 21.792103000000225,
+      "warm": {
+        "n": 4,
+        "min": 9.066204000000198,
+        "median": 9.13014599999974,
+        "max": 9.823393000000124,
+        "mean": 9.28747224999995
+      }
+    }
+  },
+  "tickCount": 501,
+  "events": 3,
+  "issues": 1,
+  "compileIdentity": {
+    "siteId": "2d295212b00a36ba",
+    "siteScore": 1,
+    "degradation": "Exact match: every clause and role bound without relaxation.",
+    "inputHash": "0687676213e1f262f77e1cdf023c517fca89573f5ed8a7a38b86d8cd910e7c60",
+    "instanceId": "2d295212b00a36ba#-1",
+    "replayKey": {
+      "templateId": "dooring-cyclist",
+      "templateVersion": 2,
+      "templateDigest": "b823f3b229560121",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "2d295212b00a36ba",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "roles.ego.pose.s",
+        "reason": "frame s=0.0 m is upstream of every drivable lane at this site; the spawn was clamped to the start of the route"
+      },
+      {
+        "path": "roles.parked-car.pose.s",
+        "reason": "frame s=3.4 m is upstream of every drivable lane at this site; the spawn was clamped to the start of the route"
+      },
+      {
+        "path": "roles.cyclist.extensions.pathSemantics",
+        "reason": "parallel path resolved in parked-car's selected local frame (-45.0 m longitudinal, 2.50 m left)",
+        "impact": "informational"
+      }
+    ]
+  },
+  "recordedTrace": null
+}

@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseSimScenarioInput } from '@simforge-oss/engine';
-import {
-  activePhysicsModeForTrace,
-  physicsSummaryForAuthoredActors,
-  physicsSummaryForTrace,
-  withEditablePhysicsDefault,
-} from '../physics';
+import { physicsSummaryForAuthoredActors, withEditablePhysicsDefault } from '../physics';
 
 describe('Studio physics migration', () => {
   const legacy = parseSimScenarioInput({
@@ -23,26 +18,9 @@ describe('Studio physics migration', () => {
     expect(withEditablePhysicsDefault(migrated)).toBe(migrated);
   });
 
-  it('migrates an editable legacy pin and treats provenance-less evidence as kinematic', () => {
+  it('migrates an editable kinematic pin to dynamic-v1', () => {
     const pinned = { ...legacy, physics: { mode: 'kinematic-v1' as const } };
     expect(withEditablePhysicsDefault(pinned)).toEqual({ ...pinned, physics: { mode: 'dynamic-v1' } });
-    expect(activePhysicsModeForTrace({ header: {} } as never)).toBe('kinematic-v1');
-    expect(activePhysicsModeForTrace(null)).toBe('dynamic-v1');
-  });
-
-  it('shows Dynamic for an ambient-only trace with a supported vehicle backend', () => {
-    const trace = {
-      header: {
-        physics: {
-          mode: 'dynamic-v1',
-          actorBackends: {
-            'ambient:v1:car': { mode: 'dynamic-v1', reason: 'selected' },
-          },
-        },
-      },
-    } as never;
-    expect(activePhysicsModeForTrace(trace)).toBe('dynamic-v1');
-    expect(physicsSummaryForTrace(trace)).toMatchObject({ dynamicCount: 1, fallbackCount: 0, legacyReplay: false });
   });
 
   it('classifies authored actors without changing authored data', () => {
@@ -62,11 +40,5 @@ describe('Studio physics migration', () => {
       { id: 'parked', mode: 'fixed-static-v1', reason: 'static-actor' },
       { id: 'reverse', mode: 'dynamic-v1', reason: 'selected' },
     ]);
-  });
-
-  it('keeps provenance-less immutable evidence visibly legacy', () => {
-    expect(physicsSummaryForTrace({ header: { actorIds: ['car'] } })).toEqual({
-      mode: 'kinematic-v1', legacyReplay: true, actors: [], dynamicCount: 0, staticCount: 0, fallbackCount: 0, unknownCount: 0,
-    });
   });
 });

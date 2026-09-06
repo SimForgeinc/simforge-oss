@@ -3,33 +3,19 @@
  *
  * Everything here is deterministic: no wall clock, no `Math.random`, no
  * iteration-order dependence. A policy that replays the same action sequence
- * against the same seed observes byte-identical episodes.
+ * against the same seed observes byte-identical episodes. Episodes execute in
+ * the native runtime (`simforge-session`); these are the documents that cross
+ * its boundary (`EpisodeConfig` in, `StepResult` out).
  */
 
-import type { Vec2, VehicleControl } from '@simforge-oss/engine';
+import type { SimEvent } from '@simforge-oss/engine';
+import type { EnvAction, PerceivedObject } from '@simforge-oss/native-runtime/shared';
 
-/** One policy decision, applied to the metric-subject actor via the engine's action hook. */
-export interface EnvAction {
-  /** Setpoint override; `undefined` fields keep the authored choreography. */
-  readonly targetSpeedMps?: number;
-  readonly targetAccelerationMps2?: number;
-  readonly motionDirection?: -1 | 1;
-  /**
-   * Pure-pursuit steering override: aim the dynamic backend's bicycle
-   * steering at this world-frame point/heading instead of the authored
-   * route (set together by the trajectory executor; see
-   * `@simforge-oss/engine` sim/trajectory-follower.ts).
-   */
-  readonly previewPoint?: Vec2;
-  readonly previewHeadingRad?: number;
-  /**
-   * Low-level control passthrough (steer/pedals) into the force-based backend.
-   * Stays inside the profile's steer clamp/rate/lag and jerk envelope.
-   */
-  readonly control?: VehicleControl;
-}
+import type { CausalFrame } from './causal.js';
 
-/** Provisional reward weights. Documented as provisional in rl-plan Phase 1; tune before Phase 3 training. */
+export type { EnvAction, PerceivedObject };
+
+/** Reward weights. One config object so training can retune without touching semantics. */
 export interface RewardConfig {
   /** Applied once when a collision involving the ego terminates the episode. */
   collisionPenalty: number;
@@ -54,11 +40,11 @@ export const DEFAULT_REWARD_CONFIG: RewardConfig = {
   comfortAccelWeight: 0.005,
 };
 
-/** Ego-centric BEV raster geometry. The raster itself is built by `BevRasterBuilder`. */
+/** Ego-centric BEV raster geometry. */
 export interface BevConfig {
   /** Metres per cell edge. */
   resolutionM: number;
-  /** Forward extent from the ego bumper origin, metres. */
+  /** Forward extent from the ego reference point, metres. */
   forwardM: number;
   /** Backward extent behind the ego, metres. */
   backwardM: number;
@@ -68,6 +54,9 @@ export interface BevConfig {
   laneHalfWidthM: number;
 }
 
+/** Raster channels: `[occupancy, lane surface, ego]`, as the native rasteriser stamps them. */
+export const BEV_CHANNELS = 3;
+
 export const DEFAULT_BEV_CONFIG: BevConfig = {
   resolutionM: 0.25,
   forwardM: 40,
@@ -76,7 +65,7 @@ export const DEFAULT_BEV_CONFIG: BevConfig = {
   laneHalfWidthM: 1.75,
 };
 
-/** Observation-channel switches. Each builder stays behind its own interface so Phase 7 can add pixel channels without touching EnvSession. */
+/** Observation-channel switches. */
 export interface ObservationConfig {
   stateVector: boolean;
   /** Object-list gating range when an actor declares no sensors. */
@@ -113,32 +102,55 @@ export interface EpisodeConfig {
   observation?: Partial<ObservationConfig>;
 }
 
-/** Perception-gated object entry, sorted by range then id. */
-export interface PerceivedObject {
-  readonly id: string;
-  /** Range from the ego reference point, metres. */
-  readonly rangeM: number;
-  /** Bearing from the ego heading, radians, positive left, wrapped to [-π, π). */
-  readonly bearingRad: number;
-  /** Range rate (negative = closing), m/s. */
-  readonly rangeRateMps: number;
-  /** Geometric line of sight was clear at this decision. */
-  readonly lineOfSight: boolean;
+/** Ego-centric BEV raster: row-major `[row][col]`, channel-last within each cell. Row 0 is farthest forward. */
+export interface BevRaster {
+  readonly width: number;
+  readonly height: number;
+  readonly channels: number;
+  readonly data: Float32Array;
 }
 
 /** Version 1 observation bundle. Every field is optional by config, never by surprise. */
 export interface Observation {
   readonly tS: number;
   readonly stateVector: Float64Array | null;
+  /** Perception-gated object entries, sorted by range then id. */
   readonly objects: readonly PerceivedObject[];
   readonly bev: BevRaster | null;
 }
 
-/** Ego-centric BEV raster: row-major `[row][col]`, channel-last within each cell. Row 0 is farthest forward. */
-export interface BevRaster {
-  readonly width: number;
-  readonly height: number;
-  readonly channels: number;
-  readonly resolutionM: number;
-  readonly data: Float32Array;
+/** Running episode minima for one monitored pair, as of the decision. */
+export interface PairMinima {
+  readonly a: string;
+  readonly b: string;
+  readonly minDistanceM: number;
+  readonly minTtcS: number | null;
+  readonly minPathTtcS: number | null;
+  readonly minPetS: number | null;
+}
+
+/** `[progress, proximity, comfort]` contributions of one decision. */
+export interface RewardTerms {
+  readonly progress: number;
+  readonly proximity: number;
+  readonly comfort: number;
+}
+
+/** Per-decision facts beside the observation. */
+export interface StepInfo {
+  readonly tS: number;
+  /** Engine events recorded during this decision interval, in record order. */
+  readonly events: readonly SimEvent[];
+  readonly minima: readonly PairMinima[];
+  /** This decision's causal frame; all frames accumulate into the channel. */
+  readonly causal: CausalFrame;
+  readonly rewardTerms: RewardTerms;
+}
+
+export interface StepResult {
+  readonly observation: Observation;
+  readonly reward: number;
+  readonly terminated: boolean;
+  readonly truncated: boolean;
+  readonly info: StepInfo;
 }

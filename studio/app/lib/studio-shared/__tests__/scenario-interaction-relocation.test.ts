@@ -5,7 +5,7 @@ const actor = (id: string) => ({
   id,
   label: id,
   kind: "vehicle" as const,
-  role: id === "ego" ? ("ego" as const) : ("traffic" as const),
+  role: id === "ego" ? ("subject" as const) : ("traffic" as const),
   is_static: false,
   placement_mode: "road" as const,
   blueprint: "vehicle.test",
@@ -14,8 +14,6 @@ const actor = (id: string) => ({
   route_direction: "forward" as const,
   lane_facing: "with_lane" as const,
   speed_kph: 20,
-  autopilot: true,
-  timeline: [],
   sensors: [],
 });
 

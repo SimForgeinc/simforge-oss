@@ -1,9 +1,9 @@
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import { type NextRequest, NextResponse } from "next/server";
 import { AssetUrlServiceError, normalizeAssetKey } from "@/app/lib/assets/asset-url-service";
-import { SUMO_RUNTIME_VERSION } from "@/app/lib/scenario/sumo-runtime";
+import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
 
 type Context = { params: Promise<{ assetPath: string[] }> };

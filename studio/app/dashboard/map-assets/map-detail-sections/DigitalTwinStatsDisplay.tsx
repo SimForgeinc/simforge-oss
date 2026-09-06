@@ -11,7 +11,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
 } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ThreeDStats as ThreeDStatsResponse } from "@/app/lib/3d-manifest-stats";
 
 // ---------------------------------------------------------------------------

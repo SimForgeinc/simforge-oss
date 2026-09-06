@@ -85,9 +85,6 @@ export function serializeScenario(doc: ScenarioV1): string {
 /**
  * Validate an already-parsed object as a v1 document.
  *
- * Does **not** migrate — use `migrate()` (or {@link deserializeScenario}) for
- * files of unknown vintage.
- *
  * @throws {ScenarioValidationError} With every issue found.
  */
 export function parseScenario(json: unknown): ScenarioV1 {

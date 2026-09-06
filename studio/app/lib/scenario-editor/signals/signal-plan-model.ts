@@ -10,11 +10,13 @@
 
 import {
   DEFAULT_BEHAVIOR_CLIP_END,
+  type BehaviorSignalState,
+} from "@simforge-oss/scenario/contracts";
+import {
   DEFAULT_PHASE_GREEN_S,
   movementStateAt,
   signalProgramCycleDurationS,
   synthesizeSignalProgram,
-  type BehaviorSignalState,
   type JunctionMovementBinding,
   type JunctionSignalPlan,
   type SceneClip,

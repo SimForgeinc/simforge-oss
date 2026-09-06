@@ -21,6 +21,7 @@ import { gunzipSync } from 'node:zlib';
 import { CoordinateFrame } from '../../opendrive.js';
 
 import { asMapId } from '../types/ids.js';
+import type { TopologyLane } from '../types/sources.js';
 import type { MapSources } from '../build/sources.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -109,6 +110,60 @@ export function miniYaleSources(
     mapGeojson: raw.mapGeojson as unknown as MapSources['mapGeojson'],
     overlay: raw.overlay as unknown as MapSources['overlay'],
     sourceHashes: { ...fixture.sourceHashes },
+  };
+}
+
+/**
+ * A 200 m straight with one driving lane per direction and no junction.
+ *
+ * The one property no carve of a real map can have: zero junctions. Every
+ * real artifact is bounded by junction stubs, so the "junction facts are not
+ * required when nothing hosts them" boundary needs a hand-built network.
+ */
+export function straightRoadSources(): MapSources {
+  const polyline = (y: number): { x: number; y: number }[] => {
+    const points: { x: number; y: number }[] = [];
+    for (let x = -100; x <= 100; x += 10) points.push({ x, y });
+    return points;
+  };
+  const lane = (laneId: number): TopologyLane => ({
+    rsl: `1:0:${laneId}`,
+    roadId: 1,
+    section: 0,
+    laneId,
+    laneType: 'driving',
+    isJunction: false,
+    junctionId: null,
+    predecessors: [],
+    successors: [],
+    speedLimitKph: 50,
+    representativeWidthM: 3.5,
+    adjacentLanes: {
+      left: { side: 'left', laneRsl: `1:0:${-laneId}`, sameDirection: false, permissionIds: [] },
+    },
+    polyline: polyline(laneId < 0 ? -1.75 : 1.75),
+  });
+  return {
+    mapId: asMapId('straight-two-lane'),
+    mapAssetId: 'straight-two-lane_fixture',
+    dir: 'in-memory straight-two-lane fixture',
+    frame: new CoordinateFrame({
+      projString: '+proj=tmerc +lat_0=0 +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
+    }),
+    topology: {
+      schemaVersion: 1,
+      mapName: 'straight-two-lane',
+      lanes: { '1:0:-1': lane(-1), '1:0:1': lane(1) },
+      gates: [],
+      junctions: {},
+    },
+    searchIndex: null,
+    signals: null,
+    lanePolygons: null,
+    mapGeojson: null,
+    overlay: null,
+    roadNames: { '1': 'Long Straight' },
+    sourceHashes: { 'topology-index': 'straight-two-lane' },
   };
 }
 

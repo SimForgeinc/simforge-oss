@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fixtures from "./fixtures/divert-tail-parity.json";
 import {
+  BehaviorClipSchema,
   DIVERT_TAIL_MAX_M,
-  divertTailFromAbsolute,
   divertTailLengthM,
   resolveDivertTail,
-} from "../divert-tail";
-import { BehaviorClipSchema } from "../scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 
 /**
  * The relative divert tail (`plans/2026-07-29-one-motion-model.md` §2.3).
@@ -72,19 +71,6 @@ describe("resolveDivertTail", () => {
     );
     expect(points.map((point) => point.z)).toEqual([13.25, 13.25]);
   });
-
-  it("round-trips an absolute polyline back to itself", () => {
-    const pose = { x: 626.788, y: 1812.109, z: 13, yawDeg: -48.146 };
-    const absolute = [
-      { x: 640, y: 1800 },
-      { x: 655.5, y: 1788.25 },
-    ];
-    const resolved = resolveDivertTail(divertTailFromAbsolute(absolute, pose), pose);
-    for (const [index, point] of absolute.entries()) {
-      expect(resolved[index]!.x).toBeCloseTo(point.x, 6);
-      expect(resolved[index]!.y).toBeCloseTo(point.y, 6);
-    }
-  });
 });
 
 describe("divertTailLengthM", () => {
@@ -141,9 +127,8 @@ describe("the divert_path clip invariants", () => {
   });
 
   it("still accepts the absolute form, uncapped", () => {
-    // The 21 corpus actors that carry a drawn path have not been converted yet, and
-    // capping the legacy form retroactively would fail-closed on scenarios that
-    // work today. That is a migration decision, not a schema one.
+    // The absolute `waypoints` form is a drawn path, not a departure from one,
+    // and the cap is a statement about departures.
     const long = clip({
       waypoints: Array.from({ length: 20 }, (_, index) => ({ x: index * 50, y: 0 })),
     });

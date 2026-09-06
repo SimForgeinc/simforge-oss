@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ChevronRight, Eye, LocateFixed } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   UUID_RE,
   tryParseJson,

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { Camera, Loader2, AlertCircle } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { toast } from "sonner";
 import type { MapAsset } from "@simforge-oss/studio-shared";
 

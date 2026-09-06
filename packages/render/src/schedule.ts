@@ -57,3 +57,23 @@ export function frameTimestampSeconds(schedule: FixedSchedule, frameIndex: numbe
   }
   return schedule.startSeconds + frameIndex / schedule.framesPerSecond;
 }
+
+/**
+ * Frame timestamps quantized to integer microseconds. Engines that render a
+ * single timeline for several sources (the native retained service) key
+ * every source's wanted frames and the union timeline on these values, and
+ * hosts recompute the same union to verify a completed run.
+ */
+export function scheduleFrameMicros(schedule: FixedSchedule): number[] {
+  return Array.from(
+    { length: schedule.frameCount },
+    (_, index) => Math.round(frameTimestampSeconds(schedule, index) * 1_000_000),
+  );
+}
+
+/** Sorted union of every schedule's quantized frame timestamps. */
+export function unionFrameMicros(schedules: readonly FixedSchedule[]): number[] {
+  const micros = new Set<number>();
+  for (const schedule of schedules) for (const value of scheduleFrameMicros(schedule)) micros.add(value);
+  return [...micros].sort((left, right) => left - right);
+}

@@ -12,7 +12,7 @@ import {
   type BehaviorSignalRef,
   type BehaviorSignalState,
   type BehaviorTrigger,
-} from "./scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 
 /**
  * TRAFFIC-SIGNAL AUTHORING, per intersection at MOVEMENT level (plan

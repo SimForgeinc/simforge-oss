@@ -193,7 +193,12 @@
       "label": "pedestrian who must clear before focus-vehicle repositions",
       "actor": {
         "class": "pedestrian",
-        "catalogId": "pedestrian.adult_walking"
+        "catalogId": "pedestrian.adult",
+        "dims": {
+          "length": 0.85,
+          "width": 0.5,
+          "height": 1.75
+        }
       },
       "initialSpeedKph": 0
     },

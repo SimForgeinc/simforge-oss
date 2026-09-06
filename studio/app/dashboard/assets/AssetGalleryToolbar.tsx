@@ -1,18 +1,18 @@
 "use client";
 
 import { ArrowUpDown, Loader2, Search, X } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
-import { Input } from "@/app/components/ui/input";
-import { SelectMenu } from "@/app/components/ui/select-menu";
-import { Toolbar, ToolbarGroup } from "@/app/components/ui/toolbar";
-import type { GalleryActorClass } from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
+import { Toolbar, ToolbarGroup } from "@simforge-oss/studio-ui/components/ui/toolbar";
+import type { GalleryActorClass } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import {
   GALLERY_ACTOR_CLASS_OPTIONS,
   GALLERY_CARLA_FILTER_OPTIONS,

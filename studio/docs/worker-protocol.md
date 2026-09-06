@@ -6,7 +6,7 @@ All internal worker endpoints require `Authorization: Bearer <token>`. The token
 
 ### Claim
 
-`POST /api/uniscenario/internal/cpu-jobs/claim`
+`POST /api/simforge/internal/cpu-jobs/claim`
 
 ```json
 {
@@ -30,7 +30,7 @@ All internal worker endpoints require `Authorization: Bearer <token>`. The token
     "mode": "browser_render",
     "engine": "browser",
     "intent": {
-      "schema": "uniscenario.render-intent/v1",
+      "schema": "simforge.render-intent/v1",
       "engine": "browser",
       "assets": [
         { "assetId": "map.manifest", "kind": "map", "sha256": "...", "sizeBytes": 123 },
@@ -105,7 +105,7 @@ Every subsequent CPU request includes this fence:
 
 ### Heartbeat and events
 
-`POST /api/uniscenario/internal/cpu-jobs/{jobId}/heartbeat`
+`POST /api/simforge/internal/cpu-jobs/{jobId}/heartbeat`
 
 ```json
 { "jobFamily": "openscenario_render", "attemptId": "...", "fenceToken": "...", "leaseSeconds": 900, "progress": 0.5 }
@@ -113,7 +113,7 @@ Every subsequent CPU request includes this fence:
 
 `progress` is optional and 0–1. The response contains the renewed expiry and `cancelRequested`.
 
-`POST /api/uniscenario/internal/cpu-jobs/{jobId}/events`
+`POST /api/simforge/internal/cpu-jobs/{jobId}/events`
 
 ```json
 { "jobFamily": "openscenario_render", "attemptId": "...", "fenceToken": "...", "type": "render.progress", "payload": {} }
@@ -121,7 +121,7 @@ Every subsequent CPU request includes this fence:
 
 ### Reserve outputs
 
-`POST /api/uniscenario/internal/cpu-jobs/{jobId}/reserve`
+`POST /api/simforge/internal/cpu-jobs/{jobId}/reserve`
 
 ```json
 {
@@ -136,17 +136,17 @@ Every subsequent CPU request includes this fence:
 One to four artifacts are accepted, each at most 512 MiB. The response supplies artifact IDs and checksum-bound upload URLs/headers. Browser recording output is normally produced through the recordings API; the CPU completion references that recording job.
 
 The local port adds the mutation endpoints missing upstream. Create and reserve
-in one `POST /api/uniscenario/recordings` call with
+in one `POST /api/simforge/recordings` call with
 `{\"recording\": <CreateBrowserRecordingSchema>, \"artifacts\": <artifact declarations>}`.
 The response is `{\"recording\": <detail>, \"artifacts\": <checksum-bound upload
 authorizations>}`. Upload the exact declared closure, then finalize it with
-`PATCH /api/uniscenario/recordings/{recordingId}` using the
+`PATCH /api/simforge/recordings/{recordingId}` using the
 `FinalizeBrowserRecordingSchema` body. Both mutations use the worker bearer
 token. Use the succeeded recording ID in the CPU completion below.
 
 ### Complete or fail
 
-`POST /api/uniscenario/internal/cpu-jobs/{jobId}/complete`
+`POST /api/simforge/internal/cpu-jobs/{jobId}/complete`
 
 ```json
 {
@@ -160,7 +160,7 @@ token. Use the succeeded recording ID in the CPU completion below.
 
 `browserRender.recordingJobId` is required by the store for browser render completion. That recording must match the render job's workspace/revision/spec and have completed manifest output plus video when requested. The store links those recording artifacts to the render job before succeeding it.
 
-`POST /api/uniscenario/internal/cpu-jobs/{jobId}/fail`
+`POST /api/simforge/internal/cpu-jobs/{jobId}/fail`
 
 ```json
 { "jobFamily": "openscenario_render", "attemptId": "...", "fenceToken": "...", "code": "render_failed", "detail": {} }
@@ -168,19 +168,19 @@ token. Use the succeeded recording ID in the CPU completion below.
 
 ## Native render lease protocol
 
-The body schema is `uniscenario.render-worker-control/v2`. Claim with:
+The body schema is `simforge.render-worker-control/v2`. Claim with:
 
-`POST /api/uniscenario/internal/render-jobs/lease`
+`POST /api/simforge/internal/render-jobs/lease`
 
 ```json
-{ "schema": "uniscenario.render-worker-control/v2", "type": "job.claim", "registrationId": "..." }
+{ "schema": "simforge.render-worker-control/v2", "type": "job.claim", "registrationId": "..." }
 ```
 
-No work returns `{"schema":"uniscenario.render-worker-control/v2","type":"job.none","retryAfterMs":2000}`. A lease returns:
+No work returns `{"schema":"simforge.render-worker-control/v2","type":"job.none","retryAfterMs":2000}`. A lease returns:
 
 ```json
 {
-  "schema": "uniscenario.render-worker-control/v2",
+  "schema": "simforge.render-worker-control/v2",
   "type": "job.leased",
   "jobId": "...",
   "attempt": 1,
@@ -191,27 +191,36 @@ No work returns `{"schema":"uniscenario.render-worker-control/v2","type":"job.no
 }
 ```
 
+A native lease's `inputs` are exactly the intent's declared `assets` plus
+`scenario.xosc`: the immutable map closure (`map.tile.000000` for
+`master.gltf`, `map.resource.<sha256(relativePath)>` for every other member)
+served through presigned URLs, and the pinned actor appearance closure
+`actors.native-closure` (`relativePath` `actor-assets/closure.json`) served
+from its public immutable URL. The intent must declare that closure's digest
+and size under the same asset id; a claim whose declared assets and served
+inputs disagree fails with `native_render_input_declaration_mismatch`.
+
 ### Heartbeat
 
-`POST /api/uniscenario/internal/render-jobs/{jobId}/heartbeat`
+`POST /api/simforge/internal/render-jobs/{jobId}/heartbeat`
 
 ```json
-{ "schema": "uniscenario.render-worker-control/v2", "type": "lease.heartbeat", "leaseId": "...", "fenceToken": "...", "progressSequence": 0 }
+{ "schema": "simforge.render-worker-control/v2", "type": "lease.heartbeat", "leaseId": "...", "fenceToken": "...", "progressSequence": 0 }
 ```
 
 The response reports renewed expiry, cancellation, and the durable progress sequence.
 
 ### Progress
 
-`POST /api/uniscenario/internal/render-jobs/{jobId}/events`
+`POST /api/simforge/internal/render-jobs/{jobId}/events`
 
 ```json
 {
-  "schema": "uniscenario.render-worker-control/v2",
+  "schema": "simforge.render-worker-control/v2",
   "type": "lease.progress",
   "leaseId": "...",
   "fenceToken": "...",
-  "records": [{ "schema": "uniscenario.render-progress/v1", "jobId": "...", "attempt": 1, "sequence": 1, "timestamp": "ISO-8601", "event": "job.started" }]
+  "records": [{ "schema": "simforge.render-progress/v1", "jobId": "...", "attempt": 1, "sequence": 1, "timestamp": "ISO-8601", "event": "job.started" }]
 }
 ```
 
@@ -219,11 +228,11 @@ Allowed events are `job.started`, `stage.started`, `stage.progress`, `artifact.r
 
 ### Reserve and upload an artifact
 
-`POST /api/uniscenario/internal/render-jobs/{jobId}/artifacts`
+`POST /api/simforge/internal/render-jobs/{jobId}/artifacts`
 
 ```json
 {
-  "schema": "uniscenario.render-worker-control/v2",
+  "schema": "simforge.render-worker-control/v2",
   "type": "artifact.reserve",
   "leaseId": "...",
   "fenceToken": "...",
@@ -238,11 +247,11 @@ Sensor outputs use roles `video`, `frames`, or `sensorArchive` and require actor
 
 ### Complete or fail
 
-`POST /api/uniscenario/internal/render-jobs/{jobId}/complete`
+`POST /api/simforge/internal/render-jobs/{jobId}/complete`
 
 ```json
 {
-  "schema": "uniscenario.render-worker-control/v2",
+  "schema": "simforge.render-worker-control/v2",
   "type": "job.complete",
   "leaseId": "...",
   "fenceToken": "...",
@@ -251,11 +260,25 @@ Sensor outputs use roles `video`, `frames`, or `sensorArchive` and require actor
 }
 ```
 
-`POST /api/uniscenario/internal/render-jobs/{jobId}/fail`
+A native completion is additionally checked against the engine's own
+evidence. The uploaded `manifest` (`simforge.native-render-manifest/v1`) and
+`diagnostics` (`simforge.native-run-diagnostics/v1`) are parsed through the
+shared `@simforge-oss/render/native` evidence schemas the engine wrote them
+with — so the diagnostics' `service.protocol` must be the
+`NATIVE_SERVICE_PROTOCOL` the client actually speaks — and must bind the
+lease's intent hash, control lineage, source xosc and the intent's pinned
+actor closure (`actorAssetsSha256` equals the `actors.native-closure` asset
+digest); agree with each other on the lowering hash and trace digest; and
+match the intent's schedules — each RGB source's video carries exactly its
+own frame count, dimensions, and frame rate, while the run's tick count is the
+union of every source's frame timestamps. Any mismatch answers 409
+`native_diagnostics_evidence_mismatch`.
+
+`POST /api/simforge/internal/render-jobs/{jobId}/fail`
 
 ```json
 {
-  "schema": "uniscenario.render-worker-control/v2",
+  "schema": "simforge.render-worker-control/v2",
   "type": "job.fail",
   "leaseId": "...",
   "fenceToken": "...",
@@ -263,5 +286,15 @@ Sensor outputs use roles `video`, `frames`, or `sensorArchive` and require actor
   "failure": { "code": "render_failed", "message": "...", "retryable": true, "details": {} }
 }
 ```
+
+### Drain
+
+`POST /api/simforge/internal/workers/{workerNodeId}/state`
+
+```json
+{ "schema": "simforge.render-worker-control/v2", "type": "worker.drain", "registrationId": "..." }
+```
+
+Answers `{"schema":"simforge.render-worker-control/v2","type":"worker.draining"}`; the node stops receiving leases.
 
 Lease IDs, fence tokens, attempt IDs, job IDs, and intent hashes are checked transactionally. A stale worker cannot heartbeat, append events, reserve output, complete, or fail another attempt.

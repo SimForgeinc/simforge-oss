@@ -18,7 +18,7 @@ import {
   WebGLRenderer,
 } from "three";
 import type { Material, Object3D } from "three";
-import type { GalleryCatalogEntryDto } from "@/app/lib/asset-gallery/contracts";
+import type { GalleryCatalogEntryDto } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 
 function disposeMaterial(material: Material) {
   for (const value of Object.values(material)) {

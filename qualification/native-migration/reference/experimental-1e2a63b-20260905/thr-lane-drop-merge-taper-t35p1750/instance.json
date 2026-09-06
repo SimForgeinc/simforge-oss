@@ -1,0 +1,788 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "temporary-lane-drop-late-merge",
+      "templateVersion": 2,
+      "templateDigest": "48bde09318a3a618",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "0a8fc7e0ff2a6cad",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "0a8fc7e0ff2a6cad#-1",
+    "archetype": "lane-change.lane-drop-late-merge",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "0a8fc7e0ff2a6cad",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_18fe4f626a1c6db1",
+      "entryLaneRsl": "2226:0:-1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0)",
+        "lane-change legality worst case \"allowed\" at s=90 m",
+        "166.69 m of runway available, 165 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 4)",
+        "work_zone_suitable loc_0788193232cb4f515e1c4622 at s=157.5 m (same-road station, 0 m lateral)",
+        "work_zone_suitable loc_0788193232cb4f515e1c4622 shares the reference OpenDRIVE road and section"
+      ]
+    },
+    "params": {
+      "values": {
+        "overlapM": -4.8,
+        "lateralRateMps": 1.215
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "lane_offset",
+        "laneRsl": "1:0:-3",
+        "spawnS": 62.00553550119572,
+        "initialSpeedMps": 6.666666666666667,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "late-merger",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "1:0:-2",
+        "spawnS": 268.20032802156936,
+        "initialSpeedMps": 7.777777777777779,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "terminal-channelizer",
+        "actorKind": "static_object",
+        "roleKind": "on_reference",
+        "laneRsl": "1:0:-2",
+        "spawnS": 343.000288141961,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [
+      {
+        "id": "closing-lane-taper-0",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1196.1460649427659,
+          "z": -1543.9300471097479,
+          "headingRad": 0.9878123345316288
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-1",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1199.2515410769,
+          "z": -1547.8712715654935,
+          "headingRad": 0.9878721864308996
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-2",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1202.3563438977076,
+          "z": -1551.8128462732998,
+          "headingRad": 0.9879920570032179
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-3",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1205.4608096419263,
+          "z": -1555.754640667035,
+          "headingRad": 0.9881719462726959
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-4",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1208.5641373291407,
+          "z": -1559.6972735847467,
+          "headingRad": 0.9884118542614203
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-5",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1211.6657554022538,
+          "z": -1563.6412117710543,
+          "headingRad": 0.9887117809652153
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-6",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1214.76089555542,
+          "z": -1567.5884000586814,
+          "headingRad": 0.9913992714595674
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-7",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1217.8486699490968,
+          "z": -1571.5432377775844,
+          "headingRad": 0.9914712350289722
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      }
+    ],
+    "arrival": [],
+    "inputHash": "2054e6dfab508d055c2518961d148e5467f25d39c152e87703b40fd57127c768",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "merger-disregards-red-x",
+        "actorId": "late-merger",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "merger-avoids-contact",
+        "actorId": "late-merger",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [],
+    "derivedFrom": {
+      "entry": "cmp-lane-drop-late-merge-distance",
+      "interactionId": "merge-at-temporary-taper",
+      "authoredValue": 35,
+      "threshold": 35.175
+    }
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "el-camino-road",
+    "clipSeconds": 12,
+    "warmupSeconds": 1,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-3",
+            "s": 15.231359722423718,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1186.0642960415491,
+            "z": -1514.6499964614109,
+            "headingRad": 0.989119993558277
+          },
+          "speedMps": 6.666666666666667
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "0:0:-3",
+              "775:0:-3",
+              "1:0:-3"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 6.666666666666667
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:lane_offset",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "late-merger",
+        "kind": "car",
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-2",
+            "s": 10.429046568404829,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1179.4976851461042,
+            "z": -1513.2232937850074,
+            "headingRad": 0.9893314856475534
+          },
+          "speedMps": 7.777777777777779
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": false,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "2226:0:-1",
+              "60:0:-3",
+              "253:0:-1",
+              "26:0:-3",
+              "614:0:-1",
+              "0:0:-2",
+              "775:0:-2",
+              "1:0:-2"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 7.777777777777779
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:late-merger",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.suv"
+        ]
+      },
+      {
+        "id": "terminal-channelizer",
+        "kind": "static_object",
+        "dims": {
+          "l": 0.9,
+          "w": 0.9,
+          "h": 1.15
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-2",
+            "s": 85.22900668879646,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1220.6234595237631,
+            "z": -1575.7028710088953,
+            "headingRad": 0.9883725558082055
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "2226:0:-1",
+              "60:0:-3",
+              "253:0:-1",
+              "26:0:-3",
+              "614:0:-1",
+              "0:0:-2",
+              "775:0:-2",
+              "1:0:-2"
+            ]
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:terminal-channelizer",
+          "class:static_object",
+          "binding:on_reference",
+          "catalog:construction.channelizer_drum"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-yields-to-late-merger",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "after",
+          "interactionId": "merge-at-temporary-taper",
+          "event": "start",
+          "delayS": 0.8
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "factor",
+          "value": 0.78
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 4.5
+        }
+      },
+      {
+        "id": "merge-at-temporary-taper",
+        "actorId": "late-merger",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "distance",
+            "a": "late-merger",
+            "b": "terminal-channelizer",
+            "mode": "alongLane",
+            "cmp": "lte",
+            "value": 35.175
+          },
+          "byLatest": 7,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 7
+        },
+        "verb": "changeLane",
+        "target": {
+          "mode": "actorLane",
+          "actorId": "ego"
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "rate",
+          "value": 1.215
+        }
+      }
+    ],
+    "signalPrograms": [
+      {
+        "id": "control:closing-lane-red-x",
+        "phases": [
+          {
+            "phase": "red_x",
+            "durationS": 12
+          }
+        ],
+        "offsetS": 0,
+        "loop": false,
+        "stopLines": [
+          {
+            "rsl": "614:0:-1",
+            "s": 55.81383323843419,
+            "connectingLaneRsls": []
+          }
+        ]
+      }
+    ],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [
+      {
+        "id": "closing-lane-taper-0",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1196.1460649427659,
+          "z": -1543.9300471097479,
+          "headingRad": 0.9878123345316288
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-1",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1199.2515410769,
+          "z": -1547.8712715654935,
+          "headingRad": 0.9878721864308996
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-2",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1202.3563438977076,
+          "z": -1551.8128462732998,
+          "headingRad": 0.9879920570032179
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-3",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1205.4608096419263,
+          "z": -1555.754640667035,
+          "headingRad": 0.9881719462726959
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-4",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1208.5641373291407,
+          "z": -1559.6972735847467,
+          "headingRad": 0.9884118542614203
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-5",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1211.6657554022538,
+          "z": -1563.6412117710543,
+          "headingRad": 0.9887117809652153
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-6",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1214.76089555542,
+          "z": -1567.5884000586814,
+          "headingRad": 0.9913992714595674
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "closing-lane-taper-7",
+        "groupId": "closing-lane-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1217.8486699490968,
+          "z": -1571.5432377775844,
+          "headingRad": 0.9914712350289722
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      }
+    ],
+    "occluders": [
+      {
+        "id": "closing-lane-taper-0",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1196.1460649427659,
+            "z": -1543.9300471097479
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9878123345316288,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-1",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1199.2515410769,
+            "z": -1547.8712715654935
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9878721864308996,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-2",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1202.3563438977076,
+            "z": -1551.8128462732998
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9879920570032179,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-3",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1205.4608096419263,
+            "z": -1555.754640667035
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9881719462726959,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-4",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1208.5641373291407,
+            "z": -1559.6972735847467
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9884118542614203,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-5",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1211.6657554022538,
+            "z": -1563.6412117710543
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9887117809652153,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-6",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1214.76089555542,
+            "z": -1567.5884000586814
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9913992714595674,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "closing-lane-taper-7",
+        "groupId": "closing-lane-taper",
+        "obb": {
+          "center": {
+            "x": 1217.8486699490968,
+            "z": -1571.5432377775844
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9914712350289722,
+          "heightM": 0.7
+        }
+      }
+    ],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

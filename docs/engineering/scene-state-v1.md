@@ -1,6 +1,6 @@
-# scene-state.v1 — scene description contract
+# simforge.scene-state.v1 — scene description contract
 
-Status: v1 frozen 2026-08-22 (WSB2). One schema for both ingestion modes:
+Status: v1 frozen 2026-08-22 (WSB2); version tag `simforge.scene-state.v1` (the bare `scene-state.v1` tag is no longer emitted or accepted). One schema for both ingestion modes:
 **trace playback** (`trace.json.gz` → per-tick transforms, dataset
 generation) and **live** (msgpack scene-diff stream from the env-server,
 closed loop). Wire formats: JSON (files, hashing) and msgpack (streams); the
@@ -15,7 +15,7 @@ field names are identical in both.
 
 | field | type | notes |
 |---|---|---|
-| `version` | `"scene-state.v1"` | literal |
+| `version` | `"simforge.scene-state.v1"` | literal |
 | `mapId` | string | e.g. `yale-street` |
 | `frame` | `"scene-yup"` | y-up scene frame |
 | `dt` / `tickHz` / `tickCount` | number | playback cadence |
@@ -49,7 +49,7 @@ browser and native bind identical geometry.
 ### Acceleration (added 2026-08-22, V1 TruthStream)
 
 `acceleration` is an **additive optional** field; the schema remains
-`scene-state.v1`. Provenance is emitter-declared:
+`simforge.scene-state.v1`. Provenance is emitter-declared:
 
 - **Trace playback** (`emitSceneState`): backward finite difference of the
   velocity channel over one `dt`, so it carries the centripetal term when a

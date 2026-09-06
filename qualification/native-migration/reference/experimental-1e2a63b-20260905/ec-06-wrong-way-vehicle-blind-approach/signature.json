@@ -1,0 +1,332 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "fa26902c1f76938a5a0225b2c7bd158b3e680bd869f48ab232894c41a57dd714",
+  "traceDigest": "63b159da6a482e8339202f833ab094b71abfc9deab17539ad6dcbdda3a6c3dcb",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 0,
+  "mapId": "easterbrook-discovery-school",
+  "engineGraphDigest": "ae48d9dbee5577e7e8506f99ab7dc242f5bcbb13f55dc686344dcfc1068638e0",
+  "topologyDigest": "ae48d9dbee5577e7e8506f99ab7dc242f5bcbb13f55dc686344dcfc1068638e0",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "following-motorcycle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "motorcycle"
+      },
+      "opposing-bus": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bus"
+      },
+      "wrong-way-sedan": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.98,
+          "from": "20:0:-1",
+          "to": "11295:0:-1"
+        },
+        {
+          "t": 6,
+          "from": "11295:0:-1",
+          "to": "21:0:-1"
+        },
+        {
+          "t": 7.86,
+          "from": "21:0:-1",
+          "to": "11662:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "following-motorcycle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 4.3,
+          "from": "20:0:-1",
+          "to": "11295:0:-1"
+        },
+        {
+          "t": 7.84,
+          "from": "11295:0:-1",
+          "to": "21:0:-1"
+        },
+        {
+          "t": 9.78,
+          "from": "21:0:-1",
+          "to": "11662:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "opposing-bus": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.9400000000000001,
+          "from": "11633:0:1",
+          "to": "21:0:1"
+        },
+        {
+          "t": 19.240000000000002,
+          "from": "21:0:1",
+          "to": "11296:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "wrong-way-sedan": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.96,
+          "from": "22:0:-1",
+          "to": "11697:0:-1"
+        },
+        {
+          "t": 2.38,
+          "from": "11697:0:-1",
+          "to": "11662:0:-1"
+        },
+        {
+          "t": 2.82,
+          "from": "11662:0:-1",
+          "to": "11690:0:-1"
+        },
+        {
+          "t": 3.14,
+          "from": "11690:0:-1",
+          "to": "11662:0:-1"
+        },
+        {
+          "t": 3.3000000000000003,
+          "from": "11662:0:-1",
+          "to": "11690:0:-1"
+        },
+        {
+          "t": 3.62,
+          "from": "11690:0:-1",
+          "to": "11662:0:-1"
+        },
+        {
+          "t": 4.82,
+          "from": "11662:0:-1",
+          "to": "11637:0:-1"
+        },
+        {
+          "t": 5,
+          "from": "11637:0:-1",
+          "to": "11673:0:-1"
+        },
+        {
+          "t": 5.6000000000000005,
+          "from": "11673:0:-1",
+          "to": "11697:0:-1"
+        },
+        {
+          "t": 6.84,
+          "from": "11697:0:-1",
+          "to": "11637:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 7.6000000000000005,
+      "kind": "trigger_fired",
+      "interactionId": "wrong-way-visible",
+      "actorId": "wrong-way-sedan",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 7.6000000000000005,
+      "kind": "state_set",
+      "actorId": "wrong-way-sedan",
+      "key": "lights.brake",
+      "value": true
+    },
+    {
+      "t": 9.1,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-brakes",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 9.200000000000001,
+      "kind": "trigger_fired",
+      "interactionId": "wrong-way-brakes",
+      "actorId": "wrong-way-sedan",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 9.6,
+      "kind": "trigger_fired",
+      "interactionId": "motorcycle-brakes",
+      "actorId": "following-motorcycle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 12,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-edges-right",
+      "actorId": "focus-vehicle",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 12,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "focus-vehicle",
+      "interactionId": "focus-vehicle-edges-right",
+      "requestedDurationS": 2.5,
+      "effectiveDurationS": 2.5,
+      "displacementM": -0.26891820331948324
+    },
+    {
+      "t": 13,
+      "kind": "trigger_fired",
+      "interactionId": "wrong-way-offsets",
+      "actorId": "wrong-way-sedan",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 13,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "wrong-way-sedan",
+      "interactionId": "wrong-way-offsets",
+      "requestedDurationS": 2,
+      "effectiveDurationS": 2.0944296820572097,
+      "displacementM": 1.2249999999950794
+    },
+    {
+      "t": 16.98,
+      "kind": "interaction_aborted",
+      "interactionId": "focus-vehicle-edges-right",
+      "actorId": "focus-vehicle",
+      "reason": "tracking_error"
+    },
+    {
+      "t": 17.18,
+      "kind": "interaction_aborted",
+      "interactionId": "wrong-way-offsets",
+      "actorId": "wrong-way-sedan",
+      "reason": "tracking_error"
+    },
+    {
+      "t": 18,
+      "kind": "trigger_fired",
+      "interactionId": "hold-position",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 18,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "lights.brake",
+      "value": true
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "focus-vehicle",
+      "wrong-way-sedan"
+    ],
+    "minDistancePairs": [
+      [
+        "focus-vehicle",
+        "following-motorcycle"
+      ],
+      [
+        "focus-vehicle",
+        "opposing-bus"
+      ],
+      [
+        "focus-vehicle",
+        "wrong-way-sedan"
+      ]
+    ],
+    "revealToConflictPair": [
+      "focus-vehicle",
+      "wrong-way-sedan"
+    ]
+  }
+}

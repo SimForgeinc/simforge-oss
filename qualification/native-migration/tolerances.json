@@ -1,0 +1,21 @@
+{
+  "schema": "simforge.native-migration.tolerances/v1",
+  "frozenAt": "2026-09-05",
+  "rule": "Tolerances are frozen before any native output exists. Discrete transitions (events, spawn/despawn, lane hand-offs, motion direction, signal phases, collision pairs, metric pair identities) are compared exactly under every class; a numeric tolerance never excuses a changed transition.",
+  "classes": {
+    "replay": {
+      "description": "Same build, backend and hardware. Requires byte-identical quantised trace: traceDigest equality plus every discrete and numeric check at zero error.",
+      "requireTraceDigest": true,
+      "t": 0,
+      "channels": { "x": 0, "y": 0, "headingRad": 0, "speedMps": 0, "lateralOffsetM": 0, "s": 0 },
+      "metrics": 0
+    },
+    "conformance": {
+      "description": "Cross-language numerical conformance (TypeScript reference vs Rust port, same profile and f64 math). Traces are quantised to 4 decimals for position/speed/s and 6 for heading before hashing; the bound is one quantum above accumulated rounding over a 20 s clip at 50 Hz.",
+      "requireTraceDigest": false,
+      "t": 1e-9,
+      "channels": { "x": 0.001, "y": 0.001, "headingRad": 0.0001, "speedMps": 0.001, "lateralOffsetM": 0.001, "s": 0.001 },
+      "metrics": 0.001
+    }
+  }
+}

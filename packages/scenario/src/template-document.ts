@@ -1,8 +1,9 @@
-/** V2 template editing with immutable state, patch history, validation and migration provenance. */
+/** V2 template editing with immutable state, patch history and validation. */
 
 import { applyPatches, enablePatches, produceWithPatches, type Patch } from 'immer';
 
-import { ScenarioMigrationError, ScenarioOperationError, ScenarioValidationError } from './errors.js';
+import { ScenarioFormatError, ScenarioOperationError, ScenarioValidationError } from './errors.js';
+import { readScenarioVersion } from './migrate-v2.js';
 import { parseTemplate, serializeTemplate, deepFreeze } from './serialize.js';
 import type { Interaction } from './schema/v2/interactions.js';
 import type { Environment } from './schema/v2/environment.js';
@@ -14,7 +15,7 @@ import type { RoleBinding } from './schema/v2/roles.js';
 import type { ReasoningTraceSegment } from './schema/v2/reasoning-trace.js';
 import type { ActorSensor } from './schema/v2/sensors.js';
 import type { LogicalAnchorInput } from './schema/v2/anchor.js';
-import type { ScenarioTemplateV2 } from './schema/v2/template.js';
+import { SCENARIO_TEMPLATE_VERSION, type ScenarioTemplateV2 } from './schema/v2/template.js';
 import type { Variant } from './schema/v2/variants.js';
 import type { MapRef } from './schema/v1.js';
 import {
@@ -122,15 +123,13 @@ export class TemplateDocument {
     return new TemplateDocument(template, options);
   }
 
-  /** Load v2 only. Legacy scenes are rejected rather than becoming a second source of truth. */
+  /** Load v2 only. v1 scenes are a different document kind; convert them explicitly with `migrateToTemplate`. */
   static fromJSON(json: unknown, options: TemplateDocumentOptions = {}): TemplateDocument {
-    const version = typeof json === 'object' && json !== null
-      ? (json as { scenarioVersion?: unknown }).scenarioVersion
-      : undefined;
-    if (version !== 2) {
-      throw new ScenarioMigrationError(
-        `unsupported Studio document format: expected ScenarioTemplate v2, got ${String(version ?? 'unversioned')}`,
-        typeof version === 'number' ? version : 0,
+    const version = readScenarioVersion(json);
+    if (version !== SCENARIO_TEMPLATE_VERSION) {
+      throw new ScenarioFormatError(
+        `unsupported Studio document format: expected ScenarioTemplate v${SCENARIO_TEMPLATE_VERSION}, got ${String(version ?? 'unversioned')}`,
+        version,
       );
     }
     return new TemplateDocument(parseTemplate(json), options);

@@ -2,13 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BrowserRenderLoweringError,
-  RENDER_SPEC_V2_SCHEMA,
   RENDER_SPEC_V3_SCHEMA,
   lowerRenderSpecToBrowser,
   lowerRenderSpecToCarla,
-  parseRenderSpecV2,
   parseRenderSpecV3,
-  renderSpecV2ToV3,
   resolveCaptureManifest,
   type RenderSpecV3,
 } from '../render-spec.js';
@@ -116,6 +113,11 @@ describe('render-spec/v3 parsing', () => {
     expect(() => parseRenderSpecV3(baseSpec(sources))).toThrow(/Too big/);
   });
 
+  it('accepts only the simforge namespace tag', () => {
+    expect(() => parseRenderSpecV3({ ...(baseSpec() as Record<string, unknown>), schema: 'uniscenario.render-spec/v3' }))
+      .toThrow();
+  });
+
   it('requires video configuration exactly when video is an artifact', () => {
     const missing = baseSpec() as Record<string, unknown>;
     delete missing.video;
@@ -147,46 +149,6 @@ describe('render-spec/v3 parsing', () => {
 });
 
 describe('render spec adapters', () => {
-  it('migrates every v2 field that has a v3 representation', () => {
-    const v2 = parseRenderSpecV2({
-      schema: RENDER_SPEC_V2_SCHEMA,
-      sources: [{ actorId: 'ego', sensorId: 'front', modality: 'instance', outputName: 'front-id' }],
-      clip: { startSeconds: 2, endSeconds: 5 },
-      video: {
-        width: 1920,
-        height: 1080,
-        fps: 60,
-        container: 'mp4',
-        codec: 'h264',
-        quality: 'high',
-        bitrateMbps: 40,
-      },
-      artifacts: ['video', 'frames'],
-      capabilityIntent: {
-        required: ['artifact.video'],
-        preferred: ['artifact.frames'],
-        fidelity: 'review',
-      },
-      authoredEnvironment,
-    });
-    const migrated = renderSpecV2ToV3(v2);
-    expect(migrated).toMatchObject({
-      schema: RENDER_SPEC_V3_SCHEMA,
-      clip: v2.clip,
-      video: { width: 1920, height: 1080, fps: 60, container: 'mp4', codec: 'h264', quality: 'high' },
-      artifacts: ['video', 'frames', 'manifest'],
-      capabilityIntent: v2.capabilityIntent,
-      authoredEnvironment: v2.authoredEnvironment,
-      sources: [{
-        actorId: 'ego',
-        sensorId: 'front',
-        outputName: 'front-id',
-        modality: 'instance',
-        attributes: { width: 1920, height: 1080, fps: 60 },
-      }],
-    });
-  });
-
   it('lowers byte-for-byte to the managed v1 sensor array', () => {
     const spec = parseRenderSpecV3(baseSpec([cameraSource(), lidarSource, radarSource]));
     expect(lowerRenderSpecToCarla(spec)).toEqual([
@@ -320,59 +282,5 @@ describe('multi-source resolved capture manifest', () => {
       executionPackageSha256: 'd'.repeat(64),
       xoscSha256: 'e'.repeat(64),
     });
-  });
-
-  it('preserves the legacy single-source v2 manifest shape', () => {
-    const v2 = parseRenderSpecV2({
-      schema: RENDER_SPEC_V2_SCHEMA,
-      sources: [{ actorId: 'ego', sensorId: 'camera', modality: 'rgb' }],
-      clip: { startSeconds: 1, endSeconds: 3 },
-      video: {
-        width: 1280,
-        height: 720,
-        fps: 30,
-        container: 'webm',
-        codec: 'vp9',
-        quality: 'standard',
-      },
-      artifacts: ['video', 'manifest'],
-      authoredEnvironment,
-    });
-    const manifest = resolveCaptureManifest(v2, {
-      createdAt: '2026-08-18T12:00:00.000Z',
-      scenarioRevision: { id: 'revision-1', contentSha256: 'a'.repeat(64) },
-      playbackEvidence: {
-        inputSha256: 'b'.repeat(64),
-        traceSha256: 'c'.repeat(64),
-        engineVersion: 'test-engine',
-        traceVersion: 1,
-        bounds: { startSeconds: 0, endSeconds: 10, verified: true },
-        identity: { complete: true, hashBound: true },
-      },
-      mapEvidence: { mapId: 'test-map' },
-      renderer: {
-        id: 'browser',
-        version: '1',
-        availableCapabilities: [
-          'artifact.video',
-          'artifact.manifest',
-          'environment.authored',
-          'timing.fixed_step',
-          'sensor.rgb',
-        ],
-      },
-      revisionEnvironment: {
-        authoritativeEnvironment: authoredEnvironment,
-        operationalConditions: {
-          weather: 'clear',
-          timeOfDay: 'day',
-          traffic: 'light',
-          visibility: 'unrestricted',
-          effects: { visibilityRangeM: 1_000, frictionScale: 1, trafficSpeedFactor: 1 },
-        },
-      },
-    });
-    expect(manifest.renderSpec).toEqual(v2);
-    expect(manifest.resolvedSources).toEqual(v2.sources);
   });
 });

@@ -1,0 +1,17 @@
+[package]
+name = "render-ffi"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "simforge_render"
+crate-type = ["cdylib"]
+
+[dependencies]
+service = { path = "../service" }
+render-core = { path = "../render-core" }
+serde_json = "1"
+
+[features]
+# Device-resident sensor output through the in-process handle path.
+gpu-interop = ["service/gpu-interop", "render-core/gpu-interop"]

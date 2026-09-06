@@ -65,7 +65,7 @@ const fixtures = [
         behavior: {
           route: { kind: 'polyline', points: [{ x: 0, z: 5 }, { x: 30, z: 5 }] },
           cruiseSpeedMps: 1.2,
-          rules: { collisionAvoidance: false, yield: false },
+          rules: { collisionAvoidance: false, yieldToVehicles: false, yieldToPedestrians: false },
         },
       }],
       interactions: [{

@@ -1,5 +1,6 @@
 "use client";
 
+import { studioHost } from "@/app/lib/host";
 import {
   useCallback,
   useEffect,
@@ -20,27 +21,27 @@ import { CityView } from "@simforge-oss/viewer/react";
 import { toast } from "sonner";
 import { contentHash } from "@simforge-oss/engine";
 
-import { TopBarActionsPortal, TopBarTrailingPortal } from "@/app/components/TopBarSlot";
-import { Button } from "@/app/components/ui/button";
-import { cn } from "@/app/lib/utils";
-import { AUTHORING_QUALITY, defaultAuthoringQuality } from "@/app/dashboard/scenario/editor/authoring-quality";
-import { EditorConfigurationBlockProvider } from "@/app/dashboard/scenario/editor/inspector/EditorDetailsPanel";
-import { EditorOverlayHost } from "@/app/dashboard/scenario/editor/inspector/EditorOverlayHost";
+import { TopBarActionsPortal, TopBarTrailingPortal } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { AUTHORING_QUALITY, defaultAuthoringQuality } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { EditorConfigurationBlockProvider } from "@simforge-oss/studio-ui/scenario/editor/inspector/EditorDetailsPanel";
+import { EditorOverlayHost } from "@simforge-oss/studio-ui/scenario/editor/inspector/EditorOverlayHost";
 import {
   EditorOverlayProvider,
   useEditorOverlay,
-} from "@/app/dashboard/scenario/editor/inspector/editor-overlay-selection";
-import { ActorLibraryRail } from "@/app/dashboard/scenario/editor/regions/ActorLibraryRail";
-import type { ViewportTool } from "@/app/dashboard/scenario/editor/regions/actor-catalog";
-import { EditorHeader } from "@/app/dashboard/scenario/editor/regions/EditorHeader";
-import { EditorModeBanner } from "@/app/dashboard/scenario/editor/regions/EditorModeBanner";
-import { PlacementCursorHint } from "@/app/dashboard/scenario/editor/regions/PlacementCursorHint";
-import { ScenarioTimelineDock } from "@/app/dashboard/scenario/editor/ScenarioTimelineDock";
+} from "@simforge-oss/studio-ui/scenario/editor/inspector/editor-overlay-selection";
+import { ActorLibraryRail } from "@simforge-oss/studio-ui/scenario/editor/regions/ActorLibraryRail";
+import type { ViewportTool } from "@simforge-oss/studio-ui/scenario/editor/regions/actor-catalog";
+import { EditorHeader } from "@simforge-oss/studio-ui/scenario/editor/regions/EditorHeader";
+import { EditorModeBanner } from "@simforge-oss/studio-ui/scenario/editor/regions/EditorModeBanner";
+import { PlacementCursorHint } from "@simforge-oss/studio-ui/scenario/editor/regions/PlacementCursorHint";
+import { ScenarioTimelineDock } from "@simforge-oss/studio-ui/scenario/editor/ScenarioTimelineDock";
 import {
   timelineActorLabels,
   type V1TimelineBrowserPlayback,
-} from "@/app/dashboard/scenario/editor/timeline/V1TimelineRail";
-import { ScenarioEditorReadout, ScenarioEditorShell } from "@/app/dashboard/scenario/editor/shell";
+} from "@simforge-oss/studio-ui/scenario/editor/timeline/V1TimelineRail";
+import { ScenarioEditorReadout, ScenarioEditorShell } from "@simforge-oss/studio-ui/scenario/editor/shell";
 import { useDriveAmbientTraffic } from "@/app/lib/scenario/ambient/useDriveAmbientTraffic";
 import { createMultiplexedCameraFeeds, type CameraFeeds } from "@/app/lib/live-world/camera-feeds";
 import {
@@ -57,9 +58,8 @@ import type {
 } from "@/app/lib/live-world/types";
 import { useWorldSource } from "@/app/lib/live-world/use-world-source";
 import type { ScenarioAuthoringQuality } from "@/app/lib/scenario/contracts";
-import { listScenarioMaps } from "@/app/lib/scenario/editor/api";
-import { useEditorRuntime } from "@/app/lib/scenario/editor/use-editor-runtime";
-import { EditorSceneEnvironmentBridge } from "@/app/dashboard/scenario/editor/EditorSceneEnvironmentBridge";
+import { useEditorRuntime } from "@simforge-oss/studio-ui/lib/scenario/editor/use-editor-runtime";
+import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { PoleCameraGrid } from "./cameras/PoleCameraGrid";
 import { HistoryDock } from "./history/HistoryDock";
 import { usePoleCameras } from "./pole-cameras";
@@ -105,7 +105,7 @@ export function DriveClient() {
       }
       return () => controller.abort();
     }
-    void listScenarioMaps(controller.signal)
+    void studioHost.artifacts.listMaps(controller.signal)
       .then((maps) => {
         if (maps.length === 0) throw new Error("No published maps are available for Drive");
         setMap(maps.find((candidate) => /richmond/i.test(candidate.label)) ?? maps[0]!);
@@ -480,6 +480,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
             updated, then the override repainted the scene. */}
         <EditorSceneEnvironmentBridge
           active={mapLoaded}
+          actorRenderer={bridge?.actors ?? null}
           document={editorDocument}
           quality={quality}
           viewer={viewer}

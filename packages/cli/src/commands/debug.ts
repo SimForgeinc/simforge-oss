@@ -10,28 +10,35 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import { materializeMapBound, type InstanceManifest } from '@simforge-oss/compiler/node';
-import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
 import {
-  buildLaneGraph,
-  parseSimScenarioInput,
-  runSimulation,
-  traceDigest,
+  compileTemplate,
+  detectKind,
+  findSite,
+  loadMap,
+  matchOnMap,
+  readInstance,
+  readTemplate,
+  writeJsonFile,
+  writeTraceFile,
+  type InstanceFile,
+  type InstanceManifest,
+  type MapBundle,
+} from '@simforge-oss/compiler/node';
+import {
   traceToSceneFrame,
+  type InvariantResidualReport,
   type SceneTrace,
   type SimEvent,
+  type SimResult,
   type SimScenarioInput,
   type SimTrace,
   type TopologyIndex,
 } from '@simforge-oss/engine';
+import { buildLaneGraph, parseTrace, runSimulation } from '@simforge-oss/engine/node';
+import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
 
 import { CliError, EXIT } from '../errors.js';
-import { checkInvariants, type InvariantResidualReport } from '../invariants.js';
-import { loadMap, type MapBundle } from '@simforge-oss/compiler/node';
-import { materialize } from '../materialize.js';
 import { emit } from '../output.js';
-import { findSite, matchOnMap } from '@simforge-oss/compiler/node';
-import { detectKind, readInstance, readTemplate, writeJsonFile, writeTraceFile, type InstanceFile } from '@simforge-oss/compiler/node';
 import { runHeadlessSumo, type HeadlessSumoResult } from '../sumo-headless.js';
 import { instanceFile } from './instantiate.js';
 import { metricsSummary } from './simulate.js';
@@ -71,9 +78,8 @@ export interface DebugPathSample {
   readonly physics?: Record<string, number>;
 }
 
-// historical name retained for stored-data compat
 interface DebugReport {
-  readonly schema: 'uniscenarios.scenario-debug.v1';
+  readonly schema: 'simforge.scenario-debug/v1';
   readonly input: {
     readonly source: string;
     readonly kind: 'template' | 'instance';
@@ -126,17 +132,16 @@ export async function debugScenario(options: DebugOptions): Promise<number> {
   const compileAt = performance.now();
   const compiled = await compileInput(resolvedOptions);
   const compileMilliseconds = performance.now() - compileAt;
+  // A clip override is re-validated by the native parser inside `runSimulation`.
   const input = options.durationSeconds === undefined
     ? compiled.instance.input
-    : parseSimScenarioInput({ ...compiled.instance.input, clipSeconds: options.durationSeconds });
+    : { ...compiled.instance.input, clipSeconds: options.durationSeconds };
   const sampleSeconds = options.sampleSeconds ?? input.dt;
 
   const simulationAt = performance.now();
-  const result = runSimulation(input, {
-    graph: compiled.bundle?.graph ?? MAPLESS_GRAPH,
-    guards: 'collect',
-  });
+  const result = runSimulation(input, { graph: compiled.bundle?.graph ?? MAPLESS_GRAPH });
   const nativeMilliseconds = performance.now() - simulationAt;
+  const traceHandle = parseTrace(result.trace);
   const sceneTrace = traceToSceneFrame(result.trace);
   const sampleIndices = sampleIndexes(sceneTrace.ticks.t, sampleSeconds);
   const actors = actorPaths(sceneTrace, sampleIndices);
@@ -153,9 +158,7 @@ export async function debugScenario(options: DebugOptions): Promise<number> {
       })
     : null;
   const invariants = compiled.template
-    ? checkInvariants({
-        template: compiled.template,
-        trace: result.trace,
+    ? traceHandle.checkInvariants(compiled.template, {
         scope: { params: {}, clip: { seconds: input.clipSeconds } },
         arrival: compiled.instance.manifest?.arrival ?? [],
         speedLimitKph: null,
@@ -176,14 +179,14 @@ export async function debugScenario(options: DebugOptions): Promise<number> {
   });
   const actorSummary = Object.fromEntries(Object.entries(actors).map(([id, samples]) => [id, summarizeActor(samples)]));
   const report: DebugReport = {
-    schema: 'uniscenarios.scenario-debug.v1',
+    schema: 'simforge.scenario-debug/v1',
     input: {
       source: path.resolve(options.file),
       kind: compiled.kind,
       mapId: input.mapId,
       provider: options.provider,
       inputHash: result.trace.header.inputHash,
-      traceDigest: traceDigest(result.trace),
+      traceDigest: traceHandle.digest(),
       durationSeconds: input.clipSeconds,
       sampleSeconds,
     },
@@ -245,7 +248,7 @@ export async function debugScenario(options: DebugOptions): Promise<number> {
       }),
       writeJsonFile(path.join(out, 'input.json'), input),
       writeJsonFile(path.join(out, 'compiled-instance.json'), compiled.instance),
-      writeTraceFile(path.join(out, 'trace.json.gz'), result.trace),
+      writeTraceFile(path.join(out, 'trace.json.gz'), traceHandle),
     ]);
     emit({
       ...report.summary,
@@ -319,15 +322,14 @@ async function compileInput(options: DebugOptions): Promise<{
   const mapId = options.mapId ?? pinnedMap;
   if (!mapId) throw new CliError('missing_option', 'a portable template needs --map', { path: '--map' });
   const bundle = await loadMap(mapId);
+  // Map-bound (`scene_absolute`) templates skip matching inside the native compiler.
   const mapBound = template.roles.length > 0 && template.roles.every((role) => role.kind === 'scene_absolute');
-  const product = mapBound
-    ? materializeMapBound(template, bundle, materializeOptions(options))
-    : await (async () => {
-        const matched = options.siteId
-          ? await findSite(template, mapId, options.siteId)
-          : await firstMatchedSite(template, mapId);
-        return materialize(template, matched.bundle, matched.site, materializeOptions(options));
-      })();
+  const site = mapBound
+    ? null
+    : options.siteId
+      ? (await findSite(template, mapId, options.siteId)).site
+      : await firstMatchedSite(template, mapId);
+  const product = compileTemplate(template, bundle, site, materializeOptions(options));
   return { kind, instance: instanceFile(product), template, bundle };
 }
 
@@ -357,7 +359,7 @@ async function firstMatchedSite(template: ScenarioTemplateV2, mapId: string) {
       exitCode: EXIT.validationFindings,
     });
   }
-  return { bundle: match.bundle, site };
+  return site;
 }
 
 function sampleIndexes(times: readonly number[], everySeconds: number): number[] {
@@ -471,7 +473,7 @@ async function compareReport(
   } catch (error) {
     throw new CliError('comparison_unreadable', error instanceof Error ? error.message : String(error), { path: file });
   }
-  if (prior.schema !== 'uniscenarios.scenario-debug.v1') {
+  if (prior.schema !== 'simforge.scenario-debug/v1') {
     throw new CliError('comparison_invalid', 'comparison file is not a scenario debug report', { path: file });
   }
   const actorIds = [...new Set([...Object.keys(prior.actors), ...Object.keys(actors)])].sort();
@@ -503,7 +505,7 @@ function compareSamples(actorId: string, prior: readonly { x: number; z: number;
 function acceptanceFailures(context: {
   options: DebugOptions;
   feasible: boolean;
-  result: ReturnType<typeof runSimulation>;
+  result: SimResult;
   invariants: readonly InvariantResidualReport[];
   diagnostics: Record<string, unknown>;
   comparison: Record<string, unknown> | null;

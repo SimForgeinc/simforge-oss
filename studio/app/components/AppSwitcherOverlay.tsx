@@ -5,9 +5,9 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { RefObject } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
-import { SkyCloudBackdrop } from "@/app/components/SkyCloudBackdrop";
+import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { DASHBOARD_APPS } from "@/app/lib/dashboard-nav";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 export function AppSwitcherOverlay({
   open,

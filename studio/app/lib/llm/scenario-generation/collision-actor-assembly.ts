@@ -1,10 +1,14 @@
 import {
+  behaviorActorRef,
+  type BehaviorAction,
+} from "@simforge-oss/scenario/contracts";
+import {
   applyAggressivenessToSpeedKph,
   type CollisionActorRecipe,
   type CollisionActorRole,
+  type CollisionClipTemplate,
   type NpcAggressiveness,
   type ScenarioEditorActorDraft,
-  type ScenarioEditorTimelineClip,
 } from "@simforge-oss/studio-shared";
 import {
   PRESET_SDG_AV,
@@ -27,7 +31,10 @@ import {
   fallbackAnchorForLaneId,
   type ActorPlacement,
 } from "@/app/lib/llm/scenario-generation/collision-anchor-resolution";
-import { finalizeGeneratedActorBehaviors } from "@/app/lib/scenario-generation/generated-actor-behavior";
+import {
+  authorGeneratedActor,
+  type GeneratedInteractionClip,
+} from "@/app/lib/scenario-generation/generated-actor-behavior";
 
 type CollisionTemplateForAssembly = {
   durationSeconds: number;
@@ -87,31 +94,65 @@ function timedWaypointsForPlannedActor(
   });
 }
 
-function resolveTimelineClips(
+/** A clip template's end, as the clip's own `end`: a span becomes a duration. */
+function clipEndForSpan(startTime: number, endTime: number | undefined) {
+  if (endTime == null || endTime <= startTime) return undefined;
+  return { kind: "duration" as const, seconds: Math.round((endTime - startTime) * 1000) / 1000 };
+}
+
+/**
+ * A clip template's action with its speed resolved (the family's
+ * aggressiveness multiplier applied) and its `target_role` bound to the actor
+ * id the builder minted for that role. A converging clip whose target role
+ * was not built is a speed command.
+ */
+function resolveClipAction(
+  clip: CollisionClipTemplate,
+  speedKph: number,
+  roleIdMap: Record<string, string>,
+): BehaviorAction {
+  const cruise: BehaviorAction = { kind: "cruise", speed_kph: speedKph };
+  switch (clip.action) {
+    case "cruise":
+      return cruise;
+    case "intercept": {
+      const targetId = roleIdMap[clip.target_role];
+      return targetId
+        ? { kind: "intercept", actor: behaviorActorRef(targetId), speed_kph: speedKph }
+        : cruise;
+    }
+    case "follow_actor": {
+      const targetId = roleIdMap[clip.target_role];
+      return targetId
+        ? {
+            kind: "follow_actor",
+            actor: behaviorActorRef(targetId),
+            distance_m: clip.distance_m,
+            max_speed_kph: speedKph,
+          }
+        : cruise;
+    }
+  }
+}
+
+/** The recipe's interaction clips, resolved against the built actor set. */
+function resolveInteractionClips(
   recipe: CollisionActorRecipe,
   aggressiveness: NpcAggressiveness,
   roleIdMap: Record<string, string>,
-): ScenarioEditorTimelineClip[] {
-  return recipe.timeline.map((clip, index) => {
-    const speed = clip.target_speed_kph != null
-      ? recipe.aggressivenessAppliesTo === "speed"
-        ? applyAggressivenessToSpeedKph(clip.target_speed_kph, aggressiveness)
-        : clip.target_speed_kph
-      : null;
-    const targetActorId = clip.target_role ? roleIdMap[clip.target_role] ?? null : null;
-    const built: ScenarioEditorTimelineClip = {
+): GeneratedInteractionClip[] {
+  return recipe.clips.map((clip, index) => {
+    const speedKph =
+      recipe.aggressivenessAppliesTo === "speed"
+        ? applyAggressivenessToSpeedKph(clip.speed_kph, aggressiveness)
+        : clip.speed_kph;
+    const end = clipEndForSpan(clip.start_time, clip.end_time);
+    return {
       id: `clip-${recipe.role}-${index}`,
-      start_time: clip.start_time,
-      ...(clip.end_time != null ? { end_time: clip.end_time } : {}),
-      action: clip.action,
-      ...(speed != null ? { target_speed_kph: speed } : {}),
-      ...(targetActorId ? { target_actor_id: targetActorId } : {}),
-      ...(clip.following_distance_m != null
-        ? { following_distance_m: clip.following_distance_m }
-        : {}),
-      enabled: true,
+      trigger: { kind: "at_time", t: Math.round(clip.start_time * 10) / 10 },
+      ...(end ? { end } : {}),
+      action: resolveClipAction(clip, speedKph, roleIdMap),
     };
-    return built;
   });
 }
 
@@ -200,29 +241,25 @@ export function buildCollisionDraftActors(input: {
           path_placement: [],
           timed_waypoints: timedWaypointsForPlannedActor(planned),
           speed_kph: planned.expectedSpeedKph,
-          // Autopilot OFF for planner-driven vehicles — timed_waypoints
-          // are the spec. CARLA's worker routes timed-path actors through
-          // its path controller.
-          autopilot: false,
           color: defaultActorColor({ kind: recipe.kind }),
-          notes: null,
-          // Strip recipe timeline; emit a single set_speed clip so the
-          // path-follower receives a constant target. The maneuver itself
-          // (the left turn / lane change) is encoded by the planner's
-          // waypoint geometry.
-          timeline: [
-            {
-              id: `clip-${recipe.role}-0`,
-              start_time: 0,
-              end_time: template.durationSeconds,
-              action: "set_speed",
-              target_speed_kph: planned.expectedSpeedKph,
-              enabled: true,
-            },
-          ],
           sensors: defaultActorSensors(recipe.role === "subject"),
         };
-        actors.push(actor);
+        // The timed path IS the spec: the base clip follows it through the
+        // worker's path controller, and the recipe's clips are dropped in
+        // favour of one constant cruise so the path-follower receives a
+        // constant target. The maneuver itself (the left turn / lane change)
+        // is encoded by the planner's waypoint geometry.
+        actors.push(
+          authorGeneratedActor(actor, {
+            interactions: [
+              {
+                id: `clip-${recipe.role}-0`,
+                end: clipEndForSpan(0, template.durationSeconds),
+                action: { kind: "cruise", speed_kph: planned.expectedSpeedKph },
+              },
+            ],
+          }),
+        );
         continue;
       }
       if (recipe.kind === "walker" && walker) {
@@ -252,14 +289,11 @@ export function buildCollisionDraftActors(input: {
           destination: null,
           destination_point: null,
           speed_kph: speed,
-          autopilot: false,
           color: defaultActorColor({ kind: recipe.kind }),
-          notes: null,
-          timeline: [],
           timed_waypoints: walker.waypoints.map((w) => ({ x: w.x, y: w.y, time: w.time })),
           sensors: [],
         };
-        actors.push(actor);
+        actors.push(authorGeneratedActor(actor));
         continue;
       }
       // Planner returned a result but this specific role didn't get a
@@ -335,20 +369,29 @@ export function buildCollisionDraftActors(input: {
           ? subjectPedestrianDestination
           : null,
       speed_kph: speed,
-      autopilot: recipe.autopilot,
       color: defaultActorColor({ kind: recipe.kind }),
-      notes: null,
-      // Strip the recipe's timeline for timed-path walkers — the
-      // trajectory itself is the spec, and the recipe is intentionally
-      // empty in that case (see template comment).
-      timeline:
-        placement.kind === "timed_path"
-          ? []
-          : resolveTimelineClips(recipe, aggressiveness, roleIdMap),
       ...(timedWaypoints ? { timed_waypoints: timedWaypoints } : {}),
       sensors: defaultActorSensors(recipe.role === "subject"),
     };
-    actors.push(actor);
+    // A timed-path placement is its own spec, whatever the recipe says: the
+    // baseline follows the trajectory and the recipe's clips are dropped.
+    // Otherwise the recipe names the baseline — the Traffic Manager, or our
+    // controller cruising at the resolved speed — and its clips fire on top.
+    const baseAction: BehaviorAction | undefined =
+      placement.kind === "timed_path" || recipe.baseline === "placement"
+        ? undefined
+        : recipe.baseline === "autopilot"
+          ? { kind: "autopilot", enabled: true }
+          : { kind: "cruise", speed_kph: speed };
+    actors.push(
+      authorGeneratedActor(actor, {
+        ...(baseAction ? { base: { action: baseAction } } : {}),
+        interactions:
+          placement.kind === "timed_path"
+            ? []
+            : resolveInteractionClips(recipe, aggressiveness, roleIdMap),
+      }),
+    );
   }
-  return finalizeGeneratedActorBehaviors(actors);
+  return actors;
 }

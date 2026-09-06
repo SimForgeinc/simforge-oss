@@ -1,0 +1,14 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.cyclist.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "cyclist"
+      }
+    }
+  ],
+  "arrival": []
+}

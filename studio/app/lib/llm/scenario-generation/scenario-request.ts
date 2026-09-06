@@ -163,7 +163,7 @@ export const ScenarioRequestSchema = z.object({
   entranceOnly: z.boolean().optional(),
   /** @deprecated alias of `entranceOnly` (the category's old name). */
   drivewayOnly: z.boolean().optional(),
-  /** Collision-AVOIDED variant (Fix 7): the subject carries `reactive_braking` so the
+  /** Collision-AVOIDED variant (Fix 7): the subject carries a `brake` reaction profile so the
    * worker brakes late+hard for the conflict walker and resumes after it clears —
    * an alpamayo edge-case STOP scene from the same planned-collision geometry. */
   subjectReactive: z.boolean().default(false),

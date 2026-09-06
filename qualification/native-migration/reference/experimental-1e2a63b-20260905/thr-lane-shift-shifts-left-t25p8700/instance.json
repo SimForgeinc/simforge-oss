@@ -1,0 +1,864 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "workzone-lane-shift",
+      "templateVersion": 2,
+      "templateDigest": "c40265e0708ff0fd",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "21352a7f76445d6e",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "21352a7f76445d6e#-1",
+    "archetype": "workzone.lane-shift",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "21352a7f76445d6e",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_94172a1d683ed19d",
+      "entryLaneRsl": "107:0:-3",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 2.02)",
+        "lane-change legality worst case \"allowed\" at s=50 m",
+        "181.49 m of runway available, 180 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 4)",
+        "work_zone_suitable loc_a5a07469383b8e126175239b at s=157.5 m (same-road station, 0 m lateral)",
+        "work_zone_suitable loc_a5a07469383b8e126175239b shares the reference OpenDRIVE road and section"
+      ]
+    },
+    "params": {
+      "values": {
+        "shiftTriggerM": 26,
+        "lateralRateMps": 0.6
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "channelizer",
+        "actorKind": "static_object",
+        "roleKind": "on_reference",
+        "laneRsl": "1:0:-3",
+        "spawnS": 330.0000511800601,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "0:0:-3",
+        "spawnS": 279.00014363118197,
+        "initialSpeedMps": 7.111111111111112,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "queue-tail",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "1:0:-3",
+        "spawnS": 373.00008848849774,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "work-vehicle",
+        "actorKind": "truck",
+        "roleKind": "on_reference",
+        "laneRsl": "1:0:-3",
+        "spawnS": 345.00011197576316,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [
+      {
+        "id": "cone-taper-0",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1166.0683955365093,
+          "z": -1476.599165318184,
+          "headingRad": 0.9843678802451866
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-1",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1168.324377077695,
+          "z": -1481.1034474555202,
+          "headingRad": 0.9844094453774316
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-2",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1170.5806990497897,
+          "z": -1485.6074283364517,
+          "headingRad": 0.984447286407062
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-3",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1172.8421310808362,
+          "z": -1490.077756449348,
+          "headingRad": 0.9744426022120675
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-4",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1175.1340296619096,
+          "z": -1494.5977458371492,
+          "headingRad": 0.9888444457625756
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-5",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1177.3712247211251,
+          "z": -1499.1112944605695,
+          "headingRad": 0.9890535007000726
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-6",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1179.6088622608545,
+          "z": -1503.6240996057736,
+          "headingRad": 0.9890777503045279
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-7",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1181.8472510330257,
+          "z": -1508.1363750066846,
+          "headingRad": 0.9890970128148548
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      }
+    ],
+    "arrival": [],
+    "inputHash": "5e98b4f1f3c222141df4e75358b844e9140d35090d7d823efa92e548d98d8cc2",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ego-uses-short-work-zone-headway",
+        "actorId": "ego",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [],
+    "derivedFrom": {
+      "entry": "cmp-lane-shift-workzone",
+      "interactionId": "ego-shifts-left",
+      "authoredValue": 26,
+      "threshold": 25.87
+    }
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "el-camino-road",
+    "clipSeconds": 19,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "channelizer",
+        "kind": "static_object",
+        "dims": {
+          "l": 0.9,
+          "w": 0.9,
+          "h": 1.15
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-3",
+            "s": 7.471961127189331,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1181.8010137687015,
+            "z": -1508.16673410214,
+            "headingRad": 0.9890970128148548
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "107:0:-3",
+              "107:1:-3",
+              "2225:0:-1",
+              "60:0:-4",
+              "250:0:-1",
+              "26:0:-4",
+              "612:0:-1",
+              "0:0:-3",
+              "775:0:-3",
+              "1:0:-3"
+            ]
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:channelizer",
+          "class:static_object",
+          "binding:on_reference",
+          "catalog:construction.channelizer_drum"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "0:0:-3",
+            "s": 3.246229357083223,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 1153.601620810084,
+            "z": -1465.6726243729624,
+            "headingRad": 0.9842098458487812
+          },
+          "speedMps": 7.111111111111112
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.8,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "107:0:-3",
+              "107:1:-3",
+              "2225:0:-1",
+              "60:0:-4",
+              "250:0:-1",
+              "26:0:-4",
+              "612:0:-1",
+              "0:0:-3",
+              "775:0:-3",
+              "1:0:-3"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 7.111111111111112
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "queue-tail",
+        "kind": "car",
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.7
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-3",
+            "s": 50.47199843562697,
+            "tFrac": 0.82
+          },
+          "pose": {
+            "x": 1201.6661109819258,
+            "z": -1546.5677676437015,
+            "headingRad": 0.9891070909939624
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "107:0:-3",
+              "107:1:-3",
+              "2225:0:-1",
+              "60:0:-4",
+              "250:0:-1",
+              "26:0:-4",
+              "612:0:-1",
+              "0:0:-3",
+              "775:0:-3",
+              "1:0:-3"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:queue-tail",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.suv"
+        ]
+      },
+      {
+        "id": "work-vehicle",
+        "kind": "truck",
+        "dims": {
+          "l": 5.9,
+          "w": 2.03,
+          "h": 1.95
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1:0:-3",
+            "s": 22.472021922892395,
+            "tFrac": -0.5
+          },
+          "pose": {
+            "x": 1192.346990708508,
+            "z": -1519.184562561119,
+            "headingRad": 0.9891321870586802
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "107:0:-3",
+              "107:1:-3",
+              "2225:0:-1",
+              "60:0:-4",
+              "250:0:-1",
+              "26:0:-4",
+              "612:0:-1",
+              "0:0:-3",
+              "775:0:-3",
+              "1:0:-3"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          }
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:work-vehicle",
+          "class:truck",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.pickup"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-brakes-for-queue",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "distance",
+            "a": "ego",
+            "b": "queue-tail",
+            "mode": "euclidean",
+            "cmp": "lte",
+            "value": 8
+          },
+          "byLatest": 14,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 14
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "stop"
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 5.5
+        }
+      },
+      {
+        "id": "ego-shifts-left",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "distance",
+            "a": "ego",
+            "b": "channelizer",
+            "mode": "alongLane",
+            "cmp": "lte",
+            "value": 25.87
+          },
+          "byLatest": 8,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 8
+        },
+        "verb": "laneOffset",
+        "target": {
+          "mode": "fraction",
+          "value": 0.82
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "rate",
+          "value": 0.6
+        }
+      },
+      {
+        "id": "work-vehicle-hazards",
+        "actorId": "work-vehicle",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "set",
+        "target": {
+          "key": "lights.indicator",
+          "value": "hazard"
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [
+      {
+        "id": "cone-taper-0",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1166.0683955365093,
+          "z": -1476.599165318184,
+          "headingRad": 0.9843678802451866
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-1",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1168.324377077695,
+          "z": -1481.1034474555202,
+          "headingRad": 0.9844094453774316
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-2",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1170.5806990497897,
+          "z": -1485.6074283364517,
+          "headingRad": 0.984447286407062
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-3",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1172.8421310808362,
+          "z": -1490.077756449348,
+          "headingRad": 0.9744426022120675
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-4",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1175.1340296619096,
+          "z": -1494.5977458371492,
+          "headingRad": 0.9888444457625756
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-5",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1177.3712247211251,
+          "z": -1499.1112944605695,
+          "headingRad": 0.9890535007000726
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-6",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1179.6088622608545,
+          "z": -1503.6240996057736,
+          "headingRad": 0.9890777503045279
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      },
+      {
+        "id": "cone-taper-7",
+        "groupId": "cone-taper",
+        "catalogId": "construction.traffic_cone",
+        "pose": {
+          "x": 1181.8472510330257,
+          "z": -1508.1363750066846,
+          "headingRad": 0.9890970128148548
+        },
+        "dims": {
+          "l": 0.36,
+          "w": 0.36,
+          "h": 0.7
+        },
+        "scale": 1,
+        "collidable": true,
+        "essentiality": "required"
+      }
+    ],
+    "occluders": [
+      {
+        "id": "cone-taper-0",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1166.0683955365093,
+            "z": -1476.599165318184
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9843678802451866,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-1",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1168.324377077695,
+            "z": -1481.1034474555202
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9844094453774316,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-2",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1170.5806990497897,
+            "z": -1485.6074283364517
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.984447286407062,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-3",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1172.8421310808362,
+            "z": -1490.077756449348
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9744426022120675,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-4",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1175.1340296619096,
+            "z": -1494.5977458371492
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9888444457625756,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-5",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1177.3712247211251,
+            "z": -1499.1112944605695
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9890535007000726,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-6",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1179.6088622608545,
+            "z": -1503.6240996057736
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9890777503045279,
+          "heightM": 0.7
+        }
+      },
+      {
+        "id": "cone-taper-7",
+        "groupId": "cone-taper",
+        "obb": {
+          "center": {
+            "x": 1181.8472510330257,
+            "z": -1508.1363750066846
+          },
+          "lengthM": 0.36,
+          "widthM": 0.36,
+          "headingRad": 0.9890970128148548,
+          "heightM": 0.7
+        }
+      }
+    ],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

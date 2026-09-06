@@ -1,4 +1,4 @@
-import type { ResolvedAmbientTrafficProfile } from './traffic.js';
+import type { ResolvedAmbientTrafficProfile } from './profile.js';
 
 /** Browser/CLI-neutral transform published by a generated SUMO map sidecar. */
 export interface SumoNetworkWorldTransform {

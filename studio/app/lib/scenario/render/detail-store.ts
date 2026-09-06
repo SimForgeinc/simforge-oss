@@ -10,7 +10,7 @@ import type {
   ScenarioJobEventDto,
   ScenarioRenderAttemptDto,
   ScenarioRenderJobDetailDto,
-} from "./contracts";
+} from "@simforge-oss/studio-host";
 
 /**
  * The render details tab (#136) and session cards (#137): one job with its attempts, its event log,

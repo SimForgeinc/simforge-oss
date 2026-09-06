@@ -289,13 +289,10 @@ export function repairActorSetupSelections<T extends ActorSetupSelectionState>(
   const selectedActor = selectedActorId
     ? actors.find((actor) => actor.id === selectedActorId) ?? null
     : null;
-  // The dock's nodes are the behavior program's clips — the only motion
-  // system. Legacy timeline ids (now riding the migration's wire envelope)
-  // stay resolvable so a selection made before an upgrade survives it.
-  const timelineIds = new Set([
-    ...(selectedActor?.behavior?.clips?.map((clip) => clip.id) ?? []),
-    ...(selectedActor?.legacy_wire?.timeline?.map((clip) => clip.id) ?? []),
-  ]);
+  // The dock's nodes are the behavior program's clips — the only motion system.
+  const timelineIds = new Set(
+    selectedActor?.behavior?.clips?.map((clip) => clip.id) ?? [],
+  );
 
   return {
     ...selections,

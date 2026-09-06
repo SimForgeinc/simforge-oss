@@ -456,7 +456,7 @@ const vehiclePoints = await placementPoints(stage, 10, 14, 0);
 
 const fast = { vehicles: await placeAll('vehicle.sedan', vehiclePoints, 'fast') };
 const pedPoints = await placementPoints(stage, 5, 26, 7.5, 55, 4.5);
-fast.pedestrians = await placeAll('pedestrian.adult_walking', pedPoints, 'fast');
+fast.pedestrians = await placeAll('pedestrian.adult', pedPoints, 'fast');
 fast.totalMs = fast.vehicles.ms + fast.pedestrians.ms;
 fast.clicks = fast.vehicles.placed + fast.pedestrians.placed;
 fast.count = await page.evaluate(() => window.__editor.state.actors.length);
@@ -473,7 +473,7 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 const human = { vehicles: await placeAll('vehicle.sedan', vehiclePoints, 'human') };
-human.pedestrians = await placeAll('pedestrian.adult_walking', pedPoints, 'human');
+human.pedestrians = await placeAll('pedestrian.adult', pedPoints, 'human');
 human.totalMs = human.vehicles.ms + human.pedestrians.ms;
 human.clicks = human.vehicles.placed + human.pedestrians.placed;
 human.count = await page.evaluate(() => window.__editor.state.actors.length);
@@ -917,7 +917,7 @@ console.log(`  ⌥  ${JSON.stringify(keys.alt)}`);
 
 // --- Esc leaves placement mode -------------------------------------------
 await blurUi();
-const armedState = await armPalette('pedestrian.adult_walking');
+const armedState = await armPalette('pedestrian.adult');
 await page.keyboard.press('Escape');
 await page.waitForTimeout(200);
 const idleState = await editorState();

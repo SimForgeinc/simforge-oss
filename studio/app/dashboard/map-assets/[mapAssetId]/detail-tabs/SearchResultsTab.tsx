@@ -32,10 +32,10 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapSearchResult, SearchFilterChip, SearchObjectFamily } from "@/app/lib/maps/search/map-search";
 import { SearchExamplesPanel } from "./SearchExamplesPanel";
 import { CopyJsonButton } from "./CopyJsonButton";

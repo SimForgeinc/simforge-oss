@@ -9,8 +9,7 @@
  * Two document kinds, deliberately different in kind and not just in version:
  *
  * - **v1, a scene** — actors at absolute coordinates on one named map.
- *   {@link ScenarioDocument} edits it, {@link parseScenario} reads it,
- *   {@link migrate} versions it. Unchanged by v2.
+ *   {@link ScenarioDocument} edits it, {@link parseScenario} reads it.
  * - **v2, a template** — a {@link LogicalAnchorSchema logical anchor} (a
  *   predicate over road structure, no coordinates, no road ids), roles bound to
  *   the matched structure, and a frame-relative timeline of seven verbs.
@@ -27,7 +26,7 @@
  *    undo/redo, dirty flag, `subscribe()`.
  * 4. **Validation** — {@link validateTemplate}: tier-1 static checks emitting
  *    {@link ClauseResult}s, with map-dependent checks behind {@link MapContext}.
- * 5. **Migration** — {@link migrate} (v1 chain) and {@link migrateToTemplate}.
+ * 5. **Conversion** — {@link migrateToTemplate} turns a v1 scene into a v2 template, explicitly.
  * 6. **Persistence** — {@link ScenarioFileStore} with in-memory and
  *    `localStorage` implementations.
  *
@@ -156,17 +155,6 @@ export {
 } from './operations.js';
 
 export {
-  migrate,
-  runMigrations,
-  deserializeScenario,
-  CURRENT_SCENARIO_VERSION,
-  SCENARIO_MIGRATIONS,
-  type ScenarioMigration,
-  type MigrateResult,
-  type RunMigrationsOptions,
-} from './migrate.js';
-
-export {
   serializeScenario,
   parseScenario,
   parseTemplate,
@@ -177,11 +165,6 @@ export {
   FLOAT_DECIMALS,
 } from './serialize.js';
 
-export {
-  migrateLegacyInitialRoutes,
-  type InitialRouteMigrationResult,
-} from './initial-route-migration.js';
-
 // --- schema v2: the portable ScenarioTemplate -------------------------------
 
 export * from './schema/v2/index.js';
@@ -190,13 +173,13 @@ export * from './expr/index.js';
 export * from './semantic-ledger.js';
 export * from './render-spec.js';
 export * from './render-intent.js';
+export * from './situation.js';
 export { Sha256 } from './sha256.js';
 
 export {
-  CURRENT_TEMPLATE_VERSION,
-  TEMPLATE_MIGRATIONS,
   detectScenarioKind,
   migrateToTemplate,
+  readScenarioVersion,
   v1ToTemplateV2,
   type MigrationNote,
   type TemplateMigrationResult,
@@ -263,7 +246,7 @@ export { buildJsonSchema, JSON_SCHEMA_ID, JSON_SCHEMA_PATH } from './json-schema
 
 export {
   ScenarioValidationError,
-  ScenarioMigrationError,
+  ScenarioFormatError,
   ScenarioOperationError,
   ScenarioNotFoundError,
   toScenarioIssues,

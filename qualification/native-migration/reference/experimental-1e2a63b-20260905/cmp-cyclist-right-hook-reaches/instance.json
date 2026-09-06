@@ -1,0 +1,378 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "cyclist-right-hook",
+      "templateVersion": 2,
+      "templateDigest": "b531127aa64d3e84",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "810c8b2fbab4be67",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "810c8b2fbab4be67#-1",
+    "archetype": "vru.cyclist-right-hook",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "810c8b2fbab4be67",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "junction:303",
+      "entryLaneRsl": "109:0:5",
+      "egoTurn": "right",
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "every required adjacency present along the corridor",
+        "77.32 m of runway available, 70 m needed",
+        "135.09 m of runway available, 55 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 4)",
+        "origin feature sits at s = 0 by construction",
+        "4-arm junction",
+        "reference path turns right"
+      ]
+    },
+    "params": {
+      "values": {
+        "cyclistSpeedKph": 16.5,
+        "overlapM": 7
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "cyclist",
+        "actorKind": "bicycle",
+        "roleKind": "relative_to",
+        "laneRsl": "109:0:5",
+        "spawnS": 1.3512514690495196,
+        "initialSpeedMps": 4.583333333333334,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "120:0:-1",
+        "spawnS": 93.08975466565124,
+        "initialSpeedMps": 5,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "cyclist-keeps-course",
+        "actorId": "cyclist",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "signalPrograms",
+        "reason": "5 physical map signal head(s) bound as 1 logical program(s) to junction 303 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 14,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "cyclist",
+        "kind": "bicycle",
+        "dims": {
+          "l": 1.8,
+          "w": 0.6,
+          "h": 1.7
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "109:0:5",
+            "s": 35.00002039185791,
+            "tFrac": -0.82
+          },
+          "pose": {
+            "x": 738.2117571550655,
+            "z": -1683.5635992035457,
+            "headingRad": -0.578895212407561
+          },
+          "speedMps": 4.583333333333334
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "109:0:5",
+              "344:0:1",
+              "87:0:-4"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 4.583333333333334
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:cyclist",
+          "class:bicycle",
+          "driver-profile:lawful",
+          "binding:relative_to"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "120:0:-1",
+            "s": 17.091193309221893,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 733.7928977315756,
+            "z": -1689.5966611643007,
+            "headingRad": -0.5643295239090063
+          },
+          "speedMps": 5
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "21:0:-2",
+              "1013:0:-1",
+              "108:0:-1",
+              "120:0:-1",
+              "109:0:5",
+              "329:0:1",
+              "76:0:1",
+              "904:0:1",
+              "75:0:1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 5
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-fails-to-yield-cyclist",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 1
+        },
+        "verb": "set",
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "ego-indicates-right",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 1
+        },
+        "verb": "set",
+        "target": {
+          "key": "lights.indicator",
+          "value": "right"
+        }
+      },
+      {
+        "id": "ego-turns-right",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "reaches",
+            "actorId": "ego",
+            "region": {
+              "kind": "circle",
+              "center": {
+                "x": 768.8818966445582,
+                "z": -1666.5170665988514
+              },
+              "radiusM": 5
+            }
+          },
+          "byLatest": 9,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 9
+        },
+        "verb": "route",
+        "target": {
+          "kind": "lanePath",
+          "lanes": [
+            "21:0:-2",
+            "1013:0:-1",
+            "108:0:-1",
+            "120:0:-1",
+            "109:0:5",
+            "329:0:1",
+            "76:0:1",
+            "904:0:1",
+            "75:0:1"
+          ]
+        }
+      }
+    ],
+    "signalPrograms": [
+      {
+        "id": "signal:1432",
+        "phases": [
+          {
+            "phase": "green",
+            "durationS": 27
+          },
+          {
+            "phase": "yellow",
+            "durationS": 3
+          },
+          {
+            "phase": "red",
+            "durationS": 30
+          }
+        ],
+        "offsetS": 23,
+        "loop": true,
+        "stopLines": [
+          {
+            "rsl": "76:0:-1",
+            "s": 5.060005166383289,
+            "connectingLaneRsls": [
+              "320:0:-1"
+            ]
+          },
+          {
+            "rsl": "76:0:-1",
+            "s": 5.060005166383289,
+            "connectingLaneRsls": [
+              "326:0:-1"
+            ]
+          },
+          {
+            "rsl": "76:0:-2",
+            "s": 5.060248353701006,
+            "connectingLaneRsls": [
+              "334:0:-1"
+            ]
+          }
+        ],
+        "mapBinding": {
+          "junctionId": "303",
+          "controllerIds": [
+            "1566"
+          ],
+          "headIds": [
+            "1432",
+            "1433",
+            "1434",
+            "1443",
+            "1522"
+          ],
+          "controllerHeadGroups": [
+            {
+              "controllerId": "1566",
+              "headIds": [
+                "1432",
+                "1433",
+                "1434",
+                "1443",
+                "1522"
+              ]
+            }
+          ],
+          "timingSource": "synthetic-default"
+        }
+      }
+    ],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

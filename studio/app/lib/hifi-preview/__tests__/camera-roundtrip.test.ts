@@ -29,7 +29,7 @@ import {
   type Mat4,
 } from "@simforge-oss/viewer";
 
-import { CreateHifiPreviewSchema, contractCameraReportAsWire, type WireCameraStateReport } from "../contracts";
+import { CreateHifiPreviewSchema, contractCameraReportAsWire, type WireCameraStateReport } from "@simforge-oss/studio-ui/lib/hifi-preview/contracts";
 
 const FIXTURE_PATH = fileURLToPath(
   new URL(
@@ -131,7 +131,7 @@ function roundTripThroughRequest(camera: WireCameraStateReport) {
     height: 720,
     camera,
     scene: {
-      version: "scene-state.v1" as const,
+      version: "simforge.scene-state.v1" as const,
       mapId: fixture.sceneState.mapId,
       tick: fixture.tick,
       tickHz: fixture.sceneState.tickHz,

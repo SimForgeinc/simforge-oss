@@ -25,7 +25,7 @@
  * `ScenarioDocument`, still the format `studio` reads today. v2 is a
  * different *kind* of document that happens to be the next number in the same
  * version sequence, so one `scenarioVersion` field still tells a loader which
- * parser to use (`detectScenarioKind`). The v1 → v2 migration is explicit
+ * parser to use (`detectScenarioKind`). The v1 → v2 conversion is explicit
  * (`migrateToTemplate`) rather than automatic, because turning a scene into a
  * template loses the thing v1 was best at — knowing exactly where everything is
  * — and that is a decision an author should make on purpose. See `migrate-v2.ts`.

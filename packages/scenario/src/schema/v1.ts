@@ -159,8 +159,8 @@ const reservedList = (what: string) =>
 /**
  * The v1 document, without the cross-field checks.
  *
- * Exported separately so migrations and tooling can `.extend()` / `.partial()`
- * it; application code should use {@link ScenarioV1Schema}.
+ * Exported separately so the JSON Schema projection and tooling can
+ * `.extend()` / `.partial()` it; application code should use {@link ScenarioV1Schema}.
  */
 export const ScenarioV1ObjectSchema = z.strictObject({
   scenarioVersion: z.literal(SCENARIO_VERSION),

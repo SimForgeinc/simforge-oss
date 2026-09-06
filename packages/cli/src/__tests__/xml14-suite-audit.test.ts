@@ -64,8 +64,8 @@ describe('production OpenSCENARIO suite assets', () => {
   it('loads a digest-matched XODR/topology pair', async () => {
     const root = await assetRoot();
     const loaded = await loadProductionAuditMap('fixture-map', root);
-    expect(loaded.graph.topologyDigest).toBe(loaded.xodrSha256);
-    expect(loaded.graph.laneRsls()).toEqual([]);
+    expect(loaded.graph.digest).toBe(loaded.xodrSha256);
+    expect(loaded.graph.laneIds).toEqual([]);
   });
 
   it('rejects stale and missing production assets distinctly', async () => {

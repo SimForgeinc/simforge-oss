@@ -5,10 +5,11 @@ import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/
 import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import {
+  RENDER_INTENT_V1_SCHEMA,
   resolveCaptureManifest,
   ScenarioTemplateV2Schema,
 } from "@simforge-oss/scenario";
-import { BROWSER_RECORDING_ADAPTER_VERSION } from "../recording-contracts";
+import { BROWSER_RECORDING_ADAPTER_VERSION } from "@simforge-oss/studio-ui/lib/scenario/recording-contracts";
 import {
   cancelCompilerExport,
   claimCompilerExport,
@@ -27,8 +28,9 @@ import {
   withScenarioJobTransaction,
   type JobTransaction,
 } from "./lifecycle-lock";
-import { simforgeEnv } from "@/lib/compat-env";
-import { PLAYBACK_MEDIA_TYPE } from "../stored-wire-compat";
+import { simforgeEnv } from "@/lib/simforge-env";
+/** Stored media type of worker-produced playback artifacts; artifact metadata binds to it. */
+const PLAYBACK_MEDIA_TYPE = "application/vnd.uniscenarios.playback+json";
 
 type CpuAttemptFamily = Exclude<ScenarioJobFamily, "openscenario_compile">;
 
@@ -1247,14 +1249,14 @@ export async function completeCpuJob(
         `UPDATE simforge.render_jobs
             SET job_state = 'succeeded', progress = 1,
                 origin_recording_job_id = CASE
-                  WHEN request_contract_version = 'uniscenario.render-intent/v1' THEN NULL
+                  WHEN request_contract_version = :intent_contract THEN NULL
                   ELSE :recording_job_id
                 END,
                 telemetry = COALESCE(telemetry, '{}'::jsonb)
                   || jsonb_build_object('browserRecordingJobId', :recording_job_id::text),
                 completed_at = NOW(), updated_at = NOW()
           WHERE id = :job_id`,
-        { job_id: jobId, recording_job_id: recording.id },
+        { job_id: jobId, recording_job_id: recording.id, intent_contract: RENDER_INTENT_V1_SCHEMA },
       );
     } else {
       for (const artifact of input.artifacts) {

@@ -5,13 +5,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { gunzipSync } from 'node:zlib';
 
-import {
-  ENGINE_VERSION,
-  serializeTrace,
-  type LaneGraph,
-  type SimScenarioInput,
-  type SimTrace,
-} from '@simforge-oss/engine';
+import { engine, type LaneGraph, type SimScenarioInput, type SimTrace } from '@simforge-oss/engine/node';
 
 import {
   analyzeEsminiCompatibility,
@@ -169,7 +163,7 @@ export function createServerMapDependencyResolver(assetRoot: string): MapDepende
 }
 
 export async function buildEsminiRunnableBundle(request: EsminiBundleRequest): Promise<EsminiRunnableBundle> {
-  if (request.graph.topologyDigest !== request.expectedXodrSha256) {
+  if (request.graph.digest !== request.expectedXodrSha256) {
     throw new Error('export graph topologyDigest does not match requested OpenDRIVE dependency');
   }
   if (request.input.mapId !== request.canonicalTrace.header.mapId) throw new Error('trace mapId does not match scenario input');
@@ -190,7 +184,9 @@ export async function buildEsminiRunnableBundle(request: EsminiBundleRequest): P
   if (compatibility.blocking.length > 0) {
     throw new Error(`esmini bundle blocked by ${compatibility.blocking.map((entry) => entry.path).join(', ')}`);
   }
+  const runtime = engine();
   const exported = exportOpenScenarioXml13Esmini(request.input, {
+    engine: runtime,
     graph: request.graph,
     roadFile: 'maps/map.xodr',
     executionMode: mode === 'supported-actions' ? 'actions' : 'trajectory-replay',
@@ -203,7 +199,8 @@ export async function buildEsminiRunnableBundle(request: EsminiBundleRequest): P
   const validation = await validateOpenScenarioXml13(exported.content, request.xsdPath);
   if (!validation.valid) throw new Error(`OpenSCENARIO 1.3.1 XSD validation failed: ${validation.diagnostics.join('; ')}`);
 
-  const traceBytes = serializeTrace(request.canonicalTrace);
+  const traceBytes = runtime.trace(request.canonicalTrace).serialize();
+  const engineVersion = runtime.version().engineVersion;
   const capabilityBytes = utf8(canonicalJson({ ...compatibility, xsdValidation: validation }));
   const provenanceBytes = utf8(canonicalJson({
     kind: 'simforge-esmini-provenance',
@@ -216,7 +213,7 @@ export async function buildEsminiRunnableBundle(request: EsminiBundleRequest): P
     mapResolution: 'server-map-store',
     openScenarioVersion: '1.3.1',
     xsdSha256: validation.xsdSha256,
-    engineVersion: ENGINE_VERSION,
+    engineVersion,
     esminiVersion: 'runner-pinned',
     exportMode: mode,
   }));
@@ -244,7 +241,7 @@ export async function buildEsminiRunnableBundle(request: EsminiBundleRequest): P
     provenanceEntry: 'reports/provenance.json',
     openScenarioVersion: '1.3.1',
     esminiVersion: 'runner-pinned',
-    engineVersion: ENGINE_VERSION,
+    engineVersion,
     behaviorParityScope: compatibility.behaviorParityScope,
     files: fileEntries,
   };

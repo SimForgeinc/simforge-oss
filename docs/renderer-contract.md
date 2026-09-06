@@ -28,9 +28,9 @@ of scope for this contract version.
 
 ## Frozen wire identifiers
 
-`scene-state.v1` and `uniscenario.static-semantics/v1` are referenced
-byte-identically (see `docs/engineering/simcloud-sync.md`). Identifiers new
-in this contract use the `simforge.` prefix:
+`simforge.scene-state.v1` and `uniscenario.static-semantics/v1` are referenced
+byte-identically (see `docs/engineering/simcloud-sync.md`). Identifiers
+introduced by this contract likewise use the `simforge.` prefix:
 
 - `simforge.renderer-contract/v1` — the contract version.
 - `simforge.renderer-parity-fixture/v1` — the fixture document version.

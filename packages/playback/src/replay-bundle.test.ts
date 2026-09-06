@@ -2,7 +2,8 @@ import {
   exportOpenScenarioXml14,
   extractOpenScenarioExecutionPlan,
 } from '../../openscenario/src/index.js';
-import { buildLaneGraph, parseSimScenarioInput, type TopologyIndex } from '@simforge-oss/engine';
+import { parseSimScenarioInput, type TopologyIndex } from '@simforge-oss/engine';
+import { engine } from '@simforge-oss/engine/node';
 import { describe, expect, it } from 'vitest';
 
 import { canonicalPreviewIdentity, samplePlaybackActors, samplePlaybackSignals } from './model';
@@ -10,7 +11,7 @@ import { playbackBundleFromReplay } from './replay-bundle';
 
 const SOURCE_DIGEST = 'a'.repeat(64);
 const GRAPH_DIGEST = 'b'.repeat(64);
-const graph = buildLaneGraph({
+const graph = engine().laneGraph({
   schemaVersion: 1,
   mapName: 'map.test',
   source: { xodrSha256: 'fixture' },
@@ -76,6 +77,7 @@ function planFixture() {
     }],
   });
   const exported = exportOpenScenarioXml14(scenario, {
+    engine: engine(),
     graph,
     executionMode: 'trajectory-replay',
     roadFile: 'maps/test.xodr',

@@ -12,20 +12,41 @@
  * bit-identically — a raw floating-point confidence product would not.
  */
 
-import { quantize } from '../core/math.js';
-import { DETECTION_REASONS, DETECTION_STATUS } from '../perception/model.js';
 import type { MapDivergenceKind } from '../perception/schema.js';
 
-/** Decimal places for the perception channels. */
+/** Decimal places for the perception channels (the native recorder quantises with these). */
 export const SENSOR_TRACE_PRECISION = {
   confidence: 4,
   range: 3,
 } as const;
 
-/** `{ absent: 0, missed: 1, degraded: 2, detected: 3 }`. */
-export const SENSOR_TRACE_STATUS_LEGEND = DETECTION_STATUS;
+/**
+ * Detection status, ordered so that a larger number is strictly more
+ * perception. The trace records the number; this is the legend.
+ */
+export const SENSOR_TRACE_STATUS_LEGEND = {
+  absent: 0,
+  missed: 1,
+  degraded: 2,
+  detected: 3,
+} as const;
+export type DetectionStatusName = keyof typeof SENSOR_TRACE_STATUS_LEGEND;
+export type DetectionStatusCode = (typeof SENSOR_TRACE_STATUS_LEGEND)[DetectionStatusName];
+
 /** Reason names indexed by the integer stored in the `reason` channel. */
-export const SENSOR_TRACE_REASON_LEGEND = DETECTION_REASONS;
+export const SENSOR_TRACE_REASON_LEGEND = [
+  'detected',
+  'absent',
+  'disabled',
+  'out_of_range',
+  'out_of_fov',
+  'occluded',
+  'atmospheric_attenuation',
+  'below_angular_resolution',
+  'low_light',
+  'glare',
+] as const;
+export type DetectionReason = (typeof SENSOR_TRACE_REASON_LEGEND)[number];
 
 /** One sensor's opinion about one other actor, over the whole clip. */
 export interface SensorTargetTrack {
@@ -118,28 +139,6 @@ export interface PerceptionMetrics {
   readonly mapDivergence: MapDivergenceMetric[];
 }
 
-/** Quantise the sensor channels, in sorted key order, before serialisation. */
-export function quantizeSensorTracks(
-  tracks: Readonly<Record<string, SensorTrack>>,
-): Record<string, SensorTrack> {
-  const out: Record<string, SensorTrack> = {};
-  for (const key of Object.keys(tracks).sort()) {
-    const track = tracks[key]!;
-    const targets: Record<string, SensorTargetTrack> = {};
-    for (const targetId of Object.keys(track.targets).sort()) {
-      const t = track.targets[targetId]!;
-      targets[targetId] = {
-        status: [...t.status],
-        reason: [...t.reason],
-        confidence: t.confidence.map((v) => quantize(v, SENSOR_TRACE_PRECISION.confidence)),
-        rangeM: t.rangeM.map((v) => quantize(v, SENSOR_TRACE_PRECISION.range)),
-        lineOfSight: [...t.lineOfSight],
-      };
-    }
-    out[key] = { observer: track.observer, sensorId: track.sensorId, type: track.type, targets };
-  }
-  return out;
-}
 
 /** Stable channel key. `observer/sensorId` is unique by construction. */
 export function sensorChannelKey(observerId: string, sensorId: string): string {

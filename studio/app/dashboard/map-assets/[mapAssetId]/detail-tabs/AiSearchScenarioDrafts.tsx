@@ -7,7 +7,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { Download, ExternalLink, Loader2, Sparkles } from "lucide-react";
 import { COLLISION_TEMPLATES } from "@simforge-oss/studio-shared";
 import type { CollisionFamilyId } from "@simforge-oss/studio-shared";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ScenarioValidationState } from "@/app/lib/maps/frontend/use-scenario-validation";
 import type { LlmProposedScenarioRecord } from "@/app/lib/maps/frontend/use-map-search-llm";
 import { ValidationVerdictCard } from "./ValidationVerdictCard";

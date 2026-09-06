@@ -30,7 +30,7 @@ import type {
   ExecutionPackageMemberDto,
   ExecutionPackageMemberRole,
   ExecutionPackageMembersDto,
-} from "./execution-package-contracts";
+} from "@simforge-oss/studio-ui/lib/scenario/execution-package-contracts";
 import { cancelOperationalJobWithResult } from "./jobs/store";
 import {
   claimFirstEligibleScenarioJob,
@@ -52,7 +52,10 @@ import {
   type ScenarioRenderResourceRequest,
   type ScenarioRenderWorkerIdentity,
 } from "@simforge-oss/studio-shared";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
+import { RenderSpecV3Schema } from "@simforge-oss/scenario";
+import { renderWorkerIdentity, type RenderWorkerIdentity } from "./render-worker-control-store";
+import type { ScenarioRendererCapability } from "./render-wire-contracts";
 
 type RenderSpec = z.infer<typeof ScenarioRenderSpecSchema>;
 const INTERACTION_RENDER_SPEC = {
@@ -149,7 +152,7 @@ export function authorizeScenarioWorker(request: Request) {
 }
 
 export function renderWorkerNodeId(request: Request) {
-  const workerNodeId = request.headers.get("x-uniscenario-worker-node-id")?.trim();
+  const workerNodeId = request.headers.get("x-simforge-worker-node-id")?.trim();
   return workerNodeId && workerNodeId.length <= 200 ? workerNodeId : null;
 }
 
@@ -159,20 +162,16 @@ export async function authorizeScenarioRenderWorker(request: Request) {
 }
 
 const LOCAL_RENDER_WORKER_NODE_ID = "uniscenario-render-local-path-pc";
-const REQUIRED_WORKER_MODES = ["interaction_2d", "full_render"] as const;
-const REQUIRED_TRAFFIC_MODES = ["disabled", "native", "sumo"] as const;
-const REQUIRED_EXECUTION_MODES = ["native-physics"] as const;
-const REQUIRED_SENSOR_KINDS = [
-  "rgb",
-  "depth",
-  "semantic",
-  "instance",
-  "normals",
-  "lidar",
-  "semantic_lidar",
-  "radar",
+/**
+ * Hardware profiles the local schema admits
+ * (`uniscenario_worker_nodes_hardware_profile_ck`, 20260820150000).
+ */
+export const RENDER_WORKER_HARDWARE_PROFILES = [
+  SIMFORGE_RTX3080_HARDWARE_PROFILE,
+  "rtx5080-16gb-v1",
+  SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE,
 ] as const;
-const REQUIRED_OUTPUTS = ["video", "trace", "manifest", "annotations"] as const;
+/** v1 render-resource-request ceiling for the CARLA lane (`renderResourceAdmissionError`). */
 const REQUIRED_WORKER_LIMITS = {
   maxDurationS: 120,
   maxSensors: 4,
@@ -206,75 +205,32 @@ function runtimeEnvironment(): "dev" | "staging" | "prod" {
   return value;
 }
 
-export function workerRegistrationCompatibilityError(
-  input: {
-    workerNodeId: string;
-    environment: "dev" | "staging" | "prod";
-    workerVersion: string;
-    imageDigest: string;
-    capabilities: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
-  },
-  expectedEnvironment = runtimeEnvironment(),
-): string | null {
-  const requiredCapabilityKeys = [
-    "xosc",
-    "fixedTimestepS",
-    "capabilityProfile",
-    "hardwareProfile",
-    "modes",
-    "trafficModes",
-    "executionModes",
-    "sensorKinds",
-    "outputs",
-    "limits",
-  ].sort();
-  const exactStringSet = (value: unknown, expected: readonly string[]) =>
-    Array.isArray(value) && value.length === expected.length && value.every((item, index) => item === expected[index]);
-  if (input.environment !== expectedEnvironment) return "worker_environment_mismatch";
-  if (!/^[a-f0-9]{40}$/.test(input.workerVersion)) return "worker_version_invalid";
-  if (!/^sha256:[a-f0-9]{64}$/.test(input.imageDigest)) return "worker_image_digest_invalid";
-  if (Object.keys(input.capabilities).sort().join("\0") !== requiredCapabilityKeys.join("\0")) {
-    return "worker_capability_schema_invalid";
-  }
-  if (
-    input.capabilities.xosc !== "1.4" ||
-    input.capabilities.fixedTimestepS !== 0.02 ||
-    input.capabilities.capabilityProfile !== "xml-1.4-trajectory-replay"
-  ) {
-    return "worker_xosc_profile_incompatible";
-  }
-  const hardwareProfile = input.capabilities.hardwareProfile;
-  if (
-    hardwareProfile !== SIMFORGE_RTX3080_HARDWARE_PROFILE &&
-    hardwareProfile !== SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE
-  ) {
+/**
+ * Operator approval gate. Registration (`registerRenderWorkerV2`) proves the
+ * worker presents exactly the pinned tuple; this decides which tuples an
+ * operator may pin at all. Engine-agnostic: the native engine version is its
+ * package version, so only CARLA keeps the git-revision requirement of its
+ * container lineage (its base-image pin lives in `renderWorkerIdentity`).
+ */
+export function renderWorkerApprovalError(input: {
+  workerNodeId: string;
+  environment: "dev" | "staging" | "prod";
+  identity: RenderWorkerIdentity;
+}): string | null {
+  const { identity } = input;
+  if (!(RENDER_WORKER_HARDWARE_PROFILES as readonly string[]).includes(identity.hardwareProfile)) {
     return "worker_hardware_profile_incompatible";
   }
-  const localProfile = hardwareProfile === SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE;
+  const localProfile = identity.hardwareProfile === SIMFORGE_LOCAL_RTX5080_HARDWARE_PROFILE;
   if (localProfile !== (input.workerNodeId === LOCAL_RENDER_WORKER_NODE_ID)) {
     return "worker_local_node_identity_mismatch";
   }
   if (localProfile && input.environment !== "dev") {
     return "worker_local_profile_environment_incompatible";
   }
-  if (!exactStringSet(input.capabilities.modes, REQUIRED_WORKER_MODES)) return "worker_mode_incompatible";
-  if (!exactStringSet(input.capabilities.trafficModes, REQUIRED_TRAFFIC_MODES))
-    return "worker_traffic_mode_incompatible";
-  if (!exactStringSet(input.capabilities.executionModes, REQUIRED_EXECUTION_MODES))
-    return "worker_execution_mode_incompatible";
-  if (!exactStringSet(input.capabilities.sensorKinds, REQUIRED_SENSOR_KINDS)) return "worker_sensor_kind_incompatible";
-  if (!exactStringSet(input.capabilities.outputs, REQUIRED_OUTPUTS)) return "worker_output_incompatible";
-  const limits = input.capabilities.limits;
-  if (
-    !limits ||
-    typeof limits !== "object" ||
-    Object.keys(limits).sort().join("\0") !== Object.keys(REQUIRED_WORKER_LIMITS).sort().join("\0") ||
-    Object.entries(REQUIRED_WORKER_LIMITS).some(
-      ([key, expected]) => (limits as Record<string, unknown>)[key] !== expected,
-    )
-  )
-    return "worker_limits_incompatible";
+  if (identity.rendererEngine === "carla" && !/^[a-f0-9]{40}$/.test(identity.workerVersion)) {
+    return "worker_version_invalid";
+  }
   return null;
 }
 
@@ -302,31 +258,15 @@ export async function getScenarioControlPlaneHealth(workerNodeId?: string | null
          WHERE w.id = :worker_node_id AND w.environment = :environment
            AND w.registration_state = 'active'
            AND w.last_heartbeat_at >= NOW() - INTERVAL '90 seconds'
-           AND w.worker_version ~ '^[a-f0-9]{40}$'
            AND w.image_digest ~ '^sha256:[a-f0-9]{64}$'
-           AND (
-             (w.hardware_profile = 'rtx3080-10gb-v1'
-               AND w.id <> 'uniscenario-render-local-path-pc')
-             OR (
-               :environment = 'dev'
-               AND w.id = 'uniscenario-render-local-path-pc'
-               AND w.hardware_profile = 'rtx5080-16gb-local-v1'
-             )
-           )
+           AND w.hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1')
            AND w.approved_worker_version = w.worker_version
            AND w.approved_image_digest = w.image_digest
            AND w.approved_hardware_profile = w.hardware_profile
            AND w.approved_at IS NOT NULL
-           AND w.capabilities->>'xosc' = '1.4'
-           AND w.capabilities->'fixedTimestepS' = '0.02'::jsonb
-           AND w.capabilities->>'capabilityProfile' = 'xml-1.4-trajectory-replay'
-           AND w.capabilities->>'hardwareProfile' = w.hardware_profile
-           AND w.capabilities->'modes' = '["interaction_2d","full_render"]'::jsonb
-           AND w.capabilities->'trafficModes' = '["disabled","native","sumo"]'::jsonb
-           AND w.capabilities->'executionModes' = '["native-physics"]'::jsonb
-           AND w.capabilities->'sensorKinds' = '["rgb","depth","semantic","instance","normals","lidar","semantic_lidar","radar"]'::jsonb
-           AND w.capabilities->'outputs' = '["video","trace","manifest","annotations"]'::jsonb
-           AND w.capabilities->'limits' = '{"maxDurationS":120,"maxSensors":4,"maxCaptureFrames":14400,"maxActors":256,"maxActorFrameStates":2000000,"maxSensorPixels":450000000,"maxOutputBytes":2147483648,"maxCameraWidth":1920,"maxCameraHeight":1080,"maxPixelsPerFrame":8294400}'::jsonb
+           AND w.capabilities->>'schema' = 'simforge.render-engine-capabilities/v1'
+           AND w.capabilities->>'backend' = w.renderer_engine
+           AND w.capabilities->>'engineVersion' = w.worker_version
        ) END AS worker_registered`,
     { worker_node_id: workerNodeId ?? "", environment },
   );
@@ -585,6 +525,9 @@ function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
     ? ScenarioRenderResourceRequestSchema.safeParse(parseJsonObject(row.resource_request))
     : null;
   const resourceRequest = parsedResourceRequest?.success ? parsedResourceRequest.data : null;
+  const parsedRenderSpec = row.job_mode === "full_render"
+    ? RenderSpecV3Schema.safeParse(parseJsonObject(row.render_spec as string | Record<string, unknown>))
+    : null;
   return {
     id: row.id,
     revisionId: row.revision_id,
@@ -595,7 +538,9 @@ function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
     progress: Number(row.progress),
     billingMode: "free",
     estimatedCost: 0,
-    renderSpec: row.job_mode === "full_render" ? (row.render_spec as RenderSpec) : null,
+    // Only the canonical render-spec/v3 is a product-facing spec; rows from the retired
+    // managed-lease lane carry no presentable spec and surface as sensor-free.
+    renderSpec: parsedRenderSpec?.success ? parsedRenderSpec.data : null,
     telemetry: {
       ...(typeof telemetry.gpuSeconds === "number" ? { gpuSeconds: telemetry.gpuSeconds } : {}),
       ...(typeof telemetry.wallSeconds === "number" ? { wallSeconds: telemetry.wallSeconds } : {}),
@@ -1293,7 +1238,6 @@ export async function getRenderJobProvenance(
           }
         : {}),
     },
-    traffic: { mode: row.ambient_mode },
     capabilityWarnings: Array.isArray(capability.warnings) ? capability.warnings : [],
     artifacts: artifacts.map((item) => ({
       id: item.id,
@@ -1318,55 +1262,6 @@ export async function cancelRenderJob(context: AppContext, jobId: string) {
   });
   if (!cancellation.mutated && cancellation.job?.status !== "cancelled") return null;
   return getRenderJob(context, jobId);
-}
-
-export async function registerWorker(input: {
-  workerNodeId: string;
-  environment: "dev" | "staging" | "prod";
-  workerVersion: string;
-  imageDigest: string;
-  capabilities: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}) {
-  const compatibilityError = workerRegistrationCompatibilityError(input);
-  if (compatibilityError) throw new Error(compatibilityError);
-  const rows = await queryRows<{ id: string; registration_state: "active" | "draining" | "disabled" }>(
-    `INSERT INTO simforge.worker_nodes (
-       id, environment, worker_version, image_digest, hardware_profile, capabilities, metadata,
-       registration_state
-     ) VALUES (
-       :id, :environment, :worker_version, :image_digest, :hardware_profile,
-       CAST(:capabilities AS jsonb), CAST(:metadata AS jsonb), 'disabled'
-     )
-     ON CONFLICT (id) DO UPDATE SET
-       environment = EXCLUDED.environment,
-       worker_version = EXCLUDED.worker_version,
-       image_digest = EXCLUDED.image_digest,
-       hardware_profile = EXCLUDED.hardware_profile,
-       capabilities = EXCLUDED.capabilities,
-       metadata = EXCLUDED.metadata,
-       registration_state = CASE
-         WHEN simforge.worker_nodes.registration_state IN ('active', 'draining')
-          AND simforge.worker_nodes.approved_worker_version = EXCLUDED.worker_version
-          AND simforge.worker_nodes.approved_image_digest = EXCLUDED.image_digest
-          AND simforge.worker_nodes.approved_hardware_profile = EXCLUDED.hardware_profile
-         THEN simforge.worker_nodes.registration_state
-         ELSE 'disabled'
-       END,
-       last_heartbeat_at = NOW()
-     RETURNING id, registration_state`,
-    {
-      id: input.workerNodeId,
-      environment: input.environment,
-      worker_version: input.workerVersion,
-      image_digest: input.imageDigest,
-      hardware_profile: input.capabilities.hardwareProfile as string,
-      capabilities: input.capabilities,
-      metadata: input.metadata ?? {},
-    },
-  );
-  const state = rows[0]?.registration_state ?? "disabled";
-  return { workerNodeId: input.workerNodeId, registered: true as const, state, eligible: state === "active" };
 }
 
 export async function heartbeatIdleRenderWorker(
@@ -1398,85 +1293,130 @@ export async function heartbeatIdleRenderWorker(
     : null;
 }
 
-export async function setRenderWorkerState(
+/**
+ * Operator approval: pin the exact identity tuple (engine version, image
+ * digest, hardware profile) a node must present to register, and open the node
+ * for registration. Creates the node row when it does not exist yet. Approval
+ * is not registration: the node must then register with precisely this tuple
+ * (`registerRenderWorkerV2` matches approved_* = presented). Re-approval
+ * rotates registration_id so a stale running instance stops claiming until it
+ * re-registers under the newly pinned tuple.
+ */
+export async function approveRenderWorker(
   workerNodeId: string,
-  input: { state: "active" | "draining" | "disabled"; reason: string },
+  input: { engine: ScenarioRendererCapability; labels: Record<string, string>; reason: string },
 ) {
+  const environment = runtimeEnvironment();
+  const identity = renderWorkerIdentity(input.engine, input.labels);
+  const approvalError = renderWorkerApprovalError({ workerNodeId, environment, identity });
+  if (approvalError) throw new Error(approvalError);
   return withTransaction(async (tx) => {
-    const worker = await tx.queryOne<{
-      id: string;
-      environment: string;
-      worker_version: string;
-      image_digest: string;
-      hardware_profile: string | null;
-      capabilities: string | Record<string, unknown>;
-    }>(
-      `SELECT id, environment, worker_version, image_digest, hardware_profile, capabilities
-         FROM simforge.worker_nodes WHERE id = :worker_node_id FOR UPDATE`,
+    // Claiming locks this row before creating a lease; approval must use the
+    // same order so a new lease cannot race the active-lease check.
+    await tx.queryOne(
+      `SELECT id FROM simforge.worker_nodes WHERE id = :worker_node_id FOR UPDATE`,
       { worker_node_id: workerNodeId },
     );
-    if (!worker || worker.environment !== runtimeEnvironment()) return null;
-    if (input.state === "active") {
-      const compatibilityError = workerRegistrationCompatibilityError({
-        workerNodeId: worker.id,
-        environment: worker.environment as "dev" | "staging" | "prod",
-        workerVersion: worker.worker_version,
-        imageDigest: worker.image_digest,
-        capabilities: parseJsonObject(worker.capabilities),
-      });
-      if (compatibilityError) throw new Error(compatibilityError);
-      const activated = await tx.queryOne<{ id: string }>(
-        `UPDATE simforge.worker_nodes
-            SET registration_state = 'active',
-                approved_worker_version = worker_version,
-                approved_image_digest = image_digest,
-                approved_hardware_profile = hardware_profile,
-                approved_at = NOW(), state_changed_at = NOW(),
-                metadata = metadata || jsonb_build_object(
-                  'lastStateReason', :reason,
-                  'lastStateChangedAt', NOW()
-                )
-          WHERE id = :worker_node_id
-            AND (
-              (hardware_profile = 'rtx3080-10gb-v1'
-                AND id <> 'uniscenario-render-local-path-pc')
-              OR (
-                :environment = 'dev'
-                AND id = 'uniscenario-render-local-path-pc'
-                AND hardware_profile = 'rtx5080-16gb-local-v1'
-              )
-            )
-            AND worker_version ~ '^[a-f0-9]{40}$'
-            AND image_digest ~ '^sha256:[a-f0-9]{64}$'
-          RETURNING id`,
-        {
-          worker_node_id: workerNodeId,
-          environment: runtimeEnvironment(),
-          reason: input.reason,
-        },
-      );
-      return activated ? { workerNodeId, state: input.state } : null;
-    }
-    if (input.state === "disabled") {
-      const activeLease = await tx.queryOne<{ id: string }>(
-        `SELECT id FROM simforge.worker_leases
-          WHERE worker_node_id = :worker_node_id AND lease_state = 'active'
-          LIMIT 1 FOR SHARE`,
-        { worker_node_id: workerNodeId },
-      );
-      if (activeLease) throw new Error("worker_has_active_lease");
-    }
-    await tx.execute(
+    const activeLease = await tx.queryOne<{ id: string }>(
+      `SELECT id FROM simforge.worker_leases
+        WHERE worker_node_id = :worker_node_id AND lease_state = 'active'
+        LIMIT 1 FOR SHARE`,
+      { worker_node_id: workerNodeId },
+    );
+    if (activeLease) throw new Error("worker_has_active_lease");
+    const approved = await tx.queryOne<{ id: string; approved_at: string }>(
+      `INSERT INTO simforge.worker_nodes (
+         id, environment, registration_id, instance_id,
+         worker_version, image_digest, hardware_profile, renderer_engine,
+         capabilities, metadata, registration_state,
+         approved_worker_version, approved_image_digest, approved_hardware_profile,
+         approved_at, state_changed_at, last_heartbeat_at
+       ) VALUES (
+         :id, :environment, :pending_registration_id, :pending_registration_id,
+         :worker_version, :image_digest, :hardware_profile, :renderer_engine,
+         CAST(:capabilities AS jsonb), CAST(:metadata AS jsonb), 'active',
+         :worker_version, :image_digest, :hardware_profile,
+         NOW(), NOW(), TIMESTAMPTZ 'epoch'
+       )
+       ON CONFLICT (id) DO UPDATE SET
+         registration_id = EXCLUDED.registration_id,
+         instance_id = EXCLUDED.instance_id,
+         worker_version = EXCLUDED.worker_version,
+         image_digest = EXCLUDED.image_digest,
+         hardware_profile = EXCLUDED.hardware_profile,
+         renderer_engine = EXCLUDED.renderer_engine,
+         capabilities = EXCLUDED.capabilities,
+         metadata = EXCLUDED.metadata,
+         registration_state = 'active',
+         last_heartbeat_at = EXCLUDED.last_heartbeat_at,
+         last_idle_heartbeat_at = NULL,
+         approved_worker_version = EXCLUDED.worker_version,
+         approved_image_digest = EXCLUDED.image_digest,
+         approved_hardware_profile = EXCLUDED.hardware_profile,
+         approved_at = NOW(),
+         state_changed_at = NOW()
+       WHERE simforge.worker_nodes.environment = EXCLUDED.environment
+       RETURNING id, approved_at::text AS approved_at`,
+      {
+        id: workerNodeId,
+        // Never expose a usable registration until the worker actually registers.
+        pending_registration_id: scenarioId("uswr_pending"),
+        environment,
+        worker_version: identity.workerVersion,
+        image_digest: identity.imageDigest,
+        hardware_profile: identity.hardwareProfile,
+        renderer_engine: identity.rendererEngine,
+        capabilities: identity.capability,
+        metadata: { ...identity.metadata, lastStateReason: input.reason },
+      },
+    );
+    if (!approved) return null;
+    return {
+      workerNodeId,
+      state: "active" as const,
+      approvedAt: rfc3339Timestamp(approved.approved_at),
+      approved: {
+        rendererEngine: identity.rendererEngine,
+        workerVersion: identity.workerVersion,
+        imageDigest: identity.imageDigest,
+        hardwareProfile: identity.hardwareProfile,
+      },
+    };
+  });
+}
+
+/** Withdraw approval: the node can no longer register or claim until re-approved. */
+export async function revokeRenderWorkerApproval(workerNodeId: string, reason: string) {
+  return withTransaction(async (tx) => {
+    await tx.queryOne(
+      `SELECT id FROM simforge.worker_nodes WHERE id = :worker_node_id FOR UPDATE`,
+      { worker_node_id: workerNodeId },
+    );
+    const activeLease = await tx.queryOne<{ id: string }>(
+      `SELECT id FROM simforge.worker_leases
+        WHERE worker_node_id = :worker_node_id AND lease_state = 'active'
+        LIMIT 1 FOR SHARE`,
+      { worker_node_id: workerNodeId },
+    );
+    if (activeLease) throw new Error("worker_has_active_lease");
+    const revoked = await tx.queryOne<{ id: string }>(
       `UPDATE simforge.worker_nodes
-          SET registration_state = :registration_state, state_changed_at = NOW(),
+          SET registration_state = 'disabled',
+              approved_worker_version = NULL,
+              approved_image_digest = NULL,
+              approved_hardware_profile = NULL,
+              approved_at = NULL,
+              state_changed_at = NOW(),
               metadata = metadata || jsonb_build_object(
                 'lastStateReason', :reason,
                 'lastStateChangedAt', NOW()
               )
-        WHERE id = :worker_node_id`,
-      { worker_node_id: workerNodeId, registration_state: input.state, reason: input.reason },
+        WHERE id = :worker_node_id AND environment = :environment
+          AND approved_at IS NOT NULL
+        RETURNING id`,
+      { worker_node_id: workerNodeId, environment: runtimeEnvironment(), reason },
     );
-    return { workerNodeId, state: input.state };
+    return revoked ? { workerNodeId, state: "disabled" as const, approvalRevoked: true as const } : null;
   });
 }
 
@@ -1488,15 +1428,9 @@ export async function provisionRenderWorkerCredential(
     const worker = await tx.queryOne<{ id: string }>(
       `SELECT id FROM simforge.worker_nodes
         WHERE id = :worker_node_id AND environment = :environment
-          AND (
-            (hardware_profile = 'rtx3080-10gb-v1'
-              AND id <> 'uniscenario-render-local-path-pc')
-            OR (
-              :environment = 'dev'
-              AND id = 'uniscenario-render-local-path-pc'
-              AND hardware_profile = 'rtx5080-16gb-local-v1'
-            )
-          )
+          AND hardware_profile IN ('rtx3080-10gb-v1', 'rtx5080-16gb-v1', 'rtx5080-16gb-local-v1')
+          AND (id = 'uniscenario-render-local-path-pc') = (hardware_profile = 'rtx5080-16gb-local-v1')
+          AND (hardware_profile <> 'rtx5080-16gb-local-v1' OR :environment = 'dev')
         FOR UPDATE`,
       { worker_node_id: workerNodeId, environment: runtimeEnvironment() },
     );

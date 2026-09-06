@@ -9,24 +9,29 @@ revisions, or artifacts.
 - [ ] Pin the exact SimForge OSS source revision and `stackVersion`.
 - [ ] Read `config/simforge-oss-stack.json` as the release authority.
 - [ ] Confirm the stack schema is `simforge-oss.stack-config/v1`.
-- [ ] Confirm all 15 npm entries have the same `0.1.0-rc.<N>` or stable version.
-- [ ] Confirm each public Python distribution has the corresponding normalized
-      Python version.
+- [ ] Confirm every registered npm entry has the same `0.1.0-rc.<N>` or stable version.
+- [ ] Confirm each registered Python distribution has the corresponding normalized
+      Python version and pins sibling `simforge-oss-*` distributions with `==`.
 - [ ] Fetch artifacts published from the matching `v<stackVersion>` tag and
       verify provenance before vendoring them.
 
 ## Expected npm stack
 
-The vendor lock must contain exactly these packages:
+The vendor lock must contain exactly the packages registered in
+`config/simforge-oss-stack.json`:
 
 - [ ] `@simforge-oss/scenario`
+- [ ] `@simforge-oss/native-runtime`
 - [ ] `@simforge-oss/engine`
 - [ ] `@simforge-oss/maps`
 - [ ] `@simforge-oss/compiler`
 - [ ] `@simforge-oss/viewer`
 - [ ] `@simforge-oss/editor`
 - [ ] `@simforge-oss/playback`
+- [ ] `@simforge-oss/studio-host`
+- [ ] `@simforge-oss/studio-ui`
 - [ ] `@simforge-oss/asset-catalog`
+- [ ] `@simforge-oss/asset-packer`
 - [ ] `@simforge-oss/render`
 - [ ] `@simforge-oss/openscenario`
 - [ ] `@simforge-oss/training-env`

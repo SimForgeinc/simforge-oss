@@ -1,0 +1,107 @@
+{
+  "id": "ec-08-zipper-merge-lane-closure",
+  "kind": "instance",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "900115d86a134458b2547f2c77729a9bc82505c40dc824ac9cbbb93dba09ee09",
+  "traceDigest": "9aa32913aa2be7a9c9dbbdebf2fc1d87b6fb37dab35b18282209394128a2241c",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 156.091383,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 14.422533000000016,
+      "warm": {
+        "n": 4,
+        "min": 1.1963989999999285,
+        "median": 4.85178899999994,
+        "max": 9.377672000000075,
+        "mean": 5.069412249999971
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 335.48610499999995,
+      "warm": {
+        "n": 4,
+        "min": 0.003997000000026674,
+        "median": 0.004805499999974927,
+        "max": 0.005569999999806896,
+        "mean": 0.004794499999945856
+      }
+    },
+    "simulate": {
+      "cold": 858.305842,
+      "warm": {
+        "n": 4,
+        "min": 463.47116800000003,
+        "median": 590.03152,
+        "max": 616.0523720000001,
+        "mean": 564.896645
+      }
+    },
+    "digest": {
+      "cold": 38.07588899999996,
+      "warm": {
+        "n": 4,
+        "min": 29.606210999999803,
+        "median": 30.392818000000034,
+        "max": 31.35938199999964,
+        "mean": 30.437807249999878
+      }
+    },
+    "serialize": {
+      "cold": 53.67929499999991,
+      "warm": {
+        "n": 4,
+        "min": 39.10699999999997,
+        "median": 41.359367999999904,
+        "max": 45.08482099999992,
+        "mean": 41.727639249999925
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 23,
+  "issues": 3,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "b47e2d89d582235f54ae9c6dbb38785041cef8497176e0df9713c866f88c443b",
+    "traceDigest": "0aa9839bfd3c60669dceffe507bcebbac6382be6ac57fde6dfe2933589390eb5",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.rideshare.laneTransitions",
+        "actors.shuttle.laneTransitions",
+        "events.length",
+        "events.0",
+        "metrics.minTTCPair",
+        "metrics.minDistancePairs"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

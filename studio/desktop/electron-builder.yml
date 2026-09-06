@@ -1,0 +1,30 @@
+# SimForge Studio desktop packaging. Run from studio/ after `node desktop/stage.mjs`:
+#   pnpm desktop:dist        (stage + this config, Linux targets)
+#
+# Two-package layout: the Electron application is the dependency-free
+# directory the stage writes (dist/desktop/app), and the whole local host is
+# shipped as resources/studio from dist/desktop/resources. Native pieces in
+# that stage are built for the build host only, which is why only the host
+# platform's targets are declared here: a macOS or Windows artifact needs the
+# stage produced on that platform (addon, sharp, Electron) before its target
+# block earns a place in this file.
+appId: ai.simforge.studio
+productName: SimForge Studio
+directories:
+  app: dist/desktop/app
+  output: dist/desktop/out
+  buildResources: desktop
+npmRebuild: false
+nodeGypRebuild: false
+asar: true
+files:
+  - "**/*"
+afterPack: desktop/after-pack.mjs
+linux:
+  target:
+    - dir
+    - AppImage
+    - deb
+  category: Development
+  maintainer: SimForge <oss@simforge.ai>
+  executableName: simforge-studio

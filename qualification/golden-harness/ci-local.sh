@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."   # repo root
 
 echo "=== step 1/3: build native renderer ==="
-cargo build --release -p render-core --bin native-render --manifest-path renderer/Cargo.toml
+cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml
 
 echo "=== step 2/3: corpus availability check ==="
 if [ -n "${SCEN_SENSOR_CORPUS:-}" ]; then

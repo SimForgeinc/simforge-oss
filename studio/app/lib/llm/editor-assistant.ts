@@ -18,10 +18,9 @@ import {
   PRESET_TRAILING_CAMERA,
   sensorsFromPreset,
 } from "@/app/lib/scenario-editor/sensor-rigs";
-import { finalizeGeneratedActorBehavior } from "@/app/lib/scenario-generation/generated-actor-behavior";
+import { authorGeneratedActor } from "@/app/lib/scenario-generation/generated-actor-behavior";
 import {
   buildActorLabel,
-  defaultActorAutopilot,
   defaultActorColor,
   defaultActorSpeedKph,
   defaultBlueprints,
@@ -267,19 +266,15 @@ function addedActorDraftFromExecution(
     destination: null,
     destination_point: null,
     speed_kph: defaultActorSpeedKph({ kind, is_static: false }),
-    autopilot: defaultActorAutopilot({
-      kind,
-      placement_mode: "road",
-      is_static: false,
-    }),
     color: defaultActorColor({ kind }),
-    notes: null,
-    timeline: [],
     sensors: action.input.wantsSensors
       ? sensorsFromPreset(PRESET_TRAILING_CAMERA)
       : [],
   };
-  return finalizeGeneratedActorBehavior(actor, [actor]);
+  // A road car's baseline is a cruise at its authored speed — never the
+  // Traffic Manager (see `baseActionForDraft`); the placement is the whole
+  // statement, so no interaction clips.
+  return authorGeneratedActor(actor);
 }
 
 export function applyEditorToolExecutionToContext(

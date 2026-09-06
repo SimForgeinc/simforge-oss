@@ -1,12 +1,20 @@
 # `@simforge-oss/cli` — `simforge`
 
-`simforge` is the canonical command. The shorter `scen` executable remains
+`simforge` is the canonical command. The shorter `sf` executable remains
 available as a compatibility alias for existing automation.
 
 Layer 4 of `docs/agent-authoring-architecture.md`: the surface an LLM agent
 drives the whole stack through. Query a map's semantics, author a template
 against the published JSON Schemas, match it onto concrete sites, sample it into
 thousands of instances, simulate, filter, triage.
+
+Every compile, match, simulation and evaluation this command performs executes
+in the **native runtime**: the `@simforge-oss/native-runtime` N-API addon for
+in-process commands (`instantiate`, `simulate`, `validate`, `evaluate`, `debug`,
+`batch`, `catalog batch`) and the `simforge-runner` binary for durable jobs
+(`job …`, `worker …`, `cas …`, `runtime show`). This package holds no
+simulator, materialiser or evaluator of its own; it parses arguments, moves
+documents between files and the runtime, and formats results.
 
 ```bash
 node packages/cli/bin/simforge.js sites match examples/ltap-opposing.template.json --all-maps --pretty
@@ -69,7 +77,24 @@ simforge catalog batch     <catalog.json> [--ledger FILE --slots a,b --map ID]
 simforge batch             <template.json> --maps a,b,c --draws N --out dir/
                        [--concurrency N --min-score --max-sites --force --no-trace]
 simforge schemas           [--name template|anchor|interactions] [--content]
+simforge runtime show
+simforge job submit        <manifest.json>            # simforge.native-job/v1
+simforge job start         <jobId> [--detach --restart]
+simforge job run           <jobId> [--restart]
+simforge job status|artifacts|cancel|attach <jobId>
+simforge job list
+simforge worker reconcile|capacity
+simforge cas ingest <path> | cas verify <sha256>
 ```
+
+The `job`, `worker`, `cas` and `runtime` groups are forwarded verbatim (plus
+`--pretty`/`--root`) to the native runner binary, located through
+`$SIMFORGE_RUNNER_BIN`, then
+`${SIMFORGE_NATIVE_RUNTIME_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime}/bin/simforge-runner`,
+then `PATH`. The runner's stdout/stderr/exit-code contract is identical to this
+one. A durable compile-and-simulate is one `simforge.compile/v1` job (template
+input, `params.mapId/site/drawIndex/seed`) followed by one `simforge.simulate/v1`
+job whose `scenario.input` is the published instance artifact by content digest.
 
 Only `richmond-field-station` may be promoted publicly. The default read
 registry is the public CloudFront registry; licensed maps need an explicitly
@@ -89,10 +114,10 @@ resumes the same release instead of minting another version.
 
 `debug` is the single command intended for an agent investigating an editor
 scenario. It accepts either a concrete instance or a v2 template. Map-bound
-Studio templates infer their pinned map and compile through
-`materializeMapBound`; portable templates use `--map` and optional `--site`
-(otherwise the highest-ranked executable site). Both paths then run the exact
-shared `@simforge-oss/engine` used by Studio playback.
+Studio templates infer their pinned map and compile without site matching;
+portable templates use `--map` and optional `--site` (otherwise the
+highest-ranked executable site). Both paths then run the exact native engine
+used by Studio playback.
 
 ```bash
 # Full JSON report on stdout (every native tick by default).
@@ -238,17 +263,17 @@ that need it.
 
 ## The materializer
 
-`simforge instantiate` is the only genuinely new code in this package — everything
-else composes the four packages below it. The four layers are each deliberately
-incomplete: the matcher does the *structural* pass and stops, the engine takes a
-*fully resolved* document and refuses anything less. `src/materialize.ts` is the
-join.
+`simforge instantiate` composes the packages below it; the join itself
+(`simforge-compiler::materialize`) is native and reached through
+`@simforge-oss/compiler/node`'s `compileTemplate`. The layers are each
+deliberately incomplete: the matcher does the *structural* pass and stops, the
+engine takes a *fully resolved* document and refuses anything less.
 
 ```
 1. PARAMS    paramSeed = sha256(templateId|paramsVersion|siteId|drawIndex)
              → xoshiro128**, one forked stream per declaration, so inserting a
                parameter does not resample the ones declared after it
-2. FRAME     the site's AnchorFrame reference path is rebuilt as a sim-engine
+2. FRAME     the site's AnchorFrame reference path is rebuilt as an engine
              Route — that is what turns a frame `s` into a world point
 3. ROLES     each FeatureBinding becomes a concrete actor. Its route comes from
              the binding's lane chain; its spawn comes from *projecting the
@@ -257,7 +282,7 @@ join.
              and `route(polyline)` at `t ≤ 0` fold into the actor's initial
              state, because a thing that happens at spawn *is* spawn state
 5. ARRIVAL   every `conflicting_gate` role with `arriveAtConflict`, and every
-             timeline `arrival` trigger, is back-solved by `sim-engine`'s
+             timeline `arrival` trigger, is back-solved by the engine's
              bisection and baked into the instance
 6. GUARDS    `checkFeasibility` — runway, decel budget, spawn overlap, route
              connectivity — reported as structured findings
@@ -404,8 +429,9 @@ publishes them. `simforge maps pull <name>@<version>` materializes, through a
 local blob cache (`--blob-cache-root`, hardlinked into every layout):
 
 - `.corpus/<name>` (`--native-corpus-root`): the master without its PNGs -
-  what the Bevy renderer loads; `nativeWorkerInputs` is exactly one entry,
-  `map.tile.000000` = `master.gltf`, with its verified `sha256`/`sizeBytes`;
+  what the Bevy renderer loads; `nativeWorkerInputs` lists every member with
+  its verified `sha256`/`sizeBytes`, `map.tile.000000` for `master.gltf` and
+  `map.resource.<sha256(relativePath)>` for each resource;
 - `map-bundles/<name>` (`--browser-root`): the web closure;
 - `dev-assets/<name>` (`--dev-assets-root`): the sidecars alone, or the whole
   master including PNGs with `--archive`.
@@ -430,9 +456,9 @@ Stated plainly, because they bound what a number from `simforge` means:
   occlusion and collision geometry, with per-prop overrides where authored.
   `targetRevealToConflictS` remains an asserted/reportable target rather than a
   free placement solver.
-- **Prop footprints are mirrored, not imported.** `prop-catalog` depends on
-  three.js; `src/prop-dims.ts` copies the dimensions of the props that can
-  occlude, and a test reads the catalog as text to catch drift.
+- **Prop footprints come from `@simforge-oss/asset-catalog`.** The native
+  compiler resolves the same metadata when it materialises; there is no
+  mirrored dimension table in this package.
 - **`route(turn|toFeature|acquire)` is dropped with a note.** Topology is fixed
   by the role binding's lane chain at instantiation time, so the timeline entry
   would be a no-op restatement.
@@ -443,6 +469,8 @@ Stated plainly, because they bound what a number from `simforge` means:
 pnpm --filter @simforge-oss/cli test
 ```
 
-The pure tests (adapter, seeding, prop-dims) always run. The materializer and
-CLI smoke tests read `dev-assets/`, which is gitignored, and `skipIf` themselves
-on a clean checkout.
+Every test exercises the native addon (`pnpm --filter @simforge-oss/native-runtime
+build:node`). The map-bound and CLI smoke tests additionally read `dev-assets/`,
+which is gitignored, and `skipIf` themselves on a clean checkout. Matcher,
+parameter-seeding and invariant semantics are tested in the Rust crates that own
+them.

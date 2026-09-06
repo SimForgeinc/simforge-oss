@@ -7,20 +7,20 @@
  * dependency** beyond erased `import type`s. Every shape here is plain JSON
  * data so it can be copied verbatim into a Rust or Python implementation.
  * Where an existing SimForge type already had the right renderer-neutral
- * shape (`ActorView`, `CameraView`, scene-state.v1 actors, the static
+ * shape (`ActorView`, `CameraView`, simforge.scene-state.v1 actors, the static
  * semantics index), this contract restates it and the adapter proves
  * assignability at compile time — the contract formalizes, it does not fork.
  *
- * Frozen wire identifiers referenced here (`scene-state.v1`,
+ * Frozen wire identifiers referenced here (`simforge.scene-state.v1`,
  * `uniscenario.static-semantics/v1`) stay byte-identical per
- * docs/engineering/simcloud-sync.md. New identifiers introduced by this
- * contract use the `simforge.` prefix.
+ * docs/engineering/simcloud-sync.md. Identifiers introduced by this contract
+ * likewise use the `simforge.` prefix.
  *
  * See docs/renderer-contract.md for the normative prose, viewport ownership,
  * and tolerance table.
  */
 
-import type { SceneState } from '@simforge-oss/engine/scene-state';
+import { SCENE_STATE_VERSION, type SceneState } from '@simforge-oss/engine/scene-state';
 
 export const RENDERER_CONTRACT_VERSION = 'simforge.renderer-contract/v1' as const;
 
@@ -134,18 +134,21 @@ export function frameCameraPose(
 }
 
 /**
- * Normative follow pose for an actor. `chase` sits behind and above the body
- * along -heading; `dash` sits at the windshield looking ahead. Both are pure
+ * Body-relative chase and dash camera poses, defined here as pure
  * functions of the actor state so follow cameras are renderer-portable.
+ * `origin` is the actor's catalog origin: a `body-centre` actor's `y` is
+ * already the body centre, so the ground line sits half a height lower.
  */
 export function followCameraPose(
   actor: Pick<ActorRenderState, 'x' | 'y' | 'z' | 'headingRad' | 'dims'>,
   mode: 'chase' | 'dash',
+  origin: 'ground' | 'body-centre' = 'ground',
 ): CameraPoseCommand {
   const fx = Math.cos(actor.headingRad);
   const fz = -Math.sin(actor.headingRad);
+  const groundY = origin === 'body-centre' ? actor.y - actor.dims.h / 2 : actor.y;
   if (mode === 'dash') {
-    const eyeY = actor.y + actor.dims.h * 0.78;
+    const eyeY = groundY + actor.dims.h * 0.78;
     return {
       position: [actor.x + fx * actor.dims.l * 0.18, eyeY, actor.z + fz * actor.dims.l * 0.18],
       target: [actor.x + fx * 30, eyeY, actor.z + fz * 30],
@@ -153,8 +156,8 @@ export function followCameraPose(
   }
   const back = actor.dims.l * 1.9 + 4;
   return {
-    position: [actor.x - fx * back, actor.y + actor.dims.h * 1.6 + 1.2, actor.z - fz * back],
-    target: [actor.x + fx * actor.dims.l, actor.y + actor.dims.h * 0.5, actor.z + fz * actor.dims.l],
+    position: [actor.x - fx * back, groundY + actor.dims.h * 1.6 + 1.2, actor.z - fz * back],
+    target: [actor.x + fx * actor.dims.l, groundY + actor.dims.h * 0.5, actor.z + fz * actor.dims.l],
   };
 }
 
@@ -196,12 +199,22 @@ export type ActorSimKind =
 export interface ActorRenderState {
   readonly id: string;
   readonly catalogId: string;
-  /** Ground-contact position in scene metres (origins are ground-centred). */
+  /**
+   * Position in scene metres. Ground contact for `origin: 'ground'` catalog
+   * entries; the solver's body-centre origin for `origin: 'body-centre'`
+   * entries, which must be placed verbatim with `rotation`.
+   */
   readonly x: number;
   readonly y: number;
   readonly z: number;
   /** Yaw in radians, CCW from +X about +Y (scene-state.v1 `yawRad`). */
   readonly headingRad: number;
+  /**
+   * Full body orientation (scene-state.v1 `rotation`, `[x, y, z, w]`). Present
+   * only for rigid-body components whose catalog entry is `body-centre`; the
+   * renderer applies it in full instead of a yaw-only pose.
+   */
+  readonly rotation?: Quat;
   readonly dims: ActorDims;
   readonly kind?: ActorSimKind;
   readonly catalogIdAuthored?: boolean;
@@ -556,7 +569,7 @@ function mat4(value: unknown, path: string): Mat4 {
  * Structural validation of an untrusted fixture document: version
  * discriminants and the numeric matrix payloads are checked here; the
  * embedded scene-state document is validated separately by the engine's zod
- * schema (the frozen scene-state.v1 wire owns its own validation).
+ * schema (the frozen simforge.scene-state.v1 wire owns its own validation).
  */
 export function validateParityFixture(raw: unknown): ParityFixture {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) fail('<root>', 'expected an object');
@@ -566,7 +579,7 @@ export function validateParityFixture(raw: unknown): ParityFixture {
   if (typeof doc.tolerances?.matrixAbs !== 'number' || typeof doc.tolerances?.pointAbs !== 'number') {
     fail('tolerances', 'expected {matrixAbs, pointAbs}');
   }
-  if (doc.sceneState?.version !== 'scene-state.v1') fail('sceneState', 'expected an embedded scene-state.v1 document');
+  if (doc.sceneState?.version !== SCENE_STATE_VERSION) fail('sceneState', `expected an embedded ${SCENE_STATE_VERSION} document`);
   if (!Number.isInteger(doc.tick) || doc.tick < 0) fail('tick', 'expected a non-negative integer');
   if (typeof doc.renderCues !== 'object' || doc.renderCues === null) fail('renderCues', 'expected an object');
   if (typeof doc.globalLowBeams !== 'boolean') fail('globalLowBeams', 'expected a boolean');
@@ -599,6 +612,7 @@ export function actorRenderStateFromSceneState(
   desc: { readonly id: string; readonly catalogId: string; readonly dims?: ActorDims; readonly color?: string },
   tickRecord: {
     readonly position: Vec3;
+    readonly rotation?: Quat;
     readonly yawRad: number;
     readonly velocity: Vec3;
   },
@@ -615,6 +629,7 @@ export function actorRenderStateFromSceneState(
     y,
     z,
     headingRad: tickRecord.yawRad,
+    ...(tickRecord.rotation === undefined ? {} : { rotation: tickRecord.rotation }),
     dims: desc.dims ?? fallbackDims,
     catalogIdAuthored: true,
     animationTimeS: timeS,

@@ -1,6 +1,7 @@
-import { Box3, Mesh, Vector3 } from 'three';
+import { Box3, type Group, Mesh, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 
+import { buildAdultPedestrian } from '../builders/pedestrians.js';
 import { CATALOG } from '../catalog.js';
 import { buildProp } from '../registry.js';
 
@@ -118,18 +119,20 @@ describe('parametric builds', () => {
     expect(paintOf(blue)).toBe('#0000ff');
   });
 
+  // `pedestrian.adult` ships a GLB, so `buildProp` hands back a placeholder;
+  // the procedural rig behind it is exercised directly.
   it('varies the pedestrian stride with the pose', () => {
-    const standing = buildProp('pedestrian.adult_standing');
-    const walking = buildProp('pedestrian.adult_walking');
+    const standing = buildAdultPedestrian({ height: 1.75, pose: 'standing' });
+    const walking = buildAdultPedestrian({ height: 1.75, pose: 'walking' });
     standing.updateMatrixWorld(true);
     walking.updateMatrixWorld(true);
-    const spanOf = (group: ReturnType<typeof buildProp>): number =>
+    const spanOf = (group: Group): number =>
       new Box3().setFromObject(group).getSize(new Vector3()).x;
     expect(spanOf(walking)).toBeGreaterThan(spanOf(standing) * 1.5);
   });
 
   it('scales pedestrians by height', () => {
-    const tall = buildProp('pedestrian.adult_standing', { height: 1.95, pose: 'standing' });
+    const tall = buildAdultPedestrian({ height: 1.95, pose: 'standing' });
     tall.updateMatrixWorld(true);
     expect(new Box3().setFromObject(tall).getSize(new Vector3()).y).toBeCloseTo(1.95, 1);
   });

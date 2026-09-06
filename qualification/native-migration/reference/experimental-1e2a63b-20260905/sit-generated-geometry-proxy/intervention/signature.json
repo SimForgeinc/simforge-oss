@@ -1,0 +1,115 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "df2c841e7694af61c2dd27a5162c9130a163b7110daf5f6b7a8741d3cf340b7e",
+  "traceDigest": "0d95dc08128cee883ef072cec7fc72cc5f91c0293b3587f745316ab912755578",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 5,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": null,
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "barrier": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "observer": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "target": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "overcast",
+    "timeOfDay": "dusk",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "barrier": {
+      "presence": [],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "observer": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "target": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "remove-proxy",
+      "actorId": "barrier",
+      "verb": "exist",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "despawn",
+      "actorId": "barrier",
+      "reason": "interaction"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "observer",
+        "target"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

@@ -353,7 +353,7 @@ const KIND_DEFAULT_CATALOG = {
   van: 'vehicle.van',
   motorcycle: 'vehicle.motorcycle',
   bicycle: 'vehicle.bicycle',
-  pedestrian: 'pedestrian.adult_walking',
+  pedestrian: 'pedestrian.adult',
 };
 const actorModels = sortedIds.map((id) => {
   const meta = actorMetadata[id];

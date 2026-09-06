@@ -8,9 +8,10 @@ Out (all stamped with sim time):
   engine state vector (x, y, cos h, sin h, speed, accel, lat offset,
   lat rate, route s, nearest-actor range)
 - ``/simforge/applied_action``    std_msgs/String            canonical JSON of
-  the wire action applied at each tick (the deterministic replay channel)
+  the engine action (named ``ACTION_FIELDS``) applied at each tick — the
+  deterministic replay channel
 - ``/simforge/episode``           std_msgs/String            begin/end events
-  (seed, spec, tick count, trace digest)
+  (record schema, seed, spec, tick count, trace digest)
 
 In:
 - ``<control_topic>``  ackermann_msgs/AckermannDriveStamped (MVP contract)
@@ -43,7 +44,7 @@ from std_msgs.msg import Float64MultiArray, String
 from tf2_msgs.msg import TFMessage
 
 from .bag_io import BagWriter
-from .env_client import EnvServerClient, StepFrame, default_server_command
+from .episode import RECORD_SCHEMA, BridgeSession, Decision
 from .trace import TraceDigest, canonical_action_json
 
 _RELIABLE = QoSProfile(
@@ -153,18 +154,14 @@ class SimForgeBridge(Node):
         self._prev_yaw: float | None = None
         self._last_action: dict[str, Any] = {}
 
-    # ----------------------------------------------------------- subclass hooks
+    # ----------------------------------------------------------- subclass hook
     #
-    # The Autoware module (autoware_bridge.py) extends the MVP through these
-    # two seams; the Ackermann path itself is unchanged.
-
-    def _make_client(self, spec_path: Path) -> EnvServerClient:
-        """Env-server client factory (subclasses may return an extended client)."""
-        return EnvServerClient(default_server_command(spec_path))
+    # The Autoware module (autoware_bridge.py) extends the MVP through this
+    # seam; the Ackermann path itself is unchanged.
 
     def _publish_extra_state(
         self,
-        frame: StepFrame,
+        frame: Decision,
         stamp: TimeMsg,
         t_ns: int,
         yaw: float,
@@ -202,9 +199,9 @@ class SimForgeBridge(Node):
     def _map_command(self, msg: AckermannDriveStamped) -> dict[str, Any]:
         drive = msg.drive
         if self.control_mode == "setpoint":
-            action: dict[str, Any] = {"ts": float(drive.speed)}
+            action: dict[str, Any] = {"target_speed_mps": float(drive.speed)}
             if drive.acceleration != 0.0:
-                action["ta"] = float(drive.acceleration)
+                action["target_acceleration_mps2"] = float(drive.acceleration)
             return action
         # passthrough: normalized pedals + steer through the engine envelope
         steer = max(-1.0, min(1.0, self.steer_sign * float(drive.steering_angle) / self.max_steer_rad))
@@ -213,15 +210,15 @@ class SimForgeBridge(Node):
             accel = self.speed_kp * (float(drive.speed) - self._speed)
         throttle = max(0.0, min(1.0, accel / self.max_accel))
         brake = max(0.0, min(1.0, -accel / self.max_decel))
-        return {"ctrl": [throttle, brake, steer]}
+        return {"throttle": throttle, "brake": brake, "steer": steer}
 
     def _timeout_action(self) -> dict[str, Any]:
         return dict(self._last_action) if self.timeout_policy == "hold" else {}
 
     # ------------------------------------------------------------ publish out
 
-    def _publish_state(self, frame: StepFrame) -> None:
-        sv = frame.sv
+    def _publish_state(self, frame: Decision) -> None:
+        sv = frame.state_vector.tolist()
         t = frame.t
         stamp = _sim_time(t)
         t_ns = _sim_time_ns(t)
@@ -266,7 +263,7 @@ class SimForgeBridge(Node):
         odom.twist.twist.angular.z = yaw_rate
         self.pub_odom.publish(odom)
 
-        status = Float64MultiArray(data=list(sv))
+        status = Float64MultiArray(data=sv)
         self.pub_status.publish(status)
 
         if self._bag:
@@ -285,26 +282,26 @@ class SimForgeBridge(Node):
     # ------------------------------------------------------------------- run
 
     def run(self) -> dict[str, Any]:
-        spec_path = Path(self.episodes).resolve()
-        client = self._make_client(spec_path)
+        session = BridgeSession(self.episodes, self.session)
+        self._session = session
         try:
-            info = client.hello()
-            self._dt_decision = 1.0 / float(info["decisionHz"])
+            self._dt_decision = 1.0 / float(session.decision_hz)
             self.get_logger().info(
-                f"env-server: proto {info['proto']}, {info['sessions']} session(s), "
-                f"decision {info['decisionHz']} Hz, engine {info['engineHz']} Hz, ego {info['egos']}"
+                f"native episode: {session.spec_path} session {session.session_index}/{session.sessions}, "
+                f"decision {session.decision_hz} Hz, engine {session.engine_hz} Hz, ego {session.ego!r}"
             )
 
-            frame = client.reset(self.seed, session=self.session)
+            frame = session.reset(self.seed)
             self._digest.update(frame)
             self._publish_episode_event(
                 {
                     "event": "begin",
+                    "record_schema": RECORD_SCHEMA,
                     "seed": self.seed,
                     "session": self.session,
-                    "episodes": str(spec_path),
-                    "decision_hz": info["decisionHz"],
-                    "ego": info["egos"][self.session],
+                    "episodes": str(session.spec_path),
+                    "decision_hz": session.decision_hz,
+                    "ego": session.ego,
                     "control_mode": self.control_mode,
                 },
                 frame.t,
@@ -332,7 +329,7 @@ class SimForgeBridge(Node):
                     if cmd is not None:
                         self._bag.write("/simforge/control/ackermann", cmd, _sim_time_ns(decision_t))
 
-                frame = client.step(action, session=self.session)
+                frame = session.step(action)
                 self._last_action = action
                 self._digest.update(frame)
                 self._publish_state(frame)
@@ -353,9 +350,10 @@ class SimForgeBridge(Node):
             self.get_logger().info(f"episode done: {summary}")
             if self.meta_path:
                 meta = {
+                    "record_schema": RECORD_SCHEMA,
                     "seed": self.seed,
                     "session": self.session,
-                    "episodes": str(spec_path),
+                    "episodes": str(session.spec_path),
                     "control_mode": self.control_mode,
                     **{k: v for k, v in summary.items() if k != "event"},
                 }
@@ -364,9 +362,10 @@ class SimForgeBridge(Node):
         finally:
             if self._bag:
                 self._bag.close()
-            client.close()
+            session.close()
 
     # populated lazily by run()/_publish_state
+    _session: BridgeSession | None = None
     _t = 0.0
     _speed = 0.0
     _dt_decision = 0.1

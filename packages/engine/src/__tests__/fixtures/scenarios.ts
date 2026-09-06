@@ -4,8 +4,8 @@
  * of the contract an adapter has to produce.
  */
 
-import { buildLaneGraph, type LaneGraph } from '../../map/lane-graph.js';
 import { toSceneXZ } from '../../frames.js';
+import { buildLaneGraph, type LaneGraph } from '../../node.js';
 import { parseSimScenarioInput, type SimScenarioInput, type SimScenarioInputSpec } from '../../schema/input.js';
 import { LANE_LEFT, LANE_RIGHT, syntheticTopology } from './synthetic-map.js';
 
@@ -15,9 +15,9 @@ export function syntheticGraph(): LaneGraph {
 
 /** Scene-frame pose for a point on a straight, east-bound fixture lane. */
 export function poseOnLane(graph: LaneGraph, rsl: string, s: number): { x: number; z: number; headingRad: number } {
-  const sample = graph.sampleDirected({ rsl, reversed: false }, s);
-  const scene = toSceneXZ(sample.point);
-  return { x: scene.x, z: scene.z, headingRad: sample.headingRad };
+  const [x, y, headingRad] = graph.sampleLane(rsl, s, false);
+  const scene = toSceneXZ({ x: x!, y: y! });
+  return { x: scene.x, z: scene.z, headingRad: headingRad! };
 }
 
 export interface VehicleOpts {
@@ -52,18 +52,14 @@ export function vehicle(graph: LaneGraph, o: VehicleOpts): SimScenarioInputSpec[
 }
 
 export function scenario(
-  graph: LaneGraph,
   partial: Partial<SimScenarioInputSpec> & Pick<SimScenarioInputSpec, 'actors'>,
 ): SimScenarioInput {
-  void graph;
   return parseSimScenarioInput({
     mapId: 'synthetic-straight',
     clipSeconds: 20,
     warmupSeconds: 5,
     dt: 0.02,
     seed: 'fixture',
-    // Most engine fixtures pin the established choreography semantics. Tests
-    // for the current default remove or override this field explicitly.
     physics: { mode: 'kinematic-v1' },
     ...partial,
   });

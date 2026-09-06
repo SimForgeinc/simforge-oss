@@ -1,90 +1,124 @@
-"""Synchronous vectorized client driving one server's batch API.
+"""Gymnasium ``VectorEnv`` over one native ``SessionBatch``.
 
-``SimForgeVector`` owns one env-server process with N sessions and maps
-every ``step()`` onto a single ``batch_step`` round trip — K actions in, K
-results back, one transport cost per batch.
+N independent worlds step together in the Rust runtime (CPU-parallel over
+worlds, GIL released). Every ``step`` is one native call: an ``(N, ACTION_WIDTH)``
+action matrix in, world-major observation/reward/flag arrays out.
+
+Autoreset follows Gymnasium's ``NEXT_STEP`` mode: a world that reported
+``terminated`` or ``truncated`` is reset on the following ``step`` (its action
+is ignored) and returns its reset observation with reward ``0`` and both flags
+``False``. Observations returned earlier are owned copies and never change.
 """
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Sequence
+import json
+from pathlib import Path
+from typing import Any, Mapping, Sequence
 
 import numpy as np
+from gymnasium.vector import AutoresetMode, VectorEnv
+from gymnasium.vector.utils import batch_space
 
-from .env import MAX_OBJECTS, OBJECT_FEATURES
-from .protocol import (
-    STATE_VECTOR_SIZE,
-    StepFrame,
-    batch_request,
-    batch_results,
-    decode_step_frame,
-)
-from .server import EnvConnection, StdioTransport, resolve_server_command
-
-Action = Mapping[str, Any] | None
+from .env import ActionMode, action_space_for, encode_action, observation_space_for
+from .episodes import EpisodeSpec, LoadedEpisode, episode_config, episode_config_json, load_episode_spec
+from .native import ACTION_WIDTH, BatchView, SessionBatch
 
 
-class SimForgeVector:
-    """Synchronous vector of N SimForge episodes on one server process."""
+class SimForgeVectorEnv(VectorEnv):
+    """Synchronous vector of N SimForge worlds executed natively in one call."""
+
+    metadata: dict[str, Any] = {"render_modes": [], "autoreset_mode": AutoresetMode.NEXT_STEP}
 
     def __init__(
         self,
-        episodes_spec: str,
-        num_envs: int,
+        episodes_spec: str | Path | None = None,
         *,
+        episodes: Sequence[LoadedEpisode] | None = None,
+        num_envs: int | None = None,
+        action_mode: ActionMode = "setpoint",
         decision_hz: int | None = None,
-        obs: Sequence[str] | None = None,
-        server_command: Sequence[str] | None = None,
-        backend: Literal["ts"] = "ts",
+        clip_seconds: float | None = None,
+        max_decisions: int | None = None,
+        bev: Mapping[str, Any] | bool | None = None,
+        episode_config_overrides: Mapping[str, Any] | None = None,
+        threads: int | None = None,
+        info_channel: bool = False,
+        maps_dir: str | Path | None = None,
     ) -> None:
-        if backend != "ts":
-            raise ValueError(f"unknown backend {backend!r}; only 'ts' is implemented")
-        self.backend = backend
-        self.num_envs = num_envs
-        flags = ["--episodes", episodes_spec]
-        if decision_hz is not None:
-            flags += ["--decision-hz", str(decision_hz)]
-        if obs is not None:
-            flags += ["--obs", ",".join(obs)]
-        self.connection: EnvConnection = StdioTransport(resolve_server_command(server_command) + tuple(flags))
+        if (episodes_spec is None) == (episodes is None):
+            raise ValueError("pass exactly one of episodes_spec or episodes")
+        base_config: Mapping[str, Any] = {}
+        if episodes_spec is not None:
+            spec: EpisodeSpec = load_episode_spec(episodes_spec, maps_dir=maps_dir)
+            episodes = spec.episodes
+            base_config = spec.episode_config
+        assert episodes is not None
+        if num_envs is not None:
+            if num_envs > len(episodes):
+                raise ValueError(f"need {num_envs} worlds but the spec provides {len(episodes)}")
+            episodes = episodes[:num_envs]
+        if not episodes:
+            raise ValueError("a vector env needs at least one episode")
+        config = episode_config(base_config, decision_hz=decision_hz, clip_seconds=clip_seconds, max_decisions=max_decisions, bev=bev)
+        if episode_config_overrides:
+            config.update(episode_config_overrides)
 
-        self.hello = self.connection.request({"i": self.connection.next_id(), "op": "hello"})
-        if self.hello["proto"] != 1 or self.hello["sessions"] < num_envs:
-            raise RuntimeError(
-                f"server hosts {self.hello['sessions']} sessions (protocol {self.hello['proto']}); need {num_envs}"
-            )
-        self.egos: tuple[str, ...] = tuple(self.hello["egos"][:num_envs])
-        self.single_observation_space = {
-            "state_vector": (STATE_VECTOR_SIZE,),
-            "objects": (MAX_OBJECTS, OBJECT_FEATURES),
-        }
+        self._batch = SessionBatch(
+            [ep.input for ep in episodes], [ep.graph for ep in episodes], episode_config_json(config), threads
+        )
+        self.num_envs: int = self._batch.size
+        self.egos: tuple[str, ...] = tuple(self._batch.egos)
+        self.decision_hz: int = self._batch.decision_hz
+        self.action_mode: ActionMode = action_mode
+        self.info_channel = info_channel
+        self.single_action_space = action_space_for(action_mode)
+        self.single_observation_space = observation_space_for(self._batch.max_objects, self._batch.bev_shape)
+        self.action_space = batch_space(self.single_action_space, self.num_envs)
+        self.observation_space = batch_space(self.single_observation_space, self.num_envs)
+        self._actions = np.empty((self.num_envs, ACTION_WIDTH), dtype=np.float64)
+        self._needs_reset = np.zeros(self.num_envs, dtype=np.bool_)
+        self._ego_array = np.array(self.egos, dtype=object)
 
-    def reset(self, *, seeds: Sequence[str | int] | None = None) -> tuple[dict[str, np.ndarray], list[dict[str, Any]]]:
-        """Reset all N sessions in one round trip; session order everywhere."""
-        request: dict[str, Any] = {"i": self.connection.next_id(), "op": "reset_all"}
-        if seeds is not None:
-            if len(seeds) != self.num_envs:
-                raise ValueError(f"need {self.num_envs} seeds, got {len(seeds)}")
-            request["seeds"] = list(seeds)
-        frames = [decode_step_frame(frame) for frame in self.connection.request(request)["rs"]]
-        return self._stack(frames), [self._info(i, frame) for i, frame in enumerate(frames)]
+    # ------------------------------------------------------------------ api
+
+    def reset(
+        self, *, seed: int | Sequence[int] | None = None, options: Mapping[str, Any] | None = None
+    ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+        seeds = self._seeds(seed, options)
+        view = self._batch.reset_all(seeds)
+        self._needs_reset[:] = False
+        return self._observation(view), self._infos(view)
 
     def step(
-        self, actions: Sequence[Action]
-    ) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray, np.ndarray, list[dict[str, Any]]]:
-        if len(actions) != self.num_envs:
-            raise ValueError(f"need {self.num_envs} actions, got {len(actions)}")
-        request = batch_request(self.connection.next_id(), list(enumerate(actions)))
-        frames = batch_results(self.connection.request(request))
-        rewards = np.array([frame.reward for frame in frames], dtype=np.float64)
-        terminated = np.array([frame.terminated for frame in frames], dtype=np.bool_)
-        truncated = np.array([frame.truncated for frame in frames], dtype=np.bool_)
-        return self._stack(frames), rewards, terminated, truncated, [self._info(i, frame) for i, frame in enumerate(frames)]
+        self, actions: np.ndarray | Sequence[Any]
+    ) -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
+        rows = np.asarray(actions, dtype=np.float64)
+        if rows.shape[0] != self.num_envs:
+            raise ValueError(f"need {self.num_envs} actions, got {rows.shape[0]}")
+        for i in range(self.num_envs):
+            encode_action(self.action_mode, rows[i], self._actions[i])
 
-    def close(self) -> None:
-        self.connection.close()
+        if self._needs_reset.any():
+            # NEXT_STEP autoreset: finished worlds restart now and skip this step.
+            self._batch.reset_worlds(np.flatnonzero(self._needs_reset).astype(np.int64), None)
+            view = self._batch.step_batch(self._actions, ~self._needs_reset)
+        else:
+            view = self._batch.step_batch(self._actions, None)
+        self._needs_reset = view.terminated | view.truncated
+        return self._observation(view), view.reward, view.terminated, view.truncated, self._infos(view)
 
-    def __enter__(self) -> "SimForgeVector":
+    def checkpoint(self, world: int) -> bytes:
+        return self._batch.checkpoint(world)
+
+    def restore(self, world: int, checkpoint: bytes) -> None:
+        self._batch.restore(world, checkpoint)
+        self._needs_reset[world] = False
+
+    def close_extras(self, **kwargs: Any) -> None:
+        self.__dict__.pop("_batch", None)
+
+    def __enter__(self) -> "SimForgeVectorEnv":
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -92,26 +126,44 @@ class SimForgeVector:
 
     # -------------------------------------------------------------- helpers
 
-    def _stack(self, frames: Sequence[StepFrame]) -> dict[str, np.ndarray]:
-        state = np.stack([frame.state_vector for frame in frames])  # type: ignore[arg-type]
-        objects = np.zeros((self.num_envs, MAX_OBJECTS, OBJECT_FEATURES), dtype=np.float32)
-        for i, frame in enumerate(frames):
-            for j, entry in enumerate(frame.objects[:MAX_OBJECTS]):
-                objects[i, j] = (
-                    entry["range_m"],
-                    entry["bearing_rad"],
-                    entry["range_rate_mps"],
-                    1.0 if entry["line_of_sight"] else 0.0,
-                    1.0,
-                )
-        return {"state_vector": state, "objects": objects}
+    def _seeds(self, seed: int | Sequence[int] | None, options: Mapping[str, Any] | None) -> list[Any] | None:
+        if seed is None:
+            explicit = None if options is None else options.get("seeds")
+            if explicit is None:
+                return None
+            seeds = list(explicit)
+        elif isinstance(seed, int):
+            seeds = [seed + i for i in range(self.num_envs)]
+        else:
+            seeds = list(seed)
+        if len(seeds) != self.num_envs:
+            raise ValueError(f"need {self.num_envs} seeds, got {len(seeds)}")
+        return seeds
 
-    def _info(self, session: int, frame: StepFrame) -> dict[str, Any]:
-        progress, proximity, comfort = frame.reward_terms
-        return {
-            "t_s": frame.t_s,
-            "ego": self.egos[session],
-            "objects": frame.objects,
-            "reward_terms": {"progress": progress, "proximity": proximity, "comfort": comfort},
-            "causal": frame.causal,
+    @staticmethod
+    def _observation(view: BatchView) -> dict[str, np.ndarray]:
+        obs = {"state_vector": view.state_vector, "objects": view.objects}
+        bev = view.bev
+        if bev is not None:
+            obs["bev"] = bev
+        return obs
+
+    def _infos(self, view: BatchView) -> dict[str, Any]:
+        n = self.num_envs
+        mask = np.ones(n, dtype=np.bool_)
+        infos: dict[str, Any] = {
+            "t_s": view.t_s,
+            "_t_s": mask,
+            "ego": self._ego_array,
+            "_ego": mask,
+            "reward_terms": view.reward_terms,
+            "_reward_terms": mask,
+            "object_ids": np.array([view.object_ids(i) for i in range(n)], dtype=object),
+            "_object_ids": mask,
         }
+        if self.info_channel:
+            channel = [json.loads(view.info_json(i)) for i in range(n)]
+            for key in ("events", "minima", "causal"):
+                infos[key] = np.array([entry[key] for entry in channel], dtype=object)
+                infos[f"_{key}"] = mask
+        return infos

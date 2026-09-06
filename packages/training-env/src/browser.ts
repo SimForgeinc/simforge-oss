@@ -1,51 +1,24 @@
 /**
- * Browser-safe entry point.
+ * `@simforge-oss/training-env/browser` — sessions bound to the WASM module.
  *
- * The package root (`./index.ts`) is not importable from a browser bundle:
- * `policy-session.ts` imports runtime values from `env-server.ts`, which pulls
- * `node:net`, `node:fs/promises`, `node:zlib` and `node:crypto`. Type-only
- * imports of `env-server` elsewhere are erased and harmless; that one value
- * import is not.
- *
- * This entry exposes the subset a browser needs to run and observe a world:
- * `WorldSession` plus the frozen truth-stream wire. Everything reachable from
- * here is platform-neutral — hashing comes from `@simforge/engine`'s pure-TS
- * SHA-256 (`packages/engine/src/core/hash.ts`), deliberately not `node:crypto`
- * or `SubtleCrypto`, so digests are identical and synchronous on both runtimes.
- *
- * Keep it that way: adding an export here that reaches a Node builtin breaks
- * every browser consumer at bundle time, not at run time.
+ * Everything reachable from here is platform-neutral: the same façades as the
+ * root, constructed over the initialised WASM runtime by `loadSessions()`. No
+ * Node builtin is reachable and no TypeScript simulator exists behind it.
  */
 
-export {
-  WorldSession,
-  replayWorldSessionLog,
-  WORLD_SESSION_LOG_VERSION,
-} from './world-session.js';
-export type {
-  AdvanceResult,
-  BatchOp,
-  CommandOutcome,
-  ReplayResult,
-  SpawnRequest,
-  WorldActorState,
-  WorldCommand,
-  WorldLogEntry,
-  WorldSessionLog,
-  WorldSessionOptions,
-  WorldSnapshot,
-} from './world-session.js';
+import type { NativeModule } from '@simforge-oss/engine';
+import { loadNative } from '@simforge-oss/native-runtime/browser';
 
-export {
-  WorldTruthPublisher,
-  TruthStreamClient,
-  encodeTruthFrame,
-  WORLD_TRUTH_QUEUE_CAPACITY,
-} from './truth-stream.js';
-export type {
-  TruthActor,
-  TruthActorCatalogEntry,
-  TruthFrame,
-  TruthSubscription,
-  TruthSubscriptionStats,
-} from './truth-stream.js';
+import { SessionRuntime } from './runtime.js';
+
+export * from './index.js';
+
+let ready: Promise<SessionRuntime> | null = null;
+
+/** Initialise the WASM runtime once; `source` is forwarded to the module loader. */
+export function loadSessions(source?: RequestInfo | URL | Response | BufferSource | WebAssembly.Module): Promise<SessionRuntime> {
+  if (!ready) {
+    ready = loadNative(source).then((module) => new SessionRuntime(module as unknown as NativeModule));
+  }
+  return ready;
+}

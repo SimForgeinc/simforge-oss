@@ -12,8 +12,9 @@ import {
   createLocalArtifactProducer,
   finalizeLocalArtifactProducer,
 } from "./jobs/local-artifact-producer-store";
-import { simforgeEnv } from "@/lib/compat-env";
-import { COMPRESSED_PLAYBACK_MEDIA_TYPE } from "./stored-wire-compat";
+import { simforgeEnv } from "@/lib/simforge-env";
+/** Stored media type of saved browser simulations; artifact metadata binds to it. */
+const COMPRESSED_PLAYBACK_MEDIA_TYPE = "application/vnd.simforge.uniscenario-playback+json+gzip";
 
 const KIND = "browser-simulation-preview-v1";
 class StaleSimulationPreviewCompletion extends Error {}

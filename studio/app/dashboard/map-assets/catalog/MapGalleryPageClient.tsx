@@ -29,18 +29,18 @@ import type {
   ScenarioDocumentDto,
   ScenarioMapDescriptorDto,
 } from "@/app/lib/scenario/contracts";
-import { TopBarActionsPortal } from "@/app/components/TopBarSlot";
-import { Button } from "@/app/components/ui/button";
-import { EmptyState } from "@/app/components/ui/empty-state";
-import { cn } from "@/app/lib/utils";
-import type { ScenarioMapOption } from "@/app/dashboard/scenario/list/document-map-groups";
-import { ScenarioMapPickerDialog } from "@/app/dashboard/scenario/list/ScenarioMapPickerDialog";
+import { TopBarActionsPortal } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
+import { ScenarioMapPickerDialog } from "@simforge-oss/studio-ui/scenario/list/ScenarioMapPickerDialog";
 import {
   ScenarioWorldHost,
   type ScenarioWorldState,
   type ScenarioWorldTarget,
-} from "@/app/dashboard/scenario/scene/ScenarioWorldHost";
-import { useIdleStreetTour } from "@/app/dashboard/scenario/scene/useIdleStreetTour";
+} from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldHost";
+import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
 import { getCardStats } from "./map-card-data";
 import { MapGallerySumoTraffic } from "./MapGallerySumoTraffic";
 

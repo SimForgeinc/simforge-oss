@@ -2,12 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { Building2, Check, Sun, Trash2, TreePine } from "lucide-react";
-import { clearMapAssetCache } from "@/app/lib/maps/frontend/map-asset-cache";
+import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import {
   readRenderingPreference,
   saveRenderingPreference,
   type RenderingPreference,
-} from "@/app/components/rendering-preference";
+} from "@simforge-oss/studio-ui/components/rendering-preference";
 
 const QUALITY_OPTIONS: Array<{ value: RenderingPreference; label: string }> = [
   { value: "roads-only", label: "Roads" },

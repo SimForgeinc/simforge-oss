@@ -1,4 +1,4 @@
-//! `scene-state.v1` wire structs for the render service (V2 ops).
+//! `simforge.scene-state.v1` wire structs for the render service (V2 ops).
 //!
 //! Mirrors the frozen contract in `packages/scene-state/src/schema.ts` and
 //! the consumer types in `native/sensors/src/scene_state.rs` (WSB3). Kept as
@@ -7,7 +7,7 @@
 
 use serde::Deserialize;
 
-pub const SCENE_STATE_SCHEMA: &str = "scene-state.v1";
+pub const SCENE_STATE_SCHEMA: &str = "simforge.scene-state.v1";
 
 /// One tick document of a scene-state stream.
 #[derive(Debug, Clone, Deserialize)]
@@ -44,9 +44,20 @@ pub struct ActorState {
     /// deterministic class palette.
     #[serde(default)]
     pub color: Option<String>,
+    /// Authored extents (metres), as in `ActorDesc.dims`; body-centred
+    /// catalog entries size their proxy from these.
+    #[serde(default)]
+    pub dims: Option<ActorDims>,
     pub transform: ActorTransform,
     #[serde(default)]
     pub velocity: [f32; 3],
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct ActorDims {
+    pub l: f32,
+    pub w: f32,
+    pub h: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,7 +93,7 @@ mod tests {
     fn actor_color_deserializes_from_scene_state() {
         let state: SceneState = serde_json::from_str(
             r##"{
-                "version":"scene-state.v1","mapId":"belmont-research-center",
+                "version":"simforge.scene-state.v1","mapId":"belmont-research-center",
                 "actors":[{
                     "id":"mini","kind":"spawn","catalogId":"vehicle.hatchback",
                     "actorClass":"car","color":"#8f2f2f",

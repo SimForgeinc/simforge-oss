@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   CompleteGalleryUploadInputSchema,
   GalleryVersionIdSchema,
-} from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { completeGalleryAssetVersion } from "@/app/lib/asset-gallery/store";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {

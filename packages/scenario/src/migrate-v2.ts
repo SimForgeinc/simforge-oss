@@ -1,7 +1,7 @@
 /**
- * v1 scene → v2 template migration, and version dispatch between the two.
+ * v1 scene → v2 template conversion, and format detection between the two.
  *
- * ## The honest version of this migration
+ * ## The honest version of this conversion
  *
  * A v1 document is a **scene**: entities at absolute scene coordinates on one
  * named map. A v2 document is a **template**: a predicate over road structure
@@ -11,7 +11,7 @@
  * entity — and that answer lives in the lane graph, in `map-intel`, which this
  * package deliberately does not depend on.
  *
- * So the migration does **not** guess. It preserves every v1 pose verbatim in
+ * So the conversion does **not** guess. It preserves every v1 pose verbatim in
  * `scene_absolute` roles, pins the anchor to the source map with **no site id**
  * (v1 had none to preserve), and returns a list of {@link MigrationNote}s
  * saying exactly what a human or `map-intel` still has to do. The resulting
@@ -21,7 +21,7 @@
  *
  * The alternative — inventing `(k, s, tFrac)` from `laneRef.s` and a guessed
  * lane width — would produce a template that *looks* portable and silently
- * places actors in the wrong lane on every other map. A migration that says
+ * places actors in the wrong lane on every other map. A conversion that says
  * "I cannot do this part" is worth more than one that quietly does it wrong.
  *
  * ## What is preserved, what is dropped
@@ -39,21 +39,13 @@
  * | — | `metricSubject` | v1 had no ego concept; left unset, reported |
  */
 
-import { ScenarioMigrationError } from './errors.js';
-import { runMigrations, type ScenarioMigration } from './migrate.js';
+import { ScenarioFormatError } from './errors.js';
+import { SCENARIO_VERSION, type ScenarioV1 } from './schema/v1.js';
 import { V2_ID_PATTERN } from './schema/v2/common.js';
-import {
-  SCENARIO_TEMPLATE_VERSION,
-  ScenarioTemplateV2Schema,
-  type ScenarioTemplateV2,
-} from './schema/v2/template.js';
-import { parseTemplate } from './serialize.js';
-import type { ScenarioV1 } from './schema/v1.js';
+import { SCENARIO_TEMPLATE_VERSION, type ScenarioTemplateV2 } from './schema/v2/template.js';
+import { parseScenario, parseTemplate } from './serialize.js';
 
-/** The template schema version this build reads and writes. */
-export const CURRENT_TEMPLATE_VERSION = SCENARIO_TEMPLATE_VERSION;
-
-/** Something the migration could not do, or did in a way you should know about. */
+/** Something the conversion could not do, or did in a way you should know about. */
 export interface MigrationNote {
   severity: 'info' | 'warning' | 'error';
   /** Stable code, e.g. `legacy_pose_absolute`. */
@@ -68,9 +60,9 @@ export interface TemplateMigrationResult {
   template: ScenarioTemplateV2;
   /** `scenarioVersion` found in the input. */
   fromVersion: number;
-  /** True when a conversion step ran (i.e. the input was v1). */
+  /** True when a conversion ran (i.e. the input was a v1 scene). */
   migrated: boolean;
-  /** Everything the migration wants a human to know. Never silently empty. */
+  /** Everything the conversion wants a human to know. Empty for a v2 input. */
   notes: MigrationNote[];
   /**
    * True when the template contains non-portable data and cannot be matched
@@ -79,12 +71,19 @@ export interface TemplateMigrationResult {
   needsRebinding: boolean;
 }
 
+/** The `scenarioVersion` of a raw document, when it carries an integer one. */
+export function readScenarioVersion(json: unknown): number | undefined {
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) return undefined;
+  if (!('scenarioVersion' in json)) return undefined;
+  const version = json.scenarioVersion;
+  return typeof version === 'number' && Number.isInteger(version) ? version : undefined;
+}
+
 /** Which parser a file wants, from its `scenarioVersion` alone. */
 export function detectScenarioKind(json: unknown): 'scene-v1' | 'template-v2' | 'unknown' {
-  if (typeof json !== 'object' || json === null || Array.isArray(json)) return 'unknown';
-  const version = (json as { scenarioVersion?: unknown }).scenarioVersion;
-  if (version === 1) return 'scene-v1';
-  if (version === 2) return 'template-v2';
+  const version = readScenarioVersion(json);
+  if (version === SCENARIO_VERSION) return 'scene-v1';
+  if (version === SCENARIO_TEMPLATE_VERSION) return 'template-v2';
   return 'unknown';
 }
 
@@ -108,23 +107,18 @@ function toRoleId(entityId: string, taken: Set<string>): string {
 }
 
 /**
- * Convert raw v1 JSON into raw v2 JSON, appending notes.
+ * Convert a validated v1 scene into raw v2 template JSON, appending notes.
  *
- * Raw in, raw out, exactly like every other migration step: it has to be able
- * to read a shape no current schema describes.
+ * The output is raw so the caller validates it once with `parseTemplate`,
+ * which also materialises every v2 default.
  */
 export function v1ToTemplateV2(
-  raw: Record<string, unknown>,
+  source: ScenarioV1,
   notes: MigrationNote[] = [],
 ): Record<string, unknown> {
-  const source = raw as unknown as ScenarioV1;
   const map = source.map;
-  if (!map || typeof map.mapId !== 'string') {
-    throw new ScenarioMigrationError('v1 document has no map; cannot pin the migrated template', 1);
-  }
-
   const taken = new Set<string>();
-  const roles = (source.entities ?? []).map((entity, index) => {
+  const roles = source.entities.map((entity, index) => {
     const id = toRoleId(entity.id, taken);
     if (id !== entity.id) {
       notes.push(
@@ -230,54 +224,36 @@ export function v1ToTemplateV2(
   return template;
 }
 
-/** The migration chain that ends at a v2 template. */
-export const TEMPLATE_MIGRATIONS: ScenarioMigration[] = [
-  {
-    from: 1,
-    to: 2,
-    description: 'v1 scene -> v2 template (absolute poses preserved as scene_absolute roles)',
-    up: (rawDoc) => v1ToTemplateV2(rawDoc),
-  },
-];
-
 /**
- * Read a v1 or v2 document and return a validated v2 template.
+ * Read a v1 scene or a v2 template and return a validated v2 template.
  *
- * Reuses the v1 migration driver — the version dispatch, the "newer than this
- * build" message and the "step did not stamp its version" guard are all already
- * tested there.
+ * Both inputs are parsed strictly against their own schema: a v1 scene must be
+ * a valid scene before it is converted, and the conversion output must be a
+ * valid template.
  *
- * @throws {ScenarioMigrationError} If the input has no usable version.
- * @throws {ScenarioValidationError} If the result is not a valid template.
+ * @throws {ScenarioFormatError} If the input carries no supported `scenarioVersion`.
+ * @throws {ScenarioValidationError} If the input, or the converted template, is invalid.
  */
 export function migrateToTemplate(json: unknown): TemplateMigrationResult {
+  const kind = detectScenarioKind(json);
+  if (kind === 'unknown') {
+    const version = readScenarioVersion(json);
+    throw new ScenarioFormatError(
+      version === undefined
+        ? 'not a scenario document: scenarioVersion must be an integer'
+        : `unsupported scenario format: file schema v${version}; this build reads scene v${SCENARIO_VERSION} and template v${SCENARIO_TEMPLATE_VERSION}`,
+      version,
+    );
+  }
   const notes: MigrationNote[] = [];
-  const chain: ScenarioMigration[] = [
-    {
-      ...(TEMPLATE_MIGRATIONS[0] as ScenarioMigration),
-      up: (rawDoc) => v1ToTemplateV2(rawDoc, notes),
-    },
-  ];
-  const result = runMigrations(json, {
-    migrations: chain,
-    targetVersion: CURRENT_TEMPLATE_VERSION,
-    // `runMigrations` is typed against the v1 document because that is what its
-    // own callers want; the validator is an injection point precisely so a
-    // different target schema can be plugged in here.
-    validate: ((raw: unknown) => parseTemplate(raw)) as unknown as (raw: unknown) => ScenarioV1,
-  });
-  const template = result.doc as unknown as ScenarioTemplateV2;
+  const template = kind === 'template-v2'
+    ? parseTemplate(json)
+    : parseTemplate(v1ToTemplateV2(parseScenario(json), notes));
   return {
     template,
-    fromVersion: result.fromVersion,
-    migrated: result.migrated,
+    fromVersion: kind === 'template-v2' ? SCENARIO_TEMPLATE_VERSION : SCENARIO_VERSION,
+    migrated: kind === 'scene-v1',
     notes,
     needsRebinding: template.roles.some((role) => role.kind === 'scene_absolute'),
   };
 }
-
-/** Validate an already-parsed object as a v2 template. Re-exported for convenience. */
-export { parseTemplate, serializeTemplate } from './serialize.js';
-
-/** The v2 template schema, re-exported so callers need one import. */
-export { ScenarioTemplateV2Schema };

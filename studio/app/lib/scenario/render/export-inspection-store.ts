@@ -2,7 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { queryRows } from "@/app/lib/db/data-api";
 import { getS3ObjectUtf8Bounded } from "@/app/lib/s3/s3-get-object";
-import type { ScenarioExportInspectionDto } from "./contracts";
+import type { ScenarioExportInspectionDto } from "@simforge-oss/studio-host";
 
 type ClosureRow = {
   export_id: string;

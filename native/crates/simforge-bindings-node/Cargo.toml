@@ -1,0 +1,20 @@
+[package]
+name = "simforge-bindings-node"
+description = "Node N-API binding of the SIMFORGE native runtime (@simforge-oss/native-runtime): scenario loading, compilation, simulation, sessions, batches and live worlds over typed arrays."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_bindings_node"
+crate-type = ["cdylib"]
+
+[dependencies]
+simforge-bindings-common = { path = "../simforge-bindings-common" }
+simforge-core = { path = "../simforge-core" }
+napi = { version = "3", default-features = false, features = ["napi8"] }
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"

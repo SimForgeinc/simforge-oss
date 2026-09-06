@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  alignLegacyStaticCollidersToScene,
   loadStaticMapColliders,
   requireReadyStaticColliderBundle,
   resetStaticColliderCacheForTests,
@@ -115,34 +114,9 @@ describe('legacy static map collider runtime', () => {
         classes: { building: 0, wall: 0, barrier: 0, prop: 0, 'road-boundary': 0 },
       },
     } satisfies StaticColliderBundle;
-    expect(() => requireReadyStaticColliderBundle(unavailable, {} as never)).toThrow(
+    expect(() => requireReadyStaticColliderBundle(unavailable)).toThrow(
       'Static map collision data is unavailable: Static collision derivative is not published for this map',
     );
   });
 
-  it('repairs the legacy scene axis and carves coarse proxies off travel lanes', () => {
-    const bundle = {
-      ...readyBundle,
-      colliders: [{
-        id: 'building-1',
-        class: 'building',
-        obb: { center: { x: 0, z: 10 }, lengthM: 40, widthM: 20, headingRad: 0 },
-      }],
-    } satisfies StaticColliderBundle;
-    const graph = {
-      laneRsls: () => ['lane-1'],
-      geometry: () => ({
-        points: [-20, -10, 0, 10, 20].map((x) => ({ x, y: 10 })),
-        widthM: 4,
-        lane: { laneType: 'driving' },
-      }),
-    };
-
-    const repaired = alignLegacyStaticCollidersToScene(bundle, graph as never);
-    expect(repaired.colliders.length).toBeGreaterThan(0);
-    expect(repaired.colliders.every((collider) => collider.id.startsWith('building-1#'))).toBe(true);
-    for (const collider of repaired.colliders) {
-      expect(Math.abs(collider.obb.center.z + 10)).toBeGreaterThan(collider.obb.widthM / 2 + 2.75);
-    }
-  });
 });

@@ -27,7 +27,7 @@ const KIND_DEFAULT_MODELS = {
   van: 'vehicle.van',
   motorcycle: 'vehicle.motorcycle',
   bicycle: 'vehicle.bicycle',
-  pedestrian: 'pedestrian.adult_walking',
+  pedestrian: 'pedestrian.adult',
 };
 
 const SEMANTIC_RENDER_KINDS = new Set(['animal', 'scooter', 'static_object']);

@@ -1,5 +1,6 @@
 "use client";
 
+import { studioHost } from "@/app/lib/host";
 import {
   Check,
   Database,
@@ -8,17 +9,16 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/app/components/ui/button";
-import type { RenderingPreference } from "@/app/components/rendering-preference"
-import { listMapOptions } from "@/app/dashboard/scenario/list/api";
-import type { ScenarioMapOption } from "@/app/dashboard/scenario/list/document-map-groups";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import type { RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference"
+import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import {
   cacheProfileMapPlan,
   createProfileMapPlan,
   type ProfileMapCacheResult,
   type ProfileMapCacheProgress,
   type ProfileMapPlan,
-} from "@/app/lib/scenario/editor/profile-map-cache";
+} from "@simforge-oss/studio-ui/lib/scenario/editor/profile-map-cache";
 
 type Phase = "planning" | "ready" | "downloading" | "complete" | "error";
 
@@ -117,7 +117,7 @@ export function ProfileMapPreparation({
     setProgress(null);
     setTransferMetrics({ bytesPerSecond: 0, remainingSeconds: null });
     setCacheResult(null);
-    void listMapOptions(controller.signal)
+    void studioHost.artifacts.listMaps(controller.signal)
       .then((maps) => {
         const eligibleMaps = maps.filter((map) => Boolean(map.browserManifestUrl));
         const nextSelection = requestedSelection

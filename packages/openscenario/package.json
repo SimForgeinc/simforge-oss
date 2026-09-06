@@ -114,6 +114,7 @@
   },
   "dependencies": {
     "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
     "fast-xml-parser": "^5.5.6"
   },

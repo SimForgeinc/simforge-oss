@@ -66,7 +66,6 @@ export function playbackBundleFromReplay(
       seed: plan.inputHash,
       mapId: input.mapId,
       engineGraphDigest: input.engineGraphDigest,
-      topologyDigest: input.engineGraphDigest,
       dt: plan.dt,
       clipSeconds: plan.clipSeconds,
       warmupSeconds: plan.warmupSeconds,
@@ -74,6 +73,7 @@ export function playbackBundleFromReplay(
       actorIds: actors.map((actor) => actor.id),
       actorMetadata,
       metricSubject: null,
+      ego: { controllerProfile: 'external-replay' },
       operationalConditions: plan.environment.authored,
       physics: {
         mode: 'kinematic-v1',

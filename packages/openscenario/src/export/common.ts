@@ -1,9 +1,12 @@
+import { NativeRuntimeError } from '@simforge-oss/native-runtime/shared';
 import {
-  buildRoute,
   toSceneXZ,
+  type Condition,
   type Interaction,
+  type LaneGraph,
+  type NativeRoute,
   type Pose,
-  type Route,
+  type RouteSpec,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
 
@@ -328,8 +331,13 @@ export function xml(value: string): string {
     .replaceAll("'", '&apos;');
 }
 
-export function mapRule(cmp: 'lte' | 'gte'): 'lessOrEqual' | 'greaterOrEqual' {
-  return cmp === 'lte' ? 'lessOrEqual' : 'greaterOrEqual';
+export function mapRule(cmp: Extract<Condition, { kind: 'speed' }>['cmp']): 'lessThan' | 'lessOrEqual' | 'greaterThan' | 'greaterOrEqual' {
+  switch (cmp) {
+    case 'lt': return 'lessThan';
+    case 'lte': return 'lessOrEqual';
+    case 'gt': return 'greaterThan';
+    case 'gte': return 'greaterOrEqual';
+  }
 }
 
 function dynamicsDuration(interaction: Interaction): number | null {
@@ -397,16 +405,10 @@ function sampledRoutePoses(
   input: SimScenarioInput,
   actorIndex: number,
   options: AsamExportOptions,
-): { route: Route; points: Pose[] } | AsamExportIssue {
+): { route: NativeRoute; points: Pose[] } | AsamExportIssue {
   const actor = input.actors[actorIndex]!;
-  const built = buildRoute(options.graph, actor.behavior.route);
-  if (!built.ok) {
-    return {
-      code: built.error.code,
-      path: `actors.${actorIndex}.behavior.route`,
-      reason: built.error.reason,
-    };
-  }
+  const built = buildRoute(options.graph, actor.behavior.route, `actors.${actorIndex}.behavior.route`);
+  if (!('route' in built)) return built;
   if (built.route.lengthM <= 1e-6) {
     return {
       code: 'route_too_short',
@@ -418,14 +420,43 @@ function sampledRoutePoses(
   if (!Number.isFinite(step) || step <= 0) {
     return { code: 'bad_route_sample', path: 'routeSampleM', reason: 'route sample distance must be positive' };
   }
-  const count = Math.max(2, Math.ceil(built.route.lengthM / step) + 1);
+  return { route: built.route, points: routePoints(built.route, step) };
+}
+
+/**
+ * Build a native route for an authored spec. A route the engine refuses is an
+ * explicit export finding at `path`, carrying the engine's error code.
+ */
+export function buildRoute(graph: LaneGraph, spec: RouteSpec, path: string): { route: NativeRoute } | AsamExportIssue {
+  try {
+    return { route: graph.route(JSON.stringify(spec)) };
+  } catch (error) {
+    if (!(error instanceof NativeRuntimeError) || error.kind !== 'argument') throw error;
+    // The engine reports a RouteBuildError as `{code, reason, detail?}` JSON.
+    let parsed: { code?: unknown; reason?: unknown } | null = null;
+    try {
+      parsed = JSON.parse(error.message) as { code?: unknown; reason?: unknown };
+    } catch {
+      parsed = null;
+    }
+    return {
+      code: typeof parsed?.code === 'string' ? parsed.code : 'route_build_failed',
+      path,
+      reason: typeof parsed?.reason === 'string' ? parsed.reason : error.message,
+    };
+  }
+}
+
+/** Sample a route at roughly `sampleM` spacing into scene-frame poses, always including both ends. */
+export function routePoints(route: NativeRoute, sampleM: number): Pose[] {
+  const count = Math.max(2, Math.ceil(route.lengthM / sampleM) + 1);
   const points: Pose[] = [];
   for (let i = 0; i < count; i += 1) {
-    const pose = built.route.poseAt((built.route.lengthM * i) / (count - 1));
-    const scene = toSceneXZ(pose.point);
-    points.push({ x: scene.x, z: scene.z, headingRad: pose.headingRad });
+    const [x, y, headingRad] = route.poseAt((route.lengthM * i) / (count - 1)) as unknown as [number, number, number];
+    const scene = toSceneXZ({ x, y });
+    points.push({ x: scene.x, z: scene.z, headingRad });
   }
-  return { route: built.route, points };
+  return points;
 }
 
 export function resolveScenario(
@@ -499,7 +530,6 @@ export function assertDefaultControllerRules(
     const rules = actor.behavior.rules;
     const changed: string[] = [];
     if (!rules.obeySignals) changed.push('obeySignals');
-    if (!rules.yield) changed.push('yield');
     if (!rules.yieldToVehicles) changed.push('yieldToVehicles');
     if (!rules.yieldToPedestrians) changed.push('yieldToPedestrians');
     if (rules.aggression !== 0.5) changed.push('aggression');

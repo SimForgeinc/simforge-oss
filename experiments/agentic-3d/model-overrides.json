@@ -1,0 +1,7 @@
+{
+  "vehicle.bicycle": {
+    "glbPath": "experiments/agentic-3d/assets/custom.cyclist-with-rider/model.glb",
+    "attribution": "meshy:custom.cyclist-with-rider",
+    "scaleToDims": true
+  }
+}

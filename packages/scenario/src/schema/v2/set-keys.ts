@@ -67,13 +67,6 @@ export const SET_KEY_REGISTRY: readonly SetKeyDecl[] = [
       'Whether the actor brakes/steers to avoid a collision. Set false to make a challenger commit; without this every generated critical scenario degrades into a safe one.',
   }),
   decl({
-    key: 'rules.yield',
-    valueType: 'boolean',
-    appliesTo: 'any_actor',
-    description:
-      'Master right-of-way yielding switch. False is appropriate for uncontrolled rolling objects and deliberate non-yielding actors; class-specific yield switches remain independently available.',
-  }),
-  decl({
     key: 'control:<id>.indication',
     pattern: '^control:[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}\\.indication$',
     valueType: 'enum',
@@ -102,8 +95,9 @@ export const SET_KEY_REGISTRY: readonly SetKeyDecl[] = [
   decl({
     key: 'rules.yieldToPedestrians',
     valueType: 'boolean',
-    appliesTo: 'vehicle',
-    description: 'Whether the actor yields to pedestrians in and approaching crossings.',
+    appliesTo: 'any_actor',
+    description:
+      'Whether the actor yields to pedestrians and animals in crossing conflicts. Applies to VRUs too: a non-yielding pedestrian clears this and rules.yieldToVehicles.',
   }),
   decl({
     key: 'rules.aggression',

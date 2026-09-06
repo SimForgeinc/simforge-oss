@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAsset, MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
 
 /** Props for the MapMetadataSection component. */

@@ -25,7 +25,7 @@ import type {
 import type { RuntimeRoadSegment } from "@/app/lib/llm/scenario-generation/runtime-road-snap";
 import { withWorldAnchor, worldAnchorAtFraction } from "@/app/lib/scenario-editor/batch-scenario-generator/routing";
 import type { ParkingLaneRef } from "@/app/lib/maps/topology/parking-lanes";
-import { finalizeGeneratedActorBehaviors } from "@/app/lib/scenario-generation/generated-actor-behavior";
+import { authorGeneratedActor } from "@/app/lib/scenario-generation/generated-actor-behavior";
 
 export interface ScenePopulation {
   /** Background autopilot vehicles on drivable lanes. */
@@ -620,7 +620,7 @@ function roadActor(
   sFraction: number,
   speedKph: number,
 ): ScenarioEditorActorDraft {
-  return {
+  const actor = {
     id,
     label,
     kind: "vehicle",
@@ -651,15 +651,17 @@ function roadActor(
     destination_point: null,
     path_placement: [],
     speed_kph: speedKph,
-    autopilot: true,
-    timeline: [],
     sensors: [],
   } as ScenarioEditorActorDraft;
+  // Background traffic is the one place the Traffic Manager is the RIGHT
+  // baseline: statistical behaviour is correct for background and only ever
+  // wrong as authored intent, so the TM baseline is authored here explicitly.
+  return authorGeneratedActor(actor, { base: { action: { kind: "autopilot", enabled: true } } });
 }
 
 function pedestrianActor(id: string, label: string, blueprint: string, start: Vec2, end: Vec2): ScenarioEditorActorDraft {
   const walkS = Math.max(2, Math.hypot(end.x - start.x, end.y - start.y) / WALK_SPEED_MPS);
-  return {
+  return authorGeneratedActor({
     id,
     label,
     kind: "walker",
@@ -680,10 +682,8 @@ function pedestrianActor(id: string, label: string, blueprint: string, start: Ve
       { x: end.x, y: end.y, time: Math.round(walkS * 10) / 10 },
     ],
     speed_kph: Math.round(WALK_SPEED_MPS * 3.6 * 10) / 10,
-    autopilot: false,
-    timeline: [],
     sensors: [],
-  } as ScenarioEditorActorDraft;
+  } as ScenarioEditorActorDraft);
 }
 
 /** Point + local tangent heading (degrees) at arc-length `d` along a polyline —
@@ -709,7 +709,7 @@ function parkingSampleAtArc(polyline: ReadonlyArray<Vec2>, cum: number[], d: num
 /** A static, point-anchored parked car at the curb (physics frozen by the
  * worker; never moves, never enters a lane). */
 function parkedCarActor(id: string, label: string, blueprint: string, sample: { x: number; y: number; yawDeg: number }): ScenarioEditorActorDraft {
-  return {
+  return authorGeneratedActor({
     id,
     label,
     kind: "vehicle",
@@ -728,10 +728,8 @@ function parkedCarActor(id: string, label: string, blueprint: string, sample: { 
     destination_point: null,
     path_placement: [],
     speed_kph: 0,
-    autopilot: false,
-    timeline: [],
     sensors: [],
-  } as ScenarioEditorActorDraft;
+  } as ScenarioEditorActorDraft);
 }
 
 /** Perpendicular distance from p to the SEGMENT ab (clamped to the segment, so a
@@ -855,7 +853,7 @@ export function buildSightlineVanOccluder(input: {
   const perpDist = Math.abs((px - lx) * vy - (py - ly) * vx) / vlen;
   if (perpDist > footprint.width / 2 + VAN_OCCLUDER_LOS_MARGIN_M) return null;
   const yawDeg = (Math.atan2(ey, ex) * 180) / Math.PI;
-  return {
+  return authorGeneratedActor({
     id: kind === "car" ? `occluder-car-${seed}` : `occluder-van-${seed}`,
     label: kind === "car" ? "Parked car (sightline occluder)" : "Parked van (occluder)",
     kind: "vehicle",
@@ -874,10 +872,8 @@ export function buildSightlineVanOccluder(input: {
     destination_point: null,
     path_placement: [],
     speed_kph: 0,
-    autopilot: false,
-    timeline: [],
     sensors: [],
-  } as ScenarioEditorActorDraft;
+  } as ScenarioEditorActorDraft);
 }
 
 /** The conflict pedestrian among the primary actors — the walker the van hides.
@@ -1296,5 +1292,5 @@ export function populateBackgroundScene(input: PopulateSceneInput): ScenarioEdit
     }
   }
 
-  return finalizeGeneratedActorBehaviors(placed);
+  return placed;
 }

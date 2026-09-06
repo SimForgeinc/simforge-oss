@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 
 type Props = {
   proxyUrl: string;

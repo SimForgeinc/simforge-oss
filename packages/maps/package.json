@@ -29,6 +29,18 @@
       "./ingest": {
         "types": "./dist/ingest.d.ts",
         "default": "./dist/ingest.js"
+      },
+      "./camera-rig": {
+        "types": "./dist/camera-rig.d.ts",
+        "default": "./dist/camera-rig.js"
+      },
+      "./signals": {
+        "types": "./dist/signals.d.ts",
+        "default": "./dist/signals.js"
+      },
+      "./coordinate-frame": {
+        "types": "./dist/coordinate-frame.d.ts",
+        "default": "./dist/coordinate-frame.js"
       }
     }
   },

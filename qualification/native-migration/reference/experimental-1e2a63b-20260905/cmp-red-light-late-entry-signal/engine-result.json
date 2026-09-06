@@ -1,0 +1,16 @@
+{
+  "issues": [
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.late-entry.behavior.route",
+      "reason": "route provides 187.4 m ahead of the spawn but the actor covers 210.0 m in 16 s",
+      "detail": {
+        "availableM": 187.3900388520886,
+        "neededM": 210.00000000000074,
+        "clipSeconds": 16
+      }
+    }
+  ],
+  "arrival": []
+}

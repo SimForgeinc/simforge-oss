@@ -16,7 +16,6 @@
  * runtime.
  */
 
-import type { BehaviorEvent } from "@simforge-oss/studio-shared";
 
 export const SCHEDULE_EVENT_ARRIVAL = "timed_point_arrival";
 export const SCHEDULE_EVENT_SHIFTED = "timed_points_schedule_shifted";
@@ -249,4 +248,7 @@ export function shiftedActorIdsAt(
     if (report.shift && report.shift.atSeconds <= timestampSeconds) shifted.add(actorId);
   }
   return shifted;
-}
+}import {
+  type BehaviorEvent,
+} from "@simforge-oss/scenario/contracts";
+

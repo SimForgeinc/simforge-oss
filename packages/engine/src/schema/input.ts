@@ -156,11 +156,15 @@ export type RouteActionTarget = z.infer<typeof routeActionTargetSchema>;
  * The discrete behaviour switches. `collisionAvoidance: false` is the
  * make-or-break flag from the research doc — it disables the safety governor so
  * a challenger actually commits instead of chickening out.
+ *
+ * Right of way is governed per conflicting class: `yieldToVehicles` and
+ * `yieldToPedestrians` each gate the junction conflict governor for the road
+ * users they name. There is no master switch — a fully non-yielding actor
+ * clears both — and the object is strict so a stale key is a parse error
+ * rather than a silently ignored rule.
  */
-export const actorRulesSchema = z.object({
+export const actorRulesSchema = z.strictObject({
   obeySignals: z.boolean().default(true),
-  /** Legacy master switch retained for input compatibility. */
-  yield: z.boolean().default(true),
   /** Yield to conflicting road users other than pedestrians/animals. */
   yieldToVehicles: z.boolean().default(true),
   /** Yield to pedestrians and animals in crossing conflicts. */
@@ -256,7 +260,6 @@ export const actorSchema = z.object({
   behavior: z.object({
     rules: actorRulesSchema.default({
       obeySignals: true,
-      yield: true,
       yieldToVehicles: true,
       yieldToPedestrians: true,
       collisionAvoidance: true,
@@ -332,7 +335,7 @@ export type LaneChangeTarget = z.infer<typeof laneChangeTargetSchema>;
  * everywhere downstream — TTC, min-clearance, required-decel, the exporters —
  * and signing it would corrupt all of them silently. See `sim/gear.ts`. */
 export const setKeySchema = z.string().regex(
-  /^(rules\.(obeySignals|yield|yieldToVehicles|yieldToPedestrians|collisionAvoidance|aggression|speedFactor)|motion\.[A-Za-z0-9_]+|lights\.[A-Za-z0-9_]+|audio\.[A-Za-z0-9_]+|doors\.[A-Za-z0-9_]+|pose\.[A-Za-z0-9_]+|env\.[A-Za-z0-9_]+|signal:[A-Za-z0-9._:@/-]+\.phase|control:[A-Za-z0-9._:@/-]+\.indication)$/,
+  /^(rules\.(obeySignals|yieldToVehicles|yieldToPedestrians|collisionAvoidance|aggression|speedFactor)|motion\.[A-Za-z0-9_]+|lights\.[A-Za-z0-9_]+|audio\.[A-Za-z0-9_]+|doors\.[A-Za-z0-9_]+|pose\.[A-Za-z0-9_]+|env\.[A-Za-z0-9_]+|signal:[A-Za-z0-9._:@/-]+\.phase|control:[A-Za-z0-9._:@/-]+\.indication)$/,
   'unknown set() key — see the typed key registry',
 );
 
@@ -410,18 +413,18 @@ export const surfacePatchSchema = z.object({
 });
 export type SurfacePatch = z.infer<typeof surfacePatchSchema>;
 
-const cmp = z.enum(['lte', 'gte']);
+const cmp = z.enum(['lt', 'lte', 'gt', 'gte']);
 
 /**
  * Trigger conditions. Every scalar comparison carries an explicit direction so
  * a generated scenario can never be ambiguous about which side fires.
  */
 export type Condition =
-  | { kind: 'distance'; a: string; b: string; mode: 'alongLane' | 'euclidean'; cmp: 'lte' | 'gte'; value: number; hysteresis?: number }
-  | { kind: 'ttc'; a: string; b: string; cmp: 'lte' | 'gte'; value: number }
-  | { kind: 'headway'; a: string; b: string; cmp: 'lte' | 'gte'; value: number }
+  | { kind: 'distance'; a: string; b: string; mode: 'alongLane' | 'euclidean'; cmp: z.infer<typeof cmp>; value: number; hysteresis?: number }
+  | { kind: 'ttc'; a: string; b: string; cmp: z.infer<typeof cmp>; value: number }
+  | { kind: 'headway'; a: string; b: string; cmp: z.infer<typeof cmp>; value: number }
   | { kind: 'reaches'; actorId: string; region: Region }
-  | { kind: 'speed'; actorId: string; cmp: 'lte' | 'gte'; value: number }
+  | { kind: 'speed'; actorId: string; cmp: z.infer<typeof cmp>; value: number }
   | { kind: 'standstill'; actorId: string; durationS: number }
   | { kind: 'signal'; signalId: string; phase: ControlIndication }
   | { kind: 'collision'; a?: string; b?: string }
@@ -796,6 +799,12 @@ export const MOTION_PHYSICS_MODES = ['kinematic-v1', 'dynamic-v1'] as const;
 export const motionPhysicsModeSchema = z.enum(MOTION_PHYSICS_MODES);
 export type MotionPhysicsMode = z.infer<typeof motionPhysicsModeSchema>;
 export const DEFAULT_MOTION_PHYSICS_MODE: MotionPhysicsMode = 'dynamic-v1';
+/**
+ * Integration substep the native `dynamic-v1` backend uses when
+ * `physics.substepS` is omitted (`simforge_core::engine::DYNAMIC_V1_DEFAULT_SUBSTEP_S`).
+ * A recorded trace's `header.physics.substepS` is authoritative over this default.
+ */
+export const DYNAMIC_V1_DEFAULT_SUBSTEP_S = 0.005;
 
 /**
  * Phase-0 selection envelope. The field is optional on SimScenarioInput on
@@ -853,8 +862,7 @@ export interface ResolvedPhysicsConfig {
  * exactly, per the truth contract in `docs/physics-validation.md`: a trace for
  * an explicitly selected mode must match that mode, so no resolution step may
  * silently relabel it. Omitted physics resolves to the current default
- * (`dynamic-v1`); immutable legacy traces are instead replayed under their
- * recorded header by the evidence validator (`legacy-kinematic`).
+ * (`dynamic-v1`); the evidence validator requires the trace to match it.
  */
 export function resolvePhysicsConfig(input: Pick<SimScenarioInput, 'physics'>): ResolvedPhysicsConfig {
   return input.physics ?? { mode: DEFAULT_MOTION_PHYSICS_MODE };

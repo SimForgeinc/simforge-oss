@@ -14,14 +14,11 @@ export type AmbientTrafficProviderId = 'off' | 'native' | 'sumo';
 
 /** Execution-bearing provider choice. Unlike camera/layout presentation state, this changes the world. */
 export const AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY = 'studio.ambientTraffic.provider.v1';
-/** Read-only migration path for scenarios saved before provider choice became execution-bearing. */
-export const LEGACY_AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY = 'studio.presentation.ambientTrafficProvider.v1';
 
 export function ambientTrafficProviderFromExtensions(
   extensions: Readonly<Record<string, unknown>> | undefined,
 ): AmbientTrafficProviderId {
-  const value = extensions?.[AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]
-    ?? extensions?.[LEGACY_AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY];
+  const value = extensions?.[AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY];
   // Missing and malformed preferences fail closed. SUMO is a sizeable,
   // execution-bearing runtime and must only start after an explicit author
   // choice in the editor.
@@ -83,7 +80,11 @@ export interface BrowserMaterializedTrafficCaptureOptions {
   readonly durationSeconds: number;
 }
 
-/** Browser-side recorder for provider output. It cannot finalize a partial Play run. */
+/**
+ * Browser-side recorder for provider output. It cannot finalize a partial
+ * Play run. SUMO frames are recorded through `recordProviderFrame` after the
+ * collision handoff has composed them, never from raw provider output.
+ */
 export class BrowserMaterializedTrafficCapture {
   private readonly recorder: MaterializedTrafficRecorder;
 
@@ -106,14 +107,6 @@ export class BrowserMaterializedTrafficCapture {
     signalStates: Readonly<Record<string, 'green' | 'yellow' | 'red' | 'off'>>,
   ): void {
     this.recorder.record({ t: time, actors, signals: signalStates });
-  }
-
-  recordSumoFrame(
-    time: number,
-    result: Pick<TrafficStepResult, 'states' | 'actorCount'>,
-    signalStates: Readonly<Record<string, 'green' | 'yellow' | 'red' | 'off'>>,
-  ): void {
-    this.recordProviderFrame(time, decodeSumoMaterializedActors(result), signalStates);
   }
 
   finalize(): MaterializedTrafficArtifactEnvelope { return this.recorder.finalize(); }

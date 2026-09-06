@@ -1,0 +1,18 @@
+[package]
+name = "simforge-compiler"
+description = "SIMFORGE scenario/world/situation compiler: template x site x draw -> executable SimScenarioInput over the native lane graph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_compiler"
+
+[dependencies]
+simforge-core = { path = "../simforge-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+flate2 = { workspace = true }

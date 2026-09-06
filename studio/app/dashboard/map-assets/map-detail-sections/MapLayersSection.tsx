@@ -1,15 +1,15 @@
 "use client";
 
 import { ChevronRight, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Switch } from "@/app/components/ui/switch";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Switch } from "@simforge-oss/studio-ui/components/ui/switch";
 import {
   ROAD_NETWORK_FEATURE_TYPES,
   type RoadNetworkFeatureTypeId,
 } from "@/app/lib/maps/frontend/road-network-feature-types";
 import { SIGNAL_CATEGORY_CONFIG } from "@/app/lib/maps/frontend/signal-overlay";
 import { enrichmentGlyphPath } from "@/app/components/map-assets-map/map-icons";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { LaneRenderMode } from "@/app/lib/maps/frontend/lane-render-mode";
 import type { MapOverlayLayer, MapOverlayLayerId } from "@simforge-oss/studio-shared";
 import type { ScenarioCandidateFamilyLayer } from "@/app/lib/maps/frontend/scenario-candidate-layers";

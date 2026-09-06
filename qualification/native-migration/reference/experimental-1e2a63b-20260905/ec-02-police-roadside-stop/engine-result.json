@@ -1,0 +1,34 @@
+{
+  "issues": [
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.cyclist-swerves.dynamics.value",
+      "reason": "requested 0.80 s lateral manoeuvre is infeasible for bicycle; clamped to 2.83 s",
+      "detail": {
+        "actorId": "lead-cyclist",
+        "requestedDurationS": 0.8,
+        "effectiveDurationS": 2.832937629822379,
+        "displacementM": -1.5157227894462473,
+        "lateralRateMaxMps": 1.2,
+        "lateralAccelMaxMps2": 2,
+        "lateralJerkMaxMps3": 4
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.cyclist-swerves",
+      "reason": "dynamic actor lead-cyclist did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "lead-cyclist",
+        "interactionId": "cyclist-swerves",
+        "referenceDurationS": 2.832937629822379,
+        "positionErrorM": 0.19031243568304657,
+        "rateErrorMps": -0.07075517382886254,
+        "headingErrorRad": -0.08249302829558047
+      }
+    }
+  ],
+  "arrival": []
+}

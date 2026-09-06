@@ -29,6 +29,11 @@ export interface MapClosure {
   };
 }
 
+/**
+ * Stored version-history row. `releaseDigest` is absent only on rows written
+ * before immutable releases existed; such rows remain listable history but
+ * cannot be resolved, pulled or promoted.
+ */
 export interface MapVersionRecord {
   version: MapVersion;
   closureDigest: Sha256Digest;
@@ -37,6 +42,9 @@ export interface MapVersionRecord {
   promotedFrom?: string;
   sourceRef?: string;
 }
+
+/** A version-history row bound to an immutable release; the only shape the registry executes. */
+export type ReleasedMapVersionRecord = MapVersionRecord & { releaseDigest: Sha256Digest };
 
 export interface MapSummary {
   label?: string;

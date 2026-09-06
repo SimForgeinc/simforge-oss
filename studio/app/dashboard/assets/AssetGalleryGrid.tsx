@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton } from "@/app/components/ui/skeleton";
-import type { GalleryAssetSummary } from "@/app/lib/asset-gallery/contracts";
+import { Skeleton } from "@simforge-oss/studio-ui/components/ui/skeleton";
+import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { AssetCard } from "./AssetCard";
 
 const GRID_CLASS =

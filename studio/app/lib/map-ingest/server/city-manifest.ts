@@ -29,7 +29,13 @@ export class InvalidGlbSceneError extends Error {
 
 type Vec3 = [number, number, number];
 type Bounds = { min: Vec3; max: Vec3 };
-type GlbAccessor = { count?: number; min?: number[]; max?: number[] };
+type GlbAccessor = {
+  count?: number;
+  componentType?: number;
+  normalized?: boolean;
+  min?: number[];
+  max?: number[];
+};
 type GlbPrimitive = {
   attributes?: { POSITION?: number };
   indices?: number;
@@ -146,6 +152,22 @@ function includePoint(bounds: Bounds, point: Vec3): void {
   }
 }
 
+/**
+ * Quantized POSITION accessors (`KHR_mesh_quantization`, meshopt exports) store
+ * integer bounds that only become metres after the glTF normalization rule and
+ * the node scale; the same rule `@simforge-oss/maps` applies for colliders.
+ */
+function normalizedAccessorValue(accessor: GlbAccessor, value: number): number {
+  if (!accessor.normalized) return value;
+  switch (accessor.componentType) {
+    case 5120: return Math.max(value / 127, -1);
+    case 5121: return value / 255;
+    case 5122: return Math.max(value / 32767, -1);
+    case 5123: return value / 65535;
+    default: return value;
+  }
+}
+
 function includeTransformedBounds(bounds: Bounds, localMin: Vec3, localMax: Vec3, matrix: readonly number[]): void {
   for (const x of [localMin[0], localMax[0]]) {
     for (const y of [localMin[1], localMax[1]]) {
@@ -226,8 +248,16 @@ function inspectLayer(layer: GeneratorLayer): { bounds: Bounds; triangles: numbe
         if (!position || position.min?.length !== 3 || position.max?.length !== 3) {
           throw new InvalidGlbSceneError(layer.fileName, "every rendered primitive needs POSITION min/max bounds");
         }
-        const localMin: Vec3 = [position.min[0]!, position.min[1]!, position.min[2]!];
-        const localMax: Vec3 = [position.max[0]!, position.max[1]!, position.max[2]!];
+        const localMin: Vec3 = [
+          normalizedAccessorValue(position, position.min[0]!),
+          normalizedAccessorValue(position, position.min[1]!),
+          normalizedAccessorValue(position, position.min[2]!),
+        ];
+        const localMax: Vec3 = [
+          normalizedAccessorValue(position, position.max[0]!),
+          normalizedAccessorValue(position, position.max[1]!),
+          normalizedAccessorValue(position, position.max[2]!),
+        ];
         if (![...localMin, ...localMax].every(Number.isFinite)) {
           throw new InvalidGlbSceneError(layer.fileName, "POSITION bounds must be finite");
         }

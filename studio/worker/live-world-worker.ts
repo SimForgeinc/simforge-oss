@@ -1,14 +1,13 @@
 /// <reference lib="webworker" />
 
 import {
-  buildLaneGraph,
   parseSimScenarioInput,
   type ActorKind,
   type LaneGraph,
   type SimScenarioInput,
   type TopologyIndex,
 } from '@simforge-oss/engine';
-import { WorldSession, type TruthSubscription } from '@simforge-oss/training-env/browser';
+import { loadSessions, type SessionRuntime, type TruthSubscription, type WorldSession } from '@simforge-oss/training-env/browser';
 
 import type {
   LiveWorldWorkerRequest,
@@ -25,6 +24,7 @@ import {
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 
+let sessions: SessionRuntime | null = null;
 let world: WorldSession | null = null;
 let truth: TruthSubscription | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -179,7 +179,8 @@ async function initialize(message: Extract<LiveWorldWorkerRequest, { type: 'init
   const topology = message.laneGraphUrl
     ? await fetchTopology(message.laneGraphUrl)
     : emptyTopology();
-  const graph = buildLaneGraph(topology);
+  sessions = await loadSessions();
+  const graph = sessions.engine.laneGraph(topology);
   // A world with no lane graph starts and advances perfectly happily, but every
   // road actor is then rejected with "no drivable lane", which reads as a
   // placement bug rather than a missing input. Say so once, up front.
@@ -200,7 +201,7 @@ async function initialize(message: Extract<LiveWorldWorkerRequest, { type: 'init
     physics: { mode: 'dynamic-v1' },
   });
 
-  world = new WorldSession({ input, graph, mode: 'live' });
+  world = sessions.world({ input, graph, mode: 'live' });
   truth = world.subscribeTruth();
   timer = setInterval(tick, 1000 / message.tickHz);
   post({ type: 'ready' });
@@ -214,7 +215,8 @@ async function initializeAuthored(
     throw new Error(`tickHz must be positive, got ${String(message.tickHz)}`);
   }
   authoredInput = parseSimScenarioInput(message.input);
-  authoredGraph = buildLaneGraph(await fetchTopology(message.laneGraphUrl));
+  sessions = await loadSessions();
+  authoredGraph = sessions.engine.laneGraph(await fetchTopology(message.laneGraphUrl));
   authoredTickHz = message.tickHz;
   playing = false;
   inspecting = false;
@@ -226,9 +228,9 @@ async function initializeAuthored(
 }
 
 function rebuildAuthoredWorld(): void {
-  if (!authoredInput || !authoredGraph) throw new Error('authored world inputs are unavailable');
-  truth?.unsubscribe();
-  world = createAuthoredWorldSession(authoredInput, authoredGraph);
+  if (!sessions || !authoredInput || !authoredGraph) throw new Error('authored world inputs are unavailable');
+  truth?.close();
+  world = createAuthoredWorldSession(sessions, authoredInput, authoredGraph);
   truth = world.subscribeTruth();
   commandSequence = 0;
   completed = false;
@@ -325,7 +327,7 @@ function tick(): void {
         const remainingTicks = Math.ceil(remainingS / authoredInput.dt - 1e-9);
         const ticks = Math.min(budget.ticks, remainingTicks);
         if (ticks > 0) world.advance(ticks);
-        postTruthFrames(truth.drain(), true);
+        postTruthFrames(truth.pull(), true);
       }
       completed = authoredClipCompleted(world.time(), authoredInput.clipSeconds);
 
@@ -337,7 +339,7 @@ function tick(): void {
       return;
     }
     world.advance(1);
-    postTruthFrames(truth.drain(), true);
+    postTruthFrames(truth.pull(), true);
   } catch (error) {
     fail(error);
     shutdown();
@@ -360,7 +362,7 @@ function advanceAuthoredTo(seconds: number, emitAll: boolean): void {
   const remaining = Math.max(0, seconds - world.time());
   const ticks = Math.ceil(remaining / authoredInput.dt - 1e-9);
   if (ticks > 0) world.advance(ticks);
-  postTruthFrames(truth.drain(), emitAll);
+  postTruthFrames(truth.pull(), emitAll);
 }
 
 function postTruthFrames(frames: Uint8Array[], emitAll: boolean): void {
@@ -437,7 +439,7 @@ function shutdown(): void {
   closed = true;
   if (timer) clearInterval(timer);
   timer = null;
-  truth?.unsubscribe();
+  truth?.close();
   truth = null;
   world = null;
   scope.close();

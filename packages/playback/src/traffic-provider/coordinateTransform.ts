@@ -6,16 +6,6 @@ import {
 } from '@simforge-oss/engine';
 import type { NetworkWorldTransform } from './protocol';
 
-export function toWorld(x: number, y: number, transform: NetworkWorldTransform): { x: number; y: number } {
-  const scene = sumoNetworkToScene({ x, y }, transform);
-  // Compatibility wrapper for existing Studio call sites. `y` here is scene
-  // z; the shared API above deliberately names it z to prevent sign mistakes.
-  return { x: scene.x, y: scene.z };
-}
-export function toNetwork(x: number, y: number, transform: NetworkWorldTransform): { x: number; y: number } {
-  return sumoSceneToNetwork({ x, z: y }, transform);
-}
-
 /** Exact scene -> SUMO conversion used for authored occupancy proxies. */
 export function externalActorToNetwork(
   actor: { readonly x: number; readonly z: number; readonly headingDegrees: number },
@@ -36,9 +26,10 @@ export function transformPackedStatesToWorld(
   }
   for (let actor = 0; actor < count; actor += 1) {
     const offset = actor * 8;
-    const position = toWorld(floats[offset + 1]!, floats[offset + 2]!, transform);
-    floats[offset + 1] = position.x;
-    floats[offset + 2] = position.y;
+    const scene = sumoNetworkToScene({ x: floats[offset + 1]!, y: floats[offset + 2]! }, transform);
+    // Packed SUMO state layout carries scene x at +1 and scene z at +2.
+    floats[offset + 1] = scene.x;
+    floats[offset + 2] = scene.z;
     const heading = floats[offset + 3]!;
     floats[offset + 3] = sumoNetworkHeadingToScene(heading, transform);
   }

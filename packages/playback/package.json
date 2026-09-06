@@ -43,6 +43,7 @@
   "dependencies": {
     "@simforge-oss/asset-catalog": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
     "@simforge-oss/openscenario": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
     "@simforge-oss/viewer": "workspace:*",

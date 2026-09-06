@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Loader2 } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
 import { CandidateLocationCard } from "./CandidateLocationCard";
 

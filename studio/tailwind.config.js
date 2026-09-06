@@ -1,9 +1,17 @@
+import { createRequire } from "node:module";
+import { dirname } from "node:path";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
-  content: ["./app/**/*.{ts,tsx}"],
+  content: {
+    relative: true,
+    files: [
+      "./app/**/*.{ts,tsx}",
+      `${dirname(createRequire(import.meta.url).resolve("@simforge-oss/studio-ui"))}/**/*.{js,ts,tsx}`,
+    ],
+  },
   theme: {
     container: {
       center: true,

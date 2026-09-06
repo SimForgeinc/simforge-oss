@@ -8,6 +8,7 @@ import { parsePlaybackPair } from "@simforge-oss/playback";
 import type { RenderInputFile } from "@simforge-oss/render";
 import { hashFile } from "@simforge-oss/render";
 import { contentHash, parseSimScenarioInput } from "@simforge-oss/engine";
+import { RENDER_INTENT_V1_SCHEMA, RENDER_SPEC_V3_SCHEMA } from "@simforge-oss/scenario";
 
 import { executeRender } from "./executor.js";
 
@@ -81,7 +82,7 @@ async function main(argv: readonly string[]): Promise<void> {
   const playbackInput = inputs.get("playback.bundle")!;
   const sources = prontoSources(hostActorId);
   const intent = {
-    schema: "uniscenario.render-intent/v1",
+    schema: RENDER_INTENT_V1_SCHEMA,
     intentId: "cloud-worker-harness",
     executionPackage: {
       id: "cloud-worker-harness-package",
@@ -99,7 +100,7 @@ async function main(argv: readonly string[]): Promise<void> {
       vehicleAsset: { catalogAssetId: hostCatalogId },
     })).sort((left, right) => left.sourceId.localeCompare(right.sourceId)),
     renderSpec: {
-      schema: "uniscenario.render-spec/v3",
+      schema: RENDER_SPEC_V3_SCHEMA,
       sources,
       clip: { startSeconds: 0, endSeconds: clipEndSeconds },
       video: { width: 320, height: 180, fps: 24, container: "mp4", codec: "h264", quality: "draft" },

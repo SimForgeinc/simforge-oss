@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
-import { simforgeEnv } from "../lib/compat-env";
+import { simforgeEnv } from "../lib/simforge-env";
 
 import type { RenderInputFile } from "@simforge-oss/render";
 

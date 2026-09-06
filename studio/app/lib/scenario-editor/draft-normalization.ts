@@ -5,7 +5,7 @@ import {
   type ScenarioEditorAmbientTraffic,
   ScenarioEditorActorDraftSchema,
   ScenarioEditorAmbientTrafficSchema,
-  migrateLegacyScenarioEditorActor,
+  normalizeActorBaseClip,
   type ScenarioEditorDraft,
   SceneFormationSchema,
   SCENE_FORMATION_SCHEMA_VERSION,
@@ -39,7 +39,6 @@ import {
 import type {
   EnvironmentPreset,
 } from "@simforge-oss/scenario/contracts";
-import { z } from "zod";
 import { lenientEnvironmentPreset } from "@/app/lib/scenario-editor/environment-preset-input";
 import {
   DEFAULT_CUSTOM_VEHICLE_MIX,
@@ -279,25 +278,20 @@ function asValidatedArray<T>(
 }
 
 /**
- * Every actor arrives carrying a behavior program — and leaves the legacy
- * authoring surface behind.
+ * Every actor arrives carrying a behavior program.
  *
- * This is THE load-time migration (schema-prune, wave 2b). The legacy keys the
- * actor schema no longer declares (`timeline`, `timedInstructions`,
- * `autopilot`, the reaction trio, `notes`, `compiled_route_stamp`) parse
- * through the versioned legacy schema, convert into `behavior` /
- * `reaction_profile` / an explicit base clip, and are STRIPPED from the
- * normalized draft — so saving writes only the pruned shape. Wire-load-bearing
- * residue (a non-empty timeline, timedInstructions, the reaction trio) moves
- * into the actor's `legacy_wire` envelope, which the payload boundary expands
- * back to the original wire spellings so the CARLA worker receives
- * byte-identical actors. All of that lives in ONE shared function,
- * `migrateLegacyScenarioEditorActor`, which the corpus migration script runs
- * too — the load path and the durable rewrite cannot drift.
+ * The load path validates the CURRENT actor shape and nothing older: an actor
+ * record without a `behavior` program is not upgraded, it is reported as
+ * unloadable exactly like an actor whose fields fail the schema. Constructors
+ * (the editor's placement tools, the generators, the .xosc importer) author the
+ * program before a draft is ever persisted, so a stored actor without one is a
+ * record this build does not read.
  *
- * The load stays a fixed point: a pruned draft re-runs the migration to
- * itself, and the motion an actor shows after normalizing is the motion it
- * had before.
+ * Accepted actors are then normalized (`normalizeActorBaseClip`): roles are
+ * stamped, a path baseline is re-synced from the actor's geometry and the
+ * placement tuple is recompiled from the base clip. That is the same pure,
+ * idempotent normalization the editor runs on every edit, so the motion an
+ * actor shows after loading is the motion it had before.
  *
  * ## What happens to an actor this build cannot read
  *
@@ -322,48 +316,30 @@ export function normalizeLoadedActorDrafts(value: unknown): {
 } {
   if (!Array.isArray(value)) return { actors: [], unloadable: [] };
 
-  const parsed: Array<{ actor: ScenarioEditorActorDraft; index: number }> = [];
+  const actors: ScenarioEditorActorDraft[] = [];
   const unloadable: UnloadableActor[] = [];
   value.forEach((entry, index) => {
     const result = ScenarioEditorActorDraftSchema.safeParse(entry);
-    if (result.success) {
-      parsed.push({ actor: result.data, index });
-      return;
-    }
-    unloadable.push({
-      index,
-      actorId: asStringOrNull(asRecord(entry).id, true),
-      issues: result.error.issues
-        .slice(0, 4)
-        .map((issue) => `${issue.path.join(".") || "actor"}: ${issue.message}`),
-    });
-  });
-
-  // The migration context is the RAW parse output: `conflictEgoFor` needs the
-  // siblings' not-yet-stripped `collision_target_id` to rebuild the walker
-  // conflict trigger, exactly as before the prune.
-  const contextActors = parsed.map((entry) => entry.actor);
-  const actors: ScenarioEditorActorDraft[] = [];
-  for (const { actor, index } of parsed) {
-    try {
-      actors.push(migrateLegacyScenarioEditorActor(actor, { actors: contextActors }));
-    } catch (error) {
-      // The legacy keys used to be validated by the actor schema itself; the
-      // versioned legacy parse keeps that strictness, and its failures surface
-      // exactly like any other unreadable actor: reported, never dropped.
+    if (!result.success) {
       unloadable.push({
         index,
-        actorId: asStringOrNull((actor as { id?: unknown }).id, true),
-        issues:
-          error instanceof z.ZodError
-            ? error.issues
-                .slice(0, 4)
-                .map((issue) => `${issue.path.join(".") || "actor"}: ${issue.message}`)
-            : [error instanceof Error ? error.message : String(error)],
+        actorId: asStringOrNull(asRecord(entry).id, true),
+        issues: result.error.issues
+          .slice(0, 4)
+          .map((issue) => `${issue.path.join(".") || "actor"}: ${issue.message}`),
       });
+      return;
     }
-  }
-  unloadable.sort((left, right) => left.index - right.index);
+    if (!result.data.behavior) {
+      unloadable.push({
+        index,
+        actorId: result.data.id,
+        issues: ["behavior: actor carries no behavior program"],
+      });
+      return;
+    }
+    actors.push(normalizeActorBaseClip(result.data));
+  });
   return { actors, unloadable };
 }
 
@@ -533,21 +509,21 @@ function stripUndefinedAndLegacy(value: unknown): unknown {
  * from it. Writing one into storage would freeze one draw of the region as
  * authored fact and double the cars on the next expansion.
  *
- * Deliberately NOT keyed on `ambient_generated`: pre-migration drafts carry
- * baked snapshot cars with that flag and no origin, and those must keep
- * persisting — re-expanding them would re-randomize a scene somebody accepted
+ * Deliberately NOT keyed on `ambient_generated`: drafts carry baked snapshot
+ * cars with that flag and no origin, and those must keep persisting —
+ * re-expanding them would re-randomize a scene somebody accepted
  * (`draft/route.ts` records the same rule for the hoist).
  */
 function persistableActorDrafts(
   actors: ScenarioEditorActorDraft[],
 ): ScenarioEditorActorDraft[] {
-  // Saving writes only the PRUNED shape. The migration is idempotent, so for
-  // an actor the load path already migrated this is a no-op; for anything a
-  // caller hands the serializer directly it is the same one migration the load
-  // runs — legacy keys convert and strip rather than leak into storage.
+  // Saving writes the NORMALIZED shape. Normalization is idempotent, so for an
+  // actor the load path already normalized this is a no-op; for anything a
+  // caller hands the serializer directly it is the same normalization the
+  // editor runs on every edit.
   return actors
     .filter((actor) => actor.origin?.kind !== "ambient_region")
-    .map((actor) => migrateLegacyScenarioEditorActor(actor, { actors }));
+    .map((actor) => normalizeActorBaseClip(actor));
 }
 
 /** The first parseable ambient-traffic spec among `sources`, else null. */

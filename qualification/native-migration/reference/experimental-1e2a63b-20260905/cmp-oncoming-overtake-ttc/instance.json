@@ -1,0 +1,382 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "oncoming-overtake",
+      "templateVersion": 2,
+      "templateDigest": "2c4a1eb3875fd7f0",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "9274f136ce47a8f6",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "9274f136ce47a8f6#-1",
+    "archetype": "lane-change.oncoming-overtake",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "9274f136ce47a8f6",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_95647cac21abc79e",
+      "entryLaneRsl": "41:0:-1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.01)",
+        "183.2 m of runway available, 180 m needed",
+        "100 m of runway available, 100 m needed",
+        "corridor.throughLanesOpposing holds over the whole interval (worst 1)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {
+        "returnTtcS": 2.1,
+        "lateralRateMps": 1
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "41:0:-1",
+        "spawnS": 1.000018935888734,
+        "initialSpeedMps": 7.111111111111112,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "overtaker",
+        "actorKind": "car",
+        "roleKind": "opposing",
+        "laneRsl": "1099:0:1",
+        "spawnS": 76.23793427437685,
+        "initialSpeedMps": 8.533333333333333,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "slow-vehicle",
+        "actorKind": "truck",
+        "roleKind": "opposing",
+        "laneRsl": "41:0:1",
+        "spawnS": 127.68802896116351,
+        "initialSpeedMps": 5.333333333333333,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "overtaker-commits",
+        "actorId": "overtaker",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "site.frame.referencePath",
+        "reason": "lane chain was not connectable end to end for the engine; kept the longest connectable run (236.7 m of 10 lanes)"
+      },
+      {
+        "path": "roles.ego.route",
+        "reason": "lane chain was not connectable end to end for the engine; kept the longest connectable run (236.7 m of 10 lanes)"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 16,
+    "warmupSeconds": 0,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "41:0:-1",
+            "s": 1.000018935888734,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 564.6936615690486,
+            "z": -1666.2799705089649,
+            "headingRad": -0.5931689378372367
+          },
+          "speedMps": 7.111111111111112
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "41:0:-1",
+              "1100:0:-1",
+              "42:0:-1",
+              "919:0:-1",
+              "74:0:-1",
+              "293:0:-1",
+              "75:0:-1",
+              "903:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 7.111111111111112
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "overtaker",
+        "kind": "car",
+        "dims": {
+          "l": 4.85,
+          "w": 1.95,
+          "h": 1.78
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1099:0:1",
+            "s": 22.303902681879364,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 646.6267659361033,
+            "z": -1617.0573310075047,
+            "headingRad": 2.5583603506377486
+          },
+          "speedMps": 8.533333333333333
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "42:0:1",
+              "1099:0:1",
+              "41:0:1",
+              "519:0:1",
+              "50:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 8.533333333333333
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:overtaker",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:opposing",
+          "catalog:vehicle.suv"
+        ]
+      },
+      {
+        "id": "slow-vehicle",
+        "kind": "truck",
+        "dims": {
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "41:0:1",
+            "s": 44.99998343385465,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 603.8617860172401,
+            "z": -1645.6615906697564,
+            "headingRad": 2.5478622252358862
+          },
+          "speedMps": 5.333333333333333
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "42:0:1",
+              "1099:0:1",
+              "41:0:1",
+              "519:0:1",
+              "50:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 5.333333333333333
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:slow-vehicle",
+          "class:truck",
+          "driver-profile:lawful",
+          "binding:opposing",
+          "catalog:vehicle.box_truck"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "crosses-centerline",
+        "actorId": "overtaker",
+        "trigger": {
+          "kind": "at",
+          "t": 1.5
+        },
+        "verb": "changeLane",
+        "target": {
+          "mode": "actorLane",
+          "actorId": "ego"
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "rate",
+          "value": 1
+        }
+      },
+      {
+        "id": "returns-opposing",
+        "actorId": "overtaker",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "ttc",
+            "a": "overtaker",
+            "b": "ego",
+            "cmp": "lte",
+            "value": 2.1
+          },
+          "byLatest": 10,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 10
+        },
+        "verb": "laneOffset",
+        "target": {
+          "mode": "fraction",
+          "value": 0
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "rate",
+          "value": 1
+        }
+      },
+      {
+        "id": "settles-behind-lead",
+        "actorId": "overtaker",
+        "trigger": {
+          "kind": "after",
+          "interactionId": "returns-opposing",
+          "event": "start",
+          "delayS": 2.8
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "match",
+          "actorId": "slow-vehicle",
+          "offsetMps": 0
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 3
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

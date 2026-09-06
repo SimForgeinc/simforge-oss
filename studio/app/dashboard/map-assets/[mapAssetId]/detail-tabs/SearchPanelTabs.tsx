@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search, Sparkles } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { SearchResultsTab } from "./SearchResultsTab";
 import { AiSearchPanel } from "./AiSearchPanel";
 import type { ComponentProps } from "react";

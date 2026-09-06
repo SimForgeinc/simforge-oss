@@ -25,6 +25,22 @@ the same immutable registry release. The compiler and Studio discover complete
 installations from the common cache; Studio publishes the browser closure and
 registers the matching native master closure during normal boot.
 
+Studio's seed treats an installation as complete when the three receipts name
+one release (version, release digest, canonical digest, web digest), members
+shared by the semantic and web profiles are byte-identical, the web profile
+carries every browser publication member (`3d/manifest.json`, `map.xodr`,
+`map.geojson.gz`, `topology-index.json.gz`, `lane-polygons.geojson.gz`,
+`signals.geojson.gz`, `derived/topology-derived.json.gz`,
+`derived/locations.json.gz`, `derived/roadway-consistency.json.gz`,
+`derived/source-capabilities.json.gz`), and the native profile carries
+`master.gltf`. Only what the registry publishes is required; build-only files
+such as a map-intel build receipt are not. Published map-intel is projected from
+the release's own reports the same way SimCloud projects a registry import: the
+roadway audit must name the map and the closure's XODR/topology digests and is
+published with its own verdict, and every `locations.json.gz` source hash must
+equal the closure member it names. An incomplete installation is reported by
+name and reason on the seed log and never replaced by a re-derived map.
+
 `SIMFORGE_MAPS_CACHE_ROOT=/elsewhere` relocates the entire cache consistently.
 Without that variable, `XDG_DATA_HOME` is honored and the fallback is
 `~/.local/share/simforge/maps`. Do not point Studio at an individual profile.
@@ -79,7 +95,7 @@ pulling content on your behalf. It is not part of the product contract.
 scripts/assets/carla-up.sh        # once per boot; the container is long-lived
 # edit python in adapters/carla-exec/ ...
 python -m pytest adapters/carla-exec/tests -q        # pure-python, no server needed
-simforge-oss-carla-api <cmd> --host localhost --port 2000  # rerun against the live server
+simforge-oss-carla-exec <cmd> --host localhost --port 2000  # rerun against the live server
 ```
 
 No image build, no container restart, no asset copy is ever part of the

@@ -1,0 +1,481 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "Recorded motion handed to an external policy",
+      "templateVersion": 2,
+      "templateDigest": "219431c6bbb262a9",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "studio:yale-street",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-handover-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "studio:yale-street#-1",
+    "archetype": null,
+    "negativeControl": false,
+    "metricSubject": "recorded-ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "studio:yale-street",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "map:yale-street",
+      "entryLaneRsl": "studio:freeform",
+      "egoTurn": null,
+      "degradationSummary": "exact map-bound Studio placement",
+      "matchedReasons": [
+        "anchor.pin.mapId",
+        "scene_absolute"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "parked-lead",
+        "actorKind": "car",
+        "roleKind": "scene_absolute",
+        "laneRsl": null,
+        "spawnS": 0.000059403192063549134,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "recorded-ego",
+        "actorKind": "car",
+        "roleKind": "scene_absolute",
+        "laneRsl": null,
+        "spawnS": 0.000059403192063549134,
+        "initialSpeedMps": 6.666666666666667,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "fae58aa61de9198aec4fd7b4d76c852a815549102b4a492b87732698a0865509",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 20,
+    "warmupSeconds": 0,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "overcast",
+      "timeOfDay": "dusk",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "recorded-ego",
+    "actors": [
+      {
+        "id": "parked-lead",
+        "kind": "car",
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        },
+        "initial": {
+          "pose": {
+            "x": 422.8112,
+            "z": -1867.0291,
+            "headingRad": 2.12629
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "polyline",
+            "points": [
+              {
+                "x": 422.8112,
+                "z": -1867.0291
+              },
+              {
+                "x": 370.0749190950901,
+                "z": -1951.9931198926488
+              }
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:parked-lead",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:scene_absolute"
+        ]
+      },
+      {
+        "id": "recorded-ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        },
+        "initial": {
+          "pose": {
+            "x": 465,
+            "z": -1935,
+            "headingRad": 2.14
+          },
+          "speedMps": 6.666666666666667
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "timedPolyline",
+            "points": [
+              {
+                "timeS": 0,
+                "x": 465,
+                "z": -1935
+              },
+              {
+                "timeS": 0.5,
+                "x": 463.2373,
+                "z": -1932.1712
+              },
+              {
+                "timeS": 1,
+                "x": 461.486,
+                "z": -1929.335
+              },
+              {
+                "timeS": 1.5,
+                "x": 459.7258,
+                "z": -1926.5044
+              },
+              {
+                "timeS": 2,
+                "x": 457.9687,
+                "z": -1923.6718
+              },
+              {
+                "timeS": 2.5,
+                "x": 456.2108,
+                "z": -1920.8396
+              },
+              {
+                "timeS": 3,
+                "x": 454.4529,
+                "z": -1918.0075
+              },
+              {
+                "timeS": 3.5,
+                "x": 452.695,
+                "z": -1915.1754
+              },
+              {
+                "timeS": 4,
+                "x": 450.9372,
+                "z": -1912.3432
+              },
+              {
+                "timeS": 4.5,
+                "x": 449.1793,
+                "z": -1909.5111
+              },
+              {
+                "timeS": 5,
+                "x": 447.4214,
+                "z": -1906.679
+              },
+              {
+                "timeS": 5.5,
+                "x": 445.6635,
+                "z": -1903.8468
+              },
+              {
+                "timeS": 6,
+                "x": 443.9057,
+                "z": -1901.0147
+              },
+              {
+                "timeS": 6.5,
+                "x": 442.1478,
+                "z": -1898.1826
+              },
+              {
+                "timeS": 7,
+                "x": 440.3899,
+                "z": -1895.3504
+              },
+              {
+                "timeS": 7.5,
+                "x": 438.632,
+                "z": -1892.5183
+              },
+              {
+                "timeS": 8,
+                "x": 436.8742,
+                "z": -1889.6862
+              },
+              {
+                "timeS": 8.5,
+                "x": 435.1163,
+                "z": -1886.854
+              },
+              {
+                "timeS": 9,
+                "x": 433.3584,
+                "z": -1884.0219
+              },
+              {
+                "timeS": 9.5,
+                "x": 431.6005,
+                "z": -1881.1898
+              },
+              {
+                "timeS": 10,
+                "x": 429.8427,
+                "z": -1878.3576
+              },
+              {
+                "timeS": 10.5,
+                "x": 428.0848,
+                "z": -1875.5255
+              },
+              {
+                "timeS": 11,
+                "x": 426.3269,
+                "z": -1872.6934
+              },
+              {
+                "timeS": 11.5,
+                "x": 424.569,
+                "z": -1869.8612
+              },
+              {
+                "timeS": 12,
+                "x": 422.8112,
+                "z": -1867.0291
+              },
+              {
+                "timeS": 12.5,
+                "x": 421.0533,
+                "z": -1864.1969
+              },
+              {
+                "timeS": 13,
+                "x": 419.2954,
+                "z": -1861.3648
+              },
+              {
+                "timeS": 13.5,
+                "x": 417.5375,
+                "z": -1858.5327
+              },
+              {
+                "timeS": 14,
+                "x": 415.7796,
+                "z": -1855.7005
+              }
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 6.666666666666667
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:recorded-ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:scene_absolute"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "situation-authority-recorded-ego-1",
+        "actorId": "recorded-ego",
+        "trigger": {
+          "kind": "at",
+          "t": 6
+        },
+        "verb": "route",
+        "target": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 465,
+              "z": -1935
+            },
+            {
+              "x": 463.2373,
+              "z": -1932.1712
+            },
+            {
+              "x": 461.486,
+              "z": -1929.335
+            },
+            {
+              "x": 459.7258,
+              "z": -1926.5044
+            },
+            {
+              "x": 457.9687,
+              "z": -1923.6718
+            },
+            {
+              "x": 456.2108,
+              "z": -1920.8396
+            },
+            {
+              "x": 454.4529,
+              "z": -1918.0075
+            },
+            {
+              "x": 452.695,
+              "z": -1915.1754
+            },
+            {
+              "x": 450.9372,
+              "z": -1912.3432
+            },
+            {
+              "x": 449.1793,
+              "z": -1909.5111
+            },
+            {
+              "x": 447.4214,
+              "z": -1906.679
+            },
+            {
+              "x": 445.6635,
+              "z": -1903.8468
+            },
+            {
+              "x": 443.9057,
+              "z": -1901.0147
+            },
+            {
+              "x": 442.1478,
+              "z": -1898.1826
+            },
+            {
+              "x": 440.3899,
+              "z": -1895.3504
+            },
+            {
+              "x": 438.632,
+              "z": -1892.5183
+            },
+            {
+              "x": 436.8742,
+              "z": -1889.6862
+            },
+            {
+              "x": 435.1163,
+              "z": -1886.854
+            },
+            {
+              "x": 433.3584,
+              "z": -1884.0219
+            },
+            {
+              "x": 431.6005,
+              "z": -1881.1898
+            },
+            {
+              "x": 429.8427,
+              "z": -1878.3576
+            },
+            {
+              "x": 428.0848,
+              "z": -1875.5255
+            },
+            {
+              "x": 426.3269,
+              "z": -1872.6934
+            },
+            {
+              "x": 424.569,
+              "z": -1869.8612
+            },
+            {
+              "x": 422.8112,
+              "z": -1867.0291
+            },
+            {
+              "x": 421.0533,
+              "z": -1864.1969
+            },
+            {
+              "x": 419.2954,
+              "z": -1861.3648
+            },
+            {
+              "x": 417.5375,
+              "z": -1858.5327
+            },
+            {
+              "x": 415.7796,
+              "z": -1855.7005
+            }
+          ]
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

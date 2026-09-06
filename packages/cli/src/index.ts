@@ -6,12 +6,16 @@
  * without shelling out.
  *
  * ```ts
- * import { loadMap, matchOnMap, materialize } from '@simforge-oss/cli';
+ * import { compileTemplate, loadMap, matchOnMap } from '@simforge-oss/cli';
  *
  * const bundle = await loadMap('yale-street');
  * const { report } = await matchOnMap(template, 'yale-street');
- * const { input, manifest } = materialize(template, bundle, report.sites[0]!, { drawIndex: 0 });
+ * const { input, manifest } = compileTemplate(template, bundle, report.sites[0]!, { drawIndex: 0 });
  * ```
+ *
+ * Every compile, simulation and evaluation reached from here executes in the
+ * native runtime (`@simforge-oss/native-runtime`); durable jobs run in the
+ * native `simforge-runner`.
  *
  * @packageDocumentation
  */
@@ -41,68 +45,36 @@ export {
 } from '@simforge-oss/compiler/node';
 
 export {
-  buildSiteSignalPlan,
-  defaultPhasesForHead,
-  parseMapSignalCatalog,
-  SYNTHETIC_SIGNAL_OFFSET_S,
+  adaptTemplateNotes,
+  cellSeed,
+  compileTemplate,
+  createMapContext,
+  findSite,
+  findSites,
+  matchOnMap,
+  matchOnMaps,
+  matchSites,
+  siteSummary,
+  templateIdentity,
+  type AdaptNote,
+  type AppliedCatalogVariant,
+  type CatalogVariantApplication,
+  type CompiledTemplate,
+  type InstanceManifest,
+  type MapControlPlan,
   type MapSignalCatalog,
   type MapSignalController,
   type MapSignalHead,
   type MapSignalJunction,
-  type SiteSignalPlan,
-} from './map-signals.js';
-export { loadMapSignalCatalog } from '@simforge-oss/compiler/node';
-
-export {
-  CLAUSE_UNMATCHABLE,
-  OPEN_END_M,
-  adaptTemplate,
-  numberish,
-  templateCrossingAngle,
-  templateStaticScope,
-  unmatchableNotes,
-  type AdaptNote,
-  type AdaptSeverity,
-  type AdaptedAnchor,
-} from './adapt.js';
-
-export {
-  cellSeed,
-  discreteValues,
-  paramsVersion,
-  resolveParams,
-  templateId,
-  type ParamDraw,
-} from './params.js';
-
-export {
-  applyCatalogVariant,
-  mapSetKey,
-  materialize,
-  type AppliedCatalogVariant,
-  type CatalogVariantApplication,
-  type InstanceManifest,
   type MaterializeOptions,
   type MaterializeResult,
   type ReplayKey,
-} from './materialize.js';
-
-export { createMapContext } from '@simforge-oss/compiler/node';
-
-export {
-  assertMatchableAnchor,
-  findSite,
-  matchOnMap,
-  matchOnMaps,
-  siteSummary,
   type SiteMatch,
+  type SiteSignalPlan,
+  type TemplateIdentity,
 } from '@simforge-oss/compiler/node';
 
-export {
-  checkInvariants,
-  type InvariantContext,
-  type InvariantResidualReport,
-} from './invariants.js';
+export type { InvariantResidualReport } from '@simforge-oss/engine';
 
 export {
   cellPaths,
@@ -117,12 +89,11 @@ export {
   readInstance,
   readTemplate,
   readTraceFile,
+  readTraceHandle,
   writeJsonFile,
   writeTraceFile,
   type InstanceFile,
 } from '@simforge-oss/compiler/node';
-
-export { PROP_DIMS, propDims, type PropDims } from './prop-dims.js';
 
 export {
   CATALOG_GENERATOR_VERSION,
@@ -155,6 +126,7 @@ export { evaluate, combinedEvaluationVerdict, criticalityBand, filtersFor, type 
 export { metricsSummary } from './commands/simulate.js';
 export { debugScenario, type DebugOptions, type DebugPathSample } from './commands/debug.js';
 export { SCHEMAS, type SchemaEntry } from './commands/schemas.js';
+export { RUNNER_BINARY, RUNNER_GROUPS, nativeRuntimeRoot, resolveRunnerBinary, runRunner, runnerCandidates, type RunnerGroup, type RunnerOptions } from './commands/runner.js';
 export { renderHash, renderRun, type RenderRunOptions } from './commands/render.js';
 export { importOpenScenario, type ImportOptions } from './commands/import.js';
 export { templateNew, type TemplateNewOptions } from './commands/template.js';

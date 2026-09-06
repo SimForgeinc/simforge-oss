@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { AlertCircle, Palette, Trash2, Upload } from "lucide-react";
-import { Switch } from "@/app/components/ui/switch";
-import { cn } from "@/app/lib/utils";
+import { Switch } from "@simforge-oss/studio-ui/components/ui/switch";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
   MAX_USER_GEOJSON_THICKNESS,

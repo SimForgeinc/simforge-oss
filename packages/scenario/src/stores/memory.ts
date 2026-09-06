@@ -1,9 +1,8 @@
 /** In-memory {@link ScenarioFileStore}, for tests and scratch documents. */
 
 import { ScenarioNotFoundError } from '../errors.js';
-import { deserializeScenario } from '../migrate.js';
 import type { ScenarioV1 } from '../schema/v1.js';
-import { serializeScenario } from '../serialize.js';
+import { parseScenario, serializeScenario } from '../serialize.js';
 import {
   assertValidScenarioName,
   toScenarioV1,
@@ -50,7 +49,7 @@ export class MemoryScenarioFileStore implements ScenarioFileStore {
     assertValidScenarioName(name);
     const text = this.#files.get(name);
     if (text === undefined) throw new ScenarioNotFoundError(name);
-    return deserializeScenario(text);
+    return parseScenario(JSON.parse(text));
   }
 
   async write(name: string, doc: ScenarioLike): Promise<void> {

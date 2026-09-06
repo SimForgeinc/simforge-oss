@@ -18,15 +18,16 @@ import {
   type Texture,
   type Raycaster,
 } from 'three';
+import { NativeRuntimeError } from '@simforge-oss/native-runtime/shared';
 import {
-  buildRoute,
   contentHash,
+  type NativeRoute,
   type RouteSpec,
   type SimActor,
   type SimScenarioInput,
   type SceneTrace,
 } from '@simforge-oss/engine';
-import type { Interaction, ScenarioTemplateV2 } from '@simforge-oss/scenario';
+import type { Interaction, ScenarioTemplateV2, SceneAbsoluteInitialRoute } from '@simforge-oss/scenario';
 import type { LaneIndex } from './laneIndex';
 
 export type RouteMarkerKind = 'turn-left' | 'turn-right' | 'reroute' | 'lane-change' | 'stop' | 'speed-change' | 'near-miss';
@@ -124,30 +125,53 @@ export function resolvedRoutePoints(
   const key = `${graphDigest}:${contentHash(spec)}:${start ? `${start.laneRsl}@${start.storageS.toFixed(3)}` : 'full'}`;
   const cached = routeGeometryCache.get(key);
   if (cached) return cached;
-  const built = buildRoute(index.graph, spec);
-  if (!built.ok || built.route.lengthM <= 0) return [];
+  const route = tryRoute(index, spec);
+  if (!route || route.lengthM <= 0) return [];
   const points: RoutePoint[] = [];
-  const startS = start && spec.kind === 'lanePath' && spec.lanes[0] === start.laneRsl
-    ? built.route.sOfLaneStorage(start.laneRsl, start.storageS) ?? 0
-    : 0;
+  // Leg boundaries along the route: each lane-chain leg spans its lane length.
+  const legStarts: number[] = [];
+  let cursor = 0;
+  for (const rsl of route.laneRsls) {
+    legStarts.push(cursor);
+    cursor += index.graph.laneLengthM(rsl);
+  }
+  let startS = 0;
+  if (start && spec.kind === 'lanePath' && spec.lanes[0] === start.laneRsl && route.laneRsls[0] === start.laneRsl) {
+    const snapshot = JSON.parse(route.snapshotJson()) as { legs?: { reversed: boolean }[] };
+    const reversed = snapshot.legs?.[0]?.reversed === true;
+    const laneLength = index.graph.laneLengthM(start.laneRsl);
+    startS = Math.min(laneLength, Math.max(0, reversed ? laneLength - start.storageS : start.storageS));
+  }
   // Two-metre samples retain junction curvature while bounding 32 typical
   // routes to a few thousand vertices. Exact leg boundaries are also sampled.
-  const samples = new Set<number>([startS, built.route.lengthM]);
-  for (let s = startS + 2; s < built.route.lengthM; s += 2) samples.add(s);
-  for (const leg of built.route.legs) {
-    if (leg.sStart >= startS) samples.add(leg.sStart);
-    if (leg.sStart + leg.lengthM >= startS) samples.add(leg.sStart + leg.lengthM);
+  const samples = new Set<number>([startS, route.lengthM]);
+  for (let s = startS + 2; s < route.lengthM; s += 2) samples.add(s);
+  for (let i = 0; i < legStarts.length; i++) {
+    const legStart = legStarts[i]!;
+    const legEnd = legStarts[i + 1] ?? route.lengthM;
+    if (legStart >= startS) samples.add(legStart);
+    if (legEnd >= startS) samples.add(legEnd);
   }
   for (const s of [...samples].sort((a, b) => a - b)) {
-    const pose = built.route.poseAt(s);
-    const x = Object.is(pose.point.x, -0) ? 0 : pose.point.x;
-    const rawZ = -pose.point.y;
+    const pose = route.poseAt(s);
+    const x = Object.is(pose[0], -0) ? 0 : pose[0]!;
+    const rawZ = -pose[1]!;
     points.push({ x, z: Object.is(rawZ, -0) ? 0 : rawZ });
   }
   const stable = Object.freeze(points);
   routeGeometryCache.set(key, stable);
   if (routeGeometryCache.size > ROUTE_CACHE_LIMIT) routeGeometryCache.delete(routeGeometryCache.keys().next().value!);
   return stable;
+}
+
+/** A route the engine refuses has no overlay; the compile surface reports why. */
+function tryRoute(index: LaneIndex, spec: RouteSpec): NativeRoute | null {
+  try {
+    return index.graph.route(JSON.stringify(spec));
+  } catch (error) {
+    if (error instanceof NativeRuntimeError && error.kind === 'argument') return null;
+    throw error;
+  }
 }
 
 function routePoints(actor: SimActor, index: LaneIndex): readonly RoutePoint[] {
@@ -384,6 +408,12 @@ export interface RouteExecutionParity {
   readonly mismatches: readonly string[];
 }
 
+function initialRouteSpec(route: SceneAbsoluteInitialRoute): RouteSpec {
+  if (route.mode === 'lanePath') return { kind: 'lanePath', lanes: route.lanes };
+  if (route.mode === 'customTimedRoute') return { kind: 'timedPolyline', points: route.points };
+  return { kind: 'polyline', points: route.points };
+}
+
 /**
  * Fail-closed contract between the persisted authoring plan and the concrete
  * simulator input installed by Play. It deliberately covers only map-bound
@@ -395,11 +425,15 @@ export function routeExecutionParity(
   input: Pick<SimScenarioInput, 'actors' | 'interactions'>,
 ): RouteExecutionParity {
   const routeRoles = template.roles
-    .flatMap((role) => role.kind === 'scene_absolute' && role.initialRoute?.lanes.length ? [role] : [])
+    .flatMap((role) => role.kind === 'scene_absolute' && role.initialRoute ? [role] : [])
     .sort((a, b) => a.id.localeCompare(b.id));
   const canonicalAuthoredInteraction = (interaction: Interaction): unknown | null => {
     if (interaction.verb === 'route' && interaction.target.mode === 'lanePath') {
       return { id: interaction.id, verb: 'route', lanes: interaction.target.lanes };
+    }
+    if (interaction.verb === 'route' &&
+      (interaction.target.mode === 'customRoute' || interaction.target.mode === 'customTimedRoute')) {
+      return { id: interaction.id, verb: 'route', target: initialRouteSpec(interaction.target) };
     }
     if (interaction.verb === 'changeLane') {
       const target = interaction.target.mode === 'relative'
@@ -416,7 +450,7 @@ export function routeExecutionParity(
   };
   const authored = routeRoles.map((role) => ({
     id: role.id,
-    initialRoute: role.initialRoute!.lanes,
+    initialRoute: initialRouteSpec(role.initialRoute!),
     interactions: template.choreography.interactions
       .filter((interaction) => interaction.actor === role.id)
       .map(canonicalAuthoredInteraction)
@@ -425,6 +459,10 @@ export function routeExecutionParity(
   const canonicalCompiledInteraction = (interaction: SimScenarioInput['interactions'][number]): unknown | null => {
     if (interaction.verb === 'route' && interaction.target.kind === 'lanePath') {
       return { id: interaction.id, verb: 'route', lanes: interaction.target.lanes };
+    }
+    if (interaction.verb === 'route' &&
+      (interaction.target.kind === 'polyline' || interaction.target.kind === 'timedPolyline')) {
+      return { id: interaction.id, verb: 'route', target: interaction.target };
     }
     if (interaction.verb === 'changeLane') {
       const target = interaction.target.mode === 'lane'
@@ -443,7 +481,7 @@ export function routeExecutionParity(
     const actor = input.actors.find((candidate) => candidate.id === role.id);
     return {
       id: role.id,
-      initialRoute: actor?.behavior.route.kind === 'lanePath' ? actor.behavior.route.lanes : null,
+      initialRoute: actor?.behavior.route ?? null,
       interactions: input.interactions
         .filter((interaction) => interaction.actorId === role.id)
         .map(canonicalCompiledInteraction)
@@ -480,6 +518,8 @@ export function authoringRoutes(
       : undefined,
   ]));
   return routesFromSimulation(concrete, index, trace, authoredColors).map((route) => {
+    const role = template.roles.find((candidate) => candidate.id === route.actorId);
+    const initialRoute = role?.kind === 'scene_absolute' ? role.initialRoute : undefined;
     const customRoute = template.choreography.interactions.find((interaction) =>
       interaction.actor === route.actorId &&
       interaction.verb === 'route' &&
@@ -488,7 +528,9 @@ export function authoringRoutes(
     const customRoutePoints = customRoute?.verb === 'route' &&
       (customRoute.target.mode === 'customRoute' || customRoute.target.mode === 'customTimedRoute')
       ? customRoute.target.points.map((point) => ({ x: point.x, z: point.z }))
-      : null;
+      : initialRoute && initialRoute.mode !== 'lanePath'
+        ? initialRoute.points.map((point) => ({ x: point.x, z: point.z }))
+        : null;
     return {
       ...route,
       planned: customRoutePoints ?? route.actual,
@@ -513,10 +555,10 @@ export function routesFromTemplate(
       || role.actor.class === 'pedestrian'
       || role.actor.class === 'static_object'
     ) return [];
-    const lanes = role.kind === 'scene_absolute' ? role.initialRoute?.lanes : undefined;
-    if (!lanes?.length) return [];
+    const initialRoute = role.kind === 'scene_absolute' ? role.initialRoute : undefined;
+    if (!initialRoute) return [];
     const planned = resolvedRoutePoints(
-      { kind: 'lanePath', lanes },
+      initialRouteSpec(initialRoute),
       index,
       role.kind === 'scene_absolute' && role.laneRef
         ? {

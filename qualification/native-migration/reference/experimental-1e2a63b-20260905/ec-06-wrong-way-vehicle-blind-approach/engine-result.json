@@ -1,0 +1,57 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.wrong-way-sedan.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "wrong-way-sedan"
+      }
+    },
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.wrong-way-offsets.dynamics.value",
+      "reason": "requested 2.00 s lateral manoeuvre is infeasible for car; clamped to 2.09 s",
+      "detail": {
+        "actorId": "wrong-way-sedan",
+        "requestedDurationS": 2,
+        "effectiveDurationS": 2.0944296820572097,
+        "displacementM": 1.2249999999950794,
+        "lateralRateMaxMps": 2.5,
+        "lateralAccelMaxMps2": 3,
+        "lateralJerkMaxMps3": 8
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.focus-vehicle-edges-right",
+      "reason": "dynamic actor focus-vehicle did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "focus-vehicle",
+        "interactionId": "focus-vehicle-edges-right",
+        "referenceDurationS": 2.5,
+        "positionErrorM": 0.1826026128553584,
+        "rateErrorMps": 0.0014085149994250146,
+        "headingErrorRad": -0.05708011368760868
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.wrong-way-offsets",
+      "reason": "dynamic actor wrong-way-sedan did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "wrong-way-sedan",
+        "interactionId": "wrong-way-offsets",
+        "referenceDurationS": 2.0944296820572097,
+        "positionErrorM": -0.8601586729561086,
+        "rateErrorMps": 0.0018897367268622123,
+        "headingErrorRad": 0.24431441228634232
+      }
+    }
+  ],
+  "arrival": []
+}

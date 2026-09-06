@@ -21,7 +21,7 @@ import {
   GALLERY_MAX_GLB_BYTES,
   GALLERY_MAX_TRIANGLES,
   type GallerySourceFormat,
-} from "./contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 
 const THUMBNAIL_SIZE = 512;
 const MAX_TEXTURE_SIZE = 2048;

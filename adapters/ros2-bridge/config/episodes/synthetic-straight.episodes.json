@@ -51,7 +51,6 @@
             "behavior": {
               "rules": {
                 "obeySignals": true,
-                "yield": true,
                 "yieldToVehicles": true,
                 "yieldToPedestrians": true,
                 "collisionAvoidance": true,

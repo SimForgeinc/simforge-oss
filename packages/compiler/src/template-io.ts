@@ -18,13 +18,14 @@ import {
   type ScenarioTemplateV2,
 } from '@simforge-oss/scenario';
 import {
-  decodeTraceGz,
+  canonicalJson,
   encodeTraceGz,
   parseSimScenarioInput,
   safeParseSimScenarioInput,
   type SimScenarioInput,
   type SimTrace,
 } from '@simforge-oss/engine';
+import { TraceHandle, parseTrace } from '@simforge-oss/engine/node';
 
 import { CliError, EXIT } from './errors.js';
 export interface CatalogArtifactProvenance {
@@ -149,12 +150,19 @@ export async function writeTemplateFile(file: string, template: ScenarioTemplate
   await writeFile(file, serializeTemplate(template), 'utf8');
 }
 
-export async function writeTraceFile(file: string, trace: SimTrace): Promise<void> {
+/**
+ * Write a trace as gzipped canonical JSON. A native handle serialises itself;
+ * a plain document is written as-is (canonical key order, no re-validation), so
+ * an evidence tool can persist a deliberately inconsistent trace for `verify`.
+ */
+export async function writeTraceFile(file: string, trace: SimTrace | TraceHandle): Promise<void> {
+  const json = trace instanceof TraceHandle ? trace.serialize() : canonicalJson(trace);
   await mkdir(path.dirname(path.resolve(file)), { recursive: true });
-  await writeFile(file, Buffer.from(await encodeTraceGz(trace)));
+  await writeFile(file, Buffer.from(await encodeTraceGz(json)));
 }
 
-export async function readTraceFile(file: string): Promise<SimTrace> {
+/** Read a plain or gzipped trace file into a validated native handle. */
+export async function readTraceHandle(file: string): Promise<TraceHandle> {
   let bytes: Buffer;
   try {
     bytes = await readFile(file);
@@ -162,13 +170,14 @@ export async function readTraceFile(file: string): Promise<SimTrace> {
     throw new CliError('file_not_found', `cannot read ${file}`, { path: file });
   }
   try {
-    if (bytes[0] === 0x1f && bytes[1] === 0x8b) return await decodeTraceGz(new Uint8Array(bytes));
-    return JSON.parse(bytes.toString('utf8')) as SimTrace;
+    return parseTrace(new Uint8Array(bytes));
   } catch (error) {
-    throw new CliError('invalid_trace', error instanceof Error ? error.message : String(error), {
-      path: file,
-    });
+    throw new CliError('invalid_trace', error instanceof Error ? error.message : String(error), { path: file });
   }
+}
+
+export async function readTraceFile(file: string): Promise<SimTrace> {
+  return (await readTraceHandle(file)).toTrace();
 }
 
 export { parseSimScenarioInput };

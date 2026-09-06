@@ -7,7 +7,7 @@ import {
   extractParkingStalls,
   PARKING_STALL_SCHEMA_VERSION,
   type ParkingStallArtifact,
-} from "@/app/lib/scenario/parking/stalls";
+} from "@simforge-oss/studio-ui/lib/scenario/parking/stalls";
 import { MapAssetIdParams } from "@/app/lib/api-schemas";
 void MapAssetIdParams;
 

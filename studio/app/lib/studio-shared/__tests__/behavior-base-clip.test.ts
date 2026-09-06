@@ -3,15 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   baseActionForDraft,
   baseClip,
-  expandLegacyWireActor,
   isBaseClip,
-  migrateLegacyScenarioEditorActor,
   normalizeActorBaseClip,
   placementFieldsFromBaseClip,
   withBaseAction,
   withBaseSpeed,
 } from "../behavior-base-clip";
-import { emptyActorBehaviorProgram } from "../scenario-behavior";
+import {
+  emptyActorBehaviorProgram,
+  type ActorBehaviorProgram,
+} from "@simforge-oss/scenario/contracts";
 import type { ScenarioEditorActorDraft } from "../scenario-editor";
 
 /**
@@ -40,25 +41,38 @@ function makeDraft(
     destination: null,
     destination_point: null,
     speed_kph: 30,
-    autopilot: true,
     color: null,
-    notes: null,
-    timeline: [],
     sensors: [],
     ...overrides,
   } as ScenarioEditorActorDraft;
 }
 
-describe("baseActionForDraft", () => {
-  it("reads an autopilot road car as an autopilot baseline", () => {
-    expect(baseActionForDraft(makeDraft())).toEqual({
-      kind: "autopilot",
-      enabled: true,
-    });
-  });
+/** A road car whose author chose the Traffic Manager as its baseline. */
+function autopilotProgram(actorId = "a1"): ActorBehaviorProgram {
+  return {
+    ...emptyActorBehaviorProgram(),
+    clips: [
+      {
+        id: `bhv_base_${actorId}`,
+        role: "base",
+        enabled: true,
+        trigger: { kind: "at_time", t: 0 },
+        end: { kind: "completion" },
+        action: { kind: "autopilot", enabled: true },
+      },
+    ],
+  };
+}
 
-  it("reads a non-autopilot road car as a cruise at its commanded speed", () => {
-    expect(baseActionForDraft(makeDraft({ autopilot: false }))).toEqual({
+function autopilotDraft(
+  overrides: Partial<ScenarioEditorActorDraft> = {},
+): ScenarioEditorActorDraft {
+  return makeDraft({ behavior: autopilotProgram(), ...overrides });
+}
+
+describe("baseActionForDraft", () => {
+  it("reads a road car as a cruise at its commanded speed — never as autopilot", () => {
+    expect(baseActionForDraft(makeDraft())).toEqual({
       kind: "cruise",
       speed_kph: 30,
     });
@@ -76,7 +90,6 @@ describe("baseActionForDraft", () => {
       baseActionForDraft(
         makeDraft({
           placement_mode: "timed_path",
-          autopilot: false,
           timed_waypoints: waypoints,
         } as Partial<ScenarioEditorActorDraft>),
       ),
@@ -86,7 +99,7 @@ describe("baseActionForDraft", () => {
   it("holds a path actor with no points yet — a path needs at least one", () => {
     expect(
       baseActionForDraft(
-        makeDraft({ placement_mode: "timed_path", autopilot: false }),
+        makeDraft({ placement_mode: "timed_path" }),
       ),
     ).toEqual({ kind: "hold" });
   });
@@ -96,50 +109,47 @@ describe("normalizeActorBaseClip", () => {
   it("is a fixed point: an actor's motion survives normalizing twice", () => {
     for (const draft of [
       makeDraft(),
-      makeDraft({ autopilot: false }),
-      makeDraft({ is_static: true, autopilot: false }),
+      autopilotDraft(),
+      makeDraft({ is_static: true }),
       makeDraft({
         placement_mode: "timed_path",
-        autopilot: false,
         timed_waypoints: [{ x: 1, y: 2, time: 1 }],
       } as Partial<ScenarioEditorActorDraft>),
     ]) {
       const once = normalizeActorBaseClip(draft);
       expect(normalizeActorBaseClip(once)).toEqual(once);
-      // ...and the legacy fields the worker reads are unchanged by the round
-      // trip, which is what makes adopting this safe for saved scenarios.
+      // ...and the placement fields the worker reads are unchanged by the
+      // round trip, which is what makes normalizing on every edit safe.
       expect(once.placement_mode).toBe(draft.placement_mode);
-      expect(once.autopilot).toBe(draft.autopilot);
       expect(once.is_static).toBe(draft.is_static);
     }
   });
 
-  it("resolves a legacy draft that is both static and on autopilot", () => {
-    // Contradictory input, and `is_static` has always won it
-    // (`actorNavigationMode` read it first). The MIGRATION owns the resolution
-    // now: it strips the legacy boolean from the persisted shape, and the wire
-    // boundary compiles `autopilot: false` back out of the `hold` base clip.
-    const resolved = migrateLegacyScenarioEditorActor(
-      makeDraft({ is_static: true, autopilot: true }),
+  it("lets an authored baseline win over a stale is_static flag", () => {
+    // Contradictory input. The base clip owns the placement tuple — it is
+    // compiled OUT of the clip on every normalization — so an authored
+    // autopilot baseline un-freezes the actor rather than being rewritten to a
+    // hold behind the author's back.
+    const resolved = normalizeActorBaseClip(
+      makeDraft({ is_static: true, behavior: autopilotProgram() }),
     );
-    expect(baseClip(resolved.behavior!)?.action).toEqual({ kind: "hold" });
-    expect(resolved.is_static).toBe(true);
-    expect((resolved as Record<string, unknown>).autopilot).toBeUndefined();
-    expect(expandLegacyWireActor(resolved).autopilot).toBe(false);
+    expect(baseClip(resolved.behavior!)?.action).toEqual({ kind: "autopilot", enabled: true });
+    expect(resolved.is_static).toBe(false);
+    expect(normalizeActorBaseClip(resolved)).toEqual(resolved);
   });
 
-  it("gives an actor with no program a baseline at t=0", () => {
+  it("gives an actor with no program a cruise baseline at t=0", () => {
     const normalized = normalizeActorBaseClip(makeDraft());
     expect(normalized.behavior?.clips).toHaveLength(1);
     expect(normalized.behavior?.clips[0]).toMatchObject({
       role: "base",
       trigger: { kind: "at_time", t: 0 },
       end: { kind: "completion" },
-      action: { kind: "autopilot", enabled: true },
+      action: { kind: "cruise", speed_kph: 30 },
     });
   });
 
-  it("prefers the first explicit base marker over the legacy shape fallback", () => {
+  it("prefers the first explicit base marker over the shape fallback", () => {
     const normalized = normalizeActorBaseClip(
       makeDraft({
         behavior: {
@@ -175,12 +185,12 @@ describe("normalizeActorBaseClip", () => {
 
   it("stamps the shape fallback as base and every other clip as interaction", () => {
     const normalized = normalizeActorBaseClip({
-      ...makeDraft({ autopilot: false }),
+      ...makeDraft(),
       behavior: {
         ...emptyActorBehaviorProgram(),
         clips: [
           {
-            id: "legacy-base",
+            id: "unmarked-base",
             enabled: true,
             trigger: { kind: "at_time", t: 0 },
             end: { kind: "completion" },
@@ -203,7 +213,7 @@ describe("normalizeActorBaseClip", () => {
   });
 
   it("leaves an authored program's own baseline alone", () => {
-    const authored = normalizeActorBaseClip(makeDraft());
+    const authored = normalizeActorBaseClip(autopilotDraft());
     const retyped = {
       ...authored,
       behavior: withBaseAction(authored.behavior!, authored, {
@@ -247,7 +257,6 @@ describe("base clip normalization", () => {
     const walker = makeDraft({
       kind: "walker",
       placement_mode: "timed_path",
-      autopilot: false,
       timed_waypoints: waypoints,
     } as Partial<ScenarioEditorActorDraft>);
 
@@ -262,10 +271,16 @@ describe("placementFieldsFromBaseClip", () => {
     const from = (draft: ScenarioEditorActorDraft) =>
       placementFieldsFromBaseClip(normalizeActorBaseClip(draft));
 
-    expect(from(makeDraft())).toMatchObject({
+    expect(from(autopilotDraft())).toMatchObject({
       placement_mode: "road",
       autopilot: true,
       is_static: false,
+    });
+    expect(from(makeDraft())).toMatchObject({
+      placement_mode: "road",
+      autopilot: false,
+      is_static: false,
+      speed_kph: 30,
     });
     expect(from(makeDraft({ is_static: true }))).toMatchObject({
       is_static: true,
@@ -279,7 +294,6 @@ describe("placementFieldsFromBaseClip", () => {
     const awaiting = normalizeActorBaseClip(
       makeDraft({
         placement_mode: "timed_path",
-        autopilot: false,
         timed_waypoints: [],
       } as Partial<ScenarioEditorActorDraft>),
     );
@@ -294,7 +308,6 @@ describe("placementFieldsFromBaseClip", () => {
       makeDraft({
         placement_mode: "timed_path",
         is_static: true,
-        autopilot: false,
       }),
     );
     expect(parked.placement_mode).toBe("point");
@@ -304,7 +317,7 @@ describe("placementFieldsFromBaseClip", () => {
 
 describe("withBaseSpeed", () => {
   it("writes a cruising actor's speed through to its base clip", () => {
-    const cruising = normalizeActorBaseClip(makeDraft({ autopilot: false }));
+    const cruising = normalizeActorBaseClip(makeDraft());
     const faster = withBaseSpeed(cruising, 55);
     expect(faster.speed_kph).toBe(55);
     expect(baseClip(faster.behavior!)?.action).toEqual({
@@ -316,7 +329,7 @@ describe("withBaseSpeed", () => {
   });
 
   it("leaves a baseline that carries no speed of its own alone", () => {
-    const autopiloted = normalizeActorBaseClip(makeDraft());
+    const autopiloted = normalizeActorBaseClip(autopilotDraft());
     const changed = withBaseSpeed(autopiloted, 55);
     expect(changed.speed_kph).toBe(55);
     expect(baseClip(changed.behavior!)?.action).toEqual({
@@ -335,7 +348,7 @@ describe("withBaseSpeed", () => {
  */
 describe("autopilot desired speed", () => {
   it("does not claim the draft's speed until an author sets one", () => {
-    const normalized = normalizeActorBaseClip(makeDraft({ speed_kph: 60 }));
+    const normalized = normalizeActorBaseClip(autopilotDraft({ speed_kph: 60 }));
 
     expect(baseClip(normalized.behavior!)?.action).toEqual({
       kind: "autopilot",
@@ -348,7 +361,7 @@ describe("autopilot desired speed", () => {
   });
 
   it("compiles an authored clip speed down to the field the worker reads", () => {
-    const normalized = normalizeActorBaseClip(makeDraft({ speed_kph: 60 }));
+    const normalized = normalizeActorBaseClip(autopilotDraft({ speed_kph: 60 }));
     const authored = withBaseAction(normalized.behavior!, normalized, {
       kind: "autopilot",
       enabled: true,

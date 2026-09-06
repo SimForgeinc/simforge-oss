@@ -1,5 +1,5 @@
-import { RouteLoading } from "@/app/components/ui/sim-loader";
+import { ScenarioEditorLoading } from "@simforge-oss/studio-ui/scenario/route-states";
 
-export default function ScenarioEditorLoading() {
-  return <RouteLoading depth={2} label="Scenario editor" detail="Preparing the editor…" />;
+export default function ScenarioEditorRouteLoading() {
+  return <ScenarioEditorLoading />;
 }

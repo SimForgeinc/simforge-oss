@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { join } from "node:path";
 
 /**
  * Origin serving a live twin's camera feeds (MJPEG) when one is attached.
@@ -14,17 +15,20 @@ const configuredDevOrigins = (process.env.SIMFORGE_ALLOWED_DEV_ORIGINS ?? "")
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
-  // Deprecated wire alias: pre-SimForge clients are forwarded to the single canonical handler tree.
+  // The desktop stage (`desktop/stage.mjs`) serves the traced standalone
+  // server from the installed artifact; the browser edition keeps `next start`.
+  ...(process.env.SIMFORGE_DESKTOP_BUILD === "1" ? { output: "standalone" as const } : {}),
+  // Workspace packages are bundled from source, so file tracing must span the monorepo.
+  outputFileTracingRoot: join(__dirname, ".."),
+  // Cargo outputs may be external worktree symlinks. Desktop staging copies
+  // the selected native binaries explicitly, never the development build trees.
+  outputFileTracingExcludes: {
+    "/*": ["../renderer/target", "../renderer/target/**/*", "../native/target", "../native/target/**/*"],
+  },
   async rewrites() {
-    return [
-      {
-        source: "/api/uniscenario/:path*",
-        destination: "/api/simforge/:path*",
-      },
-      ...(twinHttpOrigin
-        ? [{ source: "/streams/:path*", destination: `${twinHttpOrigin}/streams/:path*` }]
-        : []),
-    ];
+    return twinHttpOrigin
+      ? [{ source: "/streams/:path*", destination: `${twinHttpOrigin}/streams/:path*` }]
+      : [];
   },
   allowedDevOrigins: [
     "127.0.0.1",
@@ -54,6 +58,8 @@ const nextConfig: NextConfig = {
     "@simforge-oss/scenario",
     "@simforge-oss/engine",
     "@simforge-oss/training-env",
+    "@simforge-oss/studio-host",
+    "@simforge-oss/studio-ui",
   ],
   webpack(config) {
     config.resolve.extensionAlias = {

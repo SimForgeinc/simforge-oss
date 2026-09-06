@@ -42,11 +42,7 @@ import {
 import type { PedestrianParams } from './builders/pedestrians';
 import {
   buildAdultPedestrian,
-  buildAdultStanding,
-  buildAdultWalking,
   buildChildPedestrian,
-  buildChildStanding,
-  buildChildWalking,
   buildTrafficMarshal,
 } from './builders/pedestrians';
 import type { RunParams } from './builders/street';
@@ -114,6 +110,8 @@ import type { RobotParams } from './builders/robots';
 import {
   buildConstructionHumanoid,
   buildCoolerRobot,
+  buildDelivery4wChassis,
+  buildDelivery4wWheel,
   buildDeliveryHumanoid,
   buildDeliveryRover,
   buildGeneralPurposeHumanoid,
@@ -167,10 +165,6 @@ export interface PropParamMap {
   'vehicle.delivery_van': VehicleParams;
   'pedestrian.adult': PedestrianParams;
   'pedestrian.child': PedestrianParams;
-  'pedestrian.adult_standing': PedestrianParams;
-  'pedestrian.adult_walking': PedestrianParams;
-  'pedestrian.child_standing': PedestrianParams;
-  'pedestrian.child_walking': PedestrianParams;
   'pedestrian.traffic_marshal': PedestrianParams;
   'sidewalk_robot.delivery_rover': RobotParams;
   'sidewalk_robot.cooler_bot': RobotParams;
@@ -180,6 +174,8 @@ export interface PropParamMap {
   'sidewalk_robot.humanoid_warehouse': RobotParams;
   'sidewalk_robot.humanoid_public_safety': RobotParams;
   'sidewalk_robot.humanoid_construction': RobotParams;
+  'robot.delivery-4w': RobotParams;
+  'robot.wheel': RobotParams;
   'drone.delivery_quadcopter': DroneParams;
   'drone.camera_quadcopter': DroneParams;
   'drone.emergency_responder': DroneParams;
@@ -267,10 +263,6 @@ const BUILDERS: Builders = {
   'vehicle.delivery_van': buildDeliveryVan,
   'pedestrian.adult': buildAdultPedestrian,
   'pedestrian.child': buildChildPedestrian,
-  'pedestrian.adult_standing': buildAdultStanding,
-  'pedestrian.adult_walking': buildAdultWalking,
-  'pedestrian.child_standing': buildChildStanding,
-  'pedestrian.child_walking': buildChildWalking,
   'pedestrian.traffic_marshal': buildTrafficMarshal,
   'sidewalk_robot.delivery_rover': buildDeliveryRover,
   'sidewalk_robot.cooler_bot': buildCoolerRobot,
@@ -280,6 +272,8 @@ const BUILDERS: Builders = {
   'sidewalk_robot.humanoid_warehouse': buildWarehouseHumanoid,
   'sidewalk_robot.humanoid_public_safety': buildPublicSafetyHumanoid,
   'sidewalk_robot.humanoid_construction': buildConstructionHumanoid,
+  'robot.delivery-4w': buildDelivery4wChassis,
+  'robot.wheel': buildDelivery4wWheel,
   'drone.delivery_quadcopter': buildDeliveryDrone,
   'drone.camera_quadcopter': buildCameraDrone,
   'drone.emergency_responder': buildEmergencyDrone,
@@ -344,8 +338,9 @@ function buildExternalPlaceholder(id: string, dims: Dims): Group {
  *
  * Parameters are merged over the entry's `defaultParams`, so `buildProp(id)`
  * always produces the object whose dimensions the catalog advertises. The
- * returned group is ground-centred, faces +X and carries
- * `userData.catalogId` for round-tripping back to the catalog.
+ * returned group faces +X, carries `userData.catalogId` for round-tripping
+ * back to the catalog, and is ground-centred unless the entry declares
+ * `origin: 'body-centre'`, in which case it is centred on the origin.
  */
 export function buildProp<K extends string>(
   id: K,

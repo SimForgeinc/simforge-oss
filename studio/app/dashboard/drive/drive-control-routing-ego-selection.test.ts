@@ -1,4 +1,5 @@
-import { buildLaneGraph, parseSimScenarioInput } from "@simforge-oss/engine";
+import { parseSimScenarioInput } from "@simforge-oss/engine";
+import { sessions } from "@simforge-oss/training-env/node";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,7 +8,7 @@ import {
   selectAuthoredEgoActor,
 } from "../../lib/live-world/authored-world-session";
 
-const graph = buildLaneGraph({
+const graph = sessions().engine.laneGraph({
   source: { xodrSha256: "fixture" },
   lanes: {},
   gates: [],
@@ -51,7 +52,7 @@ describe("Drive control routing and ego selection", () => {
   it("drives the authored actor in place without rewriting the compiled document", () => {
     const input = worldInput();
     const authoredActors = structuredClone(input.actors);
-    const world = createAuthoredWorldSession(input, graph);
+    const world = createAuthoredWorldSession(sessions(), input, graph);
     const actorIdsBefore = world.snapshot().actors.map((actor) => actor.id);
 
     expect(applyEgoControl(world, "compiled-short", {
@@ -68,7 +69,7 @@ describe("Drive control routing and ego selection", () => {
 
   it("rejects a mismatched control target and moves the designated ego under held throttle", () => {
     const input = worldInput();
-    const world = createAuthoredWorldSession(input, graph);
+    const world = createAuthoredWorldSession(sessions(), input, graph);
     expect(() => applyEgoControl(world, "compiled-short", {
       actorId: "long",
       steer: 0,

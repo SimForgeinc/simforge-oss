@@ -46,3 +46,51 @@ describe('addWithInteractions', () => {
     document.dispose();
   });
 });
+
+describe('recorded initial route edits', () => {
+  it('preserves source timing across import, appearance edits, translation and undo', async () => {
+    const document = await blankDocument();
+    try {
+      const points = [
+        { timeS: 0, x: 10, z: 5 },
+        { timeS: 0.4, x: 10, z: 5 },
+        { timeS: 1.6, x: 16, z: 8 },
+        { timeS: 3, x: 18, z: 8 },
+      ];
+      document.add([{
+        id: 'recorded', catalogId: 'vehicle.sedan', x: 10, y: 0, z: 5, headingRad: 0,
+      }]);
+      document.importTemplate({
+        ...document.data,
+        roles: document.data.roles.map((role) => ({
+          ...role, initialRoute: { mode: 'customTimedRoute', points },
+        })),
+      });
+      const route = () => {
+        const role = document.data.roles.find((item) => item.id === 'recorded');
+        if (role?.kind !== 'scene_absolute') throw new Error('recorded actor missing');
+        return role.initialRoute;
+      };
+      expect(route()).toEqual({ mode: 'customTimedRoute', points });
+
+      document.update([{ id: 'recorded', label: 'Recorded ego', bodyColor: '#123456' }]);
+      expect(route()).toEqual({ mode: 'customTimedRoute', points });
+
+      document.update([{ id: 'recorded', x: 7, z: 12 }]);
+      expect(route()).toEqual({
+        mode: 'customTimedRoute',
+        points: [
+          { timeS: 0, x: 7, z: 12 },
+          { timeS: 0.4, x: 7, z: 12 },
+          { timeS: 1.6, x: 13, z: 15 },
+          { timeS: 3, x: 15, z: 15 },
+        ],
+      });
+      expect(document.undo()).toBe(true);
+      expect(document.actor('recorded')).toMatchObject({ x: 10, z: 5, label: 'Recorded ego' });
+      expect(route()).toEqual({ mode: 'customTimedRoute', points });
+    } finally {
+      document.dispose();
+    }
+  });
+});

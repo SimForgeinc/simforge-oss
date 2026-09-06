@@ -4,7 +4,7 @@ Extends the Ackermann MVP (``bridge_node.SimForgeBridge``) with the Autoware
 component contract so a stock Autoware Core control node — binary Jazzy deb
 ``autoware_simple_pure_pursuit`` from ``autoware_core_control`` — closes the
 loop on a SimForge episode. NO perception stack runs: objects are injected
-ground truth straight from the engine's truth-stream side channel.
+ground truth read straight from the native episode session's actor state.
 
 Out (in addition to every MVP topic, all stamped with sim time):
 
@@ -17,9 +17,9 @@ Out (in addition to every MVP topic, all stamped with sim time):
   steering state)
 - ``/vehicle/status/gear_status``     autoware_vehicle_msgs/GearReport (DRIVE)
 - ``/perception/object_recognition/objects``
-  autoware_perception_msgs/PredictedObjects — ground-truth actors from the
-  env-server truth stream (ego filtered out), one constant-velocity predicted
-  path each
+  autoware_perception_msgs/PredictedObjects — ground-truth actors present in
+  the world at the observation instant (ego filtered out), engine footprint
+  dimensions, one constant-velocity predicted path each
 - ``/planning/trajectory``            autoware_planning_msgs/Trajectory — the
   authored route (straight + one lane-change turn on the synthetic fixture),
   re-published every decision so a relaunched Autoware re-syncs within one
@@ -44,11 +44,8 @@ from __future__ import annotations
 
 import math
 import uuid
-from collections import deque
-from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
-import msgpack
 import rclpy
 
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -69,61 +66,19 @@ from nav_msgs.msg import Odometry
 from autoware_vehicle_msgs.msg import GearReport, SteeringReport, VelocityReport
 
 from .bridge_node import _RELIABLE, SimForgeBridge, _sim_time_ns, _yaw_quat
-from .env_client import (
-    _HEADER,
-    EnvServerClient,
-    ProtocolError,
-    ServerError,
-    StepFrame,
-    _read_exact,
-    default_server_command,
-)
+from .episode import Decision
 
-
-class TruthStreamClient(EnvServerClient):
-    """Env-server client that also consumes the truth-stream side channel.
-
-    The server flushes ``op:'tick'`` ground-truth documents onto the same
-    stdio wire after each reply (docs/engineering: truth stream, drop-oldest
-    bounded queue). This client skims them into :attr:`ticks` while reading
-    replies; :meth:`pump` issues a no-op round trip so ticks emitted after the
-    latest ``step`` reply become readable immediately.
-    """
-
-    def __init__(self, server_command: Sequence[str], **kwargs: Any) -> None:
-        super().__init__(server_command, **kwargs)
-        self.ticks: deque[dict[str, Any]] = deque(maxlen=64)
-
-    def _request(self, document: dict[str, Any]) -> Any:
-        request_id = self._next_id
-        self._next_id += 1
-        payload = msgpack.packb({"i": request_id, **document}, use_bin_type=True)
-        stdin = self._proc.stdin
-        assert stdin is not None
-        stdin.write(_HEADER.pack(len(payload)) + payload)
-        stdin.flush()
-
-        stdout = self._proc.stdout
-        assert stdout is not None
-        while True:
-            header = _read_exact(stdout.read, 4)
-            frame = _read_exact(stdout.read, _HEADER.unpack(header)[0])
-            response = msgpack.unpackb(frame, raw=False)
-            if response.get("op") == "tick":
-                self.ticks.append(response)
-                continue
-            if response.get("i") != request_id:
-                raise ProtocolError(f"reply id {response.get('i')!r} does not match request {request_id}")
-            if response.get("ok") == 1:
-                return response.get("r")
-            raise ServerError(str(response.get("e", "unknown server error")))
-
-    def subscribe(self, session: int = 0) -> None:
-        self._request({"op": "subscribe", "s": session})
-
-    def pump(self) -> None:
-        """Drain any ticks the server flushed after the previous reply."""
-        self._request({"op": "hello"})
+_KIND_LABEL = {
+    "vehicle": ObjectClassification.CAR,
+    "car": ObjectClassification.CAR,
+    "van": ObjectClassification.CAR,
+    "truck": ObjectClassification.TRUCK,
+    "bus": ObjectClassification.BUS,
+    "motorcycle": ObjectClassification.MOTORCYCLE,
+    "scooter": ObjectClassification.MOTORCYCLE,
+    "bicycle": ObjectClassification.BICYCLE,
+    "pedestrian": ObjectClassification.PEDESTRIAN,
+}
 
 
 def _actor_uuid(actor_id: str) -> list[int]:
@@ -153,9 +108,7 @@ class AutowareBridge(SimForgeBridge):
         p("lane_y_to", -3.5)
         p("cruise_speed_mps", 8.0)
         p("stop_decel_mps2", 1.2)
-        # Ground-truth objects channel.
-        p("ego_actor_id", "ego")
-        p("object_dims_lwh", [4.5, 1.9, 1.5])
+        # Ground-truth objects channel (ego = the session's metric subject).
         p("prediction_horizon_s", 3.0)
         p("prediction_dt_s", 0.5)
 
@@ -167,8 +120,6 @@ class AutowareBridge(SimForgeBridge):
         self.velocity_status_topic = str(gp("velocity_status_topic"))
         self.steering_status_topic = str(gp("steering_status_topic"))
         self.gear_status_topic = str(gp("gear_status_topic"))
-        self.ego_actor_id = str(gp("ego_actor_id"))
-        self.object_dims = [float(v) for v in gp("object_dims_lwh")]
         self.prediction_horizon_s = float(gp("prediction_horizon_s"))
         self.prediction_dt_s = float(gp("prediction_dt_s"))
 
@@ -291,24 +242,17 @@ class AutowareBridge(SimForgeBridge):
 
     # ----------------------------------------------------------- state out
 
-    def _make_client(self, spec_path: Path) -> EnvServerClient:
-        client = TruthStreamClient(default_server_command(spec_path))
-        client.subscribe(self.session)
-        self._truth_client = client
-        return client
-
     def _publish_extra_state(
         self,
-        frame: StepFrame,
+        frame: Decision,
         stamp: TimeMsg,
         t_ns: int,
         yaw: float,
         quat: tuple[float, float, float, float],
         yaw_rate: float,
     ) -> None:
-        sv = frame.sv
+        sv = frame.state_vector.tolist()
         qx, qy, qz, qw = quat
-
         kin = Odometry()
         kin.header.stamp = stamp
         kin.header.frame_id = self.frame_map
@@ -363,10 +307,8 @@ class AutowareBridge(SimForgeBridge):
                 self._bag.write(self.objects_topic, objects, t_ns)
 
     def _applied_steer_rad(self) -> float:
-        ctrl = self._last_action.get("ctrl")
-        if isinstance(ctrl, (list, tuple)) and len(ctrl) == 3:
-            return float(ctrl[2]) * self.max_steer_rad * self.steer_sign
-        return 0.0
+        steer = self._last_action.get("steer")
+        return float(steer) * self.max_steer_rad * self.steer_sign if steer is not None else 0.0
 
     # populated lazily by _publish_extra_state
     _trajectory_bagged = False
@@ -374,36 +316,27 @@ class AutowareBridge(SimForgeBridge):
     # ------------------------------------------------------ ground truth out
 
     def _ground_truth_objects(self, stamp: TimeMsg) -> PredictedObjects | None:
-        client = getattr(self, "_truth_client", None)
-        if client is None:
+        session = self._session
+        if session is None:
             return None
-        client.pump()
-        if not client.ticks:
-            return None
-        tick = client.ticks[-1]
-        client.ticks.clear()
-
+        native = session.native
+        rows = native.actors()
+        present = native.present()
+        dims = native.actor_dims
         msg = PredictedObjects()
         msg.header.stamp = stamp
         msg.header.frame_id = self.frame_map
-        for actor in tick["frame"]["actors"]:
-            if actor["id"] == self.ego_actor_id or actor["kind"] == "despawn":
+        for index, actor_id in enumerate(native.actor_ids):
+            if actor_id == session.ego or not present[index]:
                 continue
-            msg.objects.append(self._predicted_object(actor))
+            msg.objects.append(self._predicted_object(actor_id, native.actor_kinds[index], rows[index], dims[index]))
         return msg
 
-    def _predicted_object(self, actor: Mapping[str, Any]) -> PredictedObject:
-        # Truth-stream scene frame: position [x, 0, -y], same yaw (frames.ts).
-        x = float(actor["position"][0])
-        y = -float(actor["position"][2])
-        yaw = float(actor["yawRad"])
-        vx = float(actor["velocity"][0])
-        vy = -float(actor["velocity"][2])
-        ax = float(actor["acceleration"][0])
-        ay = -float(actor["acceleration"][2])
+    def _predicted_object(self, actor_id: str, kind: str, row: Any, dims: Any) -> PredictedObject:
+        # Actor row: [x, y, heading_rad, speed_mps, accel_mps2, lat_offset, lat_rate, s], xodr-local ENU.
+        x, y, yaw, speed, accel = (float(v) for v in row[:5])
         cos_y, sin_y = math.cos(yaw), math.sin(yaw)
-        v_long = vx * cos_y + vy * sin_y
-        a_long = ax * cos_y + ay * sin_y
+        vx, vy = speed * cos_y, speed * sin_y
         qx, qy, qz, qw = _yaw_quat(yaw)
 
         def pose_at(dt: float) -> Pose:
@@ -417,14 +350,16 @@ class AutowareBridge(SimForgeBridge):
             return pose
 
         obj = PredictedObject()
-        obj.object_id.uuid = _actor_uuid(str(actor["id"]))
+        obj.object_id.uuid = _actor_uuid(actor_id)
         obj.existence_probability = 1.0
-        obj.classification.append(ObjectClassification(label=ObjectClassification.CAR, probability=1.0))
+        obj.classification.append(
+            ObjectClassification(label=_KIND_LABEL.get(kind, ObjectClassification.UNKNOWN), probability=1.0)
+        )
 
         kin = PredictedObjectKinematics()
         kin.initial_pose_with_covariance.pose = pose_at(0.0)
-        kin.initial_twist_with_covariance.twist.linear.x = v_long
-        kin.initial_acceleration_with_covariance.accel.linear.x = a_long
+        kin.initial_twist_with_covariance.twist.linear.x = speed
+        kin.initial_acceleration_with_covariance.accel.linear.x = accel
 
         path = PredictedPath()
         path.confidence = 1.0
@@ -436,9 +371,10 @@ class AutowareBridge(SimForgeBridge):
         kin.predicted_paths.append(path)
         obj.kinematics = kin
 
+        length, width, height = (float(v) for v in dims[:3])
         shape = Shape()
         shape.type = Shape.BOUNDING_BOX
-        shape.dimensions = Vector3(x=self.object_dims[0], y=self.object_dims[1], z=self.object_dims[2])
+        shape.dimensions = Vector3(x=length, y=width, z=height)
         obj.shape = shape
         return obj
 

@@ -1,3 +1,4 @@
+import type { EngineRuntime } from '@simforge-oss/engine';
 import { LaneIndex } from './laneIndex';
 import type { ScenarioMapEntry } from './map';
 
@@ -39,13 +40,13 @@ async function prefetch(url: string): Promise<void> {
   }
 }
 
-/** Begin loading the lane index, keyed by the immutable map version. */
-export function warmAuthoringRuntime(map: ScenarioMapEntry): Promise<LaneIndex> {
+/** Begin loading the lane index over the host's native runtime, keyed by the immutable map version. */
+export function warmAuthoringRuntime(map: ScenarioMapEntry, engine: Promise<Pick<EngineRuntime, 'laneGraph'>> | Pick<EngineRuntime, 'laneGraph'>): Promise<LaneIndex> {
   const existing = warmups.get(map.mapVersionId);
   if (existing) return existing.promise;
 
   assetRoot(map);
-  const promise = LaneIndex.load(map.topologyUrl).then((laneIndex) => {
+  const promise = Promise.resolve(engine).then((runtime) => LaneIndex.load(map.topologyUrl, { engine: runtime })).then((laneIndex) => {
     const record = warmups.get(map.mapVersionId);
     if (record) record.ready = true;
     return laneIndex;

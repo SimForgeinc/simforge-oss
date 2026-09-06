@@ -1,0 +1,189 @@
+{
+  "id": "sit-generated-geometry-proxy",
+  "kind": "situation",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "a5663a4a664e7a33e5fbc0d08288063a1caa99edcc7a2cb42ef8c8f598c3e5c4",
+  "traceDigest": "79b66d2fd904fda2f3f41ab7eafebd9bacf5d55e4b42376a1624378ce3adf0ba",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 122.78375799999999,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 32.531758999999994,
+      "warm": null
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 299.2001540000001,
+      "warm": null
+    },
+    "simulate": {
+      "cold": 127.044985,
+      "warm": {
+        "n": 4,
+        "min": 56.55484200000001,
+        "median": 57.244963499999926,
+        "max": 65.64758200000006,
+        "mean": 59.17308774999998
+      }
+    },
+    "digest": {
+      "cold": 12.933041999999887,
+      "warm": {
+        "n": 9,
+        "min": 10.486144999999851,
+        "median": 10.615027000000282,
+        "max": 15.901832000000013,
+        "mean": 11.37653955555556
+      }
+    },
+    "serialize": {
+      "cold": 27.537215999999944,
+      "warm": {
+        "n": 1,
+        "min": 10.908460000000105,
+        "median": 10.908460000000105,
+        "max": 10.908460000000105,
+        "mean": 10.908460000000105
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 0,
+  "fixture": {
+    "path": "qualification/native-migration/fixtures/generated-geometry",
+    "id": "sit-generated-geometry-proxy",
+    "seed": "generated-static-fixed",
+    "origin": {
+      "kind": "blender-workbench-export",
+      "state": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/generated-geometry-uitjyd",
+      "sessionDescriptor": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.generated-static-geometry.json",
+      "note": "Program revision 1 adopted the Blender-exported static closure proxy (role barrier) through adopt_geometry on 2026-09-04; extension transactions below are declared here and applied by the harness through applySituationTransaction."
+    },
+    "transactionsApplied": [
+      {
+        "id": "sensed",
+        "revision": 2,
+        "digest": "c874d7ec8c449d154624cc1df59c29bea7c62b2b2a9c99af4dbd6160a9350270"
+      }
+    ],
+    "policy": null,
+    "geometryBinding": [
+      {
+        "patchId": "generated:15ca6bc815e23110c002fcde84ac440fa97fb7e32ba6be3ea55055ce537408f5",
+        "patchSha256": "25a0fefd82ec5f94d6a68fa4e69469c0884226061f0c339e44265f4ec020bed9",
+        "roleId": "barrier",
+        "mesh": "7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d"
+      }
+    ]
+  },
+  "artifacts": {
+    "retained": [
+      {
+        "label": "descriptor",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.generated-static-geometry.json",
+        "sha256": "0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83",
+        "retainedAs": "artifacts/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.json",
+        "bytes": 14695,
+        "retainedVerified": true,
+        "originalReachable": true,
+        "originalVerified": true
+      },
+      {
+        "label": "mesh",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d.glb",
+        "sha256": "7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d",
+        "retainedAs": "artifacts/7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d.glb",
+        "bytes": 2064,
+        "retainedVerified": true,
+        "originalReachable": true,
+        "originalVerified": true
+      },
+      {
+        "label": "bounds",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/bounds-3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc.json",
+        "sha256": "3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc",
+        "retainedAs": "artifacts/3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc.json",
+        "bytes": 457,
+        "retainedVerified": true,
+        "originalReachable": true,
+        "originalVerified": true
+      },
+      {
+        "label": "collision",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/collision-b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b.json",
+        "sha256": "b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b",
+        "retainedAs": "artifacts/b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b.json",
+        "bytes": 460,
+        "retainedVerified": true,
+        "originalReachable": true,
+        "originalVerified": true
+      },
+      {
+        "label": "occlusion",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/occlusion-a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac.json",
+        "sha256": "a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac",
+        "retainedAs": "artifacts/a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac.json",
+        "bytes": 460,
+        "retainedVerified": true,
+        "originalReachable": true,
+        "originalVerified": true
+      }
+    ],
+    "sources": {
+      "total": 158,
+      "reachable": 158,
+      "verified": 158,
+      "mismatched": [],
+      "unreachable": []
+    }
+  },
+  "legs": {
+    "base": {
+      "inputHash": "a5663a4a664e7a33e5fbc0d08288063a1caa99edcc7a2cb42ef8c8f598c3e5c4",
+      "traceDigest": "79b66d2fd904fda2f3f41ab7eafebd9bacf5d55e4b42376a1624378ce3adf0ba",
+      "replayStable": true,
+      "tickCount": 1001,
+      "events": 0,
+      "programDigest": "c874d7ec8c449d154624cc1df59c29bea7c62b2b2a9c99af4dbd6160a9350270",
+      "situationEvents": [],
+      "authorityTransitions": [],
+      "actionCalls": {},
+      "collisions": 0
+    },
+    "intervention": {
+      "inputHash": "df2c841e7694af61c2dd27a5162c9130a163b7110daf5f6b7a8741d3cf340b7e",
+      "traceDigest": "0d95dc08128cee883ef072cec7fc72cc5f91c0293b3587f745316ab912755578",
+      "replayStable": true,
+      "tickCount": 1001,
+      "events": 2,
+      "programDigest": "0580fec7fd5e27ff3154d2da68d5c6a6a0ec0e5b3847068ed93d1b82041aae3d",
+      "situationEvents": [],
+      "authorityTransitions": [],
+      "actionCalls": {},
+      "collisions": 0
+    }
+  },
+  "comparison": {
+    "changedRoles": [
+      "barrier"
+    ],
+    "changedTracks": [
+      "barrier"
+    ],
+    "invariantFailures": [],
+    "eventDeltas": []
+  }
+}

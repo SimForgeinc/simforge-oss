@@ -1,12 +1,29 @@
 import { randomBytes } from "node:crypto";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
+import { readLocalObject } from "@/app/lib/s3/s3-object";
 import {
   checksumBoundPutRequiredHeaders,
   getPresignedGetUrl,
   getPresignedPutUrl,
   headS3Object,
 } from "@/app/lib/s3/s3-presign";
+import {
+  NATIVE_ACTOR_ASSETS_INPUT_ID,
+  NativeRenderManifestSchema,
+  NativeRunDiagnosticsSchema,
+  nativeActorAssetsInput,
+  nativeEvidenceFailure,
+  nativeRunExpectations,
+  type NativeRunDiagnostics,
+} from "@simforge-oss/render/native";
+import { RENDER_INTENT_V1_SCHEMA, captureScheduleFps, fixedStepFrameCount, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
+import {
+  isScenarioParityEvidenceAccepted,
+  SCENARIO_PARITY_EVIDENCE_VERSION,
+  ScenarioParityEvidenceV1Schema,
+} from "@simforge-oss/studio-shared";
+import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
 import {
   ScenarioRenderIntentSchema,
@@ -16,13 +33,12 @@ import {
   type ScenarioRenderIntent,
   type ScenarioRendererCapability,
 } from "./render-wire-contracts";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 const REQUIRED_CARLA_BASE_IMAGE = "ghcr.io/simforgeinc/carla-rfs-munich-belmont:0.10.0-kia";
 const REQUIRED_CARLA_BASE_IMAGE_INDEX_DIGEST = "sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5";
 const REQUIRED_CARLA_BASE_IMAGE_AMD64_DIGEST = "sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64";
 const CONTROL_SCHEMA = "simforge.render-worker-control/v2";
-const INTENT_CONTRACT = "uniscenario.render-intent/v1";
 const LEASE_SECONDS = 900;
 function runtimeEnvironment(): "dev" | "staging" | "prod" {
   const value = process.env.SIMFORGE_ENV?.trim();
@@ -40,21 +56,52 @@ function label(input: Record<string, string>, key: string) {
   return value;
 }
 
-export async function registerRenderWorkerV2(input: {
-  workerId: string;
-  instanceId: string;
-  engine: ScenarioRendererCapability;
-  labels: Record<string, string>;
-}) {
-  const capability = ScenarioRendererCapabilitySchema.parse(input.engine);
-  const imageDigest = label(input.labels, "imageDigest");
-  const hardwareProfile = label(input.labels, "hardwareProfile");
-  const gpuModel = label(input.labels, "gpuModel");
-  const gpuMemoryMiB = Number(label(input.labels, "gpuMemoryMiB"));
+export type RenderWorkerIdentity = {
+  workerVersion: string;
+  imageDigest: string;
+  hardwareProfile: string;
+  rendererEngine: ScenarioRendererCapability["backend"];
+  capability: ScenarioRendererCapability;
+  metadata: {
+    labels: Record<string, string>;
+    gpuModel: string;
+    gpuMemoryMiB: number;
+    baseImage: string | null;
+    baseImageDigest: string | null;
+    baseImagePlatformDigest: string | null;
+    deployment: "container" | "host-native";
+  };
+};
+
+/**
+ * The exact identity tuple a worker binds through registration and an operator
+ * pins through approval. One derivation for both sides so approval can only
+ * ever pin what registration will later present.
+ *
+ * Digest binding is deployment-shaped but honestly named: containerized
+ * workers send labels.imageDigest (image content digest); host-native workers
+ * send labels.codeDigest (sha256 of the dependency lockfiles at the deployed
+ * git revision — the revision itself rides in worker_version via the engine
+ * capability). Both bind through the same approved_image_digest column, and
+ * the approval row (approved_* = current_* + approved_at) stays the only
+ * identity gate. CARLA additionally keeps its pinned base-image provenance;
+ * the native engine has no container base image to attest.
+ */
+export function renderWorkerIdentity(
+  engine: ScenarioRendererCapability,
+  labels: Record<string, string>,
+): RenderWorkerIdentity {
+  const capability = ScenarioRendererCapabilitySchema.parse(engine);
+  const imageDigestLabel = labels.imageDigest?.trim() || null;
+  const codeDigestLabel = labels.codeDigest?.trim() || null;
+  const imageDigest = imageDigestLabel ?? codeDigestLabel ?? "";
+  const hardwareProfile = label(labels, "hardwareProfile");
+  const gpuModel = label(labels, "gpuModel");
+  const gpuMemoryMiB = Number(label(labels, "gpuMemoryMiB"));
   if (!/^sha256:[a-f0-9]{64}$/.test(imageDigest)) throw new Error("worker_image_digest_invalid");
-  const baseImage = input.labels.baseImage?.trim() ?? null;
-  const baseImageDigest = input.labels.baseImageDigest?.trim() ?? null;
-  const baseImagePlatformDigest = input.labels.baseImagePlatformDigest?.trim() ?? null;
+  const baseImage = labels.baseImage?.trim() ?? null;
+  const baseImageDigest = labels.baseImageDigest?.trim() ?? null;
+  const baseImagePlatformDigest = labels.baseImagePlatformDigest?.trim() ?? null;
   if (capability.backend === "carla" && (
     baseImage !== REQUIRED_CARLA_BASE_IMAGE
     || baseImageDigest !== REQUIRED_CARLA_BASE_IMAGE_INDEX_DIGEST
@@ -68,6 +115,31 @@ export async function registerRenderWorkerV2(input: {
   if (!hardwareProfile.startsWith("rtx3080-") && !hardwareProfile.startsWith("rtx5080-")) {
     throw new Error("worker_hardware_profile_incompatible");
   }
+  return {
+    workerVersion: capability.engineVersion,
+    imageDigest,
+    hardwareProfile,
+    rendererEngine: capability.backend,
+    capability,
+    metadata: {
+      labels,
+      gpuModel,
+      gpuMemoryMiB,
+      baseImage,
+      baseImageDigest,
+      baseImagePlatformDigest,
+      deployment: imageDigestLabel ? "container" : "host-native",
+    },
+  };
+}
+
+export async function registerRenderWorkerV2(input: {
+  workerId: string;
+  instanceId: string;
+  engine: ScenarioRendererCapability;
+  labels: Record<string, string>;
+}) {
+  const identity = renderWorkerIdentity(input.engine, input.labels);
   const registrationId = scenarioId("uswr");
   const rows = await queryRows<{ registration_id: string }>(
     `UPDATE simforge.worker_nodes
@@ -92,19 +164,12 @@ export async function registerRenderWorkerV2(input: {
       instance_id: input.instanceId,
       worker_id: input.workerId,
       environment: runtimeEnvironment(),
-      worker_version: capability.engineVersion,
-      image_digest: imageDigest,
-      hardware_profile: hardwareProfile,
-      renderer_engine: capability.backend,
-      capabilities: capability,
-      metadata: {
-        labels: input.labels,
-        gpuModel,
-        gpuMemoryMiB,
-        baseImage,
-        baseImageDigest,
-        baseImagePlatformDigest,
-      },
+      worker_version: identity.workerVersion,
+      image_digest: identity.imageDigest,
+      hardware_profile: identity.hardwareProfile,
+      renderer_engine: identity.rendererEngine,
+      capabilities: identity.capability,
+      metadata: identity.metadata,
     },
   );
   if (!rows[0]) throw new Error("worker_registration_not_approved");
@@ -190,14 +255,25 @@ type Claimed = {
   intent: ScenarioRenderIntent;
   intentSha256: string;
   executionPackageControlSha256: string;
-  inputs: Array<{
-    inputId: string;
-    relativePath?: string;
-    sha256: string;
-    sizeBytes: number;
-    bucket: string;
-    key: string;
-  }>;
+  inputs: ClaimedInput[];
+};
+
+type StoredInput = {
+  inputId: string;
+  relativePath?: string;
+  sha256: string;
+  sizeBytes: number;
+  bucket: string;
+  key: string;
+};
+
+/** Stored inputs are presigned at lease time; the pinned actor closure is served from its public immutable URL. */
+type ClaimedInput = StoredInput | {
+  inputId: string;
+  relativePath: string;
+  sha256: string;
+  sizeBytes: number;
+  url: string;
 };
 
 async function reapExpiredRenderIntentLeasesV2() {
@@ -254,7 +330,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
       ORDER BY priority DESC, created_at, id LIMIT 32`,
-    { contract: INTENT_CONTRACT },
+    { contract: RENDER_INTENT_V1_SCHEMA },
   );
   for (const candidate of candidates) {
     const claimed = await withTransaction(async (tx): Promise<Claimed | null> => {
@@ -299,7 +375,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
             AND job_state = 'queued' AND cancel_requested_at IS NULL
             AND request_contract_version = :contract
           FOR UPDATE`,
-        { job_id: candidate.id, renderer_engine: worker.renderer_engine, contract: INTENT_CONTRACT },
+        { job_id: candidate.id, renderer_engine: worker.renderer_engine, contract: RENDER_INTENT_V1_SCHEMA },
       );
       if (!row) return null;
       const intent = ScenarioRenderIntentSchema.parse(parseObject(row.render_intent));
@@ -360,9 +436,9 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           WHERE id = :job_id`,
         { attempt, job_id: row.id },
       );
-      let inputs: Claimed["inputs"];
+      let inputs: ClaimedInput[];
       if (worker.renderer_engine === "native") {
-        inputs = await tx.queryRows<Claimed["inputs"][number]>(
+        inputs = await tx.queryRows<StoredInput>(
           `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
                   storage_bucket AS bucket, storage_key AS key
              FROM (
@@ -431,9 +507,18 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           bucket: member.storage_bucket,
           key: member.storage_key,
         })));
+        const actorAssets = nativeActorAssetsInput();
+        inputs.push({
+          inputId: actorAssets.inputId,
+          relativePath: actorAssets.relativePath,
+          sha256: actorAssets.sha256,
+          sizeBytes: actorAssets.sizeBytes,
+          url: actorAssets.downloadUrl,
+        });
         const byInputId = new Map(inputs.map((input) => [input.inputId, input]));
         if (byInputId.size !== inputs.length
           || inputs.length !== intent.assets.length + 1
+          || !intent.assets.some((asset) => asset.assetId === NATIVE_ACTOR_ASSETS_INPUT_ID)
           || intent.assets.some((asset) => {
             const declared = byInputId.get(asset.assetId);
             return !declared || declared.sha256 !== asset.sha256 || Number(declared.sizeBytes) !== asset.sizeBytes;
@@ -441,7 +526,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           throw new Error("native_render_input_declaration_mismatch");
         }
       } else {
-        inputs = await tx.queryRows<Claimed["inputs"][number]>(
+        inputs = await tx.queryRows<StoredInput>(
           `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
                   storage_bucket AS bucket, storage_key AS key
              FROM (
@@ -509,7 +594,7 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
       sha256: input.sha256,
       sizeBytes: Number(input.sizeBytes),
       download: {
-        url: await getPresignedGetUrl(input.key, input.bucket, LEASE_SECONDS),
+        url: "url" in input ? input.url : await getPresignedGetUrl(input.key, input.bucket, LEASE_SECONDS),
         headers: {},
       },
     }))),
@@ -526,6 +611,11 @@ type ActiveLease = {
   intent_sha256: string;
   render_intent: string | Record<string, unknown>;
   cancel_requested_at: string | null;
+  renderer_engine: "browser" | "carla" | "native";
+  execution_package_id: string;
+  execution_package_control_sha256: string;
+  source_input_digest: string;
+  xsd_sha256: string;
 };
 
 async function activeLease(
@@ -537,10 +627,13 @@ async function activeLease(
   const rows = await queryRows<ActiveLease>(
     `SELECT l.id AS lease_id, j.id AS job_id, j.workspace_id, l.render_attempt_id AS attempt_id,
             a.attempt_number, l.worker_node_id, j.intent_sha256, j.render_intent,
-            j.cancel_requested_at::text AS cancel_requested_at
+            j.cancel_requested_at::text AS cancel_requested_at,
+            j.renderer_engine, j.execution_package_id, j.execution_package_control_sha256,
+            ep.source_input_digest, ep.xsd_sha256
        FROM simforge.worker_leases l
        JOIN simforge.render_jobs j ON j.id = l.render_job_id
        JOIN simforge.render_attempts a ON a.id = l.render_attempt_id
+       JOIN simforge.execution_packages ep ON ep.id = j.execution_package_id
       WHERE l.id = :lease_id AND l.worker_node_id = :worker_node_id
         AND j.id = :job_id
         AND l.lease_token_sha256 = :token_sha256 AND l.lease_state = 'active'
@@ -770,6 +863,238 @@ type CompletionArtifact = {
   mediaType: string;
 };
 
+type NativeReservation = {
+  artifact_role: RenderArtifactIdentity["role"]; artifact_actor_id: string | null; artifact_sensor_id: string | null;
+  media_type: string; expected_sha256: string; expected_size_bytes: number; storage_bucket: string; storage_key: string;
+};
+const NATIVE_EVIDENCE_MAX_BYTES = 16 * 1024 * 1024;
+
+async function readReservedJson(reservation: NativeReservation): Promise<unknown> {
+  if (Number(reservation.expected_size_bytes) > NATIVE_EVIDENCE_MAX_BYTES) throw new Error("render_evidence_too_large");
+  return JSON.parse(Buffer.from(await readLocalObject(reservation.storage_bucket, reservation.storage_key)).toString("utf8"));
+}
+
+/**
+ * A native completion is accepted only when the engine's own manifest and
+ * diagnostics (parsed through the shared `@simforge-oss/render/native`
+ * evidence schemas) agree with the lease and the intent's schedules and
+ * actor closure; see `nativeEvidenceFailure`. The validated diagnostics are
+ * the run's evidence: they bind the actor appearance closure, the lowering
+ * and the service protocol the run actually rendered with.
+ */
+async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<NativeRunDiagnostics> {
+  const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
+  const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
+  if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
+  const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
+  const diagnostics = NativeRunDiagnosticsSchema.parse(await readReservedJson(diagnosticsReservation));
+  const failure = nativeEvidenceFailure(
+    reservations.map((item) => ({
+      role: item.artifact_role,
+      actorId: item.artifact_actor_id,
+      sensorId: item.artifact_sensor_id,
+      mediaType: item.media_type,
+      sha256: item.expected_sha256,
+      sizeBytes: Number(item.expected_size_bytes),
+    })),
+    NativeRenderManifestSchema.parse(await readReservedJson(manifestReservation)),
+    diagnostics,
+    nativeRunExpectations(intent, { intentSha256, executionPackageControlSha256: lease.execution_package_control_sha256 }),
+  );
+  if (failure) throw new Error(failure);
+  return diagnostics;
+}
+
+/** Evidence a completed attempt/job is fenced on: engine-specific schema, document and attestation. */
+type CompletionEvidence = {
+  schema: string;
+  evidence: Record<string, unknown>;
+  accepted: boolean;
+  attestation: Record<string, unknown>;
+};
+
+/**
+ * A CARLA completion carries the executor's own manifest (`manifest.json`,
+ * role `manifest`), which embeds `uniscenario.parity-evidence/v1`, the XSD
+ * validation of the exact OpenSCENARIO document it replayed and the worker
+ * attestation. The evidence identity must name this lease's revision, package,
+ * control digest and source-input digest; the XOSC attestation must name the
+ * document the intent bound. Acceptance is the parity verdict under native
+ * physics, exactly as `isScenarioParityEvidenceAccepted` defines it.
+ */
+async function verifyCarlaCompletion(lease: ActiveLease, reservations: readonly NativeReservation[]): Promise<CompletionEvidence> {
+  const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
+  if (!manifestReservation) throw new Error("render_manifest_missing");
+  const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
+  const engineManifest = await readReservedJson(manifestReservation) as Record<string, unknown>;
+  if (!engineManifest || typeof engineManifest !== "object" || Array.isArray(engineManifest)) throw new Error("render_manifest_invalid");
+  const evidence = ScenarioParityEvidenceV1Schema.parse(engineManifest.parityEvidence);
+  if (
+    evidence.identity.revisionId !== intent.scenarioRevision.revisionId
+    || evidence.identity.executionPackageId !== lease.execution_package_id
+    || evidence.identity.executionPackageControlSha256 !== lease.execution_package_control_sha256
+    || evidence.identity.sourceInputDigest !== lease.source_input_digest
+  ) {
+    throw new Error("parity_evidence_identity_mismatch");
+  }
+  const xoscValidation = engineManifest.xoscValidation as Record<string, unknown> | undefined;
+  if (
+    !xoscValidation
+    || typeof xoscValidation !== "object"
+    || Array.isArray(xoscValidation)
+    || xoscValidation.valid !== true
+    || xoscValidation.standardVersion !== "1.4.0"
+    || xoscValidation.xmlSha256 !== intent.scenarioRevision.openScenario.sha256
+    || xoscValidation.xsdSha256 !== lease.xsd_sha256
+  ) {
+    throw new Error("xosc_validation_evidence_mismatch");
+  }
+  const attestation = engineManifest.attestation ?? engineManifest.workerAttestation;
+  if (!attestation || typeof attestation !== "object" || Array.isArray(attestation)) throw new Error("worker_attestation_invalid");
+  return {
+    schema: SCENARIO_PARITY_EVIDENCE_VERSION,
+    evidence,
+    accepted: isScenarioParityEvidenceAccepted(evidence),
+    attestation: attestation as Record<string, unknown>,
+  };
+}
+
+const BROWSER_RENDER_MANIFEST_V1_SCHEMA = "simforge.browser-render-manifest/v1";
+const BrowserReceiptSchema = z.object({
+  role: z.enum(["sensor-frames", "sensor-archive", "sensor-video", "render-manifest"]),
+  actorId: z.string().min(1).nullable(),
+  sensorId: z.string().min(1).nullable(),
+  modality: z.string().min(1),
+  mediaType: z.string().min(1),
+  byteLength: z.number().int().nonnegative(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+});
+/** The document `captureBrowserArtifacts` writes as its `render-manifest` artifact. */
+const BrowserRenderManifestSchema = z.object({
+  schema: z.literal(BROWSER_RENDER_MANIFEST_V1_SCHEMA),
+  engine: z.literal("browser"),
+  intentSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  frameMajor: z.literal(true),
+  schedule: z.object({
+    startSeconds: z.number().finite().min(0),
+    endSeconds: z.number().finite().positive(),
+    fps: z.number().finite().positive(),
+    frameCount: z.number().int().positive(),
+    timestampUnit: z.literal("microseconds"),
+    firstTimestampUs: z.literal(0),
+    endTimestampUs: z.number().int().positive(),
+  }),
+  artifacts: z.array(BrowserReceiptSchema).max(4096),
+  omittedArtifacts: z.array(z.object({
+    role: z.enum(["sensor-archive", "sensor-video"]),
+    actorId: z.string().min(1),
+    sensorId: z.string().min(1),
+    modality: z.string().min(1),
+    reason: z.string().min(1),
+  })).max(4096),
+}).passthrough();
+/**
+ * Receipt roles as `@simforge-oss/render/web` uploads them: the per-frame
+ * pose stream (`sensor-frames`) travels as the global `diagnostics` artifact.
+ */
+const BROWSER_RECEIPT_ROLE: Record<string, RenderArtifactIdentity["role"]> = {
+  "sensor-frames": "diagnostics",
+  "sensor-archive": "sensorArchive",
+  "sensor-video": "video",
+  "render-manifest": "manifest",
+};
+
+/**
+ * A browser completion carries the capture's own `render-manifest`: the
+ * frame-major fixed-step schedule it rendered and a hashed receipt for every
+ * byte stream it wrote. The schedule must be exactly the intent's clip at the
+ * intent's capture rate, and every reserved output must be a receipt with the
+ * same identity, media type, size and digest (and vice versa), so the frames
+ * and bytes the host verified are the ones the capture attests. No CARLA
+ * parity is demanded of the browser: it replays immutable playback evidence.
+ */
+async function verifyBrowserCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<CompletionEvidence> {
+  const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
+  if (!manifestReservation) throw new Error("render_manifest_missing");
+  const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
+  const manifest = BrowserRenderManifestSchema.parse(await readReservedJson(manifestReservation));
+  if (manifest.intentSha256 !== intentSha256) throw new Error("browser_render_manifest_intent_mismatch");
+  const { clip } = intent.renderSpec;
+  const fps = captureScheduleFps(intent.renderSpec);
+  const frameCount = fixedStepFrameCount(clip.startSeconds, clip.endSeconds, fps);
+  const { schedule } = manifest;
+  if (
+    schedule.startSeconds !== clip.startSeconds
+    || schedule.endSeconds !== clip.endSeconds
+    || schedule.fps !== fps
+    || schedule.frameCount !== frameCount
+    || schedule.endTimestampUs !== Math.round(frameCount * 1_000_000 / fps)
+  ) {
+    throw new Error("browser_render_schedule_mismatch");
+  }
+  const receipts = new Map<string, z.infer<typeof BrowserReceiptSchema>>();
+  for (const receipt of manifest.artifacts) {
+    if (receipt.role === "render-manifest") continue;
+    const sensor = receipt.role !== "sensor-frames";
+    const key = identityKey({
+      role: BROWSER_RECEIPT_ROLE[receipt.role]!,
+      actorId: sensor ? receipt.actorId : null,
+      sensorId: sensor ? receipt.sensorId : null,
+      modality: sensor ? receipt.modality : null,
+    } as RenderArtifactIdentity);
+    if (receipts.has(key)) throw new Error("browser_render_manifest_duplicate_receipt");
+    receipts.set(key, receipt);
+  }
+  const outputs = reservations.filter((item) => item.artifact_role !== "manifest");
+  if (outputs.length !== receipts.size) throw new Error("browser_render_manifest_closure_mismatch");
+  for (const reserved of outputs) {
+    const receipt = receipts.get(identityKey({
+      role: reserved.artifact_role,
+      actorId: reserved.artifact_actor_id,
+      sensorId: reserved.artifact_sensor_id,
+      modality: reserved.artifact_modality,
+    } as RenderArtifactIdentity));
+    if (!receipt
+      || receipt.sha256 !== reserved.expected_sha256
+      || receipt.byteLength !== Number(reserved.expected_size_bytes)
+      || receipt.mediaType !== reserved.media_type) {
+      throw new Error("browser_render_manifest_receipt_mismatch");
+    }
+  }
+  return {
+    schema: BROWSER_RENDER_MANIFEST_V1_SCHEMA,
+    evidence: manifest,
+    accepted: true,
+    attestation: {
+      schema: "simforge.browser-render-attestation/v1",
+      intentSha256,
+      engine: manifest.engine,
+      frameCount: schedule.frameCount,
+      omittedArtifacts: manifest.omittedArtifacts,
+    },
+  };
+}
+
+async function verifyCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<CompletionEvidence> {
+  if (lease.renderer_engine === "native") {
+    const diagnostics = await verifyNativeCompletion(lease, intentSha256, reservations);
+    return {
+      schema: diagnostics.schema,
+      evidence: diagnostics,
+      accepted: true,
+      attestation: {
+        schema: "simforge.native-render-attestation/v1",
+        intentSha256,
+        loweringSha256: diagnostics.loweringSha256,
+        actorAssetsSha256: diagnostics.actorAssetsSha256,
+        service: diagnostics.service,
+      },
+    };
+  }
+  if (lease.renderer_engine === "carla") return verifyCarlaCompletion(lease, reservations);
+  return verifyBrowserCompletion(lease, intentSha256, reservations);
+}
+
 export async function completeRenderJobV2(input: {
   jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; intentSha256: string;
   manifest: { artifacts: CompletionArtifact[] };
@@ -818,6 +1143,18 @@ export async function completeRenderJobV2(input: {
       throw new Error("render_artifact_verification_failed");
     }
   }
+  // Success is fenced by the database: a succeeded full render must carry
+  // accepted evidence of the engine that rendered it, verified against the
+  // engine's own output document before the fenced transaction.
+  const completion = await verifyCompletion(lease, input.intentSha256, reservations);
+  // A CARLA run whose parity verdict failed is a verified, rejected result: it
+  // never becomes a succeeded job (the database fence would refuse it too).
+  if (!completion.accepted) throw new Error("parity_evidence_rejected");
+  const evidence = {
+    parity_schema: completion.schema,
+    parity_evidence: JSON.stringify(completion.evidence),
+    attestation: JSON.stringify(completion.attestation),
+  };
   await withTransaction(async (tx) => {
     const fenced = await tx.queryOne<{ id: string }>(
       `SELECT l.id FROM simforge.worker_leases l
@@ -880,9 +1217,13 @@ export async function completeRenderJobV2(input: {
       );
     }
     await tx.execute(
-      `UPDATE simforge.render_attempts SET attempt_state = 'succeeded', completed_at = NOW()
+      `UPDATE simforge.render_attempts
+          SET attempt_state = 'succeeded', completed_at = NOW(),
+              parity_evidence_schema = :parity_schema,
+              parity_evidence = CAST(:parity_evidence AS jsonb),
+              parity_accepted = TRUE
         WHERE id = :attempt_id`,
-      { attempt_id: lease.attempt_id },
+      { attempt_id: lease.attempt_id, parity_schema: evidence.parity_schema, parity_evidence: evidence.parity_evidence },
     );
     await tx.execute(
       `UPDATE simforge.worker_leases SET lease_state = 'released', released_at = NOW()
@@ -891,9 +1232,13 @@ export async function completeRenderJobV2(input: {
     );
     await tx.execute(
       `UPDATE simforge.render_jobs
-          SET job_state = 'succeeded', progress = 1, completed_at = NOW(), updated_at = NOW()
+          SET job_state = 'succeeded', progress = 1, completed_at = NOW(), updated_at = NOW(),
+              parity_evidence_schema = :parity_schema,
+              parity_evidence = CAST(:parity_evidence AS jsonb),
+              parity_accepted = TRUE,
+              worker_attestation = CAST(:attestation AS jsonb)
         WHERE id = :job_id AND intent_sha256 = :intent_sha256`,
-      { job_id: lease.job_id, intent_sha256: input.intentSha256 },
+      { job_id: lease.job_id, intent_sha256: input.intentSha256, ...evidence },
     );
   });
   return { schema: CONTROL_SCHEMA, type: "mutation.accepted" as const };
@@ -960,7 +1305,7 @@ export async function drainRenderWorkerV2(registrationId: string, workerNodeId: 
       RETURNING registration_id`,
     { worker_node_id: workerNodeId, registration_id: registrationId },
   );
-  return rows[0] ? { schema: CONTROL_SCHEMA, type: "mutation.accepted" as const } : null;
+  return rows[0] ? { schema: CONTROL_SCHEMA, type: "worker.draining" as const } : null;
 }
 
 export async function renderProgressForJob(context: Pick<AppContext, "workspaceId">, jobId: string) {

@@ -1,4 +1,4 @@
-import { Input } from "@/app/components/ui/input";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { FieldLabel } from "./FieldLabel";
 
 interface LocationOverrideFieldsProps {

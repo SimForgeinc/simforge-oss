@@ -240,7 +240,7 @@ pub fn run_job(job: &RenderJob) -> Result<RenderResults> {
     for entry in &job.schedule {
         apply_poses(&mut app, entry)?;
         let t0 = Instant::now();
-        let passes = app.render_once()?;
+        let frame = app.render_once(u64::from(entry.frame_index))?;
         frame_ms.push(t0.elapsed().as_secs_f64() * 1000.0);
 
         for cam in &entry.cameras {
@@ -249,12 +249,11 @@ pub fn run_job(job: &RenderJob) -> Result<RenderResults> {
                 ("id", format!("{}:id", cam.sensor_id)),
                 ("depth", format!("{}:depth", cam.sensor_id)),
             ] {
-                if !passes.contains_key(&key) {
+                let Some(captured) = frame.passes.get(&key) else {
                     continue; // pass disabled for this job
-                }
-                let data = &passes[&key];
+                };
                 let pixel = 4usize;
-                let raw = crate::engine::strip_padding(data, cam.width as usize, cam.height as usize, pixel);
+                let raw = crate::engine::strip_padding(&captured.bytes, cam.width as usize, cam.height as usize, pixel);
                 match pass {
                     "rgb" | "id" => {
                         let img = image::RgbaImage::from_raw(cam.width, cam.height, raw)

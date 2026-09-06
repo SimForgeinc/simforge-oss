@@ -6,7 +6,7 @@
     "pointAbs": 0.0001
   },
   "sceneState": {
-    "version": "scene-state.v1",
+    "version": "simforge.scene-state.v1",
     "mapId": "test-map",
     "frame": "scene-yup",
     "dt": 0.02,

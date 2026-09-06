@@ -1,0 +1,289 @@
+{
+ "mapId": "easterbrook-discovery-school",
+ "strideM": 40,
+ "dedupeM": 25,
+ "frameOffset": 0,
+ "posesOffMesh": 0,
+ "sites": [
+  {
+   "siteId": "s000",
+   "rsl": "4:0:-1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 61.78,
+   "meshRingR": 1,
+   "xodrY": 61.86,
+   "pose": {
+    "x": 24.46,
+    "z": 277.47,
+    "headingRad": -1.644
+   }
+  },
+  {
+   "siteId": "s001",
+   "rsl": "8:0:2",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 63.78,
+   "meshRingR": 0,
+   "xodrY": 63.82,
+   "pose": {
+    "x": -261.37,
+    "z": 290.34,
+    "headingRad": -0.207
+   }
+  },
+  {
+   "siteId": "s002",
+   "rsl": "10:0:2",
+   "s": 8,
+   "speedLimitKph": 56.327040000000004,
+   "meshY": 62.78,
+   "meshRingR": 0,
+   "xodrY": 62.93,
+   "pose": {
+    "x": -157.48,
+    "z": 302.91,
+    "headingRad": -0.099
+   }
+  },
+  {
+   "siteId": "s003",
+   "rsl": "11:0:2",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 62.64,
+   "meshRingR": 0,
+   "xodrY": 62.65,
+   "pose": {
+    "x": -51.81,
+    "z": 313.33,
+    "headingRad": -0.105
+   }
+  },
+  {
+   "siteId": "s004",
+   "rsl": "11:0:2",
+   "s": 48,
+   "speedLimitKph": 64,
+   "meshY": 62.25,
+   "meshRingR": 0,
+   "xodrY": 62.31,
+   "pose": {
+    "x": -12.46,
+    "z": 317.4,
+    "headingRad": -0.101
+   }
+  },
+  {
+   "siteId": "s005",
+   "rsl": "12:0:2",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 61.86,
+   "meshRingR": 0,
+   "xodrY": 61.89,
+   "pose": {
+    "x": 35.32,
+    "z": 321.96,
+    "headingRad": -0.095
+   }
+  },
+  {
+   "siteId": "s006",
+   "rsl": "12:0:2",
+   "s": 48,
+   "speedLimitKph": 64,
+   "meshY": 61.61,
+   "meshRingR": 0,
+   "xodrY": 61.62,
+   "pose": {
+    "x": 74.83,
+    "z": 325.67,
+    "headingRad": -0.089
+   }
+  },
+  {
+   "siteId": "s007",
+   "rsl": "20:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 61.11,
+   "meshRingR": 0,
+   "xodrY": 61.17,
+   "pose": {
+    "x": 215.78,
+    "z": 315.06,
+    "headingRad": 1.465
+   }
+  },
+  {
+   "siteId": "s008",
+   "rsl": "21:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 60.5,
+   "meshRingR": 1,
+   "xodrY": 60.4,
+   "pose": {
+    "x": 222.53,
+    "z": 236.89,
+    "headingRad": 1.503
+   }
+  },
+  {
+   "siteId": "s009",
+   "rsl": "22:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 60.36,
+   "meshRingR": 0,
+   "xodrY": 60.21,
+   "pose": {
+    "x": 229.9,
+    "z": 159.85,
+    "headingRad": 1.47
+   }
+  },
+  {
+   "siteId": "s010",
+   "rsl": "24:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 59.25,
+   "meshRingR": 0,
+   "xodrY": 59.24,
+   "pose": {
+    "x": 213.13,
+    "z": 69.76,
+    "headingRad": 1.593
+   }
+  },
+  {
+   "siteId": "s011",
+   "rsl": "25:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 58.5,
+   "meshRingR": 0,
+   "xodrY": 58.35,
+   "pose": {
+    "x": 221.16,
+    "z": -2.86,
+    "headingRad": 1.447
+   }
+  },
+  {
+   "siteId": "s012",
+   "rsl": "36:0:-1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 59.5,
+   "meshRingR": 0,
+   "xodrY": 59.49,
+   "pose": {
+    "x": 205.82,
+    "z": 110.27,
+    "headingRad": -1.635
+   }
+  },
+  {
+   "siteId": "s013",
+   "rsl": "36:1:-1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 59.39,
+   "meshRingR": 0,
+   "xodrY": 59.37,
+   "pose": {
+    "x": 202.19,
+    "z": 155.95,
+    "headingRad": -1.653
+   }
+  },
+  {
+   "siteId": "s014",
+   "rsl": "36:3:-3",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 59.64,
+   "meshRingR": 0,
+   "xodrY": 59.71,
+   "pose": {
+    "x": 203.53,
+    "z": 189.88,
+    "headingRad": -0.941
+   }
+  },
+  {
+   "siteId": "s015",
+   "rsl": "40:0:-1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 61.95,
+   "meshRingR": 0,
+   "xodrY": 61.41,
+   "pose": {
+    "x": 147.48,
+    "z": 310.46,
+    "headingRad": 3.054
+   }
+  },
+  {
+   "siteId": "s016",
+   "rsl": "40:0:-1",
+   "s": 48,
+   "speedLimitKph": 64,
+   "meshY": 60.76,
+   "meshRingR": 0,
+   "xodrY": 61.17,
+   "pose": {
+    "x": 107.62,
+    "z": 306.89,
+    "headingRad": 3.043
+   }
+  },
+  {
+   "siteId": "s017",
+   "rsl": "40:0:-1",
+   "s": 88,
+   "speedLimitKph": 64,
+   "meshY": 61.95,
+   "meshRingR": 1,
+   "xodrY": 61.25,
+   "pose": {
+    "x": 67.81,
+    "z": 302.94,
+    "headingRad": 3.044
+   }
+  },
+  {
+   "siteId": "s018",
+   "rsl": "42:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 62.21,
+   "meshRingR": 0,
+   "xodrY": 62.15,
+   "pose": {
+    "x": -126.94,
+    "z": 337.14,
+    "headingRad": -1.677
+   }
+  },
+  {
+   "siteId": "s019",
+   "rsl": "44:0:1",
+   "s": 8,
+   "speedLimitKph": 64,
+   "meshY": 62.18,
+   "meshRingR": 0,
+   "xodrY": 62.11,
+   "pose": {
+    "x": 126.48,
+    "z": 375.61,
+    "headingRad": -1.66
+   }
+  }
+ ]
+}

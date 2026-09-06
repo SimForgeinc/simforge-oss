@@ -4,12 +4,12 @@ import {
   type LaneGraph,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
-import { WorldSession } from '@simforge-oss/training-env/browser';
+import type { SessionRuntime, WorldSession } from '@simforge-oss/training-env/browser';
 
 import type { ControlInput } from './types';
 
-export function createAuthoredWorldSession(input: SimScenarioInput, graph: LaneGraph): WorldSession {
-  return new WorldSession({ input, graph, mode: 'live' });
+export function createAuthoredWorldSession(sessions: SessionRuntime, input: SimScenarioInput, graph: LaneGraph): WorldSession {
+  return sessions.world({ input, graph, mode: 'live' });
 }
 export interface AuthoredPlaybackBudget {
   readonly ticks: number;

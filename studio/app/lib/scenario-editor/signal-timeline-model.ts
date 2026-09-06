@@ -39,9 +39,11 @@
  */
 
 import {
+  type BehaviorSignalState,
+} from "@simforge-oss/scenario/contracts";
+import {
   deriveConflictFreeGroups,
   synthesizeSignalProgram,
-  type BehaviorSignalState,
   type JunctionMovementBinding,
   type JunctionSignalPlan,
   type SignalPhaseInterval,

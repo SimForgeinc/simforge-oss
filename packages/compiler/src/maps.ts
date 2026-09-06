@@ -1,41 +1,30 @@
 /**
- * Map artifacts: discovery, loading, and the two indexes everything above needs.
+ * Map artifacts: discovery and loading of the immutable map corpus.
  *
- * A "map bundle" is the join of the three producers:
- *
- * | artifact | producer | consumer here |
- * |---|---|---|
- * | `topology-index.json.gz` | the map pipeline | `sim-engine`'s `LaneGraph`, and the lane/gate spine the matcher normalizer needs |
- * | `derived/topology-derived.json.gz` | `map-intel` | the matcher's `DerivedMapIndex` |
- * | `derived/locations.json.gz` | `map-intel` | the location catalog + the matcher's crossing / parking point features |
- *
- * Everything is loaded lazily and memoised per process, because `simforge batch`
- * runs hundreds of cells against the same three files and the `LaneGraph` build
- * is the single most expensive thing in the CLI.
+ * The native compiler reads and validates a map directory (`MapBundle.load`);
+ * this module owns the corpus layout (`DEV_ASSETS`), discovery, the memoised
+ * `loadMap` and `createMapBundle` for callers that hold map-intel artifacts
+ * without an installed directory.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { gunzipSync } from 'node:zlib';
-import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
-import type { DerivedTopology, LocationCatalog } from '@simforge-oss/maps/node';
-import {
-  normalizeDerivedMapIndex,
-  type DerivedMapIndex,
-} from './anchor/index.js';
-import { parseMapSignalCatalog, topologyWithMapSpeedLimits, type SignalGeoJson } from './map-signals.js';
-import { buildLaneGraph, type LaneGraph, type TopologyIndex } from '@simforge-oss/engine';
+import type { StaticMapCollider, TopologyIndex } from '@simforge-oss/engine';
+import { engine } from '@simforge-oss/engine/node';
+import type { DerivedTopology, LocationCatalog } from '@simforge-oss/maps';
 
 import { CliError } from './errors.js';
-import type { MapSignalCatalog } from './map-signals.js';
+import { MapBundle, type InstalledMapBundle } from './types.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-/** `packages/cli/src` → repo root. */
+/** `packages/compiler/src` -> repo root; the CLI's checked-in templates and schemas live under it. */
 export const REPO_ROOT = path.resolve(HERE, '..', '..', '..');
+
 export const DEV_ASSETS = process.env['SCEN_DEV_ASSETS']
   ? path.resolve(process.env['SCEN_DEV_ASSETS'])
   : path.join(path.resolve(process.env['SIMFORGE_MAPS_CACHE_ROOT'] ?? path.join(process.env['XDG_DATA_HOME'] ?? path.join(homedir(), '.local', 'share'), 'simforge', 'maps')), 'dev-assets');
@@ -50,32 +39,6 @@ export const ARTIFACTS = {
 
 const MAP_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_FILES = ['map.xodr', 'signals.geojson.gz', ARTIFACTS.topology, ARTIFACTS.derived, ARTIFACTS.locations];
-interface InstallationReceipt {
-  schema: 'simforge.map-installation.v1';
-  name: string;
-  releaseDigest: string;
-  profile: 'semantic' | 'native' | 'web';
-  members: Record<string, { sha256: string; bytes: number }>;
-}
-const installationCache = new Map<string, { signature: string; receipt: InstallationReceipt }>();
-
-function installation(dir: string, mapId: string): InstallationReceipt | undefined {
-  const file = path.join(dir, '.map-release.json');
-  const stat = statSync(file, { throwIfNoEntry: false });
-  if (!stat) return undefined;
-  const signature = `${stat.ino}:${stat.size}:${stat.mtimeMs}`;
-  const cached = installationCache.get(file);
-  if (cached?.signature === signature) return cached.receipt;
-  const receipt = JSON.parse(readFileSync(file, 'utf8')) as InstallationReceipt;
-  if (receipt.schema !== 'simforge.map-installation.v1' || receipt.name !== mapId
-    || !['semantic', 'native', 'web'].includes(receipt.profile) || !/^[a-f0-9]{64}$/.test(receipt.releaseDigest)
-    || !receipt.members || REQUIRED_FILES.some((name) => !receipt.members[name])) {
-    throw new CliError('invalid_map_installation', `invalid installed release for "${mapId}"`, { path: file });
-  }
-  if (installationCache.size >= 32) installationCache.delete(installationCache.keys().next().value!);
-  installationCache.set(file, { signature, receipt });
-  return receipt;
-}
 
 export interface MapArtifactPresence {
   readonly topologyIndex: boolean;
@@ -109,44 +72,6 @@ export function availableMaps(root = DEV_ASSETS): string[] {
     .map((entry) => entry.name).sort();
 }
 
-async function readMapBytes(file: string, code: string, expected?: { sha256: string; bytes: number }): Promise<Buffer> {
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(file);
-  } catch {
-    throw new CliError(code, `missing artifact ${path.relative(REPO_ROOT, file)}`, {
-      path: file,
-      detail: { hint: 'pull the complete map release with `simforge maps pull <name>@<version>`' },
-    });
-  }
-  if (expected && (bytes.length !== expected.bytes || createHash('sha256').update(bytes).digest('hex') !== expected.sha256)) {
-    throw new CliError('map_installation_digest_mismatch', `installed map resource changed: ${file}`, { path: file });
-  }
-  return bytes;
-}
-
-async function readJsonGz<T>(file: string, code: string, expected?: { sha256: string; bytes: number }): Promise<T> {
-  const bytes = await readMapBytes(file, code, expected);
-  const plain = bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
-  return JSON.parse(plain.toString('utf8')) as T;
-}
-
-/** Everything the CLI knows about one map. Built once, shared across cells. */
-export interface MapBundle {
-  readonly mapId: string;
-  readonly catalog: LocationCatalog;
-  readonly derived: DerivedTopology;
-  readonly topology: TopologyIndex;
-  /** The matcher's view — derived facts adopted from `map-intel`. */
-  readonly index: DerivedMapIndex;
-  /** The engine's view — directed lanes with geometric successors. */
-  readonly graph: LaneGraph;
-  /** Physical heads + OpenDRIVE controller/junction sequence bindings. */
-  readonly signalCatalog: MapSignalCatalog;
-}
-
-const cache = new Map<string, { identity: string; bundle: Promise<MapBundle> }>();
-
 export function assertKnownMap(mapId: string, root = DEV_ASSETS): void {
   const dir = mapDir(mapId, root);
   if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) {
@@ -156,47 +81,72 @@ export function assertKnownMap(mapId: string, root = DEV_ASSETS): void {
   if (missing.length) throw new CliError('map_not_present', `map "${mapId}" is incomplete`, { path: '--map', detail: { devAssets: root, missing } });
 }
 
-/** Load (and memoise) a map bundle. */
-export function loadMap(mapId: string, root = DEV_ASSETS): Promise<MapBundle> {
-  let dir: string, receipt: InstallationReceipt | undefined, identity: string;
+async function readJsonGz<T>(file: string): Promise<T> {
+  const bytes = await readFile(file);
+  const plain = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
+  return JSON.parse(plain.toString('utf8')) as T;
+}
+
+const cache = new Map<string, { identity: string; bundle: Promise<InstalledMapBundle> }>();
+
+/**
+ * Load (and memoise) an installed map. The native loader validates the
+ * required artifacts and the OpenDRIVE/topology digest pair; the map-intel
+ * `derived`/`locations` documents are read beside it for authoring tools.
+ */
+export function loadMap(mapId: string, root = DEV_ASSETS): Promise<InstalledMapBundle> {
+  let dir: string;
+  let identity: string;
   try {
     assertKnownMap(mapId, root);
     dir = mapDir(mapId, root);
-    receipt = installation(dir, mapId);
-    identity = receipt?.releaseDigest ?? REQUIRED_FILES.map((file) => {
+    identity = REQUIRED_FILES.map((file) => {
       const stat = statSync(path.join(dir, file));
       return `${stat.ino}:${stat.size}:${stat.mtimeMs}`;
     }).join('|');
   } catch (error) { return Promise.reject(error); }
   const cached = cache.get(dir);
   if (cached?.identity === identity) return cached.bundle;
-  const expected = (file: string) => receipt?.members[file.split(path.sep).join('/')];
-  const built = (async (): Promise<MapBundle> => {
-    const [rawTopology, derived, catalog, xodr, signals] = await Promise.all([
-      readJsonGz<TopologyIndex>(path.join(dir, ARTIFACTS.topology), 'missing_topology_index', expected(ARTIFACTS.topology)),
-      readJsonGz<DerivedTopology>(path.join(dir, ARTIFACTS.derived), 'missing_derived_topology', expected(ARTIFACTS.derived)),
-      readJsonGz<LocationCatalog>(path.join(dir, ARTIFACTS.locations), 'missing_location_catalog', expected(ARTIFACTS.locations)),
-      readMapBytes(path.join(dir, 'map.xodr'), 'missing_xodr', expected('map.xodr')),
-      readJsonGz<SignalGeoJson>(path.join(dir, 'signals.geojson.gz'), 'missing_signals', expected('signals.geojson.gz')),
+  const built = (async (): Promise<InstalledMapBundle> => {
+    const native = engine().module.MapBundle.load(dir);
+    const [derived, catalog] = await Promise.all([
+      readJsonGz<DerivedTopology>(path.join(dir, ARTIFACTS.derived)),
+      readJsonGz<LocationCatalog>(path.join(dir, ARTIFACTS.locations)),
     ]);
-    if (rawTopology.source?.xodrSha256 && rawTopology.source.xodrSha256 !== createHash('sha256').update(xodr).digest('hex')) {
-      throw new CliError('map_topology_source_mismatch', `map "${mapId}" mixes different OpenDRIVE and topology versions`, { path: dir });
-    }
-    const signalCatalog = parseMapSignalCatalog(xodr.toString('utf8'), signals);
-    const topology = topologyWithMapSpeedLimits(rawTopology, signalCatalog);
-    const index = normalizeDerivedMapIndex(derived as unknown, {
-      mapId,
-      // The derived file carries only the derived layers; lanes and gates live
-      // in the topology index, so the normalizer needs both.
-      topology: topology as never,
-      locations: catalog as unknown,
-    });
-    const graph = buildLaneGraph(topology);
-    return { mapId, catalog, derived, topology, index, graph, signalCatalog };
+    return new MapBundle(native, { derived, catalog });
   })().catch((error) => { if (cache.get(dir)?.bundle === built) cache.delete(dir); throw error; });
   if (cache.size >= 32) cache.delete(cache.keys().next().value!);
   cache.set(dir, { identity, bundle: built });
   return built;
+}
+
+export interface MapBundleSources {
+  readonly mapId: string;
+  /** Topology index document, or its plain/gzip JSON bytes. */
+  readonly topology: TopologyIndex | Uint8Array;
+  /** map-intel derived topology; absent → the index is self-derived from the topology. */
+  readonly derived?: DerivedTopology;
+  /** map-intel location catalog. */
+  readonly locations?: LocationCatalog;
+  /** `search-index.json` junction control facts. */
+  readonly searchIndex?: unknown;
+  /** OpenDRIVE text; together with `signalsGeojson` it yields the signal catalog. */
+  readonly xodr?: string;
+  readonly signalsGeojson?: unknown;
+  /** Decoded `colliders` of the static-collider artifact; absent → collision-free map (browser callers fetch it by URL). */
+  readonly staticColliders?: readonly StaticMapCollider[];
+}
+
+/**
+ * Build a bundle from decoded sources without an installed directory. The
+ * signal catalog, map speed limits and derived index are derived natively,
+ * exactly as `loadMap` does for an installed map.
+ */
+export function createMapBundle(sources: MapBundleSources): MapBundle {
+  const { topology, derived, locations, ...rest } = sources;
+  const topologyBytes = topology instanceof Uint8Array ? topology : new TextEncoder().encode(JSON.stringify(topology));
+  const native = engine().module.MapBundle.fromSources(JSON.stringify({ ...rest, derived, locations }), topologyBytes);
+  return new MapBundle(native, { ...(derived ? { derived } : {}), ...(locations ? { catalog: locations } : {}) });
 }
 
 /** Resolve `--map` / `--maps` / `--all-maps` into an ordered map id list. */

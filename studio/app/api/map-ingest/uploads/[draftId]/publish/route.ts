@@ -34,7 +34,7 @@ import {
 import type { MapClosureMember } from "@/app/lib/map-ingest/server/storage";
 import { planUploadedMapClosure } from "@/app/lib/map-ingest/server/closure";
 import { publishUploadedMapVersion } from "@/app/lib/map-ingest/server/publication";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 export const maxDuration = 300;
 

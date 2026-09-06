@@ -1,0 +1,521 @@
+{
+  "schema": "simforge.native-migration.scenarios/v1",
+  "description": "Pinned scenario set for the native-migration reference harness. `scenarios` are existing checked-in `scenario-instance` files executed through the current TypeScript engine; `compiled` entries materialise checked-in portable templates on pinned matcher sites; `situations` are frozen SituationProgram fixtures (Blender-exported generated geometry, recorded-to-policy authority handover); `thresholdCorpus` derives threshold-near variants from a base entry with the engine's own predicate sampling. Every input is an existing simulated fixture or a fixture derived from one through the current compiler/engine APIs; none of them is a real-world measurement, and none is labelled as historical evidence. Coverage labels name the BASE work-package axes each entry exercises.",
+  "referencePath": "simforge simulate: readInstance -> loadMap(mapId) -> runSimulation(input, { graph, guards: 'collect' }) -> traceDigest",
+  "scenarios": [
+    {
+      "id": "ec-01-construction-chicane-reversing-truck",
+      "instance": "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz",
+      "coverage": [
+        "authored-small",
+        "warmup-prologue",
+        "signal-programs",
+        "occlusion-metrics",
+        "occluder-props",
+        "speed-commands",
+        "lateral-offset",
+        "route-commands",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "belmont-research-center"
+    },
+    {
+      "id": "ec-02-police-roadside-stop",
+      "instance": "examples/edge-cases/02-police-roadside-stop/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/02-police-roadside-stop/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "static-actors",
+        "speed-commands",
+        "lateral-offset",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-03-red-light-ambulance-preemption",
+      "instance": "examples/edge-cases/03-red-light-ambulance-preemption/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "static-actors",
+        "speed-commands",
+        "lateral-offset",
+        "spawn-despawn",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-04-child-emerging-behind-bus",
+      "instance": "examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/04-child-emerging-behind-bus/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "warmup-prologue",
+        "signal-programs",
+        "occlusion-metrics",
+        "static-actors",
+        "speed-commands",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-05-cyclist-occlusion-conflict",
+      "instance": "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz",
+      "coverage": [
+        "authored-small",
+        "occlusion-metrics",
+        "occluder-props",
+        "static-actors",
+        "speed-commands",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-06-wrong-way-vehicle-blind-approach",
+      "instance": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.trace.json.gz",
+      "coverage": [
+        "authored-small",
+        "occlusion-metrics",
+        "occluder-props",
+        "speed-commands",
+        "lateral-offset",
+        "state-set"
+      ],
+      "mapId": "easterbrook-discovery-school"
+    },
+    {
+      "id": "ec-07-protected-left-red-runner",
+      "instance": "examples/edge-cases/07-protected-left-red-runner/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "warmup-prologue",
+        "signal-programs",
+        "occlusion-metrics",
+        "speed-commands",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "el-camino-road"
+    },
+    {
+      "id": "ec-08-zipper-merge-lane-closure",
+      "instance": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "warmup-prologue",
+        "signal-programs",
+        "occlusion-metrics",
+        "occluder-props",
+        "static-actors",
+        "speed-commands",
+        "lateral-offset",
+        "lane-change",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-09-stalled-vehicle-beyond-sight",
+      "instance": "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "static-actors",
+        "speed-commands",
+        "route-commands",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "el-camino-road"
+    },
+    {
+      "id": "ec-10-officer-flashing-red-junction",
+      "instance": "examples/edge-cases/10-officer-flashing-red-junction/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/10-officer-flashing-red-junction/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "occlusion-metrics",
+        "static-actors",
+        "speed-commands",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "ec-11-double-threat-crosswalk",
+      "instance": "examples/edge-cases/11-double-threat-crosswalk/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/11-double-threat-crosswalk/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "warmup-prologue",
+        "signal-programs",
+        "occlusion-metrics",
+        "speed-commands",
+        "vru"
+      ],
+      "mapId": "el-camino-road"
+    },
+    {
+      "id": "ec-12-fire-engine-gridlock-escape",
+      "instance": "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.instance.json",
+      "recordedTrace": "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.trace.json.gz",
+      "coverage": [
+        "authored-large",
+        "static-actors",
+        "speed-commands",
+        "lateral-offset",
+        "state-set",
+        "vru"
+      ],
+      "mapId": "yale-street"
+    },
+    {
+      "id": "gc3-c2-ramp-merge-ttc-draw-002",
+      "instance": "research/edge-case-corpus/gold-corpus-v3/c2-ramp-merge/el-camino-road__7aae28bcf5c680e7__draw-002.instance.json",
+      "recordedTrace": null,
+      "mapId": "el-camino-road",
+      "coverage": [
+        "authored-small",
+        "condition-trigger-ttc",
+        "lateral-offset",
+        "control-trigger-boundary"
+      ],
+      "note": "The only checked-in scenario-instance with a `when` (ttc <= 4.5 s) trigger; exercises the threshold-crossing boundary the plan names as load-bearing."
+    }
+  ],
+  "coverageGaps": [
+    {
+      "axis": "threshold-near-corpus",
+      "status": "partial",
+      "detail": "Condition-trigger coverage comes from one checked-in ttc instance plus six compiled templates. A deliberately threshold-near corpus (parameter draws bracketing each trigger threshold) is not yet pinned; it must be produced with the compiler draw index and frozen before port comparison."
+    },
+    {
+      "axis": "ambient-generated-traffic",
+      "status": "no-fixture",
+      "detail": "No checked-in scenario-instance carries actors tagged `ambient`; ambient traffic is produced by the Studio `studio.ambientTraffic` extension (SUMO provider), not by the portable compiler. A reference for large generated traffic requires a Studio-materialised instance to be pinned into this set."
+    },
+    {
+      "axis": "recorded-to-policy-handover",
+      "status": "no-fixture",
+      "detail": "No checked-in instance uses `route.kind: timedPolyline` (recorded actor motion) or an external policy authority. The engine tests cover the mechanism synthetically; a real recorded episode must be pinned before the handover boundary is qualified."
+    },
+    {
+      "axis": "generated-geometry",
+      "status": "no-fixture",
+      "detail": "Generated static geometry enters through packages/compiler situation.ts geometry patches with verified bindings; no checked-in executable patch exists in the OSS tree (Blender workbench output is external)."
+    }
+  ],
+  "compiled": {
+    "description": "Portable templates compiled on a pinned map through the current compiler (readTemplate -> matchOnMap/findSite -> materialize) and then simulated. These exist because no checked-in instance covers distance/standstill/signal/reaches condition triggers. The reference run writes the compiled instance beside its signature; a native candidate must consume that exact instance, not re-match sites. Entries with `pinnedInstance` are compile-identity witnesses for checked-in instances. Entries with `ambient` pass that profile (and `ambientSettleSeconds`) to materialize; entries with `runtime` record RunOptions the reference applies (written to runtime.json).",
+    "seed": "native-migration-reference-2026-09-05",
+    "entries": [
+      {
+        "id": "cmp-ltap-opposing-distance",
+        "template": "examples/ltap-opposing.template.json",
+        "mapId": "el-camino-road",
+        "coverage": [
+          "condition-trigger-distance",
+          "junction"
+        ],
+        "siteId": "5c1b969514a2ff4d",
+        "expectedInputHash": "1b8dfc8e4588e584b69e9075d51b742ee813d2db58204d3d8a8b45e75b1e68a0",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "cmp-bus-pullout-standstill",
+        "template": "examples/mechanisms/parking-transit/bus-pullout.template.json",
+        "mapId": "belmont-research-center",
+        "coverage": [
+          "condition-trigger-standstill",
+          "condition-trigger-distance"
+        ],
+        "siteId": "5532969124e19a99",
+        "expectedInputHash": "20274ff777a9096197932756f52ab7534ec4bbd4c6032a676187707f1d2851c6",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "cmp-oncoming-overtake-ttc",
+        "template": "examples/mechanisms/remaining/oncoming-overtake.template.json",
+        "mapId": "yale-street",
+        "coverage": [
+          "condition-trigger-ttc",
+          "opposing-traffic"
+        ],
+        "siteId": "9274f136ce47a8f6",
+        "expectedInputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "cmp-red-light-late-entry-signal",
+        "template": "examples/mechanisms/remaining/red-light-late-entry.template.json",
+        "mapId": "yale-street",
+        "coverage": [
+          "condition-trigger-signal",
+          "signal-programs"
+        ],
+        "siteId": "03ae9501df700a67",
+        "expectedInputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "cmp-cyclist-right-hook-reaches",
+        "template": "examples/mechanisms/remaining/cyclist-right-hook.template.json",
+        "mapId": "yale-street",
+        "coverage": [
+          "condition-trigger-reaches",
+          "vru"
+        ],
+        "siteId": "810c8b2fbab4be67",
+        "expectedInputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "cmp-lane-shift-workzone",
+        "template": "examples/mechanisms/school-workzone/lane-shift.template.json",
+        "mapId": "el-camino-road",
+        "coverage": [
+          "condition-trigger-distance",
+          "authored-4-roles",
+          "workzone"
+        ],
+        "siteId": "21352a7f76445d6e",
+        "expectedInputHash": "7f6a9c53cd1f6e44efe5508d410f2323569019c072ecba00818b3052c5f79422",
+        "witness": "Current pinned-site compile identity: inputHash recorded by reference/experimental-1e2a63b-20260905 (engine 0.6.0, installed map digests in that run.json). A mismatch under the same map digests is a compiler identity regression; under different map digests it is map drift and must be re-pinned explicitly."
+      },
+      {
+        "id": "pin-ec-08-zipper-merge-lane-closure",
+        "template": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.template.json",
+        "mapId": "yale-street",
+        "siteId": "24a30f9561137117",
+        "seed": "ec-08-08-zipper-merge-lane-closure-v2",
+        "drawIndex": 0,
+        "allowRejectedSite": true,
+        "pinnedInstance": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.instance.json",
+        "coverage": [
+          "compile-identity-witness"
+        ],
+        "note": "Recompiles the checked-in curated instance from its template with the manifest replay key (paramSeed, drawIndex, siteId; the pinned site verdict was \"degraded\", so a rejected site is accepted here). The compiled inputHash is compared with the pinned manifest. On 2026-09-05 the current compiler and installed map data could not reproduce either instance (ec-08: no site matched; ec-04: signal_unbindable at the pinned site) \u2014 retained as a current failure of compile identity across map releases, not as a port result."
+      },
+      {
+        "id": "pin-ec-04-child-emerging-behind-bus",
+        "template": "examples/edge-cases/04-child-emerging-behind-bus/scenario.template.json",
+        "mapId": "yale-street",
+        "siteId": "91291881afa2f862",
+        "seed": "ec-04-04-child-emerging-behind-bus-v2",
+        "drawIndex": 0,
+        "allowRejectedSite": true,
+        "pinnedInstance": "examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json",
+        "coverage": [
+          "compile-identity-witness"
+        ],
+        "note": "Recompiles the checked-in curated instance from its template with the manifest replay key (paramSeed, drawIndex, siteId; the pinned site verdict was \"degraded\", so a rejected site is accepted here). The compiled inputHash is compared with the pinned manifest. On 2026-09-05 the current compiler and installed map data could not reproduce either instance (ec-08: no site matched; ec-04: signal_unbindable at the pinned site) \u2014 retained as a current failure of compile identity across map releases, not as a port result."
+      },
+      {
+        "id": "amb-oncoming-overtake-city-settle20",
+        "template": "examples/mechanisms/remaining/oncoming-overtake.template.json",
+        "mapId": "yale-street",
+        "siteId": "9274f136ce47a8f6",
+        "ambient": {
+          "version": 1,
+          "preset": "city",
+          "seed": "native-migration-ambient-2026-09-05",
+          "maxActors": 40,
+          "radiusM": 250
+        },
+        "ambientSettleSeconds": 20,
+        "coverage": [
+          "ambient-generated-traffic",
+          "ambient-settle-prologue",
+          "authored-large",
+          "condition-trigger-ttc"
+        ],
+        "note": "Generated background traffic through the compiler `ambient` option (applyAmbientTraffic + settleAmbientTraffic, the same path `simforge batch --ambient city --ambient-settle 20` takes). Scripted ambient reactivity (engine default)."
+      },
+      {
+        "id": "amb-lane-shift-heavy-reactive",
+        "template": "examples/mechanisms/school-workzone/lane-shift.template.json",
+        "mapId": "el-camino-road",
+        "siteId": "21352a7f76445d6e",
+        "ambient": {
+          "version": 1,
+          "preset": "heavy",
+          "seed": "native-migration-ambient-2026-09-05",
+          "maxActors": 64,
+          "radiusM": 300
+        },
+        "ambientSettleSeconds": 20,
+        "runtime": {
+          "ambientReactivity": "reactive"
+        },
+        "coverage": [
+          "ambient-generated-traffic",
+          "ambient-reactive",
+          "ambient-settle-prologue",
+          "workzone",
+          "condition-trigger-distance"
+        ],
+        "note": "Heavy preset with the reactive ambient runtime (RunOptions.ambientReactivity = reactive, as packages/evaluation catalog runs use). The runtime option is recorded in runtime.json beside the instance; a candidate must apply it."
+      },
+      {
+        "id": "amb-red-light-late-entry-moderate",
+        "template": "examples/mechanisms/remaining/red-light-late-entry.template.json",
+        "mapId": "yale-street",
+        "siteId": "03ae9501df700a67",
+        "ambient": {
+          "version": 1,
+          "preset": "moderate",
+          "seed": "native-migration-ambient-2026-09-05"
+        },
+        "ambientSettleSeconds": 0,
+        "coverage": [
+          "ambient-generated-traffic",
+          "signal-programs",
+          "condition-trigger-signal"
+        ],
+        "note": "Moderate preset without a settle prologue: the placed cohort is the t=0 population."
+      },
+      {
+        "id": "cmp-dooring-cyclist-distance",
+        "template": "examples/mechanisms/remaining/dooring-cyclist.template.json",
+        "mapId": "yale-street",
+        "siteId": "2d295212b00a36ba",
+        "coverage": [
+          "condition-trigger-distance",
+          "vru",
+          "articulated-door"
+        ]
+      },
+      {
+        "id": "cmp-lane-drop-late-merge-distance",
+        "template": "examples/mechanisms/remaining/lane-drop-late-merge.template.json",
+        "mapId": "el-camino-road",
+        "siteId": "0a8fc7e0ff2a6cad",
+        "coverage": [
+          "condition-trigger-distance",
+          "merge",
+          "collision"
+        ]
+      },
+      {
+        "id": "cmp-queue-tail-distance",
+        "template": "examples/mechanisms/corridor/queue-tail.template.json",
+        "mapId": "el-camino-road",
+        "siteId": "414ee1aa2520773c",
+        "coverage": [
+          "condition-trigger-distance",
+          "occlusion-reveal"
+        ]
+      }
+    ],
+    "sitePinning": "siteId values were selected as the top accepted matcher site per template on 2026-09-05 against the matcher index of the installed maps (matchOnMap accepted sites; rejected sites are never used). A changed matcher index makes the pinned site unavailable and the entry fails rather than silently re-matching."
+  },
+  "situations": [
+    {
+      "id": "sit-generated-geometry-proxy",
+      "fixture": "qualification/native-migration/fixtures/generated-geometry",
+      "mapId": "yale-street",
+      "coverage": [
+        "generated-geometry",
+        "geometry-transaction",
+        "situation-compare",
+        "sensor-occlusion",
+        "static-proxy-collision-support"
+      ],
+      "note": "Frozen SituationProgram whose executable geometry patch is a Blender-workbench export (2064-byte normalized GLB + descriptor + three effect proxies, retained by sha256; .corpus/HDRI/catalog source artifacts referenced by identity). The harness applies the declared observer/target sensor transaction, then runs compareSituation against the declared proxy-removal transaction: base leg = proxy present, intervention leg = proxy absent."
+    },
+    {
+      "id": "sit-recorded-policy-handover",
+      "fixture": "qualification/native-migration/fixtures/recorded-policy-handover",
+      "mapId": "yale-street",
+      "coverage": [
+        "recorded-to-policy-handover",
+        "recorded-motion",
+        "policy-action-hook",
+        "authority-intervals",
+        "situation-event"
+      ],
+      "note": "SituationProgram with recorded authority [0,6) over a customTimedRoute (engine-recorded track of a reference actor, see fixture origin) and policy authority [6,20) driven by the declared open-loop target-speed schedule through the ActionHook; a parked lead sits on the retained path. rehearseSituation records the exact handover transition state."
+    }
+  ],
+  "thresholdCorpus": {
+    "description": "Threshold-near variants derived at record time: the base scenario is sampled once with AdvanceOptions.conditions at a grid of thresholds around the authored value; adjacent grid values whose first-true tick differs bracket a crossing and become variant instances (only thresholds crossing no later than the base trigger are admissible). Each variant is written as instance.json and executed like any scenario; its result records the predicted first-true time from the base sampling and the actual trigger_fired time.",
+    "entries": [
+      {
+        "id": "thr-dooring-cyclist-brakes",
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "gridSteps": 40,
+        "gridSpan": 0.2,
+        "maxPairs": 4,
+        "coverage": [
+          "threshold-near",
+          "condition-trigger-distance"
+        ]
+      },
+      {
+        "id": "thr-lane-drop-merge-taper",
+        "base": "cmp-lane-drop-late-merge-distance",
+        "interactionId": "merge-at-temporary-taper",
+        "gridSteps": 40,
+        "gridSpan": 0.2,
+        "maxPairs": 4,
+        "coverage": [
+          "threshold-near",
+          "condition-trigger-distance"
+        ]
+      },
+      {
+        "id": "thr-queue-tail-reveal",
+        "base": "cmp-queue-tail-distance",
+        "interactionId": "ego-brakes-on-reveal",
+        "gridSteps": 40,
+        "gridSpan": 0.2,
+        "maxPairs": 4,
+        "coverage": [
+          "threshold-near",
+          "condition-trigger-distance"
+        ]
+      },
+      {
+        "id": "thr-bus-pullout-accelerates",
+        "base": "cmp-bus-pullout-standstill",
+        "interactionId": "bus-accelerates",
+        "gridSteps": 40,
+        "gridSpan": 0.2,
+        "maxPairs": 4,
+        "coverage": [
+          "threshold-near",
+          "condition-trigger-distance"
+        ]
+      },
+      {
+        "id": "thr-lane-shift-shifts-left",
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "gridSteps": 40,
+        "gridSpan": 0.2,
+        "maxPairs": 4,
+        "coverage": [
+          "threshold-near",
+          "condition-trigger-distance"
+        ]
+      }
+    ],
+    "selection": "Bases were chosen because their when-trigger fires from the predicate (not forced by byLatest) in the reference: bus-accelerates 0.78 s, ego-shifts-left 1.14 s, ego-brakes-on-reveal 1.90 s, merge-at-temporary-taper 3.76 s, cyclist-brakes-for-door 6.14 s. gc3 ttc, oncoming-overtake ttc and lane-shift ego-brakes-for-queue never become true even at 3x their threshold in the reference (trigger_skipped), so they carry no threshold-near information and are not derived."
+  }
+}

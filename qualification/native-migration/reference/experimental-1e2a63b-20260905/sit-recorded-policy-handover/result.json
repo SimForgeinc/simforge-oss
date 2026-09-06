@@ -1,0 +1,132 @@
+{
+  "id": "sit-recorded-policy-handover",
+  "kind": "situation",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "fae58aa61de9198aec4fd7b4d76c852a815549102b4a492b87732698a0865509",
+  "traceDigest": "2406ba3316872bee6db17d74307e31945e183c689d92d94bf64301816a220421",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 141.67797199999998,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 7.601438000000002,
+      "warm": null
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 295.02236200000016,
+      "warm": null
+    },
+    "simulate": {
+      "cold": 156.14371699999992,
+      "warm": {
+        "n": 4,
+        "min": 88.64682900000025,
+        "median": 97.26491050000004,
+        "max": 109.770626,
+        "mean": 98.23681900000008
+      }
+    },
+    "digest": {
+      "cold": 11.792875000000095,
+      "warm": {
+        "n": 4,
+        "min": 9.541005000000041,
+        "median": 9.761874000000034,
+        "max": 9.877714000000196,
+        "mean": 9.735616750000077
+      }
+    },
+    "serialize": {
+      "cold": 25.867747999999892,
+      "warm": null
+    }
+  },
+  "tickCount": 1001,
+  "events": 1,
+  "fixture": {
+    "path": "qualification/native-migration/fixtures/recorded-policy-handover",
+    "id": "sit-recorded-policy-handover",
+    "seed": "native-migration-handover-2026-09-05",
+    "origin": {
+      "kind": "derived-from-reference-trace",
+      "note": "recorded-ego customTimedRoute points are the fire-engine track of the ec-12-fire-engine-gridlock-escape reference run (engine 0.6.0, /tmp reference 2026-09-05) sampled every 0.5 s over [0,14] s, converted xodr-local (x,y) -> scene (x,-y). This is engine-recorded motion used as a recorded source, not a real-world measurement. parked-lead sits at the 12 s sample of the same track, i.e. on the retained spatial path."
+    },
+    "transactionsApplied": [],
+    "policy": {
+      "roleId": "recorded-ego",
+      "kind": "target-speed-schedule",
+      "schedule": [
+        {
+          "fromS": 6,
+          "targetSpeedMps": 8
+        },
+        {
+          "fromS": 9.5,
+          "targetSpeedMps": 0
+        }
+      ],
+      "semantics": "ActionHook returns { targetSpeedMps } for recorded-ego on every planning tick with tS >= 6 using the latest schedule row with fromS <= tS; undefined otherwise. The override replaces the engine-computed target speed (including governor gating), matching hookedIntent in packages/engine/src/sim/engine.ts."
+    },
+    "geometryBinding": []
+  },
+  "artifacts": {
+    "retained": [],
+    "sources": {
+      "total": 158,
+      "reachable": 158,
+      "verified": 158,
+      "mismatched": [],
+      "unreachable": []
+    }
+  },
+  "legs": {
+    "base": {
+      "inputHash": "fae58aa61de9198aec4fd7b4d76c852a815549102b4a492b87732698a0865509",
+      "traceDigest": "2406ba3316872bee6db17d74307e31945e183c689d92d94bf64301816a220421",
+      "replayStable": true,
+      "tickCount": 1001,
+      "events": 1,
+      "programDigest": "605ea1680651bef14a874cc8a8d3ed9b3ea6eb2515870b08e006ac1ed8447bea",
+      "situationEvents": [
+        {
+          "id": "ego-stopped",
+          "firstTrueS": 19.240000000000002,
+          "lastTrueS": 20
+        }
+      ],
+      "authorityTransitions": [
+        {
+          "roleId": "recorded-ego",
+          "timeS": 6,
+          "from": "recorded",
+          "to": "policy",
+          "handoverInteractionId": "situation-authority-recorded-ego-1",
+          "state": {
+            "x": 443.9057,
+            "y": 1901.0147,
+            "headingRad": -2.1262887435356164,
+            "speedMps": 6.666581442662787
+          }
+        }
+      ],
+      "actionCalls": {
+        "recorded-ego": 700
+      },
+      "collisions": 0
+    }
+  },
+  "comparison": null
+}

@@ -1,0 +1,4120 @@
+[
+ {
+  "status": "rejected",
+  "id": "custom.horn-cue-sign",
+  "label": "Visible HONK horn cue",
+  "description": "A clean, highly legible 3D visual horn cue for a driving-simulator video: a flat bright-yellow speech-bubble panel with a bold black horn/trumpet pictogram and large embossed black text reading “HONK!”. Simple game-ready geometry, matte materials, no stand, no lighting or emissive parts, readable from a chase camera, designed to momentarily appear like an on-screen warning icon.",
+  "class": "prop",
+  "dims": {
+   "l": 1.6,
+   "w": 0.072,
+   "h": 1.075
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.horn-cue-sign/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.horn-cue-sign/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-30T13:36:30.607Z",
+  "sha256": "332dc9e573f666e5ec58b5e154d7b1b75abf54b524e6a43d1f9650b1b0e32457",
+  "declaredDims": {
+   "l": 1.6,
+   "w": 0.12,
+   "h": 0.75
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.8405259607275101,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:00.816Z",
+   "verdict": "rejected",
+   "reason": "The prop is plausibly scaled, upright, grounded, and textured, but it does not read as a HONK label because its face is turned away from the chase camera.",
+   "sheet": "experiments/agentic-3d/assets/custom.horn-cue-sign/qa/frame-0002.rgb.jpg",
+   "sha256": "332dc9e573f666e5ec58b5e154d7b1b75abf54b524e6a43d1f9650b1b0e32457"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.compact-utility-tractor",
+  "label": "Compact utility tractor",
+  "description": "A realistic modern compact agricultural utility tractor, unmistakably a tractor in chase-camera and overhead driving-simulator video. Tall enclosed glazed cab, very large deeply treaded rear tires, smaller front tires, short engine hood, front grille, exhaust stack, exposed wheel arches, no trailer, no loader, no implements. Neutral green body with yellow wheel rims. Roadworthy proportions, clean real-time 3D game asset, correctly oriented forward, with wheels suitable for vehicle animation.",
+  "class": "vehicle",
+  "dims": {
+   "l": 4.399,
+   "w": 2.783,
+   "h": 2.8
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.compact-utility-tractor/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.compact-utility-tractor/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-30T14:47:31.251Z",
+  "sha256": "9ce9b28cdd4adc6a73d83ce01f70058d5ded6b41e9ca0ece71285d648de75c08",
+  "declaredDims": {
+   "l": 4.6,
+   "w": 2.2,
+   "h": 2.8
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.3126596691162424,
+   "yaw": 180,
+   "flipped": true
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:18.015Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a compact utility tractor, is plausibly scaled and grounded beside the sedan, faces the same direction, and has appropriate green, glazed, tire, and yellow-rim materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.compact-utility-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "9ce9b28cdd4adc6a73d83ce01f70058d5ded6b41e9ca0ece71285d648de75c08"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.fallen-branch-pile",
+  "label": "Fallen branch pile",
+  "description": "A realistic low, irregular pile of fallen tree branches and leafy limbs blocking a traffic lane. Many intertwined brown woody branches, snapped twigs, and sparse green leaves; no container, sign, tarp, concrete, ladder, vehicle, or manufactured debris. Broad enough to visibly obstruct most of one urban driving lane, while low enough to see over. Game-ready real-time 3D prop with a clear silhouette in chase-camera and overhead views.",
+  "class": "prop",
+  "dims": {
+   "l": 2.668,
+   "w": 2.8,
+   "h": 1.454
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.fallen-branch-pile/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.fallen-branch-pile/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-30T22:42:02.817Z",
+  "sha256": "336e49f46b2b041faa8bd1094ef669af249573514f79e1f9d1de7b8976783b9d",
+  "declaredDims": {
+   "l": 5.5,
+   "w": 2.8,
+   "h": 1.2
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 1.478171415280027,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:11.600Z",
+   "verdict": "rejected",
+   "reason": "The asset reads as a textured, grounded branch pile, but it appears substantially undersized beside the sedan and lacks the broad lane-blocking footprint expected.",
+   "sheet": "experiments/agentic-3d/assets/custom.fallen-branch-pile/qa/frame-0002.rgb.jpg",
+   "sha256": "336e49f46b2b041faa8bd1094ef669af249573514f79e1f9d1de7b8976783b9d"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.open-driver-door-hatchback",
+  "label": "Compact hatchback with driver-side door open",
+  "description": "Realistic modern compact hatchback, dark metallic blue, four wheels and glass windows. Front-left driver door is visibly open 75 degrees on its hinge, extending 0.9 m sideways. Make the open door unmistakable from a rear approach view. No driver, text, base, or environment.",
+  "class": "prop",
+  "dims": {
+   "l": 4.1,
+   "w": 1.951,
+   "h": 1.548
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T06:59:34.316Z",
+  "sha256": "04e36687429519025d64960148376fa7d13ab1a4c7456dbc59a02074dd11407a",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.75,
+   "h": 1.5
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.1540672508813747,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:18.894Z",
+   "verdict": "approved",
+   "reason": "used in judge-approved, audited scenario b2-f026-belmont",
+   "sheet": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback/qa/frame-0002.rgb.jpg",
+   "sha256": "04e36687429519025d64960148376fa7d13ab1a4c7456dbc59a02074dd11407a"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.open-car-door-panel",
+  "label": "Open driver-side car door panel",
+  "description": "Single realistic dark-blue front driver-side automobile door, viewed as an open car door standing upright. Include window frame, transparent side window, exterior handle, inner trim, and hinge edge. No car body, no base, no environment. Thin rigid panel, unmistakably a vehicle door.",
+  "class": "prop",
+  "dims": {
+   "l": 0.752,
+   "w": 0.12,
+   "h": 1.358
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.open-car-door-panel/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.open-car-door-panel/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:02:04.207Z",
+  "sha256": "64aa6aa4e4120e35acd043b0f33e96b0d8abfbf1d259e29accc0cf2e705ef0b6",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.12,
+   "h": 1.25
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.7135636974836379,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:26.062Z",
+   "verdict": "rejected",
+   "reason": "Although the scale and grounding are plausible, the edge-on presentation prevents the asset from clearly reading as the specified automobile door panel.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-car-door-panel/qa/frame-0002.rgb.jpg",
+   "sha256": "64aa6aa4e4120e35acd043b0f33e96b0d8abfbf1d259e29accc0cf2e705ef0b6"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.open-driver-door-hatchback-v2",
+  "label": "Realistic hatchback with attached fully open driver door",
+  "description": "One-piece realistic dark blue compact hatchback, viewed at normal scale. Front LEFT driver door visibly attached to its front hinge and swung fully open 75 degrees. Door includes window frame, glass, handle and interior trim; its hinge touches the car body with no gap or overlap. Four wheels, realistic paint and proportions. No base or environment.",
+  "class": "prop",
+  "dims": {
+   "l": 4.1,
+   "w": 2.282,
+   "h": 2.145
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v2/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v2/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:07:54.736Z",
+  "sha256": "9a990154268496777ff95a897b7ab492dfbd92e71c2cfd7080fdb869c00eafa5",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.8,
+   "h": 1.5
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.1543898694614216,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:41.312Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a realistically sized, grounded, textured hatchback with an attached open driver door, satisfying all prop-class approval criteria.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "9a990154268496777ff95a897b7ab492dfbd92e71c2cfd7080fdb869c00eafa5"
+  },
+  "supersededBy": "custom.open-driver-door-hatchback-v3"
+ },
+ {
+  "status": "approved",
+  "id": "custom.open-driver-door-hatchback-v3",
+  "label": "Blue car, left front door wide open 90 degrees",
+  "description": "A realistic blue compact car with its LEFT FRONT DOOR WIDE OPEN at a right angle. The large open door must project toward the viewer like a wing and remain visibly connected at the front hinge. Show the door's inner black trim, window frame, handle and hinge. Closed doors are unacceptable. Full car, four wheels, no base, no environment.",
+  "class": "prop",
+  "dims": {
+   "l": 3.871,
+   "w": 2.9,
+   "h": 1.813
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v3/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v3/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:11:04.558Z",
+  "sha256": "ac1550c6cd0182466c48e33cd9052f1ffe5bf3081f614d6b3e703ef055750a9d",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.9,
+   "h": 1.5
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.033763110338859,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:42.243Z",
+   "verdict": "approved",
+   "reason": "The asset clearly depicts a plausibly scaled, grounded, textured blue compact car with its left front door visibly connected and opened approximately 90 degrees.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "ac1550c6cd0182466c48e33cd9052f1ffe5bf3081f614d6b3e703ef055750a9d"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.open-driver-door-hatchback-mid",
+  "label": "Blue hatchback, driver door half open",
+  "description": "A realistic blue compact hatchback with its LEFT FRONT DRIVER DOOR HALF OPEN about 40 degrees, visibly attached at the front hinge. Door projects outward and shows dark inner trim, window frame and handle. Full car, four wheels, realistic materials, no base or environment. The door must clearly be partly open, neither closed nor 90 degrees.",
+  "class": "prop",
+  "dims": {
+   "l": 3.262,
+   "w": 2.304,
+   "h": 1.5
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-mid/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-mid/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:14:00.280Z",
+  "sha256": "2b73d9286246461f99863238f7841496c617bf11c5842f031e1e6dd87c99542d",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.25,
+   "h": 1.5
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 1.7164333512303078,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:43.286Z",
+   "verdict": "rejected",
+   "reason": "The blue hatchback, open driver door, scale, grounding, and materials are credible, but the vehicle faces the wrong direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-driver-door-hatchback-mid/qa/frame-0002.rgb.jpg",
+   "sha256": "2b73d9286246461f99863238f7841496c617bf11c5842f031e1e6dd87c99542d"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.vehicle.open-door-blue-hatchback",
+  "label": "Blue hatchback vehicle with attached open driver door",
+  "description": "Realistic blue compact hatchback vehicle with four wheels and glass. LEFT FRONT DRIVER DOOR is wide open 80 degrees and visibly attached at the front hinge, projecting left like a wing. Show black inner door trim, window frame and handle. Complete car, realistic materials, no base or environment.",
+  "class": "vehicle",
+  "dims": {
+   "l": 4.1,
+   "w": 2.321,
+   "h": 2.242
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.open-door-blue-hatchback/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.open-door-blue-hatchback/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:17:49.937Z",
+  "sha256": "a992c747948bfd72f7e7b33ce2b0fdab6b35aa85e8765b40812e12e7340cf208",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.8,
+   "h": 1.5
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.1538070405588665,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:56.005Z",
+   "verdict": "rejected",
+   "reason": "The hatchback is plausibly scaled, grounded, and textured, but it faces the wrong direction and lacks the clearly visible wide-open attached driver door required by the label.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.open-door-blue-hatchback/qa/frame-0002.rgb.jpg",
+   "sha256": "a992c747948bfd72f7e7b33ce2b0fdab6b35aa85e8765b40812e12e7340cf208"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.driver-door-panel",
+  "label": "Realistic isolated driver door panel",
+  "description": "ONLY one upright automobile front-left driver door, not a whole car. Realistic dark blue metal door panel with black inner trim, transparent side window in a window frame, exterior handle and visible hinge edge. Thin vertical rigid panel, unmistakably a real car door. No vehicle body, wheels, base, text or environment.",
+  "class": "vehicle",
+  "dims": {
+   "l": 0.986,
+   "w": 0.16,
+   "h": 1.25
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.driver-door-panel/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.driver-door-panel/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:20:18.984Z",
+  "sha256": "9591819d36beabb38c4cb0de05e095172f660d83426d6de1112a4dee8249491c",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.12,
+   "h": 1.25
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.6565756292595857,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:58.240Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a correctly scaled, upright, grounded, textured driver door aligned in the sedan's direction, though fine details are difficult to inspect.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.driver-door-panel/qa/frame-0002.rgb.jpg",
+   "sha256": "9591819d36beabb38c4cb0de05e095172f660d83426d6de1112a4dee8249491c"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.white-driver-door-readable",
+  "label": "Readable white driver door with window frame",
+  "description": "A single WHITE car front door standing upright and wide open. Flat white metal lower panel, black window frame with transparent glass, black exterior handle, black interior trim, and two small hinges on one vertical edge. Clear realistic automobile door silhouette. No car body, no wheels, no base, no environment, not a cube.",
+  "class": "prop",
+  "dims": {
+   "l": 1.2,
+   "w": 1.256,
+   "h": 1.216
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.white-driver-door-readable/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.white-driver-door-readable/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:36:22.908Z",
+  "sha256": "f7323cf587d7c4a88e259d8047c74f07ea453cfa318fb5a9b163241d12be864e",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.12,
+   "h": 1.3
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.6600627321020566,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:50:59.145Z",
+   "verdict": "rejected",
+   "reason": "Although upright, grounded, and plausibly scaled, the asset does not clearly read as the specified white driver door.",
+   "sheet": "experiments/agentic-3d/assets/custom.white-driver-door-readable/qa/frame-0002.rgb.jpg",
+   "sha256": "f7323cf587d7c4a88e259d8047c74f07ea453cfa318fb5a9b163241d12be864e"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.lowpoly-car-door-geometry",
+  "label": "Low-poly geometric white car door",
+  "description": "Low-poly single car door as real 3D geometry. White trapezoid lower door panel, large OPEN rectangular window hole above it with a thick black frame, protruding black handle, and two visible hinge cylinders on the right edge. Thin panel only, no car, no cube, no background. Door silhouette and window opening must be modeled geometry, not texture.",
+  "class": "prop",
+  "dims": {
+   "l": 1.921,
+   "w": 0.115,
+   "h": 1.3
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.lowpoly-car-door-geometry/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.lowpoly-car-door-geometry/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T07:41:00.546Z",
+  "sha256": "6eb5150f4515bee17579e082229d17eff57f73778ed41fef355d072d1bc8aa8b",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.12,
+   "h": 1.3
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 1.0087018696085284,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:10.044Z",
+   "verdict": "rejected",
+   "reason": "The asset has a plausible upright car-door shape and scale, but its required white panel and key modeled details are not visually represented clearly.",
+   "sheet": "experiments/agentic-3d/assets/custom.lowpoly-car-door-geometry/qa/frame-0002.rgb.jpg",
+   "sha256": "6eb5150f4515bee17579e082229d17eff57f73778ed41fef355d072d1bc8aa8b"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.cyclist-with-rider",
+  "label": "Cyclist riding a bicycle (rider included)",
+  "description": "An adult cyclist riding a city bicycle, one single unified 3D model. Rider wears a bright blue jacket, dark pants, and a dark helmet, leaning slightly forward with both hands on the handlebars and feet on the pedals. Realistic proportions, clearly readable as a person on a bicycle from 20 meters away. Solid saturated colors, clean silhouette, no base, no background, upright riding pose facing forward.",
+  "class": "vehicle",
+  "dims": {
+   "l": 1.6,
+   "w": 0.942,
+   "h": 1.75
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.cyclist-with-rider/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.cyclist-with-rider/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T08:15:03.789Z",
+  "sha256": "19ffb11064bf289931a40ba463b95aa164113dcf754544019cb20f5f99763942",
+  "declaredDims": {
+   "l": 1.8,
+   "w": 0.6,
+   "h": 1.75
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.9199587085728592,
+   "yaw": 90
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:15.317Z",
+   "verdict": "approved",
+   "reason": "The cyclist and bicycle are clearly recognizable, appropriately scaled and grounded beside the sedan, visibly textured, and oriented in the same general forward direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.cyclist-with-rider/qa/frame-0002.rgb.jpg",
+   "sha256": "19ffb11064bf289931a40ba463b95aa164113dcf754544019cb20f5f99763942"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.utility-box-trailer",
+  "label": "Detached enclosed cargo trailer",
+  "description": "A realistic compact two-wheel enclosed cargo utility trailer, white metal box body, black chassis, visible tow hitch and safety chains, no towing vehicle attached, road-ready proportions. Must clearly read as a detached automotive trailer from chase-camera distance. One complete trailer only.",
+  "class": "prop",
+  "dims": {
+   "l": 4.2,
+   "w": 2.358,
+   "h": 1.72
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.utility-box-trailer/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.utility-box-trailer/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T08:57:10.860Z",
+  "sha256": "4cabebae4de1da2842e30f36877cf5362ebc570cc462f8f3f586ccc9bb4442f0",
+  "declaredDims": {
+   "l": 4.2,
+   "w": 2.1,
+   "h": 2.3
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 2.2041945078058625,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:11.510Z",
+   "verdict": "rejected",
+   "reason": "The asset is plausibly scaled and grounded but does not match the requested white enclosed cargo trailer.",
+   "sheet": "experiments/agentic-3d/assets/custom.utility-box-trailer/qa/frame-0002.rgb.jpg",
+   "sha256": "4cabebae4de1da2842e30f36877cf5362ebc570cc462f8f3f586ccc9bb4442f0"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.realistic-open-driver-door-thin",
+  "label": "Realistic thin orange-red open driver door",
+  "description": "A single realistic modern hatchback FRONT DRIVER-SIDE CAR DOOR only, detached standalone prop. Exactly one thin upright door panel: 1.15 m long horizontally, only 0.12 m thick, 1.05 m high. Vivid orange-red painted exterior, black window frame with transparent raised side window, black trim, handle, dark interior reverse, vertical hinge edge at one end. Absolutely NO wheels, NO chassis, NO car body, NO toy form, NO pedestal, NO duplicate pieces. Correct real-world automotive materials and proportions. Origin at bottom hinge edge so it can visually attach to an existing parked hatchback.",
+  "class": "prop",
+  "dims": {
+   "l": 0.609,
+   "w": 0.475,
+   "h": 1.05
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.realistic-open-driver-door-thin/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.realistic-open-driver-door-thin/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T09:20:32.579Z",
+  "sha256": "cba483195aa27d2b771dc7cab21de79cd40c04600881afcac6f0a723d8315cf5",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.12,
+   "h": 1.05
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.5473601592706719,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:28.883Z",
+   "verdict": "rejected",
+   "reason": "The upright prop is grounded and colored appropriately, but it is too undersized and edge-like to read convincingly as a realistic detached front driver-side door.",
+   "sheet": "experiments/agentic-3d/assets/custom.realistic-open-driver-door-thin/qa/frame-0002.rgb.jpg",
+   "sha256": "cba483195aa27d2b771dc7cab21de79cd40c04600881afcac6f0a723d8315cf5"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.actor-driver-door",
+  "label": "Actor-capable hinged driver door",
+  "description": "Actor-capable single modern hatchback FRONT DRIVER-SIDE DOOR only, modeled as one thin upright automotive door panel. Dimensions exactly 1.15 m long, 0.12 m thick, 1.05 m high. Bright red painted lower panel, black window frame with transparent raised glass, handle and trim. Origin and yaw pivot at the vertical hinge edge on one short end so rotating the actor visibly swings the door. Absolutely no car body, chassis, wheels, pedestal, toy vehicle, boxes, or duplicate geometry. This will be animated as a hinged hazard beside a separate parked hatchback.",
+  "class": "vehicle",
+  "dims": {
+   "l": 0.73,
+   "w": 0.138,
+   "h": 1.05
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.actor-driver-door/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.vehicle.actor-driver-door/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T09:29:50.204Z",
+  "sha256": "88dab179d8d86214c1a3843917b0b70080d33e6053aae1e7db18cf881e15ca41",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.12,
+   "h": 1.05
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 0.5511416899139446,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:37.943Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a grounded, textured upright driver-side door, has a marginally plausible scale beside the sedan, and is aligned with the sedan's forward direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.actor-driver-door/qa/frame-0002.rgb.jpg",
+   "sha256": "88dab179d8d86214c1a3843917b0b70080d33e6053aae1e7db18cf881e15ca41"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.onepiece-open-door-hatchback-final",
+  "label": "One-piece yellow hatchback with attached open driver door",
+  "description": "One-piece realistic yellow compact hatchback, 4.1m long. Front-left driver door is thin realistic automotive geometry, visibly attached at the front A-pillar hinge and open 80 degrees. Matching yellow body and door, black inner trim, window frame and transparent glass, four wheels, lights and realistic body panels. No detached parts, boxes, cubes, duplicate doors, floating geometry, gaps or clipping. Unified curbside parked vehicle asset, readable from rear three-quarter view.",
+  "class": "prop",
+  "dims": {
+   "l": 3.212,
+   "w": 2.8,
+   "h": 1.738
+  },
+  "glbPath": "experiments/agentic-3d/assets/custom.onepiece-open-door-hatchback-final/model.glb",
+  "thumbnail": "experiments/agentic-3d/assets/custom.onepiece-open-door-hatchback-final/thumb.png",
+  "source": "meshy",
+  "generatedAt": "2026-08-31T10:04:24.169Z",
+  "sha256": "6e2e8a1035abf195fab08722450408a4f65df0257c91b360e2de698dd61750cc",
+  "declaredDims": {
+   "l": 4.1,
+   "w": 2.8,
+   "h": 1.48
+  },
+  "dimsSource": "request",
+  "normalized": {
+   "scale": 1.689445750132437,
+   "yaw": 0
+  },
+  "qa": {
+   "at": "2026-09-01T20:51:38.841Z",
+   "verdict": "approved",
+   "reason": "The textured yellow hatchback is grounded, plausibly scaled beside the sedan, and clearly has an attached open driver-side door.",
+   "sheet": "experiments/agentic-3d/assets/custom.onepiece-open-door-hatchback-final/qa/frame-0002.rgb.jpg",
+   "sha256": "6e2e8a1035abf195fab08722450408a4f65df0257c91b360e2de698dd61750cc"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.sofa-road-hazard-baked",
+  "label": "Tan Road-Hazard Sofa",
+  "description": "A tan three-seat upholstered sofa with rolled arms, three cushions, and two pale throw pillows.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.sofa-road-hazard-baked/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.2,
+   "w": 0.95,
+   "h": 0.9
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.2,
+   "w": 0.838,
+   "h": 1.037
+  },
+  "normalized": {
+   "scale": 1.1557462844322204,
+   "yaw": 0
+  },
+  "sha256": "962e8729273e0585174f83e0e186092143ce9f9de9a953d926771c296563c977",
+  "qa": {
+   "at": "2026-09-01T20:51:42.160Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a correctly oriented tan upholstered sofa with plausible dimensions relative to the sedan, visible materials, and stable ground contact.",
+   "sheet": "experiments/agentic-3d/assets/custom.sofa-road-hazard-baked/qa/frame-0002.rgb.jpg",
+   "sha256": "962e8729273e0585174f83e0e186092143ce9f9de9a953d926771c296563c977"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.soccer-ball-final",
+  "label": "Black-and-White Soccer Ball",
+  "description": "A slightly worn white soccer ball with contrasting dark gray polygonal panels.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.soccer-ball-final/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.32,
+   "w": 0.32,
+   "h": 0.32
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.32,
+   "w": 0.314,
+   "h": 0.322
+  },
+  "normalized": {
+   "scale": 0.16899644417756662,
+   "yaw": 0
+  },
+  "sha256": "73e3d16563b964d04f160030c9e604fd0327089c09c245f4d8958827e1600240",
+  "qa": {
+   "at": "2026-09-01T20:51:46.621Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured black-and-white soccer ball, has a plausible scale beside the sedan, and appears properly grounded.",
+   "sheet": "experiments/agentic-3d/assets/custom.soccer-ball-final/qa/frame-0002.rgb.jpg",
+   "sha256": "73e3d16563b964d04f160030c9e604fd0327089c09c245f4d8958827e1600240"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.discarded-sofa-roadblock",
+  "label": "Discarded Dark Sofa",
+  "description": "A dark charcoal three-seat sofa with rolled arms, tufted back cushions, and short legs.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.discarded-sofa-roadblock/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.2,
+   "w": 0.95,
+   "h": 0.9
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.264,
+   "w": 0.944,
+   "h": 0.9
+  },
+  "normalized": {
+   "scale": 1.1894123318618786,
+   "yaw": 0
+  },
+  "sha256": "b879972395f92f959bbfcc5eafdef8da46c124bc9fd09c7dbd89f296148f032f",
+  "qa": {
+   "at": "2026-09-01T20:51:52.101Z",
+   "verdict": "approved",
+   "reason": "The asset reads as an upright dark sofa, is appropriately scaled beside the sedan, grounded, and visibly surfaced despite limited detail visibility.",
+   "sheet": "experiments/agentic-3d/assets/custom.discarded-sofa-roadblock/qa/frame-0002.rgb.jpg",
+   "sha256": "b879972395f92f959bbfcc5eafdef8da46c124bc9fd09c7dbd89f296148f032f"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.stationary-pedestrian-hi-vis",
+  "label": "Standing Pedestrian in Orange Hoodie",
+  "description": "A stationary adult man wearing a bright orange hoodie, dark navy pants, and black shoes.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.stationary-pedestrian-hi-vis/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.55,
+   "w": 0.7,
+   "h": 1.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.615,
+   "w": 0.375,
+   "h": 1.8
+  },
+  "normalized": {
+   "scale": 0.9461537405936794,
+   "yaw": 0
+  },
+  "sha256": "4082dff66ef7c7b99ddbd84fba18f933c10d2bec39ce0a3082001c1df9a0fef1",
+  "qa": {
+   "at": "2026-09-01T20:51:42.168Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.stationary-pedestrian-hi-vis not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.simple-blue-block-sofa",
+  "label": "Simple Blue Sofa",
+  "description": "A bright blue block-style three-seat sofa with square arms and lightly tufted back cushions.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.simple-blue-block-sofa/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.5,
+   "w": 1,
+   "h": 1.2
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.5,
+   "w": 1.072,
+   "h": 0.974
+  },
+  "normalized": {
+   "scale": 1.31335356118627,
+   "yaw": 0
+  },
+  "sha256": "895fd29d61c9c2ed93dc69778ae0f2f6326b8ac1eade8e22663f6493c8670b31",
+  "qa": {
+   "at": "2026-09-01T20:51:54.152Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright blue three-seat block sofa with plausible sedan-relative scale, visible material detail, and proper ground contact.",
+   "sheet": "experiments/agentic-3d/assets/custom.simple-blue-block-sofa/qa/frame-0002.rgb.jpg",
+   "sha256": "895fd29d61c9c2ed93dc69778ae0f2f6326b8ac1eade8e22663f6493c8670b31"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.drivable-tractor",
+  "label": "Green Drivable Tractor",
+  "description": "A green enclosed-cab farm tractor with yellow wheel rims and large black tires.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.drivable-tractor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 3.8,
+   "w": 1.9,
+   "h": 2.5
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 3.685,
+   "w": 1.973,
+   "h": 2.5
+  },
+  "normalized": {
+   "scale": 1.9391958671953313,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "3958bc0ad2a5a0b3824ce4c5e662722cc1d5d3c8aa98f7430406422eb375f1ec",
+  "qa": {
+   "at": "2026-09-01T20:52:12.323Z",
+   "verdict": "rejected",
+   "reason": "The tractor is recognizable, plausibly scaled, grounded, and textured, but its orientation is reversed relative to the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.drivable-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "3958bc0ad2a5a0b3824ce4c5e662722cc1d5d3c8aa98f7430406422eb375f1ec"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.child-chase-ball",
+  "label": "Red Chase Ball",
+  "description": "A large bright red textured ball intended as a rolling or child-chase road hazard.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.child-chase-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.3,
+   "w": 0.3,
+   "h": 0.3
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.3,
+   "w": 0.3,
+   "h": 0.3
+  },
+  "normalized": {
+   "scale": 0.15777754671126717,
+   "yaw": 0
+  },
+  "sha256": "6eca229cb03f9997cbf969d5eef775f2850d0c7e13bc6a0942e4e6283a3ebfd8",
+  "qa": {
+   "at": "2026-09-01T20:52:05.025Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured red chase ball, is plausibly about 0.3 m in diameter relative to the sedan, and appears properly grounded.",
+   "sheet": "experiments/agentic-3d/assets/custom.child-chase-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "6eca229cb03f9997cbf969d5eef775f2850d0c7e13bc6a0942e4e6283a3ebfd8"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.schoolbus-stop-sign-v3",
+  "label": "Portable School Bus Stop Sign",
+  "description": "A red octagonal STOP sign mounted on a short dark post with a weighted round base.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.schoolbus-stop-sign-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.5,
+   "w": 0.15,
+   "h": 1.1
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.752,
+   "w": 0.204,
+   "h": 1.1
+  },
+  "normalized": {
+   "scale": 0.5778505970448956,
+   "yaw": 0
+  },
+  "sha256": "d18dd55b842b87d7e5b8c8b01fd52c5cc8bb0bd087e5e87e6bbd5f2def94451e",
+  "qa": {
+   "at": "2026-09-01T20:52:08.396Z",
+   "verdict": "rejected",
+   "reason": "The scale and placement are plausible, but the edge-on presentation prevents the asset from clearly reading as a portable school bus stop sign.",
+   "sheet": "experiments/agentic-3d/assets/custom.schoolbus-stop-sign-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "d18dd55b842b87d7e5b8c8b01fd52c5cc8bb0bd087e5e87e6bbd5f2def94451e"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.sofa-singlemesh-silhouette",
+  "label": "Orange Sofa Silhouette",
+  "description": "A vivid orange two-seat sofa with rounded arms, broad cushions, and matching throw pillows.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.sofa-singlemesh-silhouette/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.4,
+   "w": 1,
+   "h": 1.1
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.175,
+   "w": 1.024,
+   "h": 1.1
+  },
+  "normalized": {
+   "scale": 1.1427371163539735,
+   "yaw": 0
+  },
+  "sha256": "19caca241996ba6cb0c0de4e8886fcd2cdaf9fdb1a6c74c2736b89ea7710d29d",
+  "qa": {
+   "at": "2026-09-01T20:52:14.677Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright orange two-seat sofa, has plausible dimensions relative to the sedan, sits on the ground, and has visible surface materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.sofa-singlemesh-silhouette/qa/frame-0002.rgb.jpg",
+   "sha256": "19caca241996ba6cb0c0de4e8886fcd2cdaf9fdb1a6c74c2736b89ea7710d29d"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.animal.running-dog-v2",
+  "label": "Running German Shepherd",
+  "description": "A black-and-tan German shepherd with upright ears posed stepping or running forward.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.animal.running-dog-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.35,
+   "h": 0.85
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.432,
+   "w": 0.906,
+   "h": 0.85
+  },
+  "normalized": {
+   "scale": 0.47628059682988894,
+   "yaw": 0
+  },
+  "sha256": "9000401ffd6620be7087b6904112c300663e5a3e11b7b41fa2de48a7f9f001f4",
+  "qa": {
+   "at": "2026-09-01T20:52:18.483Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a textured black-and-tan German shepherd in a stepping pose, with plausible scale and ground contact beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.animal.running-dog-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "9000401ffd6620be7087b6904112c300663e5a3e11b7b41fa2de48a7f9f001f4"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.school-bus-stop-signal",
+  "label": "School Bus Stop Signal Arm",
+  "description": "A red STOP sign on a black folding signal arm with a circular warning light and mounting post.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.school-bus-stop-signal/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.25,
+   "w": 0.15,
+   "h": 0.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.637,
+   "w": 0.168,
+   "h": 0.8
+  },
+  "normalized": {
+   "scale": 0.42052227294036865,
+   "yaw": 0
+  },
+  "sha256": "94a35bd66ee3810044699da04f1b0dbea512dde3bf8ae1dfb4e547db690147f8",
+  "qa": {
+   "at": "2026-09-01T20:52:27.207Z",
+   "verdict": "approved",
+   "reason": "The asset appears to be an upright, grounded, plausibly scaled red stop signal on a dark mounting arm with visible material differentiation.",
+   "sheet": "experiments/agentic-3d/assets/custom.school-bus-stop-signal/qa/frame-0002.rgb.jpg",
+   "sha256": "94a35bd66ee3810044699da04f1b0dbea512dde3bf8ae1dfb4e547db690147f8"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.bright-shopping-bags",
+  "label": "Bright Grocery Shopping Bags",
+  "description": "Two tall reusable shopping bags in orange and yellow containing groceries and leafy greens.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.bright-shopping-bags/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.55,
+   "w": 0.28,
+   "h": 0.48
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.352,
+   "w": 0.395,
+   "h": 0.48
+  },
+  "normalized": {
+   "scale": 0.25228723148797944,
+   "yaw": 0
+  },
+  "sha256": "6a9394dec95adcca07b4991777070f106249491bfe5d0a9da2dfd2fa4a6ce531",
+  "qa": {
+   "at": "2026-09-01T20:52:35.799Z",
+   "verdict": "rejected",
+   "reason": "Although the scale and ground contact are plausible, the asset does not clearly read as two bright grocery shopping bags.",
+   "sheet": "experiments/agentic-3d/assets/custom.bright-shopping-bags/qa/frame-0002.rgb.jpg",
+   "sha256": "6a9394dec95adcca07b4991777070f106249491bfe5d0a9da2dfd2fa4a6ce531"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.dog-long-leash",
+  "label": "Tan Dog with Long Leash Harness",
+  "description": "A tan short-haired dog wearing a dark chest harness and posed walking cautiously forward.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.dog-long-leash/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1,
+   "w": 0.3,
+   "h": 0.65
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.267,
+   "w": 1.371,
+   "h": 0.65
+  },
+  "normalized": {
+   "scale": 0.7208278462469652,
+   "yaw": 0
+  },
+  "sha256": "484260acf5a81330e0d7215bbcc43b6ed947ba227fb474caf116a59f9996d9bc",
+  "qa": {
+   "at": "2026-09-01T20:52:28.420Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a tan harnessed dog with a trailing leash, has plausible scale beside the sedan, is upright and grounded, and shows adequate texturing.",
+   "sheet": "experiments/agentic-3d/assets/custom.dog-long-leash/qa/frame-0002.rgb.jpg",
+   "sha256": "484260acf5a81330e0d7215bbcc43b6ed947ba227fb474caf116a59f9996d9bc"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.broken-flatbed-trailer",
+  "label": "Broken Flatbed Trailer",
+  "description": "A long low silver flatbed utility trailer with two wheels and an upright rear edge.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.broken-flatbed-trailer/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.5,
+   "w": 2,
+   "h": 1.3
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 4.994,
+   "w": 1.566,
+   "h": 1.3
+  },
+  "normalized": {
+   "scale": 2.6267237558627548,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "d748f198b1ac83434dcc2b4520978f8cba05a15147213a665a17ab4f3d2774b7",
+  "qa": {
+   "at": "2026-09-01T20:52:54.119Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a correctly scaled, grounded, textured flatbed trailer oriented in the same direction as the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.broken-flatbed-trailer/qa/frame-0002.rgb.jpg",
+   "sha256": "d748f198b1ac83434dcc2b4520978f8cba05a15147213a665a17ab4f3d2774b7"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.stop-sign-runtime",
+  "label": "Runtime Road Stop Sign",
+  "description": "A standard red octagonal STOP sign with white lettering and border on a slim gray pole.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.stop-sign-runtime/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.1,
+   "w": 1,
+   "h": 2.6
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.382,
+   "w": 0.218,
+   "h": 2.6
+  },
+  "normalized": {
+   "scale": 1.365797123303245,
+   "yaw": 0
+  },
+  "sha256": "51f86fc1ad81b27f0b88dd14224ff14b5723372441ec3ac5894761c0407db456",
+  "qa": {
+   "at": "2026-09-01T20:53:04.519Z",
+   "verdict": "approved",
+   "reason": "The asset is a recognizable, plausibly scaled, upright, grounded, and textured stop sign, though its roadside orientation limits readability.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.stop-sign-runtime/qa/frame-0002.rgb.jpg",
+   "sha256": "51f86fc1ad81b27f0b88dd14224ff14b5723372441ec3ac5894761c0407db456"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.large-dropped-extension-ladder",
+  "label": "Large Extension Ladder",
+  "description": "A tall silver metal ladder with dark rungs and orange safety caps shown in an open leaning stance.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.large-dropped-extension-ladder/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.8,
+   "w": 0.55,
+   "h": 5.5
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.8,
+   "w": 2.591,
+   "h": 4.528
+  },
+  "normalized": {
+   "scale": 2.380502182962065,
+   "yaw": 0
+  },
+  "sha256": "a82a91a8aeeaa70f0eae1b1cc422df15147adb1c088e24c9ba04250d8272f8ed",
+  "qa": {
+   "at": "2026-09-01T20:52:51.146Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a large extension ladder in a stable leaning stance, with plausible sedan-relative scale, visible ground contact, and distinct rung and safety-cap materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.large-dropped-extension-ladder/qa/frame-0002.rgb.jpg",
+   "sha256": "a82a91a8aeeaa70f0eae1b1cc422df15147adb1c088e24c9ba04250d8272f8ed"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.open-delivery-van",
+  "label": "Open Delivery Van",
+  "description": "A plain white high-roof delivery cargo van with black lower trim and rear tail lights.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.open-delivery-van/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 5.98,
+   "w": 2.05,
+   "h": 2.75
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 5.777,
+   "w": 2.71,
+   "h": 2.75
+  },
+  "normalized": {
+   "scale": 3.03611729971503,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "93a5cf3cb99a2374316dbfd57c94fdf9a84b9553fa0571d6e883058bfc69695a",
+  "qa": {
+   "at": "2026-09-01T20:53:13.977Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a properly scaled, grounded, textured high-roof delivery van facing the same direction as the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-delivery-van/qa/frame-0002.rgb.jpg",
+   "sha256": "93a5cf3cb99a2374316dbfd57c94fdf9a84b9553fa0571d6e883058bfc69695a"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.road-drain-grate",
+  "label": "Road Drain Grate",
+  "description": "A long rectangular dark metal drainage grate recessed within a pale concrete frame.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road-drain-grate/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1,
+   "w": 0.35,
+   "h": 0.05
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1,
+   "w": 0.636,
+   "h": 0.049
+  },
+  "normalized": {
+   "scale": 0.5253220965470529,
+   "yaw": 0
+  },
+  "sha256": "44c63fa04ea755646ef5f78c389ebfefe2f3b23dcd08d5a25c6ef7141d82f071",
+  "qa": {
+   "at": "2026-09-01T20:53:05.390Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a dark metal drainage grate in a pale frame, with plausible scale, proper ground placement, and visible material detail.",
+   "sheet": "experiments/agentic-3d/assets/custom.road-drain-grate/qa/frame-0002.rgb.jpg",
+   "sha256": "44c63fa04ea755646ef5f78c389ebfefe2f3b23dcd08d5a25c6ef7141d82f071"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.yellow-schoolbus-billboard",
+  "label": "Yellow School Bus Billboard",
+  "description": "A flat billboard-like yellow school bus side silhouette with dark outlined windows and trim.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.yellow-schoolbus-billboard/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.12,
+   "w": 2.55,
+   "h": 3.1
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.1,
+   "w": 2.55,
+   "h": 2.246
+  },
+  "normalized": {
+   "scale": 2.153701443187699,
+   "yaw": 0
+  },
+  "sha256": "418da3e53ee585c65a6e177ea97d2824b7dc081f08895455593497cde0160e21",
+  "qa": {
+   "at": "2026-09-01T20:53:15.912Z",
+   "verdict": "rejected",
+   "reason": "The scale, grounding, and texturing are plausible, but the asset does not read as the requested flat yellow school bus side billboard.",
+   "sheet": "experiments/agentic-3d/assets/custom.yellow-schoolbus-billboard/qa/frame-0002.rgb.jpg",
+   "sha256": "418da3e53ee585c65a6e177ea97d2824b7dc081f08895455593497cde0160e21"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.stationary-pedestrian-natural",
+  "label": "Standing Pedestrian in Dark Sweater",
+  "description": "A stationary adult man wearing a dark navy sweater, tan trousers, and black slip-on shoes.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.stationary-pedestrian-natural/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.6,
+   "w": 0.65,
+   "h": 1.78
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.6,
+   "w": 0.372,
+   "h": 1.888
+  },
+  "normalized": {
+   "scale": 0.9918027321073453,
+   "yaw": 0
+  },
+  "sha256": "0e42939b6acd8e6fdc938cb3cdc593507e86d5a201fd36f991483bfae09c7fd1",
+  "qa": {
+   "at": "2026-09-01T20:53:05.397Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.stationary-pedestrian-natural not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.recessed-road-pothole-v2",
+  "label": "Recessed Road Pothole",
+  "description": "A wide irregular black road cavity surrounded by broken jagged pieces of dark asphalt.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.recessed-road-pothole-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.6,
+   "w": 1.1,
+   "h": 0.03
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.277,
+   "w": 1.303,
+   "h": 0.03
+  },
+  "normalized": {
+   "scale": 0.6848376693286654,
+   "yaw": 0
+  },
+  "sha256": "3ff6894dcf5f4961f20675a93cb0950a7e0a957916ee8f152a02eb11a454d584",
+  "qa": {
+   "at": "2026-09-01T20:53:17.825Z",
+   "verdict": "rejected",
+   "reason": "Although plausibly scaled and grounded, the asset reads as a faint cracked outline rather than a wide recessed black pothole surrounded by broken asphalt.",
+   "sheet": "experiments/agentic-3d/assets/custom.recessed-road-pothole-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "3ff6894dcf5f4961f20675a93cb0950a7e0a957916ee8f152a02eb11a454d584"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.animal.running-dog",
+  "label": "Running Tan Dog",
+  "description": "A medium tan dog with a white chest and paws posed running forward with its mouth open.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.animal.running-dog/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.05,
+   "w": 0.32,
+   "h": 0.72
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.265,
+   "w": 1.399,
+   "h": 0.72
+  },
+  "normalized": {
+   "scale": 0.7355434548110628,
+   "yaw": 0
+  },
+  "sha256": "b3645df46ed7fdcdc7b29dfe39e3f084eb2efd556bcdae41e16fdc0acd7544be",
+  "qa": {
+   "at": "2026-09-01T20:53:26.586Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured tan running dog, is upright and grounded, and has a plausible medium-dog scale beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.animal.running-dog/qa/frame-0002.rgb.jpg",
+   "sha256": "b3645df46ed7fdcdc7b29dfe39e3f084eb2efd556bcdae41e16fdc0acd7544be"
+  },
+  "supersededBy": "custom.animal.running-dog-v2"
+ },
+ {
+  "status": "approved",
+  "id": "custom.road-overpass-short-span",
+  "label": "Short Road Overpass",
+  "description": "A short gray concrete overpass supported by thick piers and topped with metal safety railings.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road-overpass-short-span/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 25,
+   "w": 10,
+   "h": 6
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 15.257,
+   "w": 10.662,
+   "h": 6
+  },
+  "normalized": {
+   "scale": 8.015548667880692,
+   "yaw": 0
+  },
+  "sha256": "718aa195cd7c21ff3e2484cdb3fa98d980c9384103cf25778485f3df1404ead5",
+  "qa": {
+   "at": "2026-09-01T20:53:36.316Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a correctly scaled, grounded concrete overpass with visible surface material and safety railings, despite poor shadow detail.",
+   "sheet": "experiments/agentic-3d/assets/custom.road-overpass-short-span/qa/frame-0002.rgb.jpg",
+   "sha256": "718aa195cd7c21ff3e2484cdb3fa98d980c9384103cf25778485f3df1404ead5"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.golden-retriever-v2",
+  "label": "Running Golden Retriever",
+  "description": "A golden-yellow retriever-type dog posed running forward with one front paw raised.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.golden-retriever-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.4,
+   "h": 0.72
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.266,
+   "w": 1.239,
+   "h": 0.72
+  },
+  "normalized": {
+   "scale": 0.6544299794443594,
+   "yaw": 0
+  },
+  "sha256": "1532843b4e08d0b801cd43cd9407c5c40ef8198629a2de5c2d8fe99bbe56e80a",
+  "qa": {
+   "at": "2026-09-01T20:53:30.304Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured golden retriever in a running pose, with plausible scale beside the sedan and proper ground contact.",
+   "sheet": "experiments/agentic-3d/assets/custom.golden-retriever-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "1532843b4e08d0b801cd43cd9407c5c40ef8198629a2de5c2d8fe99bbe56e80a"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.signalized_crosswalk_pole",
+  "label": "Signalized crosswalk traffic light",
+  "description": "A vertical dark gray three-lens traffic signal with deep visors and a visible green upper light.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.signalized_crosswalk_pole/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.45,
+   "w": 0.3,
+   "h": 0.8
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.221,
+   "w": 0.382,
+   "h": 0.8
+  },
+  "normalized": {
+   "scale": 0.42021370460874724,
+   "yaw": 0
+  },
+  "sha256": "6fe8d46abd422b099be04e5d8322f6b64e57c245254dd55708c8c8bbbc2ead9d",
+  "qa": {
+   "at": "2026-09-01T20:53:48.146Z",
+   "verdict": "approved",
+   "reason": "The upright, grounded three-lens signal head has plausible scale and recognizable dark-gray materials, though the green light lacks visual prominence.",
+   "sheet": "experiments/agentic-3d/assets/custom.signalized_crosswalk_pole/qa/frame-0002.rgb.jpg",
+   "sha256": "6fe8d46abd422b099be04e5d8322f6b64e57c245254dd55708c8c8bbbc2ead9d"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.pbr-farm-tractor",
+  "label": "Green PBR farm tractor",
+  "description": "A realistic bright green enclosed-cab farm tractor with large black tires and yellow wheel rims.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.pbr-farm-tractor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.5,
+   "w": 2.2,
+   "h": 2.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 3.682,
+   "w": 2.445,
+   "h": 2.8
+  },
+  "normalized": {
+   "scale": 1.9129039131981282,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "8fed43d139331ee9da507d27ce022e7049f0238b8d8fbb2a0900cc287723f013",
+  "qa": {
+   "at": "2026-09-01T20:53:54.558Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured green farm tractor, is plausibly scaled and grounded beside the sedan, and faces the same direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.pbr-farm-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "8fed43d139331ee9da507d27ce022e7049f0238b8d8fbb2a0900cc287723f013"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.skateboard-rider",
+  "label": "Skateboard rider",
+  "description": "A helmeted man in a white T-shirt and blue shorts balances on a skateboard while pointing forward.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.skateboard-rider/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.9,
+   "w": 0.6,
+   "h": 1.75
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.9,
+   "w": 0.934,
+   "h": 1.595
+  },
+  "normalized": {
+   "scale": 0.8381831754683658,
+   "yaw": 0
+  },
+  "sha256": "ffc02f7b255a78f0a637d92f3ab79d3f6da2c21d1770870be15188da3bd99d93",
+  "qa": {
+   "at": "2026-09-01T20:53:36.324Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.skateboard-rider not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.simple-black-pothole-disc-v4",
+  "label": "Black pothole disc",
+  "description": "A shallow oval black-gray road pothole insert with a thin irregular raised rim.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.simple-black-pothole-disc-v4/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.4,
+   "w": 0.9,
+   "h": 0.06
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.899,
+   "w": 0.9,
+   "h": 0.139
+  },
+  "normalized": {
+   "scale": 0.4728491984561928,
+   "yaw": 0
+  },
+  "sha256": "5ea7af6f98e6e33ba15aff8078fcc1bfa76a506863751c0fa16b1f26d9740643",
+  "qa": {
+   "at": "2026-09-01T20:53:52.666Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a shallow dark pothole disc, is plausibly scaled beside the sedan, sits flush with the ground, and has visible dark-gray surface variation.",
+   "sheet": "experiments/agentic-3d/assets/custom.simple-black-pothole-disc-v4/qa/frame-0002.rgb.jpg",
+   "sha256": "5ea7af6f98e6e33ba15aff8078fcc1bfa76a506863751c0fa16b1f26d9740643"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.animal.dog-readable-v3",
+  "label": "Yellow standing dog",
+  "description": "A stylized golden-yellow dog stands alert on four legs with floppy ears and a black nose.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-readable-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.3,
+   "w": 0.35,
+   "h": 0.85
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.265,
+   "w": 1.191,
+   "h": 0.85
+  },
+  "normalized": {
+   "scale": 0.6254244166948446,
+   "yaw": 0
+  },
+  "sha256": "67d11cbbf5b8f82e4095cf7424e8f47fdd68b5ec9f8eb629c0195aa4a7e6a21d",
+  "qa": {
+   "at": "2026-09-01T20:53:58.087Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a stylized golden-yellow standing dog, appears plausibly sized beside the sedan, is upright and grounded, and has visible coloration and features.",
+   "sheet": "experiments/agentic-3d/assets/custom.animal.dog-readable-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "67d11cbbf5b8f82e4095cf7424e8f47fdd68b5ec9f8eb629c0195aa4a7e6a21d"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.realistic-basketball-v5",
+  "label": "Orange basketball",
+  "description": "A realistic orange basketball with dark channel lines and a slightly worn textured surface.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.realistic-basketball-v5/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.24,
+   "w": 0.24,
+   "h": 0.24
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.403,
+   "w": 0.236,
+   "h": 0.24
+  },
+  "normalized": {
+   "scale": 0.21138928200503707,
+   "yaw": 0
+  },
+  "sha256": "2ca96f982c14ab74cca0dbadae3cf2d2c325616dd93ff34c796117c45478beaf",
+  "qa": {
+   "at": "2026-09-01T20:54:03.781Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a realistically sized orange basketball with visible dark channels, appropriate surface detail, and correct ground contact beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.realistic-basketball-v5/qa/frame-0002.rgb.jpg",
+   "sha256": "2ca96f982c14ab74cca0dbadae3cf2d2c325616dd93ff34c796117c45478beaf"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.road.stop-line-white-v2",
+  "label": "White road stop line",
+  "description": "A rectangular white segmented road-marking panel resembling a broad stop-line surface.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road.stop-line-white-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.5,
+   "w": 3.6,
+   "h": 0.06
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.5,
+   "w": 0.243,
+   "h": 0.241
+  },
+  "normalized": {
+   "scale": 0.26268189042349654,
+   "yaw": 0
+  },
+  "sha256": "3f8e675d8e3ee21d36d315172c79e419dbe30442b9cc8126f130b75c1fd2311c",
+  "qa": {
+   "at": "2026-09-01T20:54:11.746Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.road.stop-line-white-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "3f8e675d8e3ee21d36d315172c79e419dbe30442b9cc8126f130b75c1fd2311c"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.green-farm-tractor",
+  "label": "Green farm tractor",
+  "description": "A bright green enclosed-cab tractor has oversized black agricultural tires with yellow rims.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.green-farm-tractor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 3.6,
+   "w": 2,
+   "h": 2.3
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 3.6,
+   "w": 1.928,
+   "h": 2.395
+  },
+  "normalized": {
+   "scale": 1.892594237584558,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "3a6582b5ea3a93976f97b8aa6d793588f45b042fbef4d2dbffc8c7d974b31875",
+  "qa": {
+   "at": "2026-09-01T20:54:30.558Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a green enclosed-cab farm tractor, has plausible scale and ground contact, is textured, and faces the same direction as the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.green-farm-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "3a6582b5ea3a93976f97b8aa6d793588f45b042fbef4d2dbffc8c7d974b31875"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.flat-asphalt-pothole-v2",
+  "label": "Flat asphalt pothole ring",
+  "description": "A low gray asphalt ring forms a wide oval pothole opening with an uneven cracked edge.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.flat-asphalt-pothole-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.8,
+   "h": 0.02
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.8,
+   "w": 0.8,
+   "h": 0.031
+  },
+  "normalized": {
+   "scale": 0.4204440380201619,
+   "yaw": 0
+  },
+  "sha256": "9cc88aca0fb575d0681bd6d69d2ce94011c260d0209414bff1abeac949a90dc0",
+  "qa": {
+   "at": "2026-09-01T20:54:17.445Z",
+   "verdict": "rejected",
+   "reason": "Although plausibly scaled, grounded, and textured, the regular circular form does not convincingly read as the specified wide oval asphalt pothole ring.",
+   "sheet": "experiments/agentic-3d/assets/custom.flat-asphalt-pothole-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "9cc88aca0fb575d0681bd6d69d2ce94011c260d0209414bff1abeac949a90dc0"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.zebra-crosswalk-mat",
+  "label": "Zebra crosswalk mat",
+  "description": "A flat gray roadway mat displays a row of broad white rectangular zebra-crossing stripes.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-mat/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.2,
+   "w": 7.8,
+   "h": 0.02
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.2,
+   "w": 4.2,
+   "h": 0.089
+  },
+  "normalized": {
+   "scale": 2.206576523849204,
+   "yaw": 0
+  },
+  "sha256": "e6e777d1841c2dbbb91f06483703299c544d2b8a9dee86005f4693874e22e2ed",
+  "qa": {
+   "at": "2026-09-01T20:54:28.027Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.zebra-crosswalk-mat/qa/frame-0002.rgb.jpg",
+   "sha256": "e6e777d1841c2dbbb91f06483703299c544d2b8a9dee86005f4693874e22e2ed"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.school-bus-visible-v2",
+  "label": "Yellow school bus",
+  "description": "A compact yellow school bus features black side stripes, dark wheels, rectangular windows, and red warning lights.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.school-bus-visible-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 10.5,
+   "w": 2.55,
+   "h": 3.2
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 7.028,
+   "w": 3.142,
+   "h": 3.2
+  },
+  "normalized": {
+   "scale": 3.6944928085956357,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "4ec90356fe2cbf0f31e7c55b67559c7c125919dbd3049c505439b602baf7c501",
+  "qa": {
+   "at": "2026-09-01T20:54:43.636Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured yellow school bus, is plausibly scaled and grounded beside the sedan, and faces the same direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.school-bus-visible-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "4ec90356fe2cbf0f31e7c55b67559c7c125919dbd3049c505439b602baf7c501"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.child-play-ball",
+  "label": "Child play ball",
+  "description": "A smooth round white play ball has a large pink-red patch across its upper surface.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.child-play-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.22,
+   "w": 0.22,
+   "h": 0.22
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.22,
+   "w": 0.22,
+   "h": 0.22
+  },
+  "normalized": {
+   "scale": 0.11558924360629763,
+   "yaw": 0
+  },
+  "sha256": "db033535507144c9de71cafb02e45543ad43120a745c725c51180d12a453a363",
+  "qa": {
+   "at": "2026-09-01T20:54:45.983Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a small white play ball with a pink-red patch, appears appropriately scaled beside the sedan, and is visibly grounded.",
+   "sheet": "experiments/agentic-3d/assets/custom.child-play-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "db033535507144c9de71cafb02e45543ad43120a745c725c51180d12a453a363"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.dog-runner",
+  "label": "German shepherd dog",
+  "description": "A realistic tan-and-black German shepherd stands alert with upright ears and one foreleg slightly raised.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.dog-runner/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.15,
+   "w": 0.38,
+   "h": 0.82
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.238,
+   "w": 1.092,
+   "h": 0.82
+  },
+  "normalized": {
+   "scale": 0.5742256519973906,
+   "yaw": 0
+  },
+  "sha256": "6c50d482fc9b49c3ce84f362ee5dac7fc1c979250b7b823380f94afabfbfbcbc",
+  "qa": {
+   "at": "2026-09-01T20:54:47.372Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured German shepherd, is upright and grounded, and appears plausibly scaled beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.dog-runner/qa/frame-0002.rgb.jpg",
+   "sha256": "6c50d482fc9b49c3ce84f362ee5dac7fc1c979250b7b823380f94afabfbfbcbc"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.farm-tractor",
+  "label": "Pale green farm tractor",
+  "description": "A compact pale green tractor has a dark enclosed cab and four chunky black tires.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.farm-tractor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4,
+   "w": 2,
+   "h": 2.5
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 3.674,
+   "w": 2,
+   "h": 2.848
+  },
+  "normalized": {
+   "scale": 1.9322996655633955,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "30399ffc1cb9fc11a75b6321c9e6f07f663476716d3e293271d74d18761d4abe",
+  "qa": {
+   "at": "2026-09-01T20:55:09.431Z",
+   "verdict": "approved",
+   "reason": "The pale green enclosed-cab tractor is recognizable, appropriately scaled and grounded beside the sedan, textured, and oriented in the same forward direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.farm-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "30399ffc1cb9fc11a75b6321c9e6f07f663476716d3e293271d74d18761d4abe"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.waterfilled-pothole-rim",
+  "label": "Water-filled pothole rim",
+  "description": "A shallow gray pothole has a broken blocky rim surrounding a dark recessed center for pooled water.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.waterfilled-pothole-rim/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.5,
+   "w": 1,
+   "h": 0.08
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.993,
+   "w": 1,
+   "h": 0.139
+  },
+  "normalized": {
+   "scale": 0.5256926507628383,
+   "yaw": 0
+  },
+  "sha256": "26880c6833ba350352f4f64c05394b11161d5e6a369aac28e95d7399141dea3d",
+  "qa": {
+   "at": "2026-09-01T20:55:04.056Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a shallow water-filled pothole with a broken gray rim, is approximately one meter across relative to the sedan, and appears properly grounded and materially differentiated.",
+   "sheet": "experiments/agentic-3d/assets/custom.waterfilled-pothole-rim/qa/frame-0002.rgb.jpg",
+   "sha256": "26880c6833ba350352f4f64c05394b11161d5e6a369aac28e95d7399141dea3d"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.static-sofa-vehicle",
+  "label": "Beige three-seat sofa",
+  "description": "A tan upholstered three-seat sofa has tufted back cushions, rolled arms, and short dark feet.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.static-sofa-vehicle/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.2,
+   "w": 0.95,
+   "h": 0.9
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.94,
+   "w": 0.998,
+   "h": 0.9
+  },
+  "normalized": {
+   "scale": 1.0194406000344731,
+   "yaw": 0
+  },
+  "sha256": "e28269a5700ba5bdc0b0ef4afc56439548c84c338c131ecb8b832dce09d35471",
+  "qa": {
+   "at": "2026-09-01T20:55:05.800Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright beige three-seat sofa with plausible scale, ground contact, and visible upholstery materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.static-sofa-vehicle/qa/frame-0002.rgb.jpg",
+   "sha256": "e28269a5700ba5bdc0b0ef4afc56439548c84c338c131ecb8b832dce09d35471"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.stable-sprinting-pedestrian",
+  "label": "Sprinting man",
+  "description": "An athletic man in a dark blue shirt and shorts is posed mid-sprint with arms pumping and one knee raised.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.stable-sprinting-pedestrian/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.9,
+   "w": 0.7,
+   "h": 1.75
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.544,
+   "w": 1.494,
+   "h": 1.75
+  },
+  "normalized": {
+   "scale": 0.9201831996529646,
+   "yaw": 0
+  },
+  "sha256": "36fb6189000f3522f782dbaf188e5d4e38c50cfe9c6778f1a95bd4cd28fa450d",
+  "qa": {
+   "at": "2026-09-01T20:55:04.072Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.stable-sprinting-pedestrian not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.road-pothole-dark",
+  "label": "Dark road pothole",
+  "description": "A low rough gray asphalt mound surrounds a narrow dark oval pothole opening.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road-pothole-dark/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.8,
+   "h": 0.08
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.801,
+   "w": 0.8,
+   "h": 0.08
+  },
+  "normalized": {
+   "scale": 0.42096661241033845,
+   "yaw": 0
+  },
+  "sha256": "60639b62bcac81c99f37ae00cf22931ee94c9335b07e72f901a7e98c3d18b7d0",
+  "qa": {
+   "at": "2026-09-01T20:55:20.447Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a dark, rough-edged pothole with plausible scale, proper ground contact, and visible surface texture.",
+   "sheet": "experiments/agentic-3d/assets/custom.road-pothole-dark/qa/frame-0002.rgb.jpg",
+   "sha256": "60639b62bcac81c99f37ae00cf22931ee94c9335b07e72f901a7e98c3d18b7d0"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.glass-bus-stop-shelter",
+  "label": "Glass bus stop shelter",
+  "description": "A modern black-framed glass bus shelter includes a wooden bench, gray platform, and white stop sign panel.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.glass-bus-stop-shelter/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.2,
+   "w": 1.6,
+   "h": 2.5
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 4.2,
+   "w": 1.984,
+   "h": 2.372
+  },
+  "normalized": {
+   "scale": 2.2065916565307755,
+   "yaw": 0
+  },
+  "sha256": "c3de12f6a05fd8fdb1899511283fb204890ecb0bc2763a933a01e661872416d5",
+  "qa": {
+   "at": "2026-09-01T20:55:19.579Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a correctly scaled, upright, grounded, and materially differentiated bus shelter despite poor visibility of some requested details.",
+   "sheet": "experiments/agentic-3d/assets/custom.glass-bus-stop-shelter/qa/frame-0002.rgb.jpg",
+   "sha256": "c3de12f6a05fd8fdb1899511283fb204890ecb0bc2763a933a01e661872416d5"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.zebra-crosswalk-bars",
+  "label": "Zebra crosswalk bars",
+  "description": "Separate bright white rectangular road bars are arranged in parallel rows to form a zebra crossing.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-bars/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.2,
+   "w": 7.8,
+   "h": 0.06
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.2,
+   "w": 4.2,
+   "h": 0.096
+  },
+  "normalized": {
+   "scale": 2.2062949141905186,
+   "yaw": 0
+  },
+  "sha256": "ea8ab6062307a6eb0451503ca7f26cd9054aa9b92caa1939e337f1a4d5d4ef66",
+  "qa": {
+   "at": "2026-09-01T20:55:18.672Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.zebra-crosswalk-bars/qa/frame-0002.rgb.jpg",
+   "sha256": "ea8ab6062307a6eb0451503ca7f26cd9054aa9b92caa1939e337f1a4d5d4ef66"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.animated-adult-pushing-stroller",
+  "label": "Adult pushing stroller",
+  "description": "An adult in gray clothing leans forward while pushing a black stroller with a pale frame and four wheels.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.animated-adult-pushing-stroller/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.45,
+   "w": 0.65,
+   "h": 1.7
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.597,
+   "w": 1.278,
+   "h": 1.7
+  },
+  "normalized": {
+   "scale": 0.8934079260306139,
+   "yaw": 0
+  },
+  "sha256": "652a0fc4811c8f339196640ba308b254d22c923035b8fa0ddf22c30e108000a3",
+  "qa": {
+   "at": "2026-09-01T20:55:18.680Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.animated-adult-pushing-stroller not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.walking-cane",
+  "label": "Black walking cane",
+  "description": "A slim dark walking cane has a curved ergonomic handle and a small rubber tip.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.walking-cane/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.9,
+   "w": 0.12,
+   "h": 0.03
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.701,
+   "w": 0.12,
+   "h": 3.1
+  },
+  "normalized": {
+   "scale": 1.6284212320143707,
+   "yaw": 0
+  },
+  "sha256": "4aa75b01166494c346ea1384f59585c077fc010d2a72a79a6ab8cfa06f4c2fa9",
+  "qa": {
+   "at": "2026-09-01T20:55:26.513Z",
+   "verdict": "rejected",
+   "reason": "The asset resembles an upright black walking cane but is implausibly large compared with the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.walking-cane/qa/frame-0002.rgb.jpg",
+   "sha256": "4aa75b01166494c346ea1384f59585c077fc010d2a72a79a6ab8cfa06f4c2fa9"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.high-visibility-roadwork-barricade-v2",
+  "label": "Orange roadwork barricade",
+  "description": "A high-visibility orange-and-white striped road barricade stands on four dark legs with two amber warning lamps.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2,
+   "w": 0.65,
+   "h": 1.35
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 2,
+   "w": 0.643,
+   "h": 1.429
+  },
+  "normalized": {
+   "scale": 1.0507281210386636,
+   "yaw": 0
+  },
+  "sha256": "3b3aff0b3f6015ebb0e7ed9ee8d4c836a7cf436c30c0217dae9aab4848a42205",
+  "qa": {
+   "at": "2026-09-01T20:55:36.821Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright orange-and-white roadwork barricade with warning lamps, plausible sedan-relative scale, visible materials, and grounded legs.",
+   "sheet": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "3b3aff0b3f6015ebb0e7ed9ee8d4c836a7cf436c30c0217dae9aab4848a42205"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.large-road-pothole",
+  "label": "Large broken road pothole",
+  "description": "A large circular gray pothole has thick shattered asphalt slabs and loose rubble around a deep center.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.large-road-pothole/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.5,
+   "w": 2,
+   "h": 0.35
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 2.176,
+   "w": 2.054,
+   "h": 0.35
+  },
+  "normalized": {
+   "scale": 1.1443212016879247,
+   "yaw": 0
+  },
+  "sha256": "44c41a657325ba57c97121984464948112a5eaaf94b6d4ef60c2c6c3fcf01806",
+  "qa": {
+   "at": "2026-09-01T20:55:28.765Z",
+   "verdict": "approved",
+   "reason": "The asset clearly resembles a large broken asphalt pothole, is plausibly scaled beside the sedan, lies correctly on the ground, and has visible slab and rubble texturing.",
+   "sheet": "experiments/agentic-3d/assets/custom.large-road-pothole/qa/frame-0002.rgb.jpg",
+   "sha256": "44c41a657325ba57c97121984464948112a5eaaf94b6d4ef60c2c6c3fcf01806"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.upright-yellow-road-sofa",
+  "label": "Yellow Roadside Sofa",
+  "description": "A bright yellow three-seat upholstered sofa with rounded arms and several matching cushions.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.upright-yellow-road-sofa/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.5,
+   "w": 1,
+   "h": 1.2
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.5,
+   "w": 1.09,
+   "h": 1.043
+  },
+  "normalized": {
+   "scale": 1.3136027011276246,
+   "yaw": 0
+  },
+  "sha256": "e67f824bf31694c05c0c11f09fbe2acff66673957548bef55b46fbe1cef0a6e9",
+  "qa": {
+   "at": "2026-09-01T20:55:39.279Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a yellow three-seat sofa, has plausible dimensions relative to the sedan, is upright and grounded, and has visible upholstery shading and cushion detail.",
+   "sheet": "experiments/agentic-3d/assets/custom.upright-yellow-road-sofa/qa/frame-0002.rgb.jpg",
+   "sha256": "e67f824bf31694c05c0c11f09fbe2acff66673957548bef55b46fbe1cef0a6e9"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.road.stop-bar-and-stop-legend",
+  "label": "STOP Road Legend",
+  "description": "Large freestanding white block letters spelling STOP for placement on a roadway.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road.stop-bar-and-stop-legend/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 3.5,
+   "w": 4,
+   "h": 0.07
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 3.5,
+   "w": 0.31,
+   "h": 1.02
+  },
+  "normalized": {
+   "scale": 1.8390524210963197,
+   "yaw": 0
+  },
+  "sha256": "df4a1b3be94a84d6ba07ad1dcf4814fc9b02a63f5fdf674dfc86384f1e138a81",
+  "qa": {
+   "at": "2026-09-01T20:55:48.101Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.road.stop-bar-and-stop-legend/qa/frame-0002.rgb.jpg",
+   "sha256": "df4a1b3be94a84d6ba07ad1dcf4814fc9b02a63f5fdf674dfc86384f1e138a81"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.visible-stop-sign",
+  "label": "Portable Stop Sign",
+  "description": "A red octagonal STOP sign with white lettering mounted on a gray portable post and base.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.visible-stop-sign/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.15,
+   "w": 0.85,
+   "h": 2.4
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.21,
+   "w": 0.513,
+   "h": 2.4
+  },
+  "normalized": {
+   "scale": 1.2608039823367971,
+   "yaw": 0
+  },
+  "sha256": "1c447dbd0323edd6a989614e9a66d11359a379f15f1a832c85f640f3a346feeb",
+  "qa": {
+   "at": "2026-09-01T20:56:02.610Z",
+   "verdict": "approved",
+   "reason": "The asset is recognizable as a correctly scaled, upright, grounded, and materially finished portable stop sign.",
+   "sheet": "experiments/agentic-3d/assets/custom.visible-stop-sign/qa/frame-0002.rgb.jpg",
+   "sha256": "1c447dbd0323edd6a989614e9a66d11359a379f15f1a832c85f640f3a346feeb"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.compact-utility-tractor-driveable",
+  "label": "Green Utility Tractor",
+  "description": "A compact driveable green tractor with an enclosed black cab, white wheel hubs, and large treaded tires.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.compact-utility-tractor-driveable/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 3.5,
+   "w": 1.8,
+   "h": 2.4
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 3.5,
+   "w": 1.85,
+   "h": 2.292
+  },
+  "normalized": {
+   "scale": 1.8408738294027776,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "6386258615a6c54d92ef6304f112b59d6f8b0f602c766060c2aa7e0db38229e2",
+  "qa": {
+   "at": "2026-09-01T20:56:04.592Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a compact green utility tractor, is plausibly scaled and grounded beside the sedan, has visible materials and treaded tires, and faces the same direction as the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.compact-utility-tractor-driveable/qa/frame-0002.rgb.jpg",
+   "sha256": "6386258615a6c54d92ef6304f112b59d6f8b0f602c766060c2aa7e0db38229e2"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.fallen-mattress",
+  "label": "Fallen White Mattress",
+  "description": "A bulky white tufted mattress lying awkwardly on its side as a road obstruction.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.fallen-mattress/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2,
+   "w": 1.5,
+   "h": 0.25
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.781,
+   "w": 1.5,
+   "h": 1.303
+  },
+  "normalized": {
+   "scale": 0.9354675296154156,
+   "yaw": 0
+  },
+  "sha256": "ea928672e56572db553dd2a44531cefc69945c81e8ec38d87dd1e17510416472",
+  "qa": {
+   "at": "2026-09-01T20:56:03.705Z",
+   "verdict": "rejected",
+   "reason": "The asset is grounded and textured, but its box-like proportions do not convincingly read as a realistically scaled mattress and its side orientation fails the prop-facing rule.",
+   "sheet": "experiments/agentic-3d/assets/custom.fallen-mattress/qa/frame-0002.rgb.jpg",
+   "sha256": "ea928672e56572db553dd2a44531cefc69945c81e8ec38d87dd1e17510416472"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.pedestrian-pushing-stroller-rig",
+  "label": "Pedestrian Pushing Stroller",
+  "description": "A brown-haired adult in a gray top and dark trousers pushing a black baby stroller.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-pushing-stroller-rig/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.5,
+   "w": 0.65,
+   "h": 1.7
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.683,
+   "w": 1.105,
+   "h": 1.7
+  },
+  "normalized": {
+   "scale": 0.8929770475645696,
+   "yaw": 0
+  },
+  "sha256": "a998d5a97c6c593bd69c1e443753e8f587d124338a12ed9c093fd2c1163ddec2",
+  "qa": {
+   "at": "2026-09-01T20:56:02.618Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.pedestrian-pushing-stroller-rig not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.road.stop-line-white",
+  "label": "White Stop Line",
+  "description": "A single broad white rectangular road marking used as a vehicle stop line.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road.stop-line-white/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.45,
+   "w": 3.6,
+   "h": 0.025
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.463,
+   "w": 3.6,
+   "h": 0.019
+  },
+  "normalized": {
+   "scale": 2.3448976870187437,
+   "yaw": 0
+  },
+  "sha256": "e6e1b056381a4e8a6e8db077c7348f2a060a889330ee98eddfed32762a129b78",
+  "qa": {
+   "at": "2026-09-01T20:56:14.506Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.road.stop-line-white/qa/frame-0002.rgb.jpg",
+   "sha256": "e6e1b056381a4e8a6e8db077c7348f2a060a889330ee98eddfed32762a129b78"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.wheelchair-user",
+  "label": "Wheelchair User",
+  "description": "A seated bald adult wearing a pale blue shirt and gray trousers in a manual wheelchair.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.wheelchair-user/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.1,
+   "w": 0.7,
+   "h": 1.35
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.701,
+   "w": 1.018,
+   "h": 1.35
+  },
+  "normalized": {
+   "scale": 0.7085697989180513,
+   "yaw": 0
+  },
+  "sha256": "47c89d4bdb2dd65b4abd4374998c5000ca06065f217ca4fa370dd62f0b193b2f",
+  "qa": {
+   "at": "2026-09-01T20:56:03.715Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.wheelchair-user not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.roadwork-arrow-board-truck",
+  "label": "Roadwork Flatbed Truck",
+  "description": "A white utility flatbed truck with orange safety stripes, a roof beacon, and traffic cones on the bed.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.roadwork-arrow-board-truck/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 6.2,
+   "w": 2.3,
+   "h": 2.7
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 6.2,
+   "w": 2.598,
+   "h": 2.281
+  },
+  "normalized": {
+   "scale": 3.2599819887102717,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "e238ab53d061a842d9631278e02ca84d5f3fd0b72335195f642c8d626df9cce1",
+  "qa": {
+   "at": "2026-09-01T20:56:31.371Z",
+   "verdict": "approved",
+   "reason": "The textured roadwork flatbed truck is correctly grounded, faces the same direction as the sedan, and has plausible dimensions relative to it.",
+   "sheet": "experiments/agentic-3d/assets/custom.roadwork-arrow-board-truck/qa/frame-0002.rgb.jpg",
+   "sha256": "e238ab53d061a842d9631278e02ca84d5f3fd0b72335195f642c8d626df9cce1"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.schoolbus-rear-facade",
+  "label": "Yellow School Bus",
+  "description": "A yellow school-bus facade with dark windows, gray lower trim, black rails, and rear corner lights.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.schoolbus-rear-facade/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.18,
+   "w": 2.4,
+   "h": 2.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.612,
+   "w": 2.4,
+   "h": 2.156
+  },
+  "normalized": {
+   "scale": 2.423304560843993,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "36fec0f8032dcc2f0494f3a24c1d65f4ce040b11f16b7680427bfa2a3c236ae3",
+  "qa": {
+   "at": "2026-09-01T20:56:29.399Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a compact yellow school bus, is plausibly scaled and grounded beside the sedan, has visible materials and details, and faces the same direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.schoolbus-rear-facade/qa/frame-0002.rgb.jpg",
+   "sha256": "36fec0f8032dcc2f0494f3a24c1d65f4ce040b11f16b7680427bfa2a3c236ae3"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.baby-stroller",
+  "label": "Black Baby Stroller",
+  "description": "A modern black covered baby stroller with a white frame, storage basket, and four wheels.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.baby-stroller/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.05,
+   "w": 0.65,
+   "h": 1.1
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.05,
+   "w": 0.645,
+   "h": 1.229
+  },
+  "normalized": {
+   "scale": 0.6455611124124561,
+   "yaw": 0
+  },
+  "sha256": "749cc8061a284bd6358ecc959d650698be886a9b4c3bfdded124c0e2bce3cc11",
+  "qa": {
+   "at": "2026-09-01T20:56:25.554Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright black covered baby stroller, with plausible scale relative to the sedan, grounded wheels, and visible materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.baby-stroller/qa/frame-0002.rgb.jpg",
+   "sha256": "749cc8061a284bd6358ecc959d650698be886a9b4c3bfdded124c0e2bce3cc11"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.recessed-road-pothole",
+  "label": "Recessed Road Pothole",
+  "description": "A shallow dark-gray oval pothole with a depressed center and cracked irregular rim.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.recessed-road-pothole/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.8,
+   "h": 0.08
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.854,
+   "w": 0.835,
+   "h": 0.08
+  },
+  "normalized": {
+   "scale": 0.4484807586610491,
+   "yaw": 0
+  },
+  "sha256": "c3d8214e2ef2cd24ba86b34d04f167178006be97f400ba6ee9eb14b4981ed7fe",
+  "qa": {
+   "at": "2026-09-01T20:56:37.534Z",
+   "verdict": "rejected",
+   "reason": "The asset reads as a grounded pothole but is too small beside the sedan and lacks the clearly cracked, irregular rim described.",
+   "sheet": "experiments/agentic-3d/assets/custom.recessed-road-pothole/qa/frame-0002.rgb.jpg",
+   "sha256": "c3d8214e2ef2cd24ba86b34d04f167178006be97f400ba6ee9eb14b4981ed7fe"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.stop-sign-v4-billboard",
+  "label": "Three-Post Stop Sign",
+  "description": "A red octagonal STOP billboard with white lettering supported by three tall gray posts.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.stop-sign-v4-billboard/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.3,
+   "w": 1.4,
+   "h": 2.9
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.004,
+   "w": 0.157,
+   "h": 2.9
+  },
+  "normalized": {
+   "scale": 1.5233546616041311,
+   "yaw": 0
+  },
+  "sha256": "fdf937ffdebfbe8afc2e41d57297e6037acd5d12a151e1467be8daaccf76c4fc",
+  "qa": {
+   "at": "2026-09-01T20:57:00.107Z",
+   "verdict": "approved",
+   "reason": "The asset is a plausibly scaled, upright, grounded, and textured red octagonal STOP sign supported by three posts.",
+   "sheet": "experiments/agentic-3d/assets/custom.stop-sign-v4-billboard/qa/frame-0002.rgb.jpg",
+   "sha256": "fdf937ffdebfbe8afc2e41d57297e6037acd5d12a151e1467be8daaccf76c4fc"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.street.stop-sign-readable-v3",
+  "label": "Double-Text Stop Sign",
+  "description": "A red octagonal roadside sign displaying two stacked white STOP legends on a perforated metal post.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.12,
+   "w": 1,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.335,
+   "w": 0.236,
+   "h": 2.7
+  },
+  "normalized": {
+   "scale": 1.4180543648908788,
+   "yaw": 0
+  },
+  "sha256": "9cb95c9a095a3d3600858b3bdc8dba514a51e1418eac3d71a97c281ca2274903",
+  "qa": {
+   "at": "2026-09-01T20:56:49.714Z",
+   "verdict": "rejected",
+   "reason": "The asset is grounded and textured, but its edge-on presentation obscures the defining double text and the sign panel appears implausibly large.",
+   "sheet": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "9cb95c9a095a3d3600858b3bdc8dba514a51e1418eac3d71a97c281ca2274903"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.hurrying-pedestrian-large-bags",
+  "label": "Hurrying Shopper",
+  "description": "A young adult in a light gray jacket and blue jeans hurrying forward with large black and white shopping bags.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.hurrying-pedestrian-large-bags/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.75,
+   "w": 0.6,
+   "h": 1.72
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.894,
+   "w": 0.554,
+   "h": 1.72
+  },
+  "normalized": {
+   "scale": 0.9036222509281157,
+   "yaw": 0
+  },
+  "sha256": "8ba7b7d18e3a9e506bfa86bfd8dc927f5c985f2608538778db51013e1db55e3d",
+  "qa": {
+   "at": "2026-09-01T20:56:37.542Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.hurrying-pedestrian-large-bags not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.roadwork-barricade-striped",
+  "label": "Orange Roadwork Barricade",
+  "description": "An orange folding construction barricade with diagonal white stripes, horizontal rails, and an amber warning lamp.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.roadwork-barricade-striped/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2,
+   "w": 0.6,
+   "h": 1.2
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.767,
+   "w": 0.719,
+   "h": 1.2
+  },
+  "normalized": {
+   "scale": 0.9281272257935316,
+   "yaw": 0
+  },
+  "sha256": "0e613adb54a1ef97ed5c743e4b675acb3cd3b6c3a92bf80216d76d5203f65a13",
+  "qa": {
+   "at": "2026-09-01T20:56:51.500Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.roadwork-barricade-striped/qa/frame-0002.rgb.jpg",
+   "sha256": "0e613adb54a1ef97ed5c743e4b675acb3cd3b6c3a92bf80216d76d5203f65a13"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.running-dog",
+  "label": "Running Brown-and-White Dog",
+  "description": "A brown-and-white dog runs forward with one front paw raised and ears lifted.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.running-dog/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.05,
+   "w": 0.35,
+   "h": 0.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.297,
+   "w": 1.356,
+   "h": 0.7
+  },
+  "normalized": {
+   "scale": 0.7132071709923438,
+   "yaw": 0
+  },
+  "sha256": "9ec6962f09f4c2631ef736b0d0765b8045a80e6b214cc3c107e41b5d346021d2",
+  "qa": {
+   "at": "2026-09-01T20:57:01.230Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured brown-and-white running dog, with plausible scale beside the sedan and convincing ground contact.",
+   "sheet": "experiments/agentic-3d/assets/custom.running-dog/qa/frame-0002.rgb.jpg",
+   "sha256": "9ec6962f09f4c2631ef736b0d0765b8045a80e6b214cc3c107e41b5d346021d2"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.flat-fallen-mattress",
+  "label": "Flat Fallen Mattress",
+  "description": "A flattened white mattress with dark blue side stripes lying horizontally as road debris.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.flat-fallen-mattress/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2,
+   "w": 1.5,
+   "h": 0.2
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.028,
+   "w": 1.5,
+   "h": 0.336
+  },
+  "normalized": {
+   "scale": 0.7887848465992999,
+   "yaw": 0
+  },
+  "sha256": "92c554e5d3792b0983e362462f0b9815c9765267d4fdc105bc215b680f05e76a",
+  "qa": {
+   "at": "2026-09-01T20:57:04.099Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a flattened mattress with visible dark side detailing, plausible compact dimensions, and proper ground contact and orientation.",
+   "sheet": "experiments/agentic-3d/assets/custom.flat-fallen-mattress/qa/frame-0002.rgb.jpg",
+   "sha256": "92c554e5d3792b0983e362462f0b9815c9765267d4fdc105bc215b680f05e76a"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.adult-carrying-attached-shopping-bags",
+  "label": "Shopper with Colorful Bags",
+  "description": "A woman in a dark top and blue jeans walks while carrying attached red and yellow shopping bags.",
+  "class": "pedestrian",
+  "glbPath": "experiments/agentic-3d/assets/custom.adult-carrying-attached-shopping-bags/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.85,
+   "w": 0.5,
+   "h": 1.65
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.51,
+   "w": 0.73,
+   "h": 1.65
+  },
+  "normalized": {
+   "scale": 0.866783630535786,
+   "yaw": 0
+  },
+  "sha256": "5e088ecee5e1c408e659b85fd3001887f0fd1de4596330ec7c55450084e64d63",
+  "qa": {
+   "at": "2026-09-01T20:57:00.115Z",
+   "verdict": "rejected",
+   "reason": "Error: asset QA render failed: Error: strict-models: asset custom.adult-carrying-attached-shopping-bags not-in-catalog\n",
+   "sheet": null,
+   "sha256": null
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.animal.dog-statue-v4",
+  "label": "Brown Dog Statue",
+  "description": "A monochrome brown statue of a standing short-haired dog facing forward.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-statue-v4/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.4,
+   "h": 0.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.297,
+   "w": 1.178,
+   "h": 0.8
+  },
+  "normalized": {
+   "scale": 0.6189971228275818,
+   "yaw": 0
+  },
+  "sha256": "2c517e1dcf1b3a602ecebe9f8ab4c01290051a809af78b23062312bec9a616be",
+  "qa": {
+   "at": "2026-09-01T20:57:10.674Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a monochrome brown standing dog statue, is plausibly sized beside the sedan, upright, grounded, and visibly surfaced.",
+   "sheet": "experiments/agentic-3d/assets/custom.animal.dog-statue-v4/qa/frame-0002.rgb.jpg",
+   "sha256": "2c517e1dcf1b3a602ecebe9f8ab4c01290051a809af78b23062312bec9a616be"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.high-visibility-roadwork-barricade",
+  "label": "High-Visibility Barricade",
+  "description": "A portable roadwork barricade with orange-and-white chevrons, black folding legs, and two amber reflectors.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.8,
+   "w": 0.65,
+   "h": 1.15
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.8,
+   "w": 0.563,
+   "h": 1.186
+  },
+  "normalized": {
+   "scale": 0.9454158942381046,
+   "yaw": 0
+  },
+  "sha256": "c9ef96c29cf23aad6809eec965ed9bf70be203241233ee07b53148067c3f0141",
+  "qa": {
+   "at": "2026-09-01T20:57:11.576Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright, grounded, textured roadwork barricade and its scale is plausible beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.high-visibility-roadwork-barricade/qa/frame-0002.rgb.jpg",
+   "sha256": "c9ef96c29cf23aad6809eec965ed9bf70be203241233ee07b53148067c3f0141"
+  },
+  "supersededBy": "custom.high-visibility-roadwork-barricade-v2"
+ },
+ {
+  "status": "rejected",
+  "id": "custom.crosswalk-zebra-markings",
+  "label": "Zebra Crosswalk",
+  "description": "A flat rectangular crosswalk marking composed of evenly spaced white zebra stripes with dark gaps.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-zebra-markings/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4,
+   "w": 3,
+   "h": 0.02
+  },
+  "dimsSource": "manual",
+  "dims": {
+   "l": 3,
+   "w": 3,
+   "h": 0.06
+  },
+  "normalized": {
+   "scale": 1.5758733764425321,
+   "yaw": 0
+  },
+  "sha256": "d0193a66c7b00a256277ec8a42d0b7b923922589fdf5644e36ef1630f121d5cc",
+  "qa": {
+   "at": "2026-09-01T20:57:15.799Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.crosswalk-zebra-markings/qa/frame-0002.rgb.jpg",
+   "sha256": "d0193a66c7b00a256277ec8a42d0b7b923922589fdf5644e36ef1630f121d5cc"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.flat-wooden-road-pallet",
+  "label": "Wooden Road Pallet",
+  "description": "A low natural-wood shipping pallet with stacked slats and open forklift gaps.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.flat-wooden-road-pallet/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 1,
+   "h": 0.15
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.008,
+   "w": 1,
+   "h": 0.283
+  },
+  "normalized": {
+   "scale": 0.5296337256009215,
+   "yaw": 0
+  },
+  "sha256": "7f296a5b3cdda03551051874ffe56608e0a58834fb974763e47b9102ce9150a7",
+  "qa": {
+   "at": "2026-09-01T20:57:19.622Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured wooden pallet, has plausible dimensions relative to the sedan, and is upright and grounded.",
+   "sheet": "experiments/agentic-3d/assets/custom.flat-wooden-road-pallet/qa/frame-0002.rgb.jpg",
+   "sha256": "7f296a5b3cdda03551051874ffe56608e0a58834fb974763e47b9102ce9150a7"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.asphalt-pothole-decal",
+  "label": "Asphalt Pothole Decal",
+  "description": "A flat circular pothole decal with a black center and a broken light-gray asphalt rim.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.asphalt-pothole-decal/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.4,
+   "w": 0.9,
+   "h": 0.051
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.4,
+   "w": 1.457,
+   "h": 0.038
+  },
+  "normalized": {
+   "scale": 0.764752786306739,
+   "yaw": 0
+  },
+  "sha256": "e2a9369e5715b01f978d945f02a30563ea6d5610f95bcafacf7cd9acbd297039",
+  "qa": {
+   "at": "2026-09-01T20:57:26.098Z",
+   "verdict": "rejected",
+   "reason": "The scale and placement are plausible, but the pale center and uniform bright rim prevent the asset from reading clearly as the specified asphalt pothole.",
+   "sheet": "experiments/agentic-3d/assets/custom.asphalt-pothole-decal/qa/frame-0002.rgb.jpg",
+   "sha256": "e2a9369e5715b01f978d945f02a30563ea6d5610f95bcafacf7cd9acbd297039"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.pedestrian-stroller",
+  "label": "Baby stroller",
+  "description": "A dark gray four-wheeled baby stroller with a raised canopy, bassinet, and angled push handle.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-stroller/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.05,
+   "w": 0.62,
+   "h": 1.1
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.05,
+   "w": 0.503,
+   "h": 1.298
+  },
+  "normalized": {
+   "scale": 0.6820631266495414,
+   "yaw": 0
+  },
+  "sha256": "d20e360bdcb46c72dad2b1c57893cd8788f4bf294d2916d0343885b2ab2c87cf",
+  "qa": {
+   "at": "2026-09-01T20:57:25.219Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright, grounded, dark baby stroller with plausible dimensions relative to the sedan and visible material variation.",
+   "sheet": "experiments/agentic-3d/assets/custom.pedestrian-stroller/qa/frame-0002.rgb.jpg",
+   "sha256": "d20e360bdcb46c72dad2b1c57893cd8788f4bf294d2916d0343885b2ab2c87cf"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.marked-city-taxi",
+  "label": "Yellow city taxi",
+  "description": "A bright yellow four-door taxi sedan with black checker graphics, large TAXI lettering, and a roof sign.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.marked-city-taxi/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.9,
+   "w": 1.85,
+   "h": 1.75
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 4.489,
+   "w": 2.028,
+   "h": 1.75
+  },
+  "normalized": {
+   "scale": 2.3604883311303677,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "08e60f8e95c7eb2e154eab178c2af42addae72f5a09fd6447700fcd0bd93f68f",
+  "qa": {
+   "at": "2026-09-01T20:57:36.081Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a yellow city taxi, is appropriately scaled and grounded beside the sedan, faces the same direction, and has visible taxi graphics and materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.marked-city-taxi/qa/frame-0002.rgb.jpg",
+   "sha256": "08e60f8e95c7eb2e154eab178c2af42addae72f5a09fd6447700fcd0bd93f68f"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.pedestrian-crossing-sign",
+  "label": "Pedestrian crossing sign",
+  "description": "A fluorescent yellow rectangular roadside sign showing a black walking-person symbol on a gray metal post.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.pedestrian-crossing-sign/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.15,
+   "w": 0.75,
+   "h": 2.2
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.811,
+   "w": 0.203,
+   "h": 2.2
+  },
+  "normalized": {
+   "scale": 1.1557254758514557,
+   "yaw": 0
+  },
+  "sha256": "aaeaf9079007fa004acb8e50e177543117ec6c4f45e14ea0ec750c3de00e8cad",
+  "qa": {
+   "at": "2026-09-01T20:57:43.662Z",
+   "verdict": "rejected",
+   "reason": "The asset is upright, grounded, textured, and plausibly scaled, but its edge-on presentation obscures the defining pedestrian symbol.",
+   "sheet": "experiments/agentic-3d/assets/custom.pedestrian-crossing-sign/qa/frame-0002.rgb.jpg",
+   "sha256": "aaeaf9079007fa004acb8e50e177543117ec6c4f45e14ea0ec750c3de00e8cad"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.visible-running-dog",
+  "label": "Running brown dog",
+  "description": "A realistic tan-brown dog with a white chest runs forward with its mouth open and front legs extended.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.visible-running-dog/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.35,
+   "h": 0.65
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.281,
+   "w": 1.272,
+   "h": 0.65
+  },
+  "normalized": {
+   "scale": 0.6690616302983364,
+   "yaw": 0
+  },
+  "sha256": "ff5077b640597741b03de8e84744744a5d6cc30be00df31aec837aaa252f2c0a",
+  "qa": {
+   "at": "2026-09-01T20:57:37.976Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a realistically scaled, upright, grounded, and textured running brown dog beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.visible-running-dog/qa/frame-0002.rgb.jpg",
+   "sha256": "ff5077b640597741b03de8e84744744a5d6cc30be00df31aec837aaa252f2c0a"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.ball.faceted-soccer-v4",
+  "label": "Faceted soccer ball",
+  "description": "A low-poly faceted ball made of angular orange, dark blue, gray, and brown panels.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.ball.faceted-soccer-v4/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.4,
+   "w": 0.4,
+   "h": 0.4
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.386,
+   "w": 0.4,
+   "h": 0.405
+  },
+  "normalized": {
+   "scale": 0.2130019329832078,
+   "yaw": 0
+  },
+  "sha256": "cb85a9c61eadc10f7e7dffc3aef1e854018817d5e6ca3431cb22e5c81e55ce44",
+  "qa": {
+   "at": "2026-09-01T20:57:49.266Z",
+   "verdict": "rejected",
+   "reason": "The asset reads as a grounded, textured faceted soccer ball, but its scale is implausibly large next to the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.ball.faceted-soccer-v4/qa/frame-0002.rgb.jpg",
+   "sha256": "cb85a9c61eadc10f7e7dffc3aef1e854018817d5e6ca3431cb22e5c81e55ce44"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.ball.red-sphere-v3",
+  "label": "Red sphere ball",
+  "description": "A smooth solid bright-red spherical ball with subtle shading.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.ball.red-sphere-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.35,
+   "w": 0.35,
+   "h": 0.35
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.35,
+   "w": 0.35,
+   "h": 0.35
+  },
+  "normalized": {
+   "scale": 0.18392097321083054,
+   "yaw": 0
+  },
+  "sha256": "d5179a6569ee9db9e3a602f1315bd7205fdee5ae68852e4b2e46e335daf87546",
+  "qa": {
+   "at": "2026-09-01T20:57:47.014Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a smooth red ball, is plausibly scaled to about 0.35 m beside the sedan, rests on the ground, and has visible material shading.",
+   "sheet": "experiments/agentic-3d/assets/custom.ball.red-sphere-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "d5179a6569ee9db9e3a602f1315bd7205fdee5ae68852e4b2e46e335daf87546"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.full-zebra-crosswalk-marking",
+  "label": "Full zebra crosswalk",
+  "description": "A white road-crossing marking composed of multiple broad zebra stripes and a long boundary stripe.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.full-zebra-crosswalk-marking/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 5.5,
+   "w": 7.5,
+   "h": 0.06
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 5.5,
+   "w": 5.353,
+   "h": 0.083
+  },
+  "normalized": {
+   "scale": 2.889862135180488,
+   "yaw": 0
+  },
+  "sha256": "4d595f7842410a11d3f00193fe3d274c4875d96973e5548459805b65b07b4475",
+  "qa": {
+   "at": "2026-09-01T20:58:00.544Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.full-zebra-crosswalk-marking/qa/frame-0002.rgb.jpg",
+   "sha256": "4d595f7842410a11d3f00193fe3d274c4875d96973e5548459805b65b07b4475"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.animal.dog-billboard-v5",
+  "label": "Stylized yellow dog",
+  "description": "A simplified bright-yellow dog figure with pointed ears, black facial features, raised tail, and a running pose.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.animal.dog-billboard-v5/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.3,
+   "w": 0.25,
+   "h": 0.85
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.289,
+   "w": 1.128,
+   "h": 0.85
+  },
+  "normalized": {
+   "scale": 0.593217026918377,
+   "yaw": 0
+  },
+  "sha256": "5e9ee0b49e4a1aef6dc31ff5ffe6464c6e315e9d31079e4d6e953083d36306ba",
+  "qa": {
+   "at": "2026-09-01T20:58:01.431Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as an upright stylized yellow dog, has plausible dog-scale proportions beside the sedan, is grounded, and has visible colored materials and facial detailing.",
+   "sheet": "experiments/agentic-3d/assets/custom.animal.dog-billboard-v5/qa/frame-0002.rgb.jpg",
+   "sha256": "5e9ee0b49e4a1aef6dc31ff5ffe6464c6e315e9d31079e4d6e953083d36306ba"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.children-chase-ball",
+  "label": "Pink chase ball",
+  "description": "A large pale-pink spherical play ball with a wide white inset panel and white side segment.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.children-chase-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.45,
+   "w": 0.45,
+   "h": 0.45
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.45,
+   "w": 0.45,
+   "h": 0.45
+  },
+  "normalized": {
+   "scale": 0.23648771840567862,
+   "yaw": 0
+  },
+  "sha256": "d8b990e1bd74414df423d26322db853a3fa0fb82b8af085b3e23d3bf4c67fa0f",
+  "qa": {
+   "at": "2026-09-01T20:57:59.683Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a pale-pink segmented play ball, appears plausibly sized at roughly 0.45 m beside the sedan, is grounded correctly, and has visible white panel detailing.",
+   "sheet": "experiments/agentic-3d/assets/custom.children-chase-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "d8b990e1bd74414df423d26322db853a3fa0fb82b8af085b3e23d3bf4c67fa0f"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.street.stop-sign-readable",
+  "label": "Readable stop sign",
+  "description": "A freestanding red octagonal STOP sign with large white lettering, white border, gray post, and weighted base.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.15,
+   "w": 0.85,
+   "h": 2.6
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.918,
+   "w": 0.521,
+   "h": 2.6
+  },
+  "normalized": {
+   "scale": 1.3658588346603204,
+   "yaw": 0
+  },
+  "sha256": "e1fcf5830f29d075270493476a0ac5177735f8d755ab7da221d626d6d836b45f",
+  "qa": {
+   "at": "2026-09-01T20:58:16.443Z",
+   "verdict": "approved",
+   "reason": "The asset is recognizable as an upright, grounded, textured stop sign at a plausible scale beside the sedan, though its oblique orientation limits readability.",
+   "sheet": "experiments/agentic-3d/assets/custom.street.stop-sign-readable/qa/frame-0002.rgb.jpg",
+   "sha256": "e1fcf5830f29d075270493476a0ac5177735f8d755ab7da221d626d6d836b45f"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.hedge-green-v2",
+  "label": "Green hedge",
+  "description": "A dense rectangular hedge formed from many small dark- and light-green leaves.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.hedge-green-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4,
+   "w": 0.9,
+   "h": 1.4
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4,
+   "w": 0.271,
+   "h": 2.394
+  },
+  "normalized": {
+   "scale": 2.107840331360245,
+   "yaw": 0
+  },
+  "sha256": "ca7b68c084fa6d8a42fde7e3b01198a29a93ab558175368572f1941408062f43",
+  "qa": {
+   "at": "2026-09-01T20:58:13.319Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a dense rectangular hedge with plausible dimensions relative to the sedan, proper grounding, upright orientation, and visible foliage texture.",
+   "sheet": "experiments/agentic-3d/assets/custom.hedge-green-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "ca7b68c084fa6d8a42fde7e3b01198a29a93ab558175368572f1941408062f43"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.pothole-crater-ring-v3",
+  "label": "Pothole crater ring",
+  "description": "A low circular gray road crater with a raised broken rim and shallow recessed center.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.pothole-crater-ring-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.3,
+   "w": 0.9,
+   "h": 0.06
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.897,
+   "w": 0.9,
+   "h": 0.081
+  },
+  "normalized": {
+   "scale": 0.47268305702570473,
+   "yaw": 0
+  },
+  "sha256": "57c356a657336ab3e1e52a19b88fa07861e930a1e69444cc73c448a8628802a3",
+  "qa": {
+   "at": "2026-09-01T20:58:15.576Z",
+   "verdict": "rejected",
+   "reason": "The prop is plausibly scaled and grounded but does not clearly read as a broken pothole crater ring.",
+   "sheet": "experiments/agentic-3d/assets/custom.pothole-crater-ring-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "57c356a657336ab3e1e52a19b88fa07861e930a1e69444cc73c448a8628802a3"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.detached-cargo-trailer",
+  "label": "Detached cargo trailer",
+  "description": "A white enclosed single-axle box trailer with a black wheel, white fender, tow bar, and hitch.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.detached-cargo-trailer/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 5.2,
+   "w": 2.25,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 5.2,
+   "w": 2.292,
+   "h": 2.493
+  },
+  "normalized": {
+   "scale": 2.7301919628795512,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "054e166817089309337b50106f15c40132c5c7da76174e776f963ccef55dfaa5",
+  "qa": {
+   "at": "2026-09-01T20:58:41.808Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a grounded enclosed cargo trailer, is plausibly scaled beside the sedan, has visible materials, and points forward in the same direction as the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.detached-cargo-trailer/qa/frame-0002.rgb.jpg",
+   "sha256": "054e166817089309337b50106f15c40132c5c7da76174e776f963ccef55dfaa5"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.zebra-crosswalk-band",
+  "label": "Zebra crosswalk band",
+  "description": "A white ladder-style crosswalk marking with six narrow vertical stripes between two long horizontal bands.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.zebra-crosswalk-band/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 6,
+   "w": 0.5,
+   "h": 0.02
+  },
+  "dimsSource": "manual",
+  "dims": {
+   "l": 6,
+   "w": 0.289,
+   "h": 5.206
+  },
+  "normalized": {
+   "scale": 3.152224044206099,
+   "yaw": 0
+  },
+  "sha256": "51ba21a4588424f1b1a5b6f70627fbb9a82941b9bd181fce408e7d5d140a52db",
+  "qa": {
+   "at": "2026-09-01T20:58:40.232Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.zebra-crosswalk-band/qa/frame-0002.rgb.jpg",
+   "sha256": "51ba21a4588424f1b1a5b6f70627fbb9a82941b9bd181fce408e7d5d140a52db"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.grounded-spherical-play-ball",
+  "label": "Pastel play ball",
+  "description": "A grounded spherical beach-style ball divided into pale pink, white, light gray, and light-blue panels.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.grounded-spherical-play-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.25,
+   "w": 0.25,
+   "h": 0.25
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.25,
+   "w": 0.25,
+   "h": 0.249
+  },
+  "normalized": {
+   "scale": 0.13143360671046217,
+   "yaw": 0
+  },
+  "sha256": "302b7bac0dd027aa370482678bc9b843f9c0179557036c4c2aa87cf80c6bc083",
+  "qa": {
+   "at": "2026-09-01T20:58:29.230Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a small pastel paneled play ball, is plausibly scaled against the sedan, visibly contacts the ground, and has appropriate colored materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.grounded-spherical-play-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "302b7bac0dd027aa370482678bc9b843f9c0179557036c4c2aa87cf80c6bc083"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.road-tractor",
+  "label": "Green road tractor",
+  "description": "A compact green enclosed-cab tractor with oversized black tires and bright-yellow wheel rims.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.road-tractor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 4.2,
+   "w": 2.1,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.068,
+   "w": 2.1,
+   "h": 2.827
+  },
+  "normalized": {
+   "scale": 2.1407532827839395,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "fd56efcb1427faede978065332214f6a5f9799ec264afc8af3df5c6901c00ed5",
+  "qa": {
+   "at": "2026-09-01T20:58:57.468Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a green enclosed-cab tractor with oversized black tires and yellow rims, is plausibly scaled and grounded beside the sedan, and faces the same direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.road-tractor/qa/frame-0002.rgb.jpg",
+   "sha256": "fd56efcb1427faede978065332214f6a5f9799ec264afc8af3df5c6901c00ed5"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.street.stop-sign-solid-red-v4",
+  "label": "Solid red stop sign",
+  "description": "A simple red octagonal STOP sign with bold white letters, a white border, and a slender gray post.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-solid-red-v4/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.08,
+   "w": 1.1,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.221,
+   "w": 0.124,
+   "h": 2.7
+  },
+  "normalized": {
+   "scale": 1.418299449609374,
+   "yaw": 0
+  },
+  "sha256": "bd27b8a3158eda0cee1d65c0566fd03f40c09b7d220eb5fe6186c6c7f547c6a9",
+  "qa": {
+   "at": "2026-09-01T20:58:58.831Z",
+   "verdict": "approved",
+   "reason": "The asset is recognizable as a red octagonal stop sign, has plausible scale beside the sedan, is upright and grounded, and uses appropriate colored materials.",
+   "sheet": "experiments/agentic-3d/assets/custom.street.stop-sign-solid-red-v4/qa/frame-0002.rgb.jpg",
+   "sha256": "bd27b8a3158eda0cee1d65c0566fd03f40c09b7d220eb5fe6186c6c7f547c6a9"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.crosswalk-white-stripe",
+  "label": "White crosswalk stripe",
+  "description": "A single long narrow white road-marking stripe with slightly tapered ends.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-white-stripe/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.45,
+   "w": 8,
+   "h": 0.015
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.532,
+   "w": 0.154,
+   "h": 0.015
+  },
+  "normalized": {
+   "scale": 0.2793038871281326,
+   "yaw": 0
+  },
+  "sha256": "621a26797c9ba59e62ec1f29c699fe6b5f588f4b9dc161ffc2092a4fcc6688f9",
+  "qa": {
+   "at": "2026-09-01T20:58:55.343Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.crosswalk-white-stripe/qa/frame-0002.rgb.jpg",
+   "sha256": "621a26797c9ba59e62ec1f29c699fe6b5f588f4b9dc161ffc2092a4fcc6688f9"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.dog-actor",
+  "label": "Running dog actor",
+  "description": "A realistic reddish-brown dog with a white chest runs forward with upright ears, open mouth, and extended paws.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.dog-actor/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.1,
+   "w": 0.45,
+   "h": 0.75
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.379,
+   "w": 1.271,
+   "h": 0.75
+  },
+  "normalized": {
+   "scale": 0.6678462553349654,
+   "yaw": 0
+  },
+  "sha256": "efe73c5ebf6ef255523e0ca5953f88f11d535ada859d1e5702cc80abbddfceb8",
+  "qa": {
+   "at": "2026-09-01T20:59:07.862Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured running dog, is plausibly sized beside the sedan, and appears properly grounded and upright.",
+   "sheet": "experiments/agentic-3d/assets/custom.dog-actor/qa/frame-0002.rgb.jpg",
+   "sha256": "efe73c5ebf6ef255523e0ca5953f88f11d535ada859d1e5702cc80abbddfceb8"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.road-sofa-v2",
+  "label": "Road sofa",
+  "description": "A dark charcoal three-seat upholstered sofa with padded arms, tufted back cushions, and short black feet.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road-sofa-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 2.2,
+   "w": 0.95,
+   "h": 0.9
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 2.015,
+   "w": 0.95,
+   "h": 1.014
+  },
+  "normalized": {
+   "scale": 1.0583023556496602,
+   "yaw": 0
+  },
+  "sha256": "997a56afd3aefcc19e86a1632ebc97f9a1baf798fcf889954e5130ca5f69922c",
+  "qa": {
+   "at": "2026-09-01T20:59:11.242Z",
+   "verdict": "approved",
+   "reason": "The asset reads as an upright three-seat sofa with plausible dimensions beside the sedan, proper ground contact, and visible upholstery detailing.",
+   "sheet": "experiments/agentic-3d/assets/custom.road-sofa-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "997a56afd3aefcc19e86a1632ebc97f9a1baf798fcf889954e5130ca5f69922c"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.open-delivery-van-door",
+  "label": "White delivery van",
+  "description": "A white high-roof delivery van with dark lower trim and a large side cargo door visibly open or displaced.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.open-delivery-van-door/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 5.9,
+   "w": 2.1,
+   "h": 2.7
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 5.129,
+   "w": 2.257,
+   "h": 2.7
+  },
+  "normalized": {
+   "scale": 2.69721905617513,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "4d9aec2f8bd388ed920ebaacae678fcddf98de36e5ed931d6f01e7df3665854d",
+  "qa": {
+   "at": "2026-09-01T20:59:38.075Z",
+   "verdict": "rejected",
+   "reason": "The vehicle is a plausibly scaled, grounded, correctly oriented delivery van, but the required visibly open or displaced side cargo door is absent.",
+   "sheet": "experiments/agentic-3d/assets/custom.open-delivery-van-door/qa/frame-0002.rgb.jpg",
+   "sha256": "4d9aec2f8bd388ed920ebaacae678fcddf98de36e5ed931d6f01e7df3665854d"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.large-pothole",
+  "label": "Large pothole",
+  "description": "A deep dark-gray road pothole with a broad jagged broken rim and rough crater walls.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.large-pothole/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.8,
+   "h": 0.18
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.803,
+   "w": 0.8,
+   "h": 0.3
+  },
+  "normalized": {
+   "scale": 0.41901352082929244,
+   "yaw": 0
+  },
+  "sha256": "9c449ef6b8ea4722905e5238946923024013009940c94bc91f0af7542594b669",
+  "qa": {
+   "at": "2026-09-01T20:59:20.611Z",
+   "verdict": "rejected",
+   "reason": "The scale and rough texture are plausible, but the asset reads as raised debris rather than a grounded, recessed large pothole.",
+   "sheet": "experiments/agentic-3d/assets/custom.large-pothole/qa/frame-0002.rgb.jpg",
+   "sha256": "9c449ef6b8ea4722905e5238946923024013009940c94bc91f0af7542594b669"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.stop-sign-highviz-v3",
+  "label": "High-visibility stop signs",
+  "description": "A tall paired-sign assembly with two red octagonal STOP faces, white borders, and narrow gray support poles.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.stop-sign-highviz-v3/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.12,
+   "w": 1.2,
+   "h": 2.8
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.89,
+   "w": 0.155,
+   "h": 2.8
+  },
+  "normalized": {
+   "scale": 1.4706869107306704,
+   "yaw": 0
+  },
+  "sha256": "a640ba1ce6b6ec4c6db152a815ead227beacfd55c074d2a42fc0baea083b0135",
+  "qa": {
+   "at": "2026-09-01T20:59:24.928Z",
+   "verdict": "rejected",
+   "reason": "The upright assembly appears plausibly scaled and grounded, but it does not clearly read as the declared paired high-visibility stop signs from the provided views.",
+   "sheet": "experiments/agentic-3d/assets/custom.stop-sign-highviz-v3/qa/frame-0002.rgb.jpg",
+   "sha256": "a640ba1ce6b6ec4c6db152a815ead227beacfd55c074d2a42fc0baea083b0135"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.crosswalk-ladder-marking",
+  "label": "Crosswalk ladder marking",
+  "description": "A white ladder-style pedestrian crosswalk made from several parallel horizontal road stripes.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.crosswalk-ladder-marking/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 7,
+   "w": 4,
+   "h": 0.03
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 4.094,
+   "w": 4.095,
+   "h": 0.03
+  },
+  "normalized": {
+   "scale": 2.1517713392963933,
+   "yaw": 0
+  },
+  "sha256": "ae6814da9816108bfbcdc9c636810cd301dd6fc466601a3373b518094f1ff5c5",
+  "qa": {
+   "at": "2026-09-01T20:59:38.955Z",
+   "verdict": "rejected",
+   "reason": "painted road markings are MAP furniture, not props: a marking prop renders as a raised slab at chase-camera distance (12 pass-b1 rejections); stage the event at a mapped crosswalk (nearestCrosswalkM) instead",
+   "sheet": "experiments/agentic-3d/assets/custom.crosswalk-ladder-marking/qa/frame-0002.rgb.jpg",
+   "sha256": "ae6814da9816108bfbcdc9c636810cd301dd6fc466601a3373b518094f1ff5c5"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.fallen-wooden-pallet",
+  "label": "Fallen Wooden Pallet",
+  "description": "A weathered light-tan wooden pallet lying flat with visible slats and support rails.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.fallen-wooden-pallet/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 1,
+   "h": 0.15
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.004,
+   "w": 1,
+   "h": 0.223
+  },
+  "normalized": {
+   "scale": 0.5272850884427084,
+   "yaw": 0
+  },
+  "sha256": "74733ee964f6d6fb1ba161e4f4e42213c34028b0079a4e09086b6c3d8d751501",
+  "qa": {
+   "at": "2026-09-01T20:59:33.644Z",
+   "verdict": "approved",
+   "reason": "The asset clearly resembles a weathered wooden pallet, is appropriately scaled beside the sedan, lies flat on the ground, and has visible wood texturing.",
+   "sheet": "experiments/agentic-3d/assets/custom.fallen-wooden-pallet/qa/frame-0002.rgb.jpg",
+   "sha256": "74733ee964f6d6fb1ba161e4f4e42213c34028b0079a4e09086b6c3d8d751501"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.road-overpass-span",
+  "label": "Road Overpass Span",
+  "description": "A long, flat light-gray concrete overpass slab with a slightly tapered end.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.road-overpass-span/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 30,
+   "w": 12,
+   "h": 1.5
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 11.999,
+   "w": 12,
+   "h": 1.532
+  },
+  "normalized": {
+   "scale": 6.303824695035225,
+   "yaw": 0
+  },
+  "sha256": "5d05d12adb5fcbae5b4948c4d4a45313e157f048d9eb679ecc275ab19c88022f",
+  "qa": {
+   "at": "2026-09-01T20:59:46.991Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a broad concrete overpass slab with plausible sedan-relative dimensions, proper placement, subtle concrete surfacing, and no obvious orientation or geometry defects.",
+   "sheet": "experiments/agentic-3d/assets/custom.road-overpass-span/qa/frame-0002.rgb.jpg",
+   "sha256": "5d05d12adb5fcbae5b4948c4d4a45313e157f048d9eb679ecc275ab19c88022f"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.wooden-shipping-crate",
+  "label": "Wooden Shipping Crate",
+  "description": "A tan wooden shipping crate with vertical planks, a reinforced frame, and metal corner fasteners.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.wooden-shipping-crate/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.2,
+   "w": 0.8,
+   "h": 0.9
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.807,
+   "w": 0.809,
+   "h": 0.9
+  },
+  "normalized": {
+   "scale": 0.47273267703108807,
+   "yaw": 0
+  },
+  "sha256": "ebff12ebd12ea6ccc36b5b9091fd069e8bb26edf457060eab383305bc38d694f",
+  "qa": {
+   "at": "2026-09-01T20:59:48.695Z",
+   "verdict": "approved",
+   "reason": "The asset reads as an upright textured wooden shipping crate, is grounded, and has a plausible scale beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.wooden-shipping-crate/qa/frame-0002.rgb.jpg",
+   "sha256": "ebff12ebd12ea6ccc36b5b9091fd069e8bb26edf457060eab383305bc38d694f"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.bright-green-traffic-signal",
+  "label": "Green Traffic Signal",
+  "description": "A dark three-lens traffic signal on a short pole with green-tinted lights and a bright green lower lens.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.bright-green-traffic-signal/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.6,
+   "w": 0.6,
+   "h": 5.5
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.688,
+   "w": 0.6,
+   "h": 1.825
+  },
+  "normalized": {
+   "scale": 0.9586792944195235,
+   "yaw": 0
+  },
+  "sha256": "8ef6611100e32ab9f78df0c623232fe2e2dcf218cfae49bcb8ac87e8a1fad0e3",
+  "qa": {
+   "at": "2026-09-01T20:59:53.808Z",
+   "verdict": "rejected",
+   "reason": "The prop has a plausible upright traffic-signal shape and scale, but it does not visibly read as a green traffic signal because the required bright green lower lens is absent.",
+   "sheet": "experiments/agentic-3d/assets/custom.bright-green-traffic-signal/qa/frame-0002.rgb.jpg",
+   "sha256": "8ef6611100e32ab9f78df0c623232fe2e2dcf218cfae49bcb8ac87e8a1fad0e3"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.school-bus-stop-arm",
+  "label": "Yellow School Bus",
+  "description": "A compact yellow school bus with black stripes, gray windows, and black wheels shown from the side.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.school-bus-stop-arm/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 10.5,
+   "w": 2.55,
+   "h": 3.2
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 7.085,
+   "w": 2.55,
+   "h": 3.328
+  },
+  "normalized": {
+   "scale": 3.721529955810752,
+   "yaw": 180,
+   "flipped": true
+  },
+  "sha256": "1a7045a88f21cb980e8622792e964ff917e5139709a508f58c64b5885e2c465c",
+  "qa": {
+   "at": "2026-09-01T21:00:18.242Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured yellow school bus, is plausibly scaled and grounded beside the sedan, and faces the same direction.",
+   "sheet": "experiments/agentic-3d/assets/custom.school-bus-stop-arm/qa/frame-0002.rgb.jpg",
+   "sha256": "1a7045a88f21cb980e8622792e964ff917e5139709a508f58c64b5885e2c465c"
+  }
+ },
+ {
+  "status": "rejected",
+  "id": "custom.visible-stop-sign-v2",
+  "label": "Visible Stop Sign",
+  "description": "A red octagonal STOP sign with bold white lettering and border mounted on a gray pole.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.visible-stop-sign-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.12,
+   "w": 0.9,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.05,
+   "w": 0.126,
+   "h": 2.7
+  },
+  "normalized": {
+   "scale": 1.4180745190242006,
+   "yaw": 0
+  },
+  "sha256": "244d5af97a24b32c68b811d4fafe8ee8c5f782f16d45c59975d1d41bcec1734c",
+  "qa": {
+   "at": "2026-09-01T21:00:01.567Z",
+   "verdict": "rejected",
+   "reason": "The prop is plausibly scaled and grounded, but its edge-on presentation prevents it from clearly reading as a visible STOP sign.",
+   "sheet": "experiments/agentic-3d/assets/custom.visible-stop-sign-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "244d5af97a24b32c68b811d4fafe8ee8c5f782f16d45c59975d1d41bcec1734c"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.dropped-cargo-wooden-crate",
+  "label": "Dropped Cargo Crate",
+  "description": "A large pale wooden cargo crate with horizontal boards, reinforced corners, and metal brackets.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.dropped-cargo-wooden-crate/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1.5,
+   "w": 1.2,
+   "h": 1.2
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 1.754,
+   "w": 1.2,
+   "h": 1.071
+  },
+  "normalized": {
+   "scale": 0.9216008578132984,
+   "yaw": 0
+  },
+  "sha256": "00dccc716af87963389bfe7982a7b903c7e560e94c90448adf8acabea6584f24",
+  "qa": {
+   "at": "2026-09-01T21:00:04.733Z",
+   "verdict": "approved",
+   "reason": "The upright, grounded wooden cargo crate has recognizable board construction, plausible sedan-relative dimensions, and visible wood texturing.",
+   "sheet": "experiments/agentic-3d/assets/custom.dropped-cargo-wooden-crate/qa/frame-0002.rgb.jpg",
+   "sha256": "00dccc716af87963389bfe7982a7b903c7e560e94c90448adf8acabea6584f24"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.vehicle.rolling-toy-ball",
+  "label": "Rolling Toy Ball",
+  "description": "A worn blue toy ball with raised gray panels, black seams, and a tan center patch.",
+  "class": "vehicle",
+  "glbPath": "experiments/agentic-3d/assets/custom.vehicle.rolling-toy-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.4,
+   "w": 0.4,
+   "h": 0.4
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.4,
+   "w": 0.4,
+   "h": 0.4
+  },
+  "normalized": {
+   "scale": 0.210231410088008,
+   "yaw": 0
+  },
+  "sha256": "cd7367ba6d9184816b0e1a60db6dcc8e0a7df83ad4f172f761205181203f6b9c",
+  "qa": {
+   "at": "2026-09-01T21:00:24.997Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a grounded, appropriately scaled textured toy ball, and its spherical form has no discernible conflicting orientation.",
+   "sheet": "experiments/agentic-3d/assets/custom.vehicle.rolling-toy-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "cd7367ba6d9184816b0e1a60db6dcc8e0a7df83ad4f172f761205181203f6b9c"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.running-dog-vehicle",
+  "label": "Running Dog",
+  "description": "A brown-and-white pointed-ear dog running forward with its mouth open and tongue visible.",
+  "class": "animal",
+  "glbPath": "experiments/agentic-3d/assets/custom.running-dog-vehicle/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 1,
+   "w": 0.35,
+   "h": 0.65
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.231,
+   "w": 1.09,
+   "h": 0.65
+  },
+  "normalized": {
+   "scale": 0.5729381024348157,
+   "yaw": 0
+  },
+  "sha256": "47edb8c4dfa2e90c1f5b41a4b2a7c2dab42d890c46d78987e260e4da6843f7e5",
+  "qa": {
+   "at": "2026-09-01T21:00:15.983Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a textured, upright running dog and appears grounded at a plausible size beside the sedan.",
+   "sheet": "experiments/agentic-3d/assets/custom.running-dog-vehicle/qa/frame-0002.rgb.jpg",
+   "sha256": "47edb8c4dfa2e90c1f5b41a4b2a7c2dab42d890c46d78987e260e4da6843f7e5"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.red-playground-ball",
+  "label": "Red Playground Ball",
+  "description": "A bright red rubber playground ball with broad molded panel seams.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.red-playground-ball/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.3,
+   "w": 0.3,
+   "h": 0.3
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.3,
+   "w": 0.3,
+   "h": 0.3
+  },
+  "normalized": {
+   "scale": 0.1576254474115871,
+   "yaw": 0
+  },
+  "sha256": "c9b98b3817a6f1d959c890841859b4c653e5aa3f2a7b9509630d7abc90ed2e68",
+  "qa": {
+   "at": "2026-09-01T21:00:24.080Z",
+   "verdict": "approved",
+   "reason": "The asset clearly reads as a red seamed playground ball, appears appropriately scaled at about 0.3 m, and is visibly grounded and textured.",
+   "sheet": "experiments/agentic-3d/assets/custom.red-playground-ball/qa/frame-0002.rgb.jpg",
+   "sha256": "c9b98b3817a6f1d959c890841859b4c653e5aa3f2a7b9509630d7abc90ed2e68"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.street.red-octagon-stop-v5",
+  "label": "Red Octagonal Stop Sign",
+  "description": "A red octagonal STOP sign with large white lettering, a pale border, and a slim gray post.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.street.red-octagon-stop-v5/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.08,
+   "w": 0.9,
+   "h": 2.5
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.14,
+   "w": 0.176,
+   "h": 2.5
+  },
+  "normalized": {
+   "scale": 1.3134147988134655,
+   "yaw": 0
+  },
+  "sha256": "949642ae18f7e9ce852ba642fe5932dd02762172116b68b151c20002bac64c3e",
+  "qa": {
+   "at": "2026-09-01T21:00:47.398Z",
+   "verdict": "approved",
+   "reason": "The upright, grounded red octagonal sign and post read correctly at a plausible scale, though the viewing angle obscures most face details.",
+   "sheet": "experiments/agentic-3d/assets/custom.street.red-octagon-stop-v5/qa/frame-0002.rgb.jpg",
+   "sha256": "949642ae18f7e9ce852ba642fe5932dd02762172116b68b151c20002bac64c3e"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.dark-flat-road-pothole",
+  "label": "Flat Road Pothole",
+  "description": "A dark-gray shallow road pothole with an oval recessed center and irregular flattened edges.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.dark-flat-road-pothole/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.8,
+   "w": 0.55,
+   "h": 0.06
+  },
+  "dimsSource": "estimated",
+  "dims": {
+   "l": 0.616,
+   "w": 0.55,
+   "h": 0.062
+  },
+  "normalized": {
+   "scale": 0.32386848427668036,
+   "yaw": 0
+  },
+  "sha256": "6d126d55ffb134fbfe447e4e321cb82cd77a722cd735752378f3e5f9823b892e",
+  "qa": {
+   "at": "2026-09-01T21:00:33.587Z",
+   "verdict": "approved",
+   "reason": "The asset reads as a shallow dark pothole with plausible dimensions beside the sedan, sits flush with the ground, and has visible surface shading and texture.",
+   "sheet": "experiments/agentic-3d/assets/custom.dark-flat-road-pothole/qa/frame-0002.rgb.jpg",
+   "sha256": "6d126d55ffb134fbfe447e4e321cb82cd77a722cd735752378f3e5f9823b892e"
+  }
+ },
+ {
+  "status": "approved",
+  "id": "custom.ball.red-sphere-v2",
+  "label": "Red Ball Sphere",
+  "description": "A smooth bright-red spherical ball mounted above a pale pink stem and small round base.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.ball.red-sphere-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.35,
+   "w": 0.35,
+   "h": 0.35
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 0.35,
+   "w": 0.35,
+   "h": 0.613
+  },
+  "normalized": {
+   "scale": 0.32213351520192557,
+   "yaw": 0
+  },
+  "sha256": "93a2294c66928fda3f6ca62ace9ac72cee8478ed1f701a4034e93fd0e8e64770",
+  "qa": {
+   "at": "2026-09-01T21:00:34.460Z",
+   "verdict": "approved",
+   "reason": "The asset clearly appears as a bright-red spherical ball on a pale stem and round base, with plausible scale, upright placement, visible materials, and proper ground contact.",
+   "sheet": "experiments/agentic-3d/assets/custom.ball.red-sphere-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "93a2294c66928fda3f6ca62ace9ac72cee8478ed1f701a4034e93fd0e8e64770"
+  },
+  "supersededBy": "custom.ball.red-sphere-v3"
+ },
+ {
+  "status": "rejected",
+  "id": "custom.street.stop-sign-readable-v2",
+  "label": "Readable Stop Sign",
+  "description": "A clean red octagonal STOP sign with crisp white text, a double white border, and a gray pole.",
+  "class": "prop",
+  "glbPath": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v2/model.glb",
+  "source": "meshy",
+  "declaredDims": {
+   "l": 0.1,
+   "w": 0.95,
+   "h": 2.7
+  },
+  "dimsSource": "transcript",
+  "dims": {
+   "l": 1.403,
+   "w": 0.127,
+   "h": 2.7
+  },
+  "normalized": {
+   "scale": 1.4185117916410095,
+   "yaw": 0
+  },
+  "sha256": "f6349ccc2f47fc8126de702276d748defc877567315ec52d3bf1e89405685015",
+  "qa": {
+   "at": "2026-09-01T21:00:46.834Z",
+   "verdict": "rejected",
+   "reason": "The upright sign is plausibly scaled and grounded, but its edge-on orientation prevents it from reading as the labeled readable STOP sign.",
+   "sheet": "experiments/agentic-3d/assets/custom.street.stop-sign-readable-v2/qa/frame-0002.rgb.jpg",
+   "sha256": "f6349ccc2f47fc8126de702276d748defc877567315ec52d3bf1e89405685015"
+  }
+ }
+]

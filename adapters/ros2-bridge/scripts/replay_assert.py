@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Deterministic replay assert: re-feed a bag's recorded action channel into a
-fresh env-server session and compare trace digests.
+fresh native episode session and compare trace digests.
 
-Reads ``/simforge/episode`` (begin: seed + spec; end: recorded digest) and
-``/simforge/applied_action`` (ordered canonical-JSON wire actions) from the
-bag, replays them, and exits 0 iff the recomputed digest equals the recorded
-one.
+Reads ``/simforge/episode`` (begin: record schema, seed + spec; end: recorded
+digest) and ``/simforge/applied_action`` (ordered canonical-JSON engine
+actions) from the bag, replays them through ``simforge_oss_gym``, and exits 0
+iff the recomputed digest equals the recorded one. Bags recorded under any
+other record schema are refused.
 
 Usage: replay_assert.py <bag_dir> [--episodes SPEC]  (spec defaults to the
 one recorded in the bag's begin event)
@@ -21,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from simforge_ros2_bridge.bag_io import read_bag  # noqa: E402
-from simforge_ros2_bridge.env_client import EnvServerClient, default_server_command  # noqa: E402
+from simforge_ros2_bridge.episode import RECORD_SCHEMA, BridgeSession  # noqa: E402
 from simforge_ros2_bridge.trace import TraceDigest  # noqa: E402
 
 
@@ -47,19 +48,20 @@ def main() -> int:
     if begin is None or end is None:
         print("bag is missing episode begin/end events", file=sys.stderr)
         return 2
+    schema = begin.get("record_schema")
+    if schema != RECORD_SCHEMA:
+        print(f"bag record schema {schema!r} is not the supported schema {RECORD_SCHEMA}", file=sys.stderr)
+        return 2
     if len(actions) != end["ticks"]:
         print(f"bag holds {len(actions)} actions but episode ran {end['ticks']} ticks", file=sys.stderr)
         return 2
 
     spec = args.episodes or begin["episodes"]
     digest = TraceDigest()
-    with EnvServerClient(default_server_command(spec)) as client:
-        client.hello()
-        frame = client.reset(begin["seed"], session=begin["session"])
-        digest.update(frame)
+    with BridgeSession(spec, begin["session"]) as session:
+        digest.update(session.reset(begin["seed"]))
         for action in actions:
-            frame = client.step(action or None, session=begin["session"])
-            digest.update(frame)
+            digest.update(session.step(action))
 
     recorded = end["digest"]
     replayed = digest.hexdigest()

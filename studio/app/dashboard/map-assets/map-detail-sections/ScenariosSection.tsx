@@ -4,14 +4,14 @@ import { ChevronRight, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { ScenarioStatusBadge } from "@/app/components/ScenarioStatusBadge";
 import { formatRelativeTime } from "@/app/lib/media-utils";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { buildDashboardScenarioEditorHref } from "@/app/lib/scenario/routes";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/app/components/ui/tooltip";
+} from "@simforge-oss/studio-ui/components/ui/tooltip";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
 
 /** Props for the ScenariosSection component. */

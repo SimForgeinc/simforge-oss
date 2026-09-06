@@ -11,4 +11,4 @@ ENV SIMFORGE_MANAGED_EXECUTION=1 \
     SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256=baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64
 
 USER carla
-ENTRYPOINT ["simforge-oss-carla-api"]
+ENTRYPOINT ["simforge-oss-carla-exec"]

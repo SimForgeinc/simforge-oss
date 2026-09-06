@@ -1,14 +1,20 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22.14.0-bookworm-slim AS build
+FROM node:22.14.0-bookworm-slim AS node-toolchain
+FROM rust:1.95.0-bookworm AS build
+COPY --from=node-toolchain /usr/local /usr/local
 WORKDIR /src
-RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
+RUN rustup target add wasm32-unknown-unknown \
+ && corepack enable && corepack prepare pnpm@11.18.0 --activate
 COPY --from=source /package.json /pnpm-lock.yaml /pnpm-workspace.yaml /tsconfig.base.json ./
 COPY --from=source /packages ./packages
+COPY --from=source /native/Cargo.toml /native/Cargo.lock ./native/
+COPY --from=source /native/crates ./native/crates
 COPY --from=source /services/render-worker ./services/render-worker
 RUN pnpm install --frozen-lockfile --ignore-scripts \
- && pnpm --filter @simforge-oss/render... --filter @simforge-oss/render-worker... build \
+ && pnpm --filter @simforge-oss/native-runtime rebuild wasm-pack \
+ && pnpm --filter @simforge-oss/render-worker... build \
  && pnpm deploy --legacy --filter @simforge-oss/render-worker --prod /out/worker \
- && pnpm deploy --legacy --filter @simforge-oss/render --prod /out/browser-renderer
+ && node services/render-worker/finalize-deploy.mjs /out/worker services/render-worker
 
 FROM node:22.14.0-bookworm-slim AS runtime
 ARG SOURCE_REVISION
@@ -22,13 +28,11 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && mkdir -p /opt/simforge /scratch /cache /run/simforge \
  && chown -R renderer:renderer /scratch /cache /run/simforge
 COPY --from=build --chown=renderer:renderer /out/worker /opt/simforge/worker
-COPY --from=build --chown=renderer:renderer /out/browser-renderer /opt/simforge/browser-renderer
 # Real-GPU rendering by default: ANGLE over EGL with the NVIDIA glvnd vendor.
 # Hosts may override, but launch-config drift can no longer silently fall
 # renders back to SwiftShader CPU rendering.
 ENV NODE_ENV=production \
     PORT=8080 \
-    SIMFORGE_BROWSER_ENGINE_MODULE=/opt/simforge/browser-renderer/dist/index.js \
     SIMFORGE_SCRATCH_DIR=/scratch \
     SIMFORGE_CACHE_DIR=/cache \
     SIMFORGE_GPU_LOCK=/run/simforge/gpu.lock \

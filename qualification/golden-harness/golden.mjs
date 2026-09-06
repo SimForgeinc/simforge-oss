@@ -2,11 +2,11 @@
 /**
  * Native render golden harness — WSB6 (DeterminismCI).
  *
- * Drives the Bevy headless spike binary (scripts/renderer-spike/bevy-spike,
- * later renderer/render-core) to record and verify golden pass hashes per GPU
+ * Drives `native-render-job` (renderer/render-core; identity-stamped
+ * single-submission captures) to record and verify golden pass hashes per GPU
  * fingerprint, with a frame-time regression budget. Evidence manifests extend
  * `simforge-oss.render-determinism-manifest.v1`; the additions are documented in
- * docs/native-golden-ci.md.
+ * docs/engineering/native-golden-ci.md.
  *
  * Commands:
  *   node qualification/golden-harness/golden.mjs record  <scene>   run twice, require byte-stable, write golden
@@ -122,22 +122,29 @@ function loadScene(id) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
-/** Map logical pass key -> output file (scene.passPaths wins over spike layout). */
+/** Map logical pass key -> output file (scene.passPaths wins over the job layout). */
 function passFiles(outPrefix, scene) {
   if (scene?.passPaths) {
     return Object.fromEntries(Object.entries(scene.passPaths).map(([k, rel]) => [k, `${outPrefix}/${rel}`]));
   }
-  return spikePassFiles(outPrefix);
+  return jobPassFiles(outPrefix, scene);
 }
 
-/** Spike/native-render output layout. */
-function spikePassFiles(outPrefix) {
-  return {
-    rgb0: `${outPrefix}.rgb0.png`,
-    id0: `${outPrefix}.id.png`,
-    depth0: `${outPrefix}.depth.f32.bin`, // raw Depth32Float buffer, not the PNG visualization
-    mv0: `${outPrefix}.mv.f32.bin`, // WSB2 motion vectors, raw Rg16Float (naming confirmed; gate when the pass ships)
-  };
+/**
+ * `native-render-job` output layout: the last scheduled frame of each camera
+ * (`frames/frame-NNNNN.<sensor>.<pass>`), so the hashed frame is steady state
+ * after the job's own warmup.
+ */
+function jobPassFiles(outPrefix, scene) {
+  const a = scene.rendererArgs;
+  const frame = String(Math.max(0, a.frames - 1)).padStart(5, '0');
+  const out = {};
+  for (let c = 0; c < Math.max(1, a.cameras); c += 1) {
+    out[`rgb${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.rgb.png`;
+    out[`id${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.id.png`;
+    out[`depth${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.depth.f32.bin`; // raw Depth32Float rows
+  }
+  return out;
 }
 
 function hashPasses(outPrefix, passes, hashScene) {
@@ -145,47 +152,63 @@ function hashPasses(outPrefix, passes, hashScene) {
   const out = {};
   for (const key of passes) {
     const f = map[key];
-    if (!fs.existsSync(f)) fail(1, `expected pass output missing: ${f}`);
+    if (!f || !fs.existsSync(f)) fail(1, `expected pass output missing: ${f ?? key}`);
     out[key] = { file: path.basename(f), sha256: sha256File(f), bytes: fs.statSync(f).size };
   }
-  // Legend is deterministic metadata; recorded as diagnostic, not a gate.
-  const legend = `${outPrefix}.legend.json`;
-  if (fs.existsSync(legend)) out.legend = { file: 'legend.json', sha256: sha256File(legend), diagnostic: true };
   return out;
 }
 
-function buildSpikeInvocation(scene, glbs, outPrefix) {
+/**
+ * Build the renderer argv. Scenes with an `invocationTemplate` drive their own
+ * binary; otherwise `rendererArgs` becomes a `simforge.native-render-job/v1`
+ * job file (identity-stamped single-submission captures through
+ * `SceneApp::render_once`) rendered into the `outPrefix` directory.
+ */
+function buildInvocation(scene, glbs, outPrefix) {
   if (scene.invocationTemplate) {
     // Generic argv template ({glbs} -> csv, {out} -> output prefix/dir).
     return scene.invocationTemplate.map((t) =>
       t === '{glbs}' ? glbs.join(',') : t.replaceAll('{out}', outPrefix));
   }
   const a = scene.rendererArgs;
-  return [
-    '--glbs', glbs.join(','),
-    '--eye', ...a.eye.map(String),
-    '--target', ...a.target.map(String),
-    '--fov', String(a.fov), '--width', String(a.width), '--height', String(a.height),
-    '--warmup', String(a.warmup), '--frames', String(a.frames),
-    '--cameras', String(a.cameras),
-    '--sun-elev', String(a.sunElev), '--sun-azim', String(a.sunAzim),
-    '--lux', String(a.lux), '--ambient', String(a.ambient),
-    // Forward-compatible flags for newer binaries (e.g. WSB4 --rung/--profile/--weather).
-    ...(scene.extraArgs ?? []),
-    '--out', outPrefix,
-  ];
+  const cameras = Array.from({ length: Math.max(1, a.cameras) }, (_, c) => ({
+    sensorId: `cam${c}`, width: a.width, height: a.height, fovDeg: a.fov, eye: a.eye, target: a.target,
+  }));
+  const job = {
+    schema: 'simforge.native-render-job/v1',
+    profile: scene.profile ?? 'sensor',
+    lighting: {
+      sun_elev_deg: a.sunElev, sun_azim_deg: a.sunAzim, sun_lux: a.lux, ambient: a.ambient,
+      ...(scene.lighting ?? {}),
+    },
+    glbs,
+    warmupFrames: a.warmup,
+    passes: { rgb: true, id: true, depth: true },
+    schedule: Array.from({ length: a.frames }, (_, frameIndex) => ({ frameIndex, cameras })),
+    outDir: outPrefix,
+  };
+  const jobPath = `${outPrefix}.job.json`;
+  fs.mkdirSync(outPrefix, { recursive: true });
+  fs.writeFileSync(jobPath, JSON.stringify(job, null, 2));
+  return ['--job', jobPath];
 }
 
-function runSpike(binPath, invocation, label) {
-  console.log(`[golden-harness] spike run ${label}: ${path.basename(binPath)} ${invocation.join(' ')}`);
+function runRenderer(binPath, invocation, label) {
+  console.log(`[golden-harness] render ${label}: ${path.basename(binPath)} ${invocation.join(' ')}`);
   const r = spawnSync(binPath, invocation, { encoding: 'utf8', timeout: 600_000 });
   if (r.status !== 0) {
-    fail(1, `spike exited ${r.status}\nstdout tail:\n${(r.stdout ?? '').slice(-2000)}\nstderr tail:\n${(r.stderr ?? '').slice(-2000)}`);
+    fail(1, `renderer exited ${r.status}\nstdout tail:\n${(r.stdout ?? '').slice(-2000)}\nstderr tail:\n${(r.stderr ?? '').slice(-2000)}`);
   }
-  const timingsLine = (r.stdout ?? '').split('\n').find((l) => l.startsWith('TIMINGS '));
-  // Binaries without timing instrumentation (e.g. sensor-capture) are allowed;
-  // their scenes opt out of the frame-time gate.
-  return timingsLine ? JSON.parse(timingsLine.slice('TIMINGS '.length)) : null;
+  // `native-render-job` prints its timings JSON as the last stdout line;
+  // binaries without timing instrumentation (e.g. sensor-capture) are
+  // allowed and their scenes opt out of the frame-time gate.
+  const lines = (r.stdout ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const last = lines.at(-1);
+  if (!last?.startsWith('{')) return null;
+  const t = JSON.parse(last);
+  return typeof t.avg_frame_ms === 'number'
+    ? { ...t, measured_frames: t.measured_frames ?? t.frames_rendered }
+    : null;
 }
 
 function cargoVersions() {
@@ -193,7 +216,6 @@ function cargoVersions() {
   let lock = '';
   for (const cand of [
     path.join(repoRoot, 'renderer/Cargo.lock'),
-    path.join(repoRoot, 'scripts/renderer-spike/bevy-spike/Cargo.lock'),
   ]) {
     if (fs.existsSync(cand)) { lock = fs.readFileSync(cand, 'utf8'); break; }
   }
@@ -208,16 +230,13 @@ function rustcVersion() {
 }
 
 function resolveBinary(args, scene) {
-  // Production path first (renderer/render-core bin `native-render`, byte-identical
-  // CLI to the spike today); spike binary kept as fallback for pre-scaffold trees.
   const candidates = [
     args.bin,
     scene?.binary && path.join(repoRoot, scene.binary),
-    path.join(repoRoot, 'renderer/target/release/native-render'),
-    path.join(repoRoot, 'scripts/renderer-spike/bevy-spike/target/release/bevy-spike'),
+    path.join(repoRoot, 'renderer/target/release/native-render-job'),
   ].filter(Boolean);
   const bin = candidates.find((p) => fs.existsSync(p));
-  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release in renderer/)`);
+  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml)`);
   return bin;
 }
 
@@ -291,8 +310,8 @@ async function cmdRecord(args) {
   for (const label of ['runA', 'runB']) {
     const prefix = path.join(artifacts, label, sceneId);
     fs.mkdirSync(path.dirname(prefix), { recursive: true });
-    const invocation = buildSpikeInvocation(scene, glbs, prefix);
-    const timings = runSpike(binPath, invocation, label);
+    const invocation = buildInvocation(scene, glbs, prefix);
+    const timings = runRenderer(binPath, invocation, label);
     runs.push({
       timings,
       passHashes: hashPasses(prefix, scene.expectedPasses, scene),
@@ -389,8 +408,8 @@ async function verifyOne(args, sceneId) {
   fs.mkdirSync(artifacts, { recursive: true });
   const prefix = path.join(artifacts, 'verify-run', sceneId);
   fs.mkdirSync(path.dirname(prefix), { recursive: true });
-  const invocation = buildSpikeInvocation(scene, glbs, prefix);
-  const timings = runSpike(binPath, invocation, 'verify');
+  const invocation = buildInvocation(scene, glbs, prefix);
+  const timings = runRenderer(binPath, invocation, 'verify');
   const observed = hashPasses(prefix, [...scene.expectedPasses, ...(Object.keys(golden.passHashes).includes('legend') ? ['legend'] : [])], scene);
 
   // Gate 1: pass-hash drift.

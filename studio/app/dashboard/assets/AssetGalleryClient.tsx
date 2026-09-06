@@ -2,12 +2,12 @@
 
 import { Boxes, Loader2, SearchX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/app/components/ui/button";
-import { EmptyState } from "@/app/components/ui/empty-state";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import {
   type GalleryActorClass,
   type GalleryAssetSummary,
-} from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { AssetDetailDrawer } from "./AssetDetailDrawer";
 import { AssetGalleryGrid, AssetGalleryGridSkeleton } from "./AssetGalleryGrid";
 import { AssetGalleryHeader, type GallerySection } from "./AssetGalleryHeader";

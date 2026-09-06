@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SimForge · Blender Geometry Workbench</title>
+  <link rel="stylesheet" href="/workbench.css">
+  <script src="/workbench.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div><div class="eyebrow">SIMFORGE / LOCAL AUTHORING</div><h1>Blender geometry workbench</h1></div>
+    <div class="status-pill"><span id="status-dot" class="status-dot"></span><span id="status-label">Connecting</span></div>
+  </header>
+  <main>
+    <section class="scene-panel" aria-label="Rendered scene and camera controls">
+      <div class="toolbar">
+        <div class="scene-title"><strong id="scene-name">Scene</strong><span class="subtle">Blender-native · render on request</span></div>
+        <div class="toolbar-actions">
+          <button id="home" data-action disabled title="Restore the original camera">Home</button>
+          <button id="frame-selection" data-action disabled title="Aim and fit the camera to selected geometry">Frame selection</button>
+          <button id="measure" data-action disabled aria-pressed="false">Measure distance</button>
+        </div>
+      </div>
+      <div id="viewport" class="viewport" tabindex="0" role="region" aria-label="Rendered scene. Click to select; drag to orbit; Shift drag to pan; scroll to zoom. Keyboard arrows orbit; Shift arrows pan; plus and minus zoom; H restores home camera." aria-describedby="camera-help">
+        <img id="frame" alt="Blender-rendered scene" draggable="false" hidden>
+        <div id="empty-frame" class="empty-frame"><div class="loader"></div><strong>Preparing the scene</strong><span id="loading-detail">Connecting to the local Blender session…</span></div>
+        <div id="viewport-badge" class="viewport-badge" hidden>Rendering…</div>
+        <div id="pick-marker" class="pick-marker" hidden aria-hidden="true"></div>
+        <svg id="measure-overlay" viewBox="0 0 1 1" preserveAspectRatio="none" hidden aria-hidden="true"><line id="measure-line" vector-effect="non-scaling-stroke"/><circle id="measure-from" r=".008"/><circle id="measure-to" r=".008"/></svg>
+        <div id="gesture-hint" class="gesture-hint" hidden></div>
+      </div>
+      <div class="camera-help" id="camera-help"><span><b>Click</b> select · <b>Drag</b> orbit · <b>Shift + drag</b> pan · <b>Scroll</b> zoom</span><span>Camera renders when the gesture ends</span></div>
+      <div class="render-controls">
+        <label>Renderer<select id="engine" data-action disabled><option value="cycles">Cycles</option><option value="eevee">Eevee</option></select></label>
+        <label>Samples<input id="samples" data-action disabled type="number" min="1" max="4096" step="1" value="32" inputmode="numeric"></label>
+        <button id="render" data-action disabled>Render frame</button>
+        <div class="render-stats"><span>Last render <strong id="render-time">—</strong></span><span>Revision <strong id="revision">—</strong></span></div>
+      </div>
+      <div class="session-line"><span id="counts">Waiting for scene inventory</span><span id="camera-position"></span></div>
+      <div id="feedback" class="feedback" role="status" aria-live="polite">Connecting to Blender…</div>
+      <div id="measurement" class="feedback" role="status" hidden></div>
+      <div id="error-box" class="error-box" role="alert" hidden><div><strong>Action needs attention</strong><pre id="error-text"></pre></div><button id="dismiss-error" aria-label="Dismiss error">Dismiss</button></div>
+    </section>
+    <aside class="inspector" aria-label="Geometry inspector and Python editor">
+      <section class="selection-section">
+        <div class="section-heading"><h2>Selection</h2><span class="tag">GEOMETRY</span></div>
+        <p id="selection-empty" class="subtle">Click a surface in the rendered image to inspect its mesh and set an edit position.</p>
+        <dl id="selection-details" hidden>
+          <dt>Object</dt><dd id="selection-name"></dd>
+          <dt>Source</dt><dd id="selection-source" class="source-path"></dd>
+          <dt>Hit position</dt><dd id="selection-point"></dd>
+          <dt>Normal</dt><dd id="selection-normal"></dd>
+          <dt>Mesh</dt><dd id="selection-mesh"></dd>
+          <dt>Face</dt><dd id="selection-face"></dd>
+          <dt>Coordinates</dt><dd id="selection-frame"></dd>
+        </dl>
+      </section>
+      <section class="editor-section">
+        <div class="section-heading"><h2>Python edit</h2><button id="starter" class="quiet" title="Replace the editor with the orange barrier example">Load example</button></div>
+        <p class="editor-help">Snapshot Blender API. Available: <code>bpy</code>, <code>bmesh</code>, <code>math</code>, <code>Vector</code>, <code>Matrix</code>, <code>selected</code>, <code>hit</code>. Hit coordinates are Blender Z-up, in meters.</p>
+        <label for="code" class="sr-only">Isolated Blender Python geometry code</label>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-describedby="edit-help"></textarea>
+        <div class="edit-actions"><button id="apply" class="primary" data-action disabled>Apply & render</button><span class="subtle">Ctrl / ⌘ + Enter</span></div>
+        <p id="edit-help" class="editor-help">Edits run in a disposable confined Blender worker. Supported inert geometry is imported and rendered atomically; unsupported semantics fail closed. Failed edits roll back. Undo and redo restore geometry snapshots, not just images.</p>
+        <div class="history-controls"><button id="undo" data-action disabled>Undo <span id="undo-depth">0</span></button><button id="redo" data-action disabled>Redo <span id="redo-depth">0</span></button><button id="reset" class="danger" data-action disabled>Reset scene</button></div>
+        <p id="last-edit" class="last-edit subtle"></p>
+      </section>
+      <section class="scope-note"><strong>Geometry is not simulation truth</strong><p>Visual geometry and materials only. These edits do not update SimForge physics, road rules, or NuRec splats. Original source meshes and textures remain unchanged.</p><strong>Local isolated worker</strong><p>Worker code has no networking and can read only its snapshot and runtime; writes stay in per-job output. Only inert data enters the renderer. Linux Landlock and seccomp are required. This is not a VM or protection against native Blender/kernel vulnerabilities. Keep the trusted HTTP service loopback-only.</p></section>
+    </aside>
+  </main>
+</body>
+</html>

@@ -37,7 +37,7 @@ import {
   RENDERER_CONTRACT_VERSION,
   type CreateHifiPreviewInput,
   type HifiPreviewProvenance,
-} from "../app/lib/hifi-preview/contracts";
+} from "@simforge-oss/studio-ui/lib/hifi-preview/contracts";
 import {
   completeHifiPreview,
   failHifiPreview,
@@ -69,6 +69,24 @@ function cameraCoverage(response: Record<string, unknown>): number {
   return record && typeof record === "object" && "fraction" in record
     ? Number(record.fraction)
     : Number.NaN;
+}
+
+/**
+ * V5 identity of the single GPU submission the response payloads were copied
+ * from. A response without it is a protocol violation, not a default.
+ */
+function frameIdentity(response: Record<string, unknown>): HifiPreviewProvenance["submission"] {
+  const frame = response.frame;
+  if (
+    frame === null || typeof frame !== "object"
+    || !("simTick" in frame) || typeof frame.simTick !== "number"
+    || !("sceneRevision" in frame) || typeof frame.sceneRevision !== "number"
+    || !("rigRevision" in frame) || typeof frame.rigRevision !== "number"
+    || !("generation" in frame) || typeof frame.generation !== "number"
+  ) {
+    throw new HifiPreviewFailure("renderer_frame_identity_missing", "render response carries no V5 frame identity");
+  }
+  return { simTick: frame.simTick, sceneRevision: frame.sceneRevision, rigRevision: frame.rigRevision, generation: frame.generation };
 }
 
 
@@ -201,7 +219,7 @@ class NativeRenderServiceClient {
 
 /** Resolve the long-lived render service binary (WSB5). */
 export function resolveServiceBinary(): string | null {
-  const override = process.env.SIMFORGE_NATIVE_RENDER_SERVICE?.trim();
+  const override = process.env.SIMFORGE_NATIVE_RENDER_BINARY?.trim();
   // Keep resolution runtime-only: this module is also imported by a Next
   // route, whose bundler treats `new URL("../..", import.meta.url)` as a
   // module request. Package scripts run from `studio/`; direct invocations
@@ -268,7 +286,7 @@ export async function executeHifiPreview(
   if (!binary) {
     throw new HifiPreviewFailure(
       "renderer_unavailable",
-      "native-render-service binary not found (build renderer/service or set SIMFORGE_NATIVE_RENDER_SERVICE)",
+      "native-render-service binary not found (build renderer/service or set SIMFORGE_NATIVE_RENDER_BINARY)",
     );
   }
 
@@ -354,12 +372,6 @@ export async function executeHifiPreview(
           }],
           ...(request.scene.actors.length > 0 ? { tick_index: 0 } : {}),
         };
-        // A camera pose transition needs one service request to settle all
-        // readback buffers before the exported retry. This is still one
-        // fallback pose; no intermediate image is accepted or stored.
-        const settle = attempt === "framed"
-          ? await client!.request("render", fields)
-          : null;
         const response = await client!.request("render", {
           ...fields,
           export_dir: attemptExportDir,
@@ -368,7 +380,7 @@ export async function executeHifiPreview(
           response,
           exportDir: attemptExportDir,
           coverage: cameraCoverage(response),
-          renderMs: Number(response.server_ms ?? 0) + Number(settle?.server_ms ?? 0),
+          renderMs: Number(response.server_ms ?? 0),
         };
       },
     });
@@ -433,6 +445,7 @@ export async function executeHifiPreview(
         sha256: frameSha256,
         sizeBytes: pngBytes.byteLength,
       },
+      submission: frameIdentity(rendered.response),
       map: {
         tileCount: 1,
         payloads: nativeMap.payloads.map((payload) => ({

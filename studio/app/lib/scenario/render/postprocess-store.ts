@@ -1,7 +1,7 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { canonicalJsonSha256, scenarioId } from "@/app/lib/scenario/core";
-import type { ScenarioPostprocessInput } from "./contracts";
+import type { ScenarioPostprocessInput } from "@simforge-oss/studio-host";
 
 /**
  * Creating Cosmos (#139, #144) and VLM (#140, #145) postprocess jobs.

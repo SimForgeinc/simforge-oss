@@ -5,7 +5,7 @@ import {
   type BehaviorAction,
   type BehaviorClip,
   type BehaviorTrigger,
-} from "../scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 import {
   clipFidelity,
   fidelityContextForActor,
@@ -164,8 +164,6 @@ describe("fidelityContextForActor", () => {
       route_direction: "forward",
       lane_facing: "with_lane",
       speed_kph: 40,
-      autopilot: true,
-      timeline: [],
       sensors: [],
       ...overrides,
     } as ScenarioEditorActorDraft;

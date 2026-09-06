@@ -1,11 +1,18 @@
-import { describe, expect, it } from 'vitest';
+/**
+ * Map-bound (`scene_absolute`) Studio documents compile without site matching
+ * and execute in the native runtime. Requires installed map assets and the
+ * built N-API addon.
+ */
+
+import { compileTemplate, loadMap } from '@simforge-oss/compiler/node';
+import { runSimulation } from '@simforge-oss/engine/node';
 import { parseTemplate, TemplateDocument } from '@simforge-oss/scenario';
-import { materializeMapBound } from '@simforge-oss/compiler/node';
-import { buildSeededPlacementRoute, createFixedStepSimulation, runSimulation } from '@simforge-oss/engine';
-import { loadMap } from '@simforge-oss/compiler/node';
+import { describe, expect, it } from 'vitest';
+
 import { localMapAssetRequirement } from './asset-test-utils.js';
 
 const studioMapAssets = localMapAssetRequirement(['yale-st-palo-alto-ca', 'belmont-office-park-belmont-ca']);
+
 function xy(point: { x: number; y: number } | readonly [number, number]): { x: number; y: number } {
   return Array.isArray(point) ? { x: point[0]!, y: point[1]! } : point as { x: number; y: number };
 }
@@ -20,94 +27,12 @@ describe.skipIf(!studioMapAssets.available)(`map-bound Studio materialization${s
     });
     document.setClip(undefined, 0);
 
-    const product = materializeMapBound(document.toJSON(), bundle);
+    const product = compileTemplate(parseTemplate(document.toJSON()), bundle, null);
 
     expect(product.manifest.feasible).toBe(true);
     expect(product.manifest.replayKey.siteId).toBe(`studio:${bundle.mapId}`);
     expect(product.input.actors).toEqual([]);
     expect(product.input.clipSeconds).toBe(20);
-  }, 30_000);
-
-  it('compiles the actor-owned initial lanePath and exact 30 mph profile without timeline indirection', async () => {
-    const bundle = await loadMap('yale-st-palo-alto-ca');
-    const actorId = 'vehicle-random-turns';
-    const candidate = Object.values(bundle.topology.lanes)
-      .filter((lane) => lane.laneType === 'driving')
-      .sort((a, b) => a.rsl.localeCompare(b.rsl))
-      .map((lane) => ({
-        lane,
-        planned: buildSeededPlacementRoute(bundle.graph, {
-          startRsl: lane.rsl,
-          startStorageS: 0,
-          requiredDownstreamM: 350,
-          seed: 'studio-random-turns-materializer',
-          actorId,
-        }),
-      }))
-      .find((item) => item.planned.ok);
-    expect(candidate).toBeDefined();
-    if (!candidate || !candidate.planned.ok) throw new Error('test map has no 350 m connected driving route');
-    const spawnS = candidate.planned.route.sOfLaneStorage(candidate.lane.rsl, 0)!;
-    const spawn = candidate.planned.route.poseAt(spawnS);
-    const [roadId, section, laneId] = candidate.lane.rsl.split(':');
-    const exactKph = 13.4112 * 3.6;
-    const doc = TemplateDocument.create({
-      name: 'Random turns materializer',
-      sourceMap: { mapId: bundle.mapId, mapName: bundle.mapId },
-      anchor: { features: [], pin: { mapId: bundle.mapId } },
-    });
-    doc.addRole({
-      id: actorId,
-      kind: 'scene_absolute',
-      actor: { class: 'car', catalogId: 'vehicle.sedan', static: false, sensors: [] },
-      initialSpeedKph: exactKph,
-      pose: { position: { x: spawn.point.x, y: 0, z: -spawn.point.y }, headingRad: spawn.headingRad },
-      laneRef: { roadId: roadId!, section: Number(section), laneId: Number(laneId), s: 0, t: 0, headingOffsetRad: 0 },
-      initialRoute: { mode: 'lanePath', lanes: [...candidate.planned.lanes] },
-      essentiality: 'required',
-    });
-    doc.addInteraction({
-      id: `speed_${actorId}_initial`, actor: actorId, label: '30 mph',
-      trigger: { kind: 'at', t: 0 }, verb: 'speed',
-      target: { mode: 'absolute', valueKph: exactKph },
-      dynamics: { shape: 'linear', constraint: 'time', value: 0.25 },
-    });
-
-    const product = materializeMapBound(doc.toJSON(), bundle);
-    const actor = product.input.actors.find((item) => item.id === actorId)!;
-    expect(actor.initial.speedMps).toBe(13.4112);
-    expect(actor.behavior.cruiseSpeedMps).toBe(13.4112);
-    expect(actor.behavior.route).toEqual({ kind: 'lanePath', lanes: candidate.planned.lanes });
-    expect(product.input.interactions.some((item) => item.id === `route_${actorId}_initial`)).toBe(false);
-    expect(product.manifest.notes.some((note) => note.path.includes(`route_${actorId}_initial`))).toBe(false);
-
-    const canonicalRole = doc.role(actorId)!;
-    if (canonicalRole.kind !== 'scene_absolute') throw new Error('test actor must be scene_absolute');
-    const { initialRoute: _initialRoute, ...legacyRole } = canonicalRole;
-    const legacyProduct = materializeMapBound(parseTemplate({
-      ...doc.toJSON(),
-      roles: [legacyRole],
-      choreography: {
-        ...doc.data.choreography,
-        interactions: [{
-          id: `route_${actorId}_initial`, actor: actorId, label: 'Random turns',
-          trigger: { kind: 'at', t: 0 }, verb: 'route',
-          target: { mode: 'lanePath', lanes: [...candidate.planned.lanes] },
-        }, ...doc.data.choreography.interactions],
-      },
-    }), bundle);
-    expect(legacyProduct.input.actors.find((item) => item.id === actorId)?.behavior.route).toEqual(actor.behavior.route);
-    expect(legacyProduct.manifest.notes).toContainEqual(expect.objectContaining({
-      path: `choreography.interactions.route_${actorId}_initial`, impact: 'informational',
-    }));
-    const result = runSimulation(product.input, { graph: bundle.graph, guards: 'throw' });
-    expect(result.trace.ticks.t.at(-1)).toBe(20);
-    const speedTrack = result.trace.ticks.actors[actorId]!.speedMps;
-    // The profile is authored at exactly 30 mph, while dynamic playback may
-    // slow for map controls or route geometry before the clip ends.
-    expect(speedTrack[0]).toBeCloseTo(13.4112, 3);
-    expect(Math.max(...speedTrack)).toBeLessThanOrEqual(13.4112 * 1.05);
-    expect(result.trace.metrics.collisions).toEqual([]);
   }, 30_000);
 
   it('materializes a freshly placed v2 vehicle and simulates the exact clip duration', async () => {
@@ -131,10 +56,11 @@ describe.skipIf(!studioMapAssets.available)(`map-bound Studio materialization${s
       laneRef: { roadId: String(lane.roadId), section: lane.section, laneId: lane.laneId, s: 0, t: 0, headingOffsetRad: 0 },
       essentiality: 'required',
     });
-    const product = materializeMapBound(doc.toJSON(), bundle);
+    const product = compileTemplate(parseTemplate(doc.toJSON()), bundle, null);
     expect(product.manifest.notes).toEqual([]);
     expect(product.input.actors.map((actor) => actor.id)).toEqual(['vehicle-1']);
-    const result = runSimulation(product.input, { graph: bundle.graph, guards: 'throw' });
+    const result = runSimulation(product.scenario, { graph: bundle.graph });
+    expect(result.issues.filter((issue) => issue.severity === 'error')).toEqual([]);
     expect(result.trace.ticks.t.at(-1)).toBe(product.input.clipSeconds);
     expect(result.trace.header.inputHash).toBe(product.manifest.inputHash);
   }, 30_000);
@@ -161,7 +87,7 @@ describe.skipIf(!studioMapAssets.available)(`map-bound Studio materialization${s
       essentiality: 'required' as const,
     });
     doc.addRole(role('vehicle-1', 0));
-    doc.addRole(role('vehicle-2', Math.min(20, bundle.graph.geometry(lane.rsl)!.lengthM / 2)));
+    doc.addRole(role('vehicle-2', Math.min(20, bundle.graph.laneLengthM(lane.rsl) / 2)));
     doc.addInteraction({
       id: 'accelerate', actor: 'vehicle-1', verb: 'speed', trigger: { kind: 'at', t: 1 },
       target: { mode: 'absolute', valueKph: 8 }, dynamics: { shape: 'linear', constraint: 'time', value: 1 },
@@ -192,12 +118,12 @@ describe.skipIf(!studioMapAssets.available)(`map-bound Studio materialization${s
       ...doc.toJSON(),
       props: [{ id: 'box-1', catalogId: 'hazard.cardboard_box', pose: { laneOffset: 0, s: 30, tFrac: 0, headingOffsetRad: 0 }, essentiality: 'required' }],
     });
-    const product = materializeMapBound(template, bundle);
+    const product = compileTemplate(template, bundle, null);
     expect(product.input.interactions.map((interaction) => interaction.id).sort()).toEqual(
       ['accelerate', 'despawn', 'indicator', 'offset', 'reroute'].sort(),
     );
     expect(product.input.props.map((prop) => prop.id)).toEqual(['box-1']);
-    const result = runSimulation(product.input, { graph: bundle.graph, guards: 'collect' });
+    const result = runSimulation(product.scenario, { graph: bundle.graph });
     expect(result.trace.events.some((event) => event.kind === 'state_set' && event.actorId === 'vehicle-1')).toBe(true);
     expect(result.trace.ticks.actors['vehicle-2']!.present.at(-1)).toBe(0);
     expect(result.trace.ticks.t.at(-1)).toBe(product.input.clipSeconds);
@@ -238,69 +164,10 @@ describe.skipIf(!studioMapAssets.available)(`map-bound Studio materialization${s
       target: { mode: 'relative', dk: lane.adjacentLanes?.left?.sameDirection ? 1 : -1 },
       dynamics: { shape: 'sinusoidal', constraint: 'time', value: 2 },
     });
-    const product = materializeMapBound(doc.toJSON(), bundle);
+    const product = compileTemplate(parseTemplate(doc.toJSON()), bundle, null);
     expect(product.manifest.arrival.some((solution) => solution.interactionId === 'arrival-brake')).toBe(true);
     expect(product.input.interactions.find((interaction) => interaction.id === 'arrival-brake')?.trigger.kind).toBe('at');
     expect(product.input.interactions.find((interaction) => interaction.id === 'change-lane')).toMatchObject({ verb: 'changeLane' });
   }, 30_000);
 
-  it('keeps two distinct Belmont authoring poses exact at Play t=0', async () => {
-    const bundle = await loadMap('belmont-office-park-belmont-ca');
-    const speedKph = 48.28032;
-    const requiredDownstreamM = speedKph / 3.6 * 20 + 10;
-    const usable = Object.values(bundle.topology.lanes)
-      .filter((lane) => lane.laneType === 'driving')
-      .sort((a, b) => a.rsl.localeCompare(b.rsl))
-      .flatMap((lane, ordinal) => {
-        const storageS = (lane.widthSamples?.at(-1)?.s ?? 0) * (ordinal % 2 ? .25 : .65);
-        const planned = buildSeededPlacementRoute(bundle.graph, {
-          startRsl: lane.rsl, startStorageS: storageS, requiredDownstreamM,
-          seed: 'belmont-two-car-t0', actorId: `authored-${ordinal}`,
-        });
-        return planned.ok ? [{ lane, storageS, planned }] : [];
-      });
-    const first = usable[0]!;
-    const firstRouteS = first.planned.route.sOfLaneStorage(first.lane.rsl, first.storageS)!;
-    const firstPoint = first.planned.route.poseAt(firstRouteS).point;
-    const second = usable.find((candidate) => {
-      const routeS = candidate.planned.route.sOfLaneStorage(candidate.lane.rsl, candidate.storageS)!;
-      const point = candidate.planned.route.poseAt(routeS).point;
-      return Math.hypot(point.x - firstPoint.x, point.y - firstPoint.y) > 100;
-    })!;
-    const doc = TemplateDocument.create({
-      name: 'Belmont exact authoring t0', sourceMap: { mapId: bundle.mapId, mapName: bundle.mapId },
-      anchor: { features: [], pin: { mapId: bundle.mapId } },
-    });
-    doc.setClip(20, 0);
-    for (const [ordinal, candidate] of [first, second].entries()) {
-      const id = `authored-car-${ordinal + 1}`;
-      const routeS = candidate.planned.route.sOfLaneStorage(candidate.lane.rsl, candidate.storageS)!;
-      const pose = candidate.planned.route.poseAt(routeS);
-      const [roadId, section, laneId] = candidate.lane.rsl.split(':');
-      doc.addRole({
-        id, kind: 'scene_absolute', actor: { class: 'car', catalogId: 'vehicle.sedan', static: false, sensors: [] },
-        initialSpeedKph: speedKph,
-        pose: { position: { x: pose.point.x, y: 0, z: -pose.point.y }, headingRad: pose.headingRad },
-        laneRef: { roadId: roadId!, section: Number(section), laneId: Number(laneId), s: candidate.storageS, t: 0, headingOffsetRad: 0 },
-        initialRoute: { mode: 'lanePath', lanes: [...candidate.planned.lanes] }, essentiality: 'required',
-      });
-    }
-
-    const product = materializeMapBound(doc.toJSON(), bundle);
-    const play = (): ReturnType<typeof createFixedStepSimulation> => createFixedStepSimulation(product.input, { graph: bundle.graph, guards: 'throw' });
-    const firstPlay = play().advance(2, { trace: true }).trace!;
-    const resetPlay = play().advance(2, { trace: true }).trace!;
-
-    for (const actor of product.input.actors) {
-      const role = doc.role(actor.id)!;
-      if (role.kind !== 'scene_absolute') throw new Error('fixture role must be scene_absolute');
-      const track = firstPlay.ticks.actors[actor.id]!;
-      expect(actor.initial.pose).toMatchObject({ x: role.pose.position.x, z: role.pose.position.z });
-      expect(firstPlay.ticks.t[0]).toBe(0);
-      expect(Math.hypot(track.x[0]! - role.pose.position.x, -track.y[0]! - role.pose.position.z)).toBeLessThan(1e-9);
-      expect(Math.hypot(track.x[1]! - track.x[0]!, track.y[1]! - track.y[0]!)).toBeLessThan(speedKph / 3.6 * product.input.dt * 1.1);
-      expect(resetPlay.ticks.actors[actor.id]!.x[0]).toBe(track.x[0]);
-      expect(resetPlay.ticks.actors[actor.id]!.y[0]).toBe(track.y[0]);
-    }
-  }, 30_000);
 });

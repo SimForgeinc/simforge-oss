@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ScenarioDocument } from '../document.js';
-import { deserializeScenario } from '../migrate.js';
-import { canonicalize, roundFloat, serializeScenario, FLOAT_DECIMALS } from '../serialize.js';
+import { canonicalize, parseScenario, roundFloat, serializeScenario, FLOAT_DECIMALS } from '../serialize.js';
 import { CREATED_AT, testOptions, validScenario } from './fixtures.js';
 
 describe('roundFloat', () => {
@@ -84,8 +83,8 @@ describe('serializeScenario', () => {
       laneRef: { roadId: '9', section: 1, laneId: 2, s: 1 / 9 },
     });
     const once = doc.serialize();
-    const twice = serializeScenario(deserializeScenario(once));
-    const thrice = serializeScenario(deserializeScenario(twice));
+    const twice = serializeScenario(parseScenario(JSON.parse(once)));
+    const thrice = serializeScenario(parseScenario(JSON.parse(twice)));
     expect(twice).toBe(once);
     expect(thrice).toBe(once);
   });
@@ -93,7 +92,7 @@ describe('serializeScenario', () => {
   it('preserves extension payloads verbatim (modulo key order)', () => {
     const doc = validScenario();
     doc.extensions = { 'tool.x': { nested: [1, 2, { deep: true }], s: 'text' } };
-    const back = deserializeScenario(serializeScenario(doc));
+    const back = parseScenario(JSON.parse(serializeScenario(doc)));
     expect(back.extensions).toEqual(doc.extensions);
   });
 });

@@ -1,9 +1,9 @@
-//! scene-state.v1 consumer types (serde). Mirrors
+//! simforge.scene-state.v1 consumer types (serde). Mirrors
 //! packages/scene-state/src/schema.ts and docs/native-renderer/scene-state-v1.md.
 
 use serde::{Deserialize, Serialize};
 
-pub const SCENE_STATE_VERSION: &str = "scene-state.v1";
+pub const SCENE_STATE_VERSION: &str = "simforge.scene-state.v1";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]

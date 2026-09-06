@@ -5,7 +5,7 @@ import type {
   ScenarioValidationRepairKind,
 } from "@simforge-oss/studio-shared";
 
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ScenarioValidationState } from "@/app/lib/maps/frontend/use-scenario-validation";
 
 /**

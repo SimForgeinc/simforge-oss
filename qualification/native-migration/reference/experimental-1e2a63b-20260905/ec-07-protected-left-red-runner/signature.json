@@ -1,0 +1,375 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "8e57253a58b9359ed3e69a36db4ad4e08b3900269d9c21e42d14c68addb1206d",
+  "traceDigest": "6c9a2920cb6e01c4da2aceeee006740ca8a425deac418efbeb0d499a15deaf5e",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 1,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "cyclist": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "mobility-scooter": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "scooter"
+      },
+      "outer-pickup": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "red-runner": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "cyclist": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 11,
+          "from": "624:0:-1",
+          "to": "593:0:-1"
+        },
+        {
+          "t": 11.68,
+          "from": "593:0:-1",
+          "to": "648:0:-1"
+        },
+        {
+          "t": 12.36,
+          "from": "648:0:-1",
+          "to": "591:0:-1"
+        },
+        {
+          "t": 13.040000000000001,
+          "from": "591:0:-1",
+          "to": "624:0:-1"
+        },
+        {
+          "t": 14.4,
+          "from": "624:0:-1",
+          "to": "647:0:-1"
+        },
+        {
+          "t": 15.08,
+          "from": "647:0:-1",
+          "to": "624:0:-1"
+        },
+        {
+          "t": 18.48,
+          "from": "624:0:-1",
+          "to": null
+        },
+        {
+          "t": 19.84,
+          "from": null,
+          "to": "685:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "mobility-scooter": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.6400000000000001,
+          "from": "128:0:-5",
+          "to": "128:1:-5"
+        },
+        {
+          "t": 4.92,
+          "from": "128:1:-5",
+          "to": "693:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "outer-pickup": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "red-runner": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 3.36,
+          "from": "73:0:-6",
+          "to": "365:0:-6"
+        },
+        {
+          "t": 7.7,
+          "from": "365:0:-6",
+          "to": "74:0:-6"
+        },
+        {
+          "t": 16.94,
+          "from": "74:0:-6",
+          "to": "616:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "signal:2230": {
+      "initial": "red",
+      "transitions": []
+    },
+    "signal:2232": {
+      "initial": "green",
+      "transitions": [
+        {
+          "t": 3,
+          "from": "green",
+          "to": "yellow"
+        },
+        {
+          "t": 6,
+          "from": "yellow",
+          "to": "red"
+        }
+      ]
+    },
+    "signal:2236": {
+      "initial": "red",
+      "transitions": [
+        {
+          "t": 6,
+          "from": "red",
+          "to": "green"
+        },
+        {
+          "t": 18,
+          "from": "green",
+          "to": "yellow"
+        }
+      ]
+    },
+    "signal:2262": {
+      "initial": "red",
+      "transitions": []
+    }
+  },
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-holds",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 5,
+      "kind": "trigger_fired",
+      "interactionId": "pickup-creeps",
+      "actorId": "outer-pickup",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 5,
+      "kind": "trigger_fired",
+      "interactionId": "scooter-pauses-at-refuge",
+      "actorId": "mobility-scooter",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 8,
+      "kind": "trigger_fired",
+      "interactionId": "pickup-blocks-crosswalk",
+      "actorId": "outer-pickup",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 8,
+      "kind": "preemption",
+      "actorId": "outer-pickup",
+      "axis": "longitudinal",
+      "byInteractionId": "pickup-blocks-crosswalk",
+      "preemptedInteractionId": "pickup-creeps"
+    },
+    {
+      "t": 9,
+      "kind": "trigger_fired",
+      "interactionId": "cyclist-emerges",
+      "actorId": "cyclist",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11,
+      "kind": "trigger_fired",
+      "interactionId": "protected-left-turns-red",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 11,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:protected-left:cross.phase",
+      "value": "red"
+    },
+    {
+      "t": 11.200000000000001,
+      "kind": "trigger_fired",
+      "interactionId": "red-runner-ignores-red",
+      "actorId": "red-runner",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 11.200000000000001,
+      "kind": "state_set",
+      "actorId": "red-runner",
+      "key": "rules.obeySignals",
+      "value": false
+    },
+    {
+      "t": 12,
+      "kind": "trigger_fired",
+      "interactionId": "destination-conflict-enters",
+      "actorId": "red-runner",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 18,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-confirms-wait",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 18,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-confirms-wait",
+      "preemptedInteractionId": "focus-vehicle-holds"
+    },
+    {
+      "t": 19.5,
+      "kind": "trigger_fired",
+      "interactionId": "scooter-leaves-refuge",
+      "actorId": "mobility-scooter",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 19.5,
+      "kind": "preemption",
+      "actorId": "mobility-scooter",
+      "axis": "longitudinal",
+      "byInteractionId": "scooter-leaves-refuge",
+      "preemptedInteractionId": "scooter-pauses-at-refuge"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "cyclist",
+        "focus-vehicle"
+      ],
+      [
+        "focus-vehicle",
+        "mobility-scooter"
+      ],
+      [
+        "focus-vehicle",
+        "outer-pickup"
+      ],
+      [
+        "focus-vehicle",
+        "red-runner"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

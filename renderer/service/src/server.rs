@@ -5,8 +5,10 @@
 //! socket is drained synchronously between renders — deterministic by
 //! construction.
 //!
-//! V2 protocol (V4 SensorRig) adds `load_scene_state`, `reset_cameras`,
-//! `encode_jpeg`, per-camera rigid `attach` + semantic + CARLA depth
+//! Every render request applies its scene tick and rig changes to the
+//! resident scene, then performs exactly one [`SceneApp::capture`]; the
+//! published payloads and the response's
+//! [`render_core::engine::FrameIdentity`] come from that single submission.
 use crate::proto::{
     decode_request, encode_frame, CameraAttach, CoverageRecord, FrameReader, FrameRecord, JpegItem,
     RequestBody, ResponseBody, ServiceCamera, ServiceLidar, ServiceRadar, ShmInfo, WireRequest,
@@ -20,12 +22,12 @@ use crate::shm::{
 use anyhow::{Context, Result};
 use bevy::math::{EulerRot, Quat, Vec3};
 use render_core::engine::{
-    CameraSpec, LegendEntry, Lighting, PassSet, Profile, SceneApp, SensorTriangle,
+    CameraSpec, CapturedFrame, LegendEntry, Lighting, PassSet, Profile, SceneApp, SensorTriangle,
 };
 use render_core::profiles::RenderProfileConfig;
 use render_core::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
 use sensors::bvh::{Hit, Raycast, RaycastScene, Tri};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::Write;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
@@ -83,12 +85,8 @@ fn default_warmup() -> u32 {
 }
 
 /// Prewarm the scene (tiles + ID pass + shader warmup) and return the app.
-///
-/// WSB5 erratum fix (repro: any `native-render-service` launch on
-/// 4ec6e43's engine panicked at engine.rs:381 — `add_camera` asserted
-/// `!ready` after `wait_until_ready` had flipped it): the warmup camera is
-/// registered BEFORE the readiness barrier, which is also the documented
-/// SceneApp contract.
+/// The warmup cameras are registered before the readiness barrier so the
+/// pipelines the real rig will need are compiled up front.
 pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
     let mut app =
         SceneApp::new_with_profile_config(&spec.lighting, spec.profile_config)?;
@@ -234,6 +232,9 @@ pub struct ServiceState {
     auto_meter: bool,
     /// Metering camera the service last applied on the caller's behalf.
     auto_meter_view: Option<render_core::atmosphere::MeterView>,
+    /// Handles to send behind the `export_device_stream` acknowledgement.
+    #[cfg(feature = "gpu-interop")]
+    pending_export: Option<render_core::gpu_interop::ExportedStream>,
 }
 
 impl ServiceState {
@@ -287,7 +288,16 @@ impl ServiceState {
             lighting_authored: spec.lighting.clone(),
             auto_meter: spec.auto_meter,
             auto_meter_view: None,
+            #[cfg(feature = "gpu-interop")]
+            pending_export: None,
         })
+    }
+
+    /// Exported handles produced by the last `export_device_stream`, to be
+    /// delivered to the consumer by whoever owns the transport.
+    #[cfg(feature = "gpu-interop")]
+    pub fn take_export(&mut self) -> Option<render_core::gpu_interop::ExportedStream> {
+        self.pending_export.take()
     }
 }
 
@@ -375,6 +385,13 @@ fn handle_connection(state: &mut ServiceState, stream: UnixStream) -> Result<Clo
             let request = decode_request(&payload).map_err(anyhow::Error::msg)?;
             let response = dispatch(state, request);
             writer.write_all(&encode_frame(&response)?)?;
+            // Descriptor transfer rides the same socket right behind its
+            // acknowledgement: this thread is the only writer, so the
+            // `SFGX` frame and its SCM_RIGHTS cannot interleave.
+            #[cfg(feature = "gpu-interop")]
+            if let Some(exported) = state.take_export() {
+                exported.send_over_unix(&stream).context("send device stream handles")?;
+            }
             if matches!(response.body, ResponseBody::Close { .. }) {
                 return Ok(CloseConnection::ClientClose);
             }
@@ -382,9 +399,10 @@ fn handle_connection(state: &mut ServiceState, stream: UnixStream) -> Result<Clo
     }
 }
 
-/// CARLA ego-view transform scaled by vehicle bounds (drive_server.py
-/// `_transform_for_view` "hood" view is the V2X product default).
-fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse {
+/// Serve one decoded request against the resident scene. Shared by the
+/// socket loop and the in-process FFI host; after an `export_device_stream`
+/// acknowledgement the caller must drain [`ServiceState::take_export`].
+pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse {
     let i = request.i;
     match request.body {
         RequestBody::Hello => {
@@ -487,12 +505,26 @@ fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse {
             radars,
             tick_index,
             passes,
-        } => {
-            render_bundle_op(
-                state, i, sim_tick, cameras, lidars, radars, tick_index, passes,
-            )
-        }
+            device_sensors,
+        } => render_bundle_op(
+            state,
+            i,
+            sim_tick,
+            cameras,
+            lidars,
+            radars,
+            tick_index,
+            passes,
+            device_sensors.unwrap_or_default(),
+        ),
         RequestBody::EncodeJpeg { items } => encode_jpeg_op(state, i, items),
+        RequestBody::OpenDeviceStream { sensor_id, passes, slots, wait_ms } => {
+            open_device_stream_op(state, i, &sensor_id, &passes, slots, wait_ms)
+        }
+        RequestBody::ExportDeviceStream { sensor_id } => export_device_stream_op(state, i, &sensor_id),
+        RequestBody::CloseDeviceStream { sensor_id, grace_ms } => {
+            close_device_stream_op(state, i, &sensor_id, grace_ms)
+        }
         RequestBody::Close => WireResponse { i, body: ResponseBody::Close { ok: true } },
     }
 }
@@ -534,24 +566,39 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
             "spawn" | "update" => {
                 let class = actor.actor_class.clone().unwrap_or_else(|| "prop".into());
                 let color = actor_color(actor, &class)?;
-                let dims = actor_dims(&class);
-                let model = resolve_actor_model(state, actor);
-                let mut yaw = quat_yaw(&actor.transform.rotation);
+                let body_centred = actor
+                    .catalog_id
+                    .as_deref()
+                    .is_some_and(render_core::catalog::body_centred_origin);
+                let dims = if body_centred {
+                    actor.dims.map(|d| [d.l, d.h, d.w]).unwrap_or_else(|| actor_dims(&class))
+                } else {
+                    actor_dims(&class)
+                };
+                // Body-centred catalog entries (articulated robot components)
+                // are placed verbatim with their full rotation and never get
+                // a GLB or a ground fallback.
+                let model = if body_centred { None } else { resolve_actor_model(state, actor) };
+                let [qx, qy, qz, qw] = actor.transform.rotation;
+                let mut rotation = Quat::from_xyzw(qx, qy, qz, qw).normalize();
                 let mut position = actor.transform.position;
-                position[1] = actor_base_y(
-                    position[1],
-                    frame.ground_y,
-                    state.app.ground_at(position[0], position[2]),
-                );
+                if !body_centred {
+                    rotation = Quat::from_rotation_y(quat_yaw(&actor.transform.rotation));
+                    position[1] = actor_base_y(
+                        position[1],
+                        frame.ground_y,
+                        state.app.ground_at(position[0], position[2]),
+                    );
+                }
                 if let Some(model) = &model {
-                    yaw += model.yaw_offset_rad;
+                    rotation = Quat::from_rotation_y(model.yaw_offset_rad) * rotation;
                     position[1] += model.ground_offset_m;
                 }
                 state.app.upsert_actor(
                     &actor.id,
                     &class,
                     position,
-                    yaw,
+                    rotation,
                     dims,
                     color,
                     false,
@@ -812,23 +859,179 @@ fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) {
     }
 }
 
-fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera, passes: PassSet) -> bool {
-    if state.app.cameras().any(|c| c.sensor_id == cam.sensor_id) {
-        return false;
+/// GPU pass set every service camera is registered with. Which of them
+/// are copied out is decided per request (`capture_keys`); the ID view
+/// only renders when one of its passes is requested.
+const SERVICE_PASSES: PassSet = PassSet { rgb: true, id: true, depth: true };
+
+/// Register a camera, or re-register it when its size, field of view or
+/// profile changed since the last request. Cached payloads of a replaced
+/// camera belong to the old target and are dropped.
+fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
+    let spec = CameraSpec {
+        sensor_id: cam.sensor_id.clone(),
+        width: cam.width,
+        height: cam.height,
+        fov_y_deg: cam.fov_deg,
+        near: state.near_m,
+        far: state.far_m,
+        passes: SERVICE_PASSES,
+    };
+    let profile = cam.profile.unwrap_or(state.profile);
+    if state.app.camera(&cam.sensor_id) == Some((&spec, profile)) {
+        return;
     }
-    state.app.add_camera(
-        CameraSpec {
-            sensor_id: cam.sensor_id.clone(),
-            width: cam.width,
-            height: cam.height,
-            fov_y_deg: cam.fov_deg,
-            near: state.near_m,
-            far: state.far_m,
-            passes,
-        },
-        cam.profile.unwrap_or(state.profile),
-    );
-    true
+    let prefix = format!("{}:", cam.sensor_id);
+    state.cache.retain(|key, _| !key.starts_with(&prefix));
+    state.app.add_camera(spec, profile);
+}
+
+/// Bring the resident rig in line with `cameras` for this tick: register
+/// or replace each camera, mount it on its attach actor (so that actor's
+/// RGB geometry is excluded from this view only), resolve and set its
+/// pose, and re-meter through the first camera.
+fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), String> {
+    for (index, cam) in cameras.iter().enumerate() {
+        ensure_camera(state, cam);
+        let host = cam.attach.as_ref().map(|attach| attach.actor_id.as_str());
+        state
+            .app
+            .set_camera_host(&cam.sensor_id, host)
+            .map_err(|error| format!("set host: {error:#}"))?;
+        let (eye, target) = resolve_pose(state, cam)?;
+        state
+            .app
+            .set_pose(&cam.sensor_id, &eye, &target)
+            .map_err(|error| format!("set pose: {error:#}"))?;
+        if index == 0 {
+            auto_meter(state, cam, &eye, &target);
+        }
+    }
+    Ok(())
+}
+
+/// Capture keys for `cameras` restricted to `passes`.
+fn capture_keys(cameras: &[ServiceCamera], passes: PassSet) -> Vec<String> {
+    cameras
+        .iter()
+        .flat_map(|cam| passes.keys(&cam.sensor_id))
+        .collect()
+}
+
+/// Publish one payload into the ring and record it. Returns the record
+/// offset and the payload CRC32.
+#[allow(clippy::too_many_arguments)]
+fn publish_frame(
+    state: &mut ServiceState,
+    sensor_id: &str,
+    pass: &str,
+    width: u32,
+    height: u32,
+    format_tag: u32,
+    format_name: &str,
+    tick_id: u64,
+    data: &[u8],
+    frames: &mut Vec<FrameRecord>,
+) -> Result<(u64, u32), String> {
+    let digest = crc32fast::hash(data);
+    let offset = state
+        .shm
+        .publish(sensor_id, pass, width, height, format_tag, tick_id, data)
+        .map_err(|error| format!("publish: {error}"))?;
+    frames.push(FrameRecord {
+        sensor_id: sensor_id.to_string(),
+        pass: pass.to_string(),
+        offset,
+        len: data.len() as u64,
+        width,
+        height,
+        format: format_name.to_string(),
+        tick_id,
+        digest: format!("{digest:08x}"),
+    });
+    Ok((offset, digest))
+}
+
+/// Derive the CARLA semantic layout from an instance-ID payload.
+fn semantic_from_ids(state: &ServiceState, id_data: &[u8], width: u32, height: u32, stride: usize) -> Vec<u8> {
+    let legend = &state.legend;
+    let app = &state.app;
+    crate::carla::semantic_from_ids(id_data, width, height, stride, |id| {
+        if let Some(class) = app.actor_instance_class(id) {
+            return crate::carla::actor_class_of(class);
+        }
+        legend
+            .get(&id)
+            .map(|name| crate::carla::static_class_of(name))
+            .unwrap_or(0)
+    })
+}
+
+/// One camera pass ready for publication, in canonical order.
+struct PlannedPass {
+    pass: &'static str,
+    format_tag: u32,
+    format_name: &'static str,
+    data: Vec<u8>,
+}
+
+/// The bytes of one captured pass. Every requested pass must be present in
+/// the capture; the engine guarantees that for registered keys, so absence
+/// is an internal error.
+fn captured_pass<'a>(
+    captured: &'a CapturedFrame,
+    sensor_id: &str,
+    pass: &str,
+) -> Result<&'a [u8], String> {
+    captured
+        .passes
+        .get(&format!("{sensor_id}:{pass}"))
+        .map(|captured| captured.bytes.as_slice())
+        .ok_or_else(|| {
+            format!(
+                "capture generation {} has no {pass:?} for {sensor_id}",
+                captured.identity.generation
+            )
+        })
+}
+
+/// Encode the captured passes of one camera for publication: rgb, id,
+/// depth (raw or CARLA-packed), semantic (derived from id).
+fn plan_camera_passes(
+    state: &ServiceState,
+    captured: &CapturedFrame,
+    cam: &ServiceCamera,
+    want: PassSet,
+    want_semantic: bool,
+) -> Result<Vec<PlannedPass>, String> {
+    let stride = row_stride(cam.width, 4);
+    let take = |pass| captured_pass(captured, &cam.sensor_id, pass);
+    let mut planned = Vec::with_capacity(4);
+    if want.rgb {
+        planned.push(PlannedPass { pass: "rgb", format_tag: FORMAT_RGBA8, format_name: "rgba8", data: take("rgb")?.to_vec() });
+    }
+    if want.id {
+        planned.push(PlannedPass { pass: "id", format_tag: FORMAT_RGBA8, format_name: "rgba8", data: take("id")?.to_vec() });
+    }
+    if want.depth {
+        let raw = take("depth")?;
+        let carla = cam.depth_encoding.as_deref() == Some("carla");
+        planned.push(PlannedPass {
+            pass: "depth",
+            format_tag: FORMAT_DEPTH32F,
+            format_name: if carla { "carla-depth-bgra" } else { "depth32f" },
+            data: if carla {
+                crate::carla::depth_to_carla(raw, cam.width, cam.height, stride, state.near_m, state.far_m)
+            } else {
+                raw.to_vec()
+            },
+        });
+    }
+    if want_semantic {
+        let out = semantic_from_ids(state, take("id")?, cam.width, cam.height, stride);
+        planned.push(PlannedPass { pass: "semantic", format_tag: FORMAT_RGBA8, format_name: "rgba8", data: out });
+    }
+    Ok(planned)
 }
 
 fn render_tick(
@@ -845,160 +1048,54 @@ fn render_tick(
             return WireResponse::error(i, error);
         }
     }
-    let mut any_new_camera = false;
     for cam in &cameras {
         upsert_rig(state, cam);
-        any_new_camera |= ensure_camera(state, cam, PassSet { rgb: true, id: true, depth: true });
-        let (eye, target) = match resolve_pose(state, cam) {
-            Ok(pose) => pose,
-            Err(error) => return WireResponse::error(i, error),
-        };
-        if let Err(error) = state.app.set_pose(&cam.sensor_id, &eye, &target) {
-            return WireResponse::error(i, format!("set pose: {error:#}"));
-        }
-        if cam.sensor_id == cameras[0].sensor_id {
-            auto_meter(state, cam, &eye, &target);
-        }
     }
-    let _ = any_new_camera;
-    // Readback returns the PREVIOUS render's buffer: pose/scene updates lag
-    // one render_once (empirically shown by the two-pose hash probe: pose-A
-    // request returned pose-B pixels; new cameras return stale buffers).
-    // Flush one render so the capture render below reflects the poses and
-    // scene tick applied above. TODO(render-core): reorder readback so a
-    // single render returns current-frame buffers, then drop this flush.
-    if let Err(error) = state.app.render_once() {
-        return WireResponse::error(i, format!("render (flush): {error:#}"));
+    if let Err(error) = sync_rig(state, &cameras) {
+        return WireResponse::error(i, error);
     }
-    let passes = match state.app.render_once() {
-        Ok(passes) => passes,
+    let captured = match state.app.capture(tick_id, &capture_keys(&cameras, SERVICE_PASSES)) {
+        Ok(captured) => captured,
         Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
     };
     let mut frames = Vec::new();
     let mut coverage = Vec::with_capacity(cameras.len());
     let mut export_payloads: Vec<(String, String, u32, u32, Vec<u8>)> = Vec::new();
-    // Publish in deterministic order: cameras in request order,
-    // passes rgb/id/depth/semantic within each.
+    // Publish in deterministic order: cameras in request order, passes
+    // rgb/id/depth/semantic within each.
     for cam in &cameras {
         let stride = row_stride(cam.width, 4);
-        let id_key = format!("{}:id", cam.sensor_id);
-        let Some(id_data) = passes.get(&id_key) else {
-            return WireResponse::error(i, format!("coverage requires id pass for {}", cam.sensor_id));
+        let planned = match plan_camera_passes(state, &captured, cam, SERVICE_PASSES, cam.semantic) {
+            Ok(planned) => planned,
+            Err(error) => return WireResponse::error(i, error),
         };
-        coverage.push(CoverageRecord {
-            sensor_id: cam.sensor_id.clone(),
-            fraction: instance_coverage(id_data, cam.width, cam.height),
-        });
-        let mut publish = |state: &mut ServiceState,
-                           pass: &str,
-                           format_tag: u32,
-                           format_name: &str,
-                           data: Vec<u8>,
-                           frames: &mut Vec<FrameRecord>| {
-            match state.shm.publish(
-                &cam.sensor_id,
-                pass,
-                cam.width,
-                cam.height,
-                format_tag,
-                tick_id,
-                &data,
-            ) {
-                Ok(offset) => {
-                    frames.push(FrameRecord {
-                        sensor_id: cam.sensor_id.clone(),
-                        pass: pass.to_string(),
-                        offset,
-                        len: data.len() as u64,
-                        width: cam.width,
-                        height: cam.height,
-                        format: format_name.to_string(),
-                        tick_id,
-                        digest: None,
-                    });
-                    Ok(())
-                }
-                Err(error) => Err(format!("publish: {error}")),
+        for PlannedPass { pass, format_tag, format_name, data } in planned {
+            if pass == "id" {
+                coverage.push(CoverageRecord {
+                    sensor_id: cam.sensor_id.clone(),
+                    fraction: instance_coverage(&data, cam.width, cam.height),
+                });
             }
-        };
-        for (pass, key, format_tag, format_name) in [
-            ("rgb", format!("{}:rgb", cam.sensor_id), FORMAT_RGBA8, "rgba8"),
-            ("id", format!("{}:id", cam.sensor_id), FORMAT_RGBA8, "rgba8"),
-        ] {
-            let Some(data) = passes.get(&key) else { continue };
-            if let Err(error) = publish(state, pass, format_tag, format_name, data.clone(), &mut frames) {
+            if let Err(error) = publish_frame(
+                state, &cam.sensor_id, pass, cam.width, cam.height, format_tag, format_name, tick_id, &data, &mut frames,
+            ) {
                 return WireResponse::error(i, error);
             }
-            state.cache.insert(
-                key.clone(),
-                CachedPass { data: data.clone(), width: cam.width, height: cam.height, stride, tick_id },
-            );
             if export_dir.is_some() {
                 export_payloads.push((cam.sensor_id.clone(), pass.to_string(), cam.width, cam.height, data.clone()));
             }
-        }
-        // Depth: raw reverse-Z passthrough (v0) or CARLA 24-bit packing (V2).
-        {
-            let key = format!("{}:depth", cam.sensor_id);
-            if let Some(data) = passes.get(&key) {
-                let carla = cam.depth_encoding.as_deref() == Some("carla");
-                let out = if carla {
-                    crate::carla::depth_to_carla(data, cam.width, cam.height, stride, state.near_m, state.far_m)
+            if pass != "semantic" {
+                // JPEG source: the raw pass bytes (depth stays the linear
+                // readback even when published CARLA-packed).
+                let raw = if pass == "depth" {
+                    captured.passes[&format!("{}:depth", cam.sensor_id)].bytes.clone()
                 } else {
-                    data.clone()
+                    data
                 };
-                if let Err(error) = publish(
-                    state,
-                    "depth",
-                    FORMAT_DEPTH32F,
-                    if carla { "carla-depth-bgra" } else { "depth32f" },
-                    out,
-                    &mut frames,
-                ) {
-                    return WireResponse::error(i, error);
-                }
                 state.cache.insert(
-                    key,
-                    CachedPass { data: data.clone(), width: cam.width, height: cam.height, stride, tick_id },
+                    format!("{}:{pass}", cam.sensor_id),
+                    CachedPass { data: raw, width: cam.width, height: cam.height, stride, tick_id },
                 );
-                if export_dir.is_some() {
-                    export_payloads.push((cam.sensor_id.clone(), "depth".into(), cam.width, cam.height, data.clone()));
-                }
-            }
-        }
-        // Semantic (V2): class remap of the instance-ID pass into the CARLA
-        // byte layout. Derived, not rendered — see carla::semantic_from_ids.
-        if cam.semantic {
-            let key = format!("{}:id", cam.sensor_id);
-            let Some(id_data) = passes.get(&key) else {
-                return WireResponse::error(i, format!("semantic requested but no id pass for {}", cam.sensor_id));
-            };
-            let legend = &state.legend;
-            let app = &state.app;
-            let out = crate::carla::semantic_from_ids(id_data, cam.width, cam.height, stride, |id| {
-                if let Some(class) = app.actor_instance_class(id) {
-                    return crate::carla::actor_class_of(class);
-                }
-                legend
-                    .get(&id)
-                    .map(|name| crate::carla::static_class_of(name))
-                    .unwrap_or(0)
-            });
-            if let Err(error) = publish(state, "semantic", FORMAT_RGBA8, "rgba8", out, &mut frames) {
-                return WireResponse::error(i, error);
-            }
-            if export_dir.is_some() {
-                if let Some(data) = passes.get(&key) {
-                    let legend = &state.legend;
-                    let app = &state.app;
-                    let out = crate::carla::semantic_from_ids(data, cam.width, cam.height, stride, |id| {
-                        if let Some(class) = app.actor_instance_class(id) {
-                            return crate::carla::actor_class_of(class);
-                        }
-                        legend.get(&id).map(|n| crate::carla::static_class_of(n)).unwrap_or(0)
-                    });
-                    export_payloads.push((cam.sensor_id.clone(), "semantic".into(), cam.width, cam.height, out));
-                }
             }
         }
     }
@@ -1011,13 +1108,21 @@ fn render_tick(
     }
     WireResponse {
         i,
-        body: ResponseBody::Render { ok: true, tick_id, frames, server_ms, coverage },
+        body: ResponseBody::Render {
+            ok: true,
+            tick_id,
+            frame: captured.identity,
+            frames,
+            server_ms,
+            coverage,
+        },
     }
 }
 
 fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> WireResponse {
     let t0 = std::time::Instant::now();
     let mut frames = Vec::new();
+    let mut tick_id = 0;
     for item in &items {
         let key = format!("{}:{}", item.sensor_id, item.pass);
         let Some(cached) = state.cache.get(&key) else {
@@ -1029,107 +1134,215 @@ fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> Wir
         for px in rgba.chunks_exact(4) {
             rgb.extend_from_slice(&px[..3]);
         }
-        let tick_id = cached.tick_id;
+        tick_id = cached.tick_id;
         let (w, h) = (cached.width, cached.height);
         let jpeg = match crate::carla::encode_jpeg(&rgb, w, h, item.quality) {
             Ok(j) => j,
             Err(error) => return WireResponse::error(i, error),
         };
-        match state.shm.publish(
-            &item.sensor_id,
-            "jpeg",
-            w,
-            h,
-            FORMAT_JPEG,
-            tick_id,
-            &jpeg,
+        if let Err(error) = publish_frame(
+            state, &item.sensor_id, "jpeg", w, h, FORMAT_JPEG, "jpeg", tick_id, &jpeg, &mut frames,
         ) {
-            Ok(offset) => frames.push(FrameRecord {
-                sensor_id: item.sensor_id.clone(),
-                pass: "jpeg".into(),
-                offset,
-                len: jpeg.len() as u64,
-                width: w,
-                height: h,
-                format: "jpeg".into(),
-                tick_id,
-                digest: None,
-            }),
-            Err(error) => return WireResponse::error(i, format!("publish: {error}")),
+            return WireResponse::error(i, error);
         }
     }
     let server_ms = t0.elapsed().as_secs_f64() * 1000.0;
-    WireResponse { i, body: ResponseBody::EncodeJpeg { ok: true, tick_id: state.cache.values().next().map(|c| c.tick_id).unwrap_or(0), frames, server_ms } }
+    WireResponse { i, body: ResponseBody::EncodeJpeg { ok: true, tick_id, frames, server_ms } }
 }
 
-/// F4: render every rig camera for one sim tick and publish an atomic frame
-fn publish_sensor_payload(
+/// Publish one payload into the ring as both a frame record and a bundle
+/// table entry.
+#[allow(clippy::too_many_arguments)]
+fn publish_bundle_frame(
     state: &mut ServiceState,
     sensor_id: &str,
     pass: &str,
+    width: u32,
+    height: u32,
     format_tag: u32,
     format_name: &str,
-    measurement_count: u32,
     sim_tick: u64,
     data: &[u8],
     entries: &mut Vec<BundleEntry>,
     frames: &mut Vec<FrameRecord>,
 ) -> Result<(), String> {
-    let digest = crc32fast::hash(data);
-    let offset = state
-        .shm
-        .publish(
-            sensor_id,
-            pass,
-            measurement_count,
-            1,
-            format_tag,
-            sim_tick,
-            data,
-        )
-        .map_err(|error| format!("publish: {error}"))?;
+    let (offset, digest) = publish_frame(
+        state, sensor_id, pass, width, height, format_tag, format_name, sim_tick, data, frames,
+    )?;
     entries.push(BundleEntry {
         camera_id: sensor_id.to_string(),
         pass: pass.to_string(),
         payload_offset: offset + crate::shm::RECORD_HEADER_BYTES as u64,
         payload_len: data.len() as u64,
-        width: measurement_count,
-        height: 1,
+        width,
+        height,
         format_tag,
         digest,
-    });
-    frames.push(FrameRecord {
-        sensor_id: sensor_id.to_string(),
-        pass: pass.to_string(),
-        offset,
-        len: data.len() as u64,
-        width: measurement_count,
-        height: 1,
-        format: format_name.to_string(),
-        tick_id: sim_tick,
-        digest: Some(format!("{digest:08x}")),
     });
     Ok(())
 }
 
-fn camera_host_actor_ids(
-    rig: &[ServiceCamera],
-    available_actor_ids: &[String],
-) -> HashSet<String> {
-    let available: HashSet<&str> = available_actor_ids.iter().map(String::as_str).collect();
-    rig.iter()
-        .filter_map(|camera| camera.attach.as_ref())
-        .map(|attach| attach.actor_id.as_str())
-        .filter(|actor_id| available.contains(actor_id))
-        .map(str::to_owned)
-        .collect()
+/// One capture for a bundle: host keys plus, when requested, device
+/// streams filled by the same submission.
+fn capture_bundle(
+    state: &mut ServiceState,
+    sim_tick: u64,
+    host_keys: &[String],
+    device_sensors: &[String],
+) -> Result<CapturedFrame> {
+    if device_sensors.is_empty() {
+        return state.app.capture(sim_tick, host_keys);
+    }
+    #[cfg(feature = "gpu-interop")]
+    {
+        state.app.capture_device(sim_tick, host_keys, device_sensors)
+    }
+    #[cfg(not(feature = "gpu-interop"))]
+    {
+        anyhow::bail!(NO_DEVICE_INTEROP)
+    }
 }
 
+#[cfg(not(feature = "gpu-interop"))]
+const NO_DEVICE_INTEROP: &str =
+    "this native-render-service was built without the `gpu-interop` feature; device streams are unavailable";
+
+#[cfg(feature = "gpu-interop")]
+fn open_device_stream_op(
+    state: &mut ServiceState,
+    i: u64,
+    sensor_id: &str,
+    passes: &[String],
+    slots: u32,
+    wait_ms: Option<u64>,
+) -> WireResponse {
+    let (want, _, semantic) = match parse_bundle_passes(passes) {
+        Ok(parsed) => parsed,
+        Err(error) => return WireResponse::error(i, error),
+    };
+    if semantic {
+        return WireResponse::error(i, "device streams carry rendered planes only; `semantic` is a host-derived pass");
+    }
+    if slots == 0 {
+        return WireResponse::error(i, "open_device_stream: slots must be at least 1");
+    }
+    let wait = wait_ms.map(std::time::Duration::from_millis);
+    match state.app.open_device_stream(sensor_id, want, slots as usize, wait) {
+        Ok((stream_id, planes)) => WireResponse {
+            i,
+            body: ResponseBody::OpenDeviceStream {
+                ok: true,
+                sensor_id: sensor_id.to_string(),
+                stream_id,
+                planes: planes
+                    .into_iter()
+                    .map(|plane| crate::proto::DevicePlaneLayout {
+                        name: plane.name,
+                        width: plane.width,
+                        height: plane.height,
+                        format: serde_json::to_value(plane.format)
+                            .ok()
+                            .and_then(|value| value.as_str().map(str::to_owned))
+                            .unwrap_or_default(),
+                        dtype: plane.dtype,
+                        channels: plane.channels,
+                        pixel_bytes: plane.pixel_bytes,
+                        offset: plane.offset,
+                        row_stride: plane.row_stride,
+                        bytes: plane.bytes,
+                    })
+                    .collect(),
+            },
+        },
+        Err(error) => WireResponse::error(i, format!("open_device_stream: {error:#}")),
+    }
+}
+
+#[cfg(feature = "gpu-interop")]
+fn export_device_stream_op(state: &mut ServiceState, i: u64, sensor_id: &str) -> WireResponse {
+    match state.app.export_device_stream(sensor_id) {
+        Ok(exported) => {
+            let response = ResponseBody::ExportDeviceStream {
+                ok: true,
+                sensor_id: sensor_id.to_string(),
+                stream_id: exported.manifest.stream_id.0,
+                slots: exported.manifest.slots,
+            };
+            state.pending_export = Some(exported);
+            WireResponse { i, body: response }
+        }
+        Err(error) => WireResponse::error(i, format!("export_device_stream: {error:#}")),
+    }
+}
+
+#[cfg(feature = "gpu-interop")]
+fn close_device_stream_op(state: &mut ServiceState, i: u64, sensor_id: &str, grace_ms: u64) -> WireResponse {
+    match state
+        .app
+        .close_device_stream(sensor_id, std::time::Duration::from_millis(grace_ms))
+    {
+        Ok(Some(teardown)) => WireResponse {
+            i,
+            body: ResponseBody::CloseDeviceStream {
+                ok: true,
+                sensor_id: sensor_id.to_string(),
+                outstanding_consumer_leases: teardown.outstanding_consumer_leases as u32,
+                abandoned_producer_leases: teardown.abandoned_producer_leases as u32,
+            },
+        },
+        Ok(None) => WireResponse::error(i, format!("close_device_stream: no device stream open for {sensor_id}")),
+        Err(error) => WireResponse::error(i, format!("close_device_stream: {error:#}")),
+    }
+}
+
+#[cfg(not(feature = "gpu-interop"))]
+fn open_device_stream_op(
+    _state: &mut ServiceState,
+    i: u64,
+    _sensor_id: &str,
+    _passes: &[String],
+    _slots: u32,
+    _wait_ms: Option<u64>,
+) -> WireResponse {
+    WireResponse::error(i, NO_DEVICE_INTEROP)
+}
+
+#[cfg(not(feature = "gpu-interop"))]
+fn export_device_stream_op(_state: &mut ServiceState, i: u64, _sensor_id: &str) -> WireResponse {
+    WireResponse::error(i, NO_DEVICE_INTEROP)
+}
+
+#[cfg(not(feature = "gpu-interop"))]
+fn close_device_stream_op(_state: &mut ServiceState, i: u64, _sensor_id: &str, _grace_ms: u64) -> WireResponse {
+    WireResponse::error(i, NO_DEVICE_INTEROP)
+}
+
+/// Requested bundle passes: the GPU pass set to copy plus whether the
+/// derived semantic output is wanted (which needs the id pass rendered).
+fn parse_bundle_passes(requested: &[String]) -> Result<(PassSet, bool, bool), String> {
+    let mut want = PassSet { rgb: false, id: false, depth: false };
+    let mut want_semantic = false;
+    for pass in requested {
+        match pass.as_str() {
+            "rgb" => want.rgb = true,
+            "id" => want.id = true,
+            "depth" => want.depth = true,
+            "semantic" => want_semantic = true,
+            other => return Err(format!("unknown bundle pass {other:?}")),
+        }
+    }
+    let want_id_output = want.id;
+    want.id |= want_semantic;
+    Ok((want, want_id_output, want_semantic))
+}
+
+/// Render every rig camera for one sim tick and publish an atomic frame
 /// bundle (frames first, then the bundle table record, then the meta-page
 /// latest-bundle pointer flip). Cameras keep rig registration order and
 /// passes are canonical (rgb, id, depth, semantic) within each camera, so
 /// ring layout and per-frame digests are deterministic for a deterministic
 /// renderer.
+#[allow(clippy::too_many_arguments)]
 fn render_bundle_op(
     state: &mut ServiceState,
     i: u64,
@@ -1139,41 +1352,23 @@ fn render_bundle_op(
     radars: Option<Vec<ServiceRadar>>,
     tick_index: Option<u32>,
     passes: Option<Vec<String>>,
+    device_sensors: Vec<String>,
 ) -> WireResponse {
     let t0 = std::time::Instant::now();
-    // Requested pass set. Default rgb-only: the policy hot loop. The GPU
-    // pass set is frozen per camera at first registration (`reset_cameras`
-    // to change), matching existing V2 semantics.
+    // Default rgb-only: the policy hot loop.
     let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
-    let mut want = PassSet { rgb: false, id: false, depth: false };
-    let mut want_semantic = false;
-    for pass in &requested {
-        match pass.as_str() {
-            "rgb" => want.rgb = true,
-            "id" => want.id = true,
-            "depth" => want.depth = true,
-            "semantic" => want_semantic = true,
-            other => return WireResponse::error(i, format!("unknown bundle pass {other:?}")),
-        }
+    let (want, want_id_output, want_semantic) = match parse_bundle_passes(&requested) {
+        Ok(parsed) => parsed,
+        Err(error) => return WireResponse::error(i, error),
+    };
+    for cam in cameras.iter().flatten() {
+        upsert_rig(state, cam);
     }
-    let want_id_output = want.id;
-    if want_semantic {
-        want.id = true; // semantic derives from the instance-ID pass
+    for sensor in lidars.iter().flatten() {
+        upsert_lidar_rig(state, sensor);
     }
-    if let Some(cams) = &cameras {
-        for cam in cams {
-            upsert_rig(state, cam);
-        }
-    }
-    if let Some(sensors) = &lidars {
-        for sensor in sensors {
-            upsert_lidar_rig(state, sensor);
-        }
-    }
-    if let Some(sensors) = &radars {
-        for sensor in sensors {
-            upsert_radar_rig(state, sensor);
-        }
+    for sensor in radars.iter().flatten() {
+        upsert_radar_rig(state, sensor);
     }
     if state.rig.is_empty() && state.lidars.is_empty() && state.radars.is_empty() {
         return WireResponse::error(
@@ -1189,133 +1384,36 @@ fn render_bundle_op(
     let rig = state.rig.clone();
     let lidar_rig = state.lidars.clone();
     let radar_rig = state.radars.clone();
-    // RGB sensors mounted to an actor must not render their own host. Reset
-    // the retained scene first so a later rig change cannot leave a former
-    // host hidden; layer-1 ID proxies and scene state remain untouched.
-    let actor_ids = state.app.actor_ids();
-    let hidden_hosts = camera_host_actor_ids(&rig, &actor_ids);
-    for actor_id in &actor_ids {
-        state
-            .app
-            .set_actor_visual_hidden(actor_id, hidden_hosts.contains(actor_id));
+    if let Err(error) = sync_rig(state, &rig) {
+        return WireResponse::error(i, error);
     }
-    for cam in &rig {
-        ensure_camera(state, cam, want);
-        let (eye, target) = match resolve_pose(state, cam) {
-            Ok(pose) => pose,
-            Err(error) => return WireResponse::error(i, error),
-        };
-        if let Err(error) = state.app.set_pose(&cam.sensor_id, &eye, &target) {
-            return WireResponse::error(i, format!("set pose: {error:#}"));
-        }
-        if cam.sensor_id == rig[0].sensor_id {
-            auto_meter(state, cam, &eye, &target);
+    let host_keys = capture_keys(&rig, want);
+    for sensor_id in &device_sensors {
+        if !rig.iter().any(|cam| cam.sensor_id == *sensor_id) {
+            return WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig"));
         }
     }
-    // Same double-render flush as `render`: readback lags one render_once.
-    if let Err(error) = state.app.render_once() {
-        return WireResponse::error(i, format!("render (flush): {error:#}"));
-    }
-    let outputs = match state.app.render_once() {
-        Ok(outputs) => outputs,
+    let captured = match capture_bundle(state, sim_tick, &host_keys, &device_sensors) {
+        Ok(captured) => captured,
         Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
     };
 
     let start_cursor = state.shm.cursor_total();
     let mut frames: Vec<FrameRecord> = Vec::new();
     let mut entries: Vec<BundleEntry> = Vec::new();
+    let published = PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth };
     for cam in &rig {
-        let stride = row_stride(cam.width, 4);
-        // (pass, format_tag, format_name, payload) in canonical order. A
-        // requested pass missing from render output is a hard error: bundles
-        // are all-or-nothing.
-        let mut planned: Vec<(&str, u32, &str, Vec<u8>)> = Vec::new();
-        let missing = |pass: &str| {
-            format!(
-                "render_bundle: pass {pass:?} missing for {} (registered without it? reset_cameras and re-register)",
-                cam.sensor_id
-            )
+        let planned = match plan_camera_passes(state, &captured, cam, published, want_semantic) {
+            Ok(planned) => planned,
+            Err(error) => return WireResponse::error(i, error),
         };
-        if want.rgb {
-            match outputs.get(&format!("{}:rgb", cam.sensor_id)) {
-                Some(data) => planned.push(("rgb", FORMAT_RGBA8, "rgba8", data.clone())),
-                None => return WireResponse::error(i, missing("rgb")),
-            }
-        }
-        if want_id_output {
-            match outputs.get(&format!("{}:id", cam.sensor_id)) {
-                Some(data) => planned.push(("id", FORMAT_RGBA8, "rgba8", data.clone())),
-                None => return WireResponse::error(i, missing("id")),
-            }
-        }
-        if want.depth {
-            let carla = cam.depth_encoding.as_deref() == Some("carla");
-            match outputs.get(&format!("{}:depth", cam.sensor_id)) {
-                Some(data) => {
-                    let out = if carla {
-                        crate::carla::depth_to_carla(data, cam.width, cam.height, stride, state.near_m, state.far_m)
-                    } else {
-                        data.clone()
-                    };
-                    planned.push((
-                        "depth",
-                        FORMAT_DEPTH32F,
-                        if carla { "carla-depth-bgra" } else { "depth32f" },
-                        out,
-                    ));
-                }
-                None => return WireResponse::error(i, missing("depth")),
-            }
-        }
-        if want_semantic {
-            let Some(id_data) = outputs.get(&format!("{}:id", cam.sensor_id)) else {
-                return WireResponse::error(i, missing("semantic (id source)"));
-            };
-            let legend = &state.legend;
-            let app = &state.app;
-            let out = crate::carla::semantic_from_ids(id_data, cam.width, cam.height, stride, |id| {
-                if let Some(class) = app.actor_instance_class(id) {
-                    return crate::carla::actor_class_of(class);
-                }
-                legend.get(&id).map(|n| crate::carla::static_class_of(n)).unwrap_or(0)
-            });
-            planned.push(("semantic", FORMAT_RGBA8, "rgba8", out));
-        }
-        for (pass, format_tag, format_name, data) in planned {
-            let digest = crc32fast::hash(&data);
-            let offset = match state.shm.publish(
-                &cam.sensor_id,
-                pass,
-                cam.width,
-                cam.height,
-                format_tag,
-                sim_tick,
-                &data,
+        for PlannedPass { pass, format_tag, format_name, data } in planned {
+            if let Err(error) = publish_bundle_frame(
+                state, &cam.sensor_id, pass, cam.width, cam.height, format_tag, format_name, sim_tick, &data,
+                &mut entries, &mut frames,
             ) {
-                Ok(offset) => offset,
-                Err(error) => return WireResponse::error(i, format!("publish: {error}")),
-            };
-            entries.push(BundleEntry {
-                camera_id: cam.sensor_id.clone(),
-                pass: pass.to_string(),
-                payload_offset: offset + crate::shm::RECORD_HEADER_BYTES as u64,
-                payload_len: data.len() as u64,
-                width: cam.width,
-                height: cam.height,
-                format_tag,
-                digest,
-            });
-            frames.push(FrameRecord {
-                sensor_id: cam.sensor_id.clone(),
-                pass: pass.to_string(),
-                offset,
-                len: data.len() as u64,
-                width: cam.width,
-                height: cam.height,
-                format: format_name.to_string(),
-                tick_id: sim_tick,
-                digest: Some(format!("{digest:08x}")),
-            });
+                return WireResponse::error(i, error);
+            }
         }
     }
     if !lidar_rig.is_empty() || !radar_rig.is_empty() {
@@ -1428,16 +1526,8 @@ fn render_bundle_op(
             ));
         }
         for (sensor_id, pass, format_tag, format_name, count, data) in sensor_payloads {
-            if let Err(error) = publish_sensor_payload(
-                state,
-                &sensor_id,
-                pass,
-                format_tag,
-                format_name,
-                count,
-                sim_tick,
-                &data,
-                &mut entries,
+            if let Err(error) = publish_bundle_frame(
+                state, &sensor_id, pass, count, 1, format_tag, format_name, sim_tick, &data, &mut entries,
                 &mut frames,
             ) {
                 return WireResponse::error(i, error);
@@ -1462,9 +1552,11 @@ fn render_bundle_op(
             body: ResponseBody::RenderBundle {
                 ok: true,
                 sim_tick,
+                frame: captured.identity,
                 bundle_offset,
                 bundle_len,
                 frames,
+                device: captured.device,
                 server_ms: t0.elapsed().as_secs_f64() * 1000.0,
             },
         },
@@ -1501,13 +1593,12 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        actor_base_y, actor_color, camera_host_actor_ids, instance_coverage, row_stride,
-        CombinedSensorScene,
+        actor_base_y, actor_color, capture_keys, instance_coverage, parse_bundle_passes,
+        row_stride, CombinedSensorScene,
     };
-    use crate::proto::{CameraAttach, ServiceCamera};
+    use crate::proto::ServiceCamera;
     use crate::scene::{ActorState, ActorTransform};
     use bevy::math::{Quat, Vec3};
-    use std::collections::HashSet;
     use sensors::bvh::{RaycastScene, Tri};
     use sensors::taxonomy::SemanticClass;
 
@@ -1520,38 +1611,32 @@ mod tests {
         data[row_stride(2, 4) + 8] = 9; // Padding must not count.
         assert_eq!(instance_coverage(&data, 2, 2), 0.5);
     }
+
     #[test]
-    fn mounted_camera_excludes_its_host_and_keeps_other_actors_visible() {
+    fn semantic_requires_the_id_capture_without_publishing_it() {
         let camera = ServiceCamera {
-            sensor_id: "front-camera".into(),
-            width: 1280,
-            height: 720,
+            sensor_id: "front".into(),
+            width: 64,
+            height: 48,
             fov_deg: 58.0,
             eye: [0.0; 3],
             target: [1.0, 0.0, 0.0],
             semantic: false,
             depth_encoding: None,
-            attach: Some(CameraAttach {
-                actor_id: "ego".into(),
-                offset_m: [1.8, 0.0, 1.35],
-                yaw_deg: 0.0,
-                pitch_deg: 0.0,
-                roll_deg: 0.0,
-                look_at_actor: false,
-            }),
+            attach: None,
             profile: None,
         };
-        let actors = vec!["ego".to_string(), "lead".to_string(), "pedestrian".to_string()];
-
-        let hidden = camera_host_actor_ids(&[camera], &actors);
-        let visible: Vec<&str> = actors
-            .iter()
-            .map(String::as_str)
-            .filter(|actor_id| !hidden.contains(*actor_id))
-            .collect();
-
-        assert_eq!(hidden, HashSet::from(["ego".to_string()]));
-        assert_eq!(visible, vec!["lead", "pedestrian"]);
+        let (want, id_output, semantic) =
+            parse_bundle_passes(&["rgb".to_string(), "semantic".to_string()]).unwrap();
+        assert!(want.id && !id_output && semantic);
+        assert_eq!(
+            capture_keys(std::slice::from_ref(&camera), want),
+            vec!["front:rgb".to_string(), "front:id".to_string()]
+        );
+        let (want, id_output, _) = parse_bundle_passes(&["depth".to_string()]).unwrap();
+        assert!(!want.rgb && !want.id && want.depth && !id_output);
+        assert_eq!(capture_keys(std::slice::from_ref(&camera), want), vec!["front:depth".to_string()]);
+        assert!(parse_bundle_passes(&["normals".to_string()]).is_err());
     }
 
 
@@ -1574,6 +1659,7 @@ mod tests {
                 position: [0.0; 3],
                 rotation: [0.0, 0.0, 0.0, 1.0],
             },
+            dims: None,
             velocity: [0.0; 3],
         };
         let red = actor_color(&actor(Some("#8f2f2f")), "car").unwrap();

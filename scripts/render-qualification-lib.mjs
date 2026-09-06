@@ -4,7 +4,7 @@ import { hostname, totalmem } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { simforgeEnv } from './compat-env.mjs';
+import { simforgeEnv } from './simforge-env.mjs';
 
 export const INVENTORY_SCHEMA = 'simforge.render-qualification-inventory/v1';
 export const MANIFEST_SCHEMA = 'simforge.render-qualification-manifest/v1';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GalleryAssetIdSchema } from "@/app/lib/asset-gallery/contracts";
+import { GalleryAssetIdSchema } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import {
   countScenariosUsingGalleryAsset,
   getGalleryAsset,

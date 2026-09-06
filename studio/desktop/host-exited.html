@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SimForge Studio</title>
+    <style>
+      html, body { height: 100%; margin: 0; background: #0b0e14; color: #d7dbe3; font: 14px system-ui, sans-serif; }
+      main { height: 100%; display: grid; place-items: center; text-align: center; }
+      p { margin: 4px 0; color: #8b93a3; }
+      code { color: #ffb86b; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <strong>The local Studio host stopped</strong>
+        <p>Exit code <code id="code">unknown</code>. Durable jobs continue under their own supervisor.</p>
+        <p>Relaunch SimForge Studio to start the host again.</p>
+      </div>
+    </main>
+    <script>
+      document.getElementById("code").textContent = new URLSearchParams(location.search).get("code") ?? "unknown";
+    </script>
+  </body>
+</html>

@@ -2,7 +2,7 @@ import { homedir, hostname } from "node:os";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { simforgeEnv } from "../lib/compat-env";
+import { simforgeEnv } from "../lib/simforge-env";
 
 import type { RenderProgressRecord } from "@simforge-oss/render";
 

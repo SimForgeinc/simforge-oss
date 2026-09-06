@@ -1,20 +1,18 @@
 /**
- * `MapContext` over a real map — the implementation `scenario-model` declared
- * and deliberately did not write.
+ * `MapContext` over a loaded map - the tier-1 validator's map-dependent view.
  *
- * The interface asks its questions in **AnchorFrame** coordinates (`k`, `s`),
- * which is exactly what a matched site provides: `frame.referencePath` turns
- * `s` into a lane, `frame.lateralLanes` turns `k` into a parallel lane, and
- * everything else is a lookup in `map-intel`'s derived index. That is the whole
- * reason the seam was drawn in frame coordinates: the validator never learns a
- * road id, and this file never learns what a template is.
+ * `@simforge-oss/scenario` asks its questions in AnchorFrame coordinates
+ * (`k`, `s`), which is exactly what a matched site provides: `frame.referencePath`
+ * turns `s` into a lane, `frame.lateralLanes` turns `k` into a parallel lane,
+ * and everything else is a read of the native bundle's normalised derived index
+ * or a native signal-plan query. No map fact is derived here; this module only
+ * addresses the bundle in frame coordinates.
  *
- * Without a site (`simforge template validate --map` with no `--site`) there is no
- * frame, so there is no context: the map-dependent checks are skipped and the
- * report says `mapChecked: false` rather than passing checks it did not run.
+ * Without a site (`simforge template validate --map` with no `--site`) there is
+ * no frame and therefore no context: the map-dependent checks are skipped and
+ * the report says `mapChecked: false`.
  */
 
-import type { DerivedMapIndex, MatchedSite } from './anchor/index.js';
 import type {
   FeatureFacts,
   GateFacts,
@@ -25,8 +23,14 @@ import type {
   MapContext,
   SignalFacts,
 } from '@simforge-oss/scenario';
-import type { MapBundle } from './maps.js';
-import { buildSiteSignalPlan, resolveSiteSignalProgram } from './map-signals.js';
+
+import type { NativeSite } from '@simforge-oss/engine';
+import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
+import { engine } from '@simforge-oss/engine/node';
+import { guard } from '@simforge-oss/native-runtime/shared';
+
+import type { MatchedSite } from './anchor/index.js';
+import type { MapBundle } from './types.js';
 
 const LANE_TYPES = new Set<LaneType>([
   'driving',
@@ -43,22 +47,29 @@ function laneType(raw: string): LaneType {
   return LANE_TYPES.has(raw as LaneType) ? (raw as LaneType) : 'other';
 }
 
-/** Build a `MapContext` for one matched site. */
-export function createMapContext(source: DerivedMapIndex | MapBundle, site: MatchedSite): MapContext {
-  const bundle = 'index' in source && 'signalCatalog' in source ? source : null;
-  const index = bundle?.index ?? (source as DerivedMapIndex);
+/**
+ * Build a `MapContext` for one matched site on a loaded bundle. The site is
+ * re-addressed once as a native handle (by id, so a rejected site still
+ * resolves) and reused for every signal query.
+ */
+export function createMapContext(bundle: MapBundle, template: ScenarioTemplateV2, site: MatchedSite): MapContext {
+  const index = bundle.index;
   const frame = site.frame;
-  const signalPlan = bundle ? buildSiteSignalPlan(bundle, site) : null;
+  let nativeSite: NativeSite | null = null;
+  const siteHandle = (): NativeSite => {
+    nativeSite ??= guard(() => engine().module.findSite(JSON.stringify(template), bundle.native, site.siteId));
+    return nativeSite;
+  };
 
   const laneFacts = (rsl: string, k: number, s: number): LaneFacts | undefined => {
     const lane = index.lanes[rsl];
     if (!lane) return undefined;
     const width =
       lane.widthSamples.length > 0
-        ? (lane.widthSamples.reduce(
+        ? lane.widthSamples.reduce(
             (best, sample) => (Math.abs(sample.s - s) < Math.abs(best.s - s) ? sample : best),
             lane.widthSamples[0]!,
-          ).widthM)
+          ).widthM
         : lane.representativeWidthM;
     return {
       rsl: rsl as LaneRsl,
@@ -165,7 +176,7 @@ export function createMapContext(source: DerivedMapIndex | MapBundle, site: Matc
                 : pair.relation;
         if (relation !== from) continue;
         const sOnEgo = pair.gateA === egoGateId ? pair.sOnA : pair.sOnB;
-        const egoConnecting = frame.egoGateId ? byId.get(frame.egoGateId)?.connectingLaneRsl : undefined;
+        const egoConnecting = byId.get(egoGateId)?.connectingLaneRsl;
         const base = egoConnecting ? (frame.sOfLane[egoConnecting] ?? 0) : 0;
         return {
           gateId: other.id,
@@ -178,10 +189,9 @@ export function createMapContext(source: DerivedMapIndex | MapBundle, site: Matc
     },
 
     signal(ref): SignalFacts | undefined {
-      if (!bundle || !signalPlan) return undefined;
-      const handle = resolveSiteSignalProgram(bundle, site, signalPlan, ref);
-      if (!handle) return undefined;
-      const program = signalPlan.programs.find((candidate) => candidate.id === handle);
+      const handle = bundle.resolveSiteSignalProgram(siteHandle(), ref);
+      if (handle === null) return undefined;
+      const program = bundle.siteSignalPlan(siteHandle()).programs.find((candidate) => candidate.id === handle);
       if (!program) return undefined;
       return {
         handle,

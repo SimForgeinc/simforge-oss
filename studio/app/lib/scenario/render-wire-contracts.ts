@@ -1,4 +1,4 @@
-import { RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -19,7 +19,7 @@ const SensorSourceHostSchema = z.strictObject({
 });
 
 export const ScenarioRenderIntentSchema = z.strictObject({
-  schema: z.literal("uniscenario.render-intent/v1"),
+  schema: z.literal(RENDER_INTENT_V1_SCHEMA),
   intentId: PublicIdSchema,
   executionPackage: z.strictObject({
     id: PublicIdSchema,
@@ -122,7 +122,7 @@ const UniqueModalitiesSchema = z.array(ArtifactModalitySchema)
   .refine((items) => new Set(items).size === items.length, "Modalities must be unique.");
 
 export const ScenarioRendererCapabilitySchema = z.strictObject({
-  schema: z.literal("uniscenario.render-engine-capabilities/v1"),
+  schema: z.literal("simforge.render-engine-capabilities/v1"),
   engineId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
   engineVersion: z.string().min(1).max(128),
   backend: ScenarioRendererEngineSchema,
@@ -175,7 +175,7 @@ export const RenderArtifactIdentitySchema = z.discriminatedUnion("role", [
 export type RenderArtifactIdentity = z.infer<typeof RenderArtifactIdentitySchema>;
 
 const RenderProgressBase = {
-  schema: z.literal("uniscenario.render-progress/v1"),
+  schema: z.literal("simforge.render-progress/v1"),
   jobId: z.string().min(1).max(128),
   attempt: z.number().int().min(1).max(1_000_000),
   sequence: z.number().int().nonnegative(),

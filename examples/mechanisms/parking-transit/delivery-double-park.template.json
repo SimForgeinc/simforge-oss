@@ -48,7 +48,7 @@
     },
     {
       "id": "delivery-worker", "kind": "on_reference", "label": "delivery worker emerging on foot from behind the van",
-      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult_walking" },
+      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult", "dims": { "length": 0.85, "width": 0.5, "height": 1.75 } },
       "pose": { "laneOffset": 0, "s": 76, "tFrac": -1, "headingOffsetRad": 0 },
       "initialSpeedKph": "param.workerSpeedKph"
     }

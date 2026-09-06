@@ -1,32 +1,26 @@
 /**
- * Trace serialisation.
+ * Trace file I/O.
  *
- * `serializeTrace` produces the **canonical bytes** a determinism test compares:
- * sorted keys, no whitespace, quantised channels. Gzip is applied on top with
- * `CompressionStream` in the browser and `node:zlib` under Node — note that the
- * *compressed* bytes are not guaranteed identical across those two backends, so
- * byte-comparison happens on the uncompressed canonical JSON.
+ * Canonical trace bytes (quantised, sorted keys, no whitespace) come from the
+ * native runtime (`EngineRuntime.trace(...).toJson()`); this module only moves
+ * them through gzip with `CompressionStream` in the browser and `node:zlib`
+ * under Node. The *compressed* bytes are not guaranteed identical across those
+ * two backends, so byte-comparison happens on the uncompressed canonical JSON.
  */
 
-import { canonicalJson, sha256 } from '../core/hash.js';
-import { quantizeTrace, type SimTrace } from './trace.js';
+import type { SimTrace } from './trace.js';
+
 // Node-only fallback: a static import would make this browser module unbundleable.
 async function loadNodeZlib() {
   const specifier = ['node', 'zlib'].join(':');
   return import(/* webpackIgnore: true */ specifier);
 }
 
-/** Canonical, quantised JSON bytes for a trace. */
-export function serializeTrace(trace: SimTrace): Uint8Array {
-  return new TextEncoder().encode(canonicalJson(quantizeTrace(trace)));
+export function isGzipBytes(bytes: Uint8Array): boolean {
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
-/** Content digest of the canonical trace bytes. */
-export function traceDigest(trace: SimTrace): string {
-  return sha256(canonicalJson(quantizeTrace(trace)));
-}
-
-async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
+export async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
   const CS = (globalThis as { CompressionStream?: typeof CompressionStream }).CompressionStream;
   if (CS) {
     const stream = new Blob([bytes.slice() as unknown as BlobPart]).stream().pipeThrough(new CS('gzip'));
@@ -36,7 +30,7 @@ async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(gzipSync(bytes));
 }
 
-async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
+export async function gunzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
   const DS = (globalThis as { DecompressionStream?: typeof DecompressionStream }).DecompressionStream;
   if (DS) {
     const stream = new Blob([bytes.slice() as unknown as BlobPart]).stream().pipeThrough(new DS('gzip'));
@@ -46,14 +40,13 @@ async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(gunzipSync(bytes));
 }
 
-/** Gzipped canonical JSON — the `.trace.json.gz` payload. */
-export async function encodeTraceGz(trace: SimTrace): Promise<Uint8Array> {
-  return gzip(serializeTrace(trace));
+/** Gzip already-canonical trace JSON bytes — the `.trace.json.gz` payload. */
+export async function encodeTraceGz(canonicalTraceJson: string | Uint8Array): Promise<Uint8Array> {
+  return gzipBytes(typeof canonicalTraceJson === 'string' ? new TextEncoder().encode(canonicalTraceJson) : canonicalTraceJson);
 }
 
-/** Inverse of `encodeTraceGz`; also accepts uncompressed JSON bytes. */
+/** Inverse of `encodeTraceGz`; also accepts uncompressed JSON bytes. Structural decode only: validate with `EngineRuntime.trace`. */
 export async function decodeTraceGz(bytes: Uint8Array): Promise<SimTrace> {
-  const gzipped = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
-  const plain = gzipped ? await gunzip(bytes) : bytes;
+  const plain = isGzipBytes(bytes) ? await gunzipBytes(bytes) : bytes;
   return JSON.parse(new TextDecoder().decode(plain)) as SimTrace;
 }

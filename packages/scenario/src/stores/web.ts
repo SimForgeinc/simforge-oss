@@ -18,9 +18,8 @@
  */
 
 import { ScenarioNotFoundError } from '../errors.js';
-import { deserializeScenario } from '../migrate.js';
 import type { ScenarioV1 } from '../schema/v1.js';
-import { serializeScenario } from '../serialize.js';
+import { parseScenario, serializeScenario } from '../serialize.js';
 import {
   assertValidScenarioName,
   toScenarioV1,
@@ -122,7 +121,7 @@ export class WebScenarioFileStore implements ScenarioFileStore {
   async read(name: string): Promise<ScenarioV1> {
     const text = this.#storage.getItem(this.#key(name));
     if (text === null) throw new ScenarioNotFoundError(name);
-    return deserializeScenario(text);
+    return parseScenario(JSON.parse(text));
   }
 
   async write(name: string, doc: ScenarioLike): Promise<void> {

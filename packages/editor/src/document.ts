@@ -267,10 +267,9 @@ export function normalizeAuthoringGraph(template: ScenarioTemplateV2): {
 }
 
 /**
- * Editor cars persist only their lane pose. Their route is rebuilt against the
- * current topology when a simulation is prepared, using semantic timeline
- * direction actions. This also upgrades drafts created while the direction
- * menu wrote three indistinguishable `acquire` commands.
+ * Editor lane routes are rebuilt against the current topology using semantic
+ * direction actions. Source-backed scene-space routes are authored state and
+ * must survive loading and unrelated edits.
  */
 function normalizeRuntimeRouteIntent(template: ScenarioTemplateV2): {
   readonly template: ScenarioTemplateV2;
@@ -278,7 +277,7 @@ function normalizeRuntimeRouteIntent(template: ScenarioTemplateV2): {
 } {
   let changed = false;
   const roles = template.roles.map((role) => {
-    if (role.kind !== 'scene_absolute' || !role.initialRoute) return role;
+    if (role.kind !== 'scene_absolute' || role.initialRoute?.mode !== 'lanePath') return role;
     changed = true;
     const { initialRoute: _initialRoute, ...runtimeRouted } = role;
     return runtimeRouted;
@@ -726,7 +725,7 @@ export class EditorDocument {
           role.driverProfile = update.driverProfile;
         }
         // Exact lane chains are runtime products, never editor-owned actor state.
-        delete role.initialRoute;
+        if (role.initialRoute?.mode === 'lanePath') delete role.initialRoute;
         if (update.bodyColor !== undefined) {
           role.extensions = { ...current.extensions, 'studio.presentation.bodyColor': update.bodyColor };
         }
@@ -777,6 +776,21 @@ export class EditorDocument {
           const timedRouteDx = role.pose.position.x - current.pose.position.x;
           const timedRouteDz = role.pose.position.z - current.pose.position.z;
           if (Math.hypot(timedRouteDx, timedRouteDz) > 1e-6) {
+            if (role.initialRoute?.mode === 'customTimedRoute') {
+              role.initialRoute = {
+                ...role.initialRoute,
+                points: role.initialRoute.points.map((point) => ({
+                  ...point, x: point.x + timedRouteDx, z: point.z + timedRouteDz,
+                })),
+              };
+            } else if (role.initialRoute?.mode === 'customRoute') {
+              role.initialRoute = {
+                ...role.initialRoute,
+                points: role.initialRoute.points.map((point) => ({
+                  x: point.x + timedRouteDx, z: point.z + timedRouteDz,
+                })),
+              };
+            }
             for (const interaction of [...this.#doc.data.choreography.interactions]) {
               if (
                 interaction.actor !== update.id ||
@@ -1295,7 +1309,7 @@ function recordFromRole(role: RoleBinding): ActorRecord | null {
       ? undefined
       : role.driverProfile ?? 'lawful',
     static: role.actor.static,
-    routeLaneRsls: role.initialRoute?.lanes,
+    routeLaneRsls: role.initialRoute?.mode === 'lanePath' ? role.initialRoute.lanes : undefined,
     sensors: role.actor.sensors,
   };
 }

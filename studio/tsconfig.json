@@ -68,6 +68,11 @@
       "@simforge-oss/render/web": ["../packages/render/src/web/index.ts"],
       "@simforge-oss/scenario": ["../packages/scenario/src/index.ts"],
       "@simforge-oss/scenario/contracts": ["../packages/scenario/src/contracts.ts"],
+      "@simforge-oss/studio-host": ["../packages/studio-host/src/index.ts"],
+      "@simforge-oss/studio-host/react": ["../packages/studio-host/src/react.tsx"],
+      "@simforge-oss/studio-host/node": ["../packages/studio-host/src/node/index.ts"],
+      "@simforge-oss/studio-ui": ["../packages/studio-ui/src/index.ts"],
+      "@simforge-oss/studio-ui/*": ["../packages/studio-ui/src/*"],
       "@simforge-oss/training-env": ["../packages/training-env/src/index.ts"],
       "@simforge-oss/viewer": ["../packages/viewer/src/index.ts"],
       "@simforge-oss/viewer/react": ["../packages/viewer/src/react.tsx"]

@@ -7,6 +7,7 @@ import {
   hashRenderIntent,
   parseRenderIntent,
 } from '../render-intent.js';
+import { RENDER_SPEC_V3_SCHEMA } from '../render-spec.js';
 import { Sha256 } from '../sha256.js';
 
 const DIGEST = 'a'.repeat(64);
@@ -100,7 +101,7 @@ function intent(sources: readonly unknown[]) {
     },
     sensorHosts: sensorHosts(sources),
     renderSpec: {
-      schema: 'uniscenario.render-spec/v3',
+      schema: RENDER_SPEC_V3_SCHEMA,
       sources,
       clip: { startSeconds: 0, endSeconds: 20 },
       video: { width: 1280, height: 720, fps: 24, container: 'mp4', codec: 'h264', quality: 'standard' },

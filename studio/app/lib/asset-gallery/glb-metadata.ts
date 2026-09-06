@@ -1,7 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
-import { GALLERY_MAX_THUMBNAIL_BYTES } from "./contracts";
+import { GALLERY_MAX_THUMBNAIL_BYTES } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 
 const GLB_HEADER_BYTES = 12;
 const GLB_CHUNK_HEADER_BYTES = 8;

@@ -61,6 +61,20 @@ import {
   type TimingContext,
 } from './timing.js';
 
+function validateTimedRoute(points: readonly { timeS: number }[], path: string, out: ClauseResult[]): void {
+  for (let index = 0; index < points.length; index += 1) {
+    const timeS = points[index]!.timeS;
+    if (!Number.isFinite(timeS) || timeS < 0 || (index > 0 && timeS <= points[index - 1]!.timeS)) {
+      out.push(issue(
+        'error',
+        'route_disconnected',
+        joinPath(path, 'points', index, 'timeS'),
+        'custom timed route times must be finite, nonnegative, and strictly increasing',
+      ));
+    }
+  }
+}
+
 /** Expression-node discriminants, for the generic template walk. */
 const EXPR_KINDS = new Set(['num', 'ref', 'neg', 'bin', 'call']);
 
@@ -298,7 +312,10 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
             ),
           );
         }
-        if (role.initialRoute) {
+        if (role.initialRoute?.mode === 'customTimedRoute') {
+          validateTimedRoute(role.initialRoute.points, joinPath(base, 'initialRoute'), out);
+        }
+        if (role.initialRoute?.mode === 'lanePath') {
           const placedLane = role.laneRef
             ? `${role.laneRef.roadId}:${role.laneRef.section}:${role.laneRef.laneId}`
             : null;
@@ -495,17 +512,7 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
             ));
           }
           if (interaction.target.mode === 'customTimedRoute') {
-            const points = interaction.target.points;
-            for (let index = 1; index < points.length; index += 1) {
-              if (points[index]!.timeS <= points[index - 1]!.timeS) {
-                out.push(issue(
-                  'error',
-                  'route_disconnected',
-                  joinPath(base, 'target', 'points', index, 'timeS'),
-                  'custom timed route times must be strictly increasing',
-                ));
-              }
-            }
+            validateTimedRoute(interaction.target.points, joinPath(base, 'target'), out);
           }
         } else if (interaction.target.mode === 'nearMiss') {
           needRole(interaction.target.target, joinPath(base, 'target', 'target'));

@@ -12,7 +12,7 @@ import {
   readEditorSignalControlProjection,
   type DerivedTopologyConflicts,
 } from "./control-plan.server";
-import type { EditorSignalControlProjection } from "./types";
+import type { EditorSignalControlProjection } from "@simforge-oss/studio-ui/lib/scenario/signals/types";
 
 /**
  * The authorized, cached read that gives the signal panel real data.
@@ -23,7 +23,7 @@ import type { EditorSignalControlProjection } from "./types";
  * kilobytes. Its inputs are a whole XODR and a whole topology index — tens of
  * megabytes. Handing the client presigned URLs for those and building the
  * projection in the browser would ship three orders of magnitude more bytes than
- * the answer, and it would put `parseMapSignalCatalog` (and therefore
+ * the answer, and it would put the native signal catalog (and therefore
  * `contentHash`, and therefore `controlDigest`) on two implementations' worth of
  * environment: a digest that differs between Node and a browser would invalidate
  * every plan authored on the other one.

@@ -30,9 +30,12 @@ import {
   CARLA_UE5_WALKER_CHILDREN,
   walkerBlueprintAt,
 } from "@simforge-oss/studio-shared";
-import { PEDESTRIAN_LIMITS } from "@simforge-oss/engine";
 
-const WALKER_ACCELERATION_MPS2 = PEDESTRIAN_LIMITS.accelMax;
+/**
+ * The native engine's pedestrian longitudinal envelope (`PEDESTRIAN_LIMITS.accel_max`
+ * in `simforge_core::engine::controllers`): the ramp a walker can actually track.
+ */
+export const WALKER_ACCELERATION_MPS2 = 1.5;
 
 export type WalkerProfile = "adult" | "child";
 

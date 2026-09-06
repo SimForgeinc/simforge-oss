@@ -1,0 +1,148 @@
+{
+  "schema": "simforge.native-runtime-support-tiers/v1",
+  "tiers": [
+    {
+      "tier": "cpu-reference",
+      "description": "Deterministic CPU reference execution: simforge.compile/v1, simforge.simulate/v1, simforge.episode-batch/v1 in the runner binary. No GPU, driver or Python requirement.",
+      "requires": {
+        "os": "linux",
+        "arch": "x86_64"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "fresh-install gate: package-runtime.sh + install-runtime.sh on a clean root, then `runtime show` with components installed:true",
+          "end-to-end gate: simforge.compile/v1 -> simforge.simulate/v1 -> in-process evaluate on a real published map/scenario through the installed binary, artifact hashes verified by `job artifacts`",
+          "runner crash/reconnect/cancel gates on the installed binary (detach, SIGKILL owner, worker reconcile, resume, cancel at safe boundary)"
+        ],
+        "observed": [
+          "isolated lifecycle tests (8) passed against a counting engine in a /tmp copy on 2026-09-05; not the installed binary",
+          "core/session unit tests reported by their owners; narrower than the end-to-end gate"
+        ]
+      }
+    },
+    {
+      "tier": "python-provider",
+      "description": "Python providers installed into <root>/venv from the bundled wheels by install-runtime.sh; required by every provider workload.",
+      "requires": {
+        "os": "linux",
+        "arch": "x86_64",
+        "python": ">=3.10"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "install-runtime.sh must build <root>/venv from the bundled wheels on a clean host and import every provider module",
+          "one provider job (simforge.articulated-mujoco/v1 mujoco-cpu) must complete through the installed runner with verified artifacts"
+        ],
+        "observed": [
+          "Main ran the simforge_oss_physics job CLI directly (seeds 3,4; 120 decisions; 4 checkpoints); not through the installed runner"
+        ]
+      }
+    },
+    {
+      "tier": "articulated-mujoco-cpu",
+      "description": "simforge.articulated-mujoco/v1 with backend mujoco-cpu (float64, same-build replay).",
+      "requires": {
+        "python": ">=3.10",
+        "mujoco": ">=3.2"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "adapters/physics qualification gates (simforge-oss-physics qualify) must pass on the packaged wheel"
+        ]
+      }
+    },
+    {
+      "tier": "articulated-mujoco-warp",
+      "description": "simforge.articulated-mujoco/v1 with backend mujoco-warp: CUDA GPU with a driver supporting warp-lang; CPU/Warp parity is measured, not presumed.",
+      "requires": {
+        "python": ">=3.10",
+        "cuda": ">=12",
+        "warp-lang": ">=1.17",
+        "mujoco-warp": "pinned by simforge-oss-physics[warp]"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "mujoco-warp gates and measured CPU/Warp divergence on a real device"
+        ]
+      }
+    },
+    {
+      "tier": "roadway-gpu-batch",
+      "description": "simforge.gpu-batch-rollout/v1 (roadway-dynamic-gpu-v1): Warp/CUDA device batches with binary64 arithmetic; cross-backend conformance is measured by qualification.",
+      "requires": {
+        "python": ">=3.10",
+        "cuda": ">=12",
+        "warp-lang": ">=1.17",
+        "torch": ">=2.0 (optional, tensor leases)"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "simforge-oss-gpu-conformance and qualify on a real device"
+        ]
+      }
+    },
+    {
+      "tier": "bevy-sensor-render",
+      "description": "simforge.render-bundle/v1: resident Bevy renderer (native-render-service + libsimforge_render.so, Bevy 0.19.1 / wgpu 29) on a Vulkan-capable GPU; gpu-interop device path requires CUDA and a matching physical device, otherwise the declared host-copy path is used.",
+      "requires": {
+        "vulkan": ">=1.2",
+        "gpu": "Vulkan-capable; CUDA >=12 for gpu-interop"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "captured frames must be non-blank and change with the scene (visual inspection), not merely byte-parity or a successful build",
+          "complete resource closure: share/sky plates present and digest-verified, scene assets resolvable from the runtime root"
+        ],
+        "evidence": "set by Main after real scene renders are inspected",
+        "observed": [
+          "CUDA transport/lease mechanics passed but the captured image was black; transport mechanics are not visual qualification"
+        ]
+      }
+    },
+    {
+      "tier": "nurec-splat-render",
+      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed.",
+      "requires": {
+        "cuda": ">=12",
+        "torch": "CUDA build",
+        "3dgrut": "THREEDGRUT_ROOT with compiled tracer",
+        "kaolin": "matching torch/CUDA",
+        "assets": "pinned .usdz packages, scenes root, catalog roots, hood dir"
+      },
+      "qualification": {
+        "status": "unqualified",
+        "blockers": [
+          "provider capabilities available:true on the target host and inspected non-blank renders"
+        ]
+      }
+    }
+  ],
+  "providers": {
+    "simforge-oss-gym": {
+      "module": "simforge_oss_gym",
+      "tier": "python-provider"
+    },
+    "simforge-oss-physics": {
+      "module": "simforge_oss_physics",
+      "tier": "articulated-mujoco-cpu"
+    },
+    "simforge-oss-gpu": {
+      "module": "simforge_oss_gpu",
+      "tier": "roadway-gpu-batch"
+    },
+    "simforge-oss-native-renderer": {
+      "module": "simforge_native",
+      "tier": "bevy-sensor-render"
+    },
+    "simforge-oss-splat": {
+      "module": "simforge_splat",
+      "tier": "nurec-splat-render"
+    }
+  }
+}

@@ -1,0 +1,465 @@
+{
+  "id": "thr-lane-shift-shifts-left",
+  "kind": "threshold",
+  "mapId": "el-camino-road",
+  "status": "derived",
+  "reason": null,
+  "base": "cmp-lane-shift-workzone",
+  "interactionId": "ego-shifts-left",
+  "authoredValue": 26,
+  "baseTrigger": {
+    "t": 1.1400000000000001,
+    "forced": false
+  },
+  "variantCount": 5,
+  "variants": [
+    "thr-lane-shift-shifts-left-t25p8700",
+    "thr-lane-shift-shifts-left-t26p0000",
+    "thr-lane-shift-shifts-left-t26p1300",
+    "thr-lane-shift-shifts-left-t26p2600",
+    "thr-lane-shift-shifts-left-t26p3900"
+  ],
+  "iterations": {
+    "requested": 25,
+    "completed": 25,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 129.02666100000002,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 6.830276999999995,
+      "warm": null
+    },
+    "compile": {
+      "cold": 220.35178699999994,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 348.08959000000004,
+      "warm": null
+    },
+    "simulate": {
+      "cold": null,
+      "warm": null
+    },
+    "digest": {
+      "cold": null,
+      "warm": null
+    },
+    "serialize": {
+      "cold": null,
+      "warm": null
+    }
+  },
+  "children": [
+    {
+      "id": "thr-lane-shift-shifts-left-t25p8700",
+      "kind": "threshold-variant",
+      "mapId": "el-camino-road",
+      "status": "completed",
+      "inputHash": "5e98b4f1f3c222141df4e75358b844e9140d35090d7d823efa92e548d98d8cc2",
+      "traceDigest": "c12cb45eff35c64ce6d67060df285cf516284fa5a5f1028fe8123f7a718bb75e",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 151.61650999999995,
+          "warm": {
+            "n": 4,
+            "min": 135.57807900000012,
+            "median": 148.20643799999993,
+            "max": 163.832946,
+            "mean": 148.95597525
+          }
+        },
+        "digest": {
+          "cold": 23.993514000000005,
+          "warm": {
+            "n": 4,
+            "min": 14.90670399999999,
+            "median": 14.972854000000098,
+            "max": 15.657504999999901,
+            "mean": 15.127479250000022
+          }
+        },
+        "serialize": {
+          "cold": 28.22448099999997,
+          "warm": {
+            "n": 4,
+            "min": 14.846332999999959,
+            "median": 15.855003499999953,
+            "max": 16.348481999999876,
+            "mean": 15.726205499999935
+          }
+        }
+      },
+      "tickCount": 951,
+      "events": 9,
+      "threshold": {
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 26,
+        "value": 25.87,
+        "gridIndex": 39,
+        "predictedFirstTrueT": 1.16,
+        "admissible": false,
+        "actualFire": {
+          "t": 1.16,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-lane-shift-shifts-left-t26p0000",
+      "kind": "threshold-variant",
+      "mapId": "el-camino-road",
+      "status": "completed",
+      "inputHash": "7f6a9c53cd1f6e44efe5508d410f2323569019c072ecba00818b3052c5f79422",
+      "traceDigest": "9c34ba761a1bdedf874d227a4b8ad5798b1dc5393983936fa909ae1baf806c1f",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 131.04694700000005,
+          "warm": {
+            "n": 4,
+            "min": 132.89298399999961,
+            "median": 133.63362000000006,
+            "max": 136.14217599999984,
+            "mean": 134.0755999999999
+          }
+        },
+        "digest": {
+          "cold": 15.224520999999868,
+          "warm": {
+            "n": 4,
+            "min": 14.577263999999786,
+            "median": 14.93673949999993,
+            "max": 15.253204000000096,
+            "mean": 14.925986749999936
+          }
+        },
+        "serialize": {
+          "cold": 15.555801999999858,
+          "warm": {
+            "n": 4,
+            "min": 15.289464999999836,
+            "median": 16.13864599999988,
+            "max": 16.55965699999979,
+            "mean": 16.031603499999846
+          }
+        }
+      },
+      "tickCount": 951,
+      "events": 8,
+      "threshold": {
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 26,
+        "value": 26,
+        "gridIndex": 40,
+        "predictedFirstTrueT": 1.1400000000000001,
+        "admissible": true,
+        "actualFire": {
+          "t": 1.1400000000000001,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-lane-shift-shifts-left-t26p1300",
+      "kind": "threshold-variant",
+      "mapId": "el-camino-road",
+      "status": "completed",
+      "inputHash": "f67c386de9da083976826ad331e50f280408f0ebc9dcd92651e1c777e1eac1bb",
+      "traceDigest": "27136ea613f7d52b41bec62785d4fcf8d13f4570c051e5344439772ee6118db3",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 127.32262899999978,
+          "warm": {
+            "n": 4,
+            "min": 127.38642299999992,
+            "median": 128.2698710000002,
+            "max": 129.8340750000002,
+            "mean": 128.44006000000013
+          }
+        },
+        "digest": {
+          "cold": 15.299019000000044,
+          "warm": {
+            "n": 4,
+            "min": 14.547742000000198,
+            "median": 14.996526500000073,
+            "max": 15.413148999999976,
+            "mean": 14.98848600000008
+          }
+        },
+        "serialize": {
+          "cold": 15.238385000000108,
+          "warm": {
+            "n": 4,
+            "min": 14.830093999999917,
+            "median": 15.334864500000094,
+            "max": 17.11393999999973,
+            "mean": 15.653440749999959
+          }
+        }
+      },
+      "tickCount": 951,
+      "events": 8,
+      "threshold": {
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 26,
+        "value": 26.13,
+        "gridIndex": 41,
+        "predictedFirstTrueT": 1.12,
+        "admissible": true,
+        "actualFire": {
+          "t": 1.12,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-lane-shift-shifts-left-t26p2600",
+      "kind": "threshold-variant",
+      "mapId": "el-camino-road",
+      "status": "completed",
+      "inputHash": "3ef7b53ec3863002a7f363e6009d65f872f6f8ed0a47803b0002466ae1417d93",
+      "traceDigest": "242c74d78d1942b8136fe7053d5ca95da2922c7e07550cd14a3f13f2bf152f0e",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 119.73711000000003,
+          "warm": {
+            "n": 4,
+            "min": 129.59995700000036,
+            "median": 129.83503799999994,
+            "max": 129.98126599999978,
+            "mean": 129.81282475
+          }
+        },
+        "digest": {
+          "cold": 14.663606000000073,
+          "warm": {
+            "n": 4,
+            "min": 14.59550900000022,
+            "median": 15.166902500000106,
+            "max": 15.541799000000083,
+            "mean": 15.117778250000129
+          }
+        },
+        "serialize": {
+          "cold": 15.324598000000151,
+          "warm": {
+            "n": 4,
+            "min": 14.834897000000183,
+            "median": 15.82499800000005,
+            "max": 16.59579199999962,
+            "mean": 15.770171249999976
+          }
+        }
+      },
+      "tickCount": 951,
+      "events": 8,
+      "threshold": {
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 26,
+        "value": 26.26,
+        "gridIndex": 42,
+        "predictedFirstTrueT": 1.1,
+        "admissible": true,
+        "actualFire": {
+          "t": 1.1,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-lane-shift-shifts-left-t26p3900",
+      "kind": "threshold-variant",
+      "mapId": "el-camino-road",
+      "status": "completed",
+      "inputHash": "a42c398cf73ad43c5c03c2675b958886f993889c9b4aecc0b56032f6a19ad33a",
+      "traceDigest": "12c62a22d5532f92c765fce31170bc4306834ab4dbc4dc4b68fd7f58ad814ebc",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 124.91455900000028,
+          "warm": {
+            "n": 4,
+            "min": 133.03279199999997,
+            "median": 133.63997299999983,
+            "max": 134.62270699999954,
+            "mean": 133.7338612499998
+          }
+        },
+        "digest": {
+          "cold": 15.05324500000006,
+          "warm": {
+            "n": 4,
+            "min": 14.596951000000445,
+            "median": 14.764387499999884,
+            "max": 14.937953000000562,
+            "mean": 14.765919750000194
+          }
+        },
+        "serialize": {
+          "cold": 15.994729999999436,
+          "warm": {
+            "n": 4,
+            "min": 15.453980000000229,
+            "median": 16.091181999999662,
+            "max": 16.42269899999974,
+            "mean": 16.014760749999823
+          }
+        }
+      },
+      "tickCount": 951,
+      "events": 8,
+      "threshold": {
+        "base": "cmp-lane-shift-workzone",
+        "interactionId": "ego-shifts-left",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 26,
+        "value": 26.39,
+        "gridIndex": 43,
+        "predictedFirstTrueT": 1.08,
+        "admissible": true,
+        "actualFire": {
+          "t": 1.08,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    }
+  ]
+}

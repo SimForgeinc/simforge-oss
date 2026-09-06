@@ -1,0 +1,22 @@
+[package]
+name = "simforge-bindings-python"
+description = "PyO3 extension module `simforge_oss_gym._native`: the SIMFORGE native runtime for the simforge-oss-gym distribution (NumPy buffers, GIL released around batched stepping)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_oss_gym_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+simforge-bindings-common = { path = "../simforge-bindings-common" }
+simforge-core = { path = "../simforge-core" }
+serde_json.workspace = true
+pyo3 = { version = "0.27", features = ["abi3-py310"] }
+numpy = "0.27"
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]

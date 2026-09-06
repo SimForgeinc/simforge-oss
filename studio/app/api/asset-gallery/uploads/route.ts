@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CreateGalleryUploadInputSchema } from "@/app/lib/asset-gallery/contracts";
+import { CreateGalleryUploadInputSchema } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import {
   countRecentUploadsByUser,
   createGalleryAsset,

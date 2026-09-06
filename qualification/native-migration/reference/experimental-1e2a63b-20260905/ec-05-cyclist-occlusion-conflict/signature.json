@@ -1,0 +1,220 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "bc2343ec67709e44117879fa92e7ad7faa2bc4604f150a2e278b0dd7e1ab2cd1",
+  "traceDigest": "cd51190bfc04bae8646a849e975597704f84162e6679b31a7b315804ea7d208d",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 0,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "delivery-truck": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "pedestrian": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      },
+      "wrong-way-rider": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "delivery-truck": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 5.34,
+          "from": null,
+          "to": "93:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "pedestrian": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.84,
+          "from": null,
+          "to": "773:0:1"
+        },
+        {
+          "t": 2.7600000000000002,
+          "from": "773:0:1",
+          "to": "771:0:1"
+        },
+        {
+          "t": 3.68,
+          "from": "771:0:1",
+          "to": null
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "wrong-way-rider": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 4,
+      "kind": "trigger_fired",
+      "interactionId": "pedestrian-clears",
+      "actorId": "pedestrian",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 4.2,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-first-creep",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11.200000000000001,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-second-creep",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11.200000000000001,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-second-creep",
+      "preemptedInteractionId": "focus-vehicle-first-creep"
+    },
+    {
+      "t": 11.4,
+      "kind": "trigger_fired",
+      "interactionId": "wrong-way-rider-emerges",
+      "actorId": "wrong-way-rider",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 13.6,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-stops-for-contraflow",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 13.6,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-stops-for-contraflow",
+      "preemptedInteractionId": "focus-vehicle-second-creep"
+    },
+    {
+      "t": 17.5,
+      "kind": "trigger_fired",
+      "interactionId": "contraflow-rider-passes",
+      "actorId": "wrong-way-rider",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 17.5,
+      "kind": "preemption",
+      "actorId": "wrong-way-rider",
+      "axis": "longitudinal",
+      "byInteractionId": "contraflow-rider-passes",
+      "preemptedInteractionId": "wrong-way-rider-emerges"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "focus-vehicle",
+        "pedestrian"
+      ],
+      [
+        "focus-vehicle",
+        "wrong-way-rider"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

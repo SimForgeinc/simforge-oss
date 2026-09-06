@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Play } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
 
 /** A fly-by `mp4` artifact, optionally paired with its low-res preview clip. */

@@ -1,0 +1,52 @@
+{
+  "schema": "simforge.nurec-port-provenance/v1",
+  "upstream": {
+    "repository": "ssh://simforge1/data/share7/ubuntu/simforge-fix/worktrees/nurec-backend",
+    "commit": "a435e9ccd72a934333b17e70d913a664e80e0820",
+    "sourceDirectory": "renderer/splat/python/simforge_splat",
+    "license": "Apache-2.0",
+    "licenseNotes": "LICENSES.md"
+  },
+  "externalDependencies": {
+    "3dgrut": {"repository":"https://github.com/nv-tlabs/3dgrut", "upstreamDocumentedCommit":"a37ef72", "resolution":"$THREEDGRUT_ROOT or an importable threedgrut package (simforge_splat.prerequisites); no default path; CapabilityError when absent", "vendored":false, "pipDependency":false},
+    "kaolin": {"source":"NVIDIA Kaolin built for the installed torch/CUDA (kaolin.readthedocs.io)", "pipDependency":false, "note":"the PyPI project named 'kaolin' is unrelated and deliberately not declared"},
+    "torch": {"source":"CUDA PyTorch build from the pytorch.org index for the driver's CUDA", "pipDependency":"optional extra 'torch' pins the floor only"},
+    "runtime": ["Python >=3.11", "numpy", "scipy", "trimesh", "msgpack", "PyYAML", "hydra-core", "omegaconf", "Pillow (declared in renderer/splat/python/pyproject.toml as simforge-oss-splat 0.1.0rc61; console script simforge-oss-splat with subcommands capabilities [--no-probe] | job | service)"],
+    "sourceDataset": "PhysicalAI-Autonomous-Vehicles-NuRec sample_set/26.04_release (not vendored; publication requires dataset license review)",
+    "hood": "External AlpaSim hyperion_8_1 PNGs; --hood-dir <dir>|none is REQUIRED and the selected profile is stamped into hello.renderer.hood and every sourceEvidence.hood; a missing overlay for a rendered camera is a CapabilityError, never a silent no-hood frame",
+    "catalog": "External or repository GLB catalog roots (--catalog required, repeatable); explicit catalogId required, missing assets rejected"
+  },
+  "localChanges": [
+    "Fork source_patch.py filters selected static Gaussian centers in source-world z-up before packed buffer assembly.",
+    "Authored region GLBs enter the existing mesh depth/composite pass; final depth also gates actor proxy visibility.",
+    "Injected actor GLBs use canonical engine state placement; no class-to-hatchback fallback.",
+    "Rigid retiming uses the shifted source clock for pitch/roll/height and Fourier appearance, leaving the background clock unchanged.",
+    "Full package SHA-256 checked in addition to volume.nurec member identity.",
+    "Determinism utility uses local native client path and excludes metadata keys from repeated cross-run comparison.",
+    "Empty static Gaussian-center selections fail with unsupported_nurec_region instead of accepting mesh-only replacement.",
+    "Forks retain a hashed source-background.json; loader and renderer reject capture/background identity changes.",
+    "Calibrated sensor extrinsic overrides are rejected rather than silently replacing the package rig.",
+    "CPU source adapter returns the canonical compiler MapBundle using map-intel derivation and the importer-pinned world-to-XODR fit.",
+    "Wire cut over to the native V5 contract (protocol 2 removed): render_bundle answers carry FrameIdentity {simTick, sceneRevision, rigRevision, generation}, per-request pass selection, per-frame CRC32 digest, an empty `device` map; scene-state streams retain every tick and honour tick_index; unsupported V5 ops (load, render, encode_jpeg, set_lighting, get_state, device streams) answer explicit capability errors instead of fake successes; hello declares transport host-shm and capabilities.",
+    "Rendering core extracted to backend.py (SplatBackend/SplatSession/TickRender) so the socket service and the in-process tensor adapter share one pixel implementation.",
+    "tensor.py adds the in-process NuRec-to-PyTorch sensor path: per-camera slot pools under one output-capacity account (default = declared pools), ready/handback CUDA event ordering with explicitly registered consumer streams, views retained past release() hold their slot (no reuse/free) until they are gone, retire on reset/re-register/scene change/close preserves views, explicit device/stream/channel/format capability errors, version-gated torch storage use-count check; no host staging; DLPack is same-process only.",
+    "jpeg output/encode requests are refused explicitly (no encoder); the never-published jpeg ring tag was removed from the writer.",
+    "job.py + __main__.py add the durable runner workload simforge.render-bundle-nurec/v1 (params/out-dir/resume, JSONL progress/checkpoint/done/canceled, exit 0/1/2/130) writing frames/<sensorId>/<pass>/tick-<06d>.<png|npy>, bundles.jsonl (V5 identity + ring-layout CRC32 digests) and results.json; declared host-files transport. `capabilities --no-probe` reports prerequisites without touching CUDA. Wire constants and pass validation live in protocol.py."
+  ],
+  "preservedBehavior": ["protocol 5 msgpack Unix socket (same request shapes as V4)", "SFBNDL01 ring layout and CRC32", "rgba8/depth32f/rgb8 tag 7", "package f-theta calibration", "rolling shutter", "PPISP", "hood", "3DGUT tile sorting and shutter iteration settings", "schedule-and-structure default determinism", "immutable NuRec package bytes (SHA-256 verified)", "source-patch time-support limits"],
+  "qualification": {
+    "status":"not-run",
+    "inheritedGatesSource":"renderer/splat/DESIGN.md section 6 at pinned upstream; historical RESULTS.md is evidence of that revision only",
+    "requirements":["original on-path calibration/fidelity", "off-path paired fidelity", "in-process and restart pixel repeatability", "engine replay determinism", "region boundary support leakage", "newly exposed coverage", "RGB/depth/visibility occlusion consistency", "authored replacement lighting", "no unobserved geometry treated as recovered truth"],
+    "historicalResultsAreNotLocalQualification":true
+  },
+  "fixtures": {
+    "remoteImportedV3":"ssh://simforge1/data/share7/ubuntu/simforge-fix/scenes-v3/007a5809-8a56-40b5-8af5-7e0f65229496",
+    "preferredRemoteImportedV4":"ssh://simforge1/data/share7/ubuntu/simforge-fix/scenes-v4/007a5809-8a56-40b5-8af5-7e0f65229496",
+    "remoteSourcePackage":"/mnt/nas/a100-data/datasets/PhysicalAI-Autonomous-Vehicles-NuRec/sample_set/26.04_release/007a5809-8a56-40b5-8af5-7e0f65229496/007a5809-8a56-40b5-8af5-7e0f65229496.usdz",
+    "remoteHistoricalEvidence":"/data/share7/ubuntu/simforge-fix/nurec-backend/runs",
+    "localShapeInspectionOnly":["/home/path/tmp/actor-trajectories.json", "/home/path/tmp/scenario.input.json"],
+    "completeLocalBundle":"/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fixture/007a5809-8a56-40b5-8af5-7e0f65229496",
+    "localClosureScope":"Imported CPU execution/map closure only; QA imagery is optional and the original USDZ remains an external native-rendering prerequisite."
+  }
+}

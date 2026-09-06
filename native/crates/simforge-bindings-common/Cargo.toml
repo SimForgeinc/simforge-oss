@@ -1,0 +1,20 @@
+[package]
+name = "simforge-bindings-common"
+description = "Language-neutral binding glue shared by the Node, WASM and Python bindings: asset caching, flat typed action/observation layouts, JSON metadata boundaries. No engine logic lives here."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_bindings_common"
+
+[dependencies]
+simforge-core = { path = "../simforge-core" }
+simforge-session = { path = "../simforge-session" }
+simforge-compiler = { path = "../simforge-compiler" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+flate2 = { workspace = true }
+rmp-serde = "1"

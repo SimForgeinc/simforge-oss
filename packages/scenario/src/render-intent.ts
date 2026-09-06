@@ -4,15 +4,7 @@ import { RenderSpecV3Schema } from './render-spec.js';
 import { EntityIdSchema } from './schema/v1.js';
 import { Sha256 } from './sha256.js';
 
-export const CANONICAL_RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
-export const LEGACY_RENDER_INTENT_V1_SCHEMA = 'uniscenario.render-intent/v1' as const;
-/** Digest-preserving writer switch; keep false until canonical-document cutover. */
-export const EMIT_CANONICAL_RENDER_INTENT_SCHEMA = false;
-export const RENDER_INTENT_V1_SCHEMA = (
-  EMIT_CANONICAL_RENDER_INTENT_SCHEMA
-    ? CANONICAL_RENDER_INTENT_V1_SCHEMA
-    : LEGACY_RENDER_INTENT_V1_SCHEMA
-) as typeof CANONICAL_RENDER_INTENT_V1_SCHEMA | typeof LEGACY_RENDER_INTENT_V1_SCHEMA;
+export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
 /**
  * A trailing presentation camera authored on the sensor host. It rides outside the
  * measurement rig so a render can ship a drive-along view without restating the rig counts.
@@ -72,10 +64,7 @@ export const RenderSensorSourceHostSchema = z.strictObject({
  * so refreshing credentials never changes this document's content hash.
  */
 export const RenderIntentV1Schema = z.strictObject({
-  schema: z.union([
-    z.literal(CANONICAL_RENDER_INTENT_V1_SCHEMA),
-    z.literal(LEGACY_RENDER_INTENT_V1_SCHEMA),
-  ]),
+  schema: z.literal(RENDER_INTENT_V1_SCHEMA),
   intentId: RenderIntentIdSchema,
   executionPackage: z.strictObject({
     id: RenderIntentIdSchema,

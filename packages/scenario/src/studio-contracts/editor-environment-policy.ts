@@ -16,8 +16,9 @@ export const DEFAULT_VISIBILITY_M = 80_000;
 export const MAX_VISIBILITY_M = 120_000;
 
 /**
- * Revision 2 makes the calibrated direct-sun and sky-fill levels the 100% point.
- * Revision 1 (and unversioned blocks) stored raw renderer multipliers instead.
+ * Authored lighting is stored in the normalized scale where 1 is the calibrated
+ * direct-sun / sky-fill level. `scaleRevision` is the schema marker for that
+ * scale; a block carrying any other revision is not a current lighting block.
  */
 export const LIGHTING_SCALE_REVISION = 2 as const;
 export const DEFAULT_SUN_RENDER_SCALE = 3;
@@ -45,7 +46,7 @@ export const LIGHTING_FIELDS = [
   "haze",
 ] as const satisfies readonly LightingField[];
 
-const LegacyLightingBlockSchema = z
+const LightingBlockSchema = z
   .object({
     ambient: z.number().finite().optional().catch(undefined),
     sun: z.number().finite().optional().catch(undefined),
@@ -54,10 +55,9 @@ const LegacyLightingBlockSchema = z
     sky: z.number().finite().optional().catch(undefined),
     visibilityM: z.number().finite().optional().catch(undefined),
     haze: z.number().finite().optional().catch(undefined),
-    scaleRevision: z.number().int().optional().catch(undefined),
+    scaleRevision: z.literal(LIGHTING_SCALE_REVISION),
   })
-  .passthrough()
-  .catch({});
+  .passthrough();
 
 export type EditorLightingOverrides = Readonly<{
   [Field in LightingField]?: number;
@@ -69,31 +69,22 @@ function clampField(field: LightingField, value: number): number {
 }
 
 /**
- * Read authored lighting in the current normalized scale.
- *
- * Compatibility reader: unversioned/pre-v2 documents stored raw renderer
- * multipliers, where sun=3 and ambient=0.8 produced today's calibrated 100%.
- * Translate those two stored values before the editor or renderer consumes
- * them so old scenarios retain byte-for-byte-equivalent engine multipliers.
+ * Read authored lighting in the normalized scale. Anything that is not a
+ * current-revision block (malformed, or missing the marker) reads as preset
+ * lighting; individual non-finite fields are dropped.
  */
 export function resolveEditorLightingOverrides(
   environment: Environment,
 ): EditorLightingOverrides {
-  const parsed = LegacyLightingBlockSchema.safeParse(
+  const parsed = LightingBlockSchema.safeParse(
     environment.extensions?.[LIGHTING_EXTENSION_KEY],
   );
   if (!parsed.success) return {};
-  const currentScale = parsed.data.scaleRevision === LIGHTING_SCALE_REVISION;
   const resolved: Partial<Record<LightingField, number>> = {};
   for (const field of LIGHTING_FIELDS) {
     const stored = parsed.data[field];
     if (typeof stored !== "number") continue;
-    const normalized = !currentScale && field === "sun"
-      ? stored / DEFAULT_SUN_RENDER_SCALE
-      : !currentScale && field === "ambient"
-        ? stored / DEFAULT_AMBIENT_RENDER_SCALE
-        : stored;
-    resolved[field] = clampField(field, normalized);
+    resolved[field] = clampField(field, stored);
   }
   return resolved;
 }
@@ -119,10 +110,7 @@ export function resolveEditorLightingRenderScales(
   };
 }
 
-/**
- * Write current-scale lighting while retaining unrelated extension data.
- * Touching a legacy block rewrites every known field in normalized v2 units.
- */
+/** Write normalized lighting while retaining unrelated extension data. */
 export function withEditorLightingOverrides(
   environment: Environment,
   patch: Readonly<Partial<Record<LightingField, number | undefined>>>,

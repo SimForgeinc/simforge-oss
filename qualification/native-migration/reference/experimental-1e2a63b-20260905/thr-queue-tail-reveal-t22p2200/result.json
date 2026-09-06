@@ -1,0 +1,81 @@
+{
+  "id": "thr-queue-tail-reveal-t22p2200",
+  "kind": "threshold-variant",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "4bade48bd601894ada5aa43965f5a42a5a6ef2c8a78c9fe76af4cb62c11dba35",
+  "traceDigest": "dfb305306e1ae6489931dda640ac7e3de4d7f9f6bca966398e177444b9824034",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "simulate": {
+      "cold": 54.88537500000007,
+      "warm": {
+        "n": 4,
+        "min": 55.45533799999998,
+        "median": 56.36634050000009,
+        "max": 58.314046999999846,
+        "mean": 56.6255165
+      }
+    },
+    "digest": {
+      "cold": 7.9283130000001165,
+      "warm": {
+        "n": 4,
+        "min": 7.905557000000044,
+        "median": 7.936070500000142,
+        "max": 7.964670999999953,
+        "mean": 7.93559225000007
+      }
+    },
+    "serialize": {
+      "cold": 9.065662999999859,
+      "warm": {
+        "n": 4,
+        "min": 8.964999999999918,
+        "median": 9.228153499999962,
+        "max": 9.438599000000067,
+        "mean": 9.214976499999977
+      }
+    }
+  },
+  "tickCount": 651,
+  "events": 2,
+  "threshold": {
+    "base": "cmp-queue-tail-distance",
+    "interactionId": "ego-brakes-on-reveal",
+    "conditionKind": "distance",
+    "cmp": "lte",
+    "authoredValue": 22,
+    "value": 22.22,
+    "gridIndex": 42,
+    "predictedFirstTrueT": 1.9000000000000001,
+    "admissible": true,
+    "actualFire": {
+      "t": 1.9000000000000001,
+      "forced": false
+    },
+    "predictionMatched": true
+  }
+}

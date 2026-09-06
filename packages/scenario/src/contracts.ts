@@ -12,5 +12,7 @@ export * from "./studio-contracts/editor-environment-policy.js";
 export * from "./studio-contracts/traffic-authoring.js";
 export * from "./studio-contracts/actor-authoring.js";
 export * from "./studio-contracts/collision-inference.js";
-export * from "./studio-contracts/legacy-behavior-compat.js";
+export * from "./studio-contracts/actor-draft-authoring.js";
+export * from "./studio-contracts/behavior-program.js";
+export * from "./studio-contracts/divert-tail.js";
 export * from "./studio-contracts/sensor-materialization.js";

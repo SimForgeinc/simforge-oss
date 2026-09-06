@@ -3,7 +3,7 @@
 import { BarChart3, LayoutDashboard, Layers, Lightbulb, PanelRightClose, PanelRightOpen } from "lucide-react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@simforge-oss/studio-ui/components/ui/tabs";
 import { MapAssetEditPanel } from "@/app/dashboard/map-assets/MapAssetEditPanel";
 import { OverviewTab } from "./detail-tabs/OverviewTab";
 import { LayersTab } from "./detail-tabs/LayersTab";

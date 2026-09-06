@@ -1,0 +1,29 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.reversing-truck.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "reversing-truck"
+      }
+    },
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.van-keeps-clear-of-work-zone.dynamics.value",
+      "reason": "requested 1.00 s lateral manoeuvre is infeasible for truck; clamped to 4.20 s",
+      "detail": {
+        "actorId": "reversing-truck",
+        "requestedDurationS": 1,
+        "effectiveDurationS": 4.200000000000001,
+        "displacementM": -2.8000000000000003,
+        "lateralRateMaxMps": 1.25,
+        "lateralAccelMaxMps2": 1.5,
+        "lateralJerkMaxMps3": 2.5
+      }
+    }
+  ],
+  "arrival": []
+}

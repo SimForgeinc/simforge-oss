@@ -70,7 +70,7 @@
       "id": "child-group",
       "kind": "on_crossing",
       "label": "compact group of children waiting for and obeying the guard's release",
-      "actor": { "class": "pedestrian", "catalogId": "pedestrian.child_walking", "dims": { "length": 1.2, "width": 1.5, "height": 1.35 } },
+      "actor": { "class": "pedestrian", "catalogId": "pedestrian.child", "dims": { "length": 1.2, "width": 1.5, "height": 1.35 } },
       "feature": "school-crossing",
       "startFrac": 0.03,
       "direction": "near_to_far",

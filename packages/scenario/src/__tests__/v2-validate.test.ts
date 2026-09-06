@@ -533,6 +533,27 @@ describe('typed state', () => {
     const [found] = find(validateTemplate(template).issues, 'set_actor_mismatch');
     expect(found?.actual).toBe('pedestrian');
   });
+
+  it('lets a pedestrian clear both class yield switches and rejects the retired master rules.yield', () => {
+    const base = ltapTemplateInput();
+    const withPed = (target: { key: string; value: boolean }) => parseTemplate({
+      ...base,
+      roles: [
+        ...(base.roles as object[]),
+        { id: 'ped', kind: 'on_reference', actor: { class: 'pedestrian' }, pose: { s: 20 } },
+      ],
+      invariants: [],
+      choreography: {
+        interactions: [interaction({ actor: 'ped', verb: 'set', dynamics: undefined, target })],
+      },
+    });
+    const setCodes = (key: string) =>
+      codes(validateTemplate(withPed({ key, value: false })).issues).filter((code) =>
+        code === 'set_actor_mismatch' || code === 'unknown_set_key');
+    expect(setCodes('rules.yieldToVehicles')).toEqual([]);
+    expect(setCodes('rules.yieldToPedestrians')).toEqual([]);
+    expect(setCodes('rules.yield')).toEqual(['unknown_set_key']);
+  });
 });
 
 describe('document coherence', () => {

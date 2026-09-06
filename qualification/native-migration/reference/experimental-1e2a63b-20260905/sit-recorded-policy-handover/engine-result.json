@@ -1,0 +1,115 @@
+{
+  "issues": [],
+  "arrival": [],
+  "events": [
+    {
+      "id": "ego-stopped",
+      "firstTrueS": 19.240000000000002,
+      "lastTrueS": 20,
+      "trueTicks": 39,
+      "sampledTicks": 701,
+      "windowS": [
+        6,
+        20
+      ],
+      "transitions": [
+        {
+          "timeS": 6,
+          "value": false
+        },
+        {
+          "timeS": 19.240000000000002,
+          "value": true
+        }
+      ]
+    }
+  ],
+  "constraints": [],
+  "satisfied": false,
+  "actionCalls": {
+    "recorded-ego": 700
+  },
+  "authorityIntervals": [
+    {
+      "roleId": "parked-lead",
+      "intervalIndex": 0,
+      "startS": 0,
+      "endS": 20,
+      "hookCalls": 0,
+      "actionCalls": 0
+    },
+    {
+      "roleId": "recorded-ego",
+      "intervalIndex": 0,
+      "startS": 0,
+      "endS": 6,
+      "hookCalls": 0,
+      "actionCalls": 0
+    },
+    {
+      "roleId": "recorded-ego",
+      "intervalIndex": 1,
+      "startS": 6,
+      "endS": 20,
+      "hookCalls": 700,
+      "actionCalls": 700
+    }
+  ],
+  "authorityTransitions": [
+    {
+      "roleId": "recorded-ego",
+      "timeS": 6,
+      "from": "recorded",
+      "to": "policy",
+      "handoverInteractionId": "situation-authority-recorded-ego-1",
+      "state": {
+        "x": 443.9057,
+        "y": 1901.0147,
+        "headingRad": -2.1262887435356164,
+        "speedMps": 6.666581442662787
+      }
+    }
+  ],
+  "authority": [
+    {
+      "roleId": "parked-lead",
+      "kind": "controller",
+      "startS": 0,
+      "endS": 20,
+      "intervalIndex": 0,
+      "routeKind": "polyline",
+      "actionHookAvailable": false
+    },
+    {
+      "roleId": "recorded-ego",
+      "kind": "recorded",
+      "startS": 0,
+      "endS": 6,
+      "intervalIndex": 0,
+      "routeKind": "timedPolyline",
+      "actionHookAvailable": false
+    },
+    {
+      "roleId": "recorded-ego",
+      "kind": "policy",
+      "startS": 6,
+      "endS": 20,
+      "intervalIndex": 1,
+      "routeKind": "polyline",
+      "actionHookAvailable": true,
+      "handoverInteractionId": "situation-authority-recorded-ego-1"
+    }
+  ],
+  "observations": [
+    {
+      "id": "ego-stopped",
+      "condition": {
+        "kind": "speed",
+        "actorId": "recorded-ego",
+        "cmp": "lte",
+        "value": 0.2777777777777778
+      }
+    }
+  ],
+  "programDigest": "605ea1680651bef14a874cc8a8d3ed9b3ea6eb2515870b08e006ac1ed8447bea"
+}

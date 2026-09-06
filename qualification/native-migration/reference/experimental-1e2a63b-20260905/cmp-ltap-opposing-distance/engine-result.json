@@ -1,0 +1,31 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:2232",
+      "reason": "A coincident OpenDRIVE lane was bound to 614:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:2232",
+        "sourceRsl": "26:0:-3",
+        "routeRsl": "614:0:-1",
+        "distanceM": 1.0000148507981665
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:2262",
+      "reason": "A coincident OpenDRIVE lane was bound to 657:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:2262",
+        "sourceRsl": "72:0:-1",
+        "routeRsl": "657:0:-1",
+        "distanceM": 1.0000148507579827
+      }
+    }
+  ],
+  "arrival": []
+}

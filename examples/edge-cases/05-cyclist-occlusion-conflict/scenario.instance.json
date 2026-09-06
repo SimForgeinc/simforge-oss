@@ -5,19 +5,20 @@
     "kind": "scenario-instance-manifest",
     "manifestVersion": 1,
     "replayKey": {
-      "templateId": "ec-05-05-cyclist-occlusion-conflict-v2",
+      "templateId": "garage-bike-crossing",
       "templateVersion": 2,
-      "templateDigest": "fc6cca16e511e5f6",
+      "templateDigest": "6264102e282d9d80",
       "mapId": "yale-street",
       "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
       "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
       "siteId": "22f66ed9554e1403",
       "matcherVersion": "1.0.0",
-      "solverVersion": "0.2.6",
+      "solverVersion": "0.6.0",
       "paramSeed": "ec-05-05-cyclist-occlusion-conflict-v2",
-      "drawIndex": 0
+      "drawIndex": 0,
+      "ambientProfileHash": "none"
     },
-    "instanceId": "ec-05-05-cyclist-occlusion-conflict-v2#0",
+    "instanceId": "22f66ed9554e1403#0",
     "archetype": "gallery.05-cyclist-occlusion-conflict",
     "negativeControl": false,
     "metricSubject": "focus-vehicle",
@@ -39,14 +40,13 @@
         "parking_zone loc_9d1bf6b49c53986f6e265315 at s=80.86 m (same-road station, 5.52 m lateral)",
         "parking_zone loc_9d1bf6b49c53986f6e265315 is on the left side of travel",
         "pedestrian: pose s=-4 m is outside the reference path",
-        "legal-cyclist: pose s=-42 m is outside the reference path",
         "matched in mirror (policy.allowMirror)"
       ]
     },
     "params": {
       "values": {
-        "creepSpeedKph": 4,
-        "wrongWaySpeedKph": 25
+        "creepSpeedKph": 4.788373988121748,
+        "wrongWaySpeedKph": 25.01661876309663
       },
       "categorical": {},
       "rejectedConstraints": []
@@ -55,38 +55,38 @@
       {
         "id": "delivery-truck",
         "actorKind": "truck",
-        "roleKind": "supporting",
+        "roleKind": "relative_to",
         "laneRsl": "92:0:1",
-        "spawnS": 1.0552738595725177,
+        "spawnS": 104.85593122805895,
         "initialSpeedMps": 0,
         "bindingStatus": "bound"
       },
       {
         "id": "focus-vehicle",
         "actorKind": "car",
-        "roleKind": "focus",
+        "roleKind": "on_reference",
         "laneRsl": null,
         "spawnS": 0,
         "initialSpeedMps": 0,
-        "bindingStatus": "scene-absolute"
+        "bindingStatus": "bound"
       },
       {
         "id": "pedestrian",
         "actorKind": "pedestrian",
-        "roleKind": "supporting",
+        "roleKind": "relative_to",
         "laneRsl": null,
         "spawnS": 0,
         "initialSpeedMps": 1.1111111111111112,
-        "bindingStatus": "scene-absolute"
+        "bindingStatus": "bound"
       },
       {
         "id": "wrong-way-rider",
         "actorKind": "bicycle",
-        "roleKind": "supporting",
+        "roleKind": "relative_to",
         "laneRsl": null,
         "spawnS": 0,
         "initialSpeedMps": 0,
-        "bindingStatus": "scene-absolute"
+        "bindingStatus": "bound"
       }
     ],
     "props": [
@@ -114,25 +114,63 @@
       }
     ],
     "arrival": [],
-    "inputHash": "1a9ed1eb72741f1866ceb58b5ad2f48f51a91cff73f25da60adeedf3b6e76a9a",
+    "inputHash": "fec6a8686bd7f9469a67d93164c5355e718e719d52d593e171caee1b87db515f",
     "feasible": true,
     "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "focus-vehicle-garage-route",
+        "actorId": "focus-vehicle",
+        "verb": "route",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "pedestrian-crosses",
+        "actorId": "pedestrian",
+        "verb": "route",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "contraflow-route",
+        "actorId": "wrong-way-rider",
+        "verb": "route",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      },
+      {
+        "interactionId": "contraflow-rider-holds-course",
+        "actorId": "wrong-way-rider",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
     "notes": [
       {
         "path": "choreography.interactions.focus-vehicle-garage-route",
-        "reason": "route(polyline) at t=0 folded into focus-vehicle's spawn route (2.9 m), so the arrival solver can place the actor along it"
+        "reason": "route(polyline) at t=0 folded into focus-vehicle's spawn route (2.9 m), so the arrival solver can place the actor along it",
+        "impact": "informational"
       },
       {
         "path": "choreography.interactions.pedestrian-crosses",
-        "reason": "route(polyline) at t=0 folded into pedestrian's spawn route (5.1 m), so the arrival solver can place the actor along it"
+        "reason": "route(polyline) at t=0 folded into pedestrian's spawn route (5.1 m), so the arrival solver can place the actor along it",
+        "impact": "informational"
       },
       {
         "path": "choreography.interactions.contraflow-route",
-        "reason": "route(polyline) at t=0 folded into wrong-way-rider's spawn route (100.0 m), so the arrival solver can place the actor along it"
+        "reason": "route(polyline) at t=0 folded into wrong-way-rider's spawn route (100.0 m), so the arrival solver can place the actor along it",
+        "impact": "informational"
       },
       {
         "path": "props.garage-wall",
-        "reason": "occlusion declared between focus-vehicle and wrong-way-rider; reveal-to-conflict is reported by the engine, not solved for"
+        "reason": "occlusion declared between focus-vehicle and wrong-way-rider; reveal-to-conflict is reported by the engine, not solved for",
+        "impact": "informational"
       }
     ]
   },
@@ -142,7 +180,10 @@
     "clipSeconds": 20,
     "warmupSeconds": 0,
     "dt": 0.02,
-    "seed": "ec-05-05-cyclist-occlusion-conflict-v2",
+    "seed": "ec-05-05-cyclist",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
     "operationalConditions": {
       "weather": "clear",
       "timeOfDay": "day",
@@ -160,9 +201,9 @@
         "id": "delivery-truck",
         "kind": "truck",
         "dims": {
-          "l": 9.5,
-          "w": 2.5,
-          "h": 3.5
+          "l": 7.6,
+          "w": 2.44,
+          "h": 3.4
         },
         "initial": {
           "laneRef": {
@@ -180,7 +221,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -203,6 +243,10 @@
               "1181:0:1",
               "65:0:1"
             ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
           }
         },
         "presentAtStart": true,
@@ -210,6 +254,7 @@
         "tags": [
           "role:delivery-truck",
           "class:truck",
+          "driver-profile:lawful",
           "binding:relative_to",
           "catalog:vehicle.box_truck"
         ]
@@ -218,9 +263,9 @@
         "id": "focus-vehicle",
         "kind": "car",
         "dims": {
-          "l": 4.8,
-          "w": 1.9,
-          "h": 1.5
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
         },
         "initial": {
           "pose": {
@@ -233,7 +278,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -261,6 +305,10 @@
               }
             ]
           },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
           "cruiseSpeedMps": 0
         },
         "presentAtStart": true,
@@ -268,6 +316,7 @@
         "tags": [
           "role:focus-vehicle",
           "class:car",
+          "driver-profile:lawful",
           "binding:on_reference",
           "catalog:vehicle.sedan"
         ]
@@ -276,8 +325,8 @@
         "id": "pedestrian",
         "kind": "pedestrian",
         "dims": {
-          "l": 0.6,
-          "w": 0.6,
+          "l": 0.85,
+          "w": 0.5,
           "h": 1.75
         },
         "initial": {
@@ -291,7 +340,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -339,7 +387,7 @@
           "role:pedestrian",
           "class:pedestrian",
           "binding:relative_to",
-          "catalog:pedestrian.adult_walking"
+          "catalog:pedestrian.adult"
         ]
       },
       {
@@ -361,7 +409,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": false,
@@ -777,6 +824,10 @@
               }
             ]
           },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
           "cruiseSpeedMps": 0
         },
         "presentAtStart": true,
@@ -784,6 +835,7 @@
         "tags": [
           "role:wrong-way-rider",
           "class:bicycle",
+          "driver-profile:lawful",
           "binding:relative_to"
         ]
       }
@@ -799,7 +851,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 6.944444444444445
+          "value": 6.949060767526842
         },
         "dynamics": {
           "shape": "step",
@@ -817,7 +869,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 1.1111111111111112
+          "value": 1.3301038855893745
         },
         "dynamics": {
           "shape": "linear",
@@ -835,7 +887,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 1.1111111111111112
+          "value": 1.3301038855893745
         },
         "dynamics": {
           "shape": "linear",
@@ -887,7 +939,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 6.944444444444445
+          "value": 6.949060767526842
         },
         "dynamics": {
           "shape": "linear",
@@ -898,6 +950,7 @@
     ],
     "signalPrograms": [],
     "roadControls": [],
+    "surfacePatches": [],
     "props": [
       {
         "id": "garage-wall",
@@ -943,6 +996,7 @@
         "target": "wrong-way-rider",
         "occluderId": "garage-wall"
       }
-    ]
+    ],
+    "nearMissCriteria": []
   }
 }

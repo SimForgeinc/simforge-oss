@@ -1,4 +1,16 @@
 import { NextResponse } from "next/server";
+const DEV_REDIRECT_CACHE_SECONDS = 50 * 60;
+
+export function browserAssetRedirectCacheControl(nodeEnv = process.env.NODE_ENV) {
+  // Development assets are immutable and the redirect target remains valid
+  // for one hour. Reusing it for fifty minutes lets the browser reuse the S3
+  // response cache without risking an expired signature. Shared environments
+  // retain the authenticated no-store boundary.
+  return nodeEnv === "development"
+    ? `private, max-age=${DEV_REDIRECT_CACHE_SECONDS}`
+    : "private, no-store";
+}
+
 
 /**
  * Redirect to an object without leaving the caller's origin.

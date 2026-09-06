@@ -379,42 +379,8 @@ export const RouteTargetSchema = z.discriminatedUnion('mode', [
   }),
   /** Frame-relative polyline: jaywalking, work-zone weaves, parking manoeuvres. */
   z.strictObject({ mode: z.literal('polyline'), points: z.array(FramePoseSchema).min(2).max(32) }),
-  /** Exact scene-space points authored against a pinned map revision. */
-  z.strictObject({
-    mode: z.literal('customRoute'),
-    /**
-     * One point is a complete route: the actor stands there. Time is not a
-     * factor here, so a second copy of the same point would say nothing extra.
-     */
-    points: z.array(z.strictObject({
-      x: z.number().finite(),
-      z: z.number().finite(),
-    })).min(1).max(128),
-  }),
-  /**
-   * Exact scene-space keyframes. Unlike `customRoute`, time owns motion: the
-   * actor is linearly interpolated between these positions and its inherent
-   * cruise speed and longitudinal commands are ignored until contact occurs.
-   */
-  z.strictObject({
-    mode: z.literal('customTimedRoute'),
-    /**
-     * One keyframe is a complete route: the actor holds that spot for the whole
-     * clip. Repeated positions at later times are meaningful here — unlike
-     * `customRoute`, they are how an author writes a dwell.
-     */
-    points: z.array(z.strictObject({
-      timeS: z.number().finite().min(0),
-      x: z.number().finite(),
-      z: z.number().finite(),
-    })).min(1).max(1024),
-  }),
-  /**
-   * Exact map-bound lane chain authored by Studio placement. This target is
-   * only portable together with scene_absolute roles and deliberately retains
-   * the concrete directed-road choice for deterministic save/reopen playback.
-   */
-  SceneAbsoluteInitialRouteSchema,
+  // Initial state and timeline routes share the exact same map-bound payloads.
+  ...SceneAbsoluteInitialRouteSchema.options,
   /** Drive to a specific pose and stop being routed. */
   z.strictObject({ mode: z.literal('acquire'), pose: FramePoseSchema }),
   /**

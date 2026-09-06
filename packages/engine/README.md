@@ -8,23 +8,37 @@ performance gates, and current non-claims are documented in
 [`../../docs/physics-validation.md`](../../docs/physics-validation.md).
 
 Layer 3 of `docs/agent-authoring-architecture.md`: the deterministic scenario
-simulation engine. Pure TypeScript, `zod` for the input contract, **no rendering
-dependency** — the editor preview and the headless CLI run this code byte for
-byte, so there is no parity lane to maintain.
+simulation engine. This package is the **host-neutral contract** of that engine:
+the `SimScenarioInput` authoring schema (`zod`), the trace/metrics/evaluation
+and scene-state document types, ambient-traffic profiles, the SUMO interchange
+helpers and pure hashing. **The engine itself executes only in the native
+runtime** (`@simforge-oss/native-runtime`: N-API addon in Node, WASM in the
+browser). There is no TypeScript simulator, materialiser or evaluator behind any
+export here; the two host entries bind the same façade to the two runtimes.
 
 ```ts
-import {
-  buildLaneGraph,
-  parseSimScenarioInput,
-  runSimulation,
-  evaluateTrace,
-} from '@simforge-oss/engine';
+// Node: the N-API addon, loaded on first use.
+import { buildLaneGraph, parseTrace, runSimulation } from '@simforge-oss/engine/node';
 
 const graph = buildLaneGraph(topologyIndexJson); // dev-assets/<map>/topology-index.json.gz
-const input = parseSimScenarioInput(doc);
-const { trace, issues, arrival } = runSimulation(input, { graph });
-const verdict = evaluateTrace(trace); // 'accept' | 'reject' + findings
+const { trace, issues, arrival } = runSimulation(doc, { graph }); // doc is validated natively
+const verdict = parseTrace(trace).evaluate(); // 'accept' | 'reject' + findings
 ```
+
+```ts
+// Browser: the initialised WASM module. No Node builtin is reachable from here.
+import { loadEngine } from '@simforge-oss/engine/browser';
+
+const engine = await loadEngine(); // EngineRuntime over the WASM module
+const graph = engine.laneGraph(topologyIndexBytes);
+const result = engine.run(doc, { graph });
+```
+
+`EngineRuntime` is the one façade both entries construct: `laneGraph`,
+`scenario`, `run`, `checkFeasibility`, `trace` (a `TraceHandle` with `evaluate`,
+`sceneState`, `digest`, `evaluateIntentRubric`, `blindReviewPacket`,
+`checkInvariants`), `replayWorldLog`. Every call crosses into the native module
+and returns owned typed arrays or parsed JSON documents.
 
 ## The seam: `SimScenarioInput`
 
@@ -134,15 +148,15 @@ differ only in declaration order. Enforced by: sorted iteration at every fan-out
 a plan/apply split so no actor reads a neighbour that has already stepped,
 integer-indexed time (`t = (i − warmupTicks) · dt`, never accumulated), a seeded
 xoshiro128\*\* instead of `Math.random`, and channel quantisation before
-serialisation. `determinism.test.ts` proves all of it, including a source scan
-that fails the build if `Math.random` or a wall-clock read appears anywhere in
-`src/`.
+serialisation - all inside `simforge-core`. The Node and WASM builds of the same
+Rust engine produce byte-identical traces for the same input and map.
 
 ## Performance
 
-10 actors × 20 s at `dt = 20 ms` on yale-street geometry: **~75 ms per run**
-(~13 300 recorded ticks/s, ~266× real time) on an M-series laptop. Build the
-`LaneGraph` once and share it across runs.
+Build the `LaneGraph` once and share it across runs: it is a native handle, and
+every session, batch and whole-clip run built from it shares the decoded map.
+Whole-clip runs are synchronous by design; the consumer decides threading
+(`worker_threads` in the CLI batch, the runner for durable jobs).
 
 ## Default dynamic-v1 motion
 
@@ -179,11 +193,12 @@ Stated plainly, because they bound what a metric from this engine means:
   geometries; conservative and slightly under-reporting for crossing ones. A
   true path-intersection TTC needs `map-intel`'s junction `conflictPairs`, which
   this package deliberately does not depend on.
-- **`rules.yield` uses a coarse crossing-path scan** (14 samples at 5 m, 2.5 m
-  proximity, 2.5 s arrival window, ignored below a 0.4 rad heading difference so
-  car-following is not double-counted) rather than a precomputed conflict-point
-  table. Enough to make junction behaviour sensible; not a substitute for the
-  real table when that lands.
+- **`rules.yieldToVehicles` / `rules.yieldToPedestrians` use a coarse
+  crossing-path scan** (14 samples at 5 m, 2.5 m proximity, 2.5 s arrival
+  window, ignored below a 0.4 rad heading difference so car-following is not
+  double-counted) rather than a precomputed conflict-point table. Which switch
+  applies is decided by the *other* actor's class. Enough to make junction
+  behaviour sensible; not a substitute for the real table when that lands.
 - **Line of sight is a 2-D ground-plane test.** Occluder heights are carried but
   unused — reveal-to-conflict is dominated by plan-view geometry, and a 3-D test
   would need render meshes.
@@ -194,8 +209,8 @@ Stated plainly, because they bound what a metric from this engine means:
   land in `stateKeys` and the event log for the renderer and exporter; no
   controller consumes them yet.
 - **`metrics.invariantResiduals` is typed but not populated** — invariants live
-  in the template layer, so residual checking belongs to the adapter that knows
-  what was declared.
+  in the template layer; `TraceHandle.checkInvariants(template, …)` evaluates
+  them natively in the compiler against the declared template.
 - **The whole-clip runway guard applies to vehicles on lane routes only.**
   Pedestrians and freeform paths are *supposed* to finish mid-clip, and an actor
   the scenario explicitly despawns is exempt.

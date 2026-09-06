@@ -1,8 +1,8 @@
-//! `scene-state.v1` consumer (WSB2's contract).
+//! `simforge.scene-state.v1` consumer (WSB2's contract).
 //!
 //! Top-level shape (JSON or msgpack):
 //! ```json
-//! { "version": "scene-state.v1", "mapId": "...", "tick": 0, "tickHz": 50,
+//! { "version": "simforge.scene-state.v1", "mapId": "...", "tick": 0, "tickHz": 50,
 //!   "weather": {"preset": "clear"}, "timeOfDay": 12.0, "actors": [...] }
 //! ```
 //! Actor record: `{ id, kind: spawn|update|despawn, catalogId, actorClass,
@@ -13,7 +13,7 @@ use anyhow::{bail, Context, Result};
 use bevy::prelude::Resource;
 use serde::{Deserialize};
 
-pub const SCENE_STATE_SCHEMA: &str = "scene-state.v1";
+pub const SCENE_STATE_SCHEMA: &str = "simforge.scene-state.v1";
 
 #[derive(Debug, Clone, Deserialize, Resource)]
 pub struct SceneState {

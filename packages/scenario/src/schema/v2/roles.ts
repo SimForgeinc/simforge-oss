@@ -136,16 +136,35 @@ export const FramePoseSchema = z.strictObject({
 });
 
 /**
- * The concrete lane chain a map-bound actor follows from its authored pose.
+ * The exact map-bound route a participant owns from the start of the clip.
  *
  * This is spawn state, not choreography: changing it in the timeline would
  * imply an event at t=0 and force every consumer to rediscover the actor's
  * initial route by scanning interactions.
  */
-export const SceneAbsoluteInitialRouteSchema = z.strictObject({
-  mode: z.literal('lanePath'),
-  lanes: z.array(z.string().min(1)).min(1).max(128),
-});
+export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
+  z.strictObject({
+    mode: z.literal('lanePath'),
+    lanes: z.array(z.string().min(1)).min(1).max(128),
+  }),
+  /** One scene-space point holds position; otherwise cruise speed owns motion. */
+  z.strictObject({
+    mode: z.literal('customRoute'),
+    points: z.array(z.strictObject({
+      x: z.number().finite(),
+      z: z.number().finite(),
+    })).min(1).max(128),
+  }),
+  /** Clip-clock keyframes: repeated positions encode dwells, without retiming. */
+  z.strictObject({
+    mode: z.literal('customTimedRoute'),
+    points: z.array(z.strictObject({
+      timeS: z.number().finite().min(0),
+      x: z.number().finite(),
+      z: z.number().finite(),
+    })).min(1).max(1024),
+  }),
+]);
 
 /** A frame-relative pose. */
 export type FramePose = z.infer<typeof FramePoseSchema>;

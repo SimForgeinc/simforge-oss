@@ -501,24 +501,6 @@ function vestOver(f: Frame): Object3D[] {
   return parts;
 }
 
-/** Shoulder bag: strap over the near shoulder, body swinging at the far hip. */
-function shoulderBag(f: Frame): Object3D[] {
-  const leather = material('fabric', '#8a6a4d');
-  const bodyY = f.hipY + f.h * 0.055;
-  // Outside the torso, not inside it: a bag hangs off the hip it swings against.
-  const bagZ = -(f.torsoW * 0.5 + 0.048);
-  const strapTop: Vec3 = [0, f.neckY - f.h * 0.02, f.armZ * 0.62];
-  const strapEnd: Vec3 = [-f.torsoD * 0.16, bodyY + f.h * 0.05, bagZ];
-  return [
-    bone(strapTop, [f.torsoD * 0.42, f.chestY, f.armZ * 0.1], 0.008, 0.008, leather, 6),
-    bone([f.torsoD * 0.42, f.chestY, f.armZ * 0.1], strapEnd, 0.008, 0.008, leather, 6),
-    bone([0, f.neckY - f.h * 0.02, -f.armZ * 0.1], strapEnd, 0.008, 0.008, leather, 6),
-    box([0.108, 0.155, 0.085], leather, { at: [-0.07, bodyY, bagZ] }),
-    box([0.112, 0.048, 0.088], leather, { at: [-0.068, bodyY + 0.072, bagZ] }),
-    box([0.014, 0.02, 0.022], material('chrome'), { at: [-0.126, bodyY + 0.03, bagZ] }),
-  ];
-}
-
 /** A child's school pack, worn behind the shoulders. */
 function backpack(f: Frame, tilt: number): Object3D[] {
   const cloth = material('fabric', '#c9553f');
@@ -562,19 +544,6 @@ function backpack(f: Frame, tilt: number): Object3D[] {
     );
   }
   return [group];
-}
-
-/** Phone held in the hand named by `at`, screen up toward a tilted face. */
-function phone(at: Vec3): Object3D[] {
-  const body = box([0.011, 0.079, 0.041], material('plastic'), {
-    at: [at[0] + 0.026, at[1] + 0.022, at[2]],
-    rot: [0, 0, -0.22],
-  });
-  const screen = box([0.004, 0.066, 0.033], material('glass', '#8fd0ff'), {
-    at: [at[0] + 0.033, at[1] + 0.024, at[2]],
-    rot: [0, 0, -0.22],
-  });
-  return [body, screen];
 }
 
 /** Hard hat: shell, brim and the crown rib every real one has. */
@@ -663,20 +632,6 @@ const ADULT_WALK: Pose = {
   ],
 };
 
-/** Waiting at the kerb: feet together, phone up, head down over the screen. */
-const ADULT_WAIT: Pose = {
-  look: 0.18,
-  legs: [
-    { knee: 0.004, ankle: 0.006, spread: 0.86 },
-    { knee: -0.004, ankle: -0.006, spread: 0.86 },
-  ],
-  arms: [
-    // Forearm folded up and across the chest, so the phone is clear of it.
-    { elbow: [0.055, 0.6], hand: [0.088, 0.712], handZ: 0.48 },
-    { elbow: [-0.012, 0.612], hand: [-0.026, 0.484] },
-  ],
-};
-
 /** Child neutral: same idea, shorter reach. */
 const CHILD_NEUTRAL: Pose = {
   legs: [
@@ -699,21 +654,6 @@ const CHILD_WALK: Pose = {
   arms: [
     { elbow: [0.075, 0.585], hand: [0.135, 0.5] },
     { elbow: [-0.072, 0.568], hand: [-0.12, 0.452] },
-  ],
-};
-
-/** Child waiting: feet together, near hand up where an adult's would be. */
-const CHILD_REACH: Pose = {
-  look: -0.07,
-  legs: [
-    { knee: -0.016, ankle: -0.02, spread: 0.84 },
-    { knee: -0.026, ankle: -0.032, spread: 0.84 },
-  ],
-  arms: [
-    // Above the crown, not beside the ear: a raised hand has to clear the head
-    // from every angle the editor can orbit to.
-    { elbow: [0.05, 0.86], hand: [0.07, 1.015], elbowZ: 1.05, handZ: 1.1 },
-    { elbow: [-0.01, 0.573], hand: [-0.024, 0.438] },
   ],
 };
 
@@ -753,66 +693,24 @@ function childWardrobe(params: PedestrianParams): Wardrobe {
 }
 
 /**
- * Adult pedestrian. `pose: 'walking'` gives the striding figure, so the modern
- * id can be driven from the timeline instead of swapped for another prop.
+ * Adult pedestrian. `pose: 'walking'` gives the striding figure, so the id can
+ * be driven from the timeline instead of swapped for another prop.
  */
 export function buildAdultPedestrian(
   params: PedestrianParams = { height: 1.75, pose: 'standing' },
 ): Group {
-  if (params.pose === 'walking') return buildAdultWalking(params);
-  return figure(frameOf(params.height, ADULT), ADULT_NEUTRAL, adultWardrobe(params));
-}
-
-/** Adult waiting at the kerb: feet together, phone at chest height, bag on the hip. */
-export function buildAdultStanding(
-  params: PedestrianParams = { height: 1.75, pose: 'standing' },
-): Group {
   const f = frameOf(params.height, ADULT);
-  const group = figure(f, ADULT_WAIT, adultWardrobe(params));
-  // The phone rides in whichever hand the pose put it in — anchor off the pose,
-  // never off a duplicated constant.
-  const near = ADULT_WAIT.arms[0];
-  const hand: Vec3 = [near.hand[0] * f.h, near.hand[1] * f.h, f.armZ * (near.handZ ?? 1)];
-  for (const part of phone(hand)) group.add(part);
-  for (const part of shoulderBag(f)) group.add(part);
-  return group;
+  return figure(f, params.pose === 'walking' ? ADULT_WALK : ADULT_NEUTRAL, adultWardrobe(params));
 }
 
-/** Adult mid-stride. */
-export function buildAdultWalking(
-  params: PedestrianParams = { height: 1.75, pose: 'walking' },
-): Group {
-  return figure(frameOf(params.height, ADULT), ADULT_WALK, adultWardrobe(params));
-}
-
-/** Child pedestrian. `pose: 'walking'` strides, like the adult. */
+/** Child pedestrian. `pose: 'walking'` strides, pack bouncing off the shoulders. */
 export function buildChildPedestrian(
   params: PedestrianParams = { height: 1.2, pose: 'standing' },
 ): Group {
-  if (params.pose === 'walking') return buildChildWalking(params);
   const f = frameOf(params.height, CHILD);
-  const group = figure(f, CHILD_NEUTRAL, childWardrobe(params));
-  for (const part of backpack(f, 0)) group.add(part);
-  return group;
-}
-
-/** Child standing with a hand up at adult-hand height. */
-export function buildChildStanding(
-  params: PedestrianParams = { height: 1.2, pose: 'standing' },
-): Group {
-  const f = frameOf(params.height, CHILD);
-  const group = figure(f, CHILD_REACH, childWardrobe(params));
-  for (const part of backpack(f, 0)) group.add(part);
-  return group;
-}
-
-/** Child mid-stride, pack bouncing off the shoulders. */
-export function buildChildWalking(
-  params: PedestrianParams = { height: 1.2, pose: 'walking' },
-): Group {
-  const f = frameOf(params.height, CHILD);
-  const group = figure(f, CHILD_WALK, childWardrobe(params));
-  for (const part of backpack(f, -0.16)) group.add(part);
+  const walking = params.pose === 'walking';
+  const group = figure(f, walking ? CHILD_WALK : CHILD_NEUTRAL, childWardrobe(params));
+  for (const part of backpack(f, walking ? -0.16 : 0)) group.add(part);
   return group;
 }
 

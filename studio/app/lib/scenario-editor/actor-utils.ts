@@ -5,18 +5,12 @@
  */
 
 import type {
-  RuntimeScenarioEditorActor,
   ScenarioEditorActorDraft,
   ScenarioEditorTimedWaypoint,
-  ScenarioEditorTimelineClip,
-  ScenarioEditorTimelineAction,
 } from "@simforge-oss/studio-shared";
 import {
   DEFAULT_CARLA_ACTOR_BLUEPRINTS,
 } from "@simforge-oss/studio-shared";
-import {
-  SCENARIO_TIMING,
-} from "@simforge-oss/scenario/contracts";
 import type { ActorBlueprintLibrary } from "@/app/lib/runtime/runtime-types";
 import type { RuntimeRoadOverlayCollection } from "@/app/lib/editor-map/types";
 
@@ -31,7 +25,6 @@ export type RouteDirectionMode = "forward" | "reverse";
 // Constants (mirrors constants.ts in Svelte editor)
 // ---------------------------------------------------------------------------
 
-export const timelineDurationSeconds = SCENARIO_TIMING.defaultDurationSeconds;
 export const vehicleSpeedLimitKph = 240;
 export const walkerSpeedLimitKph = 25;
 /** 30 mph, expressed in the CARLA/editor km/h contract. */
@@ -150,11 +143,6 @@ export function randomizableVehicleColorValues(
   return values.filter(isRandomizableVehicleColor);
 }
 
-/** Timeline actions that represent a "base navigation mode" at t=0. */
-export const baseNavigationActions: Array<
-  Extract<ScenarioEditorTimelineAction, "follow_route" | "ram_actor">
-> = ["follow_route", "ram_actor"];
-
 // ---------------------------------------------------------------------------
 // Config status
 // ---------------------------------------------------------------------------
@@ -261,32 +249,6 @@ export function defaultActorSpeedKph(
   return actor.kind === "walker"
     ? defaultWalkerSpeedKph
     : defaultVehicleSpeedKph;
-}
-
-/**
- * Whether a NEWLY AUTHORED actor starts on Auto. It does not, ever.
- *
- * Auto hands the car to CARLA's Traffic Manager, which decides its own route.
- * That makes it the one baseline whose behavior an author cannot predict, read
- * off the screen, or reproduce: it takes a different turn on the second run, it
- * cannot be exported to OpenSCENARIO, and it drifts under a CARLA or map
- * upgrade. Every piece of guidance we wrote about it said "pick this, then
- * immediately Compile to route" — which is an admission that it was the wrong
- * default.
- *
- * A new car now starts on `cruise` (Keep lane): our own controller, holding the
- * authored speed along the lane it was dropped on. Deterministic from the first
- * frame, with no second step to remember.
- *
- * The function survives rather than being inlined because the DECISION is worth
- * a name and a place to argue with. `autopilot` itself is untouched on the wire
- * — ambient traffic (`random-traffic-region`), every batch generator and every
- * already-saved scenario still set and run it.
- */
-export function defaultActorAutopilot(
-  _actor: Pick<ScenarioEditorActorDraft, "kind" | "placement_mode" | "is_static">,
-): boolean {
-  return false;
 }
 
 export function defaultActorColor(
@@ -412,51 +374,6 @@ export function runtimeSpawnAnchorOrEmpty(
   };
 }
 
-export function isBaseNavigationAction(
-  action: ScenarioEditorTimelineAction,
-): action is Extract<ScenarioEditorTimelineAction, "follow_route" | "ram_actor"> {
-  return (
-    baseNavigationActions as readonly ScenarioEditorTimelineAction[]
-  ).includes(action);
-}
-
-export function clipUsesSpeed(action: ScenarioEditorTimelineAction): boolean {
-  return (
-    action === "follow_route" ||
-    action === "set_speed" ||
-    action === "ram_actor"
-  );
-}
-
-export function clipUsesTargetActor(
-  action: ScenarioEditorTimelineAction,
-): boolean {
-  return action === "ram_actor";
-}
-
-export function timelineActionsForActor(
-  actor: Pick<ScenarioEditorActorDraft, "kind" | "placement_mode" | "is_static">,
-): ScenarioEditorTimelineAction[] {
-  if (actor.kind === "prop" || actor.is_static || actor.placement_mode === "point")
-    return [];
-  if (actor.kind === "walker") return [];
-  if (actor.placement_mode === "road") {
-    return [
-      "set_speed",
-      "follow_route",
-      "ram_actor",
-    ];
-  }
-  return [];
-}
-
-export function defaultClipSpeedKphForActor(
-  actor: Pick<ScenarioEditorActorDraft, "kind" | "role">,
-): number {
-  if (actor.kind === "walker") return defaultWalkerSpeedKph;
-  return defaultVehicleSpeedKph;
-}
-
 export function speedSliderMaxForActor(
   actor: Pick<ScenarioEditorActorDraft, "kind">,
 ): number {
@@ -497,146 +414,6 @@ export function actorRouteDirection(
   actor: Pick<ScenarioEditorActorDraft, "route_direction">,
 ): RouteDirectionMode {
   return actor.route_direction === "reverse" ? "reverse" : "forward";
-}
-
-// ---------------------------------------------------------------------------
-// Timeline helpers
-// ---------------------------------------------------------------------------
-
-export function clipWithActionDefaults(
-  actor: Pick<ScenarioEditorActorDraft, "kind" | "role">,
-  clip: ScenarioEditorTimelineClip,
-  action: ScenarioEditorTimelineAction,
-): ScenarioEditorTimelineClip {
-  const defaultSpeedKph = defaultClipSpeedKphForActor(actor);
-  return {
-    ...clip,
-    action,
-    target_speed_kph: clipUsesSpeed(action)
-      ? (clip.target_speed_kph ?? defaultSpeedKph)
-      : null,
-    target_actor_id: clipUsesTargetActor(action)
-      ? (clip.target_actor_id ?? null)
-      : null,
-  };
-}
-
-export function createTimelineClip(
-  actor: ScenarioEditorActorDraft,
-  time: number,
-): ScenarioEditorTimelineClip {
-  const action = timelineActionsForActor(actor)[0] ?? "set_speed";
-  return clipWithActionDefaults(
-    actor,
-    {
-      id: crypto.randomUUID(),
-      start_time: Math.min(Math.max(1, time), timelineDurationSeconds),
-      end_time: null,
-      action,
-      target_speed_kph: null,
-      target_actor_id: null,
-      enabled: true,
-    },
-    action,
-  );
-}
-
-/**
- * Legacy-timeline helpers below take the RUNTIME actor shape: the legacy
- * `timeline` field left the persisted schema (wave 2b) and now only exists on
- * wire/runtime actors, where the payload boundary re-materializes it
- * (`expandLegacyWireActor`).
- */
-export function sanitizeTimeline(
-  actor: RuntimeScenarioEditorActor,
-): ScenarioEditorTimelineClip[] {
-  const allowed = new Set<ScenarioEditorTimelineAction>(
-    timelineActionsForActor(actor),
-  );
-  for (const action of baseNavigationActions) {
-    allowed.add(action);
-  }
-  return (actor.timeline ?? [])
-    .filter((clip) => allowed.has(clip.action))
-    .map((clip) =>
-      clipWithActionDefaults(
-        actor,
-        {
-          ...clip,
-          start_time: Math.max(0, clip.start_time),
-          end_time: null,
-        },
-        clip.action,
-      ),
-    )
-    .sort((a, b) => a.start_time - b.start_time);
-}
-
-export function baseNavigationClip(
-  actor: RuntimeScenarioEditorActor,
-): ScenarioEditorTimelineClip | null {
-  const clip = sanitizeTimeline(actor).find(
-    (item) => item.start_time === 0 && isBaseNavigationAction(item.action),
-  );
-  return clip ?? null;
-}
-
-export function routePointSpeedKph(
-  actor: ScenarioEditorActorDraft,
-  pointIndex: number,
-): number {
-  const routePoint = actor.route[pointIndex];
-  const speed = routePoint?.speed_kph;
-  if (typeof speed === "number" && Number.isFinite(speed) && speed >= 0) {
-    return speed;
-  }
-  return (
-    baseNavigationClip(actor)?.target_speed_kph ??
-    actor.speed_kph ??
-    defaultClipSpeedKphForActor(actor)
-  );
-}
-
-export function normalizeRoadFollowRouteActor(
-  actor: RuntimeScenarioEditorActor,
-): RuntimeScenarioEditorActor {
-  const navigationClip = baseNavigationClip(actor);
-  if (actor.placement_mode !== "road" || navigationClip?.action !== "follow_route") {
-    return actor;
-  }
-  const navigationSpeedKph = navigationClip.target_speed_kph;
-  const routeActor =
-    typeof navigationSpeedKph === "number" &&
-    Number.isFinite(navigationSpeedKph) &&
-    navigationSpeedKph >= 0 &&
-    actor.speed_kph !== navigationSpeedKph
-      ? { ...actor, speed_kph: navigationSpeedKph }
-      : actor;
-  const speedClipsByRouteIndex = new Map<number, number>();
-  for (const clip of routeActor.timeline ?? []) {
-    if (clip.action !== "set_speed" || clip.enabled === false) continue;
-    const routeIndex = Math.round(clip.start_time);
-    if (routeIndex <= 0 || Math.abs(clip.start_time - routeIndex) > 1e-6) continue;
-    const speed = clip.target_speed_kph;
-    if (typeof speed === "number" && Number.isFinite(speed) && speed >= 0) {
-      speedClipsByRouteIndex.set(routeIndex, speed);
-    }
-  }
-  if (speedClipsByRouteIndex.size === 0) {
-    return {
-      ...routeActor,
-      timeline: (routeActor.timeline ?? []).filter((clip) => clip.action !== "set_speed"),
-    };
-  }
-  return {
-    ...routeActor,
-    route: routeActor.route.map((anchor, index) => {
-      if (typeof anchor.speed_kph === "number" && anchor.speed_kph >= 0) return anchor;
-      if (!speedClipsByRouteIndex.has(index)) return anchor;
-      return { ...anchor, speed_kph: speedClipsByRouteIndex.get(index)! };
-    }),
-    timeline: (routeActor.timeline ?? []).filter((clip) => clip.action !== "set_speed"),
-  };
 }
 
 export function pathSegmentSpeedKph(

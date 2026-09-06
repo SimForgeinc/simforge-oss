@@ -10,6 +10,7 @@ import type { Readable, Writable } from 'node:stream';
 import {
   ENGINE_CAPABILITIES_V1_SCHEMA,
   hashFile,
+  scheduleFrameMicros,
   type EngineCapabilityDeclaration,
   type RenderArtifactManifest,
   type RenderEngineAdapter,
@@ -19,12 +20,14 @@ import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
 import { createNativeCameraSchedule } from './camera-schedule.js';
-import { NativeServiceClient, stripRgbaPadding, type NativeFrameRecord } from './service-client.js';
-import { ensureActorAssets } from './actor-assets.js';
+import { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets } from './actor-assets.js';
+import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
 import { resolveNativeLighting } from './lighting.js';
+import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers } from './map-closure.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
-const NATIVE_ENGINE_VERSION = '0.1.0-rc.60';
+const NATIVE_ENGINE_VERSION = '0.1.0-rc.61';
 
 export interface NativeRenderEngineOptions {
   /** Path to the retained native-render-service binary. */
@@ -105,6 +108,8 @@ function terminate(child: ChildProcess): void {
 
 interface Encoder {
   readonly source: RenderSourceV3;
+  readonly width: number;
+  readonly height: number;
   readonly process: ChildProcessByStdio<Writable, null, Readable>;
   readonly path: string;
   readonly stderr: string[];
@@ -112,7 +117,7 @@ interface Encoder {
   frames: number;
 }
 
-function startEncoder(ffmpeg: string, outputPath: string, source: Encoder['source']): Encoder {
+function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3): Encoder {
   if (source.modality !== 'rgb') throw new Error(`native retained adapter cannot encode ${source.modality}`);
   const child = spawn(ffmpeg, [
     '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba',
@@ -127,7 +132,10 @@ function startEncoder(ffmpeg: string, outputPath: string, source: Encoder['sourc
     stderr.push(chunk);
     if (stderr.length > 32) stderr.shift();
   });
-  return { source, process: child, path: outputPath, stderr, completion: once(child, 'exit'), frames: 0 };
+  return {
+    source, width: source.attributes.width, height: source.attributes.height,
+    process: child, path: outputPath, stderr, completion: once(child, 'exit'), frames: 0,
+  };
 }
 
 async function finishEncoder(encoder: Encoder): Promise<void> {
@@ -167,22 +175,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       });
       const xoscInput = context.inputs.get('scenario.xosc');
       if (!xoscInput) throw new Error('native render requires scenario.xosc');
-      const master = context.inputs.get('map.tile.000000');
-      if (!master || master.relativePath !== 'master.gltf') {
-        throw new Error('native render requires map.tile.000000 with relativePath master.gltf and its complete resource closure');
-      }
+      const closure = collectNativeMapMembers(context.inputs.values());
       const mapRoot = path.join(context.workspace, 'map');
       await fs.rm(mapRoot, { recursive: true, force: true });
-      const members = new Set<string>();
-      for (const input of context.inputs.values()) {
-        if (input.inputId !== master.inputId && !/^map\.resource\.[a-f0-9]{64}$/u.test(input.inputId)) continue;
-        const member = input.relativePath;
-        if (!member || /[\\:%?#\u0000-\u001f]/u.test(member)
-          || member.split('/').some((part) => !part || part === '.' || part === '..')) {
-          throw new Error(`unsafe native map member: ${member}`);
-        }
-        if (members.has(member)) throw new Error(`duplicate native map member: ${member}`);
-        members.add(member);
+      for (const [member, input] of closure.members) {
         const destination = path.join(mapRoot, member);
         await fs.mkdir(path.dirname(destination), { recursive: true });
         try {
@@ -192,7 +188,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           await fs.copyFile(input.path, destination);
         }
       }
-      const masterPath = path.join(mapRoot, master.relativePath);
+      const masterPath = path.join(mapRoot, NATIVE_MAP_MASTER_PATH);
       const document = JSON.parse(await fs.readFile(masterPath, 'utf8')) as {
         buffers?: Array<{ uri?: string }>;
         images?: Array<{ uri?: string }>;
@@ -211,17 +207,26 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       }
       for (const resource of resources) {
         if (!resource.uri || resource.uri.startsWith('data:')) continue;
-        if (!members.has(resource.uri)) throw new Error(`master references undeclared map member: ${resource.uri}`);
+        if (!closure.members.has(resource.uri)) throw new Error(`master references undeclared map member: ${resource.uri}`);
       }
-      let actorAssets: string | undefined;
-      try {
-        actorAssets = await ensureActorAssets();
-      } catch (error) {
-        process.stderr.write(`[simforge-native] actor asset closure unavailable; using proxy actors: ${error instanceof Error ? error.message : String(error)}\n`);
+      // Actor appearance is part of the render contract: the intent declares
+      // the actor closure as `actors.native-closure`, the worker delivers its
+      // bytes, and the closure's members must verify before any frame is
+      // rendered. There is no default closure and no proxy downgrade.
+      const closureInput = context.inputs.get(NATIVE_ACTOR_ASSETS_INPUT_ID);
+      if (!closureInput) throw new Error(`native render requires ${NATIVE_ACTOR_ASSETS_INPUT_ID}`);
+      const closureAsset = intent.assets.find((asset) => asset.assetId === NATIVE_ACTOR_ASSETS_INPUT_ID);
+      if (!closureAsset || closureAsset.sha256 !== closureInput.sha256 || closureAsset.sizeBytes !== closureInput.sizeBytes) {
+        throw new Error(`${NATIVE_ACTOR_ASSETS_INPUT_ID} input does not match the intent's declared actor closure`);
       }
+      const actorAssets = await ensureActorAssets({
+        closure: closureInput,
+        destination: path.join(context.workspace, 'actor-assets'),
+      });
 
       const xosc = await fs.readFile(xoscInput.path);
       const lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
+      assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
       const traceRelative = 'trace/native-trace.json';
       const tracePath = path.join(context.workspace, traceRelative);
@@ -258,10 +263,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         nearM: Math.min(...sources.map((source) => source.modality === 'rgb' ? source.attributes.nearM : 0.05)),
         farM: Math.max(...sources.map((source) => source.modality === 'rgb' ? source.attributes.farM : 1_000)),
         warmupFrames: 20,
-        ...(actorAssets === undefined ? {} : {
-          vehicleModels: actorAssets,
-          pedestrianModels: actorAssets,
-        }),
+        vehicleModels: actorAssets.directory,
+        pedestrianModels: actorAssets.directory,
       });
       const serviceLog = await fs.open(serviceLogPath, 'w', 0o644);
       const service = spawn(binary, [
@@ -273,7 +276,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       let client: NativeServiceClient | undefined;
       const encoders = new Map<string, Encoder>();
+      const scheduleBySource = new Map(rgbSchedules.map((schedule) => [schedule.sourceId, schedule]));
       let serverMs = 0;
+      const frameIdentities: NativeFrameIdentity[] = [];
       let encodingComplete = false;
       try {
         await waitForSocket(socketPath, service, options.startupTimeoutMs ?? 300_000, context.signal);
@@ -285,28 +290,25 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           const outputPath = path.join(context.workspace, 'video', `${source.outputName}.mp4`);
           encoders.set(source.outputName, startEncoder(ffmpeg, outputPath, source));
         }
-        const scheduleBySource = new Map(rgbSchedules.map((schedule) => [schedule.sourceId, schedule]));
         const wantedMicros = new Map<string, Set<number>>();
-        for (const [sourceId, schedule] of scheduleBySource) {
-          wantedMicros.set(sourceId, new Set(Array.from(
-            { length: schedule.frameCount },
-            (_, index) => Math.round((schedule.startSeconds + index / schedule.framesPerSecond) * 1_000_000),
-          )));
-        }
+        for (const [sourceId, schedule] of scheduleBySource) wantedMicros.set(sourceId, new Set(scheduleFrameMicros(schedule)));
 
         for (let tick = 0; tick < lowering.states.length; tick += 1) {
           if (context.signal.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error('native render aborted');
-          const response = await client.rpc({
-            op: 'render_bundle', sim_tick: tick, tick_index: tick,
-            cameras: cameras[tick], passes: ['rgb'],
+          const response = await client.renderBundle({
+            sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'],
           });
+          if (response.frame.simTick !== tick) {
+            throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
+          }
           serverMs += response.server_ms ?? 0;
+          frameIdentities.push(response.frame);
           const frameMicros = Math.round(lowering.frameTimes[tick]! * 1_000_000);
-          for (const frame of response.frames ?? []) {
+          for (const frame of response.frames) {
             if (frame.pass !== 'rgb' || !wantedMicros.get(frame.sensorId)?.has(frameMicros)) continue;
             const encoder = encoders.get(frame.sensorId);
             if (!encoder) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
-            const rgba = stripRgbaPadding(await client.readFrame(frame as NativeFrameRecord), frame.width, frame.height);
+            const rgba = stripRgbaPadding(await client.readFrame(frame), frame.width, frame.height);
             if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
             encoder.frames += 1;
           }
@@ -333,9 +335,16 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       for (const encoder of [...encoders.values()].sort((left, right) => left.source.outputName.localeCompare(right.source.outputName))) {
         const digest = await hashFile(encoder.path);
         const relativePath = path.relative(context.workspace, encoder.path);
+        const schedule = scheduleBySource.get(encoder.source.outputName);
+        if (!schedule) throw new Error(`native render produced ${encoder.source.outputName} without a schedule`);
+        if (encoder.frames !== schedule.frameCount) {
+          throw new Error(`native render encoded ${encoder.frames} frames for ${encoder.source.outputName}; its schedule requires ${schedule.frameCount}`);
+        }
         videoRecords.push({
           actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, relativePath,
-          frameCount: encoder.frames, sha256: digest.sha256, sizeBytes: digest.sizeBytes,
+          width: encoder.width, height: encoder.height,
+          framesPerSecond: schedule.framesPerSecond, frameCount: encoder.frames,
+          sha256: digest.sha256, sizeBytes: digest.sizeBytes,
         });
         artifacts.push({
           identity: { role: 'video', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: 'rgb' },
@@ -351,12 +360,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       const nativeManifestRelative = 'manifest/native-render.json';
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
-      await writeJson(nativeManifestPath, {
+      await writeJson(nativeManifestPath, NativeRenderManifestSchema.parse({
         schema: 'simforge.native-render-manifest/v1',
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
+        actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
         look: {
           profile: 'cinematic',
@@ -366,7 +376,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           provenance: look.provenance,
         },
         videos: videoRecords,
-      });
+      }));
       const nativeManifestDigest = await hashFile(nativeManifestPath);
       artifacts.push({
         identity: { role: 'manifest', actorId: null, sensorId: null, modality: null },
@@ -376,20 +386,22 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       const diagnosticsRelative = 'diagnostics/native-run.json';
       const diagnosticsPath = path.join(context.workspace, diagnosticsRelative);
-      await writeJson(diagnosticsPath, {
+      await writeJson(diagnosticsPath, NativeRunDiagnosticsSchema.parse({
         schema: 'simforge.native-run-diagnostics/v1',
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
+        actorAssetsSha256: actorAssets.digest,
         fixedTimestepSeconds: lowering.plan.dt,
         frameCount: lowering.states.length,
         traceSha256: traceDigest.sha256,
         videoCount: videoRecords.length,
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
-        service: { protocol: 2, binary },
+        service: { protocol: NATIVE_SERVICE_PROTOCOL, binary },
+        frames: frameIdentities,
         timings: { wallMs: performance.now() - wallStarted, serverMs },
-      });
+      }));
       const diagnosticsDigest = await hashFile(diagnosticsPath);
       artifacts.push({
         identity: { role: 'diagnostics', actorId: null, sensorId: null, modality: null },

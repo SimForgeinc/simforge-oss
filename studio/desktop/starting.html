@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SimForge Studio</title>
+    <style>
+      html, body { height: 100%; margin: 0; background: #0b0e14; color: #d7dbe3; font: 14px system-ui, sans-serif; }
+      main { height: 100%; display: grid; place-items: center; text-align: center; }
+      .pulse { width: 10px; height: 10px; border-radius: 50%; background: #5aa9ff; margin: 0 auto 16px; animation: pulse 1.2s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.2); } }
+      p { margin: 4px 0; color: #8b93a3; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <div class="pulse"></div>
+        <strong>Starting the local Studio host</strong>
+        <p>Applying migrations, seeding, and waiting for the server to answer.</p>
+      </div>
+    </main>
+  </body>
+</html>

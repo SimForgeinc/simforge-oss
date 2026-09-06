@@ -9,9 +9,9 @@ import {
   getMapAssetDescriptorTag,
 } from "@simforge-oss/studio-shared";
 import type { MapAsset, MapAssetArtifactType } from "@simforge-oss/studio-shared";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { cn } from "@/app/lib/utils";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { MapAssetDangerZone } from "./MapAssetDangerZone";
 import {
   artifactTypeFromFilename,

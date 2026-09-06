@@ -19,7 +19,6 @@ import { applyPatches, enablePatches, produceWithPatches, type Patch } from 'imm
 
 import { ScenarioValidationError, toScenarioIssues } from './errors.js';
 import { newId as mintId } from './ids.js';
-import { migrate } from './migrate.js';
 import {
   applyOp,
   buildEntity,
@@ -36,7 +35,7 @@ import {
   type MapRef,
   type ScenarioV1,
 } from './schema/v1.js';
-import { deepFreeze, serializeScenario } from './serialize.js';
+import { deepFreeze, parseScenario, serializeScenario } from './serialize.js';
 
 enablePatches();
 
@@ -174,16 +173,13 @@ export class ScenarioDocument {
   }
 
   /**
-   * Load a parsed `.scenario.json`, migrating it forward if needed.
+   * Load a parsed `.scenario.json`. The document must already be the current
+   * v1 schema; anything else fails validation.
    *
-   * The returned document starts clean unless a migration ran — a migrated
-   * document differs from the bytes on disk, so it is dirty by construction.
+   * @throws {ScenarioValidationError} With every issue found.
    */
   static fromJSON(json: unknown, options: ScenarioDocumentOptions = {}): ScenarioDocument {
-    const { doc, migrated } = migrate(json);
-    const instance = new ScenarioDocument(doc, options);
-    if (migrated) instance.#cleanIndex = null;
-    return instance;
+    return new ScenarioDocument(parseScenario(json), options);
   }
 
   /** Load `.scenario.json` text. See {@link ScenarioDocument.fromJSON}. */

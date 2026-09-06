@@ -1,0 +1,211 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "f67c386de9da083976826ad331e50f280408f0ebc9dcd92651e1c777e1eac1bb",
+  "traceDigest": "27136ea613f7d52b41bec62785d4fcf8d13f4570c051e5344439772ee6118db3",
+  "dt": 0.02,
+  "clipSeconds": 19,
+  "warmupSeconds": 2,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 951,
+  "firstT": 0,
+  "lastT": 19,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "channelizer": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "queue-tail": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "work-vehicle": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "channelizer": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 19
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 19
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.74,
+          "from": "0:0:-3",
+          "to": "775:0:-3"
+        },
+        {
+          "t": 4.16,
+          "from": "775:0:-3",
+          "to": "1:0:-3"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "queue-tail": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 19
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "work-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 19
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "work-vehicle-hazards",
+      "actorId": "work-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "work-vehicle",
+      "key": "lights.indicator",
+      "value": "hazard"
+    },
+    {
+      "t": 1.12,
+      "kind": "trigger_fired",
+      "interactionId": "ego-shifts-left",
+      "actorId": "ego",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 1.12,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "ego",
+      "interactionId": "ego-shifts-left",
+      "requestedDurationS": 14.23519183900492,
+      "effectiveDurationS": 14.23519183900492,
+      "displacementM": 4.555261388481574
+    },
+    {
+      "t": 4.109191792585556,
+      "kind": "collision",
+      "a": "ego",
+      "b": "prop:cone-taper-6",
+      "colliderA": "body",
+      "colliderB": "static"
+    },
+    {
+      "t": 4.109191792585556,
+      "kind": "interaction_aborted",
+      "interactionId": "ego-shifts-left",
+      "actorId": "ego",
+      "reason": "collision"
+    },
+    {
+      "t": 4.109191792585556,
+      "kind": "crash_disabled",
+      "actorId": "ego",
+      "otherId": "prop:cone-taper-6",
+      "reason": "material-collision"
+    },
+    {
+      "t": 14,
+      "kind": "trigger_skipped",
+      "interactionId": "ego-brakes-for-queue",
+      "actorId": "ego",
+      "reason": "window_elapsed"
+    }
+  ],
+  "metrics": {
+    "collisions": [
+      {
+        "t": 4.109191792585556,
+        "a": "ego",
+        "b": "prop:cone-taper-6",
+        "colliderA": "body",
+        "colliderB": "static"
+      }
+    ],
+    "triggerNeverFired": [
+      "ego-brakes-for-queue"
+    ],
+    "clippedCriticality": false,
+    "ticksSimulated": 951,
+    "minTTCPair": [
+      "channelizer",
+      "ego"
+    ],
+    "minDistancePairs": [
+      [
+        "channelizer",
+        "ego"
+      ],
+      [
+        "ego",
+        "queue-tail"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

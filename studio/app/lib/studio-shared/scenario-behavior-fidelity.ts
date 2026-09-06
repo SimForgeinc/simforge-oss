@@ -3,12 +3,9 @@ import type {
   BehaviorFidelity,
   BehaviorRoadAnchor,
   BehaviorTrigger,
-} from "./scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 import type { JunctionSignalPlan } from "./scenario-signals";
-import type {
-  ScenarioEditorActorDraft,
-  TimedInstructionResolvedPlan,
-} from "./scenario-editor";
+import type { ScenarioEditorActorDraft } from "./scenario-editor";
 
 function actorDrivesByPoints(
   actor: Pick<ScenarioEditorActorDraft, "kind" | "placement_mode" | "path_timing">,
@@ -303,31 +300,15 @@ function actionFidelity(
  * The fidelity context for an actor's clips.
  *
  * `hasResolvedRouteGeometry` is true when the actor's own route carries at least
- * two world-anchored waypoints, or when its timed-instruction compiler already
- * resolved a `follow_route` plan with a sampled trace — the two shapes the
- * writer can build a junction-turn trajectory out of.
+ * two world-anchored waypoints — the shape the writer can build a junction-turn
+ * trajectory out of.
  */
 export function fidelityContextForActor(
   actor: ScenarioEditorActorDraft,
 ): ClipFidelityContext {
   const drivesByPoints = actorDrivesByPoints(actor);
   const anchored = actor.route.filter((anchor) => anchorIsResolvable(anchor));
-  if (anchored.length >= 2) {
-    return { hasResolvedRouteGeometry: true, drivesByPoints };
-  }
-  // Legacy timed instructions no longer live on the schema; a raw record (or
-  // a runtime actor whose boundary expansion re-materialized them, or the
-  // migration's `legacy_wire` envelope) can still carry a resolved plan.
-  const record = actor as Record<string, unknown>;
-  const timedInstructions = (record.timedInstructions ??
-    actor.legacy_wire?.timedInstructions) as
-    | { resolvedPlan?: TimedInstructionResolvedPlan | null }
-    | undefined;
-  const plan = timedInstructions?.resolvedPlan;
-  if (plan?.kind === "follow_route" && plan.traceSamples.length >= 2) {
-    return { hasResolvedRouteGeometry: true, drivesByPoints };
-  }
-  return { hasResolvedRouteGeometry: false, drivesByPoints };
+  return { hasResolvedRouteGeometry: anchored.length >= 2, drivesByPoints };
 }
 
 /**

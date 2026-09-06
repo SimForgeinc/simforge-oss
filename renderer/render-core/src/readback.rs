@@ -4,10 +4,10 @@
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssets;
 use bevy::render::render_resource::{
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, MapMode, PollType,
-    TexelCopyBufferInfo, TexelCopyBufferLayout, TextureFormat, TextureUsages,
+    Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode, PollType, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TextureFormat, TextureUsages,
 };
-use bevy::render::renderer::{RenderContext, RenderDevice, RenderQueue};
+use bevy::render::renderer::{RenderContext, RenderDevice, RenderGraph, RenderGraphSystems};
 use bevy::render::texture::GpuImage;
 use bevy::render::{Extract, Render, RenderApp, RenderSystems};
 use std::time::Instant;
@@ -87,15 +87,14 @@ pub fn extract_frame(frame: Extract<Res<GlobalFrame>>, mut stamp: ResMut<FrameSt
     stamp.0 = frame.0;
 }
 
+/// Encode texture->staging copies after this frame's camera passes, in the
+/// same pending command stream, so the copy is submitted after (and never
+/// races) the rendering it reads.
 pub fn copy_passes(
     mut ctx: RenderContext,
-    queue: Res<RenderQueue>,
     copiers: Res<Copiers>,
     gpu_images: Res<RenderAssets<GpuImage>>,
 ) {
-    let mut encoder = ctx
-        .render_device()
-        .create_command_encoder(&CommandEncoderDescriptor::default());
     for c in copiers.iter() {
         let Some(src) = gpu_images.get(&c.src_image) else {
             continue;
@@ -103,7 +102,7 @@ pub fn copy_passes(
         let width = src.texture_descriptor.size.width as usize;
         let pixel = src.texture_descriptor.format.block_copy_size(None).unwrap_or(4);
         let padded = aligned_row(width, pixel as usize);
-        encoder.copy_texture_to_buffer(
+        ctx.command_encoder().copy_texture_to_buffer(
             src.texture.as_image_copy(),
             TexelCopyBufferInfo {
                 buffer: &c.buffer,
@@ -120,7 +119,6 @@ pub fn copy_passes(
             },
         );
     }
-    queue.submit(std::iter::once(encoder.finish()));
 }
 
 pub fn receive_passes(
@@ -188,7 +186,12 @@ pub fn install(app: &mut App) -> crossbeam_channel::Receiver<SentPass> {
         .init_resource::<Copiers>()
         .init_resource::<FrameStamp>()
         .add_systems(bevy::render::ExtractSchedule, (extract_copiers, extract_frame))
-        .add_systems(bevy::render::renderer::RenderGraph, copy_passes)
+        .add_systems(
+            RenderGraph,
+            copy_passes
+                .after(RenderGraphSystems::Render)
+                .before(RenderGraphSystems::Submit),
+        )
         .add_systems(Render, receive_passes.after(RenderSystems::Render));
     rx
 }

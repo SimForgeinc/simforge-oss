@@ -26,20 +26,20 @@ import os from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
-import { MATCH_SEMANTICS_VERSION } from '@simforge-oss/compiler/node';
 import {
-  ENGINE_VERSION,
-  contentHash,
-  resolveAmbientTrafficProfile,
-  type AmbientTrafficProfile,
-} from '@simforge-oss/engine';
+  MATCH_SEMANTICS_VERSION,
+  cellSeed,
+  matchOnMaps,
+  readTemplate,
+  templateIdentity,
+  writeJsonFile,
+} from '@simforge-oss/compiler/node';
+import { contentHash, resolveAmbientTrafficProfile, type AmbientTrafficProfile } from '@simforge-oss/engine';
+import { engine } from '@simforge-oss/engine/node';
 
 import { cellPaths, runCell, type CellOptions, type CellResult } from '../batch-cell.js';
 import { EXIT } from '../errors.js';
 import { emit, emitLines, fixed, pad } from '../output.js';
-import { cellSeed, paramsVersion, templateId } from '../params.js';
-import { matchOnMaps } from '@simforge-oss/compiler/node';
-import { readTemplate, writeJsonFile } from '@simforge-oss/compiler/node';
 import type { EvaluateFilterMode } from './evaluate.js';
 
 export interface BatchOptions {
@@ -77,8 +77,7 @@ export async function batch(options: BatchOptions): Promise<number> {
     maxSites: options.maxSites,
   });
 
-  const tid = templateId(template);
-  const pv = paramsVersion(template);
+  const { templateId: tid, paramsVersion: pv } = templateIdentity(template);
   const templateDigest = contentHash(template).slice(0, 16);
 
   // Resolve once so every cell, every worker and the replay key see one
@@ -102,7 +101,7 @@ export async function batch(options: BatchOptions): Promise<number> {
       mapId: match.mapId,
       sites: match.report.sites.length,
       matcherIndexDigest: match.bundle.index.topologyDigest,
-      engineGraphDigest: match.bundle.graph.topologyDigest,
+      engineGraphDigest: match.bundle.graph.digest,
     });
     for (const site of match.report.sites) {
       for (let draw = 0; draw < options.draws; draw += 1) {
@@ -139,9 +138,9 @@ export async function batch(options: BatchOptions): Promise<number> {
       const reused = await tryResume(cell, {
         templateDigest,
         matcherVersion: MATCH_SEMANTICS_VERSION,
-        solverVersion: ENGINE_VERSION,
+        solverVersion: engine().version().engineVersion,
         matcherIndexDigest: matches.find((m) => m.mapId === cell.mapId)?.bundle.index.topologyDigest ?? '',
-        engineGraphDigest: matches.find((m) => m.mapId === cell.mapId)?.bundle.graph.topologyDigest ?? '',
+        engineGraphDigest: matches.find((m) => m.mapId === cell.mapId)?.bundle.graph.digest ?? '',
         ambientProfileHash,
       });
       if (reused) {
@@ -190,7 +189,7 @@ export async function batch(options: BatchOptions): Promise<number> {
     templateDigest,
     paramsVersion: pv,
     matcherVersion: MATCH_SEMANTICS_VERSION,
-    solverVersion: ENGINE_VERSION,
+    solverVersion: engine().version().engineVersion,
     archetype: template.meta.archetype ?? null,
     negativeControl: template.meta.negativeControl,
     maps: perMapSites,

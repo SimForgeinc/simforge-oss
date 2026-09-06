@@ -52,6 +52,7 @@ import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
+import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
 
 const COMMANDS = [
   { name: 'maps list', summary: 'list immutable maps and versions in the configured registry' },
@@ -82,6 +83,10 @@ const COMMANDS = [
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
   { name: 'corpus prewarm', summary: 'tile subset a camera route touches (--map --route poses.json [--radius m])' },
+  { name: 'job submit|start|run|status|list|cancel|attach|artifacts', summary: 'durable native jobs (simforge.native-job/v1 manifests) in the native runner: compile, simulate, episode batches, renders; argv passes through to simforge-runner' },
+  { name: 'worker reconcile|capacity', summary: 'native runner worker maintenance and declared capacity' },
+  { name: 'cas ingest|verify', summary: 'native runner content store: ingest a file or re-hash a stored blob' },
+  { name: 'runtime show', summary: 'verified native runtime identity, engines and support tiers' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
 ] as const;
 
@@ -212,6 +217,29 @@ function positional(args: ParsedArgs, index: number, name: string): string {
   return value;
 }
 
+/**
+ * Forward a runner command group. `--pretty`/`--root` are lifted so they can
+ * sit anywhere on the `simforge` command line; everything else is the runner's.
+ */
+function runnerPassthrough(group: RunnerGroup, rest: readonly string[]): Promise<number> {
+  const argv: string[] = [group];
+  let pretty = false;
+  let root: string | undefined;
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index]!;
+    if (arg === '--pretty') {
+      pretty = true;
+    } else if (arg === '--root') {
+      root = rest[index + 1];
+      if (root === undefined) throw new CliError('missing_argument', '--root requires a directory', { path: '--root' });
+      index += 1;
+    } else {
+      argv.push(arg);
+    }
+  }
+  return runRunner({ argv, pretty, root });
+}
+
 async function dispatch(argv: readonly string[]): Promise<number> {
   const head = argv[0];
   if (head === undefined || head === '--help' || head === 'help') {
@@ -219,6 +247,10 @@ async function dispatch(argv: readonly string[]): Promise<number> {
   }
 
   const sub = argv[1];
+
+  if ((RUNNER_GROUPS as readonly string[]).includes(head)) {
+    return runnerPassthrough(head as RunnerGroup, argv.slice(1));
+  }
 
   switch (head) {
     case 'maps': {

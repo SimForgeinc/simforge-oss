@@ -1,4 +1,5 @@
-import { buildLaneGraph, parseSimScenarioInput, type TopologyIndex } from '@simforge-oss/engine';
+import { parseSimScenarioInput, type TopologyIndex } from '@simforge-oss/engine';
+import { buildLaneGraph, engine } from '@simforge-oss/engine/node';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -52,6 +53,7 @@ function fixture() {
 
 function exportedFixture(): string {
   return exportOpenScenarioXml14(fixture(), {
+    engine: engine(),
     graph,
     executionMode: 'trajectory-replay',
     roadFile: 'maps/replay-map.xodr',

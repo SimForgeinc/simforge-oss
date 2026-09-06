@@ -240,42 +240,96 @@ pub struct SkyAssetProvenance {
     pub entries: Vec<(String, String, u64)>,
 }
 
-pub struct SkyPassPlugin;
+/// Resolved and digest-verified star/Moon plates.
+///
+/// Resolution order: `$SIMFORGE_SKY_ASSETS`, `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky`
+/// (installed runtime), then the crate's `assets/sky` (source checkout).
+/// Every candidate directory must hold `SOURCES.json`; the first one that
+/// does is authoritative and its `product_sha256`/`product_bytes` are
+/// checked against the plates, so a stale or truncated plate fails here
+/// rather than rendering a wrong sky.
+#[derive(Debug, Clone)]
+pub struct SkyAssetPaths {
+    pub dir: std::path::PathBuf,
+    pub star: std::path::PathBuf,
+    pub moon: std::path::PathBuf,
+}
 
-fn asset_dir() -> std::path::PathBuf {
+pub const STAR_PLATE: &str = "starmap_2020_8k.skytex";
+pub const MOON_PLATE: &str = "moon_lroc_4k.skytex";
+
+fn candidate_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::with_capacity(3);
     if let Ok(dir) = std::env::var("SIMFORGE_SKY_ASSETS") {
-        return std::path::PathBuf::from(dir);
+        dirs.push(std::path::PathBuf::from(dir));
     }
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky")
+    if let Ok(root) = std::env::var("SIMFORGE_NATIVE_RUNTIME_ROOT") {
+        dirs.push(std::path::Path::new(&root).join("share/sky"));
+    }
+    dirs.push(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"));
+    dirs
+}
+
+impl SkyAssetPaths {
+    pub fn resolve() -> anyhow::Result<Self> {
+        use anyhow::Context;
+        let dirs = candidate_dirs();
+        let Some(dir) = dirs.iter().find(|d| d.join("SOURCES.json").is_file()) else {
+            anyhow::bail!(
+                "sky assets not found: no SOURCES.json in {} (set SIMFORGE_SKY_ASSETS or install the native runtime; \
+                 plates are built by renderer/tools/prepare_sky_assets.py)",
+                dirs.iter().map(|d| d.display().to_string()).collect::<Vec<_>>().join(", ")
+            );
+        };
+        let manifest: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.join("SOURCES.json")).context("read sky SOURCES.json")?,
+        )
+        .context("parse sky SOURCES.json")?;
+        let sources = manifest["sources"].as_array().context("sky SOURCES.json has no sources")?;
+        for product in [STAR_PLATE, MOON_PLATE] {
+            let entry = sources
+                .iter()
+                .find(|s| s["product"].as_str() == Some(product))
+                .with_context(|| format!("sky SOURCES.json lists no product {product}"))?;
+            let path = dir.join(product);
+            let len = std::fs::metadata(&path)
+                .with_context(|| format!("sky plate {} missing", path.display()))?
+                .len();
+            let (want_len, want_sha) = (entry["product_bytes"].as_u64(), entry["product_sha256"].as_str());
+            if Some(len) != want_len {
+                anyhow::bail!("sky plate {}: {len} bytes, SOURCES.json expects {want_len:?}", path.display());
+            }
+            let sha = crate::night::sha256_file(&path)?;
+            if Some(sha.as_str()) != want_sha {
+                anyhow::bail!("sky plate {}: sha256 {sha} does not match SOURCES.json {want_sha:?}", path.display());
+            }
+        }
+        Ok(Self { star: dir.join(STAR_PLATE), moon: dir.join(MOON_PLATE), dir: dir.clone() })
+    }
+}
+
+pub struct SkyPassPlugin {
+    pub assets: SkyAssetPaths,
 }
 
 impl Plugin for SkyPassPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "shaders/sky_pass.wgsl");
 
-        let dir = asset_dir();
-        let star_path = dir.join("starmap_2020_8k.skytex");
-        let moon_path = dir.join("moon_lroc_4k.skytex");
-        let star = match crate::sky_texture::load_equirect(&star_path) {
-            Ok(image) => image,
-            Err(err) => {
-                error!("sky pass: {err:#}");
-                return;
-            }
-        };
-        let moon = match crate::sky_texture::load_equirect(&moon_path) {
-            Ok(image) => image,
-            Err(err) => {
-                error!("sky pass: {err:#}");
-                return;
-            }
-        };
+        let star_path = &self.assets.star;
+        let moon_path = &self.assets.moon;
+        // Verified by `SkyAssetPaths::resolve` before the app was built; a
+        // decode failure here is a corrupt plate, not a missing one.
+        let star = crate::sky_texture::load_equirect(star_path)
+            .unwrap_or_else(|err| panic!("sky pass: {}: {err:#}", star_path.display()));
+        let moon = crate::sky_texture::load_equirect(moon_path)
+            .unwrap_or_else(|err| panic!("sky pass: {}: {err:#}", moon_path.display()));
         let noise = crate::cloud_noise::CloudNoise::generate();
         let shape_image = noise.shape_image();
         let detail_image = noise.detail_image();
 
         let mut provenance = SkyAssetProvenance::default();
-        for path in [&star_path, &moon_path] {
+        for path in [star_path, moon_path] {
             provenance.entries.push((
                 path.display().to_string(),
                 crate::night::sha256_file(path).unwrap_or_else(|_| "unreadable".into()),

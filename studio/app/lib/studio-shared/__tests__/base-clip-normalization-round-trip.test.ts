@@ -13,49 +13,19 @@
  * been authored with two cars, some `[eval] S02*` rows down to zero actors, and
  * 125 drafts across the workspace carrying the same shape.
  *
- * Three lines of assertion, run over every actor the product has ever been asked
- * to author. It would have failed the day `591de6b19` landed.
+ * Three lines of assertion over the shape that caused it. It would have failed
+ * the day `591de6b19` landed.
  */
 
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { normalizeActorBaseClip } from "../behavior-base-clip";
-import { ActorBehaviorProgramSchema } from "../scenario-behavior";
+import { ActorBehaviorProgramSchema } from "@simforge-oss/scenario/contracts";
 import { ScenarioEditorActorDraftSchema } from "../scenario-editor";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-const CASE_ROOTS = [
-  "scripts/agent/scenario-eval/cases",
-  "scripts/agent/scenario-eval/cases-stress",
-  "scripts/agent/scenario-eval/cases-m4",
-  "scripts/agent/scenario-eval/cases-calibration",
-];
-
-function corpusActors(): Array<{ where: string; actor: unknown }> {
-  const found: Array<{ where: string; actor: unknown }> = [];
-  for (const root of CASE_ROOTS) {
-    const dir = path.join(repoRoot, root);
-    if (!fs.existsSync(dir)) continue;
-    for (const name of fs.readdirSync(dir).filter((file) => file.endsWith(".json"))) {
-      const scenario = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")) as {
-        id?: string;
-        draft?: { actors?: unknown[] };
-      };
-      for (const actor of scenario.draft?.actors ?? []) {
-        found.push({ where: `${scenario.id ?? name}:${(actor as { id?: string }).id}`, actor });
-      }
-    }
-  }
-  return found;
-}
-
 /**
- * The shape that caused it, stated directly so the invariant is pinned even if
- * the corpus is one day re-authored past it: a path actor holding at t=0 and
- * released onto its path by a later clip.
+ * The shape that caused it: a path actor holding at t=0 and released onto its
+ * path by a later clip.
  */
 const REGRESSION_ACTOR = {
   id: "runner",
@@ -105,22 +75,6 @@ const REGRESSION_ACTOR = {
 };
 
 describe("normalization emits drafts the schema accepts", () => {
-  it("holds for every actor in the eval corpus", () => {
-    const actors = corpusActors();
-    expect(actors.length).toBeGreaterThan(300);
-
-    const illegal: string[] = [];
-    for (const { where, actor } of actors) {
-      const parsed = ScenarioEditorActorDraftSchema.parse(actor);
-      const normalized = normalizeActorBaseClip(parsed);
-      const reparsed = ScenarioEditorActorDraftSchema.safeParse(normalized);
-      if (!reparsed.success) {
-        illegal.push(`${where}: ${reparsed.error.issues[0]?.message}`);
-      }
-    }
-    expect(illegal).toEqual([]);
-  });
-
   it("holds for the shape that lost the car", () => {
     const parsed = ScenarioEditorActorDraftSchema.parse(REGRESSION_ACTOR);
     const normalized = normalizeActorBaseClip(parsed);

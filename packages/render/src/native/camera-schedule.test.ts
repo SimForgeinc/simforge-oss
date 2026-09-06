@@ -23,7 +23,7 @@ const host: RenderSensorSourceHost = {
 
 function state(tick: number, position: readonly [number, number, number], headingRad: number): NativeSceneState {
   return {
-    version: 'scene-state.v1', mapId: 'richmond', tick, tickHz: 24,
+    version: 'simforge.scene-state.v1', mapId: 'richmond', tick, tickHz: 24,
     weather: { preset: 'clear' }, timeOfDay: 12,
     actors: [{
       id: 'ego', kind: tick === 0 ? 'spawn' : 'update', catalogId: 'vehicle.sedan', actorClass: 'car',

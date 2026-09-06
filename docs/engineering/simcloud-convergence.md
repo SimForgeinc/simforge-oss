@@ -34,27 +34,34 @@ by the platform, never copied from the platform back into this repository.
 | Training and evaluation protocols | `@simforge-oss/training-env`, `@simforge-oss/evaluation` | Managed training and evaluation jobs |
 | Command-line workflows | `@simforge-oss/cli` | Product orchestration only |
 | Map ingestion and publication | `@simforge-oss/map-pipeline`, `@simforge-oss/map-registry` | Managed source intake and access control |
-| CARLA API and execution adapters | `adapters/carla-api`, `adapters/carla-exec` | External runtime capacity and credentials |
+| CARLA execution adapter | `adapters/carla-exec` | External runtime capacity and credentials |
 | Accounts, workspaces, permissions, billing, datasets, and hosted providers | SimForge Cloud | Entire implementation |
 
 ## Lockstep release contract
 
-`config/simforge-oss-stack.json` is the release authority. It lists exactly 15
-npm packages and the public Python distributions. Every npm package has the same
-`stackVersion`; prereleases use `0.1.0-rc.<N>`, and the release tag is
-`v<stackVersion>`. A release is one source revision, one version, and one
-immutable artifact set.
+`config/simforge-oss-stack.json` is the release authority. It registers every
+public npm package and every public Python distribution; nothing under
+`packages/` may be publishable without a registry entry, and every internal
+`@simforge-oss/*` or `simforge-oss-*` dependency must resolve to a registered
+entry. Every npm package has the same `stackVersion`; prereleases use
+`0.1.0-rc.<N>`, and the release tag is `v<stackVersion>`. Python distributions
+use the PEP 440 form (`0.1.0rc<N>`) and pin each other with `==`. A release is
+one source revision, one version, and one immutable artifact set.
 
-The 15 npm packages are:
+The registered npm packages are:
 
 - `@simforge-oss/scenario`
+- `@simforge-oss/native-runtime`
 - `@simforge-oss/engine`
 - `@simforge-oss/maps`
 - `@simforge-oss/compiler`
 - `@simforge-oss/viewer`
 - `@simforge-oss/editor`
 - `@simforge-oss/playback`
+- `@simforge-oss/studio-host`
+- `@simforge-oss/studio-ui`
 - `@simforge-oss/asset-catalog`
+- `@simforge-oss/asset-packer`
 - `@simforge-oss/render`
 - `@simforge-oss/openscenario`
 - `@simforge-oss/training-env`
@@ -62,6 +69,10 @@ The 15 npm packages are:
 - `@simforge-oss/cli`
 - `@simforge-oss/map-pipeline`
 - `@simforge-oss/map-registry`
+
+The registered Python distributions are `simforge-oss-gym`,
+`simforge-oss-physics`, `simforge-oss-gpu`, `simforge-oss-native-renderer`,
+`simforge-oss-splat`, and `simforge-oss-carla-exec`.
 
 Cloud commits its lock at `vendor/simforge-oss/stack-lock.json`. The lock records
 the source revision, stack version, package roles, artifact digests, npm

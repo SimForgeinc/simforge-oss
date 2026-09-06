@@ -1,14 +1,10 @@
 import {
-  buildRoute,
   actorPhysicsBackends,
   DYNAMIC_V1_DEFAULT_SUBSTEP_S,
-  runSimulation,
   resolvePhysicsConfig,
-  toSceneXZ,
   type Condition,
   type Interaction,
   type Pose,
-  type Route,
   type SimActor,
   type SimEvent,
   type SimScenarioInput,
@@ -19,11 +15,13 @@ import {
 import {
   analyzeAsamCapabilities,
   assertDefaultControllerRules,
+  buildRoute,
   finite,
   identifier,
   mapRule,
   mergeAsamWarnings,
   resolveScenario,
+  routePoints,
   xml,
 } from './common.js';
 import {
@@ -161,17 +159,6 @@ function compactSignalTracks(input: SimScenarioInput, trace: SimTrace) {
 
 function primaryPhysicalSignalController(program: SignalProgram): string {
   return program.mapBinding!.controllerHeadGroups![0]!.controllerId;
-}
-
-function routePoints(route: Route, sampleM: number): Pose[] {
-  const count = Math.max(2, Math.ceil(route.lengthM / sampleM) + 1);
-  const points: Pose[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const pose = route.poseAt((route.lengthM * i) / (count - 1));
-    const scene = toSceneXZ(pose.point);
-    points.push({ x: scene.x, z: scene.z, headingRad: pose.headingRad });
-  }
-  return points;
 }
 
 function boundingBox(actor: SimActor): string {
@@ -484,10 +471,8 @@ function interactionActions(
           reason: 'a live-position next-junction turn cannot be represented faithfully as a precomputed OSC action; use trajectory-replay export',
         };
       }
-      const built = buildRoute(options.graph, interaction.target);
-      if (!built.ok) {
-        return { code: built.error.code, path: `interactions.${interaction.id}.target`, reason: built.error.reason };
-      }
+      const built = buildRoute(options.graph, interaction.target, `interactions.${interaction.id}.target`);
+      if (!('route' in built)) return built;
       const sampleM = options.routeSampleM ?? 20;
       return [[
         '<PrivateAction>',
@@ -545,7 +530,7 @@ function leafCondition(resolved: ResolvedAsamScenario, condition: Condition): Le
         triggeringActor: actor(condition.a),
         // OSC has rising-edge conditions but no distance dead-band. Export the
         // exact deterministic entry threshold used by the native engine.
-        xml: `<RelativeDistanceCondition entityRef="${xml(actor(condition.b))}" relativeDistanceType="${condition.mode === 'euclidean' ? 'euclidianDistance' : 'longitudinal'}" freespace="false" rule="${mapRule(condition.cmp)}" value="${finite(condition.cmp === 'lte' ? Math.max(0, condition.value - (condition.hysteresis ?? 0)) : condition.value + (condition.hysteresis ?? 0))}" coordinateSystem="${condition.mode === 'euclidean' ? 'entity' : 'road'}"/>`,
+        xml: `<RelativeDistanceCondition entityRef="${xml(actor(condition.b))}" relativeDistanceType="${condition.mode === 'euclidean' ? 'euclidianDistance' : 'longitudinal'}" freespace="false" rule="${mapRule(condition.cmp)}" value="${finite(condition.cmp === 'lt' || condition.cmp === 'lte' ? Math.max(0, condition.value - (condition.hysteresis ?? 0)) : condition.value + (condition.hysteresis ?? 0))}" coordinateSystem="${condition.mode === 'euclidean' ? 'entity' : 'road'}"/>`,
       };
     case 'ttc':
       return {
@@ -886,7 +871,7 @@ function preflightLateralActionDurations(input: SimScenarioInput, options: AsamE
     return actor?.behavior.route.kind !== 'polyline';
   });
   if (candidates.length === 0) return new Map();
-  const simulation = runSimulation(input, { graph: options.graph, guards: 'collect' });
+  const simulation = options.engine.runSimulation(input, { graph: options.graph });
   const issues: AsamExportIssue[] = [];
   const durations = new Map<string, number>();
   for (const interaction of candidates) {
@@ -1032,15 +1017,12 @@ export function exportOpenScenarioXml14(
   let replayTrace: SimTrace | null = null;
   if (executionMode === 'trajectory-replay') {
     try {
-      const simulation = runSimulation(input, {
-        graph: options.graph,
-        // Export is a faithful replay operation, not a tier-2 acceptance run.
-        // The normal simulation/validation pipeline owns feasibility gates;
-        // runtime/arrival errors are still rejected below.
-        guards: 'skip',
-        includeWarmupTrace: true,
-      });
-      const errors = simulation.issues.filter((issue) => issue.severity === 'error');
+      // Export is a faithful replay operation, not a tier-2 acceptance run.
+      // The normal simulation/validation pipeline owns feasibility gates;
+      // runtime/arrival errors are still rejected below.
+      const simulation = options.engine.runSimulation(input, { graph: options.graph, includeWarmupTrace: true });
+      const feasibility = new Set(options.engine.checkFeasibility(input, options.graph).map((issue) => `${issue.code}\u0000${issue.path ?? ''}`));
+      const errors = simulation.issues.filter((issue) => issue.severity === 'error' && !feasibility.has(`${issue.code}\u0000${issue.path ?? ''}`));
       if (errors.length > 0) {
         throw new AsamExportError(errors.map((issue, index) => ({
           code: 'trajectory_replay_simulation_error',

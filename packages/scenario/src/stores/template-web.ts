@@ -1,4 +1,4 @@
-/** Browser persistence for v2 templates, including raw legacy-v1 reads for explicit migration. */
+/** Browser persistence for v2 templates. */
 
 import { ScenarioNotFoundError } from '../errors.js';
 import type { ScenarioTemplateV2 } from '../schema/v2/template.js';
@@ -14,7 +14,7 @@ export type TemplateLike = ScenarioTemplateV2 | { toJSON(): ScenarioTemplateV2 }
 
 export interface TemplateFileStore {
   list(): Promise<ScenarioFileEntry[]>;
-  /** Returns raw parsed JSON so TemplateDocument can retain migration provenance. */
+  /** Returns raw parsed JSON; the caller decides how to validate it (`TemplateDocument.fromJSON`). */
   read(name: string): Promise<unknown>;
   write(name: string, doc: TemplateLike): Promise<void>;
   delete(name: string): Promise<boolean>;

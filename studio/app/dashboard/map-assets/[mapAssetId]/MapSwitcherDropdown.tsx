@@ -7,9 +7,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
-import { Input } from "@/app/components/ui/input";
-import { cn } from "@/app/lib/utils";
+} from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 interface MapSwitcherDropdownProps {
   currentAsset: MapAsset;

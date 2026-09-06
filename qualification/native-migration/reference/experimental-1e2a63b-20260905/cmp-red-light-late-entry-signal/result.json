@@ -1,0 +1,120 @@
+{
+  "id": "cmp-red-light-late-entry-signal",
+  "kind": "compiled",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+  "traceDigest": "0ff372bb4ab92db184516aaf5c025dedca28ba3fadce5e486bd2a7bd9e9d00f3",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 133.345996,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 11.478929999999991,
+      "warm": {
+        "n": 4,
+        "min": 1.0198589999999967,
+        "median": 1.1348584999999503,
+        "max": 1.5152490000000398,
+        "mean": 1.2012062499999843
+      }
+    },
+    "compile": {
+      "cold": 1160.847861,
+      "warm": {
+        "n": 4,
+        "min": 2.5633269999998447,
+        "median": 3.4686430000000428,
+        "max": 5.676628000000164,
+        "mean": 3.7943102500000236
+      }
+    },
+    "mapLoad": {
+      "cold": 298.67294200000003,
+      "warm": {
+        "n": 4,
+        "min": 0.0031599999999798456,
+        "median": 0.004321499999946354,
+        "max": 0.004797999999937019,
+        "mean": 0.004150249999952393
+      }
+    },
+    "simulate": {
+      "cold": 169.34321799999998,
+      "warm": {
+        "n": 4,
+        "min": 92.40760399999999,
+        "median": 103.43152900000007,
+        "max": 138.34645899999987,
+        "mean": 109.40428025
+      }
+    },
+    "digest": {
+      "cold": 11.530201000000034,
+      "warm": {
+        "n": 4,
+        "min": 9.549715000000106,
+        "median": 10.373967500000049,
+        "max": 12.256866000000173,
+        "mean": 10.638629000000094
+      }
+    },
+    "serialize": {
+      "cold": 31.24345399999993,
+      "warm": {
+        "n": 4,
+        "min": 18.7020550000002,
+        "median": 19.066555499999822,
+        "max": 21.729910999999902,
+        "mean": 19.641269249999937
+      }
+    }
+  },
+  "tickCount": 801,
+  "events": 8,
+  "issues": 1,
+  "compileIdentity": {
+    "siteId": "03ae9501df700a67",
+    "siteScore": 1,
+    "degradation": "Exact match: every clause and role bound without relaxation.",
+    "inputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+    "instanceId": "03ae9501df700a67#-1",
+    "replayKey": {
+      "templateId": "red-light-late-entry",
+      "templateVersion": 2,
+      "templateDigest": "1cbab48e2762fa5f",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "03ae9501df700a67",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "roles.late-entry.route",
+        "reason": "lane chain extended upstream by 7 lane(s) to give the arrival solver temporal runway",
+        "impact": "informational"
+      },
+      {
+        "path": "signalPrograms",
+        "reason": "18 physical map signal head(s) bound as 3 logical program(s) to junction 345 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
+      }
+    ],
+    "expectedInputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

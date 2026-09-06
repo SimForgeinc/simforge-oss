@@ -26,7 +26,6 @@ import type {
   EnvironmentPresetWeather,
   EnvironmentPresetRoadSurface,
 } from "@simforge-oss/scenario/contracts";
-import type { ScenarioEditorTimelineAction } from "../scenario-editor";
 import { SCENARIO_TIMING } from "@simforge-oss/scenario/contracts";
 
 const DEFAULT_COLLISION_DURATION_SECONDS = SCENARIO_TIMING.defaultDurationSeconds;
@@ -173,27 +172,31 @@ export const COLLISION_ANCHOR_STRATEGIES = [
 export type CollisionAnchorStrategy = (typeof COLLISION_ANCHOR_STRATEGIES)[number];
 
 /**
- * One timeline clip template. Times are seconds since scenario start; the
+ * One interaction clip template. Times are seconds since scenario start; the
  * collision is expected ~10 s in (15 s duration leaves runway for entry +
- * post-collision settling).
+ * post-collision settling). Speeds are resolved at build time from the
+ * family's aggressiveness modifier; `target_role` is filled with the matching
+ * role's actor id.
  */
-export interface CollisionTimelineClipTemplate {
+export type CollisionClipTemplate = {
   start_time: number;
   end_time?: number;
-  action: ScenarioEditorTimelineAction;
-  /** Resolved at build time from the actor's role default + family modifier. */
-  target_speed_kph?: number;
-  /** Filled with the matching role's actor id at build time. */
-  target_role?: CollisionActorRole;
+} & (
+  | { action: "cruise"; speed_kph: number }
+  /** Drive AT `target_role` with no standoff: the converging trajectory a contact needs. */
+  | { action: "intercept"; target_role: CollisionActorRole; speed_kph: number }
   /**
-   * Standoff (metres) the pursuit actions hold from `target_role`. Only
-   * meaningful for `chase_actor` / `yield_to_actor`; `ram_actor` pins it to
-   * zero (drive INTO the target) regardless. This is the knob that turns a
-   * converging trajectory into a close pass, so every near-miss family sets
-   * it to its `nearMissMargin.targetMissDistanceM`.
+   * Converge on `target_role` and hold `distance_m` from it. This is the knob
+   * that turns a converging trajectory into a close pass, so every near-miss
+   * family sets it to its `nearMissMargin.targetMissDistanceM`.
    */
-  following_distance_m?: number;
-}
+  | {
+      action: "follow_actor";
+      target_role: CollisionActorRole;
+      speed_kph: number;
+      distance_m: number;
+    }
+);
 
 export const COLLISION_ACTOR_ROLES = [
   "subject",
@@ -207,6 +210,16 @@ export const COLLISION_ACTOR_ROLES = [
 ] as const;
 export type CollisionActorRole = (typeof COLLISION_ACTOR_ROLES)[number];
 
+/**
+ * What drives the actor before any clip fires.
+ *
+ * - `cruise`: our controller holds `baseSpeedKph` along the lane.
+ * - `autopilot`: CARLA's Traffic Manager drives it by lane rules.
+ * - `placement`: whatever the actor's placement describes — a timed-path
+ *   walker walks its points; the builder authors the geometry.
+ */
+export type CollisionActorBaseline = "cruise" | "autopilot" | "placement";
+
 export interface CollisionActorRecipe {
   role: CollisionActorRole;
   kind: "vehicle" | "walker";
@@ -218,10 +231,9 @@ export interface CollisionActorRecipe {
   /** Per-clip speed multiplier when family aggressiveness applies. */
   aggressivenessAppliesTo: "speed" | "none";
   baseSpeedKph: number;
-  /** Whether CARLA autopilot drives this actor (vs. scripted-only). */
-  autopilot: boolean;
-  /** Timeline clip templates. */
-  timeline: readonly CollisionTimelineClipTemplate[];
+  baseline: CollisionActorBaseline;
+  /** Interaction clip templates fired on top of the baseline. */
+  clips: readonly CollisionClipTemplate[];
 }
 
 // ── Near-miss margin ────────────────────────────────────────────────────────
@@ -248,7 +260,7 @@ export interface NearMissMargin {
    * Authored so `conflictLeadTimeS × subjectSpeed` lands inside
    * [`targetMissDistanceM`, `maxMissDistanceM`] — i.e. the planned temporal
    * offset alone already produces a gradeable miss, before the runtime
-   * standoff (`following_distance_m`) holds it there.
+   * standoff (`distance_m`) holds it there.
    */
   conflictLeadTimeS: number;
   /** Planned closest approach in metres — what the rollout should produce. */
@@ -340,10 +352,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // Autopilot lets CARLA's traffic manager drive the subject forward on
         // its approach lane. The active editor/runtime contract no longer
         // stores turn primitives; the oncoming actor produces the conflict.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: 10, action: "set_speed", target_speed_kph: 40 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "oncoming",
@@ -353,18 +363,18 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         anchorStrategy: "spawn_on_opposing_lane",
         aggressivenessAppliesTo: "speed",
         baseSpeedKph: 55,
-        autopilot: true,
-        // `ram_actor` actively drives the oncoming vehicle at the subject's
+        baseline: "autopilot",
+        // `intercept` actively drives the oncoming vehicle at the subject's
         // position — the converging trajectory CARLA needs to actually
         // produce a collision. Speed honors the aggressiveness multiplier
         // on the same baseSpeedKph used to spawn it.
-        timeline: [
+        clips: [
           {
             start_time: 0,
             end_time: DEFAULT_COLLISION_DURATION_SECONDS,
-            action: "ram_actor",
+            action: "intercept",
             target_role: "subject",
-            target_speed_kph: 55,
+            speed_kph: 55,
           },
         ],
       },
@@ -400,10 +410,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         baseSpeedKph: 60,
         // Autopilot drives subject forward at 60 kph; the cut-in dynamic
         // happens when the adjacent NPC steers in front.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 60 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "adjacent",
@@ -416,17 +424,16 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // The active editor/runtime contract no longer stores lane-change
         // primitives, so the conflicting actor uses the same target-driven
         // ram primitive exposed in the road actor panel.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: 4, action: "set_speed", target_speed_kph: 65 },
+        baseline: "cruise",
+        clips: [
           {
             start_time: 4,
             end_time: 7,
-            action: "ram_actor",
+            action: "intercept",
             target_role: "subject",
-            target_speed_kph: 65,
+            speed_kph: 65,
           },
-          { start_time: 7, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 40 },
+          { start_time: 7, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "cruise", speed_kph: 40 },
         ],
       },
     ],
@@ -493,10 +500,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // Autopilot drives subject toward the crosswalk; the walker's
         // crossing trajectory (set on the actor's `timed_waypoints` by
         // the builder) intersects subject's path mid-block.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 35 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "crossing_pedestrian",
@@ -506,14 +511,13 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // The builder upgrades this anchor to `placement_mode:
         // "timed_path"` with two timed waypoints (curb → opposite curb,
         // perpendicular to the nearest drivable lane). Walkers can't
-        // use follow_route/ram_actor; the timed-path trajectory IS the
-        // motion specification. Recipe `timeline` is therefore empty —
-        // the builder strips it when emitting a timed-path walker.
+        // intercept; the timed-path trajectory IS the motion specification,
+        // so the baseline is the placement and the recipe carries no clips.
         anchorStrategy: "spawn_on_pedestrian_area",
         aggressivenessAppliesTo: "none",
         baseSpeedKph: 5,
-        autopilot: false,
-        timeline: [],
+        baseline: "placement",
+        clips: [],
       },
     ],
     defaultEnvironment: {
@@ -565,10 +569,9 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // light / queued traffic. The trailing NPC is what produces the
         // collision; subject is the (correctly-behaving) victim here, which is
         // exactly the real-world pattern this family reproduces.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: 5, action: "set_speed", target_speed_kph: 30 },
-          { start_time: 5, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 0 },
+        baseline: "cruise",
+        clips: [
+          { start_time: 5, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "cruise", speed_kph: 0 },
         ],
       },
       {
@@ -579,17 +582,17 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         anchorStrategy: "spawn_on_same_lane_behind",
         aggressivenessAppliesTo: "speed",
         baseSpeedKph: 45,
-        // `ram_actor` drives the trailing vehicle into subject's position. The
+        // `intercept` drives the trailing vehicle into subject's position. The
         // converging trajectory is what CARLA needs to actually rear-end the
         // stopped subject. Aggressiveness scales the closing speed.
-        autopilot: true,
-        timeline: [
+        baseline: "autopilot",
+        clips: [
           {
             start_time: 0,
             end_time: DEFAULT_COLLISION_DURATION_SECONDS,
-            action: "ram_actor",
+            action: "intercept",
             target_role: "subject",
-            target_speed_kph: 45,
+            speed_kph: 45,
           },
         ],
       },
@@ -626,10 +629,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         anchorStrategy: "spawn_on_approach_lane",
         aggressivenessAppliesTo: "none",
         baseSpeedKph: 45,
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 45 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "adjacent",
@@ -641,17 +642,16 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         baseSpeedKph: 50,
         // The current runtime stores the lateral conflict as a target-driven
         // ram primitive rather than a separate swerve primitive.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: 5, action: "set_speed", target_speed_kph: 50 },
+        baseline: "cruise",
+        clips: [
           {
             start_time: 5,
             end_time: 8,
-            action: "ram_actor",
+            action: "intercept",
             target_role: "subject",
-            target_speed_kph: 50,
+            speed_kph: 50,
           },
-          { start_time: 8, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 50 },
+          { start_time: 8, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "cruise", speed_kph: 50 },
         ],
       },
     ],
@@ -689,10 +689,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         baseSpeedKph: 25,
         // Subject approaches the conflict at a controlled speed; the active
         // editor/runtime contract no longer stores turn primitives.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: 10, action: "set_speed", target_speed_kph: 25 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "adjacent",
@@ -708,10 +706,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         baseSpeedKph: 30,
         // Continues straight through the intersection at constant speed on
         // subject's right while subject turns across it.
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 30 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
     ],
     defaultEnvironment: {
@@ -733,10 +729,11 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
   //      conflicting actor is back-calculated to clear the conflict point this
   //      long before subject reaches it, so the planned paths cross with a gap
   //      instead of on the same instant.
-  //   2. `following_distance_m` on the converging clip — the runtime standoff.
-  //      `chase_actor` is `ram_actor` with a non-zero standoff (the CARLA
-  //      worker literally pins ram's to 0), so swapping ram → chase is what
-  //      turns "drive into subject" into "converge on subject and hold a gap".
+  //   2. `distance_m` on the converging clip — the runtime standoff.
+  //      `follow_actor` is `intercept` with a non-zero standoff (the CARLA
+  //      worker literally pins intercept's to 0), so swapping intercept →
+  //      follow_actor is what turns "drive into subject" into "converge on
+  //      subject and hold a gap".
   //
   // Both are needed: (1) makes the PLAN a miss so the kinematic validator
   // passes it, (2) keeps the CARLA rollout a miss even as the aggressiveness
@@ -770,10 +767,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // — an offset that survives the planner's sampling and the sim's
         // timestep.
         baseSpeedKph: 45,
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 45 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "adjacent",
@@ -787,24 +782,23 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // clip below opens the gap again instead of leaving it stalled
         // alongside.
         baseSpeedKph: 55,
-        autopilot: true,
-        timeline: [
-          // Run up in the adjacent lane, gaining on subject.
-          { start_time: 0, end_time: 7, action: "set_speed", target_speed_kph: 55 },
-          // The merge. `chase_actor` converges on subject and holds
-          // `following_distance_m` — the miss distance — through the conflict
-          // window. The window brackets the planned conflict at t=10 s.
+        // Runs up in the adjacent lane at its cruise baseline, gaining on subject.
+        baseline: "cruise",
+        clips: [
+          // The merge. `follow_actor` converges on subject and holds
+          // `distance_m` — the miss distance — through the conflict window.
+          // The window brackets the planned conflict at t=10 s.
           {
             start_time: 7,
             end_time: 12,
-            action: "chase_actor",
+            action: "follow_actor",
             target_role: "subject",
-            target_speed_kph: 55,
-            following_distance_m: 3.5,
+            speed_kph: 55,
+            distance_m: 3.5,
           },
           // Pull away: the pass completes and the gap reopens, so the closest
           // approach is a single moment rather than a sustained tailgate.
-          { start_time: 12, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 60 },
+          { start_time: 12, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "cruise", speed_kph: 60 },
         ],
       },
     ],
@@ -875,10 +869,8 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         // lead below is a 3.9 m gap, already inside the gradeable band, so
         // this family needs no speed reduction to be plannable.
         baseSpeedKph: 35,
-        autopilot: true,
-        timeline: [
-          { start_time: 0, end_time: DEFAULT_COLLISION_DURATION_SECONDS, action: "set_speed", target_speed_kph: 35 },
-        ],
+        baseline: "cruise",
+        clips: [],
       },
       {
         role: "crossing_pedestrian",
@@ -886,16 +878,16 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
         scenarioRole: "pedestrian",
         blueprint: "walker.pedestrian.0001",
         // Same timed-path treatment as `pedestrian_crossing`: the builder
-        // upgrades this to `placement_mode: "timed_path"` and the empty
-        // timeline is stripped. Walk speed is deliberately unchanged at 5 kph
+        // upgrades this to `placement_mode: "timed_path"` and the baseline is
+        // the placement. Walk speed is deliberately unchanged at 5 kph
         // — the entire difference from the contact family is the walker's
         // curb-hold, solved from `conflictLeadTimeS` so it steps off earlier
         // and is out of the lane by the time subject arrives.
         anchorStrategy: "spawn_on_pedestrian_area",
         aggressivenessAppliesTo: "none",
         baseSpeedKph: 5,
-        autopilot: false,
-        timeline: [],
+        baseline: "placement",
+        clips: [],
       },
     ],
     defaultEnvironment: {
@@ -936,7 +928,7 @@ export const COLLISION_TEMPLATES: Record<CollisionFamilyId, CollisionFamilyTempl
  *   - every family's modal participant count is 2 (subject + one conflict
  *     actor) — matches each `actorRecipe` having exactly two roles.
  *   - `rear_end` subject-stopped share = 0.638 (n=235) independently
- *     corroborates the rear_end recipe's "subject rolls up then stops" timeline.
+ *     corroborates the rear_end recipe's "subject rolls up then stops" clips.
  *   - `dominant_conflict_type` is "vehicle" for every family in the
  *     structured data; `pedestrian_crossing`'s conflict actor is
  *     nonetheless fixed to a walker by the family definition (the structured

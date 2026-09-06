@@ -1,0 +1,340 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "Untitled situation",
+      "templateVersion": 2,
+      "templateDigest": "0362d6b2bb586df6",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "studio:yale-street",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "generated-static-fixed",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "studio:yale-street#-1",
+    "archetype": null,
+    "negativeControl": false,
+    "metricSubject": null,
+    "operationalVariant": null,
+    "site": {
+      "siteId": "studio:yale-street",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "map:yale-street",
+      "entryLaneRsl": "studio:freeform",
+      "egoTurn": null,
+      "degradationSummary": "exact map-bound Studio placement",
+      "matchedReasons": [
+        "anchor.pin.mapId",
+        "scene_absolute"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "barrier",
+        "actorKind": "static_object",
+        "roleKind": "scene_absolute",
+        "laneRsl": null,
+        "spawnS": 0.000059403192063549134,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "observer",
+        "actorKind": "car",
+        "roleKind": "scene_absolute",
+        "laneRsl": null,
+        "spawnS": 0.000059403192063549134,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "target",
+        "actorKind": "car",
+        "roleKind": "scene_absolute",
+        "laneRsl": null,
+        "spawnS": 0.000059403192063549134,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "df2c841e7694af61c2dd27a5162c9130a163b7110daf5f6b7a8741d3cf340b7e",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 20,
+    "warmupSeconds": 5,
+    "dt": 0.02,
+    "seed": "generated-static",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "overcast",
+      "timeOfDay": "dusk",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "actors": [
+      {
+        "id": "barrier",
+        "kind": "static_object",
+        "dims": {
+          "l": 0.800048828125,
+          "w": 1,
+          "h": 2.3999996185302734
+        },
+        "initial": {
+          "pose": {
+            "x": 538.4957885742188,
+            "z": -1792.19873046875,
+            "headingRad": 0
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "polyline",
+            "points": [
+              {
+                "x": 538.4957885742188,
+                "z": -1792.19873046875
+              },
+              {
+                "x": 638.4957885742188,
+                "z": -1792.19873046875
+              }
+            ]
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:barrier",
+          "class:static_object",
+          "binding:scene_absolute",
+          "catalog:gallery.generated.7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d"
+        ]
+      },
+      {
+        "id": "observer",
+        "kind": "car",
+        "dims": {
+          "l": 0.5,
+          "w": 0.4,
+          "h": 1
+        },
+        "initial": {
+          "pose": {
+            "x": 532.4957885742188,
+            "z": -1792.19873046875,
+            "headingRad": 0
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "polyline",
+            "points": [
+              {
+                "x": 532.4957885742188,
+                "z": -1792.19873046875
+              },
+              {
+                "x": 632.4957885742188,
+                "z": -1792.19873046875
+              }
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:observer",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:scene_absolute"
+        ],
+        "sensors": [
+          {
+            "id": "front",
+            "enabled": true,
+            "mount": {
+              "position": {
+                "x": 0,
+                "y": 0.5,
+                "z": 0
+              },
+              "rotation": {
+                "yawRad": 0,
+                "pitchRad": 0,
+                "rollRad": 0
+              }
+            },
+            "aperture": {
+              "horizontalFovDeg": 90,
+              "verticalFovDeg": 60,
+              "nearM": 0.05,
+              "farM": 100
+            },
+            "type": "dash_camera",
+            "aspectRatio": 1.777778,
+            "detection": {
+              "contrastThreshold": 0.02,
+              "minAngularSizeRad": 0.0045,
+              "minIlluminationFrac": 0.02,
+              "detectConfidence": 0.5,
+              "degradedConfidence": 0.2,
+              "sensitivity": {
+                "atmosphere": 1,
+                "illumination": 1,
+                "glare": 1
+              },
+              "latchS": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "target",
+        "kind": "car",
+        "dims": {
+          "l": 0.5,
+          "w": 0.4,
+          "h": 1
+        },
+        "initial": {
+          "pose": {
+            "x": 544.4957885742188,
+            "z": -1792.19873046875,
+            "headingRad": 0
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "polyline",
+            "points": [
+              {
+                "x": 544.4957885742188,
+                "z": -1792.19873046875
+              },
+              {
+                "x": 644.4957885742188,
+                "z": -1792.19873046875
+              }
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": true,
+        "tags": [
+          "role:target",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:scene_absolute"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "remove-proxy",
+        "actorId": "barrier",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "exist",
+        "target": {
+          "state": "absent"
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": [],
+    "perception": {
+      "atmosphere": {
+        "fogVisibilityM": 20000,
+        "precipitationMmPerH": 0,
+        "illuminationFrac": 0.16000000000000003
+      },
+      "emissiveGlare": {
+        "stateKeys": [
+          "lights.emergency"
+        ],
+        "halfAngleRad": 0.25,
+        "intensity": 0.85,
+        "rangeM": 80,
+        "heightM": 1.6
+      },
+      "mapDivergences": []
+    }
+  }
+}

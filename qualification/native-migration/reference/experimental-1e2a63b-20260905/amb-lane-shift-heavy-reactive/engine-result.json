@@ -1,0 +1,170 @@
+{
+  "issues": [
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:240967fd81f709de.behavior.route",
+      "reason": "route provides 270.1 m ahead of the spawn but the actor covers 362.6 m in 19 s",
+      "detail": {
+        "availableM": 270.0910849381694,
+        "neededM": 362.56489385074576,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:2b8c3816a28a2477.behavior.route",
+      "reason": "route provides 289.8 m ahead of the spawn but the actor covers 313.2 m in 19 s",
+      "detail": {
+        "availableM": 289.8290188326925,
+        "neededM": 313.1905089288182,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:2c148c1c484bf95a.behavior.route",
+      "reason": "route provides 326.6 m ahead of the spawn but the actor covers 370.1 m in 19 s",
+      "detail": {
+        "availableM": 326.6246537333931,
+        "neededM": 370.10881110842774,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:41c810756dd88a5e.behavior.route",
+      "reason": "route provides 288.7 m ahead of the spawn but the actor covers 316.8 m in 19 s",
+      "detail": {
+        "availableM": 288.6560598901939,
+        "neededM": 316.7539907625938,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:64e2d27836b13c80.behavior.route",
+      "reason": "route provides 0.0 m ahead of the spawn but the actor covers 320.5 m in 19 s",
+      "detail": {
+        "availableM": 0,
+        "neededM": 320.47020528980266,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:79de79e954751544.behavior.route",
+      "reason": "route provides 274.4 m ahead of the spawn but the actor covers 358.5 m in 19 s",
+      "detail": {
+        "availableM": 274.4146861115998,
+        "neededM": 358.47397001325663,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:7c05f7100bc387a5.behavior.route",
+      "reason": "route provides 196.4 m ahead of the spawn but the actor covers 358.2 m in 19 s",
+      "detail": {
+        "availableM": 196.40314105088328,
+        "neededM": 358.2420546232226,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:85e225befa30af0e.behavior.route",
+      "reason": "route provides 306.4 m ahead of the spawn but the actor covers 384.7 m in 19 s",
+      "detail": {
+        "availableM": 306.41617861946554,
+        "neededM": 384.6712131402521,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:8e5ca24f386c27ca.behavior.route",
+      "reason": "route provides 329.7 m ahead of the spawn but the actor covers 386.5 m in 19 s",
+      "detail": {
+        "availableM": 329.6606954328128,
+        "neededM": 386.5498877555227,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:a075cbe033faa726.behavior.route",
+      "reason": "route provides 256.2 m ahead of the spawn but the actor covers 371.0 m in 19 s",
+      "detail": {
+        "availableM": 256.18974503742567,
+        "neededM": 370.9733892146708,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:a083c895ee0879b6.behavior.route",
+      "reason": "route provides 279.2 m ahead of the spawn but the actor covers 285.7 m in 19 s",
+      "detail": {
+        "availableM": 279.1929942638768,
+        "neededM": 285.70381383966804,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:af2efccd822712db.behavior.route",
+      "reason": "route provides 300.3 m ahead of the spawn but the actor covers 375.8 m in 19 s",
+      "detail": {
+        "availableM": 300.28193524067746,
+        "neededM": 375.81289920343994,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:b7ef2986cffe1458.behavior.route",
+      "reason": "route provides 285.9 m ahead of the spawn but the actor covers 402.0 m in 19 s",
+      "detail": {
+        "availableM": 285.92902345985544,
+        "neededM": 401.9539833689051,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:c961024c4e040532.behavior.route",
+      "reason": "route provides 310.4 m ahead of the spawn but the actor covers 365.3 m in 19 s",
+      "detail": {
+        "availableM": 310.4155770836883,
+        "neededM": 365.34141640119697,
+        "clipSeconds": 19
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:dfe5ee029aa61007.behavior.route",
+      "reason": "route provides 252.1 m ahead of the spawn but the actor covers 315.9 m in 19 s",
+      "detail": {
+        "availableM": 252.14206140109098,
+        "neededM": 315.8620896684801,
+        "clipSeconds": 19
+      }
+    }
+  ],
+  "arrival": []
+}

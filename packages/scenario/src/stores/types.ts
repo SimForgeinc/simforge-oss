@@ -2,8 +2,8 @@
  * Persistence interface.
  *
  * Deliberately async and name-keyed, because the implementation that matters
- * most (the Electron `fs` adapter, later) is both. `read` returns a *validated,
- * migrated* document rather than text: every adapter therefore round-trips
+ * most (the Electron `fs` adapter, later) is both. `read` returns a *validated*
+ * document rather than text: every adapter therefore round-trips
  * through the canonical serializer, so a file written by one adapter is
  * readable by all of them and a corrupt store fails at the boundary rather than
  * three layers into the UI.

@@ -106,11 +106,11 @@ import type {
   BehaviorClip,
   BehaviorSignalRef,
   BehaviorTrigger,
-} from "../scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 import {
   ACTOR_BEHAVIOR_SCHEMA_VERSION,
   BEHAVIOR_CLIP_END_ON_TARGET_SPEED,
-} from "../scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 import {
   ScenarioEditorDraftSchema,
   type ScenarioEditorActorDraft,
@@ -1023,8 +1023,6 @@ function actorDraftFor(
     destination: null,
     destination_point: null,
     speed_kph: pose.speedKph ?? 0,
-    autopilot: false,
-    timeline: [],
     sensors: [],
     behavior: program,
     ...(placementMode === "timed_path" ? { timed_waypoints: timedWaypoints } : {}),

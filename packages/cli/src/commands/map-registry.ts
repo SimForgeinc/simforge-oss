@@ -6,7 +6,6 @@ import {
   closureFromDirectory,
   createRegistryBackend,
   listMaps,
-  listDerivedClosures,
   loadDerivedClosure,
   promoteVersion,
   publishVersion,
@@ -195,7 +194,7 @@ export interface RegistryPullOptions {
   devAssetsRoot?: string;
   nativeCorpusRoot?: string;
   blobCacheRoot?: string;
-  /** Pull one specific web tier by its tool fingerprint instead of every published one. */
+  /** Require the immutable release's published web tier to have this tool fingerprint. */
   webFingerprint?: string;
   /** Also materialize the verbatim source rasters under dev-assets. */
   archive?: boolean;
@@ -210,10 +209,11 @@ export interface RegistryPullOptions {
 export async function registryMapsPull(options: RegistryPullOptions): Promise<number> {
   const url = registryUrl(options.registry);
   const backend = writableBackend(url);
-  const resolved = await resolveVersion(backend, options.reference);
-  const derived: MapClosure[] = options.webFingerprint === undefined
-    ? await listDerivedClosures(backend, resolved.name, resolved.record.version)
-    : [await loadDerivedClosure(backend, resolved.name, resolved.record.version, 'web', options.webFingerprint)];
+  let derived: MapClosure[] | undefined;
+  if (options.webFingerprint !== undefined) {
+    const resolved = await resolveVersion(backend, options.reference);
+    derived = [await loadDerivedClosure(backend, resolved.name, resolved.record.version, 'web', options.webFingerprint)];
+  }
   const cacheRoot = resolve(options.cacheRoot ?? process.env['SIMFORGE_MAPS_CACHE_ROOT'] ?? join(process.env['XDG_DATA_HOME'] ?? join(homedir(), '.local', 'share'), 'simforge', 'maps'));
   const result = await pullVersion(backend, options.reference, {
     layouts: {
@@ -222,7 +222,7 @@ export async function registryMapsPull(options: RegistryPullOptions): Promise<nu
       nativeCorpusRoot: resolve(options.nativeCorpusRoot ?? join(cacheRoot, '.corpus')),
       blobCacheRoot: resolve(options.blobCacheRoot ?? join(cacheRoot, '.blobs')),
     },
-    derivedClosures: derived,
+    ...(derived === undefined ? {} : { derivedClosures: derived }),
     ...(options.archive === true ? { archive: true } : {}),
   });
   emit({ registry: url, ...result }, options);

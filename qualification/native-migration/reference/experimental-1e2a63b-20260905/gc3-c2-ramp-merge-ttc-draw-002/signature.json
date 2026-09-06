@@ -1,0 +1,224 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "3e565b153637114dab07b222590bbc704404c49b2edc2759876242e11c782927",
+  "traceDigest": "e2234b509dd84b5fa2ddeed47dbff6d6b0a08eb12d45aeab724ba9b5430be289",
+  "dt": 0.02,
+  "clipSeconds": 16,
+  "warmupSeconds": 2,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 801,
+  "firstT": 0,
+  "lastT": 16,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "merging_vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.7000000000000001,
+          "from": "1039:0:-1",
+          "to": "70:0:-3"
+        },
+        {
+          "t": 2.84,
+          "from": "70:0:-3",
+          "to": "1988:0:-1"
+        },
+        {
+          "t": 5.54,
+          "from": "1988:0:-1",
+          "to": "102:0:-2"
+        },
+        {
+          "t": 5.6000000000000005,
+          "from": "102:0:-2",
+          "to": "161:0:-2"
+        },
+        {
+          "t": 7.1000000000000005,
+          "from": "161:0:-2",
+          "to": "103:0:-2"
+        },
+        {
+          "t": 7.18,
+          "from": "103:0:-2",
+          "to": "103:1:-2"
+        },
+        {
+          "t": 7.86,
+          "from": "103:1:-2",
+          "to": "750:0:-1"
+        },
+        {
+          "t": 11.38,
+          "from": "750:0:-1",
+          "to": "128:0:-3"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "merging_vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.82,
+          "from": "70:0:-3",
+          "to": "1988:0:-1"
+        },
+        {
+          "t": 4.18,
+          "from": "1988:0:-1",
+          "to": "102:0:-2"
+        },
+        {
+          "t": 4.24,
+          "from": "102:0:-2",
+          "to": "161:0:-2"
+        },
+        {
+          "t": 5.54,
+          "from": "161:0:-2",
+          "to": "103:0:-2"
+        },
+        {
+          "t": 5.6000000000000005,
+          "from": "103:0:-2",
+          "to": "103:1:-2"
+        },
+        {
+          "t": 6.22,
+          "from": "103:1:-2",
+          "to": "755:0:-1"
+        },
+        {
+          "t": 9.26,
+          "from": "755:0:-1",
+          "to": "128:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 3,
+      "kind": "trigger_fired",
+      "interactionId": "i1-merging_vehicle-change_lane",
+      "actorId": "merging_vehicle",
+      "verb": "changeLane",
+      "forced": false
+    },
+    {
+      "t": 3,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "merging_vehicle",
+      "interactionId": "i1-merging_vehicle-change_lane",
+      "requestedDurationS": 0.000001,
+      "effectiveDurationS": 0.000001,
+      "displacementM": -4.783382586239556e-14
+    },
+    {
+      "t": 3,
+      "kind": "lane_change",
+      "actorId": "merging_vehicle",
+      "fromRsl": "1988:0:-1",
+      "toRsl": "1988:0:-1",
+      "legal": true
+    },
+    {
+      "t": 3,
+      "kind": "interaction_completed",
+      "interactionId": "i1-merging_vehicle-change_lane",
+      "actorId": "merging_vehicle",
+      "finalLateralOffsetM": 0
+    },
+    {
+      "t": 3,
+      "kind": "released",
+      "actorId": "merging_vehicle",
+      "axis": "lateral",
+      "interactionId": "i1-merging_vehicle-change_lane",
+      "reason": "complete"
+    },
+    {
+      "t": 6,
+      "kind": "trigger_skipped",
+      "interactionId": "merging_vehicle-encroaches",
+      "actorId": "merging_vehicle",
+      "reason": "window_elapsed"
+    },
+    {
+      "t": 8.98,
+      "kind": "trigger_fired",
+      "interactionId": "merging_vehicle-arrival-sync",
+      "actorId": "merging_vehicle",
+      "verb": "speed",
+      "forced": false
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [
+      "merging_vehicle-encroaches"
+    ],
+    "clippedCriticality": false,
+    "ticksSimulated": 801,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "ego",
+        "merging_vehicle"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

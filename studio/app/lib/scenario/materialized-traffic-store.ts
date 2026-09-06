@@ -11,8 +11,9 @@ import {
   createLocalArtifactProducer,
   finalizeLocalArtifactProducer,
 } from "./jobs/local-artifact-producer-store";
-import { simforgeEnv } from "@/lib/compat-env";
-import { MATERIALIZED_TRAFFIC_MEDIA_TYPE } from "./stored-wire-compat";
+import { simforgeEnv } from "@/lib/simforge-env";
+/** Stored media type of every materialized-traffic artifact; artifact metadata and canonical digests bind to it. */
+const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
 
 
 function artifactBucket() { return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts"; }

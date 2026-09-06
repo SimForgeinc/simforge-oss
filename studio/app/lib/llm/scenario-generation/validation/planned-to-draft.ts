@@ -11,16 +11,11 @@
  */
 import {
   CARLA_UE5_WALKER_BLUEPRINTS,
-  DEFAULT_REACTION_AGGRESSIVENESS,
   type ScenarioEditorActorDraft,
-  type TimedInstructions,
 } from "@simforge-oss/studio-shared";
 import {
-  TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION,
-} from "@simforge-oss/maps/topology";
-import { PEDESTRIAN_LIMITS } from "@simforge-oss/engine";
-import {
   ADULT_RUN_SPEED_MPS,
+  WALKER_ACCELERATION_MPS2,
   conflictWalkerBlueprint,
   walkerProfileSpec,
   type WalkerProfile,
@@ -31,10 +26,14 @@ import {
   type PlannedWalker,
   type PlanCollisionRoutesResult,
 } from "@/app/lib/llm/scenario-generation/collision-route-planner";
-import { finalizeGeneratedActorBehaviors } from "@/app/lib/scenario-generation/generated-actor-behavior";
+import {
+  authorGeneratedActor,
+  brakeReactionProfile,
+  contactReactionProfile,
+  walkerReleaseOnApproach,
+  type GeneratedInteractionClip,
+} from "@/app/lib/scenario-generation/generated-actor-behavior";
 import { DRIVEWAY_TURN_ENTRY_SPEED_MPS } from "@/app/lib/llm/scenario-generation/planner/turn-ped-crosswalk-planner";
-
-const WALKER_ACCELERATION_MPS2 = PEDESTRIAN_LIMITS.accelMax;
 
 function emptyNonRoadSpawnAnchor(): ScenarioEditorActorDraft["spawn"] {
   return { road_id: "", s_fraction: 0.5, lane_id: null, section_id: null };
@@ -664,36 +663,24 @@ function retimeWithCurvature(
 export type SubjectTurn = "left" | "right" | null;
 
 /**
- * A timed-instruction turn primitive for the subject of a turn-collision family.
+ * The junction turn clip for the subject of a turn-collision family.
  *
  * The "drunk driving" turns (2026-06-17 review) came from driving the subject's
  * junction arc as a SPARSE `timed_path` polyline replayed by worker pure-pursuit
  * — the controller can't track the arc and the subject mounts curbs / goes off-road.
- * The fix is the CARLA-native `turn_*_at_next_intersection` primitive (the same
- * one the nominal generator uses): the worker drives the subject via the traffic
+ * The fix is the CARLA-native `turn_at_next_intersection` action (the same one
+ * the nominal generator uses): the worker drives the subject via the traffic
  * manager with a forced turn at the junction, a kinematically-valid maneuver.
  *
  * We KEEP the planned `timed_path` waypoints on the draft so the kinematic gate
- * still validates collision timing against the planned arc. At the generator
- * boundary the primitive is migrated through the shared mapping into a
- * `turn_at_next_intersection` behavior clip, which takes control when it fires.
+ * still validates collision timing against the planned arc; the turn clip takes
+ * control when it fires at t=0.
  */
-function subjectTurnInstructionIntents(
-  direction: "left" | "right",
-  speedKph: number,
-): TimedInstructions["intent"] {
-  return [
-    {
-      id: "tii_collision_subject_turn",
-      timestampSeconds: 0,
-      rowOrder: 0,
-      enabled: true,
-      primitiveId: TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION[direction],
-      args: { speedKph },
-      source: "generator",
-      validationErrors: [],
-    },
-  ];
+function subjectTurnClip(direction: "left" | "right"): GeneratedInteractionClip {
+  return {
+    id: "bhv_collision_subject_turn",
+    action: { kind: "turn_at_next_intersection", direction },
+  };
 }
 
 /**
@@ -781,8 +768,6 @@ function walkerActorDraft(
     lane_facing: "with_lane",
     destination: null,
     speed_kph: walkerCrossingSpeedKph(waypoints, spawnPoint),
-    autopilot: false,
-    timeline: [],
     timed_waypoints: waypoints.map((p) => ({ x: p.x, y: p.y, time: p.time })),
     sensors: [],
   } as ScenarioEditorActorDraft;
@@ -800,8 +785,8 @@ function walkerActorDraft(
  * road; the perpendicular clamp made the timing honest). Shift the walker's
  * schedule so it reaches the conflict when the RETIMED subject does: the curb-hold
  * absorbs the delta (grown, or shrunk to zero at most), so the crossing pace
- * is untouched. At runtime the worker's closed-loop trigger
- * (`collision_target_id`) tightens the step-off further.
+ * is untouched. At runtime the walker's own closed-loop release trigger
+ * (`walkerReleaseOnApproach`) tightens the step-off further.
  */
 /**
  * The authored schedule's time at the conflict: the time of the draft waypoint
@@ -1397,8 +1382,6 @@ function timedPathActorDraft(
     path_placement: [],
     timed_waypoints: timedWaypointsForPlanned(planned),
     speed_kph: planned.expectedSpeedKph,
-    autopilot: false,
-    timeline: [],
     sensors: [],
   } as ScenarioEditorActorDraft;
 }
@@ -1509,12 +1492,9 @@ export function plannedCollisionToDraftActors(
         : undefined,
     });
   }
-  const subjectTurnIntents = opts.subjectTurn
-    ? subjectTurnInstructionIntents(
-        opts.subjectTurn,
-        result.collision.subject.expectedSpeedKph,
-      )
-    : undefined;
+  const subjectInteractions: GeneratedInteractionClip[] = opts.subjectTurn
+    ? [subjectTurnClip(opts.subjectTurn)]
+    : [];
   if (opts.subjectTurn) {
     // P-3: the CONTACT turn subject's authored arc is what the kinematic gate
     // replays, and a constant-cruise schedule through a junction arc is
@@ -1530,15 +1510,9 @@ export function plannedCollisionToDraftActors(
           : undefined,
       });
     }
-    // The turn primitive itself is no longer assigned here.
-    //
-    // This used to be `subject.timedInstructions = subjectTurnInstructions(...)`. That
-    // helper is gone: the turn is now carried as an INTENT
-    // (`subjectTurnInstructionIntents` above, attached as `timedInstructionIntents`
-    // at the two draft-assembly sites below) so the compiled instruction list is
-    // derived once at payload build rather than written twice into the draft.
-    // The retiming above is unaffected — it is what the kinematic gate replays,
-    // and it is the half of this block that still has to happen here.
+    // The turn clip itself is authored at the two draft-assembly sites below
+    // (`subjectInteractions`). The retiming above is what the kinematic gate
+    // replays, and it is the half of this block that has to happen here.
   }
   // Fix 2: a driveway / curbside-park destination ENDS the plan — append the
   // stationary hold and mark the draft so the run-out extension leaves it alone.
@@ -1604,8 +1578,8 @@ export function plannedCollisionToDraftActors(
           : [];
     // The adult who holds, then chases. Drawn from the ADULT pool regardless of
     // the principal's stature — the whole point is a grown-up going after a kid.
-    // CROSSING COHORT (Codex P1 on #458). The worker arms a CLOSED-LOOP step-off
-    // trigger for the walker named by `collision_target_id` and nothing else: if
+    // CROSSING COHORT (Codex P1 on #458). The principal's crossing is armed by
+    // the subject's approach (`walkerReleaseOnApproach`) and nothing else: if
     // the subject is slowed by traffic, a light, or a stall, the principal is held at
     // the kerb and released late. Group members and the guardian were left on
     // their authored wall-clock schedules, so a delayed subject would have the group
@@ -1634,56 +1608,43 @@ export function plannedCollisionToDraftActors(
         )
       : null;
     if (guardian) cohortOf(guardian);
-    // BOTH variants declare the pedestrian as the target. The target does two things:
-    //  1. arms the closed-loop walker trigger so the pedestrian steps off in front of the
-    //     subject instead of on a wall-clock schedule (open-loop, the avoided walker finished
-    //     crossing before the braking subject arrived — 4 "avoided" non-events where the subject
-    //     never had to react, measured r8), and
-    //  2. exempts the subject from braking for its target — but ONLY for the CONTACT subject. The
-    //     worker gates that on `collision_target_id AND NOT reactive_braking`, so the
-    //     AVOIDED subject (reactive_braking) still brakes for the pedestrian, which is the
-    //     whole point. So the same field gives contact→hit and avoided→genuine near-miss.
-    (subject as Record<string, unknown>).collision_target_id = "ped";
-    if (opts.subjectReactive) {
-      // THE AVOIDED SUBJECT MUST BRAKE FOR ITS PEDESTRIAN. Measured on the first
-      // 3D canary of this category (belmont ped-1242-3): the subject held ~9.7 m/s
-      // straight through the encounter, passing the child with a 0.50 m gap and
-      // never slowing — `maneuverOutcome` said `expected_maneuver: "stop",
-      // executed: false, "never stopped"` in 3 of 3 avoided scenes. An avoidance
-      // set where nothing is avoided is not a near-miss dataset, it is a set of
-      // non-events.
-      //
-      // Cause is a lossy migration, not the worker. `collision_target_id` always
-      // carried TWO meanings — arm the closed-loop walker trigger, AND exempt the
-      // subject from braking — and the worker separated them with an explicit
-      // `collision_target_id AND NOT reactive_braking` gate, so only the CONTACT
-      // subject got the exemption. `migrateActorDraftReactionProfile` flattens the
-      // field into `exempt_actor_ids: [target]` and drops that condition, and the
-      // worker's `tm_collision_exempt_actor_ids` documents that an authored
-      // profile "means what it says ... regardless of the braking mode". So the
-      // avoided subject was handed a profile saying it is allowed to hit the very
-      // pedestrian it exists to yield to.
-      //
-      // Author the profile explicitly rather than letting it be derived:
-      // `finalizeGeneratedActorBehavior` prefers an actor's own
-      // `reaction_profile`, so this is the narrow, local correction. The empty
-      // exempt list is the whole point — the target id still arms the trigger,
-      // it just no longer doubles as permission to run the child down.
-      (subject as Record<string, unknown>).reaction_profile = {
-        mode: "brake",
-        aggressiveness: DEFAULT_REACTION_AGGRESSIVENESS,
-        exempt_actor_ids: [],
-      };
-    }
-    return finalizeGeneratedActorBehaviors(
-      [subject, conflictPed, ...companions, ...(guardian ? [guardian] : [])],
-      {
-        subject: {
-          reactiveBraking: opts.subjectReactive,
-          timedInstructionIntents: subjectTurnIntents,
-        },
-      },
-    );
+    // The pedestrian is the subject's intended conflict in BOTH variants, and
+    // that relationship is authored as three separate, explicit statements:
+    //
+    //  1. The walker's crossing is armed by the subject's APPROACH, not by the
+    //     wall clock (`walkerReleaseOnApproach`): open-loop, the avoided walker
+    //     finished crossing before the braking subject arrived — 4 "avoided"
+    //     non-events where the subject never had to react, measured r8. The
+    //     release is a trigger on the WALKER's own base clip, so it holds
+    //     whatever the subject's reaction profile says.
+    //  2. Only the CONTACT subject is exempted from braking for the walker
+    //     (`contactReactionProfile`): the Traffic Manager's per-pair collision
+    //     detection is switched off for exactly that pair. THE AVOIDED SUBJECT
+    //     MUST BRAKE FOR ITS PEDESTRIAN — measured on the first 3D canary of
+    //     this category (belmont ped-1242-3), a subject handed an exemption for
+    //     the very child it exists to yield to held ~9.7 m/s straight through
+    //     the encounter with a 0.50 m gap; `maneuverOutcome` said
+    //     `expected_maneuver: "stop", executed: false, "never stopped"` in 3 of
+    //     3 avoided scenes. So the avoided profile brakes with NO exemptions.
+    //  3. `intended_conflict_actor_id` names the pair for readers that need the
+    //     conflict's identity (wandering exclusion, outcome scoring) and
+    //     nothing else.
+    const authoredSubject = authorGeneratedActor(subject, {
+      interactions: subjectInteractions,
+      reactionProfile: opts.subjectReactive
+        ? brakeReactionProfile()
+        : contactReactionProfile(conflictPed.id),
+      intendedConflictActorId: conflictPed.id,
+    });
+    const authoredPed = authorGeneratedActor(conflictPed, {
+      base: { trigger: walkerReleaseOnApproach(subject.id) },
+    });
+    return [
+      authoredSubject,
+      authoredPed,
+      ...companions.map((walker) => authorGeneratedActor(walker)),
+      ...(guardian ? [authorGeneratedActor(guardian)] : []),
+    ];
   }
 
   const npc = timedPathActorDraft(
@@ -1695,11 +1656,9 @@ export function plannedCollisionToDraftActors(
   );
   // The CONTACT subject hits the conflict vehicle and YIELDS TO ORDINARY TRAFFIC. The Traffic
   // Manager's strict rules otherwise make it brake for its OWN conflict (measured
-  // 9.7 -> 4.7 m/s right at the conflict, then a clean miss); the worker turns this into a
-  // per-pair `collision_detection(subject, npc, False)` so it ignores ONLY the npc.
-  if (!opts.subjectReactive) {
-    (subject as Record<string, unknown>).collision_target_id = "npc";
-  }
+  // 9.7 -> 4.7 m/s right at the conflict, then a clean miss); the worker turns the
+  // contact profile's exemption into a per-pair `collision_detection(subject, npc, False)`
+  // so it ignores ONLY the npc. The AVOIDED subject brakes for everything.
   if (opts.subjectReactive) {
     // AVOIDED variant: the conflict NPC drives THROUGH and keeps going down its own
     // exit chain instead of parking at the conflict point (dib 2026-07-09: "why does
@@ -1707,10 +1666,6 @@ export function plannedCollisionToDraftActors(
     // Contact variants keep the planned end-at-conflict (the collision consumes it).
     appendPostConflictWaypoints(npc, result.collision.npc);
     dedupeCloseWaypoints(npc);
-    // The crosser stays assertive through the conflict but must not plow into
-    // a STOPPED (yielding) subject dead ahead — real right-of-way drivers brake for
-    // a stationary car in their lane (worker: anti_plow, stopped-vehicle-only,
-    // 16m lookahead).
   }
   if (opts.subjectTurn || opts.subjectReactive) {
     // P-3: the turn/reactive context retimes the subject; the NPC gets the same
@@ -1730,14 +1685,24 @@ export function plannedCollisionToDraftActors(
           opts.cyclistBlueprints ?? [npc.blueprint],
         )
       : [];
-  return finalizeGeneratedActorBehaviors(
-    [subject, npc, ...companionCyclists],
-    {
-      subject: {
-        reactiveBraking: opts.subjectReactive,
-        timedInstructionIntents: subjectTurnIntents,
-      },
-      npc: { antiPlow: opts.subjectReactive },
-    },
-  );
+  return [
+    authorGeneratedActor(subject, {
+      interactions: subjectInteractions,
+      reactionProfile: opts.subjectReactive
+        ? brakeReactionProfile()
+        : contactReactionProfile(npc.id),
+      intendedConflictActorId: npc.id,
+    }),
+    authorGeneratedActor(npc, {
+      // The crosser stays assertive through the conflict but must not plow into
+      // a STOPPED (yielding) subject dead ahead — real right-of-way drivers brake
+      // for a stationary car in their lane. The stopped-vehicles-only scan is
+      // exactly that: it ignores the moving subject it exists to cross in front
+      // of, and brakes (then holds a standoff) for one that has come to rest.
+      ...(opts.subjectReactive
+        ? { reactionProfile: brakeReactionProfile({ obstacleFilter: "stopped_vehicles" }) }
+        : {}),
+    }),
+    ...companionCyclists.map((cyclist) => authorGeneratedActor(cyclist)),
+  ];
 }

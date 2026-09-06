@@ -1,76 +1,31 @@
 /**
- * WorldSession — a multi-client, command-driven world over the fixed-step
- * engine (world-session server v1, F5).
+ * WorldSession — a multi-client, command-driven world (world-session v1).
  *
- * ## Design
+ * Clip sessions preserve the authored finite-trace behaviour and rebuild after
+ * structural commands; live sessions mutate actors incrementally and never end.
+ * In either mode the canonical input plus the ordered command log is the
+ * deterministic replay artifact, and every engine tick with `tS >= 0` is
+ * chained into the digest.
  *
- * Clip sessions preserve the authored finite-trace behavior and rebuild after
- * structural commands. Live sessions use the engine's opt-in incremental actor
- * mutation surface: incumbent runtime state is untouched, the clip never ends,
- * and per-tick trace history is not retained. In either mode the canonical
- * input and ordered command log remain the deterministic replay artifact.
- *
- * ## Engine entry points used (never forked)
- *
- * - catalog:      `ACTOR_KINDS`, `DEFAULT_ACTOR_DIMS`, `parseSimScenarioInput`
- * - ground snap:  `LaneGraph.nearestLane` / `sampleDirected` / `nominalReversed`
- * - validation:   `checkFeasibility` (schema + route/lane guards) and
- *                 `obbOverlap` against the *current* world snapshot (the
- *                 feasibility guards only cover t = 0 placement)
- * - execution:    `createFixedStepSimulation` with an `ActionHook` timeline
- *
- * ## Digest
- *
- * Every engine tick with `tS >= 0` is hashed (chained SHA-256 over canonical
- * sorted actor rows). Replaying the same mode and command log reproduces the
- * same frame sequence and digest.
+ * The world itself runs in the native runtime (`simforge-session::world`);
+ * this façade converts commands, snapshots and logs at the JSON/typed-array
+ * boundary and hands out truth-stream subscriptions.
  */
 
-import {
-  ACTOR_KINDS,
-  DEFAULT_ACTOR_DIMS,
-  canonicalJson,
-  checkFeasibility,
-  contentHash,
-  createFixedStepSimulation,
-  isRoadActorKind,
-  localFromScene,
-  normalizeSimScenarioInput,
-  obbOverlap,
-  parseSimScenarioInput,
-  sceneHeading,
-  sha256,
-  toSceneXZ,
-  type ActionHook,
-  type ActionOverride,
-  type ActorKind,
-  type Dims,
-  type FixedStepSimulationSession,
-  type LaneGraph,
-  type Obb,
-  type RouteSpec,
-  type SessionActorSnapshot,
-  type SimEvent,
-  type SimScenarioInput,
-  type TickObserver,
-} from '@simforge-oss/engine';
-import {
-  WorldTruthPublisher,
-  type TruthActorCatalogEntry,
-  type TruthSubscription,
-} from './truth-stream.js';
+import type { ActorKind, Dims, LaneGraph, NativeModule, NativeTruthSubscription, NativeWorldSession, RouteSpec, ScenarioSource, SimEvent } from '@simforge-oss/engine';
+import type { EngineRuntime } from '@simforge-oss/engine';
+import { guard, type EnvAction } from '@simforge-oss/native-runtime/shared';
+
+import { TruthStreamClient, type TruthFrame, type TruthSubscriptionStats } from './truth-stream.js';
+
 /** Version tag of the session-log artifact; bumped on any breaking change. */
 export const WORLD_SESSION_LOG_VERSION = 2;
-
-const EPS_S = 1e-9;
-/** Ground-snap search radius; matches `LaneGraph.nearestLane`'s default. */
-const SNAP_MAX_DIST_M = 25;
 
 /* ------------------------------------------------------------- commands */
 
 /**
  * A runtime spawn request. Everything beyond `kind` and `pose` has an
- * engine-derived default: dims from `DEFAULT_ACTOR_DIMS`, lane placement from
+ * engine-derived default: dims from the actor catalog, lane placement from
  * the nearest drivable lane (road kinds), heading from the snapped lane
  * tangent, and a `follow` route from the snapped lane (road kinds) or a
  * zero-length `polyline` hold (everything else).
@@ -86,7 +41,7 @@ export interface SpawnRequest {
   /** Explicit route; overrides the snap-derived default. */
   readonly route?: RouteSpec;
   readonly cruiseSpeedMps?: number;
-  /** Snap pose to the nearest drivable lane. Default: `isRoadActorKind(kind)`. */
+  /** Snap pose to the nearest drivable lane. Default: road actor kinds. */
   readonly snapToLane?: boolean;
   readonly static?: boolean;
   readonly tags?: readonly string[];
@@ -102,7 +57,7 @@ export type WorldCommand =
   /** Atomic: every op applies, or none does and the world is untouched. */
   | { readonly kind: 'batch'; readonly ops: readonly BatchOp[] }
   /** Zero-order-hold action override for one actor; `null` releases it. */
-  | { readonly kind: 'act'; readonly actorId: string; readonly action: ActionOverride | null };
+  | { readonly kind: 'act'; readonly actorId: string; readonly action: EnvAction | null };
 
 export interface CommandOutcome {
   readonly ok: boolean;
@@ -168,7 +123,7 @@ export interface AdvanceResult {
 }
 
 export interface WorldSessionOptions {
-  readonly input: SimScenarioInput;
+  readonly input: ScenarioSource;
   readonly graph: LaneGraph;
   /**
    * Finite horizon in clip mode (default 120 s). Ignored in live mode, whose
@@ -179,428 +134,120 @@ export interface WorldSessionOptions {
   readonly mode?: 'clip' | 'live';
 }
 
-/* ---------------------------------------------------------------- helpers */
+/* ------------------------------------------------------------ truth pull */
 
-function obbOf(a: Pick<SessionActorSnapshot, 'x' | 'y' | 'headingRad'>, dims: Dims): Obb {
-  return { center: { x: a.x, y: a.y }, lengthM: dims.l, widthM: dims.w, headingRad: a.headingRad };
-}
+/**
+ * One pull-based truth subscriber. The native world enqueues already-framed
+ * bytes on its tick path and never calls consumer code; `pull()` drains the
+ * framed bytes, `frames()` decodes them.
+ */
+export class TruthSubscription {
+  private readonly decoder = new TruthStreamClient();
 
-function pad(n: number, width: number): string {
-  return String(n).padStart(width, '0');
-}
+  constructor(readonly native: NativeTruthSubscription) {}
 
-/** Does a feasibility-issue path refer to one of `ids`? Paths are dotted (`actors.<id>.…`). */
-function pathTouches(path: string, ids: readonly string[]): boolean {
-  return ids.some((id) => path === `actors.${id}` || path.startsWith(`actors.${id}.`)
-    || path === `interactions.${id}` || path.startsWith(`interactions.${id}.`)
-    || path.includes(`.${id}.`) || path.endsWith(`.${id}`));
-}
+  /** Every queued frame as `u32le length || msgpack(TruthFrame)`, oldest first. */
+  pull(): Uint8Array[] {
+    return guard(() => this.native.drainFrames());
+  }
 
-interface ActionEpoch {
-  readonly fromTS: number;
-  readonly action: ActionOverride | null;
+  /** Every queued frame, decoded. */
+  frames(): TruthFrame[] {
+    const out: TruthFrame[] = [];
+    for (const framed of this.pull()) out.push(...this.decoder.push(framed));
+    return out;
+  }
+
+  get stats(): TruthSubscriptionStats {
+    return { queued: this.native.queued, dropped: this.native.dropped };
+  }
+
+  get active(): boolean {
+    return this.native.active;
+  }
+
+  close(): void {
+    this.native.close();
+  }
 }
 
 /* ------------------------------------------------------------ the session */
 
+const WORLD_POSE_ROW = 5;
+
 export class WorldSession {
-  private readonly graph: LaneGraph;
-  private readonly horizonSeconds: number;
-  private readonly mode: 'clip' | 'live';
-  /** Canonical, normalized current input; swapped atomically on commit. */
-  private input: SimScenarioInput;
-  private sim: FixedStepSimulationSession;
+  readonly native: NativeWorldSession;
+  readonly mode: 'clip' | 'live';
 
-  /** Ticks requested past t = 0; live mode never clamps. */
-  private tickCount = 0;
-  private actorCounter = 0;
-  private existCounter = 0;
-  /** Per-actor zero-order-hold action timeline (append-only, time-ordered). */
-  private readonly actionTimeline = new Map<string, ActionEpoch[]>();
-  /** Spawn/despawn events surfaced by clip-mode rebuild catch-up. */
-  private pendingEvents: SimEvent[] = [];
-  private readonly entries: WorldLogEntry[] = [];
-  private digestHex: string;
-  /** Pull-based truth fan-out; never calls consumer code from the tick path. */
-  private readonly truthPublisher = new WorldTruthPublisher();
-  private actorCatalog = new Map<string, TruthActorCatalogEntry>();
-
-  readonly baseInputHash: string;
-
-  constructor(options: WorldSessionOptions) {
-    this.graph = options.graph;
+  constructor(module: NativeModule, engine: EngineRuntime, options: WorldSessionOptions) {
     this.mode = options.mode ?? 'clip';
-    this.horizonSeconds = options.horizonSeconds ?? 120;
-    this.input = normalizeSimScenarioInput(
-      this.mode === 'live' ? options.input : { ...options.input, clipSeconds: this.horizonSeconds },
-    );
-    this.baseInputHash = contentHash(this.input);
-    this.refreshActorCatalog();
-    this.digestHex = sha256(`world-session.v${WORLD_SESSION_LOG_VERSION}:${this.baseInputHash}:${this.mode}`);
-
-    const errors = checkFeasibility(this.input, this.graph).filter((i) => i.severity === 'error');
-    if (errors.length > 0) {
-      throw new Error(`base input fails feasibility: ${errors.map((i) => `${i.code}@${i.path}`).join(', ')}`);
-    }
-    this.sim = this.buildSim();
-    this.consumeWarmup();
+    const scenario = engine.scenario(options.input);
+    const optionsJson = JSON.stringify({ mode: this.mode, ...(options.horizonSeconds === undefined ? {} : { horizonSeconds: options.horizonSeconds }) });
+    this.native = guard(() => new module.WorldSession(scenario, options.graph, optionsJson));
   }
 
-  /* -------------------------------------------------------------- engine */
-
-  private buildSim(): FixedStepSimulationSession {
-    // Guards are 'skip': the constructor and every structural commit run
-    // checkFeasibility explicitly, so construction must never re-litigate.
-    return createFixedStepSimulation(this.input, {
-      graph: this.graph,
-      guards: 'skip',
-      actionHook: this.hook,
-      mode: this.mode,
-    });
-  }
-
-  /**
-   * The engine records state *at* t before stepping, so consuming exactly
-   * warmupTicks leaves the snapshot at t = -dt; one more tick parks the world
-   * at t = 0 (same convention as EnvSession).
-   */
-  private consumeWarmup(): void {
-    const warmupTicks = Math.round(this.input.warmupSeconds / this.input.dt) + 1;
-    if (warmupTicks > 0) this.sim.advance(warmupTicks);
-  }
-
-  /** Zero-order hold: the latest action epoch at or before tS drives the actor. */
-  private readonly hook: ActionHook = ({ actorId, tS }): ActionOverride | undefined => {
-    const timeline = this.actionTimeline.get(actorId);
-    if (!timeline) return undefined;
-    for (let i = timeline.length - 1; i >= 0; i--) {
-      const epoch = timeline[i]!;
-      if (tS >= epoch.fromTS - EPS_S) return epoch.action ?? undefined;
-    }
-    return undefined;
-  };
-
-  /** Chained digest and atomic truth publication for every live tick. */
-  private readonly onTick: TickObserver = (obs) => {
-    if (obs.tS < -EPS_S) return;
-    const rows = obs.actors
-      .map((a) => [a.id, a.x, a.y, a.headingRad, a.speedMps, a.present ? 1 : 0, a.s] as const)
-      .sort((r, q) => (r[0] < q[0] ? -1 : r[0] > q[0] ? 1 : 0));
-    this.digestHex = sha256(this.digestHex + canonicalJson([obs.tickIndex, obs.tS, rows]));
-    this.truthPublisher.publish(obs, this.sim.signalBook(), this.actorCatalog, this.input.dt);
-  };
-
-  private refreshActorCatalog(): void {
-    this.actorCatalog = new Map(this.input.actors.map((actor) => [
-      actor.id,
-      {
-        kind: actor.kind,
-        dims: actor.dims ?? DEFAULT_ACTOR_DIMS[actor.kind],
-      },
-    ]));
-  }
-
-  /**
-   * Rebuild the engine from the (new) canonical input and re-advance to the
-   * current tick. Deterministic engine ⇒ pre-existing actors reproduce their
-   * exact state; frames are NOT re-hashed (see the digest contract above).
-   * Spawn/despawn events for actors touched by this rebuild that fire exactly
-   * at the boundary are kept for the next advance's event report.
-   */
-  private rebuild(touchedIds: readonly string[], boundaryTS: number): void {
-    this.sim = this.buildSim();
-    this.consumeWarmup();
-    if (this.tickCount > 0) this.sim.advance(this.tickCount);
-    const replayed = this.sim.drainEvents();
-    for (const event of replayed) {
-      if (
-        event.t >= boundaryTS - EPS_S &&
-        (event.kind === 'spawn' || event.kind === 'despawn') &&
-        touchedIds.includes(event.actorId)
-      ) {
-        this.pendingEvents.push(event);
-      }
-    }
-  }
-
-  /* ------------------------------------------------------------ read side */
-
+  /** Simulation time at the current instant. */
   time(): number {
-    return this.sim.peek().tS;
+    return this.native.time;
   }
 
+  /** Ticks advanced past t = 0. */
   tick(): number {
-    return this.tickCount;
+    return this.native.tick;
   }
 
+  /** Chained frame digest so far. */
   digest(): string {
-    return this.digestHex;
+    return this.native.digest;
   }
 
-  /**
-   * Subscribe to future committed ticks. The pull queue is bounded and uses
-   * drop-oldest, so a consumer can never stall world advancement.
-   */
+  /** Subscribe to future atomic truth frames; bounded, drop-oldest. */
   subscribeTruth(options: { readonly capacity?: number } = {}): TruthSubscription {
-    return this.truthPublisher.subscribe(options.capacity);
+    return new TruthSubscription(guard(() => this.native.subscribe(options.capacity ?? null)));
   }
 
   snapshot(): WorldSnapshot {
-    const snap = this.sim.peek();
-    const kinds = new Map(this.input.actors.map((a) => [a.id, a.kind]));
-    return {
-      tS: snap.tS,
-      tick: this.tickCount,
-      done: snap.done,
-      actors: snap.actors.map((a) => {
-        const scene = toSceneXZ({ x: a.x, y: a.y });
-        return {
-          id: a.id,
-          kind: kinds.get(a.id) ?? 'vehicle',
-          x: scene.x,
-          z: scene.z,
-          headingRad: sceneHeading(a.headingRad),
-          speedMps: a.speedMps,
-          present: a.present,
-          s: a.s,
-          laneRsl: a.laneRsl,
-        };
-      }),
-    };
+    const view = this.native.snapshot();
+    const actors: WorldActorState[] = [];
+    for (let i = 0; i < view.actorIds.length; i += 1) {
+      const base = i * WORLD_POSE_ROW;
+      actors.push({
+        id: view.actorIds[i]!,
+        kind: view.kinds[i] as ActorKind,
+        x: view.pose[base]!,
+        z: view.pose[base + 1]!,
+        headingRad: view.pose[base + 2]!,
+        speedMps: view.pose[base + 3]!,
+        s: view.pose[base + 4]!,
+        present: view.present[i] !== 0,
+        laneRsl: view.laneRsls[i] ?? null,
+      });
+    }
+    return { tS: view.tS, tick: view.tick, done: view.done, actors };
   }
 
   exportLog(): WorldSessionLog {
-    return {
-      version: WORLD_SESSION_LOG_VERSION,
-      baseInputHash: this.baseInputHash,
-      mode: this.mode,
-      horizonSeconds: this.horizonSeconds,
-      entries: [...this.entries],
-      digest: this.digestHex,
-    };
+    return JSON.parse(guard(() => this.native.logJson())) as WorldSessionLog;
   }
 
-  /* ----------------------------------------------------------- write side */
-
-  /**
-   * Apply one command at the current tick boundary and record it in the log.
-   * Ordering across clients is the caller's contract (the registry sorts
-   * queued commands by client id, then seq, before applying).
-   */
+  /** Apply one command for `clientId`/`seq`; the outcome (including rejections) is logged. */
   applyCommand(clientId: string, seq: number, command: WorldCommand): CommandOutcome {
-    const outcome = this.execute(command);
-    this.entries.push({
-      kind: 'command',
-      clientId,
-      seq,
-      command,
-      ok: outcome.ok,
-      ...(outcome.actorIds ? { actorIds: outcome.actorIds } : {}),
-      ...(outcome.error ? { error: outcome.error } : {}),
-    });
-    return outcome;
+    return JSON.parse(guard(() => this.native.command(JSON.stringify(command), clientId, seq))) as CommandOutcome;
   }
 
   /** Advance the engine by `ticks`, hashing every frame into the digest. */
   advance(ticks: number): AdvanceResult {
     if (!Number.isInteger(ticks) || ticks <= 0) throw new Error(`ticks must be a positive integer, got ${String(ticks)}`);
-    this.sim.advance(ticks, { onTick: this.onTick });
-    this.tickCount += ticks;
-    const events = [...this.pendingEvents, ...this.sim.drainEvents()];
-    this.pendingEvents = [];
-    this.entries.push({ kind: 'advance', ticks });
-    const snap = this.snapshot();
-    return { tS: snap.tS, tick: snap.tick, done: snap.done, events, actors: snap.actors };
+    return JSON.parse(guard(() => this.native.advance(ticks))) as AdvanceResult;
   }
 
-  private execute(command: WorldCommand): CommandOutcome {
-    switch (command.kind) {
-      case 'spawn':
-        return this.applyStructural([{ kind: 'spawn', spawn: command.spawn }]);
-      case 'despawn':
-        return this.applyStructural([{ kind: 'despawn', actorId: command.actorId }]);
-      case 'batch':
-        if (command.ops.length === 0) return { ok: false, error: 'batch must contain at least one op' };
-        return this.applyStructural(command.ops);
-      case 'act':
-        return this.applyAct(command.actorId, command.action);
-      default:
-        return { ok: false, error: `unknown command kind ${String((command as { kind?: unknown }).kind)}` };
-    }
+  /** Opaque, portable continuation state. */
+  checkpoint(): Uint8Array {
+    return guard(() => this.native.checkpoint());
   }
 
-  private applyAct(actorId: string, action: ActionOverride | null): CommandOutcome {
-    if (!this.input.actors.some((a) => a.id === actorId)) {
-      return { ok: false, error: `act: unknown actor ${actorId}` };
-    }
-    const epoch: ActionEpoch = { fromTS: this.time(), action };
-    const timeline = this.actionTimeline.get(actorId);
-    if (timeline) timeline.push(epoch);
-    else this.actionTimeline.set(actorId, [epoch]);
-    return { ok: true };
-  }
-
-  /**
-   * Atomic structural mutation: resolve and validate every op against a
-   * candidate input. Live mode commits through incremental engine mutation;
-   * clip mode retains deterministic rebuild semantics.
-   */
-  private applyStructural(ops: readonly BatchOp[]): CommandOutcome {
-    const snap = this.sim.peek();
-    const boundaryTS = snap.tS;
-
-    const dimsById = new Map(this.input.actors.map((a) => [a.id, a.dims]));
-    const worldObbs = snap.actors
-      .filter((a) => a.present)
-      .map((a) => ({ id: a.id, obb: obbOf(a, dimsById.get(a.id) ?? DEFAULT_ACTOR_DIMS.vehicle) }));
-
-    const usedIds = new Set(this.input.actors.map((a) => a.id));
-    const presentNow = new Set(snap.actors.filter((a) => a.present).map((a) => a.id));
-    const batchSpawned = new Set<string>();
-    const batchDespawned = new Set<string>();
-    const batchObbs: Array<{ id: string; obb: Obb }> = [];
-
-    const newActors: unknown[] = [];
-    const newInteractions: unknown[] = [];
-    const spawnedIds: string[] = [];
-    let actorCounter = this.actorCounter;
-    let existCounter = this.existCounter;
-
-    for (const op of ops) {
-      if (op.kind === 'spawn') {
-        const req = op.spawn;
-        if (!ACTOR_KINDS.includes(req.kind)) return { ok: false, error: `spawn: unknown actor kind ${String(req.kind)}` };
-        if (this.mode === 'live' && req.tags?.includes('ambient')) {
-          return { ok: false, error: 'spawn: live ambient actors are not supported' };
-        }
-
-        let id = req.id;
-        if (id !== undefined) {
-          if (usedIds.has(id)) return { ok: false, error: `spawn: actor id ${id} already in use` };
-        } else {
-          do id = `ws:${pad(++actorCounter, 4)}`; while (usedIds.has(id));
-        }
-
-        const resolved = this.resolveSpawnPlacement(req);
-        if (!resolved.ok) return { ok: false, error: `spawn ${id}: ${resolved.error}` };
-        const { pose, laneRef, route } = resolved;
-
-        const dims = req.dims ?? DEFAULT_ACTOR_DIMS[req.kind];
-        const obb: Obb = { center: localFromScene(pose), lengthM: dims.l, widthM: dims.w, headingRad: pose.headingRad };
-        const hit = [...worldObbs, ...batchObbs].find((o) => !batchDespawned.has(o.id) && obbOverlap(obb, o.obb));
-        if (hit) return { ok: false, error: `spawn ${id}: footprint overlaps ${hit.id} at the current tick` };
-
-        usedIds.add(id);
-        batchSpawned.add(id);
-        batchObbs.push({ id, obb });
-        spawnedIds.push(id);
-        newActors.push({
-          id,
-          kind: req.kind,
-          ...(req.dims ? { dims: req.dims } : {}),
-          initial: { ...(laneRef ? { laneRef } : {}), pose, speedMps: req.speedMps ?? 0 },
-          behavior: { route, ...(req.cruiseSpeedMps !== undefined ? { cruiseSpeedMps: req.cruiseSpeedMps } : {}) },
-          presentAtStart: false,
-          ...(req.static !== undefined ? { static: req.static } : {}),
-          tags: [...(req.tags ?? []), 'world-session:spawned'],
-        });
-        newInteractions.push({
-          id: `ws:exist:${pad(++existCounter, 6)}`,
-          actorId: id,
-          trigger: { kind: 'at', t: boundaryTS },
-          verb: 'exist',
-          target: { state: 'present' },
-        });
-      } else {
-        const id = op.actorId;
-        const alive = (presentNow.has(id) || batchSpawned.has(id)) && !batchDespawned.has(id);
-        if (!alive) return { ok: false, error: `despawn: actor ${id} is not present at the current tick` };
-        batchDespawned.add(id);
-        newInteractions.push({
-          id: `ws:exist:${pad(++existCounter, 6)}`,
-          actorId: id,
-          trigger: { kind: 'at', t: boundaryTS },
-          verb: 'exist',
-          target: { state: 'absent' },
-        });
-      }
-    }
-
-    // Schema gate: the candidate must parse through the engine's own contract.
-    let candidate: SimScenarioInput;
-    try {
-      candidate = normalizeSimScenarioInput(
-        parseSimScenarioInput({
-          ...this.input,
-          actors: [...this.input.actors, ...(newActors as SimScenarioInput['actors'])],
-          interactions: [...this.input.interactions, ...(newInteractions as SimScenarioInput['interactions'])],
-        }),
-      );
-    } catch (error) {
-      return { ok: false, error: `batch rejected by input schema: ${error instanceof Error ? error.message : String(error)}` };
-    }
-
-    // Feasibility gate, scoped to what this batch introduced: pre-existing
-    // issues in the base input are not this batch's fault and never block it.
-    const touched = [...spawnedIds, ...batchDespawned];
-    const bad = checkFeasibility(candidate, this.graph).find(
-      (issue) => issue.severity === 'error' && pathTouches(issue.path, touched),
-    );
-    if (bad) return { ok: false, error: `batch rejected by feasibility: ${bad.code} at ${bad.path}` };
-
-    // Commit the canonical input and truth catalog first. A live engine accepts
-    // the same normalized actor specs directly and never replays elapsed ticks.
-    this.input = candidate;
-    this.refreshActorCatalog();
-    this.actorCounter = actorCounter;
-    this.existCounter = existCounter;
-    if (this.mode === 'live') {
-      let spawnedIndex = 0;
-      for (const op of ops) {
-        if (op.kind === 'spawn') {
-          const actorId = spawnedIds[spawnedIndex++]!;
-          const actor = candidate.actors.find((item) => item.id === actorId)!;
-          this.sim.addActor(actor);
-        } else {
-          this.sim.setActorPresence(op.actorId, false);
-        }
-      }
-    } else {
-      this.rebuild(touched, boundaryTS);
-    }
-    return { ok: true, actorIds: spawnedIds };
-  }
-
-  /**
-   * Ground snap + defaults for one spawn request, via the lane graph:
-   * nearest drivable lane, its legal traversal direction, and the lane
-   * tangent as the default heading. Non-road kinds (and `snapToLane: false`)
-   * keep the authored pose and hold position on a zero-length polyline route
-   * unless an explicit route is given.
-   */
-  private resolveSpawnPlacement(req: SpawnRequest):
-    | { ok: true; pose: { x: number; z: number; headingRad: number }; laneRef: { rsl: string; s: number; tFrac: number } | null; route: RouteSpec }
-    | { ok: false; error: string } {
-    const snap = req.snapToLane ?? isRoadActorKind(req.kind);
-    if (!snap) {
-      const pose = { x: req.pose.x, z: req.pose.z, headingRad: req.pose.headingRad ?? 0 };
-      return { ok: true, pose, laneRef: null, route: req.route ?? { kind: 'polyline', points: [{ x: pose.x, z: pose.z }] } };
-    }
-    const local = localFromScene(req.pose);
-    const nearest = this.graph.nearestLane(local, { maxDistM: SNAP_MAX_DIST_M });
-    if (!nearest) return { ok: false, error: `no drivable lane within ${SNAP_MAX_DIST_M} m of (${req.pose.x}, ${req.pose.z})` };
-    const reversed = this.graph.nominalReversed(nearest.rsl) ?? false;
-    const lengthM = this.graph.lengthOf(nearest.rsl);
-    const directedS = reversed ? lengthM - nearest.s : nearest.s;
-    const sample = this.graph.sampleDirected({ rsl: nearest.rsl, reversed }, directedS);
-    const scene = toSceneXZ(sample.point);
-    const pose = { x: scene.x, z: scene.z, headingRad: req.pose.headingRad ?? sceneHeading(sample.headingRad) };
-    return {
-      ok: true,
-      pose,
-      laneRef: { rsl: nearest.rsl, s: nearest.s, tFrac: 0 },
-      route: req.route ?? { kind: 'follow', startRsl: nearest.rsl, turns: [], maxLengthM: 2000 },
-    };
+  restore(checkpoint: Uint8Array): void {
+    guard(() => this.native.restore(checkpoint));
   }
 }
 
@@ -620,31 +267,11 @@ export interface ReplayResult {
  * reproduces its recorded outcome (including rejections).
  */
 export function replayWorldSessionLog(
+  module: NativeModule,
+  engine: EngineRuntime,
   log: WorldSessionLog,
-  options: { input: SimScenarioInput; graph: LaneGraph },
+  options: { input: ScenarioSource; graph: LaneGraph },
 ): ReplayResult {
-  if (log.version !== WORLD_SESSION_LOG_VERSION) {
-    throw new Error(`unsupported world-session log version ${String(log.version)}`);
-  }
-  const world = new WorldSession({
-    input: options.input,
-    graph: options.graph,
-    horizonSeconds: log.horizonSeconds,
-    mode: log.mode,
-  });
-  if (world.baseInputHash !== log.baseInputHash) {
-    throw new Error(`base input mismatch: log built from ${log.baseInputHash}, replay input is ${world.baseInputHash}`);
-  }
-  let divergedAt: number | null = null;
-  for (let i = 0; i < log.entries.length; i++) {
-    const entry = log.entries[i]!;
-    if (entry.kind === 'advance') {
-      world.advance(entry.ticks);
-      continue;
-    }
-    const outcome = world.applyCommand(entry.clientId, entry.seq, entry.command);
-    const sameIds = canonicalJson(outcome.actorIds ?? []) === canonicalJson(entry.actorIds ?? []);
-    if (divergedAt === null && (outcome.ok !== entry.ok || !sameIds)) divergedAt = i;
-  }
-  return { digest: world.digest(), outcomesMatch: divergedAt === null, divergedAt };
+  const scenario = engine.scenario(options.input);
+  return JSON.parse(guard(() => module.replayWorldLog(JSON.stringify(log), scenario, options.graph))) as ReplayResult;
 }

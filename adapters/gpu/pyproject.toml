@@ -1,0 +1,38 @@
+[project]
+name = "simforge-oss-gpu"
+version = "0.1.0rc61"
+description = "GPU batch profile (roadway-dynamic-gpu-v1): Warp/CUDA batched execution of the current dynamic-v1 roadway semantics with device-resident reset, actions, observations, rewards, termination and checkpoints."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "SimForge" }]
+dependencies = [
+    "numpy>=1.26",
+    "warp-lang>=1.17",
+]
+
+[project.urls]
+Repository = "https://github.com/SimForgeinc/simforge-oss"
+
+[project.optional-dependencies]
+# Zero-copy tensor views via wp.to_torch / wp.from_torch and torch.cuda.Event leases.
+torch = ["torch>=2.4"]
+dev = ["pytest==9.1.1"]
+
+[project.scripts]
+simforge-oss-gpu = "simforge_oss_gpu.__main__:main"
+simforge-oss-gpu-conformance = "simforge_oss_gpu.conformance:main"
+simforge-oss-gpu-qualify = "simforge_oss_gpu.qualify:main"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["simforge_oss_gpu"]
+
+[tool.hatch.build.targets.sdist]
+include = ["simforge_oss_gpu", "tools", "tests", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,8 +1,8 @@
 # @simforge-oss/scenario
 
-The scenario document: schemas, edit history, (de)serialization, migrations,
-validation and persistence. Framework-free TypeScript — no React, no three.js,
-no DOM beyond an optional `localStorage`.
+The scenario document: schemas, edit history, (de)serialization, validation
+and persistence. Framework-free TypeScript — no React, no three.js, no DOM
+beyond an optional `localStorage`.
 
 Two document kinds live here, and they are genuinely different claims:
 
@@ -10,12 +10,12 @@ Two document kinds live here, and they are genuinely different claims:
 |---|---|---|
 | what it says | "these actors, at these coordinates, on this map" | "this kind of place, these roles, this choreography" |
 | portable? | no, by construction | yes, by construction |
-| entry points | `ScenarioDocument`, `parseScenario`, `migrate` | `parseTemplate`, `validateTemplate`, `migrateToTemplate` |
+| entry points | `ScenarioDocument`, `parseScenario` | `parseTemplate`, `validateTemplate`, `migrateToTemplate` |
 | schema | `src/schema/v1.ts` | `src/schema/v2/` |
 
-v1 is unchanged and still what `studio` edits. v2 is the authoring format
-for retargetable scenarios and the emission target for LLM agents — jump to
-[Schema v2](#schema-v2--the-portable-scenariotemplate).
+v1 is the absolute scene, kept as its own document kind. v2 is what Studio
+edits, the authoring format for retargetable scenarios and the emission target
+for LLM agents — jump to [Schema v2](#schema-v2--the-portable-scenariotemplate).
 
 ```ts
 import { ScenarioDocument, WebScenarioFileStore } from '@simforge-oss/scenario';
@@ -48,7 +48,6 @@ doc.markClean();
 | `operations.ts` | The closed set of edits (`ScenarioOp`) and how they apply. |
 | `document.ts` | `ScenarioDocument`: apply, undo/redo, dirty flag, `subscribe`. |
 | `serialize.ts` | Canonical text: key order, float precision, freezing. |
-| `migrate.ts` | Version dispatch for the v1 lane. |
 | `stores/` | `ScenarioFileStore` + in-memory and `localStorage` implementations. |
 
 (The v2 modules are listed [below](#modules).)
@@ -160,7 +159,7 @@ byte-identical, with no history entry and no notification.
 
 `ScenarioFileStore` is async and name-keyed, because the implementation that
 matters most — the Electron `fs` adapter — is both. `read()` returns a
-*validated, migrated* document rather than text, so every adapter round-trips
+*validated* document rather than text, so every adapter round-trips
 through the canonical serializer and corruption fails at the boundary.
 
 - `MemoryScenarioFileStore` — tests and scratch. Stores canonical text, so tests
@@ -299,25 +298,20 @@ decoding grammar. Rules JSON Schema cannot express (mandatory `dynamics`,
 mandatory `byLatest`, one-axis-one-owner, the `set` registry) are spelled out in
 each schema's `description`, so a model reading the schema still sees them.
 
-### Migrating a v1 scene to a v2 template
+### Converting a v1 scene to a v2 template
 
-`migrateToTemplate(json)` accepts either version and always returns a v2
-template plus a list of `MigrationNote`s. What it will **not** do is invent
-frame coordinates: converting `(x, y, z)` to `(k, s, tFrac)` needs the lane
-graph, which lives in `map-intel`. So every v1 entity becomes a
-`scene_absolute` role that keeps its pose verbatim, the anchor is pinned to the
-source map with **no** `siteId` (v1 had none to preserve), and the validator
-reports `non_portable_role` + `pin_site_unresolved` until someone rebinds it.
-A migration that says "I cannot do this part" is worth more than one that
-quietly does it wrong.
-
-### Adding schema v3
-
-1. Add `src/schema/v3/` and a `ScenarioMigration` to `TEMPLATE_MIGRATIONS`.
-2. Bump `SCENARIO_TEMPLATE_VERSION`.
-3. Add a fixture test per step — `runMigrations` takes the chain and the
-   validator as options precisely so each step is testable in isolation.
-4. `pnpm run schema` to regenerate (a test fails if you forget).
+`migrateToTemplate(json)` accepts either kind and always returns a v2
+template plus a list of `MigrationNote`s. Both kinds parse strictly against
+their own schema: there is no version chain and no lenient reading of older
+shapes — a document either is the current v1 scene, is the current v2
+template, or is rejected with `ScenarioFormatError`. What the conversion
+will **not** do is invent frame coordinates: converting `(x, y, z)` to
+`(k, s, tFrac)` needs the lane graph, which lives in `map-intel`. So every v1
+entity becomes a `scene_absolute` role that keeps its pose verbatim, the
+anchor is pinned to the source map with **no** `siteId` (v1 had none to
+preserve), and the validator reports `non_portable_role` +
+`pin_site_unresolved` until someone rebinds it. A conversion that says "I
+cannot do this part" is worth more than one that quietly does it wrong.
 
 ## Scripts
 

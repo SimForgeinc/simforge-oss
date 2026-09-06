@@ -188,7 +188,7 @@ function authoredSceneState(): SceneState {
     ],
   });
   return sceneStateSchema.parse({
-    version: 'scene-state.v1',
+    version: 'simforge.scene-state.v1',
     mapId: 'test-map',
     frame: 'scene-yup',
     dt: 0.02,
@@ -303,7 +303,7 @@ function loadFixture(): ParityFixture {
 describe('renderer contract v1 — Three viewer conformance', () => {
   const fixture = loadFixture();
 
-  it('fixture validates and embeds a valid scene-state.v1 document', () => {
+  it('fixture validates and embeds a valid simforge.scene-state.v1 document', () => {
     const validated = validateParityFixture(JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')));
     expect(() => sceneStateSchema.parse(validated.sceneState)).not.toThrow();
     expect(validated.tick).toBeLessThan(validated.sceneState.tickCount);

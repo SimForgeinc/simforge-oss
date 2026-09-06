@@ -19,9 +19,9 @@ import {
 } from "@/app/lib/maps/metadata/rrdata-xml";
 import { deriveIngestTagsFromMapStats } from "@/app/lib/maps/metadata/ingest-tags";
 import { ChevronDown, Paperclip, MapPin, Camera } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { cn } from "@/app/lib/utils";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   generateMapAssetId,
   parseGeoJson,

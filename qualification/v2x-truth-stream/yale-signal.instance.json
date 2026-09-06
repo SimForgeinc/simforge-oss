@@ -40,7 +40,6 @@
     "behavior": {
      "rules": {
       "obeySignals": true,
-      "yield": true,
       "yieldToVehicles": true,
       "yieldToPedestrians": true,
       "collisionAvoidance": true,
@@ -92,7 +91,6 @@
     "behavior": {
      "rules": {
       "obeySignals": true,
-      "yield": true,
       "yieldToVehicles": true,
       "yieldToPedestrians": true,
       "collisionAvoidance": true,
@@ -144,7 +142,6 @@
     "behavior": {
      "rules": {
       "obeySignals": true,
-      "yield": true,
       "yieldToVehicles": true,
       "yieldToPedestrians": true,
       "collisionAvoidance": true,
@@ -193,7 +190,6 @@
     "behavior": {
      "rules": {
       "obeySignals": true,
-      "yield": true,
       "yieldToVehicles": true,
       "yieldToPedestrians": true,
       "collisionAvoidance": true,
@@ -241,7 +237,6 @@
     "behavior": {
      "rules": {
       "obeySignals": true,
-      "yield": true,
       "yieldToVehicles": true,
       "yieldToPedestrians": true,
       "collisionAvoidance": true,

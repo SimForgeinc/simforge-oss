@@ -10,7 +10,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { createFixedSchedules } from '../schedule.js';
 import type { RenderInputFile } from '../engine.js';
+import { nativeActorAssetsInput } from './actor-assets.js';
 import { createRenderEngine } from './engine.js';
+import { nativeActorCatalogId } from './lowering.js';
 
 const enabled = process.env.SIMFORGE_NATIVE_E2E === '1';
 const suite = enabled ? describe : describe.skip;
@@ -54,6 +56,18 @@ suite('native retained service GPU e2e', () => {
     }
     const clipStart = Math.max(0, Math.min(encounterTime - 1, plan.clipSeconds - 2));
     const clipEnd = clipStart + Math.min(2, plan.clipSeconds);
+    // The same explicit closure the Studio hosts declare, delivered like the
+    // worker delivers it: bytes downloaded and hashed before the engine runs.
+    const actorClosure = nativeActorAssetsInput();
+    const closureResponse = await fetch(actorClosure.downloadUrl);
+    if (!closureResponse.ok) throw new Error(`actor closure download failed ${closureResponse.status}`);
+    const closureBytes = new Uint8Array(await closureResponse.arrayBuffer());
+    const closureSha256 = createHash('sha256').update(closureBytes).digest('hex');
+    expect({ sha256: closureSha256, sizeBytes: closureBytes.byteLength }).toEqual({ sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes });
+    const closurePath = path.join(output, 'inputs', ...actorClosure.relativePath.split('/'));
+    await fs.mkdir(path.dirname(closurePath), { recursive: true });
+    await fs.writeFile(closurePath, closureBytes);
+    const hostCatalogId = nativeActorCatalogId(actor.kind, plan.actorMetadata[actor.id]?.tags ?? actor.tags);
     const intent: RenderIntentV1 = {
       schema: 'simforge.render-intent/v1',
       intentId: 'native-gpu-e2e',
@@ -63,7 +77,7 @@ suite('native retained service GPU e2e', () => {
         openScenario: { sha256: xoscSha256, sizeBytes: xosc.byteLength },
         map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: 'c'.repeat(64) },
       },
-      sensorHosts: [{ sourceId: 'front-rgb', actorId: actor.id, vehicleAsset: { catalogAssetId: 'vehicle.sedan' } }],
+      sensorHosts: [{ sourceId: 'front-rgb', actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId } }],
       renderSpec: {
         schema: 'simforge.render-spec/v3',
         sources: [{
@@ -83,10 +97,12 @@ suite('native retained service GPU e2e', () => {
         },
         authoredEnvironment: { weather: 'clear', timeOfDay: 'noon', surfacePatches: [] },
       },
-      assets: [], seed: 1,
+      assets: [{ assetId: actorClosure.inputId, kind: 'catalog', sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes }],
+      seed: 1,
     };
     const inputRecords: RenderInputFile[] = [
       { inputId: 'scenario.xosc', path: xoscPath, sha256: xoscSha256, sizeBytes: xosc.byteLength },
+      { inputId: actorClosure.inputId, path: closurePath, relativePath: actorClosure.relativePath, sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes },
     ];
     for (const entry of await fs.readdir(mapDirectory, { recursive: true, withFileTypes: true })) {
       if (!entry.isFile()) continue;
@@ -120,5 +136,9 @@ suite('native retained service GPU e2e', () => {
       .map((frame) => frame.actors.find((candidate) => candidate.id === actor.id)?.transform.position.join(','))
       .filter(Boolean);
     expect(new Set(positions).size).toBeGreaterThan(1);
+    for (const evidence of ['manifest/native-render.json', 'diagnostics/native-run.json']) {
+      const record = JSON.parse(await fs.readFile(path.join(output, evidence), 'utf8')) as { actorAssetsSha256: string };
+      expect(record.actorAssetsSha256).toBe(actorClosure.sha256);
+    }
   }, 360_000);
 });

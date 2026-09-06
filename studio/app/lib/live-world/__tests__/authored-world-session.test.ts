@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildLaneGraph, parseSimScenarioInput } from '@simforge-oss/engine';
+import { parseSimScenarioInput } from '@simforge-oss/engine';
+import { sessions } from '@simforge-oss/training-env/node';
 
 import {
   applyEgoControl,
@@ -8,7 +9,7 @@ import {
   createAuthoredWorldSession,
 } from '../authored-world-session';
 
-const graph = buildLaneGraph({
+const graph = sessions().engine.laneGraph({
   source: { xodrSha256: 'fixture' },
   lanes: {},
   gates: [],
@@ -38,7 +39,7 @@ function input() {
 describe('authored world session', () => {
   it('runs all compiled actors together and applies ego input as a zero-order-hold act command', () => {
     const compiledInput = input();
-    const world = createAuthoredWorldSession(compiledInput, graph);
+    const world = createAuthoredWorldSession(sessions(), compiledInput, graph);
     const before = world.snapshot();
     assertControllableActor(compiledInput, 'ego');
 
@@ -60,12 +61,12 @@ describe('authored world session', () => {
 
   it('rebuilding the session restores the exact authored t=0 conditions for the 20-second clip', () => {
     const compiledInput = input();
-    const first = createAuthoredWorldSession(compiledInput, graph);
+    const first = createAuthoredWorldSession(sessions(), compiledInput, graph);
     const initial = first.snapshot();
     first.advance(125);
     expect(first.time()).toBeCloseTo(2.5, 8);
 
-    const reset = createAuthoredWorldSession(compiledInput, graph);
+    const reset = createAuthoredWorldSession(sessions(), compiledInput, graph);
     expect(reset.time()).toBe(0);
     expect(reset.snapshot()).toEqual(initial);
     expect(compiledInput.clipSeconds).toBe(20);

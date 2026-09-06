@@ -1,20 +1,20 @@
 "use client";
 
+import { studioHost } from "@/app/lib/host";
 import { DatabaseZap } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProfileMapPreparation } from "@/app/components/ProfileMapPreparation";
-import { SkyCloudBackdrop } from "@/app/components/SkyCloudBackdrop";
-import { useSetPageTitle } from "@/app/components/TopBarSlot";
-import { Button } from "@/app/components/ui/button";
+import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
+import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { readRenderingPreference,
 saveRenderingPreference,
-type RenderingPreference, } from "@/app/components/rendering-preference"
-import { QualityChooser } from "@/app/dashboard/scenario/editor/states/EditorStatePanels";
-import { listMapOptions } from "@/app/dashboard/scenario/list/api";
-import type { ScenarioMapOption } from "@/app/dashboard/scenario/list/document-map-groups";
-import { clearMapAssetCache } from "@/app/lib/maps/frontend/map-asset-cache";
+type RenderingPreference, } from "@simforge-oss/studio-ui/components/rendering-preference"
+import { QualityChooser } from "@simforge-oss/studio-ui/scenario/editor/states/EditorStatePanels";
+import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
+import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 
 type Preparation = {
   profile: RenderingPreference;
@@ -30,7 +30,7 @@ const PROFILE_LABELS: Record<RenderingPreference, string> = {
 
 const RenderingBenchmarkCard = dynamic(
   () =>
-    import("@/app/dashboard/scenario/editor/regions/slots/RenderingBenchmark").then(
+    import("@simforge-oss/studio-ui/scenario/editor/regions/slots/RenderingBenchmark").then(
       (module) => module.RenderingBenchmarkCard,
     ),
   { ssr: false },
@@ -54,7 +54,7 @@ export function RenderSettingsPageClient() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void listMapOptions(controller.signal)
+    void studioHost.artifacts.listMaps(controller.signal)
       .then((maps) => {
         if (controller.signal.aborted) return;
         setBenchmarkTarget(

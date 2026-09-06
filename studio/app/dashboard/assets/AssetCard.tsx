@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowUpRight, Sparkles } from "lucide-react";
-import { CarlaCompatibilityPill } from "@/app/components/CarlaCompatibilityPill";
-import { Badge } from "@/app/components/ui/badge";
-import type { GalleryAssetSummary } from "@/app/lib/asset-gallery/contracts";
+import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 
 /** One tile in the local model catalog. */

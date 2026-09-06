@@ -1,4 +1,39 @@
-import type { LaneGeometry, LaneGraph } from '@simforge-oss/engine';
+/**
+ * OpenDRIVE road-surface elevation from `<elevation>` profiles projected onto
+ * the immutable lane topology. A renderer-side DTO resolver: it reads the
+ * topology index a `MapBundle` exposes and never touches the engine.
+ */
+
+import { pointOf, type TopologyIndex, type TopologyLane } from '@simforge-oss/engine';
+
+interface LaneGeometry {
+  readonly lane: TopologyLane;
+  readonly points: readonly { readonly x: number; readonly y: number }[];
+  readonly cum: readonly number[];
+  readonly lengthM: number;
+}
+
+function laneGeometry(lane: TopologyLane): LaneGeometry | null {
+  const points = lane.polyline.map(pointOf);
+  if (points.length < 2) return null;
+  const cum: number[] = [0];
+  for (let i = 1; i < points.length; i += 1) cum.push(cum[i - 1]! + Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y));
+  return { lane, points, cum, lengthM: cum[cum.length - 1]! };
+}
+
+function widthAt(lane: TopologyLane, s: number): number {
+  const samples = lane.widthSamples;
+  if (!samples || samples.length === 0) return lane.representativeWidthM ?? 3.5;
+  let before = samples[0]!;
+  let after = samples[samples.length - 1]!;
+  for (const sample of samples) {
+    if (sample.s <= s) before = sample;
+    if (sample.s >= s) { after = sample; break; }
+  }
+  if (after.s === before.s) return before.widthM;
+  const t = (s - before.s) / (after.s - before.s);
+  return before.widthM + (after.widthM - before.widthM) * t;
+}
 
 type Poly3 = { s: number; a: number; b: number; c: number; d: number };
 type RoadProfile = { length: number; sectionStarts: number[]; elevations: Poly3[] };
@@ -99,7 +134,7 @@ function projectSampledLane(
  */
 export function buildXodrElevationResolver(
   xodr: string,
-  graph: LaneGraph,
+  topology: TopologyIndex,
   preferredRoadsByActor?: ReadonlyMap<string, ReadonlySet<string>>,
 ): (position: { readonly x: number; readonly y: number; readonly actorId?: string }) => number {
   const profiles = parseProfiles(xodr);
@@ -122,8 +157,8 @@ export function buildXodrElevationResolver(
     roadNeighbors.set(b, backward);
   };
   const cells = new Map<string, Set<string>>();
-  for (const rsl of graph.laneRsls()) {
-    const geometry = graph.geometry(rsl);
+  for (const rsl of Object.keys(topology.lanes).sort()) {
+    const geometry = laneGeometry(topology.lanes[rsl]!);
     if (!geometry) continue;
     const driving = geometry.lane.laneType === 'driving';
     const road = profiles.get(geometry.lane.roadId);
@@ -172,7 +207,7 @@ export function buildXodrElevationResolver(
     for (const rsl of nearby) {
       const { geometry, road, sectionStart, sectionEnd, driving, roadId } = laneRecords.get(rsl)!;
       const projected = projectSampledLane(geometry.points, geometry.cum, x, y);
-      if (!projected || projected.d > graph.widthAt(rsl, projected.arcS) / 2 + LANE_EDGE_TOLERANCE_M) continue;
+      if (!projected || projected.d > widthAt(geometry.lane, projected.arcS) / 2 + LANE_EDGE_TOLERANCE_M) continue;
       const roadS = sectionStart + projected.sampleFraction * (sectionEnd - sectionStart);
       candidates.push({ rsl, d: projected.d, elevation: evaluate(road.elevations, roadS), driving, roadId });
     }

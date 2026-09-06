@@ -1,0 +1,81 @@
+{
+  "id": "thr-bus-pullout-accelerates-t19p0950",
+  "kind": "threshold-variant",
+  "mapId": "belmont-research-center",
+  "status": "completed",
+  "inputHash": "dc17f11638e9327d55333033f78abdacdeb8e8fc92849e90d8a6e1393153ad99",
+  "traceDigest": "9c250680cb37ea21c797419cfcfa1b269d3af0daf5a3854f2201ca364af64ca3",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": null,
+      "warm": null
+    },
+    "simulate": {
+      "cold": 69.90386600000011,
+      "warm": {
+        "n": 4,
+        "min": 67.17503899999974,
+        "median": 71.55586549999998,
+        "max": 76.85397200000034,
+        "mean": 71.78518550000001
+      }
+    },
+    "digest": {
+      "cold": 8.966519000000062,
+      "warm": {
+        "n": 4,
+        "min": 7.990910999999869,
+        "median": 8.308292999999821,
+        "max": 8.839269000000058,
+        "mean": 8.361691499999893
+      }
+    },
+    "serialize": {
+      "cold": 14.295901999999842,
+      "warm": {
+        "n": 4,
+        "min": 14.007450000000063,
+        "median": 14.293320000000222,
+        "max": 14.930521000000226,
+        "mean": 14.381152750000183
+      }
+    }
+  },
+  "tickCount": 701,
+  "events": 7,
+  "threshold": {
+    "base": "cmp-bus-pullout-standstill",
+    "interactionId": "bus-accelerates",
+    "conditionKind": "distance",
+    "cmp": "lte",
+    "authoredValue": 19,
+    "value": 19.095,
+    "gridIndex": 41,
+    "predictedFirstTrueT": 0.76,
+    "admissible": true,
+    "actualFire": {
+      "t": 0.76,
+      "forced": false
+    },
+    "predictionMatched": true
+  }
+}

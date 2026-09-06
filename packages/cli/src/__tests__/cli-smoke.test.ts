@@ -146,7 +146,7 @@ describe.skipIf(!haveArtifacts)('simforge — the pipeline', () => {
     const first = await simforge('debug', project, '--sample', '0.1', '--out', out, '--fail-on-fallback');
     expect(first.code).toBe(0);
     const summary = json<{ schema: string; actorCount: number; acceptance: { ok: boolean }; files: string[] }>(first);
-    expect(summary).toMatchObject({ schema: 'uniscenarios.scenario-debug.v1', actorCount: 1, acceptance: { ok: true } });
+    expect(summary).toMatchObject({ schema: 'simforge.scenario-debug/v1', actorCount: 1, acceptance: { ok: true } });
     expect(summary.files).toEqual(['report.json', 'summary.json', 'paths.json', 'input.json', 'compiled-instance.json', 'trace.json.gz']);
     const report = JSON.parse(await readFile(path.join(out, 'report.json'), 'utf8')) as {
       actors: { sedan: Array<{ t: number; x: number; accelerationMps2: number; roadId: string | null }> };

@@ -1,0 +1,246 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+  "traceDigest": "0ff372bb4ab92db184516aaf5c025dedca28ba3fadce5e486bd2a7bd9e9d00f3",
+  "dt": 0.02,
+  "clipSeconds": 16,
+  "warmupSeconds": 2,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 801,
+  "firstT": 0,
+  "lastT": 16,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "late-entry": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "night",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.6,
+          "from": "402:0:1",
+          "to": "67:0:1"
+        },
+        {
+          "t": 1.98,
+          "from": "67:0:1",
+          "to": "346:0:1"
+        },
+        {
+          "t": 6.640000000000001,
+          "from": "346:0:1",
+          "to": "102:0:-1"
+        },
+        {
+          "t": 8.1,
+          "from": "102:0:-1",
+          "to": "1396:0:-1"
+        },
+        {
+          "t": 9.74,
+          "from": "1396:0:-1",
+          "to": "103:0:-1"
+        },
+        {
+          "t": 10,
+          "from": "103:0:-1",
+          "to": "1342:0:-1"
+        },
+        {
+          "t": 13.58,
+          "from": "1342:0:-1",
+          "to": "62:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "late-entry": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.44,
+          "from": "1114:0:-1",
+          "to": "70:0:-6"
+        },
+        {
+          "t": 1.54,
+          "from": "70:0:-6",
+          "to": "1377:0:-6"
+        },
+        {
+          "t": 2.8000000000000003,
+          "from": "1377:0:-6",
+          "to": "71:0:-6"
+        },
+        {
+          "t": 3.52,
+          "from": "71:0:-6",
+          "to": "375:0:-1"
+        },
+        {
+          "t": 5.96,
+          "from": "375:0:-1",
+          "to": "27:0:5"
+        },
+        {
+          "t": 6.92,
+          "from": "27:0:5",
+          "to": "131:0:1"
+        },
+        {
+          "t": 9.02,
+          "from": "131:0:1",
+          "to": "109:0:6"
+        },
+        {
+          "t": 12.48,
+          "from": "109:0:6",
+          "to": "330:0:1"
+        },
+        {
+          "t": 15.52,
+          "from": "330:0:1",
+          "to": "76:0:2"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "signal:1426": {
+      "initial": "red",
+      "transitions": []
+    },
+    "signal:1427": {
+      "initial": "red",
+      "transitions": []
+    },
+    "signal:1477": {
+      "initial": "green",
+      "transitions": []
+    }
+  },
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "ego-bound-signal-green",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "signal:signal:1477.phase",
+      "value": "green"
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "ego-released",
+      "actorId": "ego",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "late-entry-commits",
+      "actorId": "late-entry",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "late-entry",
+      "key": "rules.collisionAvoidance",
+      "value": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "left-bound-signal-red",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "signal:signal:1426.phase",
+      "value": "red"
+    },
+    {
+      "t": 8,
+      "kind": "released",
+      "actorId": "ego",
+      "axis": "longitudinal",
+      "interactionId": "ego-released",
+      "reason": "window"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": true,
+    "ticksSimulated": 801,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "ego",
+        "late-entry"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

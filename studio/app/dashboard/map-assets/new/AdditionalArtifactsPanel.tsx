@@ -1,6 +1,6 @@
 import { Paperclip } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { artifactTypeFromExtension } from "@/app/lib/maps/frontend/add-map-utils";
 import { UploadStatusBadge, type TrackedUpload } from "./UploadStatusBadge";
 

@@ -1,17 +1,17 @@
 "use client";
 
 import { Search, LayoutGrid, Map, X, ArrowUpDown } from "lucide-react";
-import { Input } from "@/app/components/ui/input";
-import { Button } from "@/app/components/ui/button";
-import { Toolbar, ToolbarGroup } from "@/app/components/ui/toolbar";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Toolbar, ToolbarGroup } from "@simforge-oss/studio-ui/components/ui/toolbar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
+} from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import type { CatalogView, CatalogSort } from "./catalog-filters";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 const SORT_LABELS: Record<CatalogSort, string> = {
   date: "Date Added",

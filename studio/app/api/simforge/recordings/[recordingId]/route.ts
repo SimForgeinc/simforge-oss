@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   FinalizeBrowserRecordingSchema,
   UpdateBrowserRecordingProgressSchema,
-} from "@/app/lib/scenario/recording-contracts";
+} from "@simforge-oss/studio-ui/lib/scenario/recording-contracts";
 import {
   readJson,
   requireScenarioContext,

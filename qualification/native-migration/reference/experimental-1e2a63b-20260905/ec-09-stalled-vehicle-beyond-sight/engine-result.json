@@ -1,0 +1,17 @@
+{
+  "issues": [
+    {
+      "code": "spawn_lane_pose_mismatch",
+      "severity": "warning",
+      "path": "actors.umbrella-pedestrian.initial",
+      "reason": "authored pose and lane station differ by 0.36 m; the authored pose is preserved and lane progress is reprojected",
+      "detail": {
+        "rsl": "7:0:-2",
+        "authoredS": 27.247138914322363,
+        "projectedS": 27.24717116382927,
+        "mismatchM": 0.3606537209916261
+      }
+    }
+  ],
+  "arrival": []
+}

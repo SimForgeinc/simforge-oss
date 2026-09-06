@@ -1119,7 +1119,10 @@ fn spawn_actor_if_needed(
         .get(&desc.id)
         .map(String::as_str)
         .unwrap_or(&desc.catalog_id);
-    if let Some(recipe) = models.recipes.get(recipe_key) {
+    let recipe = (!crate::catalog::body_centred_origin(&desc.catalog_id))
+        .then(|| models.recipes.get(recipe_key))
+        .flatten();
+    if let Some(recipe) = recipe {
         // --- catalog GLB path: shared mesh/material handles ---------------
         let scale = if recipe.scale_to_dims {
             match (recipe.model_length_m, desc.dims) {
@@ -1216,9 +1219,13 @@ fn spawn_actor_if_needed(
         }
     } else {
         // --- primitive fallback: prototypes shared across same-shape actors
+        let shape = if crate::catalog::body_centred_origin(&desc.catalog_id) {
+            desc.catalog_id.as_str()
+        } else {
+            desc.actor_class.as_str()
+        };
         let proto_key = format!(
-            "{}|{:.0}x{:.0}x{:.0}",
-            desc.actor_class,
+            "{shape}|{:.0}x{:.0}x{:.0}",
             dims.l * 1000.0,
             dims.w * 1000.0,
             dims.h * 1000.0
@@ -1417,18 +1424,24 @@ fn apply_tick(
             }
             _ => *visibility = Visibility::Visible,
         }
+        // Body-centred catalog entries carry their own height; everything
+        // else is a ground-contact origin placed on the playback ground.
+        let body_centred = pb
+            .state
+            .actors
+            .iter()
+            .any(|d| d.id == rec.id && crate::catalog::body_centred_origin(&d.catalog_id));
         transform.translation = Vec3::new(
             rec.position[0] as f32,
-            pb.args.ground_y,
+            if body_centred { rec.position[1] as f32 } else { pb.args.ground_y },
             rec.position[2] as f32,
         );
-        let q = Quat::from_xyzw(
+        transform.rotation = Quat::from_xyzw(
             rec.rotation[0] as f32,
             rec.rotation[1] as f32,
             rec.rotation[2] as f32,
             rec.rotation[3] as f32,
         );
-        transform.rotation = q;
 
     }
 

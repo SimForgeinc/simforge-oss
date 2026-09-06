@@ -1,0 +1,628 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "red-light-late-entry",
+      "templateVersion": 2,
+      "templateDigest": "1cbab48e2762fa5f",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "03ae9501df700a67",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "03ae9501df700a67#-1",
+    "archetype": "intersection.red-light-late-entry",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "03ae9501df700a67",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "junction:345",
+      "entryLaneRsl": "67:0:1",
+      "egoTurn": "straight",
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "80.28 m of runway available, 65 m needed",
+        "88.73 m of runway available, 45 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)",
+        "origin feature sits at s = 0 by construction",
+        "4-arm junction",
+        "conflicting from_left straight movement crosses the ego path at 102.84°",
+        "signalized junction as requested",
+        "reference path turns straight",
+        "late-entry: bound to gate 345:16:-6--1 (from_left straight), crossing at 101° (template 90°)"
+      ]
+    },
+    "params": {
+      "values": {
+        "arrivalDeltaS": 2.15
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "68:0:1",
+        "spawnS": 46.729944542902984,
+        "initialSpeedMps": 10.555555555555555,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "late-entry",
+        "actorKind": "car",
+        "roleKind": "conflicting_gate",
+        "laneRsl": "31:0:-5",
+        "spawnS": 0,
+        "initialSpeedMps": 11.666666666666668,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [
+      {
+        "interactionId": "role:late-entry",
+        "actorId": "late-entry",
+        "referenceActorId": "ego",
+        "spawnDeltaS": 150.17349948091828,
+        "spawnS": 150.17349948091828,
+        "targetDeltaT": 2.15,
+        "achievedDeltaT": 2.1499650523448866,
+        "achievedTtc": -2.1499650523448866,
+        "fireTime": 5.1065293985250655,
+        "iterations": 18,
+        "converged": true
+      }
+    ],
+    "inputHash": "2611767c700423457b0de3f9003c490a76b0621a10d78a0d7be1a527ad6b7634",
+    "feasible": true,
+    "issues": [
+      {
+        "code": "runway_insufficient",
+        "severity": "warning",
+        "path": "actors.late-entry.behavior.route",
+        "reason": "route provides 187.4 m ahead of the spawn but the actor covers 210.0 m in 16 s",
+        "detail": {
+          "availableM": 187.3900388520886,
+          "neededM": 210.00000000000074,
+          "clipSeconds": 16
+        }
+      }
+    ],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "late-entry-ignores-signal",
+        "actorId": "late-entry",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "roles.late-entry.route",
+        "reason": "lane chain extended upstream by 7 lane(s) to give the arrival solver temporal runway",
+        "impact": "informational"
+      },
+      {
+        "path": "signalPrograms",
+        "reason": "18 physical map signal head(s) bound as 3 logical program(s) to junction 345 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 16,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "night",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "68:0:1",
+            "s": 1.7700554570969302,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 672.2126053218831,
+            "z": -1667.6625338295978,
+            "headingRad": 0.9828874184750536
+          },
+          "speedMps": 10.555555555555555
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "68:0:1",
+              "402:0:1",
+              "67:0:1",
+              "346:0:1",
+              "102:0:-1",
+              "1396:0:-1",
+              "103:0:-1",
+              "1342:0:-1",
+              "62:0:-1",
+              "800:0:-1",
+              "60:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 10.555555555555555
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "late-entry",
+        "kind": "car",
+        "dims": {
+          "l": 4.05,
+          "w": 1.75,
+          "h": 1.46
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "31:0:-5",
+            "s": 5.286198778331652,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 645.0579524397009,
+            "z": -1772.3689354916721,
+            "headingRad": -0.841184742567758
+          },
+          "speedMps": 11.666666666666668
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": false,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "268:0:-1",
+              "30:0:-6",
+              "485:0:-1",
+              "31:0:-5",
+              "1114:0:-1",
+              "70:0:-6",
+              "1377:0:-6",
+              "71:0:-6",
+              "375:0:-1",
+              "27:0:5",
+              "131:0:1",
+              "109:0:6",
+              "330:0:1",
+              "76:0:2"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 11.666666666666668
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:late-entry",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:conflicting_gate",
+          "catalog:vehicle.hatchback"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ego-bound-signal-green",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "set",
+        "target": {
+          "key": "signal:signal:1477.phase",
+          "value": "green"
+        }
+      },
+      {
+        "id": "ego-released",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "signal",
+            "signalId": "signal:1477",
+            "phase": "green"
+          },
+          "byLatest": 8,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 8
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 10.555555555555555
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "time",
+          "value": 0.8
+        }
+      },
+      {
+        "id": "late-entry-commits",
+        "actorId": "late-entry",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "signal",
+            "signalId": "signal:1426",
+            "phase": "red"
+          },
+          "byLatest": 8,
+          "ifNever": "fire"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 8
+        },
+        "verb": "set",
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "left-bound-signal-red",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "set",
+        "target": {
+          "key": "signal:signal:1426.phase",
+          "value": "red"
+        }
+      }
+    ],
+    "signalPrograms": [
+      {
+        "id": "signal:1426",
+        "phases": [
+          {
+            "phase": "red",
+            "durationS": 30
+          },
+          {
+            "phase": "green",
+            "durationS": 12
+          },
+          {
+            "phase": "yellow",
+            "durationS": 3
+          },
+          {
+            "phase": "red",
+            "durationS": 15
+          }
+        ],
+        "offsetS": 23,
+        "loop": true,
+        "stopLines": [
+          {
+            "rsl": "18:0:-2",
+            "s": 7.406970529479786,
+            "connectingLaneRsls": [
+              "356:0:-1"
+            ]
+          },
+          {
+            "rsl": "71:0:-2",
+            "s": 7.511175490921346,
+            "connectingLaneRsls": [
+              "359:0:-1"
+            ]
+          }
+        ],
+        "mapBinding": {
+          "junctionId": "345",
+          "controllerIds": [
+            "1571"
+          ],
+          "headIds": [
+            "1426",
+            "1429",
+            "1480",
+            "1518"
+          ],
+          "controllerHeadGroups": [
+            {
+              "controllerId": "1571",
+              "headIds": [
+                "1426",
+                "1429",
+                "1480",
+                "1518"
+              ]
+            }
+          ],
+          "timingSource": "synthetic-default"
+        }
+      },
+      {
+        "id": "signal:1427",
+        "phases": [
+          {
+            "phase": "red",
+            "durationS": 45
+          },
+          {
+            "phase": "green",
+            "durationS": 12
+          },
+          {
+            "phase": "yellow",
+            "durationS": 3
+          }
+        ],
+        "offsetS": 23,
+        "loop": true,
+        "stopLines": [
+          {
+            "rsl": "18:0:-3",
+            "s": 7.4024394915455005,
+            "connectingLaneRsls": [
+              "384:0:-1"
+            ]
+          },
+          {
+            "rsl": "18:0:-6",
+            "s": 7.399269934892359,
+            "connectingLaneRsls": [
+              "377:0:-1"
+            ]
+          },
+          {
+            "rsl": "18:0:-8",
+            "s": 7.396308348577504,
+            "connectingLaneRsls": [
+              "380:0:-1"
+            ]
+          },
+          {
+            "rsl": "71:0:-3",
+            "s": 7.510994857830839,
+            "connectingLaneRsls": [
+              "376:0:-1"
+            ]
+          },
+          {
+            "rsl": "71:0:-4",
+            "s": 7.510990143171178,
+            "connectingLaneRsls": [
+              "373:0:-1"
+            ]
+          },
+          {
+            "rsl": "71:0:-5",
+            "s": 7.510999917954207,
+            "connectingLaneRsls": [
+              "374:0:-1"
+            ]
+          }
+        ],
+        "mapBinding": {
+          "junctionId": "345",
+          "controllerIds": [
+            "1572"
+          ],
+          "headIds": [
+            "1427",
+            "1428",
+            "1430",
+            "1431",
+            "1475",
+            "1476",
+            "1479",
+            "1519"
+          ],
+          "controllerHeadGroups": [
+            {
+              "controllerId": "1572",
+              "headIds": [
+                "1427",
+                "1428",
+                "1430",
+                "1431",
+                "1475",
+                "1476",
+                "1479",
+                "1519"
+              ]
+            }
+          ],
+          "timingSource": "synthetic-default"
+        }
+      },
+      {
+        "id": "signal:1477",
+        "phases": [
+          {
+            "phase": "green",
+            "durationS": 27
+          },
+          {
+            "phase": "yellow",
+            "durationS": 3
+          },
+          {
+            "phase": "red",
+            "durationS": 30
+          }
+        ],
+        "offsetS": 23,
+        "loop": true,
+        "stopLines": [
+          {
+            "rsl": "102:0:1",
+            "s": 1,
+            "connectingLaneRsls": [
+              "347:0:1"
+            ]
+          },
+          {
+            "rsl": "102:0:1",
+            "s": 1,
+            "connectingLaneRsls": [
+              "360:0:1"
+            ]
+          },
+          {
+            "rsl": "102:0:2",
+            "s": 1,
+            "connectingLaneRsls": [
+              "370:0:1"
+            ]
+          },
+          {
+            "rsl": "67:0:1",
+            "s": 1,
+            "connectingLaneRsls": [
+              "346:0:1"
+            ]
+          },
+          {
+            "rsl": "67:0:1",
+            "s": 1,
+            "connectingLaneRsls": [
+              "352:0:1"
+            ]
+          },
+          {
+            "rsl": "67:0:1",
+            "s": 1,
+            "connectingLaneRsls": [
+              "357:0:1"
+            ]
+          }
+        ],
+        "mapBinding": {
+          "junctionId": "345",
+          "controllerIds": [
+            "1569",
+            "1570"
+          ],
+          "headIds": [
+            "1477",
+            "1478",
+            "1525",
+            "1526",
+            "1527",
+            "1528"
+          ],
+          "controllerHeadGroups": [
+            {
+              "controllerId": "1569",
+              "headIds": [
+                "1477",
+                "1478",
+                "1525",
+                "1526",
+                "1527",
+                "1528"
+              ]
+            },
+            {
+              "controllerId": "1570",
+              "headIds": [
+                "1477",
+                "1478",
+                "1525",
+                "1526",
+                "1527",
+                "1528"
+              ]
+            }
+          ],
+          "timingSource": "synthetic-default"
+        }
+      }
+    ],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

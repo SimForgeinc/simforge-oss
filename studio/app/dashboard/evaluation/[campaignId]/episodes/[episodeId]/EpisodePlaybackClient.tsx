@@ -3,23 +3,23 @@
 import { ArrowLeft, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSetPageTitle } from "@/app/components/TopBarSlot";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { PageHeader } from "@/app/components/ui/page-header";
+} from "@simforge-oss/studio-ui/components/ui/card";
+import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import type {
   EvalEpisodePayload,
   EvalEvent,
   EvalViewTick,
 } from "@/app/lib/evaluation/contracts";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "../../../shared";
 
 const EVENT_COLOR: Record<EvalEvent["severity"], string> = {

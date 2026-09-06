@@ -315,9 +315,7 @@ describe('dirty tracking', () => {
     expect(doc.isDirty).toBe(true);
   });
 
-  // The complementary case — a migrated file loads *dirty* — lives in
-  // migrate.test.ts, where the migration chain can be stubbed.
-  it('loads clean when the file needed no migration', () => {
+  it('loads clean from JSON', () => {
     const clean = ScenarioDocument.fromJSON(validScenario());
     expect(clean.isDirty).toBe(false);
   });

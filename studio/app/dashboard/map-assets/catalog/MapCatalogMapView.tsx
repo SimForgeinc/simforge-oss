@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { MapAsset } from "@simforge-oss/studio-shared";
 import MapAssetsMapDynamic from "@/app/components/map-assets-map/MapAssetsMapDynamic";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { getCardStats, getMapCapabilities, humanizeTag, rankDominantTags } from "./map-card-data";
 import { CapabilityHints, CardStatsRow } from "./map-card-display";
 

@@ -1,0 +1,172 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "8732f3bde89210dbf2dfdda3acb476aa3e00be02ae70eaaf9862a0c11612556e",
+  "traceDigest": "0a75cb2edf2a559135bb2975e986f6e84d3c16a0292725bd3801167dbddce4b5",
+  "dt": 0.02,
+  "clipSeconds": 12,
+  "warmupSeconds": 1,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 601,
+  "firstT": 0,
+  "lastT": 12,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "late-merger": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "terminal-channelizer": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 12
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "late-merger": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 12
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "terminal-channelizer": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 12
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "control:closing-lane-red-x": {
+      "initial": "red_x",
+      "transitions": []
+    }
+  },
+  "events": [
+    {
+      "t": 3.7600000000000002,
+      "kind": "trigger_fired",
+      "interactionId": "merge-at-temporary-taper",
+      "actorId": "late-merger",
+      "verb": "changeLane",
+      "forced": false
+    },
+    {
+      "t": 3.7600000000000002,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "late-merger",
+      "interactionId": "merge-at-temporary-taper",
+      "requestedDurationS": 7.2040574030549696,
+      "effectiveDurationS": 7.2040574030549696,
+      "displacementM": -4.668229197179621
+    },
+    {
+      "t": 4.5600000000000005,
+      "kind": "trigger_fired",
+      "interactionId": "ego-yields-to-late-merger",
+      "actorId": "ego",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 7.895298088871847,
+      "kind": "collision",
+      "a": "ego",
+      "b": "late-merger"
+    },
+    {
+      "t": 7.895298088871847,
+      "kind": "crash_disabled",
+      "actorId": "ego",
+      "otherId": "late-merger",
+      "reason": "material-collision"
+    },
+    {
+      "t": 7.895298088871847,
+      "kind": "interaction_aborted",
+      "interactionId": "merge-at-temporary-taper",
+      "actorId": "late-merger",
+      "reason": "collision"
+    },
+    {
+      "t": 7.895298088871847,
+      "kind": "crash_disabled",
+      "actorId": "late-merger",
+      "otherId": "ego",
+      "reason": "material-collision"
+    }
+  ],
+  "metrics": {
+    "collisions": [
+      {
+        "t": 7.895298088871847,
+        "a": "ego",
+        "b": "late-merger"
+      }
+    ],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 601,
+    "minTTCPair": [
+      "ego",
+      "late-merger"
+    ],
+    "minDistancePairs": [
+      [
+        "ego",
+        "late-merger"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

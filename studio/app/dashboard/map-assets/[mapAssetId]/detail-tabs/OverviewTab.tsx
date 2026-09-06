@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Route, GitFork, PersonStanding, Footprints, Bike, SquareParking, ChevronRight, Loader2 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAsset, MapAssetEnrichmentSnapshot, CandidateLocation } from "@simforge-oss/studio-shared";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
 import { CopyButton } from "@/app/components/CopyButton";

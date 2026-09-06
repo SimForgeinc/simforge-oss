@@ -1,24 +1,68 @@
 import { z } from "zod";
+import { ScenarioTemplateV2Schema, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import {
-  SCENARIO_TEMPLATE_VERSION,
-  ScenarioTemplateV2Schema,
-  type RenderSpecV3,
-  type ScenarioTemplateV2,
-} from "@simforge-oss/scenario";
+  DISABLED_AMBIENT_PROVENANCE,
+  EMPTY_AMBIENT_CONFIG_SHA256,
+  SCENARIO_SCHEMA_VERSION,
+} from "@simforge-oss/studio-ui/lib/scenario/contracts";
 import {
   SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS,
   ScenarioParityEvidenceV1Schema,
   ScenarioRenderWorkerIdentitySchema,
-  type ScenarioParityEvidenceV1,
-  type ScenarioRenderResourceRequest,
 } from "@simforge-oss/studio-shared";
-import { acceptedStoredSchemaId } from "./stored-wire-compat";
+import { ScenarioRendererCapabilitySchema } from "./render-wire-contracts";
+import {
+  SCENARIO_AUTHORING_QUALITY_IDS,
+  SCENARIO_DATASET_VISIBILITIES,
+  SCENARIO_JOB_MODES,
+  SCENARIO_RATING_REVIEWED_VIA,
+  type ScenarioAuthoringQuality,
+} from "@simforge-oss/studio-host";
 
-export const SCENARIO_SCHEMA_VERSION = String(SCENARIO_TEMPLATE_VERSION);
-export const OPENSCENARIO_NATIVE_PROFILE = "ASAM OpenSCENARIO XML 1.4";
-export const SCENARIO_RENDER_CONTRACT_VERSION = "2.0.0";
-export const EMPTY_AMBIENT_CONFIG_SHA256 = "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a";
-export const EMPTY_AMBIENT_RESULT_SHA256 = "1925590408012373ea3cc6b9d02703527531492efb52aa39689d541a0581f840";
+/**
+ * Wire DTOs and enumerations are owned by `@simforge-oss/studio-host`, the
+ * boundary both hosts serve; this module adds the request validation schemas
+ * the local routes parse and re-exports the shared shapes for server code.
+ */
+export {
+  DEFAULT_SCENARIO_AUTHORING_QUALITY_ID,
+  OPENSCENARIO_NATIVE_PROFILE,
+  SCENARIO_AUTHORING_QUALITY_IDS,
+  SCENARIO_DATASET_VISIBILITIES,
+  SCENARIO_JOB_MODES,
+  SCENARIO_RATING_REVIEWED_VIA,
+} from "@simforge-oss/studio-host";
+export type {
+  CreateScenarioRevisionResultDto,
+  ScenarioArtifactDto,
+  ScenarioAuthoringQuality,
+  ScenarioConflictDto,
+  ScenarioDatasetDto,
+  ScenarioDatasetReadinessDto,
+  ScenarioDatasetVisibility,
+  ScenarioDocumentDto,
+  ScenarioDocumentRatingDto,
+  ScenarioDocumentSummaryDto,
+  ScenarioDocumentSummaryPageDto,
+  ScenarioExportDto,
+  ScenarioJobMode,
+  ScenarioJobProvenanceDto,
+  ScenarioMapDescriptorDto,
+  ScenarioRatingAggregateDto,
+  ScenarioRenderJobDto,
+  ScenarioRevisionDto,
+  ScenarioSimulationPreviewDto,
+  ScenarioTagDto,
+} from "@simforge-oss/studio-host";
+
+export {
+  DISABLED_AMBIENT_PROVENANCE,
+  EMPTY_AMBIENT_CONFIG_SHA256,
+  EMPTY_AMBIENT_RESULT_SHA256,
+  SCENARIO_AUTHORING_QUALITY_CHOICES,
+  SCENARIO_RENDER_CONTRACT_VERSION,
+  SCENARIO_SCHEMA_VERSION,
+} from "@simforge-oss/studio-ui/lib/scenario/contracts";
 const AmbientDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const AmbientConfigSchema = z.record(z.unknown());
 
@@ -62,29 +106,9 @@ export const ReserveScenarioMaterializedTrafficSchema = ScenarioMaterializedTraf
   expectedVersion: z.number().int().positive(),
 });
 export const CompleteScenarioMaterializedTrafficSchema = ScenarioMaterializedTrafficReferenceSchema;
-export const DISABLED_AMBIENT_PROVENANCE: ScenarioAmbientProvenance = {
-  mode: "disabled",
-  ambientConfig: {},
-  configSha256: EMPTY_AMBIENT_CONFIG_SHA256,
-  resultSha256: EMPTY_AMBIENT_RESULT_SHA256,
-};
 
-export const SCENARIO_AUTHORING_QUALITY_IDS = [
-  "roads-only",
-  "ultra-low-3d",
-  "minimal",
-  "high",
-] as const;
 export const ScenarioAuthoringQualitySchema = z.enum(SCENARIO_AUTHORING_QUALITY_IDS);
-export type ScenarioAuthoringQuality = z.infer<typeof ScenarioAuthoringQualitySchema>;
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "minimal" satisfies ScenarioAuthoringQuality;
 
-export const SCENARIO_AUTHORING_QUALITY_CHOICES = [
-  { id: "roads-only", label: "Roads Only", guidance: "CPU/software-rendering mode. Keeps 3D roads, every lane marking, signals and actors; city, vegetation and decorative street furniture are not downloaded.", downloadGuidance: "Measured cold load: 11–14 MB", gpuMemoryGuidance: "Resident estimate: 1–6 MB · 0 GB dedicated GPU required", recommended: false },
-  { id: "ultra-low-3d", label: "Low", guidance: "Real navigable 3D roads, buildings and actors with flat unlit colors, no textures, lighting, environment, vegetation or nonessential overlays.", downloadGuidance: "Measured cold load: 18–58 MB", gpuMemoryGuidance: "Resident estimate: 11–47 MB · 1 GB GPU recommended", recommended: false },
-  { id: "minimal", label: "Balanced", guidance: "Road and coarse city context only: no vegetation, low resolution, and very restrained streaming.", downloadGuidance: "Measured cold load: 45–534 MB", gpuMemoryGuidance: "Resident estimate: 370–640 MB · 2 GB GPU recommended", recommended: true },
-  { id: "high", label: "High", guidance: "Sharper viewport with a larger resident scene.", downloadGuidance: "Measured cold load: 44–816 MB", gpuMemoryGuidance: "Resident estimate: 377–1,601 MB · 4 GB GPU recommended", recommended: false },
-] as const satisfies ReadonlyArray<{ id: ScenarioAuthoringQuality; label: string; guidance: string; downloadGuidance: string; gpuMemoryGuidance: string; recommended: boolean }>;
 
 const CanonicalScenarioContentSchema = z
   .custom<ScenarioTemplateV2>((value) => ScenarioTemplateV2Schema.safeParse(value).success, {
@@ -130,10 +154,6 @@ export const ReserveScenarioSimulationPreviewSchema = z.strictObject({
 export const CompleteScenarioSimulationPreviewSchema = ReserveScenarioSimulationPreviewSchema.extend({
   artifactId: z.string().trim().min(1),
 });
-export type ScenarioSimulationPreviewDto = {
-  artifactId: string; draftVersion: number; sha256: string; sizeBytes: number;
-  mediaType: string; downloadUrl: string; createdAt: string;
-};
 
 export const CreateScenarioDatasetSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -149,11 +169,7 @@ export const UpdateScenarioDatasetSchema = z
     message: "Provide a name or a description to update.",
   });
 
-export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export const ScenarioDatasetVisibilitySchema = z.enum(SCENARIO_DATASET_VISIBILITIES);
-export type ScenarioDatasetVisibility = z.infer<typeof ScenarioDatasetVisibilitySchema>;
-
-export const SCENARIO_RATING_REVIEWED_VIA = ["queue", "browser"] as const;
 
 export const UpsertScenarioDocumentRatingSchema = z.object({
   score: z.number().int().min(1).max(5),
@@ -336,7 +352,7 @@ export type ScenarioRenderSensor = z.infer<
 >;
 
 export const ScenarioRenderSpecSchema = z.strictObject({
-  schema: acceptedStoredSchemaId("uniscenario.render-spec/v1").default("uniscenario.render-spec/v1"),
+  schema: z.literal("uniscenario.render-spec/v1").default("uniscenario.render-spec/v1"),
   width: z.number().int().min(64).max(8192),
   height: z.number().int().min(64).max(8192),
   fps: z.number().positive().max(240),
@@ -404,13 +420,7 @@ export const ScenarioRenderSpecSchema = z.strictObject({
 });
 export type ScenarioRenderSpec = z.infer<typeof ScenarioRenderSpecSchema>;
 
-/**
- * Render job modes a row may carry. Both full_render and browser_render execute the same immutable
- * render intent through the registered GPU lease lane; interaction_2d remains the non-render control
- * mode used by legacy validation flows.
- */
-export const ScenarioJobModeSchema = z.enum(["interaction_2d", "full_render", "browser_render"]);
-export type ScenarioJobMode = z.infer<typeof ScenarioJobModeSchema>;
+export const ScenarioJobModeSchema = z.enum(SCENARIO_JOB_MODES);
 
 export const ParityThresholdsSchema = z.strictObject({
   positionM: z.number().nonnegative().max(SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS.positionM),
@@ -453,17 +463,17 @@ export const CompleteArtifactSchema = z.object({
   artifactId: z.string().trim().min(1),
 });
 
-export const RegisterWorkerSchema = z.object({
-  workerNodeId: z.string().trim().min(1).max(200),
-  environment: z.enum(["dev", "staging", "prod"]),
-  workerVersion: z.string().trim().min(1).max(200),
-  imageDigest: z.string().trim().min(1).max(500),
-  capabilities: z.record(z.string(), z.unknown()),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+/**
+ * Operator approval body: the renderer capability document and identity labels
+ * exactly as the worker will present them at `POST /internal/workers/register`.
+ */
+export const ApproveRenderWorkerSchema = z.strictObject({
+  engine: ScenarioRendererCapabilitySchema,
+  labels: z.record(z.string(), z.string()),
+  reason: z.string().trim().min(3).max(500),
 });
 
-export const SetRenderWorkerStateSchema = z.strictObject({
-  state: z.enum(["active", "draining", "disabled"]),
+export const RevokeRenderWorkerApprovalSchema = z.strictObject({
   reason: z.string().trim().min(3).max(500),
 });
 
@@ -539,316 +549,3 @@ export const FailRenderJobSchema = z.object({
     details: z.record(z.string(), z.unknown()).optional(),
   }),
 });
-
-export type ScenarioDocumentDto = {
-  id: string;
-  workspaceId: string;
-  title: string;
-  draftVersion: number;
-  schemaVersion: string;
-  /**
-   * Server-computed digest of the draft's canonical content, from the same
-   * `canonicalContentSha256` a revision is frozen with. The render tab compares it against a
-   * render's `revisionContentSha256` to decide whether that render is outdated; the client's own
-   * `contentHash` uses a different serializer and MUST NOT be compared against either.
-   */
-  contentSha256: string;
-  content: ScenarioTemplateV2;
-  mapVersionId: string | null;
-  datasetId: string;
-  authoringQualityId: ScenarioAuthoringQuality;
-  createdAt: string;
-  updatedAt: string;
-  latestRevisionId: string | null;
-};
-
-export type ScenarioDatasetDto = {
-  id: string;
-  workspaceId: string;
-  name: string;
-  description: string | null;
-  visibility: ScenarioDatasetVisibility;
-  isSystemManaged: boolean;
-  systemSlug: string | null;
-  isDefault: boolean;
-  /** Pinned revision × render-job pairs. Zero until someone pins a revision. */
-  itemCount: number;
-  /** Live documents in the dataset — the number the list actually wants. */
-  documentCount: number;
-  renderSubmittedCount: number;
-  renderCompletedCount: number;
-  exportCompletedCount: number;
-  createdByUserName: string | null;
-  updatedByUserName: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ScenarioDatasetReadinessDto = {
-  summary: { total: number; rendered: number; cosmosed: number; vlmed: number };
-  scenarios: Array<{ id: string; has_render: boolean }>;
-};
-
-/**
- * The per-row shape for the document list.
- *
- * Deliberately carries NO `content`. `ScenarioDocumentDto` ships the whole
- * `ScenarioTemplateV2` and costs a full Zod `parseTemplate()` per row; at 50 rows a page that is
- * fifty schema parses to render a table of titles. Everything here that comes from the template
- * comes from the STORED GENERATED projections added by migration `20260805010000`, so it can never
- * disagree with `content_sha256`.
- *
- * `contentTags` is the template's authored `meta.tags` (hashed content). `tags` is the workspace's
- * organizational catalog (mutable metadata). They are different things — see §6.3.
- */
-export type ScenarioDocumentSummaryDto = {
-  id: string;
-  workspaceId: string;
-  title: string;
-  description: string | null;
-  datasetId: string;
-  datasetSortOrder: number;
-  mapVersionId: string | null;
-  mapLabel: string | null;
-  /** Canonical map-assets identity shared by immutable versions of the same source map. */
-  mapSourceMapId?: string | null;
-  /** Stable first-party preview route for the exact immutable map version used by this document. */
-  mapThumbnailUrl?: string | null;
-  latestRevisionId: string | null;
-  revisionCount: number;
-  archetype: string | null;
-  author: string | null;
-  contentTags: string[];
-  tags: Array<{ id: string; label: string; color: string | null }>;
-  roleCount: number;
-  /** Whether at least one actor has an authored sensor configuration. */
-  hasSensorProfile: boolean;
-  propCount: number;
-  variantCount: number;
-  clipSeconds: number | null;
-  negativeControl: boolean;
-  derivationKind: "copy" | "variation" | "cross_map_variation" | "import" | null;
-  derivedFromDocumentId: string | null;
-  hasRender: boolean;
-  createdByUserName: string | null;
-  updatedByUserName: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ScenarioDocumentSummaryPageDto = {
-  documents: ScenarioDocumentSummaryDto[];
-  nextCursor: string | null;
-};
-
-/**
- * A workspace organizational tag.
- *
- * Strictly separate from the template's authored `meta.tags`, which is hashed content and surfaces
- * as `ScenarioDocumentSummaryDto.contentTags` (§6.3). Nothing here ever reaches
- * `canonical_content`, so renaming or recolouring a tag can never change a document digest.
- */
-export type ScenarioTagDto = {
-  id: string;
-  workspaceId: string;
-  slug: string;
-  label: string;
-  color: string | null;
-  isSystemDefault: boolean;
-  /** Live documents carrying this tag, for the filter dropdown's counts. */
-  documentCount: number;
-};
-
-export type ScenarioDocumentRatingDto = {
-  documentId: string;
-  revisionId: string | null;
-  renderJobId: string | null;
-  raterUserId: string;
-  score: number;
-  comment: string | null;
-  reviewedVia: (typeof SCENARIO_RATING_REVIEWED_VIA)[number];
-  createdAt: string;
-  updatedAt: string;
-};
-
-/** Ports v1's `ScenarioRatingAggregate` one-to-one. */
-export type ScenarioRatingAggregateDto = {
-  documentId: string;
-  ratingCount: number;
-  averageScore: number;
-  minimumScore: number | null;
-  reviewState: "pending" | "accepted" | "rejected";
-  viewerScore: number | null;
-};
-
-export type ScenarioRenderJobDto = {
-  id: string;
-  revisionId: string;
-  executionPackageId: string;
-  originRecordingJobId: string | null;
-  mode: ScenarioJobMode;
-  status: "queued" | "leased" | "running" | "succeeded" | "failed" | "cancelled";
-  progress: number;
-  billingMode: "free";
-  estimatedCost: 0;
-  renderSpec: ScenarioRenderSpec | RenderSpecV3 | null;
-  telemetry: { gpuSeconds?: number; wallSeconds?: number; storageBytes?: number; outputBytes?: number };
-  parityResult: Record<string, unknown> | null;
-  parityEvidence: ScenarioParityEvidenceV1 | null;
-  resourceRequest: ScenarioRenderResourceRequest | object | null;
-  /** Sanitized product signal. Raw node, GPU and host attestation stays attempt-internal. */
-  workerAttestation: Record<string, unknown> | null;
-  failureCode: string | null;
-  failureDetail: unknown;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ScenarioJobProvenanceDto = {
-  documentId: string;
-  revisionId: string;
-  revisionNumber: number;
-  sourceRevisionSha256: string;
-  /** Canonical concrete simulation input hash bound into the XOSC and CARLA execution evidence. */
-  sourceInputDigest: string | null;
-  openScenarioProfile: typeof OPENSCENARIO_NATIVE_PROFILE;
-  compilerVersion: string;
-  validationStatus: string | null;
-  xoscArtifactId: string;
-  xoscSha256: string;
-  executionPackageId: string;
-  executionPackageSha256: string;
-  mapVersionId: string;
-  xodrSha256: string;
-  assetCatalogSha256: string | null;
-  coordinateSystemId: string;
-  coordinateSystemSha256: string;
-  ambient: Record<string, unknown>;
-  /** @deprecated Read `ambient`; retained for one UI compatibility window. */
-  traffic: Record<string, unknown>;
-  capabilityWarnings: unknown[];
-  artifacts: Array<{
-    id: string;
-    kind: string;
-    sha256: string;
-    sizeBytes: number;
-    mediaType: string;
-    metadata: Record<string, unknown>;
-  }>;
-  events: Array<{ sequence: number; type: string; occurredAt: string; payload: Record<string, unknown> }>;
-};
-
-export type ScenarioRevisionDto = {
-  id: string;
-  workspaceId: string;
-  documentId: string;
-  revisionNumber: number;
-  sourceDraftVersion: number;
-  schemaVersion: string;
-  contentSha256: string;
-  mapVersionId: string | null;
-  openScenarioProfile: typeof OPENSCENARIO_NATIVE_PROFILE;
-  export: {
-    id: string;
-    format: "openscenario_xml_1_4";
-    status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-    artifactId: string | null;
-  };
-  createdAt: string;
-};
-
-export type CreateScenarioRevisionResultDto = {
-  revisionId: string;
-  exportId: string;
-  exportStatus: ScenarioRevisionDto["export"]["status"];
-  revision: ScenarioRevisionDto;
-};
-
-export type ScenarioExportDto = {
-  id: string;
-  revisionId: string;
-  format: "openscenario_xml_1_4";
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-  artifactId: string | null;
-  executionPackageId: string | null;
-  compilerVersion: string;
-  errorCode: string | null;
-  errorDetail: unknown;
-  createdAt: string;
-  startedAt: string | null;
-  completedAt: string | null;
-};
-
-export type ScenarioArtifactDto = {
-  id: string;
-  revisionId: string | null;
-  kind: string;
-  mediaType: string;
-  sha256: string;
-  sizeBytes: number;
-  metadata: Record<string, unknown>;
-  downloadUrl: string;
-  downloadExpiresAt: string;
-  createdAt: string;
-};
-
-export type ScenarioMapDescriptorDto = {
-  mapVersionId: string;
-  /** FK-backed `map_versions.source_map_asset_id`: full timestamped `public.map_assets.id`, never a logical display slug. */
-  sourceMapId: string;
-  label: string;
-  locality: string | null;
-  /** Stable route root for every member of this immutable browser bundle. */
-  browserAssetRootUrl: string;
-  browserManifestUrl: string;
-  /** Identity of the complete published browser member closure. */
-  browserClosureSha256: string;
-  artifacts: {
-    xodrSha256: string;
-    topologySha256: string;
-    derivedTopologySha256: string;
-    locationsSha256: string;
-    signalsSha256: string;
-    lanePolygonsSha256: string;
-  };
-  /** Digest of the network bytes referenced by the optional SUMO manifest. */
-  sumoNetworkSha256: string | null;
-  topologyArtifactUrl: string;
-  /** Presigned gzipped derived topology; null when the map version has no available artifact. */
-  derivedTopologyUrl: string | null;
-  /** Presigned gzipped locations; null when the map version has no available artifact. */
-  locationsUrl: string | null;
-  /** Presigned SUMO network; null when the map version has no matching available artifact. */
-  sumoNetworkUrl: string | null;
-  /** Stable first-party route for the independently versioned Scenario preview artifact. */
-  thumbnailUrl: string | null;
-  /**
-   * Presigned `signals.geojson`, or null when the map version publishes none.
-   *
-   * The browser needs the FEATURES, not the XODR: `buildSignalOverlay` (and so
-   * `buildTrafficLightOrbLayer`, which reads that overlay's `userData.byId`)
-   * takes `SignalFeature[]` from this artifact. `map_versions.signals_artifact_id`
-   * has always carried it and `compiler-control-store.ts` already reads it; it
-   * was simply not exposed to the editor, which is why v2's renderer builds no
-   * signal overlay at all today.
-   *
-   * The editor's *authoring* surface does not use this. Its
-   * `EditorSignalControlProjection` is built server-side from the artifact bytes
-   * (`signals/projection-store.server.ts`), because the inputs are tens of
-   * megabytes and the answer is tens of kilobytes.
-   *
-   * Presigned per request like the other artifact URLs here, and never cached:
-   * `MEDIA_URL_TTL_SECONDS` is 3600 at the IAM role ceiling and no `cacheLife`
-   * profile is safe (plan §2.5.3).
-   */
-  signalsArtifactUrl: string | null;
-  xodr: { artifactId: string; sha256: string };
-  coordinateSystem: { id: string; sha256: string };
-};
-
-export type ScenarioConflictDto = {
-  error: "draft_version_conflict";
-  refetch: true;
-  currentDraftVersion: number;
-  current: ScenarioDocumentDto;
-};

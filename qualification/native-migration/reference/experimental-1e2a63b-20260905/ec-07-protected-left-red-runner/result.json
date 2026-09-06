@@ -1,0 +1,105 @@
+{
+  "id": "ec-07-protected-left-red-runner",
+  "kind": "instance",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "8e57253a58b9359ed3e69a36db4ad4e08b3900269d9c21e42d14c68addb1206d",
+  "traceDigest": "6c9a2920cb6e01c4da2aceeee006740ca8a425deac418efbeb0d499a15deaf5e",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 148.372406,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 8.66906400000002,
+      "warm": {
+        "n": 4,
+        "min": 1.728302999999869,
+        "median": 3.2373565000001463,
+        "max": 4.126655999999912,
+        "mean": 3.0824180000000183
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 348.518231,
+      "warm": {
+        "n": 4,
+        "min": 0.003478999999970256,
+        "median": 0.004041500000084852,
+        "max": 0.00507900000002337,
+        "mean": 0.004160250000040833
+      }
+    },
+    "simulate": {
+      "cold": 627.1534559999999,
+      "warm": {
+        "n": 4,
+        "min": 387.28757700000006,
+        "median": 435.8217175,
+        "max": 468.56661699999995,
+        "mean": 431.87440725
+      }
+    },
+    "digest": {
+      "cold": 34.49018799999999,
+      "warm": {
+        "n": 4,
+        "min": 28.694104000000152,
+        "median": 31.707906499999922,
+        "max": 36.85677799999985,
+        "mean": 32.24167374999996
+      }
+    },
+    "serialize": {
+      "cold": 50.330777000000126,
+      "warm": {
+        "n": 4,
+        "min": 39.41008499999998,
+        "median": 40.84653750000018,
+        "max": 41.34525900000017,
+        "mean": 40.61210475000013
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 15,
+  "issues": 5,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "d1950d17927500b4f977fc1542ce73da038d1af70bba1c1d9aefc26827bb8ccf",
+    "traceDigest": "9c10301c5f2d8e3524e04ea8ab7c1835cdfdf1d215258deea7421ed4e08e61d4",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.cyclist.laneTransitions",
+        "actors.mobility-scooter.laneTransitions",
+        "events.length",
+        "events.0",
+        "metrics.minDistancePairs"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

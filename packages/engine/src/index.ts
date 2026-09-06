@@ -1,26 +1,21 @@
 /**
- * `./index.js` — the deterministic scenario simulation engine
- * (layer 3 of `docs/agent-authoring-architecture.md`).
+ * `@simforge-oss/engine` — host-neutral contracts of the SimForge engine.
  *
- * Pure TypeScript, zod for the input contract, no rendering dependency: the
- * editor preview and the headless CLI run *this* code, byte for byte.
+ * The simulation itself runs in the native runtime. This entry carries what
+ * both hosts share: the `SimScenarioInput` authoring contract (zod), the trace,
+ * metrics, evaluation, scene-state and signal documents the runtime emits,
+ * coordinate-frame helpers, canonical hashing and the ambient/SUMO interchange
+ * formats. Execution façades live in `./node` (N-API) and `./browser` (WASM):
  *
  * ```ts
- * const graph = buildLaneGraph(await loadTopologyIndex(url));
- * const input = parseSimScenarioInput(doc);
- * const { trace } = runSimulation(input, { graph });
+ * import { buildLaneGraph, runSimulation, evaluateTrace } from '@simforge-oss/engine/node';
+ * const graph = buildLaneGraph(topologyBytes);
+ * const { trace } = runSimulation(parseSimScenarioInput(doc), { graph });
  * const verdict = evaluateTrace(trace);
  * ```
  */
 
-export { ENGINE_VERSION } from './version.js';
-
 /* ------------------------------------------------------------- the contract */
-export {
-  resolveOverlappingControlLanes,
-  type ControlBindingRepair,
-} from './sim/signals.js';
-
 export {
   simScenarioInputSchema,
   parseSimScenarioInput,
@@ -30,6 +25,7 @@ export {
   ACTOR_KINDS,
   MOTION_PHYSICS_MODES,
   DEFAULT_MOTION_PHYSICS_MODE,
+  DYNAMIC_V1_DEFAULT_SUBSTEP_S,
   DEFAULT_ACTOR_DIMS,
   CONTROL_INDICATIONS,
   isPedestrianLikeKind,
@@ -97,147 +93,39 @@ export type {
 } from './schema/input.js';
 export { pruneDanglingAfterInteractions } from './schema/repair.js';
 export type { RemovedDanglingInteraction } from './schema/repair.js';
+export { SURFACE_KINDS, SURFACE_KIND_FRICTION_SCALE } from './environment.js';
+export type { SurfaceKind } from './environment.js';
+export { actorPhysicsBackend, actorPhysicsBackends, physicsBackendCounts } from './physics-provenance.js';
 
 /* ------------------------------------------------------------------ frames */
 export { localFromScene, toSceneXZ, sceneHeading } from './frames.js';
 export type { SceneXZ } from './frames.js';
 
 /* -------------------------------------------------------------------- maps */
-export { buildLaneGraph, LaneGraph, ENDPOINT_TOL_M } from './map/lane-graph.js';
-export type { DirectedLane, LaneGeometry } from './map/lane-graph.js';
 export { pointOf } from './map/topology.js';
 export { decodeTopologyIndex } from './map/decode-topology.js';
 export type { TopologyIndexFile } from './map/decode-topology.js';
 export type {
   LaneRsl,
+  PolylinePoint,
+  TopologyAdjacentLane,
   TopologyGate,
   TopologyIndex,
   TopologyJunction,
   TopologyLane,
+  TopologyLaneChangePermission,
+  TurnRelationName,
 } from './map/topology.js';
-export {
-  buildRoute,
-  buildFollowRoute,
-  buildLanePathRoute,
-  buildSeededPlacementRoute,
-  buildDefaultPlacementRoute,
-  Route,
-  retargetToLane,
-  retargetToNeighbour,
-} from './map/route.js';
-export type { PlacementRouteOptions, RouteLeg, RoutePose, RouteBuildError, SeededPlacementRouteOptions, SeededPlacementRouteResult } from './map/route.js';
 
-/* ------------------------------------------------------------------ engine */
-export { createFixedStepSimulation, runSimulation } from './sim/engine.js';
-export type { StaticColliderClass, StaticMapCollider } from './sim/static-colliders.js';
-export type {
-  ActionHook,
-  ActionHookContext,
-  ActionOverride,
-  AdvanceOptions,
-  EngineTickObservation,
-  FixedStepSimulationProgress,
-  FixedStepSimulationSession,
-  RunOptions,
-  SessionActorSnapshot,
-  SessionPairMinima,
-  SimResult,
-  SimulationSnapshot,
-  TickObserver,
-} from './sim/engine.js';
-export { evaluateCondition } from './sim/triggers.js';
-export type { ConditionContext } from './sim/triggers.js';
-export { buildOccluders, hasLineOfSight, blockingOccluder } from './sim/visibility.js';
-export type { OccluderShape } from './sim/visibility.js';
-export { DEFAULT_DARK_DWELL_S, SignalBook, phaseForbidsEntry, SIGNAL_SNAPSHOT_TICK_HZ, signalSnapshotAt } from './sim/signals.js';
-export type { SignalPhase, SignalState, SignalSnapshot, StopLineAuthority, StopLineBinding } from './sim/signals.js';
+/* ------------------------------------------------------------- run results */
+export type { ArrivalSolution, RunOptions, SimResult, StaticColliderClass, StaticMapCollider } from './result.js';
 
-/* ----------------------------------------------------- localised conditions */
-export { SURFACE_KINDS, SURFACE_KIND_FRICTION_SCALE, SurfaceField } from './environment.js';
-export type { SurfaceKind, SurfacePatchSpec, SurfaceQuery, SurfaceSample } from './environment.js';
-export {
-  MOTION_LIMITS_BY_KIND,
-  PEDESTRIAN_LIMITS,
-  VEHICLE_LIMITS,
-  limitsFor,
-  gapScaleFor,
-  requiredDecelFor,
-} from './sim/controllers.js';
-export type { MotionLimits } from './sim/controllers.js';
-export { shapeValue, transitionDuration, transitionValue } from './sim/dynamics.js';
-export {
-  DynamicV1Backend,
-  DYNAMIC_V1_DEFAULT_SUBSTEP_S,
-  GENERIC_PASSENGER_CAR_PROFILE,
-  resolveVehiclePhysicsProfile,
-} from './sim/dynamic-v1.js';
-export type { ResolvedVehiclePhysicsProfile } from './sim/dynamic-v1.js';
-export {
-  TrajectoryFollower,
-  DEFAULT_TRAJECTORY_FOLLOWER_CONFIG,
-  anchorPlanToWorld,
-} from './sim/trajectory-follower.js';
-export type {
-  FollowerCommand,
-  TrackedPose,
-  TrajectoryFollowerConfig,
-  TrajectoryPlanPoint,
-} from './sim/trajectory-follower.js';
-export type {
-  MotionActorInitialization,
-  MotionBackend,
-  MotionIntent,
-  MotionStepResult,
-  PhysicsTelemetrySample,
-  VehicleControl,
-  VehicleMotionState,
-} from './sim/motion-backend.js';
-export { actorPhysicsBackend, actorPhysicsBackends, physicsBackendCounts } from './sim/physics-provenance.js';
-export {
-  alongRouteGapM,
-  articulatedDoorObb,
-  DOOR_MAX_OPEN_ANGLE_RAD,
-  DOOR_OPEN_DURATION_S,
-  isReverseMotion,
-  headwayS,
-  pairKey,
-  readPair,
-  readPathConflict,
-  readStaticPathConflict,
-  sweptObbTimeOfImpact,
-} from './sim/pairs.js';
-export type { DoorName, PairReadout, PathConflictReadout, SweptObbResult } from './sim/pairs.js';
-export type { ActorRuntime, AxisId } from './sim/state.js';
-export { axisOf } from './sim/state.js';
-
-/* ------------------------------------------------------------------ solves */
-export { solveArrival, applyArrivalSolution, resolveArrivalTriggers, ARRIVAL_TOLERANCE_M } from './solve/arrival.js';
-export type { ArrivalSolution } from './solve/arrival.js';
-export { solvePedestrianNearMiss } from './solve/pedestrian-near-miss.js';
-export type { PedestrianNearMissRequest, PedestrianNearMissResult, PedestrianNearMissSolution, PedestrianNearMissDiagnostic, PedestrianNearMissIssueCode, NearMissPass, TimedTrajectoryPoint } from './solve/pedestrian-near-miss.js';
-export { resolvePedestrianProjection } from './solve/pedestrian-projection.js';
-export type { PedestrianProjection, PedestrianProjectionMovement, PedestrianProjectionSegment, PedestrianProjectionSegmentKind } from './solve/pedestrian-projection.js';
-export { verifyNearMissOutcome } from './trace/near-miss.js';
-export { computeRealizedPet } from './trace/realized-pet.js';
-export { computeMinClearance } from './trace/min-clearance.js';
-export type { MinClearanceResult } from './trace/min-clearance.js';
-export type { RealizedPetResult, RealizedPetStatus } from './trace/realized-pet.js';
-export type { NearMissVerification } from './trace/near-miss.js';
-export { checkFeasibility, COMFORT_DECEL_MPS2, HARD_DECEL_MPS2 } from './solve/guards.js';
-export { actionAwareRunwayNeedM, nominalRun, nominalRunwayNeedM } from './solve/nominal.js';
-export type { NominalActor, NominalProbe } from './solve/nominal.js';
+/* ----------------------------------------------------------------- signals */
+export { DEFAULT_DARK_DWELL_S, DEFAULT_DARK_FALLBACK, SIGNAL_SNAPSHOT_TICK_HZ } from './signals.js';
+export type { ControlBindingRepair, SignalPhase, SignalSnapshot, SignalState, StopLineAuthority, StopLineBinding } from './signals.js';
 
 /* ------------------------------------------------------------------- trace */
-export {
-  quantizeTrace,
-  quantizeMetrics,
-  traceToSceneFrame,
-  TRACE_FORMAT_VERSION,
-  LATERAL_OFFSET_TRACE_VERSION,
-  READABLE_TRACE_FORMAT_VERSIONS,
-  isReadableTraceFormatVersion,
-  TRACE_PRECISION,
-} from './trace/trace.js';
+export { traceToSceneFrame, TRACE_FORMAT_VERSION, TRACE_PRECISION } from './trace/trace.js';
 export type {
   ActorTrack,
   ActorPhysicsTrack,
@@ -261,30 +149,10 @@ export type {
   TraceHeader,
   PhysicsTraceProvenance,
 } from './trace/trace.js';
-export { encodeTraceGz, decodeTraceGz, serializeTrace, traceDigest } from './trace/gzip.js';
-export { computeMetrics, criticalityWindow } from './trace/metrics.js';
-export { MONITORED_PAIR_POLICY_VERSION, selectMetricPair } from './trace/monitored-pairs.js';
-export type { MetricPairSelection, MonitoredPairPolicy } from './trace/monitored-pairs.js';
-export {
-  evaluateTrace,
-  evaluateMetrics,
-  criticalityMetricsInWindow,
-  DEFAULT_MAX_DECEL_MPS2,
-  DEFAULT_TRIVIAL_TTC_S,
-} from './trace/evaluate.js';
-export type {
-  EvaluateFilters,
-  RejectCode,
-  RejectFinding,
-  TraceEvaluation,
-} from './trace/evaluate.js';
-export {
-  createBlindReviewPacket,
-  evaluateIntentRubric,
-  intentCriterionSchema,
-  intentRubricSchema,
-  summarizeBehavior,
-} from './trace/intent-rubric.js';
+export { decodeTraceGz, encodeTraceGz, gunzipBytes, gzipBytes, isGzipBytes } from './trace/gzip.js';
+export { DEFAULT_MAX_DECEL_MPS2, DEFAULT_TRIVIAL_PET_S, DEFAULT_TRIVIAL_TTC_S } from './trace/evaluate.js';
+export type { EvaluateFilters, InvariantCheckOptions, InvariantResidualReport, RejectCode, RejectFinding, TraceEvaluation } from './trace/evaluate.js';
+export { intentCriterionSchema, intentRubricSchema } from './trace/intent-rubric.js';
 export type {
   BehaviorSummary,
   BlindReviewPacket,
@@ -325,29 +193,6 @@ export type {
   SimSensor,
 } from './perception/schema.js';
 export {
-  angularSeparationRad,
-  contrastLimitedRangeM,
-  detectionReasonCode,
-  koschmiederContrast,
-  observeTarget,
-  resolutionLimitedRangeM,
-  sensorPose,
-  DETECTION_REASONS,
-  DETECTION_STATUS,
-  KOSCHMIEDER_K,
-} from './perception/model.js';
-export type {
-  DetectionObservation,
-  DetectionReason,
-  DetectionStatusCode,
-  GlareSource,
-  PerceivedTarget,
-  SensorPose,
-} from './perception/model.js';
-export { PerceptionRuntime, inExtent } from './perception/runtime.js';
-export type { LineOfSightFn, PerceptionActorView, PerceptionObserverSpec } from './perception/runtime.js';
-export {
-  quantizeSensorTracks,
   sensorChannelKey,
   SENSOR_TRACE_PRECISION,
   SENSOR_TRACE_REASON_LEGEND,
@@ -355,6 +200,9 @@ export {
 } from './trace/sensor-track.js';
 export type {
   DetectionGap,
+  DetectionReason,
+  DetectionStatusCode,
+  DetectionStatusName,
   MapDivergenceMetric,
   MapDivergenceTrack,
   PerceptionMetrics,
@@ -362,7 +210,6 @@ export type {
   SensorTargetTrack,
   SensorTrack,
 } from './trace/sensor-track.js';
-export type { PerceptionQuery } from './sim/triggers.js';
 
 /* ------------------------------------------------------------------ errors */
 export { SimEngineError, issue } from './errors.js';
@@ -370,62 +217,29 @@ export type { SimIssue, SimIssueCode, SimIssueSeverity } from './errors.js';
 
 /* -------------------------------------------------------------------- util */
 export { canonicalJson, contentHash, sha256, sha256Bytes } from './core/hash.js';
-export { Rng, normalizeSeed, seedFromString } from './core/rng.js';
-export { obbOverlap, obbCorners } from './core/math.js';
+export { obbAt, obbOverlap, obbCorners, obbSeparation, sweptObbTimeOfImpact, type SweptObbResult } from './core/math.js';
 export type { Obb, Vec2 } from './core/math.js';
-
-/* ------------------------------------------------------ SUMO authored world */
-export {
-  buildSumoAuthoredOccupancies,
-  buildSumoRoadOccupancyIndex,
-  sumoAuthoredOccupanciesAt,
-  sumoAuthoredOccupancySourcesAt,
-} from './ambient/authored-occupancy.js';
-export type {
-  SumoAuthoredOccupancy,
-  SumoAuthoredOccupancyKind,
-  SumoAuthoredOccupancySource,
-  SumoRoadOccupancyIndex,
-} from './ambient/authored-occupancy.js';
-
-/* ------------------------------------------------ physics validation */
-export {
-  PHYSICS_VALIDATION_CONTRACT_VERSION,
-  PHYSICS_VALIDATION_GATES,
-  report as physicsValidationReport,
-  validateGoldenReference,
-  validateDeterminism as validatePhysicsDeterminism,
-  validateFrictionCircle,
-  validatePerformance as validatePhysicsPerformance,
-  validateReferenceValue,
-  validateStoppingDistanceMonotonicity,
-  validateTimestepConvergence,
-} from './validation/physics.js';
-export type {
-  FrictionObservation,
-  ValidationFinding as PhysicsValidationFinding,
-  ValidationReport as PhysicsValidationReport,
-  VehicleObservation,
-} from './validation/physics.js';
-export {
-  validateGoldenManeuvers,
-  type GoldenManeuverFixture,
-  type GoldenManeuverReference,
-} from './validation/golden-maneuvers.js';
 
 /* --------------------------------------------------------- ambient traffic */
 export {
   AMBIENT_TRAFFIC_EXTENSION_KEY,
   ambientTrafficProfileFromExtensions,
   ambientTrafficProfileSchema,
-  applyAmbientTraffic,
-  createAmbientCandidatePool,
   defaultAmbientTrafficProfile,
-  materializeAmbientCandidatePool,
-  materializeAmbientTrafficProfile,
-  promoteAmbientActor,
   resolveAmbientTrafficProfile,
-} from './ambient/traffic.js';
+} from './ambient/profile.js';
+export type {
+  AmbientActorProvenance,
+  AmbientCandidate,
+  AmbientCandidatePool,
+  AmbientReservation,
+  AmbientScreeningReason,
+  AmbientTrafficOptions,
+  AmbientTrafficProfile,
+  AmbientTrafficProvenance,
+  AmbientTrafficResult,
+  ResolvedAmbientTrafficProfile,
+} from './ambient/profile.js';
 export {
   MATERIALIZED_TRAFFIC_SCHEMA,
   MATERIALIZED_TRAFFIC_TIME_PRECISION,
@@ -458,24 +272,6 @@ export type {
   MaterializedTrafficSignal,
   MaterializedTrafficSignalState,
 } from './ambient/materialized-traffic.js';
-export { settleAmbientTraffic } from './ambient/settle.js';
-export type {
-  AmbientSettleOptions,
-  AmbientSettleProvenance,
-  AmbientSettleResult,
-} from './ambient/settle.js';
-export type {
-  AmbientActorProvenance,
-  AmbientCandidate,
-  AmbientCandidatePool,
-  AmbientReservation,
-  AmbientScreeningReason,
-  AmbientTrafficOptions,
-  AmbientTrafficProfile,
-  AmbientTrafficProvenance,
-  AmbientTrafficResult,
-  ResolvedAmbientTrafficProfile,
-} from './ambient/traffic.js';
 export {
   buildSumoRouteDocument,
   sumoActorIdHash,
@@ -488,6 +284,18 @@ export {
   validateSumoNetworkManifest,
   validateSumoRuntimeManifest,
 } from './ambient/sumo.js';
+export {
+  buildSumoAuthoredOccupancies,
+  buildSumoRoadOccupancyIndex,
+  sumoAuthoredOccupanciesAt,
+  sumoAuthoredOccupancySourcesAt,
+} from './ambient/authored-occupancy.js';
+export type {
+  SumoAuthoredOccupancy,
+  SumoAuthoredOccupancyKind,
+  SumoAuthoredOccupancySource,
+  SumoRoadOccupancyIndex,
+} from './ambient/authored-occupancy.js';
 export type {
   SumoNetworkManifest,
   SumoNetworkPoint,
@@ -496,13 +304,34 @@ export type {
   SumoRuntimeManifest,
   SumoScenePoint,
 } from './ambient/sumo.js';
-export {
-  DEFAULT_AMBIENT_ROBUSTNESS_CASES,
-  evaluateAmbientRobustness,
-} from './ambient/robustness.js';
+
+/* ------------------------------------------------------- native module shape */
 export type {
-  AmbientRobustnessCase,
-  AmbientRobustnessCaseReport,
-  AmbientRobustnessOptions,
-  AmbientRobustnessReport,
-} from './ambient/robustness.js';
+  NativeBatchResult,
+  NativeBevShape,
+  NativeCompileResult,
+  NativeEnvSession,
+  NativeLaneGraph,
+  NativeMapBundle,
+  NativeModule,
+  NativePolicyHook,
+  NativePolicySession,
+  NativePolicyStepResult,
+  NativeScenarioInput,
+  NativeSeed,
+  NativeSessionBatch,
+  NativeSite,
+  NativePlacementRoute,
+  NativeRoute,
+  NativeSimulation,
+  NativeStepResult,
+  NativeTrace,
+  NativeTrafficHandoff,
+  NativeTruthSubscription,
+  NativeWorldSession,
+  NativeWorldSnapshot,
+} from './native-module.js';
+
+/* ------------------------------------------------------ host-neutral façade */
+export { EngineRuntime, SimulationHandle, TraceHandle } from './runtime.js';
+export type { LaneGraph, NativeMap, RunSimulationOptions, ScenarioInput, ScenarioSource, SimulationProgress, TopologySource, TraceSource } from './runtime.js';

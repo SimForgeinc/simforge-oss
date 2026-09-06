@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+
+# Shared dependency table. Crates opt in with `workspace = true`; crate-local
+# dependencies (clap, libc, napi, pyo3, ...) stay in the owning manifest.
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+thiserror = "2"
+sha2 = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+rmp-serde = "1"
+
+[profile.dev]
+opt-level = 1
+debug = false
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = "fat"

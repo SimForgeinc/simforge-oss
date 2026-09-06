@@ -1,13 +1,16 @@
 import type { TruthFrame } from '@simforge-oss/training-env/browser';
 import {
   ThreeRendererAdapter,
+  actorOrigin,
   followCameraPose,
   indexedWorldHeightSampler,
   type ActorRenderState,
+  type ActorRenderer,
   type CityViewer,
 } from '@simforge-oss/viewer';
 
 export interface TruthViewerBridge {
+  readonly actors: ActorRenderer;
   apply(frame: TruthFrame): void;
   setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
   dispose(): void;
@@ -87,7 +90,7 @@ export function createTruthViewerBridge(
     if (!followId || disposed) return;
     const actor = lastRendered.get(followId);
     if (!actor) return;
-    const pose = followCameraPose(actor, followMode);
+    const pose = followCameraPose(actor, followMode, actorOrigin(actor));
     viewer.controls.applyView({
       position: pose.position,
       target: pose.target,
@@ -96,6 +99,7 @@ export function createTruthViewerBridge(
   };
 
   return {
+    actors: adapter.actors,
     apply(frame) {
       if (disposed) return;
       if (latest && frame.tick <= latest.tick) return;

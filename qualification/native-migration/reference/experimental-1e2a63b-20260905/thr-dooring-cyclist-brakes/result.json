@@ -1,0 +1,711 @@
+{
+  "id": "thr-dooring-cyclist-brakes",
+  "kind": "threshold",
+  "mapId": "yale-street",
+  "status": "derived",
+  "reason": null,
+  "base": "cmp-dooring-cyclist-distance",
+  "interactionId": "cyclist-brakes-for-door",
+  "authoredValue": 6.5,
+  "baseTrigger": {
+    "t": 6.140000000000001,
+    "forced": false
+  },
+  "variantCount": 8,
+  "variants": [
+    "thr-dooring-cyclist-brakes-t6p4675",
+    "thr-dooring-cyclist-brakes-t6p5000",
+    "thr-dooring-cyclist-brakes-t6p5650",
+    "thr-dooring-cyclist-brakes-t6p5975",
+    "thr-dooring-cyclist-brakes-t6p6625",
+    "thr-dooring-cyclist-brakes-t6p6950",
+    "thr-dooring-cyclist-brakes-t6p7600",
+    "thr-dooring-cyclist-brakes-t6p7925"
+  ],
+  "iterations": {
+    "requested": 40,
+    "completed": 40,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 146.37625799999998,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 4.2371029999999905,
+      "warm": null
+    },
+    "compile": {
+      "cold": 182.23349000000002,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 281.056278,
+      "warm": null
+    },
+    "simulate": {
+      "cold": null,
+      "warm": null
+    },
+    "digest": {
+      "cold": null,
+      "warm": null
+    },
+    "serialize": {
+      "cold": null,
+      "warm": null
+    }
+  },
+  "children": [
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p4675",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "6be178ac7ceeb379eeaabea9bf2d30adb557f9288f36928431d73b7cd7019d3d",
+      "traceDigest": "84ef462c890a07435dfdb56eaf9f5be3faf4fb37265cb49921e73a2c45c2f5b2",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 101.76669700000002,
+          "warm": {
+            "n": 4,
+            "min": 79.927276,
+            "median": 83.44000449999999,
+            "max": 90.28814299999999,
+            "mean": 84.27385699999999
+          }
+        },
+        "digest": {
+          "cold": 8.516656000000012,
+          "warm": {
+            "n": 4,
+            "min": 6.786788999999999,
+            "median": 6.862583000000029,
+            "max": 7.228202999999894,
+            "mean": 6.935039499999988
+          }
+        },
+        "serialize": {
+          "cold": 23.476562000000058,
+          "warm": {
+            "n": 4,
+            "min": 9.458114000000023,
+            "median": 9.700694500000054,
+            "max": 10.108649000000014,
+            "mean": 9.742038000000036
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.4675,
+        "gridIndex": 39,
+        "predictedFirstTrueT": 6.16,
+        "admissible": false,
+        "actualFire": {
+          "t": 6.16,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p5000",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "0687676213e1f262f77e1cdf023c517fca89573f5ed8a7a38b86d8cd910e7c60",
+      "traceDigest": "e64a6bcf392b035b64dba77623e34e48af0fa1abe94d4dfde4cb5f45540a795d",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 83.00701500000014,
+          "warm": {
+            "n": 4,
+            "min": 80.62844600000017,
+            "median": 81.11058200000002,
+            "max": 82.32989899999984,
+            "mean": 81.29487725000001
+          }
+        },
+        "digest": {
+          "cold": 6.87847899999997,
+          "warm": {
+            "n": 4,
+            "min": 6.713940999999977,
+            "median": 7.114690999999993,
+            "max": 7.471971999999823,
+            "mean": 7.103823749999947
+          }
+        },
+        "serialize": {
+          "cold": 9.222144999999955,
+          "warm": {
+            "n": 4,
+            "min": 9.07527499999992,
+            "median": 9.402935999999954,
+            "max": 10.022782000000007,
+            "mean": 9.475982249999959
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.5,
+        "gridIndex": 40,
+        "predictedFirstTrueT": 6.140000000000001,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.140000000000001,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p5650",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "3f9ce973adf77391f48e79b6d2089912bb0bb86366d4b3b798dd08e1d1bc0107",
+      "traceDigest": "a098710e0af7d70a50122ad939ed43e19e10bfcb69bedecd81761684527740dd",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 79.58615299999997,
+          "warm": {
+            "n": 4,
+            "min": 79.98520200000007,
+            "median": 81.48861799999986,
+            "max": 84.7716220000002,
+            "mean": 81.933515
+          }
+        },
+        "digest": {
+          "cold": 6.771486999999979,
+          "warm": {
+            "n": 4,
+            "min": 6.7147939999999835,
+            "median": 6.778039000000035,
+            "max": 6.810788999999659,
+            "mean": 6.770415249999928
+          }
+        },
+        "serialize": {
+          "cold": 9.051554000000124,
+          "warm": {
+            "n": 4,
+            "min": 9.023812999999791,
+            "median": 9.409683499999915,
+            "max": 9.791094000000157,
+            "mean": 9.408568499999944
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.565,
+        "gridIndex": 42,
+        "predictedFirstTrueT": 6.140000000000001,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.140000000000001,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p5975",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "adb1613e324d8711f5c2a0c3d6541b8b4bb516e8f1d7dc7e0b2c97d3af25d0c5",
+      "traceDigest": "1a0a7eafc01cd36bb981e5e666debbbfad34e2242cdfa7248056ad2584c930c2",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 79.02775599999995,
+          "warm": {
+            "n": 4,
+            "min": 78.24219799999992,
+            "median": 78.95894500000009,
+            "max": 79.78710199999978,
+            "mean": 78.98679749999997
+          }
+        },
+        "digest": {
+          "cold": 6.704753999999866,
+          "warm": {
+            "n": 4,
+            "min": 6.738297999999759,
+            "median": 6.742381499999965,
+            "max": 6.862521999999899,
+            "mean": 6.771395749999897
+          }
+        },
+        "serialize": {
+          "cold": 8.76862200000005,
+          "warm": {
+            "n": 4,
+            "min": 8.763302000000294,
+            "median": 8.89201399999979,
+            "max": 9.310268000000178,
+            "mean": 8.964399500000013
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.5975,
+        "gridIndex": 43,
+        "predictedFirstTrueT": 6.12,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.12,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p6625",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "06055949757a0d33dec139d0c4b0c97090698737212c728cee5fffa51bc0d49e",
+      "traceDigest": "be9f5c5f20793df5694318c27e43154608cc78a0670b3e8a9ca546fb4edc6244",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 79.037417,
+          "warm": {
+            "n": 4,
+            "min": 78.01336899999978,
+            "median": 83.94582000000014,
+            "max": 92.10686699999997,
+            "mean": 84.50296900000001
+          }
+        },
+        "digest": {
+          "cold": 7.43478899999991,
+          "warm": {
+            "n": 4,
+            "min": 6.782704000000194,
+            "median": 6.886396999999988,
+            "max": 7.175525000000107,
+            "mean": 6.932755750000069
+          }
+        },
+        "serialize": {
+          "cold": 9.321692999999868,
+          "warm": {
+            "n": 4,
+            "min": 8.974252999999862,
+            "median": 9.490015999999969,
+            "max": 9.738229000000047,
+            "mean": 9.423128499999962
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.6625,
+        "gridIndex": 45,
+        "predictedFirstTrueT": 6.12,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.12,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p6950",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "260883de70520e20c7206cd1ad03d9882b202748bf6c4c767b080e24a7560334",
+      "traceDigest": "3bf6527a2ce88c0a7ab5b0c1552c7e4e766fdc7d34a541f14394c7f0b15ed50e",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 85.3253679999998,
+          "warm": {
+            "n": 4,
+            "min": 75.97117100000014,
+            "median": 81.69798749999995,
+            "max": 84.330919,
+            "mean": 80.92451625000001
+          }
+        },
+        "digest": {
+          "cold": 6.897627000000284,
+          "warm": {
+            "n": 4,
+            "min": 6.966403999999784,
+            "median": 7.070592999999917,
+            "max": 7.3199639999998,
+            "mean": 7.1068884999998545
+          }
+        },
+        "serialize": {
+          "cold": 8.842069999999694,
+          "warm": {
+            "n": 4,
+            "min": 8.956991000000016,
+            "median": 9.131114000000025,
+            "max": 9.480272000000241,
+            "mean": 9.174872750000077
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.695,
+        "gridIndex": 46,
+        "predictedFirstTrueT": 6.1000000000000005,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.1000000000000005,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p7600",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "f666c179522cc74a7ebedf16916b4405b84e4704efa963b9910a07fd363e9620",
+      "traceDigest": "bfd0b8b2b50a1e8709fb7cd09c89037463f4af293a048e625c478549180f58b0",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 101.75086099999999,
+          "warm": {
+            "n": 4,
+            "min": 83.38647600000013,
+            "median": 93.74101900000028,
+            "max": 101.54305199999999,
+            "mean": 93.10289150000017
+          }
+        },
+        "digest": {
+          "cold": 6.989394000000175,
+          "warm": {
+            "n": 4,
+            "min": 6.800932999999986,
+            "median": 6.92278999999985,
+            "max": 7.333161999999902,
+            "mean": 6.994918749999897
+          }
+        },
+        "serialize": {
+          "cold": 9.046659999999974,
+          "warm": {
+            "n": 4,
+            "min": 9.107659999999669,
+            "median": 9.616156000000046,
+            "max": 11.664398000000347,
+            "mean": 10.001092500000027
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.76,
+        "gridIndex": 48,
+        "predictedFirstTrueT": 6.1000000000000005,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.1000000000000005,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    },
+    {
+      "id": "thr-dooring-cyclist-brakes-t6p7925",
+      "kind": "threshold-variant",
+      "mapId": "yale-street",
+      "status": "completed",
+      "inputHash": "f187dfd0f02cf946eb9468027ef4f96832c612b58cbdc3ba91de265d8ee9288e",
+      "traceDigest": "035d57065480b6bae0ca1e3c4f13b8e117d09ecaf922ced4347958a2088ddb1b",
+      "replayStable": true,
+      "iterations": {
+        "requested": 5,
+        "completed": 5,
+        "failed": 0,
+        "errors": []
+      },
+      "timingMs": {
+        "moduleLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "instanceLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "compile": {
+          "cold": null,
+          "warm": null
+        },
+        "mapLoad": {
+          "cold": null,
+          "warm": null
+        },
+        "simulate": {
+          "cold": 92.36895900000036,
+          "warm": {
+            "n": 4,
+            "min": 76.2630820000004,
+            "median": 77.99058349999996,
+            "max": 79.6425709999994,
+            "mean": 77.97170499999993
+          }
+        },
+        "digest": {
+          "cold": 7.257099999999809,
+          "warm": {
+            "n": 4,
+            "min": 6.754203999999845,
+            "median": 6.81853349999983,
+            "max": 7.170191000000159,
+            "mean": 6.890365499999916
+          }
+        },
+        "serialize": {
+          "cold": 9.168722999999773,
+          "warm": {
+            "n": 4,
+            "min": 9.001266000000214,
+            "median": 9.58761850000019,
+            "max": 9.912559000000329,
+            "mean": 9.52226550000023
+          }
+        }
+      },
+      "tickCount": 501,
+      "events": 3,
+      "threshold": {
+        "base": "cmp-dooring-cyclist-distance",
+        "interactionId": "cyclist-brakes-for-door",
+        "conditionKind": "distance",
+        "cmp": "lte",
+        "authoredValue": 6.5,
+        "value": 6.7925,
+        "gridIndex": 49,
+        "predictedFirstTrueT": 6.08,
+        "admissible": true,
+        "actualFire": {
+          "t": 6.08,
+          "forced": false
+        },
+        "predictionMatched": true
+      }
+    }
+  ]
+}

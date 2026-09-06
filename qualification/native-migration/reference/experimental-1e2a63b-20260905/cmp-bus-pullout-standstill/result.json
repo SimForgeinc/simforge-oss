@@ -1,0 +1,110 @@
+{
+  "id": "cmp-bus-pullout-standstill",
+  "kind": "compiled",
+  "mapId": "belmont-research-center",
+  "status": "completed",
+  "inputHash": "20274ff777a9096197932756f52ab7534ec4bbd4c6032a676187707f1d2851c6",
+  "traceDigest": "84e8c3d36529416e67dc29f463bd7d29169c06cd9862d8831cb6356dd12f92ad",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 165.931009,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 14.162180000000006,
+      "warm": {
+        "n": 4,
+        "min": 0.8977379999998902,
+        "median": 1.04433999999992,
+        "max": 3.1683530000000246,
+        "mean": 1.5386927499999388
+      }
+    },
+    "compile": {
+      "cold": 377.701307,
+      "warm": {
+        "n": 4,
+        "min": 1.7680800000000545,
+        "median": 2.5605170000000044,
+        "max": 4.088946000000078,
+        "mean": 2.7445150000000353
+      }
+    },
+    "mapLoad": {
+      "cold": 248.086545,
+      "warm": {
+        "n": 4,
+        "min": 0.002953000000047723,
+        "median": 0.00358049999999821,
+        "max": 0.005118000000038592,
+        "mean": 0.0038080000000206837
+      }
+    },
+    "simulate": {
+      "cold": 136.00893600000006,
+      "warm": {
+        "n": 4,
+        "min": 67.69560200000001,
+        "median": 72.77240199999983,
+        "max": 98.41028999999992,
+        "mean": 77.9126739999999
+      }
+    },
+    "digest": {
+      "cold": 9.51295499999992,
+      "warm": {
+        "n": 4,
+        "min": 7.950240000000122,
+        "median": 8.269570499999986,
+        "max": 10.654297000000042,
+        "mean": 8.785919500000034
+      }
+    },
+    "serialize": {
+      "cold": 31.150480000000016,
+      "warm": {
+        "n": 4,
+        "min": 13.542991999999913,
+        "median": 16.269258499999978,
+        "max": 17.019340000000057,
+        "mean": 15.775212249999981
+      }
+    }
+  },
+  "tickCount": 701,
+  "events": 7,
+  "issues": 2,
+  "compileIdentity": {
+    "siteId": "5532969124e19a99",
+    "siteScore": 0.582,
+    "degradation": "Degraded match (score 0.58). speeds clamped to the site limit 64 kph (arrival invariants re-solved over the speed parameter). corridor.speedLimitKph worst value 64 at s=0 m, wanted [25, 60]. Presentation was relaxed; the scenario still tests what it was written to test.",
+    "inputHash": "20274ff777a9096197932756f52ab7534ec4bbd4c6032a676187707f1d2851c6",
+    "instanceId": "5532969124e19a99#-1",
+    "replayKey": {
+      "templateId": "bus-pullout",
+      "templateVersion": 2,
+      "templateDigest": "5d8269fc0b0c26b0",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "5532969124e19a99",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [],
+    "expectedInputHash": "20274ff777a9096197932756f52ab7534ec4bbd4c6032a676187707f1d2851c6",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

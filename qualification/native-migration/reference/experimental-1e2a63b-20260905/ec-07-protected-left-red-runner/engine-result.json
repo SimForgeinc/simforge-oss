@@ -1,0 +1,62 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:2230",
+      "reason": "A coincident OpenDRIVE lane was bound to 616:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:2230",
+        "sourceRsl": "74:0:-6",
+        "routeRsl": "616:0:-1",
+        "distanceM": 1.0000146064027762
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:2236",
+      "reason": "A coincident OpenDRIVE lane was bound to 627:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:2236",
+        "sourceRsl": "128:1:-2",
+        "routeRsl": "627:0:-1",
+        "distanceM": 1.0000148507217255
+      }
+    },
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.signal:2236",
+      "reason": "A coincident OpenDRIVE lane was bound to 624:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "signal:2236",
+        "sourceRsl": "128:1:-3",
+        "routeRsl": "624:0:-1",
+        "distanceM": 1.0000148507879982
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.cyclist.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "cyclist"
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.mobility-scooter.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "mobility-scooter"
+      }
+    }
+  ],
+  "arrival": []
+}

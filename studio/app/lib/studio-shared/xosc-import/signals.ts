@@ -34,7 +34,7 @@
  * junction repeat on a schedule nobody authored.
  */
 
-import type { BehaviorSignalState, BehaviorTrigger } from "../scenario-behavior";
+import type { BehaviorSignalState, BehaviorTrigger } from "@simforge-oss/scenario/contracts";
 import {
   SIGNAL_PLAN_SCHEMA_VERSION,
   type JunctionMovementBinding,

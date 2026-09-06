@@ -60,4 +60,10 @@ studio/.next/
 renderer/target/
 renderer/target-*/
 renderer/vendor/bevy_gltf/target/
+
+# Static assets studio/scripts/sync-studio-assets.mjs copies from installed
+# packages (three's Basis transcoder, @simforge-oss/studio-ui/public).
 studio/public/basis/
+studio/public/render-selection/
+studio/public/scenario-editor/carla-mark.png
+studio/public/scenario-editor/driver-behaviors/

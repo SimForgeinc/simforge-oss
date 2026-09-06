@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import {
   collectGalleryCatalogIds,
   galleryCatalogEntry,
-} from "@/app/lib/asset-gallery/catalog-entry";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/catalog-entry";
 import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
 import { queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
@@ -14,7 +14,7 @@ import {
   withScenarioJobTransaction,
   type JobTransaction,
 } from "./jobs/lifecycle-lock";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 const OUTPUT_KIND = {
   xosc: "compiled-xosc",

@@ -1,0 +1,120 @@
+{
+  "id": "cmp-ltap-opposing-distance",
+  "kind": "compiled",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "7e1f86a000800c048b6f73273ce8cf8d442dac8222234c1ee45edabc4ffc221d",
+  "traceDigest": "2cd20cea6cbc7a880a1f6fa3196a228fe07e15ede9643902429cc1a7bdd9a780",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 151.720089,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 10.806816999999995,
+      "warm": {
+        "n": 4,
+        "min": 1.0577630000000227,
+        "median": 1.1233049999999594,
+        "max": 1.3181569999999283,
+        "mean": 1.1556324999999674
+      }
+    },
+    "compile": {
+      "cold": 100.59306400000003,
+      "warm": {
+        "n": 4,
+        "min": 3.561580999999933,
+        "median": 4.799748499999964,
+        "max": 7.834862000000044,
+        "mean": 5.248984999999976
+      }
+    },
+    "mapLoad": {
+      "cold": 365.30554400000005,
+      "warm": {
+        "n": 4,
+        "min": 0.003233000000136599,
+        "median": 0.003872500000056789,
+        "max": 0.0047669999999016,
+        "mean": 0.003936250000037944
+      }
+    },
+    "simulate": {
+      "cold": 262.27421000000004,
+      "warm": {
+        "n": 4,
+        "min": 126.57269300000007,
+        "median": 135.4517955,
+        "max": 347.77658900000006,
+        "mean": 186.31321825000003
+      }
+    },
+    "digest": {
+      "cold": 15.103047999999944,
+      "warm": {
+        "n": 4,
+        "min": 10.380668999999898,
+        "median": 10.769190999999864,
+        "max": 11.605121999999938,
+        "mean": 10.881043249999891
+      }
+    },
+    "serialize": {
+      "cold": 32.40103499999998,
+      "warm": {
+        "n": 4,
+        "min": 19.20279900000014,
+        "median": 20.95264199999997,
+        "max": 21.61353700000018,
+        "mean": 20.680405000000064
+      }
+    }
+  },
+  "tickCount": 801,
+  "events": 7,
+  "issues": 2,
+  "compileIdentity": {
+    "siteId": "5c1b969514a2ff4d",
+    "siteScore": 0.96,
+    "degradation": "Degraded match (score 0.96). junction spans 137.13 m. Presentation was relaxed; the scenario still tests what it was written to test.",
+    "inputHash": "1b8dfc8e4588e584b69e9075d51b742ee813d2db58204d3d8a8b45e75b1e68a0",
+    "instanceId": "5c1b969514a2ff4d#-1",
+    "replayKey": {
+      "templateId": "ltap-opposing",
+      "templateVersion": 2,
+      "templateDigest": "786da163db5abc5a",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "5c1b969514a2ff4d",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "roles.oncoming.route",
+        "reason": "lane chain extended upstream by 1 lane(s) to give the arrival solver temporal runway",
+        "impact": "informational"
+      },
+      {
+        "path": "signalPrograms",
+        "reason": "22 physical map signal head(s) bound as 4 logical program(s) to junction 590 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
+      }
+    ],
+    "expectedInputHash": "1b8dfc8e4588e584b69e9075d51b742ee813d2db58204d3d8a8b45e75b1e68a0",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

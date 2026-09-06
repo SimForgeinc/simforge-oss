@@ -1,8 +1,8 @@
 "use client";
 
 import { Boxes, Map as MapIcon, Upload } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { PageHeader } from "@/app/components/ui/page-header";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { AssetGallerySegmented } from "./AssetGallerySegmented";
 
 /** The two things this library holds. Models and maps share nothing but the shelf. */

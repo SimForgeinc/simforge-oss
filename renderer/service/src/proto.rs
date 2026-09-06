@@ -1,29 +1,22 @@
 //! Wire protocol for the native render service.
 //!
-//! Conventions mirror packages/rl-env/src/env-server.ts: every message is one
-//! u32-LE length-prefixed msgpack payload (max [`MAX_FRAME_BYTES`]); requests
-//! carry `{ i: <sequence>, op: "<verb>", ... }`; responses echo `i`.
+//! Every message is one u32-LE length-prefixed msgpack payload (max
+//! [`MAX_FRAME_BYTES`]); requests carry `{ i: <sequence>, op: "<verb>", ... }`;
+//! responses echo `i`.
+use render_core::engine::{DeviceReady, FrameIdentity};
 use serde::{Deserialize, Serialize};
 
 /// Wire protocol version; bumped on any breaking frame change.
 ///
-/// V2 (V4 SensorRig): adds `load_scene_state`, `reset_cameras`,
-/// `encode_jpeg`; extends `render` with optional `tickIndex`; extends
-/// cameras with optional rigid `attach`, `semantic`, and CARLA
-/// `depthEncoding`. All V2 additions are optional; V1 clients keep working.
-///
-/// V3 (lookdev): adds `set_lighting`, which re-lights a prewarmed scene in
-/// place. Purely additive; V1/V2 clients keep working.
-///
-/// V4 (lookdev AA): **breaking.** `profileConfig.cinematic.taa: bool` is
-/// replaced by `profileConfig.cinematic.aa: "off" | "fxaa" | "smaa-low" |
-/// "smaa-medium" | "smaa-high" | "smaa-ultra" | "taa"`, because FXAA, SMAA
-/// and TAA are alternatives rather than layers. `CinematicFx` is
-/// `#[serde(default)]`, so a V3 client's `taa` key would be *silently*
-/// ignored and fall back to the `taa` default — hence a version bump
-/// rather than a quiet alias. `set_lighting` also now answers with
-/// `anti_alias` and per-camera `camera_anti_alias` component readback.
-pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 4;
+/// V5: every rendered response (`render`, `render_bundle`) carries the
+/// [`FrameIdentity`] of the single submission its payloads were copied
+/// from, and every published frame record carries a CRC32 `digest`. The
+/// per-camera GPU pass set is no longer frozen at first registration: each
+/// `render_bundle` request selects the passes it wants, and a camera
+/// re-sent with a different size, field of view or profile is re-registered
+/// in place. Mounted cameras exclude their host actor from their own view
+/// only. Requests are unchanged from V4.
+pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -73,17 +66,18 @@ pub struct ServiceCamera {
     pub fov_deg: f32,
     pub eye: [f32; 3],
     pub target: [f32; 3],
-    /// V2: also produce the semantic output (derived from the instance-ID
-    /// pass, CARLA byte layout). Requires an `id`-capable camera.
+    /// Also produce the semantic output (derived from the instance-ID pass,
+    /// CARLA byte layout).
     #[serde(default)]
     pub semantic: bool,
-    /// V2: `"linear"` (default, raw reverse-Z Depth32Float passthrough) or
+    /// `"linear"` (default, raw reverse-Z Depth32Float passthrough) or
     /// `"carla"` (24-bit fixed point over a 1000 m far plane, BGRA order).
     #[serde(default)]
     pub depth_encoding: Option<String>,
-    /// V2: rigid attachment — when present, eye/target are re-resolved from
-    /// the attached actor's scene-state transform every render and the
-    /// explicit eye/target fields are ignored.
+    /// Rigid attachment — when present, eye/target are re-resolved from the
+    /// attached actor's scene-state transform every render, the explicit
+    /// eye/target fields are ignored, and the host actor's RGB geometry is
+    /// excluded from this camera's view only.
     #[serde(default)]
     pub attach: Option<CameraAttach>,
     /// Optional per-camera render profile. Omit to inherit the service scene
@@ -147,36 +141,39 @@ pub enum RequestBody {
     Hello,
     /// Add more tiles before first render (map prewarm extension).
     Load { glbs: Vec<String> },
-    /// Render one tick for the given cameras; passes rgb+id+depth.
+    /// Render one tick for the given cameras (rgb + id + depth, plus
+    /// semantic per camera) and publish the frames individually. Cameras
+    /// upsert the retained rig like `render_bundle`.
     Render {
         tick_id: u64,
         cameras: Vec<ServiceCamera>,
         /// When present, PNG export of this tick happens asynchronously into
-        /// this directory (PNG demoted to async export per WSB5).
+        /// this directory after the response.
         #[serde(default)]
         export_dir: Option<String>,
-        /// V2: apply this frame index of the loaded scene-state stream before
-        /// rendering (actor spawn/update/despawn + ego attach resolution).
+        /// Apply this frame index of the loaded scene-state stream before
+        /// rendering (actor spawn/update/despawn + attach resolution).
         #[serde(default)]
         tick_index: Option<u32>,
     },
-    /// V2: load a scene-state.v1 stream (one document per tick, in order).
+    /// Load a scene-state.v1 stream (one document per tick, in order).
     /// Actors are created lazily on the first rendered tick that references
     /// them. `mapId`/`xodrSha256` must match the prewarmed scene contract.
     LoadSceneState { states: Vec<crate::scene::SceneState> },
-    /// V2: drop every registered camera; the next `render` re-registers with
-    /// fresh attributes (CARLA respawn-on-view-change analogue).
+    /// Drop every registered camera, lidar and radar; the next render
+    /// re-registers from its request.
     ResetCameras,
-    /// V2: JPEG-encode cached pass payloads from the last rendered tick and
+    /// JPEG-encode cached pass payloads from the last rendered tick and
     /// publish the results into the shm ring as `jpeg` records.
     EncodeJpeg { items: Vec<JpegItem> },
-    /// F4: render every rig camera for one sim tick and publish an atomic
+    /// Render every rig camera for one sim tick and publish an atomic
     /// frame bundle (per-camera frames + one bundle table record + the
     /// meta-page latest-bundle pointer). `cameras`, when present, upserts the
     /// retained rig (registration order preserved); when absent, the rig from
     /// previous `render_bundle`/`render` calls is reused. `passes` defaults
-    /// to `["rgb"]` and is frozen per camera at first registration
-    /// (`reset_cameras` to change).
+    /// to `["rgb"]` and selects, per request, which outputs are copied
+    /// from the GPU; the instance-ID view renders only when `id` or
+    /// `semantic` is requested.
     RenderBundle {
         sim_tick: u64,
         #[serde(default)]
@@ -194,32 +191,58 @@ pub enum RequestBody {
         /// Subset of `rgb | id | depth | semantic`.
         #[serde(default)]
         passes: Option<Vec<String>>,
+        /// Sensors whose open device streams are filled from this bundle's
+        /// submission (GPU-local copies into a leased slot; no host bytes).
+        #[serde(default)]
+        device_sensors: Option<Vec<String>>,
     },
-    /// V3 (lookdev): re-light the prewarmed scene in place. The tiles and
-    /// the instance-ID pass stay loaded; the lighting ladder, the cinematic
-    /// stack on every registered camera, distance fog and the wet-road ramp
-    /// are rebuilt from these settings. Answers with the engine values that
-    /// were actually applied.
+    /// Re-light the prewarmed scene in place. The tiles and the instance-ID
+    /// pass stay loaded; the lighting ladder, the cinematic stack on every
+    /// registered camera, distance fog and the wet-road ramp are rebuilt
+    /// from these settings. Answers with the engine values that were
+    /// actually applied.
     SetLighting {
         lighting: render_core::engine::Lighting,
         #[serde(default)]
         profile_config: Option<render_core::profiles::RenderProfileConfig>,
-        /// V4: update the live look in place instead of respawning it, so
-        /// TAA history survives (time-lapse recording). Falls back to the
-        /// full relight when the change is more than the sun's position;
-        /// the response says which happened.
+        /// Update the live look in place instead of respawning it, so TAA
+        /// history survives (time-lapse recording). Falls back to the full
+        /// relight when the change is more than the sun's position; the
+        /// response says which happened.
         #[serde(default)]
         advance: bool,
     },
-    /// V4 (lookdev): read back the current look without changing anything.
-    ///
-    /// Exists because `set_lighting` can only report the AA components of
-    /// cameras that are already registered, and the first camera is
-    /// registered by the first `render`/`render_bundle` — i.e. after the
-    /// first `set_lighting`. A lookdev surface that wants to *prove* what
-    /// its live views carry needs a read that is not tied to a write.
+    /// Read back the current look without changing anything. `set_lighting`
+    /// can only report the AA components of cameras that are already
+    /// registered, and the first camera is registered by the first render;
+    /// a lookdev surface that wants to prove what its live views carry
+    /// needs a read that is not tied to a write.
     GetState,
     Close,
+    /// Allocate an exportable Vulkan device stream for a registered camera:
+    /// `slots` independently leasable outputs, one plane per requested
+    /// pass (`rgb`/`id` RGBA8 sRGB, `depth` Depth32Float). `wait_ms` bounds
+    /// how long a bundle blocks for a consumer release when every slot is
+    /// outstanding; omitted means fail fast. Requires a service built with
+    /// `gpu-interop` and a Vulkan device that exports memory/semaphores;
+    /// otherwise the request is rejected explicitly.
+    OpenDeviceStream {
+        sensor_id: String,
+        passes: Vec<String>,
+        slots: u32,
+        #[serde(default)]
+        wait_ms: Option<u64>,
+    },
+    /// Export fresh handles for every slot of a sensor's device stream
+    /// (see `ResponseBody::ExportDeviceStream`).
+    ExportDeviceStream { sensor_id: String },
+    /// Tear down a sensor's device stream after waiting up to `graceMs` for
+    /// outstanding consumer leases.
+    CloseDeviceStream {
+        sensor_id: String,
+        #[serde(default)]
+        grace_ms: u64,
+    },
 }
 
 /// One requested JPEG encoding from the last rendered tick's cache.
@@ -252,17 +275,14 @@ pub enum ResponseBody {
         ok: bool,
         tiles: usize,
     },
-    /// V2: scene-state stream accepted.
     LoadSceneState {
         ok: bool,
         ticks: usize,
         map_id: String,
     },
-    /// V2: all cameras dropped.
     ResetCameras {
         ok: bool,
     },
-    /// V3: scene re-lit in place.
     SetLighting {
         ok: bool,
         /// Engine values the renderer resolved from the request.
@@ -276,13 +296,11 @@ pub enum ResponseBody {
         camera_anti_alias: Vec<(String, String)>,
         /// Server-side re-light wall time, milliseconds.
         server_ms: f64,
-        /// V4: `true` when the request asked for an in-place advance but
-        /// the renderer had to fall back to a full relight (TAA history
-        /// reset). Always `false` for a plain `set_lighting`.
-        #[serde(default)]
+        /// `true` when the request asked for an in-place advance but the
+        /// renderer had to fall back to a full relight (TAA history reset).
+        /// Always `false` for a plain `set_lighting`.
         full_relight: bool,
     },
-    /// V4: current look, read without writing.
     GetState {
         ok: bool,
         protocol: u32,
@@ -291,7 +309,7 @@ pub enum ResponseBody {
         camera_anti_alias: Vec<(String, String)>,
         cameras: usize,
     },
-    /// V2: JPEG records published into the shm ring.
+    /// JPEG records published into the shm ring.
     EncodeJpeg {
         ok: bool,
         tick_id: u64,
@@ -299,22 +317,59 @@ pub enum ResponseBody {
         /// Server-side encode+publish wall time, milliseconds.
         server_ms: f64,
     },
-    /// F4: atomic frame bundle published.
+    /// Atomic frame bundle published.
     RenderBundle {
         ok: bool,
         sim_tick: u64,
+        /// Identity of the single GPU submission every camera payload in
+        /// this bundle was copied from. Lidar/radar payloads are computed on
+        /// the CPU from the same scene revision.
+        frame: FrameIdentity,
         /// Physical offset of the bundle RECORD header in the shm file.
         bundle_offset: u64,
         /// Bundle table payload length.
         bundle_len: u64,
-        /// One record per published frame, digests populated.
+        /// One record per published frame.
         frames: Vec<FrameRecord>,
+        /// Device-resident outputs by sensor for `device_sensors`: the slot
+        /// the consumer must lease (`ImportedStream.lease(slot, generation)`)
+        /// and whose ready signal is bound to this bundle's submission.
+        device: std::collections::HashMap<String, DeviceReady>,
         /// Server-side render+publish wall time, milliseconds.
         server_ms: f64,
+    },
+    /// Exportable device stream allocated for a camera.
+    OpenDeviceStream {
+        ok: bool,
+        sensor_id: String,
+        stream_id: u64,
+        /// Byte layout of every plane in a slot.
+        planes: Vec<DevicePlaneLayout>,
+    },
+    /// Acknowledged export. Immediately after this frame the service writes
+    /// one `SFGX` frame (`b"SFGX" ++ u32le(len) ++ manifest JSON`) carrying
+    /// every slot's memory/ready/release descriptors as `SCM_RIGHTS` on the
+    /// same socket; the client must consume it before its next request
+    /// (`simforge_native.gpu.receive_stream`).
+    ExportDeviceStream {
+        ok: bool,
+        sensor_id: String,
+        stream_id: u64,
+        slots: u32,
+    },
+    CloseDeviceStream {
+        ok: bool,
+        sensor_id: String,
+        /// Published slots the consumer had not released within the grace.
+        outstanding_consumer_leases: u32,
+        /// Slots acquired by the renderer but never submitted.
+        abandoned_producer_leases: u32,
     },
     Render {
         ok: bool,
         tick_id: u64,
+        /// Identity of the single GPU submission every payload was copied from.
+        frame: FrameIdentity,
         /// One record per produced pass payload.
         frames: Vec<FrameRecord>,
         /// Server-side render+publish wall time, milliseconds.
@@ -352,7 +407,7 @@ impl WireResponse {
 #[serde(rename_all = "camelCase")]
 pub struct FrameRecord {
     pub sensor_id: String,
-    /// `rgb | id | depth | semantic | jpeg`
+    /// `rgb | id | depth | semantic | jpeg | lidar | radar`
     pub pass: String,
     pub offset: u64,
     /// Payload byte length (row-padded).
@@ -360,14 +415,32 @@ pub struct FrameRecord {
     pub width: u32,
     pub height: u32,
     /// `rgba8` (RGB + ID + semantic), `depth32f` (raw reverse-Z
-    /// Depth32Float), or `jpeg` (V2 EncodeJpeg output; 1 byte per pixel).
+    /// Depth32Float), `carla-depth-bgra`, `jpeg`, `ply-ascii` or `radar-csv`.
     pub format: String,
     pub tick_id: u64,
-    /// F4 (`render_bundle` only): CRC32 (IEEE) of the payload bytes as
-    /// 8-char lowercase hex. Absent on V1/V2 `render`/`encode_jpeg` frames,
-    /// keeping those responses byte-identical.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub digest: Option<String>,
+    /// CRC32 (IEEE) of the payload bytes as 8-char lowercase hex.
+    pub digest: String,
+}
+
+/// Byte layout of one plane inside every slot of a device stream (mirror of
+/// `gpu_interop::PlaneLayout`, also carried by the exported manifest).
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DevicePlaneLayout {
+    pub name: String,
+    pub width: u32,
+    pub height: u32,
+    /// `rgba8-unorm-srgb`, `depth32-float`, ... (kebab-case `PlaneFormat`).
+    pub format: String,
+    /// numpy-style typestr of one channel (`|u1`, `<f4`, ...).
+    pub dtype: String,
+    pub channels: u32,
+    pub pixel_bytes: u32,
+    /// Byte offset of row 0 inside the slot allocation.
+    pub offset: u64,
+    /// Bytes between consecutive rows (256-byte aligned copy stride).
+    pub row_stride: u32,
+    /// `row_stride * height`.
+    pub bytes: u64,
 }
 
 /// Geometry coverage measured from the instance-ID pass already rendered for
@@ -426,6 +499,12 @@ pub fn encode_frame<T: Serialize>(value: &T) -> Result<Vec<u8>, rmp_serde::encod
 /// Decode one length-prefixed request payload.
 pub fn decode_request(payload: &[u8]) -> Result<WireRequest, String> {
     rmp_serde::from_slice(payload).map_err(|e| format!("bad request: {e}"))
+}
+
+/// Decode one request document from JSON (in-process FFI host; same
+/// `{i, op, ...}` envelope as the msgpack frames).
+pub fn decode_request_json(document: &str) -> Result<WireRequest, String> {
+    serde_json::from_str(document).map_err(|e| format!("bad request: {e}"))
 }
 
 #[cfg(test)]

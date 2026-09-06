@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 import { OptimizeMapVersionInputSchema } from "@/app/lib/map-ingest/contracts";
 import { planUploadedMapClosure } from "@/app/lib/map-ingest/server/closure";

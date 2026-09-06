@@ -73,11 +73,18 @@ describe("resolveActorMotion", () => {
     ]);
   });
 
-  it("resolves autopilot-plus-route the way CARLA does, not the way the draft says", () => {
-    // 257 stored actors are this shape. The worker disables autopilot whenever a
-    // route is present (actor_control.py:378 + :3235), so the resolution must
-    // agree with the executor rather than with the declaration.
-    const motion = resolveActorMotion(actor({ autopilot: true, route: [ANCHOR(30, 40)] }));
+  it("resolves a Traffic-Manager baseline plus route the way CARLA does, not the way the draft says", () => {
+    // The worker disables autopilot whenever a route is present
+    // (actor_control.py:378 + :3235), so the resolution must agree with the
+    // executor rather than with the declared baseline.
+    const motion = resolveActorMotion(
+      actor({
+        route: [ANCHOR(30, 40)],
+        behavior: {
+          clips: [{ id: "base", role: "base", action: { kind: "autopilot", enabled: true } }],
+        },
+      }),
+    );
     expect(motion.baseline.kind).toBe("drive");
     expect(motion.runwayIsDerived).toBe(true);
   });

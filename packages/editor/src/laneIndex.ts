@@ -46,12 +46,7 @@
  * frame budget even when it runs on every `pointermove`.
  */
 
-import {
-  buildLaneGraph,
-  decodeTopologyIndex,
-  type LaneGraph,
-  type TopologyIndex,
-} from '@simforge-oss/engine';
+import { decodeTopologyIndex, type EngineRuntime, type LaneGraph, type TopologyIndex } from '@simforge-oss/engine';
 
 /** `road:section:lane`, the topology index's lane key. */
 export type LaneRsl = string;
@@ -150,6 +145,12 @@ export interface LaneIndexStats {
 }
 
 export interface LaneIndexOptions {
+  /**
+   * The host's loaded native runtime. It decodes the same topology into the
+   * lane graph every route plan and placement rank queries; the editor never
+   * derives connectivity itself.
+   */
+  engine: Pick<EngineRuntime, 'laneGraph'>;
   /** Lane types to index. Default `['driving']` — what a vehicle may be placed on. */
   laneTypes?: readonly LaneType[];
   /** Grid cell size in metres. Default `8`. */
@@ -260,22 +261,22 @@ export class LaneIndex {
   }
 
   /** Fetch and decode `topology-index.json.gz`, then {@link build}. */
-  static async load(url: string, options: LaneIndexOptions = {}): Promise<LaneIndex> {
+  static async load(url: string, options: LaneIndexOptions): Promise<LaneIndex> {
     const t0 = now();
     const res = await fetch(url, options.signal ? { signal: options.signal } : {});
     if (!res.ok) throw new Error(`topology index ${res.status} ${url}`);
     const raw = await res.arrayBuffer();
-    // The simulation package owns artifact decoding and validates the topology
-    // envelope before authoring indexes it.
+    // The engine owns artifact decoding and validates the topology envelope
+    // before authoring indexes it; the native graph decodes the same bytes.
     const json = await decodeTopologyIndex(raw) as TopologyFile;
     const fetchMs = now() - t0;
-    return LaneIndex.build(json, { ...options, fetchMs, bytes: raw.byteLength });
+    return LaneIndex.build(json, { ...options, fetchMs, bytes: raw.byteLength, graph: options.engine.laneGraph(new Uint8Array(raw)) });
   }
 
   /** Index an already-parsed topology file. */
   static build(
     file: TopologyFile,
-    options: LaneIndexOptions & { fetchMs?: number; bytes?: number } = {},
+    options: LaneIndexOptions & { fetchMs?: number; bytes?: number; graph?: LaneGraph },
   ): LaneIndex {
     const t0 = now();
     const laneTypes = new Set(options.laneTypes ?? DEFAULT_LANE_TYPES);
@@ -423,34 +424,7 @@ export class LaneIndex {
       options.bytes ??
       lanes.reduce((sum, l) => sum + l.xs.byteLength + l.zs.byteLength + l.cum.byteLength, 0);
 
-    const graph = buildLaneGraph({
-      mapName: file.mapName,
-      source: file.source,
-      lanes: Object.fromEntries(Object.entries(file.lanes).map(([rsl, lane]) => [rsl, {
-        rsl,
-        roadId: Number(lane.roadId),
-        section: lane.section,
-        laneId: lane.laneId,
-        laneType: lane.laneType,
-        isJunction: lane.isJunction === true,
-        junctionId: lane.junctionId ?? null,
-        predecessors: lane.predecessors ?? [],
-        successors: lane.successors ?? [],
-        speedLimitKph: lane.speedLimitKph ?? null,
-        ...(lane.representativeWidthM && lane.representativeWidthM > 0
-          ? { representativeWidthM: lane.representativeWidthM }
-          : {}),
-        ...(lane.widthSamples ? { widthSamples: lane.widthSamples } : {}),
-        ...(lane.adjacentLanes ? { adjacentLanes: lane.adjacentLanes } : {}),
-        ...(lane.laneChangePermissions ? { laneChangePermissions: lane.laneChangePermissions } : {}),
-        polyline: (lane.polyline ?? []).flatMap((point) => {
-          const value = vertexOf(point);
-          return value ? [value] : [];
-        }),
-      }])),
-      gates: file.gates ?? [],
-      junctions: file.junctions ?? {},
-    });
+    const graph = options.graph ?? options.engine.laneGraph(file as unknown as TopologyIndex);
 
     return new LaneIndex({
       lanes,
@@ -695,8 +669,12 @@ export class LaneIndex {
     const connectorRelation = this.graph.turnRelationOf(lane.rsl);
     if (connectorRelation === 'Straight') return 0;
     if (connectorRelation !== null) return 3;
-    const movements = this.graph.gatesFrom(lane.rsl);
-    if (movements.some((gate) => gate.turnRelation === 'Straight')) return 0;
+    // Junction movements leaving this lane are its connecting successors.
+    const movements = this.graph
+      .successors(lane.rsl, this.graph.nominalReversed(lane.rsl) ?? false)
+      .map(([rsl]) => this.graph.turnRelationOf(rsl))
+      .filter((relation) => relation !== null);
+    if (movements.includes('Straight')) return 0;
     if (movements.length > 0) return 2;
     return lane.isJunction ? 2 : 1;
   }

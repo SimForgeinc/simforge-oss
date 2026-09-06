@@ -1,0 +1,119 @@
+{
+  "id": "cmp-oncoming-overtake-ttc",
+  "kind": "compiled",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+  "traceDigest": "764bfa3eb855edbb244d1e3a390f3ec8dadbbb996fd154c54d9cc4e42e512e39",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 144.329015,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 10.105757000000011,
+      "warm": {
+        "n": 4,
+        "min": 1.1318659999999454,
+        "median": 1.2834830000000466,
+        "max": 1.8508080000001428,
+        "mean": 1.3874100000000453
+      }
+    },
+    "compile": {
+      "cold": 843.4112170000001,
+      "warm": {
+        "n": 4,
+        "min": 1.556898000000274,
+        "median": 2.229797500000018,
+        "max": 5.634898000000021,
+        "mean": 2.9128477500000827
+      }
+    },
+    "mapLoad": {
+      "cold": 329.967599,
+      "warm": {
+        "n": 4,
+        "min": 0.0030029999998077983,
+        "median": 0.0038045000000010987,
+        "max": 0.005114000000048691,
+        "mean": 0.003931499999964672
+      }
+    },
+    "simulate": {
+      "cold": 180.41147,
+      "warm": {
+        "n": 4,
+        "min": 111.55903899999998,
+        "median": 138.6702029999998,
+        "max": 168.51323899999988,
+        "mean": 139.35317099999986
+      }
+    },
+    "digest": {
+      "cold": 18.77357600000005,
+      "warm": {
+        "n": 4,
+        "min": 12.631212999999889,
+        "median": 14.303695999999832,
+        "max": 16.475656999999956,
+        "mean": 14.428565499999877
+      }
+    },
+    "serialize": {
+      "cold": 38.12307399999986,
+      "warm": {
+        "n": 4,
+        "min": 19.711463999999978,
+        "median": 20.77185449999979,
+        "max": 23.558845999999903,
+        "mean": 21.203504749999865
+      }
+    }
+  },
+  "tickCount": 801,
+  "events": 7,
+  "issues": 0,
+  "compileIdentity": {
+    "siteId": "9274f136ce47a8f6",
+    "siteScore": 1,
+    "degradation": "Exact match: every clause and role bound without relaxation.",
+    "inputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+    "instanceId": "9274f136ce47a8f6#-1",
+    "replayKey": {
+      "templateId": "oncoming-overtake",
+      "templateVersion": 2,
+      "templateDigest": "2c4a1eb3875fd7f0",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "9274f136ce47a8f6",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "site.frame.referencePath",
+        "reason": "lane chain was not connectable end to end for the engine; kept the longest connectable run (236.7 m of 10 lanes)"
+      },
+      {
+        "path": "roles.ego.route",
+        "reason": "lane chain was not connectable end to end for the engine; kept the longest connectable run (236.7 m of 10 lanes)"
+      }
+    ],
+    "expectedInputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

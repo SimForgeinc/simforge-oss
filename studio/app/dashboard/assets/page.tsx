@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import { Skeleton } from "@simforge-oss/studio-ui/components/ui/skeleton";
 import { listGalleryAssets } from "@/app/lib/asset-gallery/store";
 import { requireAppContext } from "@/app/lib/db/app-context";
 import { AssetGalleryClient } from "./AssetGalleryClient";

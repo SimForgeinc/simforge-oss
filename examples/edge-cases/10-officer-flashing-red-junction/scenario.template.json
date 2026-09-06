@@ -273,7 +273,7 @@
       "label": "pedestrian group held throughout focus-vehicle's movement",
       "actor": {
         "class": "pedestrian",
-        "catalogId": "pedestrian.adult_standing",
+        "catalogId": "pedestrian.adult",
         "dims": {
           "length": 0.8,
           "width": 1.4,

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildLaneGraph, parseSimScenarioInput } from '@simforge-oss/engine';
+import { parseSimScenarioInput } from '@simforge-oss/engine';
+import { engine } from '@simforge-oss/engine/node';
 import { clearCanonicalPreviewCache, runCanonicalPreview } from '../canonicalPreview';
 
 describe('canonical native authoring preview', () => {
   it('runs the complete fixed-step episode and reuses the exact hash-cached result', () => {
-    const graph = buildLaneGraph({ schemaVersion: 1, mapName: 'preview', source: { xodrSha256: 'preview' }, lanes: {}, gates: [], junctions: {} });
+    const graph = engine().laneGraph({ schemaVersion: 1, mapName: 'preview', source: { xodrSha256: 'preview' }, lanes: {}, gates: [], junctions: {} });
     const input = parseSimScenarioInput({
       mapId: 'preview', clipSeconds: 3, warmupSeconds: 0, dt: .02, physics: { mode: 'kinematic-v1' },
       actors: [{
@@ -17,8 +18,8 @@ describe('canonical native authoring preview', () => {
       }],
     });
     clearCanonicalPreviewCache();
-    const first = runCanonicalPreview(input, graph, undefined);
-    const second = runCanonicalPreview(input, graph, undefined);
+    const first = runCanonicalPreview(engine(), input, graph);
+    const second = runCanonicalPreview(engine(), input, graph);
     expect(first).toBe(second);
     expect(first.trace.ticks.t.at(-1)).toBe(3);
     expect(first.trace.events.find((event) => event.kind === 'trigger_fired' && event.interactionId === 'stop')?.t).toBe(1.02);

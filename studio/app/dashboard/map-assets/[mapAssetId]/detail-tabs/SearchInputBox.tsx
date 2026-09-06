@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
-import { Input } from "@/app/components/ui/input";
-import { cn } from "@/app/lib/utils";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { getMapSearchSuggestions } from "@/app/lib/maps/search/map-search";
 
 interface SearchInputBoxProps {

@@ -1,0 +1,17 @@
+[package]
+name = "simforge-bindings-wasm"
+description = "Browser WASM binding of the portable CPU subset of the SIMFORGE native runtime (@simforge-oss/native-runtime/browser). GPU/native-only profiles are explicit unsupported errors."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_bindings_wasm"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+simforge-bindings-common = { path = "../simforge-bindings-common" }
+simforge-core = { path = "../simforge-core" }
+wasm-bindgen = "0.2"
+js-sys = "0.3"

@@ -2,7 +2,7 @@
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import { getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the ScenarioTagsSection component. */
 type ScenarioTagsSectionProps = {

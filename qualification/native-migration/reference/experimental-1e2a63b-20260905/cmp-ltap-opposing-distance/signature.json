@@ -1,0 +1,222 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "7e1f86a000800c048b6f73273ce8cf8d442dac8222234c1ee45edabc4ffc221d",
+  "traceDigest": "2cd20cea6cbc7a880a1f6fa3196a228fe07e15ede9643902429cc1a7bdd9a780",
+  "dt": 0.02,
+  "clipSeconds": 16,
+  "warmupSeconds": 2,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 801,
+  "firstT": 0,
+  "lastT": 16,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "oncoming": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.18,
+          "from": "37:0:-1",
+          "to": "2015:0:-1"
+        },
+        {
+          "t": 4.68,
+          "from": "2015:0:-1",
+          "to": "72:0:-1"
+        },
+        {
+          "t": 6.1000000000000005,
+          "from": "72:0:-1",
+          "to": "657:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "oncoming": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 3.12,
+          "from": "2226:0:-1",
+          "to": "60:0:-3"
+        },
+        {
+          "t": 4.04,
+          "from": "60:0:-3",
+          "to": "253:0:-1"
+        },
+        {
+          "t": 7.5600000000000005,
+          "from": "253:0:-1",
+          "to": "26:0:-3"
+        },
+        {
+          "t": 8.8,
+          "from": "26:0:-3",
+          "to": "614:0:-1"
+        },
+        {
+          "t": 12.200000000000001,
+          "from": "614:0:-1",
+          "to": "0:0:-2"
+        },
+        {
+          "t": 13.98,
+          "from": "0:0:-2",
+          "to": "775:0:-2"
+        },
+        {
+          "t": 14.98,
+          "from": "775:0:-2",
+          "to": "1:0:-2"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "signal:2230": {
+      "initial": "red",
+      "transitions": []
+    },
+    "signal:2232": {
+      "initial": "green",
+      "transitions": []
+    },
+    "signal:2236": {
+      "initial": "red",
+      "transitions": [
+        {
+          "t": 5,
+          "from": "red",
+          "to": "green"
+        }
+      ]
+    },
+    "signal:2262": {
+      "initial": "green",
+      "transitions": []
+    }
+  },
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "ego-permissive-green",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "signal:signal:2262.phase",
+      "value": "green"
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "ego-takes-bound-left-turn",
+      "actorId": "ego",
+      "verb": "route",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "opposing-through-green",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "signal:signal:2232.phase",
+      "value": "green"
+    },
+    {
+      "t": 6.0600000000000005,
+      "kind": "trigger_fired",
+      "interactionId": "ego-slows-for-the-turn",
+      "actorId": "ego",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 12,
+      "kind": "released",
+      "actorId": "ego",
+      "axis": "longitudinal",
+      "interactionId": "ego-slows-for-the-turn",
+      "reason": "window"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 801,
+    "minTTCPair": [
+      "ego",
+      "oncoming"
+    ],
+    "minDistancePairs": [
+      [
+        "ego",
+        "oncoming"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

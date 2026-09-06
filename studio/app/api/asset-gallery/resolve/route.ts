@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ResolveGalleryCatalogIdsInputSchema } from "@/app/lib/asset-gallery/contracts";
+import { ResolveGalleryCatalogIdsInputSchema } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {

@@ -1,0 +1,105 @@
+{
+  "id": "ec-09-stalled-vehicle-beyond-sight",
+  "kind": "instance",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "ecf647c2addd476705303bd9fc9dee83b5afdb6573f92f89e5ffc462eb5b2b86",
+  "traceDigest": "1ddf020f460711eff2a8c17baccb26f4b87a4387f2b9fa62987381c3232e6d2f",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 158.71703399999998,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 13.185914999999994,
+      "warm": {
+        "n": 4,
+        "min": 0.7141019999999116,
+        "median": 1.1872789999999895,
+        "max": 2.2251719999999295,
+        "mean": 1.328457999999955
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 341.96898799999997,
+      "warm": {
+        "n": 4,
+        "min": 0.0022910000000138098,
+        "median": 0.003294500000095013,
+        "max": 0.004462000000103217,
+        "mean": 0.003335500000076763
+      }
+    },
+    "simulate": {
+      "cold": 378.19220699999994,
+      "warm": {
+        "n": 4,
+        "min": 193.40943000000016,
+        "median": 195.7109264999999,
+        "max": 248.50159599999995,
+        "mean": 208.33321974999998
+      }
+    },
+    "digest": {
+      "cold": 30.960777000000007,
+      "warm": {
+        "n": 4,
+        "min": 23.998413000000028,
+        "median": 26.645058000000063,
+        "max": 28.01888400000007,
+        "mean": 26.326853250000056
+      }
+    },
+    "serialize": {
+      "cold": 50.26054899999997,
+      "warm": {
+        "n": 4,
+        "min": 30.591964999999846,
+        "median": 32.71489199999985,
+        "max": 33.53252900000007,
+        "mean": 32.3885694999999
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 10,
+  "issues": 1,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "f38564b35983fb73ba48b5aae8bb87d53950087dcd696cd3d8d537a0dcfa933c",
+    "traceDigest": "02bb76344c1605deab645f1e2129723cd22d21e55b31e393ef48c8e9e761e5dd",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.oncoming-glare.laneTransitions",
+        "actors.umbrella-pedestrian.laneTransitions",
+        "events.length",
+        "events.2"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

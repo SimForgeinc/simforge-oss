@@ -5,8 +5,6 @@ import {
   PhysicsProfileIdSchema,
   ScenarioEditorActorPlacementModeSchema,
   ScenarioEditorSimulationConfigSchema,
-  ScenarioEditorTimelineActionSchema,
-  TimedInstructionResolvedPlanSchema,
 } from "../scenario-editor";
 
 describe("scenario editor behavior contract", () => {
@@ -18,14 +16,6 @@ describe("scenario editor behavior contract", () => {
       "timed_path",
     ]);
     expect(ScenarioEditorActorPlacementModeSchema.safeParse("path").success).toBe(true);
-  });
-
-  it("keeps existing timeline actions compatible", () => {
-    expect(ScenarioEditorTimelineActionSchema.safeParse("follow_route").success).toBe(true);
-    expect(ScenarioEditorTimelineActionSchema.safeParse("set_speed").success).toBe(true);
-    expect(ScenarioEditorTimelineActionSchema.safeParse("ram_actor").success).toBe(true);
-    expect(ScenarioEditorTimelineActionSchema.safeParse("chase_actor").success).toBe(true);
-    expect(ScenarioEditorTimelineActionSchema.safeParse("lane_change_left").success).toBe(true);
   });
 
   it("pins exact same-map gate provenance for relocated actors", () => {
@@ -64,29 +54,6 @@ describe("scenario editor behavior contract", () => {
     expect(ScenarioEditorSimulationConfigSchema.safeParse({
       physics_profile_id: "omniverse",
     }).success).toBe(false);
-  });
-
-  it("keeps timed instruction resolved plans on runtime-native actor configuration", () => {
-    expect(
-      TimedInstructionResolvedPlanSchema.safeParse({
-        kind: "runtime_native",
-        schemaVersion: "simforge.timed-instruction-plan.v1",
-        source: "carla_runtime_waypoints",
-        actorSpawnRsl: "1:0:-1",
-        manifest: [],
-      }).success,
-    ).toBe(true);
-    expect(
-      TimedInstructionResolvedPlanSchema.safeParse({
-        kind: "topology_constrained_path",
-        schemaVersion: "simforge.timed-instruction-plan.v1",
-        source: "timed_instructions_compiler",
-        sourceLaneRsl: "1:0:-1",
-        targetLaneRsl: "1:0:-2",
-        side: "left",
-        points: [],
-      }).success,
-    ).toBe(false);
   });
 
   it("rejects parking segments with fewer than two waypoints (worker executor contract)", () => {

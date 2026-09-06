@@ -14,9 +14,17 @@ import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import {
-  matchAnchorReport,
-  normalizeDerivedMapIndex,
+  CATALOG_EXACT_SITE_OPTIONS,
+  DEV_ASSETS,
+  compileTemplate,
+  REPO_ROOT,
+  availableMaps,
+  loadMap,
+  matchSites,
+  readTemplate,
+  templateIdentity,
   type DerivedMapIndex,
+  type MapBundle,
   type MatchedSite,
 } from '@simforge-oss/compiler/node';
 import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
@@ -29,11 +37,6 @@ import {
   type IncidentDefinition,
 } from './catalog-taxonomy.js';
 import { CliError, EXIT } from './errors.js';
-import { availableMaps, DEV_ASSETS, REPO_ROOT, loadMap, type MapBundle } from '@simforge-oss/compiler/node';
-import { adaptTemplate } from './adapt.js';
-import { materialize, templateId as canonicalTemplateId } from './materialize.js';
-import { assertMatchableAnchor, catalogExactMatcherPolicy } from '@simforge-oss/compiler/node';
-import { readTemplate } from '@simforge-oss/compiler/node';
 
 // historical name retained for stored-data compat
 export const CATALOG_KIND = 'uniscenarios-scenario-catalog' as const;
@@ -474,7 +477,7 @@ async function readExecutableTemplates(repoRoot: string): Promise<ExecutableTemp
     return {
       provenance: {
         id: entry.id,
-        runtimeTemplateId: canonicalTemplateId(template),
+        runtimeTemplateId: templateIdentity(template).templateId,
         source: entry.source,
         digest: sha256(bytes),
       },
@@ -483,17 +486,13 @@ async function readExecutableTemplates(repoRoot: string): Promise<ExecutableTemp
   }));
 }
 
-async function readMapContext(devAssets: string, mapId: string): Promise<MapContext> {
+async function readMapContext(devAssets: string, mapId: string, bundle: MapBundle): Promise<MapContext> {
   const derivedFile = path.join(devAssets, mapId, 'derived', 'topology-derived.json.gz');
   const locationsFile = path.join(devAssets, mapId, 'derived', 'locations.json.gz');
-  const engineFile = path.join(devAssets, mapId, 'topology-index.json.gz');
   let derivedBytes: Buffer;
   let locationBytes: Buffer;
-  let engineBytes: Buffer;
   try {
-    [derivedBytes, locationBytes, engineBytes] = await Promise.all([
-      readFile(derivedFile), readFile(locationsFile), readFile(engineFile),
-    ]);
+    [derivedBytes, locationBytes] = await Promise.all([readFile(derivedFile), readFile(locationsFile)]);
   } catch {
     throw new CliError('missing_map_provenance', `cannot read complete map provenance for ${mapId}`, {
       path: path.join(devAssets, mapId),
@@ -503,11 +502,9 @@ async function readMapContext(devAssets: string, mapId: string): Promise<MapCont
 
   let derived: DerivedProvenance;
   let catalog: RawLocationCatalog;
-  let topology: unknown;
   try {
     derived = JSON.parse(unzip(derivedBytes).toString('utf8')) as DerivedProvenance;
     catalog = JSON.parse(unzip(locationBytes).toString('utf8')) as RawLocationCatalog;
-    topology = JSON.parse(unzip(engineBytes).toString('utf8')) as unknown;
   } catch (error) {
     throw new CliError('invalid_map_provenance', error instanceof Error ? error.message : String(error), {
       path: path.join(devAssets, mapId),
@@ -530,14 +527,10 @@ async function readMapContext(devAssets: string, mapId: string): Promise<MapCont
       path: path.join(devAssets, mapId),
     });
   }
-  const matcherIndex = normalizeDerivedMapIndex(derived as unknown, {
-    mapId,
-    topology: topology as never,
-    locations: catalog as unknown,
-  });
-  const topologyRecord = isRecord(topology) ? topology : null;
-  const topologySource = topologyRecord && isRecord(topologyRecord['source']) ? topologyRecord['source'] : null;
-  const engineGraphDigest = topologySource?.['xodrSha256'];
+  // The matcher index and engine graph are the native bundle's: the same
+  // objects executor replay matches and simulates against.
+  const matcherIndex = bundle.index;
+  const engineGraphDigest = bundle.graph.digest;
   if (
     typeof matcherIndex.topologyDigest !== 'string' || matcherIndex.topologyDigest.length === 0 ||
     typeof engineGraphDigest !== 'string' || engineGraphDigest.length === 0
@@ -797,13 +790,13 @@ export async function createScenarioCatalog(
     throw new CliError('bad_value', '--namespace must not be empty', { path: '--namespace' });
   }
 
-  const [executableTemplates, contexts] = await Promise.all([
-    readExecutableTemplates(repoRoot),
-    Promise.all(mapIds.map((mapId) => readMapContext(devAssets, mapId))),
-  ]);
   const runtimeBundles = new Map<string, MapBundle>(
     await Promise.all(mapIds.map(async (mapId) => [mapId, await loadMap(mapId, devAssets)] as const)),
   );
+  const [executableTemplates, contexts] = await Promise.all([
+    readExecutableTemplates(repoRoot),
+    Promise.all(mapIds.map((mapId) => readMapContext(devAssets, mapId, runtimeBundles.get(mapId)!))),
+  ]);
   const templates = executableTemplates.map((entry) => entry.provenance);
   const templateById = new Map(templates.map((template) => [template.id, template]));
   const executableById = new Map(executableTemplates.map((entry) => [entry.provenance.id, entry.template]));
@@ -826,15 +819,10 @@ export async function createScenarioCatalog(
       if (!template) return [];
       // This must remain identical to executor replay.  A persisted site is
       // an exact reservation, not a request to re-run the interactive site's
-      // diversity/truncation policy.
-      const { anchor, roles, notes } = adaptTemplate(template);
-      // Same rule as `matchOnMap`: a catalog entry built from a template whose
-      // requirement was discarded is a reservation of the wrong place.
-      assertMatchableAnchor(notes);
-      const matched = matchAnchorReport({
-        ...anchor,
-        policy: catalogExactMatcherPolicy(anchor.policy ?? {}),
-      }, context.matcherIndex, { roles }).sites;
+      // diversity/truncation policy, so the native matcher runs with the same
+      // exact-resolution options the worker uses; an unmatchable anchor fails
+      // closed inside it.
+      const matched = matchSites(template, runtimeBundles.get(map.mapId)!, CATALOG_EXACT_SITE_OPTIONS).report.sites;
       const candidates: CatalogLocationSitePair[] = locations.flatMap((location) => matched.flatMap((matcherSite) =>
         matcherSiteClosesLocation(matcherSite, location, context.matcherIndex)
           ? [{
@@ -902,7 +890,7 @@ export async function createScenarioCatalog(
           const candidateSite = bindSite(candidate.location);
           const candidateSeed = catalogSeed(namespace, map, ordinal, candidateEntry.incident, candidateSite, candidateVariant.id, taxonomyHash);
           try {
-            const concrete = materialize(templateDocument, runtimeBundle, candidate.matcherSite, {
+            const concrete = compileTemplate(templateDocument, runtimeBundle, candidate.matcherSite, {
               drawIndex: 0,
               seed: candidateSeed,
               variant: candidateVariant,

@@ -9,29 +9,56 @@
  *
  * `scope` distinguishes two honest cases:
  *
- * - `always` — every map must produce this key. A missing one is a real defect.
+ * - `always` — required on every map that has somewhere to write it. `hosts`
+ *   names where: the location types the producer emits, or `'anchored'` for
+ *   the anchor-lift facts every road-anchored location carries. When a host
+ *   exists and none carries the key, that is a real defect and the build
+ *   fails. When no host exists — a two-lane straight with no junction has no
+ *   `junction` or `junction_movement` records — the key is *inapplicable*,
+ *   not missing; requiring it there would demand a fact about an entity the
+ *   map does not contain.
  * - `conditional` — the key depends on a feature that genuinely may not exist
  *   on a given map (only `easterbrook-discovery-school` has MUTCD school signs,
- *   for instance). These must be produced by *at least one* map in a full
- *   `--all` build, which still catches the declared-but-never-written case.
+ *   for instance), so no host can be named for it. These must be produced by
+ *   *at least one* map in a full `--all` build, which still catches the
+ *   declared-but-never-written case.
  *
  * Facts adopted verbatim from the search index are *not* declared here — they
  * are foreign data passed through, and are reported separately by
  * {@link summariseFactKeys}.
  */
 
+import type { LocationType } from '../types/location.js';
+
 /** Declared type of a fact value. */
 export type FactKeyType = 'string' | 'number' | 'boolean' | 'string[]';
 
+/**
+ * Where an `always` key must appear: the location types its producer emits,
+ * or `'anchored'` for every location with a road anchor regardless of type.
+ */
+export type FactKeyHosts = readonly LocationType[] | 'anchored';
+
 /** One entry in the declared vocabulary. */
-export interface FactKeySpec {
+export type FactKeySpec = {
   key: string;
   type: FactKeyType;
-  scope: 'always' | 'conditional';
   /** Which derivation writes it — the answer to "who produces this?". */
   producedBy: string;
   description: string;
+} & ({ scope: 'always'; hosts: FactKeyHosts } | { scope: 'conditional' });
+
+/** The subset of a catalog record the audit reads. */
+export interface FactKeyHostLocation {
+  type: LocationType;
+  anchor: { road: object | null };
+  facts: Record<string, unknown>;
 }
+
+const JUNCTION_HOSTS: readonly LocationType[] = ['junction'];
+const MOVEMENT_HOSTS: readonly LocationType[] = ['junction_movement'];
+/** The corridor cross-section facts; work-zones writes the same set. */
+const CORRIDOR_HOSTS: readonly LocationType[] = ['midblock_segment', 'work_zone_suitable'];
 
 /** The vocabulary this package guarantees. */
 export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
@@ -40,6 +67,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'anchor_distance_m',
     type: 'number',
     scope: 'always',
+    hosts: 'anchored',
     producedBy: 'anchor-lift',
     description: 'Distance from the location point to its anchored lane centreline.',
   },
@@ -47,6 +75,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'lane_type',
     type: 'string',
     scope: 'always',
+    hosts: 'anchored',
     producedBy: 'anchor-lift',
     description: 'Lane type of the anchor lane (driving/biking/sidewalk/parking/shoulder).',
   },
@@ -54,6 +83,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'anchor_heading_deg',
     type: 'number',
     scope: 'always',
+    hosts: 'anchored',
     producedBy: 'anchor-lift',
     description: 'Compass bearing of lane travel at the anchor (0 = north, clockwise).',
   },
@@ -63,6 +93,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'arm_count',
     type: 'number',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Number of physical legs meeting at the junction.',
   },
@@ -70,6 +101,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'derived_control',
     type: 'string',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Control derived from nearby signals: signalized|all_way_stop|minor_stop|yield|uncontrolled.',
   },
@@ -77,6 +109,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'conflict_pair_count',
     type: 'number',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Number of precomputed crossing movement pairs inside the junction.',
   },
@@ -84,6 +117,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'has_opposing_conflict',
     type: 'boolean',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'True when some pair of crossing movements approaches from opposing arms.',
   },
@@ -91,6 +125,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'junction_size_m',
     type: 'number',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Largest extent of the junction footprint, metres.',
   },
@@ -98,6 +133,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'internal_lane_count',
     type: 'number',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Junction-internal (connecting) lane count.',
   },
@@ -105,6 +141,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'approach_lane_count',
     type: 'number',
     scope: 'always',
+    hosts: JUNCTION_HOSTS,
     producedBy: 'junction-descriptors',
     description: 'Inbound lane count across all arms.',
   },
@@ -114,6 +151,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'turn_relation',
     type: 'string',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'Left | Right | Straight | UTurnLeft | UTurnRight.',
   },
@@ -121,6 +159,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'heading_change_deg',
     type: 'number',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'Signed heading change from approach to exit, degrees.',
   },
@@ -128,6 +167,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'movement_length_m',
     type: 'number',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'Length of the connecting lane, metres.',
   },
@@ -135,6 +175,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'conflicting_movement_count',
     type: 'number',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'How many other movements in the junction cross this one.',
   },
@@ -142,6 +183,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'is_protected',
     type: 'boolean',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'True when no other movement in the junction crosses this one.',
   },
@@ -149,6 +191,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'junction_control',
     type: 'string',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'Derived control of the parent junction.',
   },
@@ -156,6 +199,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'exit_count',
     type: 'number',
     scope: 'always',
+    hosts: MOVEMENT_HOSTS,
     producedBy: 'densify/junction-movements',
     description: 'Number of exit lanes the movement can feed.',
   },
@@ -165,6 +209,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'lanes_same_dir',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Same-direction through lanes at the location.',
   },
@@ -172,6 +217,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'lanes_opposing',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Opposing through lanes on the same carriageway.',
   },
@@ -179,6 +225,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'speed_limit_kph',
     type: 'number',
     scope: 'always',
+    hosts: [...CORRIDOR_HOSTS, 'junction_movement', 'school_zone'],
     producedBy: 'densify/midblock-segments',
     description: 'Posted/derived speed limit of the anchor lane.',
   },
@@ -186,6 +233,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'lane_width_m',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Local lane width at the anchor.',
   },
@@ -193,6 +241,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'curvature_deg_per_10m',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Absolute heading change per 10 m of arc length.',
   },
@@ -200,6 +249,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'distance_to_junction_m',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Along-chain distance to the nearest junction entry/exit.',
   },
@@ -207,6 +257,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'has_parking_adjacent',
     type: 'boolean',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'A parking lane sits beside the anchor lane in the same lane row.',
   },
@@ -214,6 +265,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'has_bike_adjacent',
     type: 'boolean',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'A bike lane sits beside the anchor lane.',
   },
@@ -221,6 +273,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'has_sidewalk_adjacent',
     type: 'boolean',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'A sidewalk sits beside the anchor lane.',
   },
@@ -228,6 +281,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'has_shoulder_adjacent',
     type: 'boolean',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'A shoulder sits beside the anchor lane.',
   },
@@ -235,6 +289,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'is_one_way',
     type: 'boolean',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'No opposing lanes in the anchor lane row.',
   },
@@ -242,6 +297,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'road_name',
     type: 'string',
     scope: 'always',
+    hosts: [...CORRIDOR_HOSTS, 'junction_movement', 'parking_space', 'school_zone'],
     producedBy: 'densify/midblock-segments',
     description: 'Display name of the road at the anchor. Never a placement reference.',
   },
@@ -249,6 +305,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'segment_length_m',
     type: 'number',
     scope: 'always',
+    hosts: CORRIDOR_HOSTS,
     producedBy: 'densify/midblock-segments',
     description: 'Length of the parent lane chain, metres.',
   },
@@ -256,6 +313,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'runway_upstream_m',
     type: 'number',
     scope: 'always',
+    hosts: ['midblock_segment'],
     producedBy: 'densify/midblock-segments',
     description: 'Road available behind the location along its own corridor, metres.',
   },
@@ -263,6 +321,7 @@ export const DECLARED_FACT_KEYS: readonly FactKeySpec[] = [
     key: 'runway_downstream_m',
     type: 'number',
     scope: 'always',
+    hosts: ['midblock_segment'],
     producedBy: 'densify/midblock-segments',
     description: 'Road available ahead of the location along its own corridor, metres.',
   },
@@ -399,8 +458,17 @@ export const DECLARED_FACT_KEY_MAP: ReadonlyMap<string, FactKeySpec> = new Map(
 
 /** Outcome of the declared-key assertion. */
 export interface FactKeyAudit {
-  /** Declared `always` keys with no producer in this build. Non-empty ⇒ build fails. */
+  /**
+   * Declared `always` keys that have a host location in this build, yet no
+   * host carries them. Non-empty ⇒ build fails.
+   */
   missingAlways: string[];
+  /**
+   * Declared `always` keys with no host location in this build — junction
+   * facts on a map with no junction. Informational: nothing exists to carry
+   * them. Still subject to the cross-map "produced somewhere" check.
+   */
+  inapplicableAlways: string[];
   /** Declared `conditional` keys with no producer in this build. Informational. */
   missingConditional: string[];
   /** Keys present on locations but not declared (adopted from the search index). */
@@ -410,21 +478,35 @@ export interface FactKeyAudit {
 }
 
 /** Which fact keys a set of locations actually carries. */
-export function summariseFactKeys(
-  locations: readonly { facts: Record<string, unknown> }[],
-): FactKeyAudit {
+export function summariseFactKeys(locations: readonly FactKeyHostLocation[]): FactKeyAudit {
   const produced = new Set<string>();
-  for (const loc of locations) for (const key of Object.keys(loc.facts)) produced.add(key);
+  const byType = new Map<LocationType, FactKeyHostLocation[]>();
+  const anchored: FactKeyHostLocation[] = [];
+  for (const loc of locations) {
+    for (const key of Object.keys(loc.facts)) produced.add(key);
+    const bucket = byType.get(loc.type);
+    if (bucket) bucket.push(loc);
+    else byType.set(loc.type, [loc]);
+    if (loc.anchor.road) anchored.push(loc);
+  }
+
   const missingAlways: string[] = [];
+  const inapplicableAlways: string[] = [];
   const missingConditional: string[] = [];
   for (const spec of DECLARED_FACT_KEYS) {
-    if (produced.has(spec.key)) continue;
-    if (spec.scope === 'always') missingAlways.push(spec.key);
-    else missingConditional.push(spec.key);
+    if (spec.scope === 'conditional') {
+      if (!produced.has(spec.key)) missingConditional.push(spec.key);
+      continue;
+    }
+    const hosts =
+      spec.hosts === 'anchored' ? anchored : spec.hosts.flatMap((t) => byType.get(t) ?? []);
+    if (hosts.length === 0) inapplicableAlways.push(spec.key);
+    else if (!hosts.some((loc) => spec.key in loc.facts)) missingAlways.push(spec.key);
   }
   const undeclaredPresent = [...produced].filter((k) => !DECLARED_FACT_KEY_MAP.has(k)).sort();
   return {
     missingAlways: missingAlways.sort(),
+    inapplicableAlways: inapplicableAlways.sort(),
     missingConditional: missingConditional.sort(),
     undeclaredPresent,
     produced: [...produced].sort(),
@@ -432,20 +514,20 @@ export function summariseFactKeys(
 }
 
 /**
- * Throw when a declared `always` key has no producer.
+ * Throw when a declared `always` key has a host location but no producer.
  *
  * Called at the end of every catalog build. Downgrading this to a warning is
  * how the vocabulary rots.
  */
 export function assertDeclaredFactsProduced(
   mapId: string,
-  locations: readonly { facts: Record<string, unknown> }[],
+  locations: readonly FactKeyHostLocation[],
 ): FactKeyAudit {
   const audit = summariseFactKeys(locations);
   if (audit.missingAlways.length > 0) {
     throw new Error(
       `map-intel[${mapId}]: declared fact keys with no producer: ${audit.missingAlways.join(', ')}. ` +
-        `Either derive them or change their scope in DECLARED_FACT_KEYS.`,
+        `Either derive them, or fix their hosts or scope in DECLARED_FACT_KEYS.`,
     );
   }
   return audit;

@@ -18,9 +18,9 @@ import {
   User,
   X,
 } from "lucide-react";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
-import { cn } from "@/app/lib/utils";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ScenarioValidationState } from "@/app/lib/maps/frontend/use-scenario-validation";
 import type {
   ChatAssistantMessage,

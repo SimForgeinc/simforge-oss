@@ -34,14 +34,14 @@ export function clampDeclaredAxisHolds(template: ScenarioTemplateV2): {
   for (let round = 0; round < MAX_ROUNDS && !report.ok; round += 1) {
     const clampToByIndex = new Map<number, number>();
     for (const issue of report.issues) {
-      if (issue.severity !== 'error' || issue.code !== 'axis_conflict') continue;
+      if (issue.severity !== "error" || issue.code !== "axis_conflict") continue;
       const pathMatch = UNTIL_PATH.exec(issue.path);
-      const requiredMatch = typeof issue.required === 'string' ? REQUIRED_UNTIL.exec(issue.required) : null;
+      const requiredMatch = typeof issue.required === "string" ? REQUIRED_UNTIL.exec(issue.required) : null;
       if (!pathMatch || !requiredMatch) continue;
       const index = Number(pathMatch[1]);
       const takeoverT = Number(requiredMatch[1]);
       const interaction = current.choreography.interactions[index];
-      if (!interaction || interaction.until?.kind !== 'at' || typeof interaction.until.t !== 'number') continue;
+      if (!interaction || interaction.until?.kind !== "at" || typeof interaction.until.t !== "number") continue;
       if (!(Number.isFinite(takeoverT) && takeoverT < interaction.until.t)) continue;
       const existing = clampToByIndex.get(index);
       if (existing === undefined || takeoverT < existing) clampToByIndex.set(index, takeoverT);
@@ -49,7 +49,7 @@ export function clampDeclaredAxisHolds(template: ScenarioTemplateV2): {
     if (clampToByIndex.size === 0) break;
     const interactions = current.choreography.interactions.map((interaction, index) => {
       const toT = clampToByIndex.get(index);
-      if (toT === undefined || interaction.until?.kind !== 'at' || typeof interaction.until.t !== 'number') return interaction;
+      if (toT === undefined || interaction.until?.kind !== "at" || typeof interaction.until.t !== "number") return interaction;
       clamps.push({
         path: `choreography.interactions.${index}.until`,
         interactionId: interaction.id,

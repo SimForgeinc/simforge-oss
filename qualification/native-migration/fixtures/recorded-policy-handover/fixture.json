@@ -1,0 +1,26 @@
+{
+  "schema": "simforge.native-migration.situation-fixture/v1",
+  "id": "sit-recorded-policy-handover",
+  "mapId": "yale-street",
+  "seed": "native-migration-handover-2026-09-05",
+  "origin": {
+    "kind": "derived-from-reference-trace",
+    "note": "recorded-ego customTimedRoute points are the fire-engine track of the ec-12-fire-engine-gridlock-escape reference run (engine 0.6.0, /tmp reference 2026-09-05) sampled every 0.5 s over [0,14] s, converted xodr-local (x,y) -> scene (x,-y). This is engine-recorded motion used as a recorded source, not a real-world measurement. parked-lead sits at the 12 s sample of the same track, i.e. on the retained spatial path."
+  },
+  "program": "program.json",
+  "policy": {
+    "roleId": "recorded-ego",
+    "kind": "target-speed-schedule",
+    "schedule": [
+      {
+        "fromS": 6,
+        "targetSpeedMps": 8
+      },
+      {
+        "fromS": 9.5,
+        "targetSpeedMps": 0
+      }
+    ],
+    "semantics": "ActionHook returns { targetSpeedMps } for recorded-ego on every planning tick with tS >= 6 using the latest schedule row with fromS <= tS; undefined otherwise. The override replaces the engine-computed target speed (including governor gating), matching hookedIntent in packages/engine/src/sim/engine.ts."
+  }
+}

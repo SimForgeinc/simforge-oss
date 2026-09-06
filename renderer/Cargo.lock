@@ -5131,15 +5131,27 @@ name = "render-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ash",
  "bevy",
  "clap",
  "crossbeam-channel",
  "half",
  "image",
+ "libc",
  "serde",
  "serde_json",
  "sha2",
  "walkdir",
+ "wgpu",
+]
+
+[[package]]
+name = "render-ffi"
+version = "0.1.0"
+dependencies = [
+ "render-core",
+ "serde_json",
+ "service",
 ]
 
 [[package]]

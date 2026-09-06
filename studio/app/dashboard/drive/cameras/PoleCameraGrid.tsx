@@ -18,8 +18,8 @@ import type { PoleCamera, PoleCameraRig, ResolvedCameraPose } from "@simforge-os
 import { findRigFeature, resolveCameraPose } from "@simforge-oss/maps/camera-rig";
 import { PerspectiveCamera, Vector2, Vector4 } from "three";
 import type { CityViewer } from "@simforge-oss/viewer";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   Card,
   CardAction,
@@ -27,12 +27,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { Input } from "@/app/components/ui/input";
+} from "@simforge-oss/studio-ui/components/ui/card";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import type { WorldClock } from "@/app/lib/live-world/types";
-import { Separator } from "@/app/components/ui/separator";
+import { Separator } from "@simforge-oss/studio-ui/components/ui/separator";
 import type { CameraFeedState, CameraFeeds } from "@/app/lib/live-world/camera-feeds";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   adjustmentFromCamera,
   applyCameraAdjustment,

@@ -1,5 +1,5 @@
-import { RouteLoading } from "@/app/components/ui/sim-loader";
+import { ScenarioDatasetLoading } from "@simforge-oss/studio-ui/scenario/route-states";
 
-export default function ScenarioDatasetLoading() {
-  return <RouteLoading depth={2} label="Scenarios" detail="Loading dataset scenarios…" />;
+export default function ScenarioDatasetRouteLoading() {
+  return <ScenarioDatasetLoading />;
 }

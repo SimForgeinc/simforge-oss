@@ -1,52 +1,64 @@
-"""SimForgeEnv: spaces, reward types, gymnasium check_env-style smoke."""
+"""SimForgeEnv: declared spaces match consumed actions; termination, checkpoint semantics."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
+from gymnasium import spaces
 
 from simforge_oss_gym import SimForgeEnv
 
-from conftest import server_cmd  # noqa: F401 - re-exported fixture
-
 
 @pytest.fixture()
-def env(spec: str, server_cmd: tuple[str, ...]) -> SimForgeEnv:
-    environment = SimForgeEnv(spec, seed="seed-a", server_command=server_cmd)
-    yield environment
-    environment.close()
+def env(spec: str) -> SimForgeEnv:
+    with SimForgeEnv(spec, seed="seed-a") as environment:
+        yield environment
 
 
-def test_observation_and_action_space_types(env: SimForgeEnv) -> None:
-    assert isinstance(env.observation_space, __import__("gymnasium").spaces.Dict)
+def test_spaces_describe_consumed_actions(env: SimForgeEnv) -> None:
+    assert isinstance(env.observation_space, spaces.Dict)
     assert env.observation_space["state_vector"].shape == (10,)
     assert env.observation_space["objects"].shape == (64, 5)
-    assert env.action_space.shape == (3,)
+    assert env.action_space.shape == (2,)  # setpoint mode: [target_speed_mps, target_acceleration_mps2]
     assert env.ego == "ego"
+    obs, _ = env.reset()
+    assert env.observation_space.contains(obs)
+    for _ in range(5):
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, _ = env.step(action)
+        assert env.observation_space.contains(obs)
+        assert np.isfinite(reward)
+
+
+def test_control_mode_bounds_are_enforced(spec: str) -> None:
+    with SimForgeEnv(spec, action_mode="control") as env:
+        assert env.action_space.shape == (3,)
+        env.reset(seed=1)
+        env.step(np.array([0.3, 0.0, -0.1]))
+        with pytest.raises(ValueError):
+            env.step(np.array([1.5, 0.0, 0.0]))
 
 
 def test_reset_returns_t0_observation(env: SimForgeEnv) -> None:
     obs, info = env.reset(options={"seed": "seed-a"})
     assert info["t_s"] == 0.0
-    assert obs["state_vector"].dtype == np.float64
-    assert obs["state_vector"].shape == (10,)
+    assert obs["state_vector"].dtype == np.float64 and obs["state_vector"].shape == (10,)
     assert obs["objects"].dtype == np.float32
     assert obs["objects"][:, 4].sum() >= 1  # at least one perceived object marked valid
+    assert "events" in info and "causal" in info
 
 
-def test_step_reward_and_info_contract(env: SimForgeEnv) -> None:
+def test_step_info_contract(env: SimForgeEnv) -> None:
     env.reset(options={"seed": "seed-a"})
-    obs, reward, terminated, truncated, info = env.step({"target_speed_mps": 9.0})
+    obs, reward, terminated, truncated, info = env.step(np.array([9.0, 0.0]))
     assert isinstance(reward, float)
-    assert terminated in (True, False) and truncated in (True, False)
     assert info["t_s"] == pytest.approx(0.1)
     assert set(info["reward_terms"]) == {"progress", "proximity", "comfort"}
-    assert "causal" in info and info["ego"] == "ego"
     assert obs["state_vector"][0] > 0
 
 
-def test_episode_runs_to_truncation(env: SimForgeEnv) -> None:
-    """Clip is 4 s at 10 Hz: the episode must truncate exactly at t = 3.9→4.0 s."""
+def test_episode_runs_to_truncation_and_refuses_further_steps(env: SimForgeEnv) -> None:
+    """Clip is 4 s at 10 Hz: the episode must truncate exactly at t = 4.0 s."""
     env.reset(options={"seed": "seed-b"})
     last_t, truncated = -1.0, False
     for _ in range(60):
@@ -54,20 +66,25 @@ def test_episode_runs_to_truncation(env: SimForgeEnv) -> None:
         last_t = info["t_s"]
         if terminated or truncated:
             break
-    assert truncated, f"episode neither truncated nor terminated (last t={last_t})"
-    assert last_t == pytest.approx(4.0)
+    assert truncated and last_t == pytest.approx(4.0)
+    with pytest.raises(Exception):
+        env.step(None)
 
 
-def test_gymnasium_api_smoke(env: SimForgeEnv) -> None:
-    """check_env-style smoke: sample actions/observations, one full step cycle."""
-    action = env.action_space.sample() * 0.0 + np.array([9.0, 0.0, 0.0], dtype=np.float32)
-    obs, _ = env.reset(seed=7)
-    env.observation_space.contains(obs)
-    obs2, reward, terminated, truncated, _ = env.step({"target_speed_mps": float(action[0])})
-    assert obs2["state_vector"].shape == obs["state_vector"].shape
-    assert np.isfinite(reward)
+def test_retained_observations_are_immutable(env: SimForgeEnv) -> None:
+    first, _ = env.reset(seed=3)
+    snapshot = first["state_vector"].copy()
+    env.step(np.array([9.0, 0.0]))
+    np.testing.assert_array_equal(first["state_vector"], snapshot)
 
 
-def test_backend_enum_reserved(spec: str) -> None:
-    with pytest.raises(ValueError, match="backend"):
-        SimForgeEnv(spec, backend="py")  # type: ignore[arg-type]
+def test_checkpoint_restore_continues_bit_identically(env: SimForgeEnv) -> None:
+    env.reset(seed=11)
+    for _ in range(5):
+        env.step(np.array([8.0, 0.0]))
+    checkpoint = env.checkpoint()
+    reference = [env.step(np.array([6.0, -0.5]))[0]["state_vector"] for _ in range(5)]
+    env.restore(checkpoint)
+    replay = [env.step(np.array([6.0, -0.5]))[0]["state_vector"] for _ in range(5)]
+    for a, b in zip(reference, replay):
+        np.testing.assert_array_equal(a, b)

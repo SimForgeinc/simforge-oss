@@ -87,8 +87,10 @@ browser tier. Pulling reconstructs their external geometry, KTX2 textures,
 decoder runtime, OpenDRIVE, lane topology, signal records, and derived locations.
 Source rasters are archival and are not transferred to render workers.
 Studio also provisions its installed Three Basis JS/WASM pair at `/basis/`
-before starting. Other embedders must serve the matching runtime pair or
-explicitly configure `ktx2TranscoderPath`.
+and the shared Studio UI's own static art (`@simforge-oss/studio-ui/public`)
+under `public/` before starting (`studio/scripts/sync-studio-assets.mjs`).
+Other embedders must serve the matching runtime pair or explicitly configure
+`ktx2TranscoderPath`, and mount that `public/` tree at their origin root.
 
 The Linux/A100 source builder requires `flock`, KTX-Software and a durable work
 directory. An optional `map-source.json` (`simforge.map-source.v1`) selects
@@ -118,7 +120,7 @@ Every package is released at the same stack version.
 | System | Package | Responsibility |
 |---|---|---|
 | Scenario | [`@simforge-oss/scenario`](packages/scenario) | Versioned, framework-free portable scenario documents and schemas. |
-| Engine | [`@simforge-oss/engine`](packages/engine) | Fixed-step simulation, deterministic traces, and the `scene-state.v1` serializer exposed at `/scene-state`. |
+| Engine | [`@simforge-oss/engine`](packages/engine) | Fixed-step simulation, deterministic traces, and the `simforge.scene-state.v1` serializer exposed at `/scene-state`. |
 | World | [`@simforge-oss/maps`](packages/maps) | OpenDRIVE parsing, georeferencing, lane and signal topology, and scenario-independent map intelligence; parsing is also exposed at `/opendrive`. |
 | World | [`@simforge-oss/map-pipeline`](packages/map-pipeline) | Deterministic master, semantic and browser-tier generation from explicit map sources. |
 | World | [`@simforge-oss/map-registry`](packages/map-registry) | Immutable map releases, content-addressed resources, resumable publication and verified pulls. |
@@ -141,16 +143,12 @@ The other product boundaries are intentionally not npm packages:
 - [`qualification/`](qualification) contains release and determinism gates;
   [`research/`](research) contains experiments that do not ship as product code.
 
-## CARLA compatibility
+## CARLA execution
 
-SimForge supports both directions of CARLA interoperability without conflating
-them:
-
-- [`adapters/carla-api`](adapters/carla-api) provides a drop-in Python
-  `import carla` facade over SimForge Engine. Existing CARLA-facing tools can
-  target SimForge without starting a CARLA server.
-- [`adapters/carla-exec`](adapters/carla-exec) runs SimForge scenarios in a
-  real, pinned CARLA runtime when CARLA execution is the required reference.
+[`adapters/carla-exec`](adapters/carla-exec) runs SimForge scenarios in a
+real, pinned CARLA runtime when CARLA execution is the required reference
+(`simforge-oss-carla-exec`). Local execution is the native Python SDK
+([`adapters/gym`](adapters/gym)); there is no `import carla` facade.
 
 OpenDRIVE and OpenSCENARIO remain explicit interchange boundaries. Compatibility
 reports distinguish exact control-stream behavior from behavior approximated by

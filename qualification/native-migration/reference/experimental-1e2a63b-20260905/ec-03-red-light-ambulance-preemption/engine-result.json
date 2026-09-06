@@ -1,0 +1,43 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.pedestrian.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "pedestrian"
+      }
+    },
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.focus-vehicle-nudges-right.dynamics.value",
+      "reason": "requested 2.20 s lateral manoeuvre is infeasible for car; clamped to 2.78 s",
+      "detail": {
+        "actorId": "focus-vehicle",
+        "requestedDurationS": 2.2,
+        "effectiveDurationS": 2.7764695792503833,
+        "displacementM": -2.8537603191352883,
+        "lateralRateMaxMps": 2.5,
+        "lateralAccelMaxMps2": 3,
+        "lateralJerkMaxMps3": 8
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.focus-vehicle-nudges-right",
+      "reason": "dynamic actor focus-vehicle did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "focus-vehicle",
+        "interactionId": "focus-vehicle-nudges-right",
+        "referenceDurationS": 2.7764695792503833,
+        "positionErrorM": 0.4907137120790699,
+        "rateErrorMps": 0.027426340781633307,
+        "headingErrorRad": -0.1901512869115538
+      }
+    }
+  ],
+  "arrival": []
+}

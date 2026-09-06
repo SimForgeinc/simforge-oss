@@ -1402,3 +1402,55 @@ export function buildConstructionHumanoid(params: RobotParams = {}): Group {
   });
   return g;
 }
+
+/* ------------------------------------------------ rigid-body components */
+
+/**
+ * Articulated delivery-robot components, one catalog entry per exported
+ * rigid body (`adapters/physics` `delivery-robot-curb-ramp` workload).
+ *
+ * Unlike every other builder in this file these are `origin: 'body-centre'`:
+ * the mesh is centred on the origin in X, Y and Z because the solver exports
+ * each body's centre pose, and the consumer places the mesh there verbatim.
+ * The whole robot is therefore assembled by the scene state, not here — the
+ * chassis carries no wheels, and a wheel is one axis-symmetric cylinder whose
+ * spin arrives in the exported quaternion.
+ */
+
+/** Chassis body of the four-wheel delivery robot: 0.70 × 0.50 × 0.30 m box. */
+const DELIVERY_4W_CHASSIS = { l: 0.7, w: 0.5, h: 0.3 } as const;
+
+/** Drive wheel of the four-wheel delivery robot: radius 0.10 m, width 0.05 m. */
+const DELIVERY_4W_WHEEL = { radius: 0.1, width: 0.05 } as const;
+
+/**
+ * Chassis box centred on its rigid-body origin, +X forward, +Y up. The paint
+ * is the collider's exact extent; the sensor visor and lid seam are flush
+ * insets so the bounding box stays the physics box.
+ */
+export function buildDelivery4wChassis(params: RobotParams = {}): Group {
+  const group = new Group();
+  const { l, w, h } = DELIVERY_4W_CHASSIS;
+  const paint = material('paint', params.color ?? '#e6802a');
+  const dark = material('plastic');
+
+  group.add(box([l, h, w], paint, { name: 'chassis' }));
+  // Forward sensor visor, recessed into the front face.
+  group.add(box([0.004, h * 0.22, w * 0.7], material('glass'), { at: [l / 2 - 0.002, h * 0.2, 0], name: 'visor' }));
+  // Cargo lid seam, recessed into the top face.
+  group.add(box([l * 0.8, 0.004, w * 0.86], dark, { at: [-l * 0.05, h / 2 - 0.002, 0], name: 'lid-seam' }));
+  return group;
+}
+
+/**
+ * One drive wheel centred on its axle: a cylinder whose axis is local Z, so
+ * the exported spin (rotation about the axle, scene −Z in the identity pose)
+ * turns it about its own centre. Axis-symmetric by construction.
+ */
+export function buildDelivery4wWheel(params: RobotParams = {}): Group {
+  const group = new Group();
+  const { radius, width } = DELIVERY_4W_WHEEL;
+  const tire = params.color ? material('paint', params.color) : material('tire');
+  group.add(cyl(radius, width, tire, { axis: 'z', segments: 32, name: 'tire' }));
+  return group;
+}

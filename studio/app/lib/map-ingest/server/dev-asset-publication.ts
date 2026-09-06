@@ -1,19 +1,22 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { extname, posix, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import sharp from "sharp";
+import { z } from "zod";
 
+import { parseRoadwayConsistencyReport } from "@simforge-oss/maps/ingest";
+import type { MapTopologyIndex } from "@simforge-oss/maps/topology";
 import { LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
 import { execute } from "@/app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { upsertMapAsset } from "@/app/lib/db/map-asset-store";
 import { extractCoordinateRefFromXodr } from "@/app/lib/maps/metadata/xodr";
 import { registerLocalFile, writeLocalObject, type LocalObjectMetadata } from "@/app/lib/s3/s3-object";
-import { buildDerivedArtifacts, MAP_INTEL_BUILDER_VERSION } from "./derived";
 import {
   planNativeMapAssetSet,
   planUploadedMapClosure,
+  REQUIRED_BROWSER_MEMBERS,
   type UploadedMapClosureMemberInput,
 } from "./closure";
 import { publishUploadedMapVersion, type PublishedMapIntel } from "./publication";
@@ -22,16 +25,33 @@ import { nativeMasterResources } from "../native-master-resources";
 
 export type DevAssetMap = readonly [slug: string, label: string, locality: string];
 
-export type MapInstallationReceipt = {
-  schema: "simforge.map-installation.v1";
-  name: string;
-  version: string;
-  releaseDigest: string;
-  canonicalDigest: string;
-  webDigest?: string;
-  profile: "semantic" | "native" | "web";
-  members: Record<string, { sha256: string; bytes: number }>;
-};
+const SHA256 = /^[a-f0-9]{64}$/;
+const Sha256Schema = z.string().regex(SHA256);
+const SafeMemberPathSchema = z.string().refine(
+  (path) =>
+    path.length > 0 &&
+    !path.startsWith("/") &&
+    !path.includes("\\") &&
+    !path.split("/").some((part) => part === "" || part === "." || part === "..") &&
+    !/[\u0000-\u001f\u007f]/u.test(path),
+  { message: "unsafe installation member path" },
+);
+
+/** One profile's `.map-release.json`, written by the registry installer after every member verified. */
+export const MapInstallationReceiptSchema = z.object({
+  schema: z.literal("simforge.map-installation.v1"),
+  name: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  version: z.string().regex(/^v[1-9][0-9]*$/),
+  releaseDigest: Sha256Schema,
+  canonicalDigest: Sha256Schema,
+  webDigest: Sha256Schema.optional(),
+  profile: z.enum(["semantic", "native", "web"]),
+  members: z.record(
+    SafeMemberPathSchema,
+    z.object({ sha256: Sha256Schema, bytes: z.number().int().nonnegative() }),
+  ),
+});
+export type MapInstallationReceipt = z.infer<typeof MapInstallationReceiptSchema>;
 
 export type RegistryMapInstallation = {
   semanticRoot: string;
@@ -43,32 +63,38 @@ export type RegistryMapInstallation = {
 };
 
 type GeoJson = { features?: Array<{ geometry?: { coordinates?: unknown } }> };
-type Topology = Parameters<typeof buildDerivedArtifacts>[0]["topologyIndex"];
 type Manifest = {
   scene?: { totalTriangles?: number };
 };
-type Receipt = {
-  contractVersion?: string;
-  builder?: { package?: string; version?: string };
-  mapId?: string;
-  catalogRevision?: string;
-  sourceHashes?: Record<string, unknown>;
-  outputs?: Record<string, unknown>;
-};
-type RoadwayReport = {
-  format: string;
-  validatorVersion: string;
-  verdict: string;
-  stats: Record<string, unknown>;
-  sourceDigests: PublishedMapIntel["roadwayConsistency"]["sourceDigests"];
-};
-type SourceCapabilities = {
-  geography?: {
-    bounds?: { min_lat: number; min_lng: number; max_lat: number; max_lng: number };
-    center?: { lat: number; lng: number };
-  };
-  thumbnail?: { path?: string; recipe?: string };
-};
+/** `derived/map-intel-build-receipt.json`, written by the Starter Road generator. */
+const BuildReceiptSchema = z.object({
+  contractVersion: z.string().min(1),
+  builder: z.object({ package: z.string().min(1), version: z.string().min(1) }),
+  mapId: z.string().min(1),
+  catalogRevision: z.string().min(1),
+  sourceHashes: z.record(z.string(), Sha256Schema),
+  outputs: z.record(z.string(), z.unknown()),
+});
+/** `derived/locations.json.gz`: the map-intel catalog every release and the Starter carry. */
+const LocationsSchema = z.object({
+  catalogRevision: z.string().min(1),
+  sourceHashes: z.record(z.string(), Sha256Schema),
+  locations: z.array(z.unknown()),
+});
+const GeographySchema = z.object({
+  bounds: z.object({
+    min_lat: z.number().finite(),
+    min_lng: z.number().finite(),
+    max_lat: z.number().finite(),
+    max_lng: z.number().finite(),
+  }),
+  center: z.object({ lat: z.number().finite(), lng: z.number().finite() }),
+});
+/** `derived/source-capabilities.json.gz`: only the fields publication binds. */
+const SourceCapabilitiesSchema = z.object({
+  geography: GeographySchema,
+  thumbnail: z.object({ path: SafeMemberPathSchema, recipe: z.string().min(1).optional() }),
+});
 
 type StoredMember = UploadedMapClosureMemberInput & {
   metadata: LocalObjectMetadata;
@@ -76,6 +102,26 @@ type StoredMember = UploadedMapClosureMemberInput & {
 };
 
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+
+/**
+ * Browser members every installed release must carry. The registry installer
+ * materializes the web profile as the web closure plus every canonical semantic
+ * member, so the web receipt alone is the complete browser publication input.
+ */
+const REQUIRED_INSTALLED_WEB_MEMBERS: readonly string[] = [
+  ...REQUIRED_BROWSER_MEMBERS,
+  "map.geojson.gz",
+  "derived/source-capabilities.json.gz",
+];
+
+/** Map-intel source hash names and the closure member each must equal. */
+const SOURCE_HASH_MEMBERS: Readonly<Record<string, string>> = {
+  xodr: "map.xodr",
+  "topology-index": "topology-index.json.gz",
+  "lane-polygons": "lane-polygons.geojson.gz",
+  signals: "signals.geojson.gz",
+  "map-geojson": "map.geojson.gz",
+};
 
 function mediaType(path: string): string {
   if (path.endsWith(".geojson.gz") || path.endsWith(".json.gz") || path.endsWith(".xml.gz")) {
@@ -191,10 +237,118 @@ function jsonFromGzip<T>(bytes: Buffer): T {
   return JSON.parse(gunzipSync(bytes).toString("utf8")) as T;
 }
 
-function roadGlbPath(paths: string[]): string {
-  const path = paths.find((candidate) => /\/tiles\/road\.glb$/i.test(candidate));
-  if (!path) throw new Error("published dev asset has no roads-only road.glb for consistency derivation");
-  return path;
+/**
+ * Read one profile's `.map-release.json` and confirm every declared member is
+ * present at its declared size. Digests are verified when members are stored.
+ */
+async function readInstallationReceipt(
+  root: string,
+  name: string,
+  profile: MapInstallationReceipt["profile"],
+): Promise<MapInstallationReceipt> {
+  let raw: string;
+  try {
+    raw = await readFile(resolve(root, ".map-release.json"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`${profile} profile is not installed at ${root}`);
+    }
+    throw error;
+  }
+  const parsed = MapInstallationReceiptSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success || parsed.data.name !== name || parsed.data.profile !== profile) {
+    throw new Error(`invalid ${profile} installation receipt at ${root}`);
+  }
+  const receipt = parsed.data;
+  for (const [relativePath, member] of Object.entries(receipt.members)) {
+    let memberStat;
+    try {
+      memberStat = await stat(resolve(root, relativePath));
+    } catch {
+      throw new Error(`${profile} receipt member is missing: ${relativePath}`);
+    }
+    if (!memberStat.isFile() || memberStat.size !== member.bytes) {
+      throw new Error(`${profile} receipt member does not match its receipt size: ${relativePath}`);
+    }
+  }
+  return receipt;
+}
+
+/**
+ * Resolve the three installed profiles of one immutable registry release.
+ *
+ * The receipts must name one release (version, release digest, canonical
+ * digest, web digest), members shared by the semantic and web profiles must be
+ * the same bytes, the web profile must carry every browser publication input,
+ * and the native profile must carry `master.gltf`. Nothing here depends on
+ * build-only files: the release contract is exactly what the registry publishes.
+ */
+export async function resolveRegistryMapInstallation(input: {
+  name: string;
+  semanticRoot: string;
+  webRoot: string;
+  nativeRoot: string;
+}): Promise<RegistryMapInstallation> {
+  const { name, semanticRoot, webRoot, nativeRoot } = input;
+  const [semanticReceipt, webReceipt, nativeReceipt] = await Promise.all([
+    readInstallationReceipt(semanticRoot, name, "semantic"),
+    readInstallationReceipt(webRoot, name, "web"),
+    readInstallationReceipt(nativeRoot, name, "native"),
+  ]);
+  if (!webReceipt.webDigest) {
+    throw new Error(`web profile of ${name} has no web closure digest`);
+  }
+  for (const receipt of [semanticReceipt, nativeReceipt]) {
+    if (
+      receipt.version !== webReceipt.version ||
+      receipt.releaseDigest !== webReceipt.releaseDigest ||
+      receipt.canonicalDigest !== webReceipt.canonicalDigest ||
+      (receipt.webDigest !== undefined && receipt.webDigest !== webReceipt.webDigest)
+    ) {
+      throw new Error(
+        `${receipt.profile} profile of ${name} is ${receipt.version} release ${receipt.releaseDigest}, `
+        + `web profile is ${webReceipt.version} release ${webReceipt.releaseDigest}`,
+      );
+    }
+  }
+  for (const [relativePath, semanticMember] of Object.entries(semanticReceipt.members)) {
+    const webMember = webReceipt.members[relativePath];
+    if (
+      webMember &&
+      (webMember.sha256 !== semanticMember.sha256 || webMember.bytes !== semanticMember.bytes)
+    ) {
+      throw new Error(`semantic/web profile conflict for ${name}: ${relativePath}`);
+    }
+  }
+  const missing = REQUIRED_INSTALLED_WEB_MEMBERS.filter((path) => !webReceipt.members[path]);
+  if (missing.length > 0) {
+    throw new Error(`web profile of ${name} lacks browser publication members: ${missing.join(", ")}`);
+  }
+  if (!nativeReceipt.members["master.gltf"]) {
+    throw new Error(`native profile of ${name} lacks master.gltf`);
+  }
+  return { semanticRoot, webRoot, nativeRoot, semanticReceipt, webReceipt, nativeReceipt };
+}
+
+/**
+ * Every map-intel source hash that names a published closure member must equal
+ * that member's stored digest; the XODR and topology hashes are mandatory
+ * because the roadway audit is bound through them.
+ */
+function assertSourceHashesBound(
+  slug: string,
+  sourceHashes: Record<string, string>,
+  memberSha256: (path: string) => string,
+): void {
+  for (const required of ["xodr", "topology-index"]) {
+    if (!sourceHashes[required]) throw new Error(`${slug} map-intel source hashes lack ${required}`);
+  }
+  for (const [source, digest] of Object.entries(sourceHashes)) {
+    const path = SOURCE_HASH_MEMBERS[source];
+    if (path && memberSha256(path) !== digest) {
+      throw new Error(`${slug} map-intel source hash ${source} does not match closure member ${path}`);
+    }
+  }
 }
 
 async function storeSourceMember(
@@ -221,6 +375,28 @@ async function storeSourceMember(
   return {
     relativePath,
     sha256: metadata.checksumSha256Hex,
+    byteLength: metadata.sizeBytes,
+    mediaType: mediaType(relativePath),
+    bucket: LOCAL_ARTIFACT_BUCKET,
+    key,
+    metadata,
+    sourcePath,
+  };
+}
+
+/**
+ * Generated starter members live at content-addressed keys, like every
+ * generated member: republishing a regenerated Starter Road must never rewrite
+ * the bytes an earlier starter version's blob rows still resolve to.
+ */
+async function storeStarterMember(mapRoot: string, relativePath: string): Promise<StoredMember> {
+  const sourcePath = resolve(mapRoot, relativePath);
+  const digest = sha256(await readFile(sourcePath));
+  const key = `map-closure/${digest}`;
+  const metadata = await registerLocalFile(LOCAL_ARTIFACT_BUCKET, key, sourcePath, mediaType(relativePath));
+  return {
+    relativePath,
+    sha256: digest,
     byteLength: metadata.sizeBytes,
     mediaType: mediaType(relativePath),
     bucket: LOCAL_ARTIFACT_BUCKET,
@@ -264,50 +440,22 @@ export async function publishDevAssetMap({
   }
   const semanticRoot = installation?.semanticRoot ?? resolve(assetsRoot!, slug);
   const browserRoot = installation?.webRoot ?? semanticRoot;
-  const paths = installation
-    ? [
-      ...Object.keys(installation.semanticReceipt.members),
-      ...Object.keys(installation.webReceipt.members),
-    ].sort()
-    : await stableFiles(semanticRoot);
-  const sourceByPath = new Map<string, {
-    root: string;
-    expected?: { sha256: string; bytes: number };
-  }>();
-  if (installation) {
-    for (const [relativePath, expected] of Object.entries(installation.semanticReceipt.members)) {
-      sourceByPath.set(relativePath, { root: semanticRoot, expected });
-    }
-    for (const [relativePath, expected] of Object.entries(installation.webReceipt.members)) {
-      const prior = sourceByPath.get(relativePath);
-      if (
-        prior &&
-        (!prior.expected ||
-          prior.expected.sha256 !== expected.sha256 ||
-          prior.expected.bytes !== expected.bytes)
-      ) {
-        throw new Error(`${slug} semantic/web receipt conflict: ${relativePath}`);
-      }
-      sourceByPath.set(relativePath, { root: browserRoot, expected });
-    }
-  } else {
-    for (const relativePath of paths) sourceByPath.set(relativePath, { root: semanticRoot });
-  }
 
+  // An installed web profile is self-contained (web closure plus canonical
+  // semantic members), so it alone is the browser closure; every member is
+  // digest-checked against its receipt as it is stored. The Starter Road is
+  // generated in place and stored content-addressed.
   const members: StoredMember[] = [];
-  for (const [relativePath, source] of [...sourceByPath.entries()].sort(([left], [right]) =>
-    left.localeCompare(right),
-  )) {
-    members.push(await storeSourceMember(
-      source.root,
-      slug,
-      relativePath,
-      "",
-      source.expected,
-    ));
-  }
   if (installation) {
+    for (const [relativePath, expected] of Object.entries(installation.webReceipt.members)
+      .sort(([left], [right]) => left.localeCompare(right))) {
+      members.push(await storeSourceMember(browserRoot, slug, relativePath, "", expected));
+    }
     members.push(await storeSourceMember(browserRoot, slug, ".map-release.json"));
+  } else {
+    for (const relativePath of await stableFiles(semanticRoot)) {
+      members.push(await storeStarterMember(semanticRoot, relativePath));
+    }
   }
   const byPath = new Map(members.map((member) => [member.relativePath, member]));
   const requireMember = (path: string) => {
@@ -335,38 +483,21 @@ export async function publishDevAssetMap({
     byPath.set(sumoManifestPath, sumoManifestMember);
   }
 
-  const xodrBytes = await readFile(requireMember("map.xodr").sourcePath!);
+  const xodrMember = requireMember("map.xodr");
+  const xodrBytes = await readFile(xodrMember.sourcePath!);
   const xodrText = xodrBytes.toString("utf8");
   const manifestBytes = await readFile(requireMember("3d/manifest.json").sourcePath!);
   const manifest = JSON.parse(manifestBytes.toString("utf8")) as Manifest;
-  const topologyBytes = await readFile(requireMember("topology-index.json.gz").sourcePath!);
-  const topology = jsonFromGzip<Topology>(topologyBytes);
-  let roadway: Buffer;
-  const existingRoadway = byPath.get("derived/roadway-consistency.json.gz");
-  if (existingRoadway?.sourcePath) {
-    roadway = await readFile(existingRoadway.sourcePath);
-  } else {
-    const lanePolygons = jsonFromGzip<NonNullable<Parameters<typeof buildDerivedArtifacts>[0]["lanePolygonsJson"]>>(
-      await readFile(requireMember("lane-polygons.geojson.gz").sourcePath!),
-    );
-    const signals = jsonFromGzip<NonNullable<Parameters<typeof buildDerivedArtifacts>[0]["signalsJson"]>>(
-      await readFile(requireMember("signals.geojson.gz").sourcePath!),
-    );
-    roadway = buildDerivedArtifacts({
-      mapId: slug,
-      xodrText,
-      xodrSha256: requireMember("map.xodr").sha256,
-      topologyIndex: topology,
-      topologyBytes,
-      lanePolygonsJson: lanePolygons,
-      signalsJson: signals,
-      manifest: manifest as Parameters<typeof buildDerivedArtifacts>[0]["manifest"],
-      roadGlbBytes: await readFile(resolve(semanticRoot, roadGlbPath(paths))),
-    }).roadwayConsistency.bytes;
-    const member = await storeGeneratedMember("derived/roadway-consistency.json.gz", roadway);
-    members.push(member);
-    byPath.set(member.relativePath, member);
-  }
+  const topologyMember = requireMember("topology-index.json.gz");
+  const topology = jsonFromGzip<MapTopologyIndex>(await readFile(topologyMember.sourcePath!));
+  // The roadway audit is published exactly as its producer wrote it, bound to
+  // this map and to the XODR and topology bytes in the closure. A failed verdict
+  // is published as failed.
+  const roadwayMember = requireMember("derived/roadway-consistency.json.gz");
+  const roadwayReport = parseRoadwayConsistencyReport(await readFile(roadwayMember.sourcePath!), {
+    mapId: slug,
+    sourceDigests: { xodrSha256: xodrMember.sha256, topologySha256: topologyMember.sha256 },
+  });
 
   const roadGeoJsonCompressed = await readFile(requireMember("map.geojson.gz").sourcePath!);
   const roadGeoJsonBytes = gunzipSync(roadGeoJsonCompressed);
@@ -379,18 +510,15 @@ export async function publishDevAssetMap({
   let thumbnailMetadata: LocalObjectMetadata;
   let thumbnailKey: string;
   let thumbnailRecipe: string;
-  let geography: NonNullable<SourceCapabilities["geography"]> | undefined;
+  let geography: z.infer<typeof GeographySchema> | undefined;
   if (installation) {
-    const capabilitiesMember = requireMember("derived/source-capabilities.json.gz");
-    const capabilities = jsonFromGzip<SourceCapabilities>(
-      await readFile(capabilitiesMember.sourcePath!),
-    );
-    const sourceThumbnailPath = capabilities.thumbnail?.path;
-    if (!sourceThumbnailPath) throw new Error(`${slug} source capabilities have no thumbnail`);
-    const thumbnail = requireMember(sourceThumbnailPath);
+    const capabilities = SourceCapabilitiesSchema.parse(jsonFromGzip<unknown>(
+      await readFile(requireMember("derived/source-capabilities.json.gz").sourcePath!),
+    ));
+    const thumbnail = requireMember(capabilities.thumbnail.path);
     thumbnailMetadata = thumbnail.metadata;
     thumbnailKey = thumbnail.key;
-    thumbnailRecipe = capabilities.thumbnail?.recipe ?? "registry-source-thumbnail";
+    thumbnailRecipe = capabilities.thumbnail.recipe ?? "registry-source-thumbnail";
     geography = capabilities.geography;
   } else {
     const thumbnailBytes = await renderRoadThumbnail(label, roadGeoJson);
@@ -522,12 +650,53 @@ export async function publishDevAssetMap({
   }
   if (installation && !nativePlan) throw new Error("registry native asset set was not planned");
 
-  const receiptBytes = await readFile(requireMember("derived/map-intel-build-receipt.json").sourcePath!);
-  const receipt = JSON.parse(receiptBytes.toString("utf8")) as Receipt;
-  const locations = jsonFromGzip<{ locations?: unknown[] }>(
+  const locations = LocationsSchema.parse(jsonFromGzip<unknown>(
     await readFile(requireMember("derived/locations.json.gz").sourcePath!),
-  );
-  const roadwayReport = jsonFromGzip<RoadwayReport>(roadway);
+  ));
+  const memberSha256 = (path: string) => requireMember(path).sha256;
+  const counts = {
+    locationCount: locations.locations.length,
+    laneCount: Object.keys(topology.lanes).length,
+    junctionCount: Object.keys(topology.junctions).length,
+  };
+  const roadwayConsistency: PublishedMapIntel["roadwayConsistency"] = {
+    format: roadwayReport.format,
+    validatorVersion: roadwayReport.validatorVersion,
+    verdict: roadwayReport.verdict,
+    stats: roadwayReport.stats,
+    artifactSha256: roadwayMember.sha256,
+    sourceDigests: roadwayReport.sourceDigests,
+  };
+  let mapIntel: PublishedMapIntel;
+  if (installation) {
+    // Same projection SimCloud records for a registry import: the release is
+    // the receipt, and map-intel identity comes from the catalog it shipped.
+    assertSourceHashesBound(slug, locations.sourceHashes, memberSha256);
+    mapIntel = {
+      contractVersion: "simforge.map-release.v1",
+      builder: { package: "@simforge-oss/map-registry", version: "1" },
+      mapId: slug,
+      catalogRevision: locations.catalogRevision,
+      sourceHashes: locations.sourceHashes,
+      outputs: {},
+      receiptSha256: installation.webReceipt.releaseDigest,
+      ...counts,
+      roadwayConsistency,
+    };
+  } else {
+    const receiptBytes = await readFile(requireMember("derived/map-intel-build-receipt.json").sourcePath!);
+    const receipt = BuildReceiptSchema.parse(JSON.parse(receiptBytes.toString("utf8")));
+    if (receipt.mapId !== slug || receipt.catalogRevision !== locations.catalogRevision) {
+      throw new Error(`${slug} map-intel build receipt does not describe its locations catalog`);
+    }
+    assertSourceHashesBound(slug, receipt.sourceHashes, memberSha256);
+    mapIntel = {
+      ...receipt,
+      receiptSha256: sha256(receiptBytes),
+      ...counts,
+      roadwayConsistency,
+    };
+  }
   const result = await publishUploadedMapVersion({
     draftId,
     plan,
@@ -564,29 +733,7 @@ export async function publishDevAssetMap({
       sourceBucket: LOCAL_ARTIFACT_BUCKET,
       sourceKey: installation ? thumbnailKey : geojsonKey,
     },
-    mapIntel: {
-      contractVersion: receipt.contractVersion ?? "uniscenario.map-intel-build/v1",
-      builder: {
-        package: receipt.builder?.package ?? "@simforge-oss/maps",
-        version: receipt.builder?.version ?? MAP_INTEL_BUILDER_VERSION,
-      },
-      mapId: receipt.mapId ?? slug,
-      catalogRevision: receipt.catalogRevision ?? sha256(receiptBytes),
-      sourceHashes: receipt.sourceHashes ?? {},
-      outputs: receipt.outputs ?? {},
-      receiptSha256: sha256(receiptBytes),
-      locationCount: locations.locations?.length ?? 0,
-      laneCount: topology.stats.lanes,
-      junctionCount: topology.stats.junctions,
-      roadwayConsistency: {
-        format: roadwayReport.format,
-        validatorVersion: roadwayReport.validatorVersion,
-        verdict: roadwayReport.verdict,
-        stats: roadwayReport.stats,
-        artifactSha256: requireMember("derived/roadway-consistency.json.gz").sha256,
-        sourceDigests: roadwayReport.sourceDigests,
-      },
-    },
+    mapIntel,
     triangleCount: manifest.scene?.totalTriangles ?? 0,
     ...(installation
       ? {

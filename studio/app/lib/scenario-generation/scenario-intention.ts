@@ -6,7 +6,6 @@ import {
   type CollisionFamilyId,
   type GeneratedActorBehaviorMetadata,
   type GeneratedScenarioMetadata,
-  type RuntimeScenarioEditorActor,
   type ScenarioEditorActorDraft,
   type ScenarioIntention,
 } from "@simforge-oss/studio-shared";
@@ -580,30 +579,19 @@ function controlModeFor(
   actor: ScenarioEditorActorDraft,
   behaviorIntent: string,
 ): GeneratedActorBehaviorMetadata["control_mode"] {
-  // Generator intermediates still carry the legacy keys top-level; a migrated
-  // draft carries residue in the wire envelope and its Auto baseline as an
-  // `autopilot` base clip.
-  const legacy = actor as RuntimeScenarioEditorActor;
   if (
     actor.reaction_profile?.mode === "brake" ||
     actor.reaction_profile?.mode === "brake_and_swerve" ||
-    legacy.reactive_braking ||
-    actor.legacy_wire?.reactive_braking ||
     behaviorIntent === "yield"
   ) {
     return "reactive";
   }
-  const autopilotBase = actor.behavior
-    ? baseClip(actor.behavior)?.action.kind === "autopilot"
-    : undefined;
-  if (autopilotBase ?? legacy.autopilot) return "traffic_manager";
-  const legacyTimeline = legacy.timeline ?? actor.legacy_wire?.timeline ?? [];
+  if (actor.behavior && baseClip(actor.behavior)?.action.kind === "autopilot") {
+    return "traffic_manager";
+  }
   if (
     actor.behavior?.clips.some(
       (clip) => clip.action.kind === "intercept" || clip.action.kind === "follow_actor",
-    ) ||
-    legacyTimeline.some(
-      (clip) => clip.action === "ram_actor" || clip.action === "chase_actor",
     )
   ) {
     return "closed_loop";

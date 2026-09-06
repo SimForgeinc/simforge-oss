@@ -224,12 +224,12 @@ def scene_documents(scenario: dict, map_id: str, fps: int) -> tuple[list[dict], 
                 "position": position, "rotation": quat_y(heading), "yawRad": heading,
                 "velocity": velocity,
             })
-        states.append({"version": "scene-state.v1", "mapId": map_id, "tick": tick, "tickHz": fps,
+        states.append({"version": "simforge.scene-state.v1", "mapId": map_id, "tick": tick, "tickHz": fps,
                        "weather": {"preset": weather}, "timeOfDay": minutes / 60, "actors": records})
         frames.append({"tick": tick, "t": t, "actors": [
             {k: r[k] for k in ("id", "kind", "position", "rotation", "yawRad", "velocity")} for r in records
         ]})
-    playback = {"version": "scene-state.v1", "mapId": map_id, "frame": "map-y-up", "dt": 1 / fps,
+    playback = {"version": "simforge.scene-state.v1", "mapId": map_id, "frame": "map-y-up", "dt": 1 / fps,
                 "tickHz": fps, "tickCount": count, "weather": {"preset": weather, "fog_density": 0,
                 "rain_intensity": 0, "wetness": 0}, "timeOfDay": minutes / 60, "profile": "cinematic",
                 "actors": descriptors, "frames": frames}

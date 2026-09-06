@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { ScenarioWorkspaceStatusProvider } from "./editor/status";
+import { ScenarioWorkspaceStatusProvider } from "@simforge-oss/studio-ui/scenario/editor/status";
 
 // This segment owns long-lived client state (the shared 3D world and status
 // provider), so it cannot participate in Next.js instant-navigation prerenders.

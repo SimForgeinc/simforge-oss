@@ -200,7 +200,12 @@
       "label": "shopper chasing but stopping at driveway edge",
       "actor": {
         "class": "pedestrian",
-        "catalogId": "pedestrian.adult_walking"
+        "catalogId": "pedestrian.adult",
+        "dims": {
+          "length": 0.85,
+          "width": 0.5,
+          "height": 1.75
+        }
       },
       "pose": {
         "laneOffset": 0,
@@ -245,7 +250,12 @@
       "lateralFrac": 0,
       "actor": {
         "class": "pedestrian",
-        "catalogId": "pedestrian.adult_walking"
+        "catalogId": "pedestrian.adult",
+        "dims": {
+          "length": 0.85,
+          "width": 0.5,
+          "height": 1.75
+        }
       },
       "initialSpeedKph": 0,
       "extensions": {

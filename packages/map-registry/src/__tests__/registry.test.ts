@@ -241,17 +241,18 @@ describe('file registry', () => {
     expect(await readFile(join(layouts.devAssetsRoot, 'test-map', 'images', 'aa.png'))).toEqual(Buffer.from('png-bytes'));
   });
 
-  it('refuses to pull a tiled canonical closure from before the master format', async () => {
+  it('refuses to resolve or pull a version record without an immutable release', async () => {
     const root = await temporaryRoot('legacy');
     const source = join(root, 'source');
     await mkdir(join(source, '3d', 'tiles'), { recursive: true });
     await writeFile(join(source, '3d', 'tiles', 'road.glb'), Buffer.from([1]));
     const built = await closureFromDirectory(source);
     const backend = new FileRegistryBackend(`file://${join(root, 'registry')}`);
+    // The old direct-closure layout is present and digest-consistent, yet must never be interpreted.
     await backend.put('maps/legacy-map/v1/closure.json', Buffer.from(canonicalJson(built.closure)));
     await backend.put('maps/legacy-map/versions.json', Buffer.from(canonicalJson([{ version: 'v1', createdAt: '2026-01-01T00:00:00Z', closureDigest: closureDigest(built.closure) }])));
     await mergeIndexEntry(backend, 'legacy-map', 'v1', {});
-    expect((await resolveVersion(backend, 'legacy-map@v1')).release).toBeUndefined();
+    await expect(resolveVersion(backend, 'legacy-map@v1')).rejects.toThrow('legacy-map@v1 has no supported immutable release');
     await expect(pullVersion(backend, 'legacy-map@v1', {
       layouts: {
         browserBundlesRoot: join(root, 'browser'),
@@ -326,7 +327,7 @@ describe('file registry', () => {
     expect(index['immutable-map'].versions).toEqual(['v1', 'v2']);
     for (const result of [first, second]) {
       const resolved = await resolveVersion(backend, `immutable-map@${result.record.version}`);
-      expect(releaseDigest(resolved.release!)).toBe(result.record.releaseDigest);
+      expect(releaseDigest(resolved.release)).toBe(result.record.releaseDigest);
     }
   });
 

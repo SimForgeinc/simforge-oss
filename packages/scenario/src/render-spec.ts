@@ -16,69 +16,14 @@ import {
   WeatherSchema,
   type Environment,
 } from './schema/v2/environment.js';
-import {
-  SensorMountSchema,
-  type SensorMount,
-} from './schema/v2/sensors.js';
+import { SensorMountSchema } from './schema/v2/sensors.js';
 
-export const CANONICAL_RENDER_SPEC_V2_SCHEMA = 'simforge.render-spec/v2' as const;
-export const LEGACY_RENDER_SPEC_V2_SCHEMA = 'uniscenario.render-spec/v2' as const;
-export const CANONICAL_CAPTURE_MANIFEST_V1_SCHEMA = 'simforge.capture-manifest/v1' as const;
-export const LEGACY_CAPTURE_MANIFEST_V1_SCHEMA = 'uniscenario.capture-manifest/v1' as const;
-export const CANONICAL_RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
-export const LEGACY_RENDER_SPEC_V3_SCHEMA = 'uniscenario.render-spec/v3' as const;
-/** Digest-preserving writer switch; keep false until canonical-document cutover. */
-export const EMIT_CANONICAL_RENDER_SCHEMAS = false;
-export const RENDER_SPEC_V2_SCHEMA = (
-  EMIT_CANONICAL_RENDER_SCHEMAS ? CANONICAL_RENDER_SPEC_V2_SCHEMA : LEGACY_RENDER_SPEC_V2_SCHEMA
-) as typeof CANONICAL_RENDER_SPEC_V2_SCHEMA | typeof LEGACY_RENDER_SPEC_V2_SCHEMA;
-export const RESOLVED_CAPTURE_MANIFEST_V1_SCHEMA = (
-  EMIT_CANONICAL_RENDER_SCHEMAS ? CANONICAL_CAPTURE_MANIFEST_V1_SCHEMA : LEGACY_CAPTURE_MANIFEST_V1_SCHEMA
-) as typeof CANONICAL_CAPTURE_MANIFEST_V1_SCHEMA | typeof LEGACY_CAPTURE_MANIFEST_V1_SCHEMA;
-export const RENDER_SPEC_V3_SCHEMA = (
-  EMIT_CANONICAL_RENDER_SCHEMAS ? CANONICAL_RENDER_SPEC_V3_SCHEMA : LEGACY_RENDER_SPEC_V3_SCHEMA
-) as typeof CANONICAL_RENDER_SPEC_V3_SCHEMA | typeof LEGACY_RENDER_SPEC_V3_SCHEMA;
+export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
+export const RESOLVED_CAPTURE_MANIFEST_V1_SCHEMA = 'simforge.capture-manifest/v1' as const;
 
 const Sha256Schema = z
   .string()
   .regex(/^[0-9a-f]{64}$/, 'must be lowercase hex sha-256');
-
-export const CaptureSensorModalitySchema = z.enum([
-  'rgb',
-  'depth',
-  'semantic',
-  'instance',
-]);
-
-export const CaptureCapabilitySchema = z.enum([
-  'sensor.rgb',
-  'sensor.depth',
-  'sensor.semantic',
-  'sensor.instance',
-  'artifact.video',
-  'artifact.frames',
-  'artifact.manifest',
-  'artifact.trace',
-  'artifact.annotations',
-  'environment.authored',
-  'timing.fixed_step',
-]);
-
-export const CaptureArtifactSchema = z.enum([
-  'video',
-  'frames',
-  'manifest',
-  'trace',
-  'annotations',
-]);
-
-export const RenderSensorSourceSchema = z.strictObject({
-  actorId: EntityIdSchema,
-  sensorId: EntityIdSchema,
-  modality: CaptureSensorModalitySchema.default('rgb'),
-  /** Stable artifact stem. Labels are presentation-only and never identify a source. */
-  outputName: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/).optional(),
-});
 
 export const RenderClipSchema = z.strictObject({
   /** Inclusive source-playback time. */
@@ -92,27 +37,6 @@ export const RenderClipSchema = z.strictObject({
       message: 'endSeconds must be greater than startSeconds',
       path: ['endSeconds'],
       input: ctx.value.endSeconds,
-    });
-  }
-});
-
-export const RenderVideoSchema = z.strictObject({
-  width: z.number().int().min(64).max(8192),
-  height: z.number().int().min(64).max(8192),
-  fps: z.number().int().min(1).max(120),
-  container: z.enum(['mp4', 'webm']),
-  codec: z.enum(['h264', 'vp9', 'av1']),
-  quality: z.enum(['draft', 'standard', 'high', 'lossless']),
-  /** Optional encoder target. Adapters may reject it instead of silently clamping. */
-  bitrateMbps: z.number().finite().positive().max(500).optional(),
-}).check((ctx) => {
-  const profile = `${ctx.value.container}+${ctx.value.codec}`;
-  if (profile !== 'mp4+h264' && profile !== 'webm+vp9' && profile !== 'webm+av1') {
-    ctx.issues.push({
-      code: 'custom',
-      message: 'supported codec profiles are mp4+h264, webm+vp9, and webm+av1',
-      path: ['codec'],
-      input: ctx.value.codec,
     });
   }
 });
@@ -204,105 +128,6 @@ export const ResolvedEnvironmentProvenanceSchema = z.strictObject({
   }
 });
 
-export const CaptureCapabilityIntentSchema = z.strictObject({
-  /** Missing required capabilities make the capture inadmissible. */
-  required: z.array(CaptureCapabilitySchema).max(32).default([
-    'artifact.video',
-    'artifact.manifest',
-    'environment.authored',
-    'timing.fixed_step',
-  ]),
-  /** Missing preferred capabilities are recorded in provenance as warnings. */
-  preferred: z.array(CaptureCapabilitySchema).max(32).default([]),
-  fidelity: z.enum(['review', 'dataset']).default('review'),
-}).check((ctx) => {
-  const required = new Set<string>();
-  ctx.value.required.forEach((capability, index) => {
-    if (required.has(capability)) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `duplicate required capability "${capability}"`,
-        path: ['required', index],
-        input: capability,
-      });
-    }
-    required.add(capability);
-  });
-  const preferred = new Set<string>();
-  ctx.value.preferred.forEach((capability, index) => {
-    if (preferred.has(capability)) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `duplicate preferred capability "${capability}"`,
-        path: ['preferred', index],
-        input: capability,
-      });
-    }
-    if (required.has(capability)) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `capability "${capability}" cannot be both required and preferred`,
-        path: ['preferred', index],
-        input: capability,
-      });
-    }
-    preferred.add(capability);
-  });
-});
-
-/** One canonical author-facing render configuration for every renderer. */
-export const RenderSpecV2Schema = z.strictObject({
-  schema: z.union([
-    z.literal(CANONICAL_RENDER_SPEC_V2_SCHEMA),
-    z.literal(LEGACY_RENDER_SPEC_V2_SCHEMA),
-  ]),
-  /** First release records exactly one actor-mounted image sensor. */
-  sources: z.array(RenderSensorSourceSchema).length(1),
-  clip: RenderClipSchema,
-  video: RenderVideoSchema,
-  artifacts: z.array(CaptureArtifactSchema).min(1).max(8).default(['video', 'manifest']),
-  capabilityIntent: CaptureCapabilityIntentSchema.prefault({}),
-  /**
-   * Exact authored scenario environment, not a renderer-specific lowering.
-   * It retains weather/time presets, sun angles, surface conditions, and
-   * extensions so browser and managed adapters resolve the same intent.
-   */
-  authoredEnvironment: EnvironmentSchema,
-}).check((ctx) => {
-  const sourceKeys = new Set<string>();
-  ctx.value.sources.forEach((source, index) => {
-    const key = `${source.actorId}\u0000${source.sensorId}\u0000${source.modality}`;
-    if (sourceKeys.has(key)) {
-      ctx.issues.push({
-        code: 'custom',
-        message: 'duplicate actor/sensor/modality capture source',
-        path: ['sources', index],
-        input: source,
-      });
-    }
-    sourceKeys.add(key);
-  });
-  const artifacts = new Set<string>();
-  ctx.value.artifacts.forEach((artifact, index) => {
-    if (artifacts.has(artifact)) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `duplicate artifact "${artifact}"`,
-        path: ['artifacts', index],
-        input: artifact,
-      });
-    }
-    artifacts.add(artifact);
-  });
-  if (!artifacts.has('video')) {
-    ctx.issues.push({
-      code: 'custom',
-      message: 'render-spec/v2 requires a video artifact',
-      path: ['artifacts'],
-      input: ctx.value.artifacts,
-    });
-  }
-});
 export const RenderModalitySchema = z.enum([
   'rgb',
   'depth',
@@ -455,10 +280,7 @@ export const RenderCapabilityIntentV3Schema = z.strictObject({
 });
 
 export const RenderSpecV3Schema = z.strictObject({
-  schema: z.union([
-    z.literal(CANONICAL_RENDER_SPEC_V3_SCHEMA),
-    z.literal(LEGACY_RENDER_SPEC_V3_SCHEMA),
-  ]),
+  schema: z.literal(RENDER_SPEC_V3_SCHEMA),
   sources: z.array(RenderSourceV3Schema).min(1).max(64),
   clip: RenderClipSchema,
   video: RenderVideoV3Schema.optional(),
@@ -519,13 +341,7 @@ export const RenderSpecV3Schema = z.strictObject({
   }
 });
 
-const ResolvedCaptureSourceSchema = RenderSensorSourceSchema;
-const ResolvedCaptureSourceV3Schema = RenderSourceV3Schema;
-
-const AnyResolvedCaptureSourceSchema = z.union([
-  ResolvedCaptureSourceSchema,
-  ResolvedCaptureSourceV3Schema,
-]);
+const ResolvedCaptureSourceSchema = RenderSourceV3Schema;
 
 export const ResolvedFrameScheduleSchema = z.strictObject({
   startSeconds: z.number().finite().min(0),
@@ -581,10 +397,7 @@ export const CaptureSourceProvenanceSchema = z.union([
 ]);
 
 export const ResolvedCaptureManifestSchema = z.strictObject({
-  schema: z.union([
-    z.literal(CANONICAL_CAPTURE_MANIFEST_V1_SCHEMA),
-    z.literal(LEGACY_CAPTURE_MANIFEST_V1_SCHEMA),
-  ]),
+  schema: z.literal(RESOLVED_CAPTURE_MANIFEST_V1_SCHEMA),
   createdAt: z.iso.datetime({ offset: true }),
   scenarioRevision: z.strictObject({
     id: z.string().min(1).max(200),
@@ -602,9 +415,9 @@ export const ResolvedCaptureManifestSchema = z.strictObject({
     version: z.string().min(1).max(200),
     availableCapabilities: z.array(RenderCapabilityNameSchema).max(64),
   }),
-  renderSpec: z.union([RenderSpecV2Schema, RenderSpecV3Schema]),
+  renderSpec: RenderSpecV3Schema,
   environmentProvenance: ResolvedEnvironmentProvenanceSchema,
-  resolvedSources: z.array(AnyResolvedCaptureSourceSchema).min(1).max(64),
+  resolvedSources: z.array(ResolvedCaptureSourceSchema).min(1).max(64),
   schedule: ResolvedFrameScheduleSchema,
   capabilityResolution: z.strictObject({
     required: z.array(RenderCapabilityNameSchema).max(64),
@@ -757,11 +570,6 @@ export const ResolvedCaptureManifestSchema = z.strictObject({
   }
 });
 
-export type CaptureSensorModality = z.infer<typeof CaptureSensorModalitySchema>;
-export type CaptureCapability = z.infer<typeof CaptureCapabilitySchema>;
-export type CaptureArtifact = z.infer<typeof CaptureArtifactSchema>;
-export type RenderSensorSource = z.infer<typeof RenderSensorSourceSchema>;
-export type RenderSpecV2 = z.infer<typeof RenderSpecV2Schema>;
 export type RenderModality = z.infer<typeof RenderModalitySchema>;
 export type RenderSourceTransform = z.infer<typeof RenderSourceTransformSchema>;
 export type RenderCameraAttributes = z.infer<typeof RenderCameraAttributesSchema>;
@@ -868,7 +676,6 @@ export class BrowserRenderLoweringError extends Error {
     super(message);
   }
 }
-export type RenderSpecV2Input = z.input<typeof RenderSpecV2Schema>;
 export type ResolvedCaptureSource = z.infer<typeof ResolvedCaptureSourceSchema>;
 export type ResolvedFrameSchedule = z.infer<typeof ResolvedFrameScheduleSchema>;
 export type VerifiedPlaybackEvidence = z.infer<typeof VerifiedPlaybackEvidenceSchema>;
@@ -915,53 +722,9 @@ export interface ResolveCaptureManifestContext {
   readonly revisionEnvironment: RevisionEnvironmentContext;
 }
 
-/** Validate/default an editable render spec without introducing a platform dependency. */
-export function parseRenderSpecV2(value: unknown): RenderSpecV2 {
-  return RenderSpecV2Schema.parse(value);
-}
 /** Validate a canonical multi-source render specification. */
 export function parseRenderSpecV3(value: unknown): RenderSpecV3 {
   return RenderSpecV3Schema.parse(value);
-}
-
-/**
- * Deterministically migrate the legacy single-camera intent. V2 did not carry
- * an authored mount or camera clipping values, so its historical renderer
- * defaults become explicit v3 values.
- */
-export function renderSpecV2ToV3(v2: RenderSpecV2): RenderSpecV3 {
-  const parsed = parseRenderSpecV2(v2);
-  const source = parsed.sources[0]!;
-  const { bitrateMbps: _legacyBitrate, ...video } = parsed.video;
-  const artifacts: RenderArtifactV3[] = parsed.artifacts.includes('manifest')
-    ? [...parsed.artifacts]
-    : [...parsed.artifacts, 'manifest'];
-  return parseRenderSpecV3({
-    schema: RENDER_SPEC_V3_SCHEMA,
-    sources: [{
-      actorId: source.actorId,
-      sensorId: source.sensorId,
-      outputName: source.outputName ?? source.sensorId,
-      transform: {
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
-      },
-      modality: source.modality,
-      attributes: {
-        width: parsed.video.width,
-        height: parsed.video.height,
-        fps: parsed.video.fps,
-        horizontalFovDeg: 90,
-        nearM: 0.05,
-        farM: 1_000,
-      },
-    }],
-    clip: parsed.clip,
-    video,
-    artifacts,
-    capabilityIntent: parsed.capabilityIntent,
-    authoredEnvironment: parsed.authoredEnvironment,
-  });
 }
 
 /** Lower portable mounts and native modality attributes to managed worker v1 sensors. */
@@ -1075,7 +838,7 @@ export function resolveCaptureManifest(
   value: unknown,
   context: ResolveCaptureManifestContext,
 ): ResolvedCaptureManifest {
-  const renderSpec = parseAnyRenderSpec(value);
+  const renderSpec = parseRenderSpecV3(value);
   const playbackEvidence = VerifiedPlaybackEvidenceSchema.parse(context.playbackEvidence);
   if (renderSpec.clip.startSeconds < playbackEvidence.bounds.startSeconds
     || renderSpec.clip.endSeconds > playbackEvidence.bounds.endSeconds) {
@@ -1141,13 +904,8 @@ export function resolveCaptureManifest(
   });
 }
 
-
-function parseAnyRenderSpec(value: unknown): RenderSpecV2 | RenderSpecV3 {
-  return z.union([RenderSpecV2Schema, RenderSpecV3Schema]).parse(value);
-}
-
-function requiredCapabilities(renderSpec: RenderSpecV2 | RenderSpecV3): string[] {
-  const artifactCapability = (artifact: CaptureArtifact | RenderArtifactV3): string =>
+function requiredCapabilities(renderSpec: RenderSpecV3): string[] {
+  const artifactCapability = (artifact: RenderArtifactV3): string =>
     artifact === 'sensorArchive' ? 'artifact.sensor_archive' : `artifact.${artifact}`;
   return [...new Set([
     ...renderSpec.capabilityIntent.required,
@@ -1156,14 +914,10 @@ function requiredCapabilities(renderSpec: RenderSpecV2 | RenderSpecV3): string[]
   ])];
 }
 
-function captureScheduleFps(renderSpec: RenderSpecV2 | RenderSpecV3): number {
-  if (
-    renderSpec.schema === CANONICAL_RENDER_SPEC_V2_SCHEMA
-    || renderSpec.schema === LEGACY_RENDER_SPEC_V2_SCHEMA
-  ) return renderSpec.video.fps;
+/** The fixed-step capture rate a render spec resolves to: the video rate, else the fastest sensor. */
+export function captureScheduleFps(renderSpec: RenderSpecV3): number {
   if (renderSpec.video) return renderSpec.video.fps;
   const sourceRates = renderSpec.sources.flatMap((source) => {
-    if (!('attributes' in source)) return [];
     if (source.modality === 'lidar') return [source.attributes.rotationFrequencyHz];
     if (source.modality === 'radar') return [];
     return [source.attributes.fps];

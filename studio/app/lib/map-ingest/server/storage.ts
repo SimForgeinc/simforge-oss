@@ -10,7 +10,7 @@ import {
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import { verifyUploadedObject } from "@/app/lib/asset-gallery/storage";
 import type { UploadedObjectVerification } from "@/app/lib/asset-gallery/storage";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 export type MapUploadMember = {
   path: string;

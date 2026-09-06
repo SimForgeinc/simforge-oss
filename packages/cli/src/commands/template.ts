@@ -13,18 +13,22 @@ import {
   parseAndValidateTemplate,
   toScenarioIssues,
   type ClauseResult,
+  type MapContext,
 } from '@simforge-oss/scenario';
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { adaptTemplate } from '../adapt.js';
+import {
+  adaptTemplateNotes,
+  assertKnownMap,
+  createMapContext,
+  matchOnMap,
+  writeJsonFile,
+} from '@simforge-oss/compiler/node';
+
 import { CliError, EXIT } from '../errors.js';
-import { assertKnownMap } from '@simforge-oss/compiler/node';
-import { createMapContext } from '@simforge-oss/compiler/node';
 import { emit, emitLines, pad } from '../output.js';
-import { matchOnMap } from '@simforge-oss/compiler/node';
-import { writeJsonFile } from '@simforge-oss/compiler/node';
 
 export interface TemplateValidateOptions {
   readonly file: string;
@@ -56,7 +60,7 @@ export async function templateValidate(options: TemplateValidateOptions): Promis
 
   let mapChecked = false;
   let siteId: string | null = null;
-  let context: ReturnType<typeof createMapContext> | undefined;
+  let context: MapContext | undefined;
   // Not an `issue`: the validator's codes are a closed vocabulary shared with
   // the matcher, and "I could not run the map checks" is a property of *this
   // invocation*, not a defect in the document.
@@ -68,7 +72,7 @@ export async function templateValidate(options: TemplateValidateOptions): Promis
       ? match.report.sites.find((s) => s.siteId === options.siteId)
       : match.report.sites[0];
     if (site) {
-      context = createMapContext(match.bundle, site);
+      context = createMapContext(match.bundle, template, site);
       siteId = site.siteId;
       mapChecked = true;
     } else {
@@ -77,12 +81,12 @@ export async function templateValidate(options: TemplateValidateOptions): Promis
   }
 
   const { report } = parseAndValidateTemplate(json, context);
-  const adapted = adaptTemplate(template);
+  const adapterNotes = adaptTemplateNotes(template);
   // A clause the matcher cannot express is a document error, not a footnote.
   // Until this existed, `blind-crest-queue` shipped with its `crest` feature
   // deleted and every one of its five sites scored 0.89 from 142-272 m away
   // from the nearest actual crest, and the author was told nothing.
-  const unmatchable: ClauseResult[] = adapted.notes
+  const unmatchable: ClauseResult[] = adapterNotes
     .filter((n) => n.severity === 'error')
     .map((n) => ({
       path: n.path,
@@ -106,7 +110,7 @@ export async function templateValidate(options: TemplateValidateOptions): Promis
     siteId,
     counts,
     issues,
-    adapterNotes: adapted.notes,
+    adapterNotes,
   };
 
   if (!options.pretty) {
@@ -122,7 +126,7 @@ export async function templateValidate(options: TemplateValidateOptions): Promis
     for (const i of issues) {
       lines.push(`${pad(i.severity, 9)}${pad(i.code, 26)}${pad(i.path, 44)}${i.message}`);
     }
-    for (const n of adapted.notes) {
+    for (const n of adapterNotes) {
       if (n.severity === 'error') continue; // already reported above as an issue
       lines.push(`${pad('adapter', 9)}${pad('note', 26)}${pad(n.path, 44)}${n.reason}`);
     }

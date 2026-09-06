@@ -3,17 +3,17 @@
 import dynamic from "next/dynamic";
 import { AlertTriangle, Check, Clipboard, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CarlaCompatibilityPill } from "@/app/components/CarlaCompatibilityPill";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/app/components/ui/sheet";
-import type { GalleryAssetSummary } from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/components/ui/sheet";
+import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 
 /**

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { MAP_ASSET_DESCRIPTOR_TAG_IDS, getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { cn } from "@/app/lib/utils";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { displayTag } from "@/app/lib/maps/frontend/add-map-utils";
 
 interface ScenarioTagsPanelProps {

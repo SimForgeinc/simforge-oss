@@ -14,8 +14,6 @@ import {
   junctionBranchHeadingChangeDeg,
   junctionDirectionPolicy,
   junctionTurnForBranch,
-  JUNCTION_TURN_FOR_AUTHORED_DIRECTION,
-  TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION,
   type JunctionVec2,
 } from "@simforge-oss/maps/topology";
 
@@ -71,18 +69,6 @@ describe("junctionDirectionPolicy", () => {
     });
   });
 
-  it("reads the legacy timeline when the program has no turn", () => {
-    expect(
-      junctionDirectionPolicy({
-        timeline: [{ id: "t1", action: "turn_left_at_next_intersection" }],
-      }),
-    ).toEqual({ kind: "authored_turn", direction: "left" });
-    expect(
-      junctionDirectionPolicy({
-        timeline: [{ id: "t1", action: "go_straight_at_next_intersection" }],
-      }),
-    ).toEqual({ kind: "authored_turn", direction: "straight" });
-  });
 
   it("survives the reduced payload the corridor endpoint receives", () => {
     // The editor strips behavior programs off the wire, so the rule has to
@@ -115,9 +101,6 @@ describe("junctionDirectionPolicy", () => {
       kind: "straight",
     });
     expect(junctionDirectionPolicy(turnClip("sideways"))).toEqual({ kind: "straight" });
-    expect(
-      junctionDirectionPolicy({ timeline: [{ id: "t1", action: "lane_change_left" }] }),
-    ).toEqual({ kind: "straight" });
   });
 });
 
@@ -203,25 +186,6 @@ describe("u_turn as an authored direction", () => {
     expect(isAuthoredJunctionDirection("U_TURN")).toBe(false);
   });
 
-  it("bridges every authored direction to a map branch", () => {
-    for (const direction of ["left", "right", "straight", "u_turn"] as const) {
-      expect(JUNCTION_TURN_FOR_AUTHORED_DIRECTION[direction]).toBeTruthy();
-    }
-    expect(JUNCTION_TURN_FOR_AUTHORED_DIRECTION.u_turn).toBe("uturn");
-  });
-
-  it("has no legacy timed primitive for a u-turn", () => {
-    // Deliberate: the legacy `timeline` channel never had one and Phase G deletes
-    // the channel. The absence is what makes a caller trying to route a u-turn
-    // through it fail to compile instead of writing an undefined primitive id.
-    expect(
-      (TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION as Record<string, string | undefined>)
-        .u_turn,
-    ).toBeUndefined();
-    expect(TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION.left).toBe(
-      "turn_left_at_next_intersection",
-    );
-  });
 
   it("reads a u_turn clip back off an actor", () => {
     expect(

@@ -1,0 +1,257 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "12ed073fd216d61951215c20850444d1daf78171ed56bec61cbb86b500826840",
+  "traceDigest": "4fec291aa880fea845b854e1a058255432c6f7a36c95521546eb84e9af197d8a",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 0,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "lead-cyclist": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "police-cruiser": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "roadside-officer": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "trailing-cyclist": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "tram": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bus"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 3.58,
+          "from": "83:0:-2",
+          "to": "757:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "lead-cyclist": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.02,
+          "from": "83:0:-2",
+          "to": "757:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "police-cruiser": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "roadside-officer": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "trailing-cyclist": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 6.96,
+          "from": "83:0:-2",
+          "to": "757:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "tram": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 9.78,
+          "from": "83:0:-3",
+          "to": "755:0:-1"
+        },
+        {
+          "t": 17.18,
+          "from": "755:0:-1",
+          "to": "19:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 5.5,
+      "kind": "trigger_fired",
+      "interactionId": "police-emergency-lights-on",
+      "actorId": "police-cruiser",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 5.5,
+      "kind": "state_set",
+      "actorId": "police-cruiser",
+      "key": "lights.emergency",
+      "value": "flashing"
+    },
+    {
+      "t": 5.86,
+      "kind": "trigger_fired",
+      "interactionId": "cyclist-swerves",
+      "actorId": "lead-cyclist",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 5.86,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "lead-cyclist",
+      "interactionId": "cyclist-swerves",
+      "requestedDurationS": 0.8,
+      "effectiveDurationS": 2.832937629822379,
+      "displacementM": -1.5157227894462473
+    },
+    {
+      "t": 6.0200000000000005,
+      "kind": "trigger_fired",
+      "interactionId": "cyclist-brakes",
+      "actorId": "lead-cyclist",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 6.22,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-brakes",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 6.78,
+      "kind": "trigger_fired",
+      "interactionId": "trailing-cyclist-stops",
+      "actorId": "trailing-cyclist",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 11.52,
+      "kind": "interaction_aborted",
+      "interactionId": "cyclist-swerves",
+      "actorId": "lead-cyclist",
+      "reason": "tracking_error"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "focus-vehicle",
+      "lead-cyclist"
+    ],
+    "minDistancePairs": [
+      [
+        "focus-vehicle",
+        "lead-cyclist"
+      ],
+      [
+        "focus-vehicle",
+        "trailing-cyclist"
+      ],
+      [
+        "focus-vehicle",
+        "tram"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

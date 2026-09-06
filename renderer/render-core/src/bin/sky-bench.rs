@@ -349,9 +349,9 @@ fn main() -> Result<()> {
             app.warmup(args.warmup);
 
             let mut samples = Vec::with_capacity(args.frames as usize);
-            for _ in 0..args.frames {
+            for frame in 0..args.frames {
                 let t0 = Instant::now();
-                let _ = app.render_once()?;
+                app.render_once(u64::from(frame))?;
                 samples.push(t0.elapsed().as_secs_f64() * 1000.0);
             }
             let r = stats(mode, *w, *h, samples);
@@ -396,7 +396,7 @@ fn main() -> Result<()> {
                 last_build = a.medium_build_ms;
                 readback = serde_json::to_value(a)?;
             }
-            let _ = app.render_once()?;
+            app.render_once(u64::from(i))?;
         }
         relight_samples.sort_by(|a, b| a.partial_cmp(b).unwrap());
         relights.push(RelightResult {

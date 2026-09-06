@@ -6,8 +6,8 @@ import {
   readRenderingPreference,
   saveRenderingPreference,
   type RenderingPreference,
-} from "@/app/components/rendering-preference"
-import { installMapAssetFetchGateway } from "@/app/lib/maps/frontend/map-asset-cache";
+} from "@simforge-oss/studio-ui/components/rendering-preference"
+import { installMapAssetFetchGateway } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import { SCENARIO_AUTHORING_QUALITY_IDS } from "@/app/lib/scenario/contracts";
 
 installMapAssetFetchGateway();

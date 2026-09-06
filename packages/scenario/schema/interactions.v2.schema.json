@@ -514,6 +514,28 @@
                   "properties": {
                     "mode": {
                       "type": "string",
+                      "const": "lanePath"
+                    },
+                    "lanes": {
+                      "minItems": 1,
+                      "maxItems": 128,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema19"
+                      }
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "lanes"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
                       "const": "customRoute"
                     },
                     "points": {
@@ -521,7 +543,7 @@
                       "maxItems": 128,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema19"
+                        "$ref": "#/$defs/__schema20"
                       }
                     }
                   },
@@ -543,35 +565,13 @@
                       "maxItems": 1024,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema20"
-                      }
-                    }
-                  },
-                  "required": [
-                    "mode",
-                    "points"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "mode": {
-                      "type": "string",
-                      "const": "lanePath"
-                    },
-                    "lanes": {
-                      "minItems": 1,
-                      "maxItems": 128,
-                      "type": "array",
-                      "items": {
                         "$ref": "#/$defs/__schema21"
                       }
                     }
                   },
                   "required": [
                     "mode",
-                    "lanes"
+                    "points"
                   ],
                   "additionalProperties": false
                 },
@@ -1615,6 +1615,10 @@
       ]
     },
     "__schema19": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema20": {
       "type": "object",
       "properties": {
         "x": {
@@ -1630,7 +1634,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema20": {
+    "__schema21": {
       "type": "object",
       "properties": {
         "timeS": {
@@ -1650,10 +1654,6 @@
         "z"
       ],
       "additionalProperties": false
-    },
-    "__schema21": {
-      "type": "string",
-      "minLength": 1
     }
   }
 }

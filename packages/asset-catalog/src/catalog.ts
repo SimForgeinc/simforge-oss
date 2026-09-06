@@ -455,59 +455,22 @@ export const CATALOG = [
     label: 'Child pedestrian',
     class: 'pedestrian',
     description:
-      'Child pedestrian, 1.20 m — short enough to be hidden by a parked sedan. Motion is authored separately in the timeline.',
+      'Child pedestrian with a 1.20 m stature and child-scaled physical/motion profile. Short enough to be hidden by a parked sedan.',
     dims: { l: 0.24, w: 0.35, h: 1.2 },
     tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.2, pose: 'standing' },
+    defaultParams: {
+      height: 1.2,
+      pose: 'standing',
+      massKg: 32,
+      walkSpeedMps: 1,
+      runSpeedMps: 3,
+      directionChangeImpulsiveness: 0.75,
+    },
     model: {
       kind: 'glb',
       url: '/catalog/pedestrians-carla/models/pedestrian_0049.glb',
       contentHash: '8d657dfaf86c9735deafd233bd48bf6e07df687e9a98d35f98fd4d669f14db17',
     },
-  },
-  {
-    id: 'pedestrian.adult_standing',
-    label: 'Adult standing (legacy id)',
-    class: 'pedestrian',
-    description:
-      'Backward-compatible adult pedestrian preset retained for saved scenarios; new authoring should use pedestrian.adult with a timeline action.',
-    dims: { l: 0.32, w: 0.5, h: 1.75 },
-    tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.75, pose: 'standing' },
-    legacyAliasOf: 'pedestrian.adult',
-  },
-  {
-    id: 'pedestrian.adult_walking',
-    label: 'Adult walking (legacy id)',
-    class: 'pedestrian',
-    description:
-      'Backward-compatible walking adult preset retained for saved scenarios; new authoring should use pedestrian.adult with timeline motion.',
-    dims: { l: 0.85, w: 0.5, h: 1.75 },
-    tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.75, pose: 'walking' },
-    legacyAliasOf: 'pedestrian.adult',
-  },
-  {
-    id: 'pedestrian.child_standing',
-    label: 'Child standing (legacy id)',
-    class: 'pedestrian',
-    description:
-      'Backward-compatible child pedestrian preset retained for saved scenarios; new authoring should use pedestrian.child with a timeline action.',
-    dims: { l: 0.24, w: 0.35, h: 1.2 },
-    tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.2, pose: 'standing' },
-    legacyAliasOf: 'pedestrian.child',
-  },
-  {
-    id: 'pedestrian.child_walking',
-    label: 'Child walking (legacy id)',
-    class: 'pedestrian',
-    description:
-      'Backward-compatible walking child preset retained for saved scenarios; new authoring should use pedestrian.child with timeline motion.',
-    dims: { l: 0.58, w: 0.35, h: 1.2 },
-    tags: ['vru', 'occlusion:low', 'sidewalk'],
-    defaultParams: { height: 1.2, pose: 'walking' },
-    legacyAliasOf: 'pedestrian.child',
   },
   {
     id: 'pedestrian.traffic_marshal',
@@ -613,6 +576,35 @@ export const CATALOG = [
     tags: ['occlusion:low', 'mobile', 'sidewalk', 'autonomous', 'workzone', 'service'],
     defaultParams: { color: '#f59e0b' },
     animation: { rig: 'humanoid', clips: ['idle', 'walk', 'carry_tool', 'inspect', 'kneel'], idleClip: 'idle', locomotionClip: 'walk' },
+  },
+
+  // -------------------------------------------- articulated robot components
+  // One entry per rigid body exported by the MuJoCo delivery-robot workload
+  // (adapters/physics): the scene state assembles the robot from these, so
+  // each mesh is centred on its solver origin and carries only its own body.
+  {
+    id: 'robot.delivery-4w',
+    label: 'Four-wheel delivery robot chassis',
+    class: 'robot',
+    actorClass: 'static_object',
+    description:
+      'Chassis rigid body of the articulated four-wheel delivery robot: a 0.70 x 0.50 x 0.30 m box centred on its body origin with no wheels, posed per tick by the physics exporter.',
+    dims: { l: .7, w: .5, h: .3 },
+    origin: 'body-centre',
+    tags: ['occlusion:low', 'mobile', 'sidewalk', 'autonomous', 'delivery'],
+    defaultParams: { color: '#e6802a' },
+  },
+  {
+    id: 'robot.wheel',
+    label: 'Delivery robot wheel',
+    class: 'robot',
+    actorClass: 'static_object',
+    description:
+      'One drive wheel rigid body of the articulated delivery robot: a 0.10 m radius, 0.05 m wide cylinder centred on its axle, spun by the exported quaternion.',
+    dims: { l: .2, w: .05, h: .2 },
+    origin: 'body-centre',
+    tags: ['occlusion:low', 'mobile', 'sidewalk', 'autonomous', 'delivery'],
+    defaultParams: {},
   },
 
   // ------------------------------------------------------------------ drones
@@ -1020,9 +1012,13 @@ const BY_ID = new Map<string, CatalogEntry>(CATALOG.map((entry) => [entry.id, en
 
 export const CATALOG_IDS = CATALOG.map((entry) => entry.id) as readonly CatalogId[];
 
-/** Canonical choices for new scenarios; compatibility aliases remain in `CATALOG`. */
+/**
+ * Canonical choices for new scenarios. Rigid-body components (posed only by a
+ * physics exporter, never placed on the ground by an author) remain in
+ * `CATALOG` and resolvable by id.
+ */
 export const AUTHORING_CATALOG = CATALOG.filter(
-  (entry) => !('legacyAliasOf' in entry),
+  (entry) => !('origin' in entry && entry.origin === 'body-centre'),
 ) as readonly CatalogEntry[];
 
 export function isCatalogId(id: string): id is CatalogId {

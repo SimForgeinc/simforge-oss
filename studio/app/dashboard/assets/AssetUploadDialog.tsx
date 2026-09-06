@@ -3,10 +3,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Boxes, FileUp, Map as MapIcon, Upload, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useMemo} from "react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { SelectMenuField } from "@/app/components/ui/select-menu";
-import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { SelectMenuField } from "@simforge-oss/studio-ui/components/ui/select-menu";
+import { Textarea } from "@simforge-oss/studio-ui/components/ui/textarea";
 import {
   gallerySuggestedScale,
   galleryTypicalSizeFor,
@@ -16,7 +16,7 @@ import {
   type GalleryAssetSummary,
   type GalleryDimensions,
   type GallerySourceFormat,
-} from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import type { GalleryModelFacing } from "@/app/lib/asset-gallery/model-import";
 import type { PublishedMapSummary } from "@/app/lib/map-ingest/contracts";
 import { MapUploadPanel, type MapUploadPhase } from "./MapUploadPanel";

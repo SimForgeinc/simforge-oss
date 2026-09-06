@@ -2,7 +2,7 @@
 
 import { CheckCircle2, FileUp, MapPin } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { Input } from "@/app/components/ui/input";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import {
   SERVER_GENERATED_CLOSURE_PATHS,
   type CreateMapUploadInput,

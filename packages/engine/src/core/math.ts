@@ -177,3 +177,115 @@ export function pointInPolygon(p: Vec2, poly: readonly Vec2[]): boolean {
   }
   return inside;
 }
+
+/* ---------------------------------------------------------- swept OBB */
+
+const SWEEP_CONTACT_EPSILON_M = 1e-9;
+const SWEEP_MAX_ITERATIONS = 256;
+
+export interface SweptObbResult {
+  /** First contact as a fraction of the supplied motion interval. */
+  readonly toi: number;
+}
+
+function projectionRadius(obb: Obb, ax: number, ay: number): number {
+  const c = Math.cos(obb.headingRad);
+  const s = Math.sin(obb.headingRad);
+  return (
+    Math.abs(c * ax + s * ay) * (obb.lengthM / 2) +
+    Math.abs(-s * ax + c * ay) * (obb.widthM / 2)
+  );
+}
+
+/** Exact swept SAT for translating boxes with fixed headings and dimensions. */
+function fixedOrientationSweep(a0: Obb, a1: Obb, b0: Obb, b1: Obb): SweptObbResult | null {
+  let enter = 0;
+  let leave = 1;
+  const axes: Array<[number, number]> = [
+    [Math.cos(a0.headingRad), Math.sin(a0.headingRad)],
+    [-Math.sin(a0.headingRad), Math.cos(a0.headingRad)],
+    [Math.cos(b0.headingRad), Math.sin(b0.headingRad)],
+    [-Math.sin(b0.headingRad), Math.cos(b0.headingRad)],
+  ];
+  const rel0 = { x: b0.center.x - a0.center.x, y: b0.center.y - a0.center.y };
+  const relDelta = {
+    x: (b1.center.x - b0.center.x) - (a1.center.x - a0.center.x),
+    y: (b1.center.y - b0.center.y) - (a1.center.y - a0.center.y),
+  };
+  for (const [ax, ay] of axes) {
+    const radius = projectionRadius(a0, ax, ay) + projectionRadius(b0, ax, ay);
+    const p = rel0.x * ax + rel0.y * ay;
+    const v = relDelta.x * ax + relDelta.y * ay;
+    if (Math.abs(v) < 1e-15) {
+      if (Math.abs(p) > radius) return null;
+      continue;
+    }
+    const t0 = (-radius - p) / v;
+    const t1 = (radius - p) / v;
+    const axisEnter = Math.min(t0, t1);
+    const axisLeave = Math.max(t0, t1);
+    enter = Math.max(enter, axisEnter);
+    leave = Math.min(leave, axisLeave);
+    if (enter > leave) return null;
+  }
+  return enter <= 1 && leave >= 0 ? { toi: Math.max(0, enter) } : null;
+}
+
+/** The box interpolated a fraction `t` of the way from `from` to `to`. */
+export function obbAt(from: Obb, to: Obb, t: number): Obb {
+  return {
+    center: { x: lerp(from.center.x, to.center.x, t), y: lerp(from.center.y, to.center.y, t) },
+    lengthM: lerp(from.lengthM, to.lengthM, t),
+    widthM: lerp(from.widthM, to.widthM, t),
+    headingRad: lerpAngle(from.headingRad, to.headingRad, t),
+  };
+}
+
+/**
+ * Continuous OBB collision over one motion interval.
+ *
+ * Translation with fixed headings uses an exact swept SAT. Rotating boxes use
+ * deterministic conservative advancement with a bound on corner velocity, so
+ * an overlap cannot be stepped over. The result is stable for the same
+ * IEEE-754 inputs and does not depend on wall-clock iteration budgets. This is
+ * the presentation-side handoff used for external (SUMO) traffic; the engine's
+ * own collision detection runs natively.
+ */
+export function sweptObbTimeOfImpact(a0: Obb, a1: Obb, b0: Obb, b1: Obb): SweptObbResult | null {
+  if (obbOverlap(a0, b0)) return { toi: 0 };
+  const da = angleDelta(a0.headingRad, a1.headingRad);
+  const db = angleDelta(b0.headingRad, b1.headingRad);
+  const dimensionsStable =
+    Math.abs(a1.lengthM - a0.lengthM) < 1e-12 &&
+    Math.abs(a1.widthM - a0.widthM) < 1e-12 &&
+    Math.abs(b1.lengthM - b0.lengthM) < 1e-12 &&
+    Math.abs(b1.widthM - b0.widthM) < 1e-12;
+  if (Math.abs(da) < 1e-12 && Math.abs(db) < 1e-12 && dimensionsStable) {
+    return fixedOrientationSweep(a0, a1, b0, b1);
+  }
+
+  const relativeTravel = Math.hypot(
+    (b1.center.x - b0.center.x) - (a1.center.x - a0.center.x),
+    (b1.center.y - b0.center.y) - (a1.center.y - a0.center.y),
+  );
+  const speedBound =
+    relativeTravel +
+    Math.abs(da) * Math.hypot(a0.lengthM, a0.widthM) / 2 +
+    Math.abs(db) * Math.hypot(b0.lengthM, b0.widthM) / 2 +
+    Math.hypot(a1.lengthM - a0.lengthM, a1.widthM - a0.widthM) / 2 +
+    Math.hypot(b1.lengthM - b0.lengthM, b1.widthM - b0.widthM) / 2;
+  if (speedBound <= 0) return null;
+
+  let t = 0;
+  for (let iteration = 0; iteration < SWEEP_MAX_ITERATIONS && t <= 1; iteration++) {
+    const a = obbAt(a0, a1, t);
+    const b = obbAt(b0, b1, t);
+    const separation = obbSeparation(a, b);
+    if (separation <= SWEEP_CONTACT_EPSILON_M || obbOverlap(a, b)) return { toi: t };
+    const step = separation / speedBound;
+    if (step <= 1e-14) return { toi: t };
+    t += step;
+  }
+  if (t <= 1 && obbOverlap(obbAt(a0, a1, t), obbAt(b0, b1, t))) return { toi: t };
+  return null;
+}

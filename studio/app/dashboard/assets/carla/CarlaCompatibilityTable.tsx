@@ -2,9 +2,9 @@
 
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { CarlaCompatibilityPill } from "@/app/components/CarlaCompatibilityPill";
-import { Input } from "@/app/components/ui/input";
-import { SelectMenu } from "@/app/components/ui/select-menu";
+import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
 import {
   Table,
   TableBody,
@@ -12,8 +12,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/app/components/ui/table";
-import type { CarlaCompatibility } from "@/app/lib/scenario/carla-compatibility";
+} from "@simforge-oss/studio-ui/components/ui/table";
+import type { CarlaCompatibility } from "@simforge-oss/studio-ui/lib/scenario/carla-compatibility";
 
 export interface CarlaCompatibilityRow {
   catalogId: string;

@@ -101,7 +101,10 @@ those.
 3. **Declared facts must be produced.** A fact key declared in
    `DECLARED_FACT_KEYS` and written by no derivation fails the build. (The prior
    system declared `is_t_intersection`, aliased it in three query paths, and
-   wrote it from zero — every query on it silently returned nothing.)
+   wrote it from zero — every query on it silently returned nothing.) Each
+   `always` key names its `hosts` — the location types that carry it — so a map
+   with no junction is not asked for junction facts; the key is reported as
+   inapplicable, and the cross-map build still requires it somewhere.
 4. **Determinism.** Every fan-out is sorted with a locale-independent
    comparator, no wall clock reaches an artifact, and the build is a pure
    function of the loaded sources. Tested: rebuild ⇒ byte-identical; permute the

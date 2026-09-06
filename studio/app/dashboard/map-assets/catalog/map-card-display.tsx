@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { Route, GitFork, OctagonAlert, Bike, Bus, Footprints, PersonStanding, Box, CirclePlay } from "lucide-react";
 import { TrafficLightIcon } from "@/app/components/icons/TrafficLightIcon";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { CardStat, CardStatIconKey, MapCapabilities } from "./map-card-data";
 
 type IconProps = { className?: string };

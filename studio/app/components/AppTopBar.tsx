@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AppSwitcherOverlay } from "@/app/components/AppSwitcherOverlay";
 import SimForgeLogo from "@/app/components/landing/SimForgeLogo";
-import { useTopBarSlotContext } from "@/app/components/TopBarSlot";
+import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { activeNavItem } from "@/app/lib/dashboard-nav";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 const driveStandalone = Boolean(process.env.NEXT_PUBLIC_DRIVE_STANDALONE);
 const driveHomeUrl = process.env.NEXT_PUBLIC_DRIVE_HOME_URL?.trim();

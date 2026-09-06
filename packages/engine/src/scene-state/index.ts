@@ -1,7 +1,4 @@
 export {
-  CANONICAL_SCENE_STATE_VERSION,
-  EMIT_CANONICAL_SCENE_STATE_VERSION,
-  LEGACY_SCENE_STATE_VERSION,
   SCENE_STATE_VERSION,
   actorClassSchema,
   actorDescSchema,
@@ -20,4 +17,4 @@ export type {
   SceneState,
   Weather,
 } from './schema.js';
-export { catalogIdFor, emitSceneState, yawToQuaternion } from './emit.js';
+export { catalogIdFor, yawToQuaternion } from './helpers.js';

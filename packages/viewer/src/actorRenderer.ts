@@ -57,7 +57,7 @@ import {
 } from 'three';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { LOW_FIDELITY_HIDDEN_ROLE } from './roads-only';
-import { buildProp, getEntry, type Dims, type ExternalModelBinding } from '@simforge-oss/asset-catalog';
+import { buildProp, getEntry, type CatalogOrigin, type Dims, type ExternalModelBinding } from '@simforge-oss/asset-catalog';
 import type { ActorKind } from '@simforge-oss/engine';
 import type { ActorSensor } from '@simforge-oss/scenario';
 import {
@@ -80,11 +80,20 @@ export type ActorRenderIdentity =
 export interface ActorView {
   readonly id: string;
   readonly catalogId: string;
-  /** Ground-contact position in scene metres (prop origins are ground-centred). */
+  /**
+   * Position in scene metres: ground contact for ground-origin props, the
+   * solver's body origin for `body-centre` catalog entries.
+   */
   readonly x: number;
   readonly y: number;
   readonly z: number;
   readonly headingRad: number;
+  /**
+   * Full orientation `[x, y, z, w]` exported by a physics solver. Applied
+   * verbatim to `body-centre` catalog entries; ground-origin props keep the
+   * yaw pose, for which scene-state's rotation is redundant by contract.
+   */
+  readonly rotation?: readonly [number, number, number, number];
   readonly dims: Dims;
   /** Simulation identity. Omitted by the editor, whose catalog id is authored. */
   readonly kind?: ActorKind;
@@ -1252,8 +1261,27 @@ function applyDownPose(actor: ActorView, dims: Dims): void {
   _position.y += Math.sin(angle) * Math.min(dims.h, dims.w) * 0.5;
 }
 
+/** Where this actor's catalog mesh keeps its origin; drives centring math. */
+export function actorOrigin(actor: Pick<ActorView, 'catalogId'>): CatalogOrigin {
+  return getEntry(actor.catalogId).origin ?? 'ground';
+}
+
 export function poseMatrix(actor: ActorView, templateDims = getEntry(actor.catalogId).dims): Matrix4 {
-  const animation = getEntry(actor.catalogId).animation;
+  const entry = getEntry(actor.catalogId);
+  _scale.set(
+    actor.dims.l / templateDims.l,
+    actor.dims.h / templateDims.h,
+    actor.dims.w / templateDims.w,
+  );
+  if (entry.origin === 'body-centre') {
+    // Rigid-body component: the exporter's centre pose is the pose. Hover,
+    // gait bob and knock-down are solver outcomes here, not renderer effects.
+    _position.set(actor.x, actor.y, actor.z);
+    if (actor.rotation) _quaternion.set(actor.rotation[0], actor.rotation[1], actor.rotation[2], actor.rotation[3]);
+    else _quaternion.setFromAxisAngle(_up, actor.headingRad);
+    return _matrix.compose(_position, _quaternion, _scale).clone();
+  }
+  const animation = entry.animation;
   const time = actor.animationTimeS ?? 0;
   const moving = Math.abs(actor.speedMps ?? 0) > .05;
   const hover = animation?.hoverHeightM ?? 0;
@@ -1265,11 +1293,6 @@ export function poseMatrix(actor: ActorView, templateDims = getEntry(actor.catal
   _position.set(actor.x, actor.y + hover + bob, actor.z);
   _quaternion.setFromAxisAngle(_up, actor.headingRad);
   applyDownPose(actor, actor.dims);
-  _scale.set(
-    actor.dims.l / templateDims.l,
-    actor.dims.h / templateDims.h,
-    actor.dims.w / templateDims.w,
-  );
   return _matrix.compose(_position, _quaternion, _scale).clone();
 }
 
@@ -1374,8 +1397,9 @@ function pushBoxEdges(out: number[], actor: ActorView): void {
   const [x1, z1] = corner(hl, -hw);
   const [x2, z2] = corner(-hl, -hw);
   const [x3, z3] = corner(-hl, hw);
-  const yLo = actor.y + 0.02;
-  const yHi = actor.y + h;
+  const groundY = actorOrigin(actor) === 'body-centre' ? actor.y - h / 2 : actor.y;
+  const yLo = groundY + 0.02;
+  const yHi = groundY + h;
   const ring = [
     [x0, z0],
     [x1, z1],

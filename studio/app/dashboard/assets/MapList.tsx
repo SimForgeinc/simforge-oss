@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Map as MapIcon, MapPin, SquarePen } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import type { ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
 
 /**

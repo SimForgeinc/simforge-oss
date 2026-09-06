@@ -1,6 +1,5 @@
 import type { ScenarioEditorRoadAnchor } from "@simforge-oss/studio-shared";
 import type { RuntimeRoadSegment } from "@/app/lib/runtime/runtime-types";
-import type { ForbiddenFractionZones } from "./types";
 import {
   isDrivableSegment,
   isRoutableSegment,
@@ -631,6 +630,8 @@ export function buildRouteViaChain(
 // ---------------------------------------------------------------------------
 // Forbidden-fraction zones (heavy-traffic clearance corridors).
 // ---------------------------------------------------------------------------
+
+export type ForbiddenFractionZones = Map<string, Array<{ start: number; end: number }>>;
 
 export function addForbiddenWindow(
   zones: ForbiddenFractionZones,

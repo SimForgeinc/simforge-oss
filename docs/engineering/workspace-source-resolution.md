@@ -36,7 +36,7 @@ Do not add a package-specific alias to fix a stale-build failure. Add its public
 
 `pnpm pack` applies `publishConfig.exports`, so packed manifests contain only compiled `dist/` entry points. Package `files` lists continue to ship `dist` (plus declared static assets), not `src`. Release artifact verification and packed-package smoke tests therefore exercise the same compiled files consumers install from npm.
 
-Runtime tools that deliberately launch a compiled executable are exceptions. The Gym, CARLA API, policy-runner, and ROS 2 adapters launch `packages/training-env/dist/env-server.js` when no installed `simforge-env-server` is available. They check for that artifact and instruct the operator to run `pnpm --filter @simforge-oss/training-env build`; this is process execution, not workspace module resolution.
+Runtime tools that deliberately launch a compiled executable are exceptions. The Gym, policy-runner, and ROS 2 adapters launch `packages/training-env/dist/env-server.js` when no installed `simforge-env-server` is available. They check for that artifact and instruct the operator to run `pnpm --filter @simforge-oss/training-env build`; this is process execution, not workspace module resolution.
 
 ## Regression proof
 

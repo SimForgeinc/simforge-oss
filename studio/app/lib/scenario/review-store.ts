@@ -6,7 +6,7 @@ import {
   type ScenarioReviewQueueItem,
   type ScenarioReviewQueuePage,
   type ScenarioReviewState,
-} from "./review-contracts";
+} from "@simforge-oss/studio-ui/lib/scenario/review-contracts";
 
 /**
  * The operator review queue's read (manifest #42).

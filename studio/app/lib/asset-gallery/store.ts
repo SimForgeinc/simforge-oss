@@ -4,7 +4,7 @@ import type {
   GalleryActorClass,
   GalleryAssetSummary,
   GalleryCatalogEntryDto,
-} from "./contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { execute, queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
 import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 import {

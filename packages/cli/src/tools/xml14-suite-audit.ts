@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
-import { buildLaneGraph, parseSimScenarioInput, type LaneGraph, type TopologyIndex } from '@simforge-oss/engine';
+import { parseSimScenarioInput, type LaneGraph, type TopologyIndex } from '@simforge-oss/engine';
+import { buildLaneGraph, engine } from '@simforge-oss/engine/node';
 import { AsamExportError, exportOpenScenarioXml14 } from '@simforge-oss/openscenario/export';
 import { validateOpenScenarioXml14 } from '@simforge-oss/openscenario/node';
 import { DEV_ASSETS } from '@simforge-oss/compiler/node';
@@ -125,11 +126,12 @@ export async function auditXml14Instance(
     if (replayKey?.mapId && replayKey.mapId !== input.mapId) throw new AuditAssetError(
       'instance-topology-stale', `instance replay map ${replayKey.mapId} does not match input map ${input.mapId}`,
     );
-    if (replayKey?.engineGraphDigest && replayKey.engineGraphDigest !== productionMap.graph.topologyDigest) throw new AuditAssetError(
+    if (replayKey?.engineGraphDigest && replayKey.engineGraphDigest !== productionMap.graph.digest) throw new AuditAssetError(
       'instance-topology-stale',
-      `instance graph ${replayKey.engineGraphDigest} does not match production graph ${productionMap.graph.topologyDigest}`,
+      `instance graph ${replayKey.engineGraphDigest} does not match production graph ${productionMap.graph.digest}`,
     );
     const exported = exportOpenScenarioXml14(input, {
+      engine: engine(),
       graph: productionMap.graph,
       executionMode: 'trajectory-replay',
       roadFile: `${input.mapId}.xodr`,

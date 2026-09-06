@@ -1,0 +1,345 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "bus-pullout",
+      "templateVersion": 2,
+      "templateDigest": "5d8269fc0b0c26b0",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "5532969124e19a99",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "5532969124e19a99#-1",
+    "archetype": "transit.bus-pullout",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "5532969124e19a99",
+      "score": 0.582,
+      "verdict": "degraded",
+      "originFeatureId": "seg_c38cc851590a981f",
+      "entryLaneRsl": "10:0:1",
+      "egoTurn": null,
+      "degradationSummary": "Degraded match (score 0.58). speeds clamped to the site limit 64 kph (arrival invariants re-solved over the speed parameter). corridor.speedLimitKph worst value 64 at s=0 m, wanted [25, 60]. Presentation was relaxed; the scenario still tests what it was written to test.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.13)",
+        "192.79 m of runway available, 170 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)",
+        "bus_stop loc_7df87f7d52c8fbb3eca20fe7 at s=115.82 m (same-road station, 4.12 m lateral)",
+        "bus_stop loc_7df87f7d52c8fbb3eca20fe7 is 4.12 m laterally from the reference path",
+        "bus_stop loc_7df87f7d52c8fbb3eca20fe7 shares the reference OpenDRIVE road and section",
+        "bus_stop loc_7df87f7d52c8fbb3eca20fe7 is on the right side of travel"
+      ]
+    },
+    "params": {
+      "values": {
+        "dwellSeconds": 1.5,
+        "rearQuarterDistanceM": 19,
+        "busDepartureSpeedKph": 18,
+        "mergeDurationS": 3.5
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "bus",
+        "actorKind": "bus",
+        "roleKind": "on_reference",
+        "laneRsl": "374:0:-1",
+        "spawnS": 115.81587685472189,
+        "initialSpeedMps": 0,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "436:0:-1",
+        "spawnS": 53.31587809858641,
+        "initialSpeedMps": 12.5,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "47de46ff18126bddadb13c373264fa61625ea883d4db26cab66164604f14ccca",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "bus-disables-avoidance",
+        "actorId": "bus",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [],
+    "derivedFrom": {
+      "entry": "cmp-bus-pullout-standstill",
+      "interactionId": "bus-accelerates",
+      "authoredValue": 19,
+      "threshold": 18.905
+    }
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 14,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "native-migration",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "bus",
+        "kind": "bus",
+        "dims": {
+          "l": 12.2,
+          "w": 2.55,
+          "h": 3.2
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "374:0:-1",
+            "s": 35.89053149748908,
+            "tFrac": -1
+          },
+          "pose": {
+            "x": -167.56768813939732,
+            "z": -180.83654620806075,
+            "headingRad": 2.980931219371196
+          },
+          "speedMps": 0
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "10:0:1",
+              "1038:0:1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 0
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:bus",
+          "class:bus",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.bus"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "436:0:-1",
+            "s": 8.341701716952315,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -107.71887862162087,
+            "z": -171.08062695456132,
+            "headingRad": 3.1413570952194876
+          },
+          "speedMps": 12.5
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "10:0:1",
+              "1038:0:1",
+              "21:0:-1",
+              "436:0:-1",
+              "22:0:-1",
+              "374:0:-1",
+              "107:0:-1",
+              "314:0:-1",
+              "14:0:1",
+              "1197:0:1",
+              "13:0:1",
+              "1194:0:1",
+              "122:0:-1",
+              "292:0:-1",
+              "77:0:-1",
+              "466:0:-1",
+              "95:0:-1",
+              "4264:0:-1",
+              "105:0:-1",
+              "1242:0:-1",
+              "129:0:2",
+              "1065:0:1"
+            ]
+          },
+          "drivingProfile": {
+            "comfortableLateralAccelerationMps2": 2.2,
+            "comfortableDecelerationMps2": 2.5
+          },
+          "cruiseSpeedMps": 12.5
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "bus-accelerates",
+        "actorId": "bus",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "distance",
+            "a": "ego",
+            "b": "bus",
+            "mode": "euclidean",
+            "cmp": "lte",
+            "value": 18.905
+          },
+          "byLatest": 8,
+          "ifNever": "skip"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 8
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 5
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "time",
+          "value": 3
+        }
+      },
+      {
+        "id": "bus-enters-lane",
+        "actorId": "bus",
+        "trigger": {
+          "kind": "after",
+          "interactionId": "bus-accelerates",
+          "event": "start",
+          "delayS": 0.2
+        },
+        "verb": "laneOffset",
+        "target": {
+          "mode": "fraction",
+          "value": 0
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "time",
+          "value": 3.5
+        }
+      },
+      {
+        "id": "bus-signals",
+        "actorId": "bus",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "standstill",
+            "actorId": "bus",
+            "durationS": 1.5
+          },
+          "byLatest": 3,
+          "ifNever": "skip"
+        },
+        "window": {
+          "startS": 0,
+          "endS": 3
+        },
+        "verb": "set",
+        "target": {
+          "key": "lights.indicator",
+          "value": "left"
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

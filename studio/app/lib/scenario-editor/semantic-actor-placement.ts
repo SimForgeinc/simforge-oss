@@ -1,6 +1,8 @@
 import {
-  baseActionForDraft,
   emptyActorBehaviorProgram,
+} from "@simforge-oss/scenario/contracts";
+import {
+  baseActionForDraft,
   normalizeActorBaseClip,
   withBaseAction,
   type ScenarioEditorActorDraft,
@@ -10,7 +12,6 @@ import type { SemanticFeatureSelection } from "@/app/lib/editor-map/semantic-ove
 import {
   buildActorLabel,
   createRandomActorAppearance,
-  defaultActorAutopilot,
   defaultActorSpeedKph,
 } from "@/app/lib/scenario-editor/actor-utils";
 import {
@@ -88,14 +89,7 @@ export function buildSemanticRoadActorDraft({
       kind: tool.kind,
       is_static: Boolean(tool.isStatic),
     }),
-    autopilot: defaultActorAutopilot({
-      kind: tool.kind,
-      placement_mode: "road",
-      is_static: Boolean(tool.isStatic),
-    }),
     color: appearance.color,
-    notes: null,
-    timeline: [],
     // Subject is derived from a configured rig, so the first vehicle into a
     // rig-less scene gets one — mirrors `shouldAutoAttachSensorRig` on the
     // canvas placement path.

@@ -1,0 +1,61 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.cross-traffic.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "cross-traffic"
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.focus-vehicle.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "focus-vehicle"
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.pedestrian.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "pedestrian"
+      }
+    },
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.focus-vehicle-nudges-right.dynamics.value",
+      "reason": "requested 1.80 s lateral manoeuvre is infeasible for car; clamped to 3.08 s",
+      "detail": {
+        "actorId": "focus-vehicle",
+        "requestedDurationS": 1.8,
+        "effectiveDurationS": 3.0764442328480923,
+        "displacementM": -3.882271265635828,
+        "lateralRateMaxMps": 2.5,
+        "lateralAccelMaxMps2": 3,
+        "lateralJerkMaxMps3": 8
+      }
+    },
+    {
+      "code": "lateral_tracking_failed",
+      "severity": "warning",
+      "path": "interactions.focus-vehicle-nudges-right",
+      "reason": "dynamic actor focus-vehicle did not physically settle onto its authored lateral reference",
+      "detail": {
+        "actorId": "focus-vehicle",
+        "interactionId": "focus-vehicle-nudges-right",
+        "referenceDurationS": 3.0764442328480923,
+        "positionErrorM": 1.881448210175577,
+        "rateErrorMps": 0.02049174592119174,
+        "headingErrorRad": -0.5041944034159442
+      }
+    }
+  ],
+  "arrival": []
+}

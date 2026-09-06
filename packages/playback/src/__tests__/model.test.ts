@@ -5,18 +5,21 @@ import { describe, expect, it } from 'vitest';
 import {
   contentHash,
   parseSimScenarioInput,
-  READABLE_TRACE_FORMAT_VERSIONS,
   TRACE_FORMAT_VERSION,
   type SimScenarioInput,
   type SimTrace,
 } from '@simforge-oss/engine';
 import {
   PlaybackLoadError,
+  canonicalPreviewIdentity,
+  canonicalPreviewParity,
   defaultCatalogIdForActorKind,
+  evaluatePlaybackSignalHeadStates,
   parsePlaybackPair,
   readPlaybackFiles,
   samplePlaybackActors,
   samplePlaybackSignals,
+  type PlaybackBundle,
   type PlaybackFile,
 } from '../model';
 
@@ -57,13 +60,12 @@ function trace(documentInput = input()): SimTrace {
   const hash = contentHash(documentInput);
   return {
     header: {
-      traceVersion: 2,
+      traceVersion: TRACE_FORMAT_VERSION,
       engineVersion: '0.1.0',
       inputHash: hash,
       seed: 'playback-test',
       mapId: 'test-map',
       engineGraphDigest: 'graph-digest',
-      topologyDigest: 'graph-digest',
       dt: 0.2,
       clipSeconds: 1,
       warmupSeconds: 0,
@@ -196,25 +198,46 @@ function message(action: () => unknown): string {
   }
 }
 
+/** The fixture is a plain literal; widen its readonly tracks so a test can corrupt one channel deliberately. */
+function mutableTracks(trace: SimTrace): Record<string, { lateralOffsetM?: number[] }> {
+  const tracks = trace.ticks.actors as unknown as Record<string, { lateralOffsetM?: number[] }>;
+  return tracks;
+}
+
 describe('SimForge concrete playback import', () => {
-  it.each(READABLE_TRACE_FORMAT_VERSIONS)('accepts explicitly supported trace format v%s', (traceVersion) => {
+  it('identifies an immutable full-duration preview and requires exact trace parity', () => {
     const fixture = pair();
-    (fixture.trace.header as { traceVersion: number }).traceVersion = traceVersion;
-    if (traceVersion === TRACE_FORMAT_VERSION) {
-      for (const track of Object.values(fixture.trace.ticks.actors)) {
-        (track as { lateralOffsetM: number[] }).lateralOffsetM = fixture.trace.ticks.t.map(() => 0);
-      }
-    }
-    expect(parsePlaybackPair(fixture.instance, fixture.trace).trace.header.traceVersion).toBe(traceVersion);
+    const bundle = parsePlaybackPair(fixture.instance, fixture.trace);
+    const identity = canonicalPreviewIdentity(bundle);
+    expect(identity).toMatchObject({ contractVersion: 1, complete: true, hashBound: true, samples: 2 });
+    expect(canonicalPreviewParity(bundle, bundle)).toMatchObject({ ok: true });
+    const changed = structuredClone(bundle);
+    (changed.trace.ticks.actors.ego!.x as number[])[1] = 99;
+    expect(canonicalPreviewParity(bundle, changed)).toMatchObject({ ok: false });
   });
 
-  it.each([0, TRACE_FORMAT_VERSION + 1, 99])('fails closed for unknown trace format v%s', (traceVersion) => {
+  it('preserves the exact lateral-offset channel', () => {
+    const fixture = pair();
+    mutableTracks(fixture.trace)['ego']!.lateralOffsetM = [-0.25, 1.75];
+    expect(parsePlaybackPair(fixture.instance, fixture.trace).trace.ticks.actors.ego?.lateralOffsetM)
+      .toEqual([-0.25, 1.75]);
+  });
+
+  it.each([0, TRACE_FORMAT_VERSION - 1, TRACE_FORMAT_VERSION + 1, 99])('fails closed for trace format v%s', (traceVersion) => {
     const fixture = pair();
     (fixture.trace.header as { traceVersion: number }).traceVersion = traceVersion;
     const error = message(() => parsePlaybackPair(fixture.instance, fixture.trace));
-    expect(error).toContain(
-      `header.traceVersion must be one of ${READABLE_TRACE_FORMAT_VERSIONS.join(', ')} (current ${TRACE_FORMAT_VERSION})`,
-    );
+    expect(error).toContain(`header.traceVersion must be ${TRACE_FORMAT_VERSION}`);
+  });
+
+  it('rejects a missing or malformed lateral channel', () => {
+    const fixture = pair();
+    const tracks = mutableTracks(fixture.trace);
+    delete tracks['bus']!.lateralOffsetM;
+    tracks['ego']!.lateralOffsetM = [0, Number.NaN];
+    const error = message(() => parsePlaybackPair(fixture.instance, fixture.trace));
+    expect(error).toContain('ticks.actors.bus.lateralOffsetM length missing does not match ticks.t length 2');
+    expect(error).toContain('ticks.actors.ego.lateralOffsetM contains a non-finite value');
   });
 
   it('maps every semantic actor kind to a buildable fallback model', () => {
@@ -329,30 +352,48 @@ describe('SimForge concrete playback import', () => {
     expect(samplePlaybackSignals(bundle, 1)[0]?.phase).toBe('green');
   });
 
-  it('rejects input-hash, map, and actor identity mismatches with paths', () => {
-    const fixture = pair();
-    const broken = structuredClone(fixture.trace) as any;
-    broken.header.inputHash = 'wrong-hash';
-    broken.header.mapId = 'other-map';
-    broken.header.actorIds = ['ego'];
-    delete (broken.ticks.actors as Partial<typeof broken.ticks.actors>).bus;
+  it('evaluates authored clips and baseline gaps beyond a materialize-only t=0 preview', () => {
+    const documentInput = parseSimScenarioInput({
+      ...input(),
+      clipSeconds: 6,
+      signalPrograms: [
+        {
+          id: 'selected-stage', loop: false,
+          phases: [
+            { phase: 'red', durationS: 1 },
+            { phase: 'green', durationS: 3 },
+            { phase: 'red', durationS: 2 },
+          ],
+          stopLines: [],
+          mapBinding: { junctionId: '590', controllerIds: ['2297'], headIds: ['2230', '2231'], timingSource: 'authored' },
+        },
+        {
+          id: 'conflicting-stage', loop: false,
+          phases: [{ phase: 'red', durationS: 6 }],
+          stopLines: [],
+          mapBinding: { junctionId: '590', controllerIds: ['other'], headIds: ['2240'], timingSource: 'authored' },
+        },
+      ],
+    });
+    // Only the signal surfaces of the bundle are exercised; the authoring worker's materialize-only trace ends at t=0.
+    const bundle = {
+      instance: { input: documentInput },
+      signals: documentInput.signalPrograms.map((program) => ({
+        id: program.id,
+        headIds: program.mapBinding?.headIds ?? [],
+        timingSource: program.mapBinding?.timingSource ?? 'unbound',
+      })),
+      trace: { ticks: { t: [0], signals: {
+        'selected-stage': { phase: ['red'] },
+        'conflicting-stage': { phase: ['red'] },
+      } } },
+    } as unknown as PlaybackBundle;
 
-    const error = message(() => parsePlaybackPair(fixture.instance, broken));
-    expect(error).toContain('header.inputHash');
-    expect(error).toContain('header.mapId');
-    expect(error).toContain('actor ids differ');
-    expect(error).toContain('ticks.actors.bus is missing');
-  });
-
-  it('rejects explicit topology and operational-condition closure mismatches', () => {
-    const fixture = pair();
-    const broken = structuredClone(fixture.trace) as any;
-    broken.header.topologyDigest = 'different-topology';
-    broken.header.operationalConditions.weather = 'snow';
-
-    const error = message(() => parsePlaybackPair(fixture.instance, broken));
-    expect(error).toContain('header.topologyDigest does not match manifest.replayKey.engineGraphDigest');
-    expect(error).toContain('header.operationalConditions does not exactly match instance input.operationalConditions');
+    expect(samplePlaybackSignals(bundle, 2).map((signal) => signal.phase)).toEqual(['red', 'red']);
+    expect(evaluatePlaybackSignalHeadStates(bundle, .999)).toEqual({ '2230': 'red', '2231': 'red', '2240': 'red' });
+    expect(evaluatePlaybackSignalHeadStates(bundle, 1)).toEqual({ '2230': 'green', '2231': 'green', '2240': 'red' });
+    expect(evaluatePlaybackSignalHeadStates(bundle, 3.999)).toEqual({ '2230': 'green', '2231': 'green', '2240': 'red' });
+    expect(evaluatePlaybackSignalHeadStates(bundle, 4)).toEqual({ '2230': 'red', '2231': 'red', '2240': 'red' });
   });
 
   it('maps real actor ids and interpolates dynamic pose and wrapped heading', () => {

@@ -1,0 +1,37 @@
+{
+  "id": "pin-ec-08-zipper-merge-lane-closure",
+  "kind": "compiled",
+  "mapId": "yale-street",
+  "status": "failed",
+  "iterations": {
+    "requested": 5,
+    "completed": 0,
+    "failed": 5,
+    "errors": [
+      {
+        "iteration": 0,
+        "message": "Error: no accepted site for pin-ec-08-zipper-merge-lane-closure on yale-street (pinned 24a30f9561137117; accepted 0, rejected 23)\n    at resolveSite (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:349:11)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:553:22\n    at async Phases.time (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:331:19)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:552:28\n    at async executeInput (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:485:48)\n    at async runInstanceOrCompiled (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:543:21)\n    at async Object.cmdRunOne [as run-one] (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:735:10)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:818:22"
+      },
+      {
+        "iteration": 1,
+        "message": "Error: no accepted site for pin-ec-08-zipper-merge-lane-closure on yale-street (pinned 24a30f9561137117; accepted 0, rejected 23)\n    at resolveSite (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:349:11)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:553:22\n    at async Phases.time (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:331:19)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:552:28\n    at async executeInput (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:485:48)\n    at async runInstanceOrCompiled (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:543:21)\n    at async Object.cmdRunOne [as run-one] (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:735:10)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:818:22"
+      },
+      {
+        "iteration": 2,
+        "message": "Error: no accepted site for pin-ec-08-zipper-merge-lane-closure on yale-street (pinned 24a30f9561137117; accepted 0, rejected 23)\n    at resolveSite (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:349:11)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:553:22\n    at async Phases.time (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:331:19)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:552:28\n    at async executeInput (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:485:48)\n    at async runInstanceOrCompiled (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:543:21)\n    at async Object.cmdRunOne [as run-one] (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:735:10)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:818:22"
+      },
+      {
+        "iteration": 3,
+        "message": "Error: no accepted site for pin-ec-08-zipper-merge-lane-closure on yale-street (pinned 24a30f9561137117; accepted 0, rejected 23)\n    at resolveSite (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:349:11)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:553:22\n    at async Phases.time (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:331:19)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:552:28\n    at async executeInput (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:485:48)\n    at async runInstanceOrCompiled (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:543:21)\n    at async Object.cmdRunOne [as run-one] (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:735:10)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:818:22"
+      },
+      {
+        "iteration": 4,
+        "message": "Error: no accepted site for pin-ec-08-zipper-merge-lane-closure on yale-street (pinned 24a30f9561137117; accepted 0, rejected 23)\n    at resolveSite (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:349:11)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:553:22\n    at async Phases.time (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:331:19)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:552:28\n    at async executeInput (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:485:48)\n    at async runInstanceOrCompiled (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:543:21)\n    at async Object.cmdRunOne [as run-one] (file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:735:10)\n    at async file:///home/path/tmp/simforge-native-migration/qualification/native-migration/harness.mjs:818:22"
+      }
+    ]
+  },
+  "timingMs": {
+    "moduleLoad": 152.04568700000002
+  },
+  "compileIdentity": null
+}

@@ -1,0 +1,105 @@
+{
+  "id": "ec-04-child-emerging-behind-bus",
+  "kind": "instance",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "a67d55800dc6ce4dcdc84d0e42a87b657407ee39e37c20509476ba3792a16564",
+  "traceDigest": "2ed0c55d950d1b60cc3620ddb79197def274eb14510cc964d1fe242fb36120f1",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 134.35066300000003,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 12.327849999999984,
+      "warm": {
+        "n": 4,
+        "min": 1.0989630000001398,
+        "median": 1.1501714999999422,
+        "max": 1.730391999999938,
+        "mean": 1.2824244999999905
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 311.13141799999994,
+      "warm": {
+        "n": 4,
+        "min": 0.0032850000000053114,
+        "median": 0.004210000000171021,
+        "max": 0.004304000000047381,
+        "mean": 0.004002250000098684
+      }
+    },
+    "simulate": {
+      "cold": 487.66303500000004,
+      "warm": {
+        "n": 4,
+        "min": 287.28680699999995,
+        "median": 306.38029300000005,
+        "max": 345.172139,
+        "mean": 311.304883
+      }
+    },
+    "digest": {
+      "cold": 27.569582999999966,
+      "warm": {
+        "n": 4,
+        "min": 21.985192000000097,
+        "median": 22.996103999999946,
+        "max": 23.06325300000003,
+        "mean": 22.760163250000005
+      }
+    },
+    "serialize": {
+      "cold": 41.287217000000055,
+      "warm": {
+        "n": 4,
+        "min": 27.33980900000006,
+        "median": 31.500789499999996,
+        "max": 34.01626999999985,
+        "mean": 31.089414499999975
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 21,
+  "issues": 1,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/04-child-emerging-behind-bus/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "bf1cf85f116f8c16ba3bb9734fe5a60c1116699e0f5fa291ff69e88f33081032",
+    "traceDigest": "eef85c83231f51a0c98a338e6cba4073965f3fa85fa6a8e8973b579fb9b93f11",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.child.laneTransitions",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.trailing-taxi.laneTransitions",
+        "metrics.minTTCPair",
+        "metrics.revealToConflictPair"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

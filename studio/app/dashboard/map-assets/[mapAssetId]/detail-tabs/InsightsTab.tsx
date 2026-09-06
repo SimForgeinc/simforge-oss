@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef } from "react";
 import { ChevronRight, Loader2, X } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type {
   MapAsset,
   MapAssetEnrichmentSnapshot,
@@ -18,7 +18,7 @@ import {
   type ScenarioFamilyGroup,
 } from "@/app/lib/scenario-intelligence-ui";
 import { getFamilyIcon } from "@/app/lib/scenario-family-icons";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
 
 type ActiveFilter = { type: "family"; id: string } | { type: "tag"; id: string } | null;
 

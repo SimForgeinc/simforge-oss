@@ -18,7 +18,7 @@
  */
 
 import { InstancedMesh, PerspectiveCamera, Raycaster, SpotLight, Vector2 } from 'three';
-import { ActorRenderer, MAX_PROJECTED_HEADLIGHTS, type ActorView } from './actorRenderer';
+import { ActorRenderer, MAX_PROJECTED_HEADLIGHTS, actorOrigin, type ActorView } from './actorRenderer';
 import type { CameraView } from './camera-controls';
 import { DEFAULT_ACTIVE_LUMINAIRE_LIMIT } from './luminaire-lighting';
 import type { CityViewer } from './viewer';
@@ -144,7 +144,7 @@ export class ThreeRendererAdapter {
         if (command.attachment.kind !== 'actor') return;
         const actor = this.lastFrame?.actors.find((entry) => entry.id === command.attachment.id);
         if (!actor) return;
-        const pose = followCameraPose(actor, command.mode);
+        const pose = followCameraPose(actor, command.mode, actorOrigin(actor));
         this.host.controls.applyView({ position: pose.position, target: pose.target, fov: camera.fov });
         return;
       }

@@ -1,47 +1,31 @@
-"""Shared pytest fixtures: a server command and the synthetic episode spec."""
+"""Shared fixtures: the synthetic episode spec. Requires the built extension."""
 
 from __future__ import annotations
 
-import shutil
+import importlib.util
 from pathlib import Path
 
 import pytest
 
-ADAPTER_DIR = Path(__file__).resolve().parents[1]
-REPO_DIR = ADAPTER_DIR.parents[1]
 SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode.json"
+DYNAMIC_SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode-dynamic.json"
+TRAJECTORY_SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode-trajectory.json"
 
-TSX = REPO_DIR / "node_modules" / ".bin" / "tsx"
-SERVER_SRC = REPO_DIR / "packages" / "training-env" / "src" / "env-server.ts"
-SERVER_DIST = REPO_DIR / "packages" / "training-env" / "dist" / "env-server.js"
-
-
-def server_command() -> tuple[str, ...]:
-    """Run the TS server from the workspace build, else from source via tsx."""
-    if SERVER_DIST.exists():
-        return ("node", str(SERVER_DIST))
-    if TSX.exists() and SERVER_SRC.exists():
-        return (str(TSX), str(SERVER_SRC))
-    installed = shutil.which("simforge-env-server")
-    if installed:
-        return (installed,)
-    raise RuntimeError("no simforge-env-server available: build @simforge-oss/training-env first")
-
-
-def _server_available() -> bool:
-    return SERVER_DIST.exists() or (TSX.exists() and SERVER_SRC.exists()) or shutil.which("simforge-env-server") is not None
-
-
-if not _server_available():  # pragma: no cover - environment guard
-    pytest.skip("no env-server runtime available", allow_module_level=True)
-
-
-@pytest.fixture(scope="session")
-def server_cmd() -> tuple[str, ...]:
-    return server_command()
+if importlib.util.find_spec("simforge_oss_gym._native") is None:  # pragma: no cover - environment guard
+    pytest.skip("simforge_oss_gym._native is not built (run `maturin develop` in adapters/gym)", allow_module_level=True)
 
 
 @pytest.fixture(scope="session")
 def spec() -> str:
     assert SPEC_PATH.exists(), f"missing episode spec fixture {SPEC_PATH}"
     return str(SPEC_PATH)
+
+
+@pytest.fixture(scope="session")
+def dynamic_spec() -> str:
+    return str(DYNAMIC_SPEC_PATH)
+
+
+@pytest.fixture(scope="session")
+def trajectory_spec() -> str:
+    return str(TRAJECTORY_SPEC_PATH)

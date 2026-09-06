@@ -22,6 +22,7 @@ import {
   type MapSummary,
   type MapVersion,
   type MapVersionRecord,
+  type ReleasedMapVersionRecord,
 } from './schema.js';
 
 const textEncoder = new TextEncoder();
@@ -390,11 +391,19 @@ export async function listMaps(backend: RegistryBackend): Promise<MapRegistryInd
 
 export interface ResolvedVersion {
   name: string;
-  record: MapVersionRecord;
+  record: ReleasedMapVersionRecord;
   closure: MapClosure;
-  release?: MapRelease;
+  release: MapRelease;
 }
 
+function assertReleasedRecord(name: string, record: MapVersionRecord): ReleasedMapVersionRecord {
+  if (record.releaseDigest === undefined || !/^[a-f0-9]{64}$/.test(record.releaseDigest)) {
+    throw new Error(`${name}@${record.version} has no supported immutable release; re-ingest it with the current pipeline`);
+  }
+  return { ...record, releaseDigest: record.releaseDigest };
+}
+
+/** Resolve a `name[@version]` reference to its immutable release and the canonical closure that release names. */
 export async function resolveVersion(
   backend: RegistryBackend,
   reference: string,
@@ -408,21 +417,19 @@ export async function resolveVersion(
   const version = (separator === -1 ? entry.latest : reference.slice(separator + 1)) as MapVersion;
   if (!/^v[1-9][0-9]*$/.test(version)) throw new Error(`invalid map version: ${version}`);
   const records = await readOptionalJson<MapVersionRecord[]>(backend, `maps/${name}/versions.json`, []);
-  const record = records.find((candidate) => candidate.version === version);
-  if (record === undefined) throw new Error(`unknown map version: ${name}@${version}`);
+  const stored = records.find((candidate) => candidate.version === version);
+  if (stored === undefined) throw new Error(`unknown map version: ${name}@${version}`);
+  const record = assertReleasedRecord(name, stored);
   const releaseKey = `maps/${name}/${version}/release.json`;
-  const release = record.releaseDigest === undefined ? undefined : parseJson<MapRelease>(await backend.get(releaseKey), releaseKey);
-  if (release) {
-    assertRelease(release);
-    if (release.name !== name || release.version !== version || releaseDigest(release) !== record.releaseDigest) throw new Error('release digest or identity mismatch');
-  }
-  const closureKey = release?.canonical.key ?? `maps/${name}/${version}/closure.json`;
-  const closure = parseJson<MapClosure>(await backend.get(closureKey), closureKey);
+  const release = parseJson<MapRelease>(await backend.get(releaseKey), releaseKey);
+  assertRelease(release);
+  if (release.name !== name || release.version !== version || releaseDigest(release) !== record.releaseDigest) throw new Error('release digest or identity mismatch');
+  const closure = parseJson<MapClosure>(await backend.get(release.canonical.key), release.canonical.key);
   assertClosure(closure);
   if (closure.kind !== 'canonical') throw new Error('release canonical reference is not canonical');
   const actualDigest = closureDigest(closure);
-  if (actualDigest !== record.closureDigest || (release && actualDigest !== release.canonical.digest)) throw new Error(`closure digest mismatch for ${name}@${version}`);
-  return { name, record, closure, ...(release ? { release } : {}) };
+  if (actualDigest !== record.closureDigest || actualDigest !== release.canonical.digest) throw new Error(`closure digest mismatch for ${name}@${version}`);
+  return { name, record, closure, release };
 }
 
 async function verifyRemoteBlob(backend: RegistryBackend, memberPath: string, digest: string, bytes: number, outputPath?: string): Promise<void> {
@@ -601,7 +608,6 @@ export async function pullVersion(
 ): Promise<PullResult> {
   const resolvedVersion = await resolveVersion(backend, reference);
   const { closure, name } = resolvedVersion;
-  if (!resolvedVersion.release) throw new Error(`${name} has no supported immutable release; re-ingest before pulling`);
   if (closure.metadata?.master !== true) {
     throw new Error(
       `${name}@${resolvedVersion.record.version} predates the map master format (tiled canonical closure); re-ingest it with the current pipeline`,
@@ -612,7 +618,7 @@ export async function pullVersion(
   const derivedClosures = await exactDerivedClosures(backend, resolvedVersion.release, options.derivedClosures);
   const installation = {
     schema: 'simforge.map-installation.v1' as const, name, version: resolvedVersion.record.version,
-    releaseDigest: resolvedVersion.record.releaseDigest!, canonicalDigest: resolvedVersion.record.closureDigest,
+    releaseDigest: resolvedVersion.record.releaseDigest, canonicalDigest: resolvedVersion.record.closureDigest,
     ...(resolvedVersion.release.web ? { webDigest: resolvedVersion.release.web.digest } : {}),
   };
   const devDestination = join(layouts.devAssetsRoot, name);
@@ -656,7 +662,7 @@ export async function pullVersion(
     name,
     version: resolvedVersion.record.version,
     closureDigest: resolvedVersion.record.closureDigest,
-    releaseDigest: resolvedVersion.record.releaseDigest!,
+    releaseDigest: resolvedVersion.record.releaseDigest,
     materialized,
     nativeWorkerInputs,
   };
@@ -693,7 +699,6 @@ export async function promoteVersion(
 ): Promise<PublishedVersion> {
   const resolvedVersion = await resolveVersion(source, input.reference);
   guardTarget(resolvedVersion.name, effectiveTarget(destination, input.target));
-  if (!resolvedVersion.release) throw new Error('legacy map version has no supported immutable release; re-ingest before promotion');
   const derivedClosures = await exactDerivedClosures(source, resolvedVersion.release, input.derivedClosures);
   const cache = input.blobCacheRoot ?? await mkdtemp(join(tmpdir(), 'map-promotion-'));
   try {

@@ -1,0 +1,113 @@
+{
+  "schema": "simforge.native-migration.source-inventory/v1",
+  "generatedAt": "2026-09-05",
+  "owner": "BaselineIntake",
+  "referenceStack": {
+    "release": { "checkout": "/home/path/tmp/simforge-oss-agentic-qa", "commit": "2a69e50f4e9d09cc67c7f424c168e7225070528d", "role": "released Studio/map-registry behaviour; wins on map roots, viewer, QA and cli semantics" },
+    "experimental": { "checkout": "/home/path/simforge-oss", "commit": "1e2a63bc3479b85eb688c733d9ddc01f3c2d8eb7", "worktree": "dirty (situation-first authoring v2)", "role": "current scenario/compiler/engine semantics, situation authoring, Blender workbench, NuRec splat port" },
+    "engineVersion": "0.6.0",
+    "traceFormatVersion": 4,
+    "canonicalInput": "SimScenarioInput (packages/engine/src/schema/input.ts, camelCase wire fields, schemaVersion 1)",
+    "referenceExecutionPath": "readInstance -> loadMap(mapId) -> runSimulation(input, { graph, guards: 'collect' }) -> traceDigest (packages/cli/src/commands/simulate.ts)"
+  },
+  "components": [
+    {
+      "id": "scenario-schema",
+      "source": "packages/scenario (src/schema/v2/*, validate/*, situation.ts, initial-route-migration.ts)",
+      "capabilities": [
+        "ScenarioTemplateV2 (zod) with portable/on_reference and scene_absolute roles",
+        "scene_absolute initialRoute union: lanePath | customRoute | customTimedRoute (recorded actor motion, dwell semantics)",
+        "structural validation incl. strictly increasing timed-route clocks (route_disconnected)",
+        "SituationProgram / SituationTransaction: frozen revisions, typed template ops, geometry patch manifests, situationDigest",
+        "canonical JSON + portable SHA-256 (Sha256, canonicalize)"
+      ],
+      "consumers": ["packages/compiler", "packages/editor", "packages/openscenario", "studio", "experiments/agentic-3d (situation-loop, geometry-binding, situation-corpus via compiler dist)", "adapters/gym (via compiled instances)"],
+      "migrationDestination": "simforge-core types (NativeFoundation reads release + this intake); situation program stays TypeScript-owned (authoring), transactions cross to native only as compiled inputs"
+    },
+    {
+      "id": "compiler",
+      "source": "packages/compiler (materialize.ts, map-bound.ts, sites.ts, anchor/*, portable.ts, situation.ts, perception.ts)",
+      "capabilities": [
+        "template -> SimScenarioInput materialisation with instance manifest (replayKey: templateDigest, matcherIndexDigest, engineGraphDigest, siteId, paramSeed, drawIndex)",
+        "anchor matcher over map topology (pinned sites searched in the pre-truncation pool)",
+        "condition lowering with exact comparators lt/lte/gt/gte; diagnostic observations lowered in actor scope and rejected on semantic loss (observation_unsupported / observation_unresolved)",
+        "initialRoute lowering: lanePath route, customRoute -> polyline, customTimedRoute -> timedPolyline",
+        "portable lift refuses exact scene-space routes (initial_route_not_portable)",
+        "situation compile/compare: SituationProgram + verified generated-geometry bindings -> paired base/control executions (compareSituation)",
+        "map loading from the registry cache (DEV_ASSETS), lane graph build, signal catalog"
+      ],
+      "consumers": ["packages/cli (instantiate/batch/simulate)", "studio", "experiments/agentic-3d/*.mjs (dist/node.js)", "qualification/native-migration/harness.mjs"],
+      "migrationDestination": "simforge-compiler crate (future owner) for materialisation and MapBundle loading; simforge-core::map (MapGeometry) for topology/lane graph/routes"
+    },
+    {
+      "id": "engine",
+      "source": "packages/engine (sim/engine.ts, sim/controllers.ts, sim/triggers.ts, sim/physics*, trace/*, scene-state/*)",
+      "capabilities": [
+        "fixed-step deterministic simulation (dt 0.02, warm-up prologue excluded from trace), kinematic-v1 and dynamic-v1 physics with rigid contact",
+        "route-aware OBB leader search for all controlled actors (findLeader with body widths, fixed-body projection cache)",
+        "designated-ego sensor-limited hazard perception (80 m, ±60°, line of sight through all live bodies/props) stamped as header.ego.controllerProfile",
+        "child pedestrian catalog physics/motion profile (tag catalog:pedestrian.child)",
+        "condition triggers incl. hysteresis and 4 comparators; AdvanceOptions.conditions/onConditions pre-integration sampling",
+        "scene-state emission incl. static_object -> prop/hazard.cardboard_box",
+        "trace v4 columnar channels (x, y, headingRad, speedMps, lateralOffsetM, s, laneRsl, present, physics), events, metrics, sensor tracks"
+      ],
+      "consumers": ["packages/cli", "packages/editor/playback/viewer", "studio", "adapters/gym", "experiments/agentic-3d (situation-loop rehearsals, corpus replay)", "openscenario export"],
+      "migrationDestination": "simforge-core engine/trace/solve modules (EngineExecution owners); this harness is the conformance reference"
+    },
+    {
+      "id": "asset-catalog",
+      "source": "packages/asset-catalog (catalog.ts, gallery.ts, gallery.generated.ts, schema.ts, types.ts)",
+      "capabilities": ["canonical catalog ids/dims/classes", "gallery visual profile with external GLB + clipAssets by contentHash, dimension gate 0.30", "child pedestrian defaultParams (massKg 32, walk 1, run 3)"],
+      "consumers": ["packages/compiler (situation geometry bindings, prop dims)", "renderer/service assets", "experiments/agentic-3d/asset-library.mjs, geometry-binding.mjs", "studio"],
+      "migrationDestination": "unchanged TypeScript ownership; native consumers receive resolved dims/ids in compiled input"
+    },
+    {
+      "id": "openscenario-export",
+      "source": "packages/openscenario/src/export/*",
+      "capabilities": ["xosc 1.4 / 1.3-esmini export with rule mapping lessThan/lessOrEqual/greaterThan/greaterOrEqual"],
+      "consumers": ["packages/cli export"],
+      "migrationDestination": "unchanged"
+    },
+    {
+      "id": "editor-seams",
+      "source": "packages/editor (document.ts, routeOverlay.ts)",
+      "capabilities": ["initialRoute-aware document normalisation and route-execution parity for all three route modes"],
+      "consumers": ["studio", "SimCloud apps/web (SharedStudioHost)"],
+      "migrationDestination": "SharedStudioHost shared UI/host"
+    },
+    {
+      "id": "situation-authoring",
+      "source": "experiments/agentic-3d (19 live modules + tests + atlas sites + asset library manifest)",
+      "capabilities": [
+        "gateway identity/probe (Starline OMP), bounded author sessions with critics and 3-member ensembles",
+        "frozen benchmark preparation, per-brief sensing freeze, supervisor with owned Blender workers, reports/collection/diversity review",
+        "replayable corpus export/verify/replay over compiled base/control executions",
+        "NuRec source bindings (situation-nurec.mjs inspect/fork/bind; nurec-observations.mjs pinned observation sampling)",
+        "asset library maintenance (rebuild/normalize/qa/dedupe/search/report) and Meshy generation CLI"
+      ],
+      "consumers": ["operators via docs/situation-authoring.md", "renderer/blender workbench", "packages/*/dist"],
+      "migrationDestination": "stays TypeScript/Node orchestration; consumes native runtime through the same compiled inputs later"
+    },
+    {
+      "id": "blender-workbench",
+      "source": "renderer/blender (workbench_server.py, blender_runner.py, geometry_*.py, guarded_blender.py, workbench.{html,css,js})",
+      "capabilities": ["resident Blender/Cycles OptiX map scene with HTTP state/render API, guarded authority, source-identity checks", "geometry jobs/export/validation to GLB with digests (generated static geometry publication)"],
+      "consumers": ["experiments/agentic-3d/blender-client.mjs, blender-map-workbench.mjs, situation-benchmark.mjs"],
+      "migrationDestination": "Blender workbench (existing Python), publishes assets/semantics; not physics authority"
+    },
+    {
+      "id": "nurec-splat",
+      "source": "renderer/splat (python/simforge_splat/*, PROVENANCE.json, LICENSES.md)",
+      "capabilities": ["3DGUT/3DGRT NuRec package loading, gaussian render with actor pass, ring-buffer bundle service (protocol 2), rigid retiming, region replacement, source patch"],
+      "consumers": ["experiments/agentic-3d/situation-nurec.mjs (bundle bindings)", "renderer/service simforge_native client"],
+      "migrationDestination": "NuRec backend behind the common sensor-output envelope; separately owned AUTHOR/PYTHON work; qualification per protocols.json (original20, training24)"
+    }
+  ],
+  "publicConsumersMatrix": [
+    { "consumer": "packages/cli simulate/instantiate/batch", "contract": "InstanceFile{manifest,input} -> SimTrace", "destination": "simforge-runner simforge.simulate/v1 + simforge.compile/v1 (RuntimeDistribution)" },
+    { "consumer": "adapters/gym", "contract": "compiled instance + step/observation transport", "destination": "simforge-bindings-python over simforge-session" },
+    { "consumer": "studio / packages/playback", "contract": "SimTrace v4 + scene-state", "destination": "unchanged consumer of traces produced natively" },
+    { "consumer": "experiments/agentic-3d situation loop", "contract": "compareSituation over compiler dist", "destination": "unchanged until compiler crate parity is qualified by this harness" },
+    { "consumer": "renderer/service", "contract": "scene-state frames + sensor rigs", "destination": "GraphicsFrameIdentity" }
+  ]
+}

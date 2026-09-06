@@ -1,0 +1,83 @@
+{
+  "issues": [
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:1a396801d110ef25.behavior.route",
+      "reason": "route provides 183.0 m ahead of the spawn but the actor covers 285.1 m in 16 s",
+      "detail": {
+        "availableM": 183.00089256266267,
+        "neededM": 285.12946796261497,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:1a55772f6caffabd.behavior.route",
+      "reason": "route provides 235.8 m ahead of the spawn but the actor covers 306.4 m in 16 s",
+      "detail": {
+        "availableM": 235.83007812745132,
+        "neededM": 306.3782292545204,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:3d410544e4587069.behavior.route",
+      "reason": "route provides 252.3 m ahead of the spawn but the actor covers 273.6 m in 16 s",
+      "detail": {
+        "availableM": 252.30965661582968,
+        "neededM": 273.57686297299085,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:5ae43b0b0c5089c0.behavior.route",
+      "reason": "route provides 236.3 m ahead of the spawn but the actor covers 263.9 m in 16 s",
+      "detail": {
+        "availableM": 236.34619719682337,
+        "neededM": 263.93205434219186,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:9aff90beeee72591.behavior.route",
+      "reason": "route provides 204.1 m ahead of the spawn but the actor covers 262.8 m in 16 s",
+      "detail": {
+        "availableM": 204.08338359164907,
+        "neededM": 262.7598511081514,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "runway_insufficient",
+      "severity": "warning",
+      "path": "actors.ambient:v1:a9a28f531ce11158.behavior.route",
+      "reason": "route provides 248.3 m ahead of the spawn but the actor covers 271.7 m in 16 s",
+      "detail": {
+        "availableM": 248.30107366008423,
+        "neededM": 271.65328799349743,
+        "clipSeconds": 16
+      }
+    },
+    {
+      "code": "spawn_lane_pose_mismatch",
+      "severity": "warning",
+      "path": "actors.ambient:v1:8a0dd8d86e3145eb.initial",
+      "reason": "authored pose and lane station differ by 0.62 m; the authored pose is preserved and lane progress is reprojected",
+      "detail": {
+        "rsl": "1412:0:-1",
+        "authoredS": 20.084938745207527,
+        "projectedS": 211.63569585551357,
+        "mismatchM": 0.6198234034647256
+      }
+    }
+  ],
+  "arrival": []
+}

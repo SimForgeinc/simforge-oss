@@ -1,0 +1,258 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "06055949757a0d33dec139d0c4b0c97090698737212c728cee5fffa51bc0d49e",
+  "traceDigest": "be9f5c5f20793df5694318c27e43154608cc78a0670b3e8a9ca546fb4edc6244",
+  "dt": 0.02,
+  "clipSeconds": 10,
+  "warmupSeconds": 1,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 501,
+  "firstT": 0,
+  "lastT": 10,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "cyclist",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "cyclist": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "parked-car": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "cyclist": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 10
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.4,
+          "from": null,
+          "to": "1196:0:-1"
+        },
+        {
+          "t": 0.8,
+          "from": "1196:0:-1",
+          "to": "1195:0:1"
+        },
+        {
+          "t": 1,
+          "from": "1195:0:1",
+          "to": "1184:0:1"
+        },
+        {
+          "t": 1.4000000000000001,
+          "from": "1184:0:1",
+          "to": "1183:0:1"
+        },
+        {
+          "t": 1.8,
+          "from": "1183:0:1",
+          "to": "1194:0:1"
+        },
+        {
+          "t": 2.2,
+          "from": "1194:0:1",
+          "to": null
+        },
+        {
+          "t": 5.24,
+          "from": null,
+          "to": "1211:0:-1"
+        },
+        {
+          "t": 5.84,
+          "from": "1211:0:-1",
+          "to": "1223:0:1"
+        },
+        {
+          "t": 6.04,
+          "from": "1223:0:1",
+          "to": "1212:0:1"
+        },
+        {
+          "t": 6.26,
+          "from": "1212:0:1",
+          "to": "1218:0:-1"
+        },
+        {
+          "t": 6.48,
+          "from": "1218:0:-1",
+          "to": "1221:0:1"
+        },
+        {
+          "t": 6.7,
+          "from": "1221:0:1",
+          "to": "1215:0:1"
+        },
+        {
+          "t": 6.96,
+          "from": "1215:0:1",
+          "to": "1227:0:1"
+        },
+        {
+          "t": 9.28,
+          "from": "1227:0:1",
+          "to": null
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 10
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.94,
+          "from": "65:0:-1",
+          "to": "1180:0:-1"
+        },
+        {
+          "t": 4.2,
+          "from": "1180:0:-1",
+          "to": "92:0:-1"
+        },
+        {
+          "t": 4.5,
+          "from": "92:0:-1",
+          "to": "1208:0:-1"
+        },
+        {
+          "t": 5.48,
+          "from": "1208:0:-1",
+          "to": "93:0:-1"
+        },
+        {
+          "t": 6.26,
+          "from": "93:0:-1",
+          "to": "1146:0:-1"
+        },
+        {
+          "t": 6.98,
+          "from": "1146:0:-1",
+          "to": "94:0:-1"
+        },
+        {
+          "t": 7.12,
+          "from": "94:0:-1",
+          "to": "995:0:-1"
+        },
+        {
+          "t": 8.02,
+          "from": "995:0:-1",
+          "to": "95:0:-1"
+        },
+        {
+          "t": 8.22,
+          "from": "95:0:-1",
+          "to": "95:1:-1"
+        },
+        {
+          "t": 8.620000000000001,
+          "from": "95:1:-1",
+          "to": "95:2:-1"
+        },
+        {
+          "t": 9.88,
+          "from": "95:2:-1",
+          "to": "95:3:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "parked-car": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 10
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 6,
+      "kind": "trigger_skipped",
+      "interactionId": "door-opens-with-collider",
+      "actorId": "parked-car",
+      "reason": "window_elapsed"
+    },
+    {
+      "t": 6.12,
+      "kind": "trigger_fired",
+      "interactionId": "cyclist-brakes-for-door",
+      "actorId": "cyclist",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 7,
+      "kind": "released",
+      "actorId": "cyclist",
+      "axis": "longitudinal",
+      "interactionId": "cyclist-brakes-for-door",
+      "reason": "window"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [
+      "door-opens-with-collider"
+    ],
+    "clippedCriticality": false,
+    "ticksSimulated": 501,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "cyclist",
+        "ego"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

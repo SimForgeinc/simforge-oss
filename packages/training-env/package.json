@@ -1,7 +1,7 @@
 {
   "name": "@simforge-oss/training-env",
   "version": "0.1.0-rc.61",
-  "description": "Gymnasium-semantics environment core over the SimForge fixed-step engine: EnvSession (reset/step), observations (state vector, perception-gated object list, BEV raster), reward assembly, and the versioned causal ground-truth channel.",
+  "description": "Gymnasium-semantics environment façades over the SimForge native runtime: EnvSession (reset/step), SessionBatch, PolicySession, WorldSession with the truth-stream wire, and the versioned causal ground-truth channel.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
@@ -15,6 +15,10 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
       "./browser": {
         "types": "./dist/browser.d.ts",
         "default": "./dist/browser.js"
@@ -25,14 +29,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "simforge-env-server": "./dist/env-server.js"
-  },
   "exports": {
     ".": {
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./node": {
+      "development": "./src/node.ts",
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
     },
     "./browser": {
       "development": "./src/browser.ts",
@@ -44,16 +50,14 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/browser.ts src/env-server.ts --format esm --dts --sourcemap --clean --no-splitting --out-dir dist",
+    "build": "tsup src/index.ts src/node.ts src/browser.ts --format esm --dts --sourcemap --clean --no-splitting --out-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "bench": "tsx src/bench/env-bench.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.1.3",
-    "@simforge-oss/compiler": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
-    "zod": "^4.4.3"
+    "@simforge-oss/native-runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

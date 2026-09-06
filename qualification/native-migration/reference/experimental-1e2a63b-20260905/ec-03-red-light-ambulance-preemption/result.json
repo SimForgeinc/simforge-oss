@@ -1,0 +1,105 @@
+{
+  "id": "ec-03-red-light-ambulance-preemption",
+  "kind": "instance",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "3fcbf3a6a34e08b8ac2e8a3fd4ac9f07d2749d9e5e9efb3030da68207dffe017",
+  "traceDigest": "22d805de08b77c7ce621c38bb1a989e6e1e00764cbcf1dc79b61f899fc47f519",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 138.527582,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 12.648048000000017,
+      "warm": {
+        "n": 4,
+        "min": 0.8437689999998383,
+        "median": 0.8695390000000316,
+        "max": 1.450399999999945,
+        "mean": 1.0083117499999616
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 294.33831,
+      "warm": {
+        "n": 4,
+        "min": 0.002704999999878055,
+        "median": 0.00311700000008841,
+        "max": 0.003547000000025946,
+        "mean": 0.0031215000000202053
+      }
+    },
+    "simulate": {
+      "cold": 365.579914,
+      "warm": {
+        "n": 4,
+        "min": 199.19906899999978,
+        "median": 217.8920300000001,
+        "max": 290.25137699999993,
+        "mean": 231.30862649999997
+      }
+    },
+    "digest": {
+      "cold": 29.684867000000054,
+      "warm": {
+        "n": 4,
+        "min": 23.429302000000007,
+        "median": 26.279472499999997,
+        "max": 29.963498999999956,
+        "mean": 26.48793649999999
+      }
+    },
+    "serialize": {
+      "cold": 52.18574000000001,
+      "warm": {
+        "n": 4,
+        "min": 33.49714899999981,
+        "median": 36.832409499999926,
+        "max": 42.61178999999993,
+        "mean": 37.4434394999999
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 41,
+  "issues": 3,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "5c82d66208b3af13f9bb4216f42536aa841713b03bd7ed241ecd10c143fe0b6e",
+    "traceDigest": "a811e538ea18270e1e5fae810e6f6fc7032238a8f11ea537767bb93e47798e1a",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.ambulance.laneTransitions",
+        "actors.cross-traffic.laneTransitions",
+        "actors.pedestrian.laneTransitions",
+        "events.length",
+        "events.22"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

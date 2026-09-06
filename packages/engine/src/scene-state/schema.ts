@@ -1,9 +1,9 @@
 /**
- * scene-state.v1 — the one scene description both native-renderer ingestion
- * modes consume.
+ * `simforge.scene-state.v1` — the one scene description both native-renderer
+ * ingestion modes consume.
  *
  * Produced from a `SimTrace` (trace.json.gz) by `emitSceneState` for trace
- * playback, and by the env-server bridge per tick for closed-loop live mode.
+ * playback, and by the native world session truth stream per tick for closed-loop live mode.
  * Wire formats: JSON (file playback, hashing) and msgpack (live stream); the
  * schema is identical in both.
  *
@@ -16,18 +16,8 @@
 
 import { z } from 'zod';
 
-export const CANONICAL_SCENE_STATE_VERSION = 'simforge.scene-state.v1' as const;
-export const LEGACY_SCENE_STATE_VERSION = 'scene-state.v1' as const;
-/**
- * Digest-preserving emission switch. Keep false until stored recordings and
- * renderers are deliberately re-canonicalized in one coordinated release.
- */
-export const EMIT_CANONICAL_SCENE_STATE_VERSION = false;
-export const SCENE_STATE_VERSION = (
-  EMIT_CANONICAL_SCENE_STATE_VERSION
-    ? CANONICAL_SCENE_STATE_VERSION
-    : LEGACY_SCENE_STATE_VERSION
-) as typeof CANONICAL_SCENE_STATE_VERSION | typeof LEGACY_SCENE_STATE_VERSION;
+/** The only scene-state document version emitted or accepted. */
+export const SCENE_STATE_VERSION = 'simforge.scene-state.v1' as const;
 
 /** Render profiles; part of the render intent (WSB4 owns `cinematic`). */
 export const renderProfileSchema = z.enum(['sensor', 'cinematic']);
@@ -91,7 +81,7 @@ export const actorTickSchema = z.object({
    * consumers must tolerate its absence on older documents. Provenance is
    * emitter-declared, not encoded — the trace emitter derives it by backward
    * finite difference of the velocity channel (so it carries the centripetal
-   * term when a body turns); the live env-server stream projects the engine's
+   * term when a body turns); the live truth stream projects the engine's
    * planned longitudinal acceleration onto the heading.
    */
   acceleration: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
@@ -107,10 +97,7 @@ export const frameSchema = z.object({
 export type SceneFrame = z.infer<typeof frameSchema>;
 
 export const sceneStateSchema = z.object({
-  version: z.union([
-    z.literal(CANONICAL_SCENE_STATE_VERSION),
-    z.literal(LEGACY_SCENE_STATE_VERSION),
-  ]),
+  version: z.literal(SCENE_STATE_VERSION),
   mapId: z.string().min(1),
   frame: z.literal('scene-yup'),
   dt: z.number().finite().positive(),

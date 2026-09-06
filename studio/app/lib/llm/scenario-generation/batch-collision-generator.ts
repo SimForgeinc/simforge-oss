@@ -13,6 +13,7 @@
  * Phase 2 finding: fit-rank alone floated degenerate roomy sites).
  */
 import {
+  normalizeActorBaseClip,
   plannedSubjectActor,
   type GeneratedScenarioMetadata,
   type ScenarioEditorActorDraft,
@@ -79,7 +80,7 @@ import type {
 } from "@simforge-oss/maps/topology";
 import type { ScenarioRequest } from "./scenario-request";
 import { stampCollisionGeneratedOutput } from "@/app/lib/scenario-generation/scenario-intention";
-import { finalizeGeneratedActorBehaviors } from "@/app/lib/scenario-generation/generated-actor-behavior";
+import { authorGeneratedActor } from "@/app/lib/scenario-generation/generated-actor-behavior";
 
 const DEFAULT_MIN_TIME_S = 5;
 // Turn-family runway (operator 2026-07-28, 5 scenes: "we don't need so much
@@ -789,7 +790,7 @@ function buildOccluderCar(
   const perpDist = Math.abs((px - lx) * vy - (py - ly) * vx) / vlen;
   if (perpDist > footprint.width / 2 + OCCLUDER_LOS_MARGIN_M) return null;
   const yawDeg = (Math.atan2(ey, ex) * 180) / Math.PI;
-  return {
+  return authorGeneratedActor({
     id: `occluder-${index}`,
     label,
     kind: "vehicle",
@@ -808,10 +809,8 @@ function buildOccluderCar(
     destination_point: null,
     path_placement: [],
     speed_kph: 0,
-    autopilot: false,
-    timeline: [],
     sensors: [],
-  } as ScenarioEditorActorDraft;
+  } as ScenarioEditorActorDraft);
 }
 
 /** How far upstream of the conflict (along the through-actor's approach) the
@@ -892,7 +891,7 @@ function buildCyclistOccluderCar(
   const px = placed.x;
   const py = placed.y;
   const yawDeg = (Math.atan2(uy, ux) * 180) / Math.PI;
-  return {
+  return authorGeneratedActor({
     id: `occluder-${index}`,
     label: "Parked car (occluder)",
     kind: "vehicle",
@@ -911,10 +910,8 @@ function buildCyclistOccluderCar(
     destination_point: null,
     path_placement: [],
     speed_kph: 0,
-    autopilot: false,
-    timeline: [],
     sensors: [],
-  } as ScenarioEditorActorDraft;
+  } as ScenarioEditorActorDraft);
 }
 
 /**
@@ -938,8 +935,8 @@ function subjectTurnForSite(
 }
 
 /** Families whose conflicting principal is a CROSSING PEDESTRIAN (walker), so the
- *  planner produces a walker and the draft gets companion peds + a ped
- *  collision_target_id. Covers the straight pedestrian_crossing AND the two
+ *  planner produces a walker and the draft gets companion peds + a walker
+ *  released on the subject's approach. Covers the straight pedestrian_crossing AND the two
  *  turn-across-crosswalk families (which add a turning subject on top). */
 function isPedCrossingFamily(family: ScenarioRequest["scenarioFamily"]): boolean {
   return (
@@ -1724,16 +1721,15 @@ export function generateCollisionScenarioBatch(
     keptActors = hygiene.actors;
     keptBackground = hygiene.background;
 
-    // `finalizeGeneratedActorBehaviors` wraps the KEPT set, not the raw one: the
-    // walker-hygiene cull above can drop actors, and a base clip authored onto an
-    // actor that is about to be culled is wasted work — while an actor that
-    // survives the cull without one has no baseline at all, which is the defect
-    // the call exists to prevent.
-    const allActors = finalizeGeneratedActorBehaviors([
+    // Every actor was authored with its program where it was built; the
+    // mutations since (path extension, occluder relocation, walker hygiene)
+    // moved GEOMETRY, and a path baseline mirrors the actor's geometry. Re-sync
+    // the KEPT set — an actor about to be culled is not worth the copy.
+    const allActors = [
       ...keptActors,
       ...(keptOccluder ? [keptOccluder] : []),
       ...keptBackground,
-    ]);
+    ].map((actor) => normalizeActorBaseClip(actor));
 
     // Final assembled-scene plausibility gate (codex review 2026-07-27 #1): the
     // kinematic gate above validated a clean PRE-population draft; every

@@ -130,6 +130,7 @@ async function main(): Promise<void> {
       duplicateIds: build.duplicateIds,
       skippedKinds: build.skippedKinds,
       missingConditionalFacts: build.audit.missingConditional,
+      inapplicableAlwaysFacts: build.audit.inapplicableAlways,
       locationsGzBytes: emitted.locationsBytes,
       derivedGzBytes: emitted.derivedBytes,
       ms: Date.now() - started,

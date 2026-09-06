@@ -1,0 +1,104 @@
+{
+  "id": "ec-01-construction-chicane-reversing-truck",
+  "kind": "instance",
+  "mapId": "belmont-research-center",
+  "status": "completed",
+  "inputHash": "b0bf1c17b43023297477c7ce4a0d6858c6fa26853014fe5e387e96f851ef3dde",
+  "traceDigest": "076d222cdd8bd6faf16338ff927731b00ec30183cbc48e6dc90f5eefc07ab490",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 154.810444,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 11.494918999999982,
+      "warm": {
+        "n": 4,
+        "min": 1.183514999999943,
+        "median": 2.1101754999999685,
+        "max": 5.304061000000047,
+        "mean": 2.6769817499999817
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 257.103731,
+      "warm": {
+        "n": 4,
+        "min": 0.0032660000001669687,
+        "median": 0.004032000000051994,
+        "max": 0.004679000000123779,
+        "mean": 0.004002250000098684
+      }
+    },
+    "simulate": {
+      "cold": 342.375403,
+      "warm": {
+        "n": 4,
+        "min": 174.31882100000007,
+        "median": 195.38503750000007,
+        "max": 262.70381599999996,
+        "mean": 206.94817800000004
+      }
+    },
+    "digest": {
+      "cold": 25.361032000000023,
+      "warm": {
+        "n": 4,
+        "min": 15.60008300000004,
+        "median": 15.981385499999988,
+        "max": 16.771512999999914,
+        "mean": 16.083591749999982
+      }
+    },
+    "serialize": {
+      "cold": 34.639635,
+      "warm": {
+        "n": 4,
+        "min": 21.114835000000085,
+        "median": 22.38387499999999,
+        "max": 24.653485000000046,
+        "mean": 22.634017500000027
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 24,
+  "issues": 2,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "c81054d5d3ce0cc6c20df10459b932d4cca38898a42fdd1b487490c1505df9a5",
+    "traceDigest": "c2a05bcae0656a2f47e2280626311b3200fd34e36d9c43aea71e43dd6b5b3ff0",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.worker.laneTransitions",
+        "events.length",
+        "events.0"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

@@ -5,11 +5,11 @@ import { gunzip } from 'node:zlib';
 import { promisify } from 'node:util';
 import { chromium, type Page } from 'playwright-core';
 import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration, type RenderArtifactManifest, type RenderEngineAdapter, type RenderExecutionContext } from '../index.js';
-import { fixedStepFrameCount, parseRenderIntent } from '@simforge-oss/scenario';
+import { RENDER_INTENT_V1_SCHEMA, fixedStepFrameCount, parseRenderIntent } from '@simforge-oss/scenario';
 import { parsePlaybackPair, type PlaybackBundle } from '@simforge-oss/playback';
 import { BROWSER_RENDER_ENGINE_ID, type BrowserCaptureResult } from './capture.js';
 import type { ArtifactIdentity } from './artifacts.js';
-import { BROWSER_RENDER_REQUEST_V1_SCHEMA, RENDER_INTENT_V1_SCHEMA, parseBrowserRenderIntent, type BrowserRenderIntentV1, type ResolvedBrowserRenderRequest } from './intent.js';
+import { BROWSER_RENDER_REQUEST_V1_SCHEMA, parseBrowserRenderIntent, type BrowserRenderIntentV1, type ResolvedBrowserRenderRequest } from './intent.js';
 
 export interface BrowserRenderEngineOptions {
   readonly harnessUrl?: string;

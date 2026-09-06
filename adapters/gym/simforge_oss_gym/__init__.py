@@ -1,17 +1,106 @@
-"""Gymnasium client for the SimForge deterministic env-server."""
+"""simforge-oss-gym: the SimForge Python SDK.
 
-from .env import SimForgeEnv
-from .protocol import ENV_SERVER_PROTOCOL_VERSION, StepFrame, decode_step_frame, encode_action
-from .server import EnvConnection, resolve_server_command
-from .vector import SimForgeVector
+The Rust native runtime ships inside this wheel as ``simforge_oss_gym._native``
+(no Node, Studio or subprocess). Execution profiles with their own providers
+(GPU batch, articulated MuJoCo, NuRec sensor tensors) are explicit extras
+selected through :mod:`simforge_oss_gym.profiles`.
+"""
+
+from .env import SimForgeEnv, action_space_for, encode_action, observation_space_for
+from .episodes import EpisodeSpec, LoadedEpisode, available_maps, load_episode_spec, maps_root
+from .native import (
+    ACTION_FIELDS,
+    ACTION_WIDTH,
+    ENGINE_HZ,
+    ENGINE_VERSION,
+    OBJECT_FEATURES,
+    STATE_VECTOR_SIZE,
+    EngineError,
+    EnvSession,
+    LaneGraph,
+    MapBundle,
+    NativeError,
+    ScenarioInput,
+    SchemaError,
+    SessionBatch,
+    SessionError,
+    UnsupportedError,
+    WorldSession,
+    compile_situation,
+    compile_template,
+    find_site,
+    find_sites,
+    Site,
+    Route,
+    match_sites,
+    rehearse_situation,
+    solve_situation,
+    compare_situation,
+    apply_situation_transaction,
+    template_identity_json,
+    cell_seed,
+    adapt_template_notes_json,
+    run_simulation,
+    check_feasibility,
+)
+from .policy import PolicyRunner
+from .profiles import ARTICULATED, PROFILES, ROADWAY_GPU, ROADWAY_NATIVE, ProfileUnavailableError, available_profiles, make_env, make_vector_env
+from .vector import SimForgeVectorEnv
+from .world import SimForgeWorld, TruthStream
 
 __all__ = [
-    "ENV_SERVER_PROTOCOL_VERSION",
-    "EnvConnection",
-    "StepFrame",
+    "ACTION_FIELDS",
+    "ACTION_WIDTH",
+    "ARTICULATED",
+    "ENGINE_HZ",
+    "ENGINE_VERSION",
+    "OBJECT_FEATURES",
+    "PROFILES",
+    "ROADWAY_GPU",
+    "ROADWAY_NATIVE",
+    "STATE_VECTOR_SIZE",
+    "EngineError",
+    "EnvSession",
+    "EpisodeSpec",
+    "LaneGraph",
+    "LoadedEpisode",
+    "MapBundle",
+    "NativeError",
+    "PolicyRunner",
+    "ProfileUnavailableError",
+    "ScenarioInput",
+    "SchemaError",
+    "SessionBatch",
+    "SessionError",
     "SimForgeEnv",
-    "SimForgeVector",
-    "decode_step_frame",
+    "SimForgeVectorEnv",
+    "SimForgeWorld",
+    "TruthStream",
+    "UnsupportedError",
+    "WorldSession",
+    "action_space_for",
+    "available_maps",
+    "available_profiles",
+    "adapt_template_notes_json",
+    "apply_situation_transaction",
+    "cell_seed",
+    "template_identity_json",
+    "compare_situation",
+    "compile_situation",
+    "compile_template",
     "encode_action",
-    "resolve_server_command",
+    "find_site",
+    "find_sites",
+    "Route",
+    "Site",
+    "match_sites",
+    "rehearse_situation",
+    "solve_situation",
+    "load_episode_spec",
+    "make_env",
+    "make_vector_env",
+    "maps_root",
+    "observation_space_for",
+    "run_simulation",
+    "check_feasibility",
 ]

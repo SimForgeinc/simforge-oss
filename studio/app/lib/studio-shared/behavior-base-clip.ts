@@ -20,42 +20,27 @@
  *
  * ## Explicit identity
  *
- * Normalized clips carry `role: "base"` or `role: "interaction"`. Legacy
- * programs without markers still resolve through the original shape rule on
- * first load, then normalization stamps the resolved identity.
+ * Normalized clips carry `role: "base"` or `role: "interaction"`. A program a
+ * constructor hands over without markers resolves through the shape rule
+ * (`isBaseClipShape`) once, then normalization stamps the resolved identity.
  *
  * ## Direction of compilation
  *
- * Before: mode -> clip (`migrateActorDraftToBehaviorProgram`).
- * Now:    clip -> mode (`placementFieldsFromBaseClip`).
- *
- * The legacy executable fields are still written into the runtime payload, so
- * the Python worker is untouched by this change. They are simply outputs now,
- * not things a user edits.
+ * Clip -> placement (`placementFieldsFromBaseClip`). `placement_mode`,
+ * `is_static` and `speed_kph` are outputs of the base clip, not things a user
+ * edits; the runtime `autopilot` boolean is compiled at the payload boundary.
  */
 
 import {
   ACTOR_ROUTE_ACTION_KINDS,
-  BEHAVIOR_ROUTE_ANCHOR_CAP,
   DEFAULT_BEHAVIOR_CLIP_END,
   emptyActorBehaviorProgram,
-  migrateActorDraftReactionProfile,
-  migrateActorDraftToBehaviorProgram,
-  type ActorBehaviorMigrationContext,
   type ActorBehaviorProgram,
   type BehaviorAction,
   type BehaviorActionKind,
   type BehaviorClip,
-} from "./scenario-behavior";
-import {
-  ACTOR_LEGACY_MOTION_KEYS,
-  ACTOR_LEGACY_MOTION_SCHEMA_VERSION,
-  readLegacyActorMotion,
-  type RuntimeScenarioEditorActor,
-  type ScenarioEditorActorDraft,
-  type ScenarioEditorActorLegacyMotion,
-  type ScenarioEditorActorLegacyWire,
-} from "./scenario-editor";
+} from "@simforge-oss/scenario/contracts";
+import type { ScenarioEditorActorDraft } from "./scenario-editor";
 
 /**
  * Actions that can serve as a baseline — the ones that answer "what is this
@@ -71,8 +56,8 @@ const BASE_LOCOMOTION_ACTION_KINDS = [
   /**
    * An autopilot intent compiled to explicit lane-graph geometry
    * (`compileAutopilotRoute`). Deterministic and exportable, where `autopilot`
-   * is neither. Only ever created by that compile — never derived from legacy
-   * fields, so `baseActionForDraft` does not produce it.
+   * is neither. Only ever created by that compile or authored outright —
+   * `baseActionForDraft` does not derive it from placement.
    */
   "follow_route",
   /** Our controller holds a target speed along the lane. */
@@ -122,18 +107,17 @@ function isRouteAction(kind: BehaviorActionKind): boolean {
  * A clip qualifies as the baseline in one of two ways.
  *
  * The ordinary way is starting the scenario and running open-endedly. `t <= 0`
- * rather than `t === 0` because a legacy migration could quantize a negative
- * authored time, and a baseline that starts before the scenario starts is still
- * the baseline.
+ * rather than `t === 0` because a baseline that starts before the scenario
+ * starts is still the baseline.
  *
  * A PATH clip qualifies whatever its trigger, because its waypoints are the
  * actor's placement path and an actor has exactly one of those. The case that
- * forces this is the conflict walker: its crossing is migrated as a `walk_path`
- * armed by `proximity` to the ego rather than by the clock
- * (`crossWhenClip`/`_maintain_walker_conflict_trigger`). That crossing is its
- * baseline — it is the only motion the walker has. Requiring `at_time` here
- * would fail to see it and prepend a SECOND `walk_path` at t=0, and the walker
- * would step into the road immediately instead of waiting for the car.
+ * forces this is the conflict walker: its crossing is authored as a `walk_path`
+ * armed by `proximity` to the ego rather than by the clock (`crossWhenClip`).
+ * That crossing is its baseline — it is the only motion the walker has.
+ * Requiring `at_time` here would fail to see it and prepend a SECOND
+ * `walk_path` at t=0, and the walker would step into the road immediately
+ * instead of waiting for the car.
  */
 function isBaseClipShape(clip: BehaviorClip): boolean {
   if (!isBaseLocomotionAction(clip.action.kind)) return false;
@@ -166,42 +150,23 @@ export function isBaseClip(
 }
 
 // ---------------------------------------------------------------------------
-// Synthesis: legacy fields -> base clip
+// Synthesis: placement -> base clip
 // ---------------------------------------------------------------------------
 
 /**
- * The legacy `autopilot` reading of a draft that has not been migrated yet.
+ * The baseline a draft's placement describes.
  *
- * The schema no longer declares the field (schema-prune, wave 2b), so a value
- * only exists as a passthrough key: on raw stored records the load migration
- * has not touched, on generator-built intermediates that still write the
- * literal, and on runtime actors whose payload boundary compiled it. ABSENT
- * means TRUE — the historical schema default (`.default(true)`), which is what
- * every stored row without the key has always parsed to.
+ * Walkers walk their points, path placements follow their points, parked
+ * actors and props hold, and a road vehicle cruises at its authored speed.
+ * That last default is deliberate and is the whole answer to "does a new car
+ * start on Auto?": it does not, ever. Auto hands the car to CARLA's Traffic
+ * Manager, which decides its own route — the one baseline an author cannot
+ * predict, read off the screen, reproduce, or export to OpenSCENARIO. A
+ * Traffic-Manager baseline is therefore only ever AUTHORED, by a constructor
+ * that wants background traffic and says so with an explicit `autopilot`
+ * action (`withBaseAction`); nothing derives it from placement.
  */
-function legacyAutopilotHint(draft: ScenarioEditorActorDraft): boolean {
-  return (draft as Record<string, unknown>).autopilot !== false;
-}
-
-/**
- * The baseline a draft's legacy control fields describe.
- *
- * This is the same reading `actorNavigationMode` did, plus the waypoint
- * geometry, so an actor authored before base clips existed opens its timeline
- * showing exactly the motion it already had.
- */
-export function baseActionForDraft(
-  draft: ScenarioEditorActorDraft,
-  options?: {
-    /** Explicit legacy autopilot value; defaults to the passthrough hint. */
-    autopilot?: boolean;
-    /** Load-migration mapping: `autopilot: true` + a non-empty `route` becomes
-     * a `follow_route` base, because the worker already gives the route
-     * precedence and spawns with TM autopilot force-disabled
-     * (report-autopilot-concept finding 12) — the boolean was dead weight. */
-    routeToFollowRoute?: boolean;
-  },
-): BehaviorAction {
+export function baseActionForDraft(draft: ScenarioEditorActorDraft): BehaviorAction {
   if (draft.is_static || draft.kind === "prop") return { kind: "hold" };
 
   const waypoints = draft.timed_waypoints ?? [];
@@ -230,31 +195,15 @@ export function baseActionForDraft(
       : { kind: "hold" };
   }
 
-  const autopilot = options?.autopilot ?? legacyAutopilotHint(draft);
-  if (autopilot) {
-    if (options?.routeToFollowRoute) {
-      const anchors = (draft.route ?? []).slice(0, BEHAVIOR_ROUTE_ANCHOR_CAP);
-      if (anchors.length > 0) return { kind: "follow_route", anchors: [...anchors] };
-    }
-    // Autopilot's `speed_kph` is deliberately NOT seeded from the draft.
-    //
-    // Compilation runs on every edit, so a clip that carries a speed OWNS it:
-    // the recompile would overwrite any later direct write to `draft.speed_kph`
-    // (generators, the .xosc importer, `replaceFromServer`) with the clip's
-    // stale copy. Leaving it absent keeps the draft field freely writable until
-    // an author states an opinion in the inspector, at which point the clip
-    // taking ownership is exactly what was asked for. `cruise` differs because
-    // its speed is REQUIRED — a cruise with no speed is not a baseline at all.
-    return { kind: "autopilot", enabled: true };
-  }
   return { kind: "cruise", speed_kph: draft.speed_kph ?? 0 };
 }
 
-/** The baseline clip a draft's legacy control fields describe. */
+/** The baseline clip a draft's placement describes, stamped `base`. */
 function baseClipForDraft(draft: ScenarioEditorActorDraft): BehaviorClip {
   return {
     id: baseClipId(draft.id),
     enabled: true,
+    role: "base",
     trigger: { kind: "at_time", t: 0 },
     end: DEFAULT_BEHAVIOR_CLIP_END,
     action: baseActionForDraft(draft),
@@ -265,11 +214,10 @@ function baseClipForDraft(draft: ScenarioEditorActorDraft): BehaviorClip {
  * Guarantee the program opens with a baseline, without disturbing one it
  * already has.
  *
- * Idempotent: an actor whose migration already emitted a `follow_path` /
- * `walk_path` clip at t=0 (every drive-by-points actor) is returned untouched,
- * because that clip already IS the baseline. Only autopilot, cruising, and
- * parked actors — whose baseline lived in `placement_mode`/`autopilot` and
- * nowhere else — gain a clip here.
+ * Idempotent: an actor whose program already opens with a base-shaped clip
+ * (every drive-by-points actor's `follow_path` / `walk_path`) is returned
+ * untouched, because that clip already IS the baseline. Only actors whose
+ * program says nothing about their baseline gain a clip here.
  */
 function withBaseClip(
   program: ActorBehaviorProgram,
@@ -301,15 +249,13 @@ export function withBaseAction(
 }
 
 // ---------------------------------------------------------------------------
-// Compilation: base clip -> legacy executable fields
+// Compilation: base clip -> placement fields
 // ---------------------------------------------------------------------------
 
 /**
- * The compiled placement tuple the runtime still reads. `placement_mode`,
- * `is_static` and `speed_kph` remain declared draft fields; `autopilot` does
- * NOT — the schema prune removed it from the authored surface, so here it is
- * a boundary-only output: the payload build spreads it onto the wire actor and
- * the persistence serializers strip it (`migrateLegacyScenarioEditorActor`).
+ * The compiled placement tuple the runtime reads. `placement_mode`,
+ * `is_static` and `speed_kph` are declared draft fields; `autopilot` is NOT —
+ * it is a boundary-only output the payload build spreads onto the wire actor.
  */
 export type CompiledActorPlacementFields = Partial<
   Pick<ScenarioEditorActorDraft, "placement_mode" | "is_static" | "speed_kph">
@@ -416,11 +362,10 @@ export function placementFieldsFromBaseClip(
 /**
  * The draft with its compiled control fields recompiled from its base clip.
  *
- * `autopilot` is deliberately NOT written here. It left the persisted schema
- * (wave 2b), so writing it into every in-memory draft would just re-create the
- * key the serializers then have to strip. It is compiled where it is consumed:
- * the runtime boundary (`expandLegacyWireActor`), which both the CARLA payload
- * build and preview ingestion run.
+ * `autopilot` is deliberately NOT written here: it is not a persisted field,
+ * so writing it into every in-memory draft would only create a key the
+ * serializers then have to strip. It is compiled where it is consumed, at the
+ * runtime payload boundary, from `placementFieldsFromBaseClip`.
  */
 export function withCompiledBaseClip(
   draft: ScenarioEditorActorDraft,
@@ -545,7 +490,7 @@ function withRouteActionsInTheBaseSlotOnly(
 }
 
 /**
- * Give a draft a baseline, sync its path geometry, and recompile its legacy
+ * Give a draft a baseline, sync its path geometry, and recompile its placement
  * fields from the result. The normalization entry point.
  *
  * Idempotent by construction, which matters because it runs on every actor on
@@ -587,203 +532,4 @@ export function normalizeActorBaseClip(
         })),
       };
   return withCompiledBaseClip({ ...draft, behavior: program });
-}
-
-// ---------------------------------------------------------------------------
-// The ONE legacy migration (schema-prune, wave 2b)
-// ---------------------------------------------------------------------------
-
-/**
- * Build the wire-compat envelope out of the legacy keys a record still carries,
- * merged over whatever envelope it already had (a round-tripped pruned draft).
- *
- * A key that is PRESENT top-level overrides the envelope — including presence
- * of an EMPTY timeline, which clears a stale envelope copy — so the raw record
- * is always the most recent statement. `null` means "no residue at all".
- */
-function legacyWireEnvelope(
-  record: Record<string, unknown>,
-  legacy: ScenarioEditorActorLegacyMotion,
-  existing: ScenarioEditorActorLegacyWire | undefined,
-): ScenarioEditorActorLegacyWire | null {
-  const has = (key: string) => Object.prototype.hasOwnProperty.call(record, key);
-  const next: ScenarioEditorActorLegacyWire = {
-    ...(existing ?? {}),
-    schema_version: ACTOR_LEGACY_MOTION_SCHEMA_VERSION,
-  };
-  if (has("timeline")) {
-    if (legacy.timeline.length > 0) next.timeline = legacy.timeline;
-    else delete next.timeline;
-  }
-  if (has("timedInstructions")) {
-    if (legacy.timedInstructions !== undefined)
-      next.timedInstructions = legacy.timedInstructions;
-    else delete next.timedInstructions;
-  }
-  if (has("reactive_braking")) {
-    if (legacy.reactive_braking !== undefined)
-      next.reactive_braking = legacy.reactive_braking;
-    else delete next.reactive_braking;
-  }
-  if (has("anti_plow")) {
-    if (legacy.anti_plow !== undefined) next.anti_plow = legacy.anti_plow;
-    else delete next.anti_plow;
-  }
-  if (has("collision_target_id")) {
-    if (legacy.collision_target_id !== undefined)
-      next.collision_target_id = legacy.collision_target_id;
-    else delete next.collision_target_id;
-  }
-  return Object.keys(next).some((key) => key !== "schema_version") ? next : null;
-}
-
-/**
- * Migrate one actor record off the legacy authored surface. THE load-time
- * migration (spec: schema-prune step 3) — `draft-normalization.ts` runs it on
- * every loaded and every saved actor, and
- * `scripts/agent/migrate-corpus-to-one-motion.mjs` runs the same function so
- * the durable rewrite cannot drift from the load path.
- *
- * What it does, in order:
- *
- * 1. Parses the legacy keys through the versioned legacy schema
- *    (`readLegacyActorMotion` — same defaults the pruned fields used to carry,
- *    same strictness the old inline declarations had) and STRIPS them.
- * 2. An actor with no behavior program gets the full plan-3.3 migration:
- *    `timeline`/`timedInstructions`/`timed_waypoints` become clips, the
- *    reaction trio becomes `reaction_profile`, and the baseline becomes an
- *    explicit base clip — `autopilot: true` with a route migrates to a
- *    `follow_route` base (the worker already executed exactly that: route
- *    precedence + spawn-time TM disable), `autopilot: true` alone keeps TM
- *    semantics as an `autopilot` base clip (stored Auto actors are NOT
- *    silently converted to cruise), everything else lands where
- *    `baseActionForDraft` always put it.
- * 3. Wire-load-bearing residue (non-empty timeline, timedInstructions, the
- *    reaction trio) moves into the `legacy_wire` envelope so the payload
- *    boundary can keep the worker wire byte-identical.
- * 4. Normalizes the base clip, which recompiles the placement tuple.
- *
- * Idempotent: a pruned draft re-runs to itself, which is what lets the
- * persistence serializers call it defensively on every save.
- */
-export function migrateLegacyScenarioEditorActor(
-  parsed: ScenarioEditorActorDraft,
-  context?: ActorBehaviorMigrationContext,
-): ScenarioEditorActorDraft {
-  const record = parsed as unknown as Record<string, unknown>;
-  const { legacy } = readLegacyActorMotion(record);
-
-  const next = { ...parsed } as ScenarioEditorActorDraft & Record<string, unknown>;
-  for (const key of ACTOR_LEGACY_MOTION_KEYS) delete next[key];
-
-  let program = next.behavior;
-  if (!program) {
-    program = migrateActorDraftToBehaviorProgram(parsed, context);
-    const reaction = migrateActorDraftReactionProfile(parsed);
-    if (reaction && !next.reaction_profile) next.reaction_profile = reaction;
-  }
-  // Base synthesis happens HERE, with the legacy `autopilot` value in hand,
-  // for BOTH branches: an actor that already had a program can still lack a
-  // base-shaped clip (interaction clips only), and pre-prune it was
-  // `normalizeActorBaseClip` reading the stored boolean that decided between
-  // an `autopilot` and a `cruise` baseline. After the strip that boolean only
-  // exists right here.
-  if (baseClipIndex(program) === -1) {
-    program = {
-      ...program,
-      clips: [
-        {
-          id: baseClipId(next.id),
-          enabled: true,
-          trigger: { kind: "at_time", t: 0 },
-          end: DEFAULT_BEHAVIOR_CLIP_END,
-          action: baseActionForDraft(next, {
-            autopilot: legacy.autopilot,
-            routeToFollowRoute: true,
-          }),
-        },
-        ...program.clips,
-      ],
-    };
-  }
-  next.behavior = program;
-
-  const envelope = legacyWireEnvelope(record, legacy, parsed.legacy_wire);
-  if (envelope) next.legacy_wire = envelope;
-  else delete next.legacy_wire;
-
-  return normalizeActorBaseClip(next);
-}
-
-/**
- * Expand a pruned actor into the RUNTIME shape both engines consume: the
- * migration's wire-compat envelope back under its ORIGINAL wire spellings,
- * plus the compiled `autopilot` boolean the schema no longer carries.
- *
- * - `timeline` is ALWAYS materialized. The old schema defaulted it to `[]`, so
- *   every actor the worker has ever validated carried the key; the boundary
- *   re-emits it to keep the wire byte-identical.
- * - `autopilot` compiles from the base clip (`placementFieldsFromBaseClip`),
- *   falling back to the legacy passthrough reading for an actor with no base
- *   clip — which is exactly the value the old schema default produced.
- *
- * Runs at BOTH runtime boundaries — the CARLA payload build
- * (`runtimeActorPayload.ts::compileRuntimeActorWireFields`) and preview
- * simulation ingestion — so the two engines keep reading one spec. The
- * envelope itself never ships: provenance the runtime cannot act on does not
- * ride the wire.
- */
-/**
- * The compiled `autopilot` value, tolerating the malformed programs preview
- * ingestion can be handed: a spec whose `behavior` the program parser will
- * reject must degrade to the legacy reading here, not crash the whole preview
- * before the parser gets to report it per-actor.
- */
-function compiledAutopilotOf(actor: ScenarioEditorActorDraft): boolean | undefined {
-  const clips = (actor.behavior as { clips?: unknown } | undefined)?.clips;
-  if (!Array.isArray(clips)) return undefined;
-  try {
-    return placementFieldsFromBaseClip(actor).autopilot;
-  } catch {
-    return undefined;
-  }
-}
-
-export function expandLegacyWireActor(
-  actor: ScenarioEditorActorDraft,
-): RuntimeScenarioEditorActor {
-  const envelope = actor.legacy_wire;
-  // A key still present TOP-LEVEL (a raw legacy record, a generator
-  // intermediate, the ambient expander's members) is the more recent statement
-  // and wins over the envelope — the same precedence the migration itself uses.
-  const has = (key: string) => Object.prototype.hasOwnProperty.call(actor, key);
-  const expanded: RuntimeScenarioEditorActor = {
-    ...actor,
-    // A pruned actor (the normal case: nothing top-level) gets the value
-    // `withCompiledBaseClip` used to write — compiled from the base clip, with
-    // the legacy reading (absent = true, the old schema default) only deciding
-    // for an actor that has no base clip at all. An EXPLICIT top-level value
-    // wins instead, because the worker reads the wire literal as sent and the
-    // two engines must keep reading one spec.
-    ...(has("autopilot")
-      ? {}
-      : { autopilot: compiledAutopilotOf(actor) ?? legacyAutopilotHint(actor) }),
-    ...(has("timeline")
-      ? {}
-      : { timeline: envelope?.timeline ? [...envelope.timeline] : [] }),
-    ...(!has("timedInstructions") && envelope?.timedInstructions !== undefined
-      ? { timedInstructions: envelope.timedInstructions }
-      : {}),
-    ...(!has("reactive_braking") && envelope?.reactive_braking !== undefined
-      ? { reactive_braking: envelope.reactive_braking }
-      : {}),
-    ...(!has("anti_plow") && envelope?.anti_plow !== undefined
-      ? { anti_plow: envelope.anti_plow }
-      : {}),
-    ...(!has("collision_target_id") && envelope?.collision_target_id !== undefined
-      ? { collision_target_id: envelope.collision_target_id }
-      : {}),
-  };
-  delete expanded.legacy_wire;
-  return expanded;
 }

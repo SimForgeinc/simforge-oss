@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { hostname } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
-import { simforgeEnv } from "../lib/compat-env";
+import { simforgeEnv } from "../lib/simforge-env";
 
 import { COMPILER_VERSION, compileClaim, type CompileResult, type CompilerArtifact, type CompilerArtifactKind, type CompilerClaim } from "./compiler-core.js";
 

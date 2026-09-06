@@ -1,0 +1,110 @@
+{
+  "id": "cmp-lane-shift-workzone",
+  "kind": "compiled",
+  "mapId": "el-camino-road",
+  "status": "completed",
+  "inputHash": "7f6a9c53cd1f6e44efe5508d410f2323569019c072ecba00818b3052c5f79422",
+  "traceDigest": "9c34ba761a1bdedf874d227a4b8ad5798b1dc5393983936fa909ae1baf806c1f",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 152.24061799999998,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 9.786601999999988,
+      "warm": {
+        "n": 4,
+        "min": 0.9017289999999321,
+        "median": 1.1362535000000662,
+        "max": 1.3038789999998244,
+        "mean": 1.1195287499999722
+      }
+    },
+    "compile": {
+      "cold": 262.29203999999993,
+      "warm": {
+        "n": 4,
+        "min": 1.8266559999999572,
+        "median": 2.167186499999957,
+        "max": 7.64302100000009,
+        "mean": 3.4510124999999903
+      }
+    },
+    "mapLoad": {
+      "cold": 331.109254,
+      "warm": {
+        "n": 4,
+        "min": 0.002748000000110551,
+        "median": 0.0032370000001265,
+        "max": 0.005625000000009095,
+        "mean": 0.0037117500000931614
+      }
+    },
+    "simulate": {
+      "cold": 225.63588900000002,
+      "warm": {
+        "n": 4,
+        "min": 115.8415379999999,
+        "median": 136.07546200000013,
+        "max": 153.62368300000003,
+        "mean": 135.40403625000005
+      }
+    },
+    "digest": {
+      "cold": 19.79909299999997,
+      "warm": {
+        "n": 4,
+        "min": 15.573990999999978,
+        "median": 18.144439000000148,
+        "max": 19.504877999999962,
+        "mean": 17.84193675000006
+      }
+    },
+    "serialize": {
+      "cold": 27.039442000000008,
+      "warm": {
+        "n": 4,
+        "min": 15.297975999999835,
+        "median": 15.459624500000018,
+        "max": 19.309592000000066,
+        "mean": 16.381704249999984
+      }
+    }
+  },
+  "tickCount": 951,
+  "events": 8,
+  "issues": 0,
+  "compileIdentity": {
+    "siteId": "21352a7f76445d6e",
+    "siteScore": 1,
+    "degradation": "Exact match: every clause and role bound without relaxation.",
+    "inputHash": "7f6a9c53cd1f6e44efe5508d410f2323569019c072ecba00818b3052c5f79422",
+    "instanceId": "21352a7f76445d6e#-1",
+    "replayKey": {
+      "templateId": "workzone-lane-shift",
+      "templateVersion": 2,
+      "templateDigest": "c40265e0708ff0fd",
+      "mapId": "el-camino-road",
+      "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
+      "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+      "siteId": "21352a7f76445d6e",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [],
+    "expectedInputHash": "7f6a9c53cd1f6e44efe5508d410f2323569019c072ecba00818b3052c5f79422",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

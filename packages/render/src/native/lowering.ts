@@ -6,7 +6,7 @@ import {
   type OpenScenarioPlanActor,
   type OpenScenarioPlanSample,
 } from '@simforge-oss/openscenario';
-import type { FixedSchedule } from '../schedule.js';
+import { unionFrameMicros, type FixedSchedule } from '../schedule.js';
 
 export interface NativeActorState {
   readonly id: string;
@@ -21,7 +21,7 @@ export interface NativeActorState {
 }
 
 export interface NativeSceneState {
-  readonly version: 'scene-state.v1';
+  readonly version: 'simforge.scene-state.v1';
   readonly mapId: string;
   readonly tick: number;
   readonly tickHz: number;
@@ -30,10 +30,23 @@ export interface NativeSceneState {
   readonly actors: readonly NativeActorState[];
 }
 
+/**
+ * One rendered actor's appearance identity: the catalog id the scene state
+ * carries and whether the scenario authored it (`catalog:<id>` tag) or the
+ * lowering substituted the semantic class default.
+ */
+export interface NativeActorAppearance {
+  readonly actorId: string;
+  readonly catalogId: string;
+  readonly authored: boolean;
+}
+
 export interface NativeLowering {
   readonly plan: OpenScenarioExecutionPlan;
   readonly states: readonly NativeSceneState[];
   readonly frameTimes: readonly number[];
+  /** Every actor that appears in at least one state, sorted by id. */
+  readonly appearances: readonly NativeActorAppearance[];
   readonly sha256: string;
 }
 
@@ -92,9 +105,18 @@ function actorClass(kind: string): string {
   return classes[kind] ?? 'prop';
 }
 
-function catalogId(kind: string, tags: readonly string[]): string {
+function authoredCatalogId(tags: readonly string[]): string | undefined {
   const tagged = tags.find((tag) => tag.startsWith('catalog:'));
-  if (tagged) return tagged.slice('catalog:'.length);
+  return tagged?.slice('catalog:'.length);
+}
+
+/**
+ * The catalog id the native scene state carries for an actor: the authored
+ * `catalog:<id>` tag verbatim, else the semantic class default.
+ */
+export function nativeActorCatalogId(kind: string, tags: readonly string[]): string {
+  const authored = authoredCatalogId(tags);
+  if (authored !== undefined) return authored;
   const defaults: Record<string, string> = {
     pedestrian: 'pedestrian.adult', bicycle: 'cyclist.commuter', bus: 'vehicle.transit-bus',
     truck: 'vehicle.box-truck', motorcycle: 'vehicle.motorcycle', obstacle: 'prop.traffic-cone',
@@ -115,16 +137,6 @@ function environment(plan: OpenScenarioExecutionPlan): { preset: 'clear' | 'rain
   return { preset, hour };
 }
 
-function unionFrameTimes(schedules: readonly FixedSchedule[]): number[] {
-  const micros = new Set<number>();
-  for (const schedule of schedules) {
-    for (let index = 0; index < schedule.frameCount; index += 1) {
-      micros.add(Math.round((schedule.startSeconds + index / schedule.framesPerSecond) * 1_000_000));
-    }
-  }
-  return [...micros].sort((left, right) => left - right).map((value) => value / 1_000_000);
-}
-
 export function lowerOpenScenarioToNative(
   xosc: string,
   sourceSha256: string,
@@ -132,9 +144,10 @@ export function lowerOpenScenarioToNative(
 ): NativeLowering {
   if (schedules.length === 0) throw new Error('native render requires at least one RGB schedule');
   const plan = extractOpenScenarioExecutionPlan(xosc, { sourceSha256 });
-  const frameTimes = unionFrameTimes(schedules);
+  const frameTimes = unionFrameMicros(schedules).map((value) => value / 1_000_000);
   const conditions = environment(plan);
   const previous = new Map<string, boolean>();
+  const rendered = new Set<string>();
   const states = frameTimes.map((clipTime, tick): NativeSceneState => {
     const planTime = plan.warmupSeconds + clipTime;
     if (planTime > plan.stopTimeS + 1e-8) {
@@ -149,10 +162,11 @@ export function lowerOpenScenarioToNative(
       const kind = sample.present ? (wasPresent ? 'update' : 'spawn') : 'despawn';
       const metadata = plan.actorMetadata[actor.id];
       const yaw = sample.headingRad;
+      rendered.add(actor.id);
       actors.push({
         id: actor.id,
         kind,
-        catalogId: catalogId(actor.kind, metadata?.tags ?? actor.tags),
+        catalogId: nativeActorCatalogId(actor.kind, metadata?.tags ?? actor.tags),
         actorClass: actorClass(actor.kind),
         transform: {
           position: [q(sample.x), q(sample.z), q(-sample.y)],
@@ -164,10 +178,21 @@ export function lowerOpenScenarioToNative(
     const previousTime = tick === 0 ? frameTimes[1] ?? clipTime + plan.dt : frameTimes[tick - 1]!;
     const tickHz = q(1 / Math.max(1e-9, Math.abs(clipTime - previousTime)));
     return {
-      version: 'scene-state.v1', mapId: plan.mapId, tick, tickHz,
+      version: 'simforge.scene-state.v1', mapId: plan.mapId, tick, tickHz,
       weather: { preset: conditions.preset }, timeOfDay: conditions.hour, actors,
     };
   });
+  const appearances = [...plan.actors]
+    .filter((actor) => rendered.has(actor.id))
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((actor): NativeActorAppearance => {
+      const tags = plan.actorMetadata[actor.id]?.tags ?? actor.tags;
+      return {
+        actorId: actor.id,
+        catalogId: nativeActorCatalogId(actor.kind, tags),
+        authored: authoredCatalogId(tags) !== undefined,
+      };
+    });
   const sha256 = createHash('sha256').update(canonicalJson({ planSource: sourceSha256, states })).digest('hex');
-  return { plan, states, frameTimes, sha256 };
+  return { plan, states, frameTimes, appearances, sha256 };
 }

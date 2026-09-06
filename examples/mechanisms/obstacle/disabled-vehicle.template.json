@@ -55,7 +55,7 @@
       "id": "stranded-occupant",
       "kind": "relative_to",
       "label": "stranded pedestrian standing beside and behind the disabled vehicle",
-      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult_standing", "static": true },
+      "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult", "static": true },
       "ref": "disabled-vehicle",
       "dLane": 0,
       "dsM": -3.2,

@@ -52,10 +52,9 @@ describe('catalog', () => {
     expect(() => getEntry('vehicle.hovercraft' as never)).toThrow();
   });
 
-  it('keeps legacy ids loadable but out of new-authoring choices', () => {
-    expect(getEntry('pedestrian.adult_walking').legacyAliasOf).toBe('pedestrian.adult');
-    expect(AUTHORING_CATALOG).toHaveLength(CATALOG.length - 4);
-    expect(AUTHORING_CATALOG.some((entry) => entry.legacyAliasOf)).toBe(false);
+  it('keeps rigid-body components out of new-authoring choices', () => {
+    expect(AUTHORING_CATALOG.some((entry) => entry.origin === 'body-centre')).toBe(false);
+    expect(AUTHORING_CATALOG.some((entry) => entry.id === 'pedestrian.adult')).toBe(true);
   });
 
   it('queries by class and by tag', () => {
@@ -66,7 +65,7 @@ describe('catalog', () => {
     expect(queryCatalog({ class: ['hazard', 'occluder'] }).length).toBe(11);
 
     const vru = queryCatalog({ tags: ['vru'] });
-    expect(vru.map((entry) => entry.id)).toContain('pedestrian.child_walking');
+    expect(vru.map((entry) => entry.id)).toContain('pedestrian.child');
     expect(vru.map((entry) => entry.id)).toContain('vehicle.bicycle');
 
     const blockers = queryCatalog({ tags: ['occlusion:high'] });

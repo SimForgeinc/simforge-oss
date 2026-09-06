@@ -2,7 +2,7 @@ import type {
   ScenarioStatus,
 } from "@simforge-oss/scenario/contracts";
 import { Clock, Loader2, CheckCheck, X } from "lucide-react";
-import { Badge } from "@/app/components/ui/badge";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 
 type StatusConfig = {
   label: string;

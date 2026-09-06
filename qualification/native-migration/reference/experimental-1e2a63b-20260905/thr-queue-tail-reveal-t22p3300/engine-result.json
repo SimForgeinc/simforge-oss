@@ -1,0 +1,15 @@
+{
+  "issues": [
+    {
+      "code": "decel_budget_exceeded",
+      "severity": "warning",
+      "path": "interactions.ego-brakes-on-reveal.dynamics",
+      "reason": "implies 8.00 m/s² of braking, above the 5.5 m/s² comfort limit",
+      "detail": {
+        "impliedDecel": 8,
+        "budget": 5.5
+      }
+    }
+  ],
+  "arrival": []
+}

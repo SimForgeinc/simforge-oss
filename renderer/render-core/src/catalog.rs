@@ -81,6 +81,15 @@ fn vehicle_color(catalog_id: &str) -> Color {
 
 pub const WHEEL_COLOR: Color = Color::srgb(0.08, 0.08, 0.09);
 
+/// Catalog ids whose scene-state transform is the body centre rather than
+/// the ground contact point (asset-catalog `origin: 'body-centre'`). Their
+/// authored position and full rotation quaternion are applied verbatim: no
+/// ground lift, no yaw-only rotation, and no GLB or vehicle-primitive
+/// fallback.
+pub fn body_centred_origin(catalog_id: &str) -> bool {
+    matches!(catalog_id, "robot.delivery-4w" | "robot.wheel")
+}
+
 /// Build the part list for one actor description (the primitive fallback
 /// used when the catalog id has no vehicles-carla GLB).
 pub fn actor_parts(actor: &ActorDesc) -> Vec<ActorPart> {
@@ -88,6 +97,32 @@ pub fn actor_parts(actor: &ActorDesc) -> Vec<ActorPart> {
     let (l, w, h) = (dims.l as f32, dims.w as f32, dims.h as f32);
     let color = actor_body_color(actor);
     let mut parts = Vec::new();
+
+    match actor.catalog_id.as_str() {
+        // Articulated robot components: one rigid body each, centred on the
+        // origin; the simulation carries pitch and wheel spin in `rotation`.
+        "robot.delivery-4w" => {
+            parts.push(ActorPart {
+                mesh: Mesh::from(Cuboid::new(l, h, w)),
+                offset: Transform::IDENTITY,
+                name: "chassis".into(),
+                color,
+                kind: ActorPartKind::Body,
+            });
+            return parts;
+        }
+        "robot.wheel" => {
+            parts.push(ActorPart {
+                mesh: axle_cyl(h / 2.0, w),
+                offset: Transform::IDENTITY,
+                name: "wheel".into(),
+                color: WHEEL_COLOR,
+                kind: ActorPartKind::Other,
+            });
+            return parts;
+        }
+        _ => {}
+    }
 
     match actor.actor_class.as_str() {
         "pedestrian" => {
@@ -209,4 +244,39 @@ fn axle_cyl(r: f32, width: f32) -> Mesh {
     });
     mesh.rotate_by(bevy::math::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2));
     mesh
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn desc(catalog_id: &str, dims: Dims) -> ActorDesc {
+        ActorDesc {
+            id: "a".into(),
+            catalog_id: catalog_id.into(),
+            actor_class: "prop".into(),
+            dims: Some(dims),
+            color: None,
+        }
+    }
+
+    #[test]
+    fn robot_components_are_single_rigid_bodies_on_the_origin() {
+        let chassis = actor_parts(&desc("robot.delivery-4w", Dims { l: 0.7, w: 0.5, h: 0.3 }));
+        assert_eq!(chassis.len(), 1);
+        assert_eq!(chassis[0].offset, Transform::IDENTITY);
+        assert_eq!(chassis[0].kind, ActorPartKind::Body);
+
+        let wheel = actor_parts(&desc("robot.wheel", Dims { l: 0.2, w: 0.05, h: 0.2 }));
+        assert_eq!(wheel.len(), 1);
+        assert_eq!(wheel[0].offset, Transform::IDENTITY);
+        // The simulation carries wheel spin in the actor rotation; no
+        // procedural spin part.
+        assert_eq!(wheel[0].kind, ActorPartKind::Other);
+        assert!(body_centred_origin("robot.wheel") && !body_centred_origin("vehicle.hatchback"));
+
+        // A same-dims prop still gets the vehicle grammar with wheels.
+        let prop = actor_parts(&desc("prop.box", Dims { l: 0.7, w: 0.5, h: 0.3 }));
+        assert!(prop.iter().any(|p| matches!(p.kind, ActorPartKind::Wheel { .. })));
+    }
 }

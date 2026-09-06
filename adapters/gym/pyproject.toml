@@ -1,14 +1,17 @@
 [project]
 name = "simforge-oss-gym"
 version = "0.1.0rc61"
-description = "Gymnasium client for the SimForge deterministic env-server (simforge-env-server)"
+description = "SimForge Python SDK: Gymnasium environments over the Rust native runtime (PyO3), with explicit GPU-batch, articulated-physics and sensor-tensor profiles"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "SimForge" }]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
 dependencies = [
-    "gymnasium>=1.0",
-    "msgpack>=1.0",
+    "gymnasium>=1.1",
     "numpy>=1.24",
 ]
 
@@ -17,16 +20,48 @@ Repository = "https://github.com/SimForgeinc/simforge-oss"
 
 [project.optional-dependencies]
 dev = ["pytest==9.1.1"]
+torch = ["torch>=2.0"]
+# roadway-dynamic-gpu-v1: Warp/CUDA device batch (adapters/gpu).
+gpu = ["simforge-oss-gpu==0.1.0rc61", "warp-lang>=1.17", "torch>=2.0"]
+# articulated-mujoco-v1: MuJoCo CPU solver (adapters/physics); add `articulated-warp` for the batched backend.
+articulated = ["simforge-oss-physics==0.1.0rc61"]
+articulated-warp = ["simforge-oss-physics[warp]==0.1.0rc61"]
+# Sensor tensors from the in-process NuRec renderer (renderer/splat/python, CUDA only, source install).
+nurec = ["simforge-oss-splat==0.1.0rc61"]
+# Resident Bevy sensors in-process: the simforge_native provider (renderer/service/python); libsimforge_render
+# ships in the native runtime bundle. torch only for the device path.
+bevy = ["simforge-oss-native-renderer==0.1.0rc61"]
+
+[project.scripts]
+simforge-oss-policy-runner = "simforge_oss_gym.tools.policy_runner:main"
 
 [build-system]
-requires = ["hatchling==1.31.0"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["simforge_oss_gym"]
+[tool.maturin]
+# The extension crate lives in the native workspace; maturin builds it into
+# `simforge_oss_gym/_native.abi3.so` and ships the pure-Python package next
+# to it. There is no pure-Python fallback: an install without the extension is
+# an install failure, not a degraded runtime.
+manifest-path = "../../native/crates/simforge-bindings-python/Cargo.toml"
+module-name = "simforge_oss_gym._native"
+python-source = "."
+python-packages = ["simforge_oss_gym", "simforge_oss_gym.tools"]
+features = ["extension-module"]
+strip = true
+include = [
+    { path = "simforge_oss_gym/_native.pyi", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_gym/py.typed", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_gym/THIRD_PARTY_NOTICES", format = ["sdist", "wheel"] },
+    { path = "tests/**/*", format = "sdist" },
+]
 
-[tool.hatch.build.targets.sdist]
-include = ["simforge_oss_gym", "tests", "README.md", "pyproject.toml"]
+[tool.uv.sources]
+simforge-oss-gpu = { path = "../gpu" }
+simforge-oss-physics = { path = "../physics" }
+simforge-oss-splat = { path = "../../renderer/splat/python" }
+simforge-oss-native-renderer = { path = "../../renderer/service/python" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

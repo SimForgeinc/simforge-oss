@@ -12,7 +12,7 @@ dependencies = []
 Repository = "https://github.com/SimForgeinc/simforge-oss"
 
 [project.scripts]
-simforge-oss-carla-api = "simforge_oss_carla_exec.local:main"
+simforge-oss-carla-exec = "simforge_oss_carla_exec.local:main"
 
 [project.optional-dependencies]
 dev = ["pytest==9.1.1"]

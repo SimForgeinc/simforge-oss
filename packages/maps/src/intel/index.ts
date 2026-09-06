@@ -161,6 +161,8 @@ export {
   DECLARED_FACT_KEYS,
   DECLARED_FACT_KEY_MAP,
   type FactKeyAudit,
+  type FactKeyHostLocation,
+  type FactKeyHosts,
   type FactKeySpec,
 } from './build/facts.js';
 export { MIDBLOCK_STRIDE_M } from './build/densify/midblock-segments.js';

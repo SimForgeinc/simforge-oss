@@ -112,7 +112,12 @@
  * ball head whenever the approach has no per-turn split.
  */
 
-import type { BehaviorSignalState, JunctionSignalPlan } from "@simforge-oss/studio-shared";
+import {
+  type BehaviorSignalState,
+} from "@simforge-oss/scenario/contracts";
+import type {
+  JunctionSignalPlan,
+} from "@simforge-oss/studio-shared";
 import {
   planStatesAt,
   SIGNAL_STATE_COLORS,

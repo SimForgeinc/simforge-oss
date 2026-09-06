@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/app/components/ui/badge";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import type { LlmToolCallRecord } from "@/app/lib/maps/frontend/use-map-search-llm";
 
 const RELATION_OP_LABEL: Record<

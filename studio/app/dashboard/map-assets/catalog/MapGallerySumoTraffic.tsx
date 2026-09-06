@@ -10,8 +10,8 @@ import {
   type SumoTrafficStatus,
 } from "@simforge-oss/playback/traffic";
 import type { ScenarioMapDescriptorDto } from "@/app/lib/scenario/contracts";
-import type { MapEntry } from "@/app/lib/scenario/maps";
-import { useSumoTraffic } from "@/app/lib/scenario/ambient/useSumoTraffic";
+import type { MapEntry } from "@simforge-oss/studio-ui/lib/scenario/maps";
+import { useSumoTraffic } from "@simforge-oss/studio-ui/lib/scenario/ambient/useSumoTraffic";
 
 // SUMO's gallery demand replenishes vehicles for one hour. Rotate shortly
 // before that window closes so a gallery left open indefinitely never empties.

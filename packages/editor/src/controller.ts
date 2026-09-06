@@ -39,7 +39,6 @@
 import { Vector2, Vector3, type Intersection } from 'three';
 import { getViewerSurfaceRect, type EditorViewer } from './viewer-contract';
 import { CATALOG, getEntry, type CatalogId } from '@simforge-oss/asset-catalog';
-import { buildDefaultPlacementRoute, buildFollowRoute } from '@simforge-oss/engine';
 import { type ActorView } from '@simforge-oss/viewer';
 import {
   actorKindFor,
@@ -626,12 +625,7 @@ export class EditorController extends EditorControllerInput {
     const startRsl = `${anchor.roadId}:${anchor.section}:${anchor.laneId}`;
     const duration = this.doc.data.choreography.clipSeconds + this.doc.data.choreography.warmupSeconds;
     const requiredDownstreamM = Math.max(100, (speedKph / 3.6) * duration + 10);
-    const planned = buildDefaultPlacementRoute(this.laneIndex.graph, {
-      startRsl,
-      startStorageS: anchor.s,
-      requiredDownstreamM
-    });
-    return planned.ok ? planned.lanes : null;
+    return this.laneIndex.graph.defaultPlacementRoute(startRsl, anchor.s, requiredDownstreamM)?.lanes ?? null;
   }
 
   /**
@@ -649,13 +643,7 @@ export class EditorController extends EditorControllerInput {
     const speedKph = actor.initialSpeedKph ?? defaultDrivingSpeedKph(actor.catalogId) ?? 30;
     const duration = this.doc.data.choreography.clipSeconds
       + this.doc.data.choreography.warmupSeconds;
-    const built = buildFollowRoute(
-      this.laneIndex.graph,
-      startRsl,
-      [turn],
-      Math.max(100, (speedKph / 3.6) * duration + 10),
-    );
-    return built.ok ? built.route.legs.map((leg) => leg.rsl) : null;
+    return this.laneIndex.graph.followRoute(startRsl, [turn], Math.max(100, (speedKph / 3.6) * duration + 10));
   }
 
   /** Explain a risky but still authorable road anchor. */
@@ -663,12 +651,8 @@ export class EditorController extends EditorControllerInput {
     const startRsl = `${anchor.roadId}:${anchor.section}:${anchor.laneId}`;
     const duration = this.doc.data.choreography.clipSeconds + this.doc.data.choreography.warmupSeconds;
     const requiredDownstreamM = Math.max(100, (speedKph / 3.6) * duration + 10);
-    const planned = buildDefaultPlacementRoute(this.laneIndex.graph, {
-      startRsl,
-      startStorageS: anchor.s,
-      requiredDownstreamM,
-    });
-    if (!planned.ok) {
+    const planned = this.laneIndex.graph.defaultPlacementRoute(startRsl, anchor.s, requiredDownstreamM);
+    if (!planned) {
       return 'Warning: this lane has no connected continuation. Move to a nearby through lane unless the stop is intentional.';
     }
 

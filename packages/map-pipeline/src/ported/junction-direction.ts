@@ -73,22 +73,6 @@ export function isAuthoredJunctionDirection(
   return value === "left" || value === "right" || value === "straight" || value === "u_turn";
 }
 
-/**
- * Canonical legacy primitive used only at compatibility/validation boundaries.
- *
- * `u_turn` is deliberately absent, and this is deliberately NOT keyed by the full
- * `AuthoredJunctionDirection` union: the legacy `timeline` channel never had a
- * u-turn primitive and Phase G deletes the channel outright, so a u-turn is
- * expressible only as a clip. Leaving the key out means a caller that tries to
- * route a u-turn through the legacy channel fails to compile, which is the signal
- * we want — widening the type to `string | undefined` would instead push an
- * `undefined` primitive id into a draft.
- */
-export const TIMED_INSTRUCTION_PRIMITIVE_FOR_JUNCTION_DIRECTION = {
-  left: "turn_left_at_next_intersection",
-  right: "turn_right_at_next_intersection",
-  straight: "go_straight_at_next_intersection",
-} as const;
 
 export type JunctionDirectionPolicy =
   /** The author routed this actor; follow the anchors, do not choose. */
@@ -237,7 +221,6 @@ export interface JunctionDirectionActorRead {
   ambient_generated?: boolean | null;
   route?: readonly unknown[] | null;
   behavior?: unknown;
-  timeline?: readonly unknown[] | null;
   /**
    * A policy already resolved by an earlier caller, if any.
    *
@@ -278,18 +261,9 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-const LEGACY_TURN_ACTIONS: Record<string, AuthoredJunctionDirection> = {
-  turn_left_at_next_intersection: "left",
-  turn_right_at_next_intersection: "right",
-  go_straight_at_next_intersection: "straight",
-};
 
 /**
  * The direction an authored `turn_at_next_intersection` asks for, or null.
- *
- * Reads the behavior program first and the legacy timeline second, which is the
- * same precedence `migrateActorDraftToBehaviorProgram` establishes: a draft that
- * has both is one mid-migration, and the program is the live half.
  */
 export function authoredJunctionTurn(
   actor: JunctionDirectionActorRead,
@@ -303,12 +277,6 @@ export function authoredJunctionTurn(
     if (isAuthoredJunctionDirection(direction)) {
       return direction;
     }
-  }
-  for (const raw of asArray(actor.timeline)) {
-    const clip = asRecord(raw);
-    if (clip.enabled === false) continue;
-    const direction = LEGACY_TURN_ACTIONS[String(clip.action ?? "").trim()];
-    if (direction !== undefined) return direction;
   }
   return null;
 }

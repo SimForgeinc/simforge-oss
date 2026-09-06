@@ -1,5 +1,5 @@
 //! trace-to-scene-state: convert an engine trace (fixtures trace.json.gz,
-//! decompressed) into a `scene-state.v1` document for the sensor harness.
+//! decompressed) into a `simforge.scene-state.v1` document for the sensor harness.
 //!
 //! Trace shape (see fixtures/evidence/golden-yale-bus-stop): header with
 //! actorMetadata {id: {kind}}, ticks = {t: [...], actors: {id: {x[], y[],
@@ -118,7 +118,7 @@ fn main() -> Result<()> {
     }
 
     let doc = json!({
-        "version": "scene-state.v1",
+        "version": sensors::scene_state::SCENE_STATE_SCHEMA,
         "mapId": std::env::var("MAP_ID").unwrap_or_else(|_| "yale-street".into()),
         "tick": i,
         "tickHz": tick_hz,

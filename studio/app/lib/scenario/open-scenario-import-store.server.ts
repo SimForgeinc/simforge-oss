@@ -5,17 +5,11 @@ import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import { sha256, scenarioId } from "./core";
 import { createLocalArtifactProducer } from "./jobs/local-artifact-producer-store";
 import { withScenarioJobTransaction } from "./jobs/lifecycle-lock";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 const ARTIFACT_KIND = "source-openscenario";
 
-function artifactBucket() {
-  return (
-    simforgeEnv("ARTIFACT_BUCKET")?.trim() ||
-    process.env.S3_BUCKET?.trim() ||
-    "local-artifacts"
-  );
-}
+function artifactBucket() { return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts"; }
 
 type ArtifactRow = {
   id: string;

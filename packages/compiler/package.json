@@ -1,6 +1,7 @@
 {
   "name": "@simforge-oss/compiler",
   "version": "0.1.0-rc.61",
+  "description": "SimForge scenario compiler contracts and the Node façade over the native compiler: map bundles, site matching, template and situation compilation, rehearsal and comparison.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
@@ -43,6 +44,9 @@
     "@simforge-oss/asset-catalog": "workspace:*",
     "@simforge-oss/engine": "workspace:*",
     "@simforge-oss/maps": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
+    "@simforge-oss/openscenario": "workspace:*",
+    "@simforge-oss/playback": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
     "zod": "^4.4.3"
   },

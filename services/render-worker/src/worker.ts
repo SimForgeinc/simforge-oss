@@ -20,6 +20,7 @@ import {
   type RenderEngineAdapter,
   type RenderProgressRecord,
 } from '@simforge-oss/render';
+import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss/render/native';
 
 import type { RenderWorkerConfig } from './config.js';
 import { acquireGpuJobLock, type GpuJobLock } from './gpu-lock.js';
@@ -44,39 +45,39 @@ function failureOf(error: unknown): { code: string; message: string; retryable: 
   return { code: 'render.execution_failed', message, retryable: true };
 }
 
-const NATIVE_CORPUS_ASSET_ID = 'map.native-corpus';
-const NATIVE_TILE_INPUT_PATTERN = /^map\.tile\.[A-Za-z0-9._-]+$/;
-
+/**
+ * Admits exactly the inputs the immutable intent declares: every claimed
+ * input must match a declared asset's digest and size, and every declared
+ * asset must be claimed. Native map members are declared per member
+ * (`map.tile.000000` for `master.gltf`, `map.resource.<sha256(path)>` for
+ * each resource), so the intent hash binds the complete served closure;
+ * their ids must additionally derive from the served `relativePath`, paths
+ * must be unique and safe, and the master must be present. Member bytes are
+ * hashed on download and the engine refuses a master referencing anything
+ * outside the member set.
+ */
 export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'inputs'>): void {
   const expectedInputs = new Map<string, { sha256: string; sizeBytes: number }>([
     ['scenario.xosc', job.intent.scenarioRevision.openScenario],
-    ...job.intent.assets
-      .filter((asset) => asset.assetId !== NATIVE_CORPUS_ASSET_ID)
-      .map((asset) => [asset.assetId, asset] as const),
+    ...job.intent.assets.map((asset) => [asset.assetId, asset] as const),
   ]);
-  const expectsNativeCorpus = job.intent.assets.some((asset) => asset.assetId === NATIVE_CORPUS_ASSET_ID);
   const claimedInputIds = new Set<string>();
-  let nativeTileCount = 0;
+  let hasNativeMembers = false;
 
   for (const input of job.inputs) {
     if (claimedInputIds.has(input.inputId)) throw new Error(`invalid duplicate claimed input ${input.inputId}`);
     claimedInputIds.add(input.inputId);
-    if (expectsNativeCorpus && NATIVE_TILE_INPUT_PATTERN.test(input.inputId)) {
-      nativeTileCount += 1;
-      continue;
-    }
     const expected = expectedInputs.get(input.inputId);
     if (!expected) throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
     if (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes) {
       throw new Error(`invalid claimed input metadata for ${input.inputId}`);
     }
+    hasNativeMembers ||= isNativeMapMemberInputId(input.inputId);
   }
   for (const inputId of expectedInputs.keys()) {
     if (!claimedInputIds.has(inputId)) throw new Error(`invalid missing claimed input ${inputId}`);
   }
-  if (expectsNativeCorpus && nativeTileCount === 0) {
-    throw new Error('invalid missing claimed map.tile.* inputs for map.native-corpus');
-  }
+  if (hasNativeMembers) collectNativeMapMembers(job.inputs);
 }
 
 async function loadConfiguredEngine(config: RenderWorkerConfig): Promise<RenderEngineAdapter> {

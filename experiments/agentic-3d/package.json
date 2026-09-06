@@ -1,0 +1,21 @@
+{
+  "name": "@simforge-oss/agentic-3d-experiment",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Situation-first authoring experiment: orchestration, geometry publication, rehearsal/solve/compare, frozen corpus replay and NuRec source binding over the public native-backed SimForge packages. No build step; plain ES modules.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.4.2",
+    "@simforge-oss/asset-catalog": "workspace:*",
+    "@simforge-oss/compiler": "workspace:*",
+    "@simforge-oss/engine": "workspace:*",
+    "@simforge-oss/maps": "workspace:*",
+    "@simforge-oss/native-runtime": "workspace:*",
+    "@simforge-oss/scenario": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

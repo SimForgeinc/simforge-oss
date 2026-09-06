@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["render-core", "sensors", "service"]
+members = ["render-core", "sensors", "service", "ffi"]
 exclude = ["vendor/bevy_gltf", "vendor/bevy_pbr", "vendor/bevy_mesh"]
 
 [workspace.package]

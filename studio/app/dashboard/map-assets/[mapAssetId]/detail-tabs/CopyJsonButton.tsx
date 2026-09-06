@@ -7,8 +7,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+} from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 interface CopyJsonButtonProps {
   /** Object serialised to pretty-printed JSON on click. */

@@ -1,0 +1,344 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "b0bf1c17b43023297477c7ce4a0d6858c6fa26853014fe5e387e96f851ef3dde",
+  "traceDigest": "076d222cdd8bd6faf16338ff927731b00ec30183cbc48e6dc90f5eefc07ab490",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 1,
+  "mapId": "belmont-research-center",
+  "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+  "topologyDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "reversing-truck": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "worker": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 9.92,
+          "from": "119:0:1",
+          "to": "402:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "reversing-truck": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "worker": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 10,
+          "from": "402:0:1",
+          "to": "401:0:1"
+        },
+        {
+          "t": 14.5,
+          "from": "401:0:1",
+          "to": "402:0:1"
+        },
+        {
+          "t": 16.62,
+          "from": "402:0:1",
+          "to": null
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "control:far-portal-signal": {
+      "initial": "red",
+      "transitions": [
+        {
+          "t": 16,
+          "from": "red",
+          "to": "green"
+        }
+      ]
+    },
+    "control:near-portal-signal": {
+      "initial": "green",
+      "transitions": [
+        {
+          "t": 3,
+          "from": "green",
+          "to": "red"
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-enters-cautiously",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "van-keeps-clear-of-work-zone",
+      "actorId": "reversing-truck",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "reversing-truck",
+      "interactionId": "van-keeps-clear-of-work-zone",
+      "requestedDurationS": 1,
+      "effectiveDurationS": 4.200000000000001,
+      "displacementM": -2.8000000000000003
+    },
+    {
+      "t": 3,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-keeps-right",
+      "actorId": "focus-vehicle",
+      "verb": "laneOffset",
+      "forced": false
+    },
+    {
+      "t": 3,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "focus-vehicle",
+      "interactionId": "focus-vehicle-keeps-right",
+      "requestedDurationS": 2.5,
+      "effectiveDurationS": 2.5,
+      "displacementM": -1.1335224343315924
+    },
+    {
+      "t": 4,
+      "kind": "trigger_fired",
+      "interactionId": "signal-behind-turns-red",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 4,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "signal:control:near-portal-signal.phase",
+      "value": "red"
+    },
+    {
+      "t": 4,
+      "kind": "trigger_fired",
+      "interactionId": "van-retains-exit",
+      "actorId": "reversing-truck",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 4,
+      "kind": "state_set",
+      "actorId": "reversing-truck",
+      "key": "rules.collisionAvoidance",
+      "value": true
+    },
+    {
+      "t": 4.0200000000000005,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-ignores-stale-red",
+      "actorId": "focus-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 4.0200000000000005,
+      "kind": "state_set",
+      "actorId": "focus-vehicle",
+      "key": "rules.obeySignals",
+      "value": false
+    },
+    {
+      "t": 5.94,
+      "kind": "interaction_completed",
+      "interactionId": "focus-vehicle-keeps-right",
+      "actorId": "focus-vehicle",
+      "finalLateralOffsetM": -1.1334422990579178
+    },
+    {
+      "t": 5.94,
+      "kind": "released",
+      "actorId": "focus-vehicle",
+      "axis": "lateral",
+      "interactionId": "focus-vehicle-keeps-right",
+      "reason": "complete"
+    },
+    {
+      "t": 10,
+      "kind": "trigger_fired",
+      "interactionId": "worker-emerges",
+      "actorId": "worker",
+      "verb": "route",
+      "forced": false
+    },
+    {
+      "t": 10.200000000000001,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-stops-for-worker",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 10.200000000000001,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-stops-for-worker",
+      "preemptedInteractionId": "focus-vehicle-enters-cautiously"
+    },
+    {
+      "t": 12.5,
+      "kind": "trigger_fired",
+      "interactionId": "worker-enters-shared-lane",
+      "actorId": "worker",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 16.4,
+      "kind": "trigger_fired",
+      "interactionId": "van-clears",
+      "actorId": "reversing-truck",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 16.4,
+      "kind": "state_set",
+      "actorId": "reversing-truck",
+      "key": "lights.indicator",
+      "value": "right"
+    },
+    {
+      "t": 16.8,
+      "kind": "trigger_fired",
+      "interactionId": "worker-clears",
+      "actorId": "worker",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 16.8,
+      "kind": "preemption",
+      "actorId": "worker",
+      "axis": "longitudinal",
+      "byInteractionId": "worker-clears",
+      "preemptedInteractionId": "worker-enters-shared-lane"
+    },
+    {
+      "t": 19.3,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-resumes-after-both-clear",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 19.3,
+      "kind": "preemption",
+      "actorId": "focus-vehicle",
+      "axis": "longitudinal",
+      "byInteractionId": "focus-vehicle-resumes-after-both-clear",
+      "preemptedInteractionId": "focus-vehicle-stops-for-worker"
+    },
+    {
+      "t": 20,
+      "kind": "interaction_aborted",
+      "interactionId": "van-keeps-clear-of-work-zone",
+      "actorId": "reversing-truck",
+      "reason": "clip_end"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": true,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "focus-vehicle",
+      "worker"
+    ],
+    "minDistancePairs": [
+      [
+        "focus-vehicle",
+        "reversing-truck"
+      ],
+      [
+        "focus-vehicle",
+        "worker"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

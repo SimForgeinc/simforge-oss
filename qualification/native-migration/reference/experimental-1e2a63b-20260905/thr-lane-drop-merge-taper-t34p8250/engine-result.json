@@ -1,0 +1,18 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.control:closing-lane-red-x",
+      "reason": "A coincident OpenDRIVE lane was bound to 0:0:-2 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "control:closing-lane-red-x",
+        "sourceRsl": "614:0:-1",
+        "routeRsl": "0:0:-2",
+        "distanceM": 0.000014850798309409289
+      }
+    }
+  ],
+  "arrival": []
+}

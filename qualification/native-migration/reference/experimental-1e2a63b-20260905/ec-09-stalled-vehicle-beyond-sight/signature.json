@@ -1,0 +1,276 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "ecf647c2addd476705303bd9fc9dee83b5afdb6573f92f89e5ffc462eb5b2b86",
+  "traceDigest": "1ddf020f460711eff2a8c17baccb26f4b87a4387f2b9fa62987381c3232e6d2f",
+  "dt": 0.02,
+  "clipSeconds": 20,
+  "warmupSeconds": 0,
+  "mapId": "el-camino-road",
+  "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "topologyDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+  "tickCount": 1001,
+  "firstT": 0,
+  "lastT": 20,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "focus-vehicle",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "focus-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "oncoming-glare": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "shopper": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      },
+      "stalled-vehicle": {
+        "mode": "fixed-static-v1",
+        "reason": "static-actor",
+        "profile": "fixed-static"
+      },
+      "umbrella-pedestrian": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "pedestrian"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "rain",
+    "timeOfDay": "dusk",
+    "traffic": "moderate",
+    "visibility": "directional-glare",
+    "effects": {
+      "visibilityRangeM": 105,
+      "frictionScale": 0.58,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "focus-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.02,
+          "from": "71:0:3",
+          "to": "815:0:1"
+        },
+        {
+          "t": 5.74,
+          "from": "815:0:1",
+          "to": "7:0:-2"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "oncoming-glare": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 8.14,
+          "from": "685:0:-1",
+          "to": "69:0:-2"
+        },
+        {
+          "t": 11.36,
+          "from": "69:0:-2",
+          "to": "2030:0:-1"
+        },
+        {
+          "t": 15.32,
+          "from": "2030:0:-1",
+          "to": "46:0:-2"
+        },
+        {
+          "t": 18.900000000000002,
+          "from": "46:0:-2",
+          "to": "820:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "shopper": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "stalled-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "umbrella-pedestrian": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 20
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 14.26,
+          "from": "7:0:-2",
+          "to": "735:0:-1"
+        },
+        {
+          "t": 14.32,
+          "from": "735:0:-1",
+          "to": "7:0:-2"
+        },
+        {
+          "t": 14.44,
+          "from": "7:0:-2",
+          "to": "735:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "shopper-chases",
+      "actorId": "shopper",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 0,
+      "kind": "trigger_fired",
+      "interactionId": "shopper-path",
+      "actorId": "shopper",
+      "verb": "route",
+      "forced": false
+    },
+    {
+      "t": 0.5,
+      "kind": "trigger_fired",
+      "interactionId": "stalled-vehicle-hazards-on",
+      "actorId": "stalled-vehicle",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 0.5,
+      "kind": "state_set",
+      "actorId": "stalled-vehicle",
+      "key": "lights.hazard",
+      "value": true
+    },
+    {
+      "t": 3.5,
+      "kind": "trigger_fired",
+      "interactionId": "focus-vehicle-progressive-brake",
+      "actorId": "focus-vehicle",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 6.8,
+      "kind": "trigger_fired",
+      "interactionId": "shopper-stops",
+      "actorId": "shopper",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 6.8,
+      "kind": "preemption",
+      "actorId": "shopper",
+      "axis": "longitudinal",
+      "byInteractionId": "shopper-stops",
+      "preemptedInteractionId": "shopper-chases"
+    },
+    {
+      "t": 12.5,
+      "kind": "trigger_fired",
+      "interactionId": "pedestrian-steps",
+      "actorId": "umbrella-pedestrian",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 14,
+      "kind": "trigger_fired",
+      "interactionId": "pedestrian-notices-cart",
+      "actorId": "umbrella-pedestrian",
+      "verb": "speed",
+      "forced": false
+    },
+    {
+      "t": 14,
+      "kind": "preemption",
+      "actorId": "umbrella-pedestrian",
+      "axis": "longitudinal",
+      "byInteractionId": "pedestrian-notices-cart",
+      "preemptedInteractionId": "pedestrian-steps"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 1001,
+    "minTTCPair": [
+      "focus-vehicle",
+      "oncoming-glare"
+    ],
+    "minDistancePairs": [
+      [
+        "focus-vehicle",
+        "oncoming-glare"
+      ],
+      [
+        "focus-vehicle",
+        "shopper"
+      ],
+      [
+        "focus-vehicle",
+        "umbrella-pedestrian"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

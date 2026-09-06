@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge } from "@/app/components/ui/badge";
-import { cn } from "@/app/lib/utils";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   queued: "bg-muted text-muted-foreground border-transparent",

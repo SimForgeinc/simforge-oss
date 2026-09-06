@@ -1,8 +1,9 @@
 import type {
+  EngineRuntime,
   Interaction,
   LaneGraph,
+  NativeRoute,
   Pose,
-  Route,
   SimActor,
   SimScenarioInput,
 } from '@simforge-oss/engine';
@@ -97,6 +98,8 @@ export class AsamExportError extends Error {
 export interface AsamExportOptions {
   /** Compiler-owned actor identities authorized for materialized-traffic replacement. */
   readonly trustedAmbientActorIds?: readonly string[] | undefined;
+  /** The native runtime that builds routes and runs replay simulations for this export. */
+  readonly engine: EngineRuntime;
   /** The concrete map graph used to turn every engine route into world coordinates. */
   readonly graph: LaneGraph;
   /** Resolve OpenDRIVE XY to the absolute road-surface elevation for WorldPosition Z. */
@@ -153,7 +156,7 @@ export interface ResolvedActor {
   readonly actor: SimActor;
   readonly name: string;
   readonly routeName: string;
-  readonly route: Route;
+  readonly route: NativeRoute;
   readonly points: readonly Pose[];
 }
 

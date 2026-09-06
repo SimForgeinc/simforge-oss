@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScenarioMigrationError, ScenarioOperationError, ScenarioValidationError } from '../errors.js';
+import { ScenarioFormatError, ScenarioOperationError, ScenarioValidationError } from '../errors.js';
 import { prepareSimulationInput } from '../materialization.js';
 import { TemplateDocument } from '../template-document.js';
 import { MemoryStorage } from '../stores/web.js';
@@ -80,8 +80,8 @@ describe('TemplateDocument', () => {
     expect(TemplateDocument.parse(doc.serialize()).roles).toHaveLength(41);
   });
 
-  it('is v2-only and clearly rejects legacy formats', () => {
-    expect(() => TemplateDocument.fromJSON({ scenarioVersion: 1 })).toThrow(ScenarioMigrationError);
+  it('is v2-only and clearly rejects other document kinds', () => {
+    expect(() => TemplateDocument.fromJSON({ scenarioVersion: 1 })).toThrow(ScenarioFormatError);
     expect(() => TemplateDocument.fromJSON({ scenarioVersion: 1 })).toThrow(/expected ScenarioTemplate v2/);
   });
 

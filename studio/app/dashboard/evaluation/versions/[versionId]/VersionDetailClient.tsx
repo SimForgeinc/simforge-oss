@@ -3,17 +3,17 @@
 import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { useSetPageTitle } from "@/app/components/TopBarSlot";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { PageHeader } from "@/app/components/ui/page-header";
+} from "@simforge-oss/studio-ui/components/ui/card";
+import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import {
   Table,
   TableBody,
@@ -21,7 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/app/components/ui/table";
+} from "@simforge-oss/studio-ui/components/ui/table";
 import type {
   ModelEndpointRecord,
   ModelRunRecord,

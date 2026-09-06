@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   GalleryAssetIdSchema,
   RenameGalleryAssetInputSchema,
-} from "@/app/lib/asset-gallery/contracts";
+} from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import {
   deleteGalleryAsset,
   getGalleryAsset,

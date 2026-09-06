@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
 
 interface SearchExamplesPanelProps {

@@ -1,0 +1,42 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_binding_repaired",
+      "severity": "warning",
+      "path": "signalPrograms.control:downstream-lane-control",
+      "reason": "A coincident OpenDRIVE lane was bound to 755:0:-1 so this route can obey the physical control. Choose an unambiguous lane when portability matters.",
+      "detail": {
+        "source": "signalPrograms",
+        "controlId": "control:downstream-lane-control",
+        "sourceRsl": "83:0:-3",
+        "routeRsl": "755:0:-1",
+        "distanceM": 0.00001660041065606437
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.rideshare.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "rideshare"
+      }
+    },
+    {
+      "code": "lateral_duration_clamped",
+      "severity": "warning",
+      "path": "interactions.follower-aborts-pass.dynamics.value",
+      "reason": "requested 1.51 s lateral manoeuvre is infeasible for car; clamped to 1.76 s",
+      "detail": {
+        "actorId": "following-car",
+        "requestedDurationS": 1.5132405435092235,
+        "effectiveDurationS": 1.7595576062499152,
+        "displacementM": -0.7263554608844274,
+        "lateralRateMaxMps": 2.5,
+        "lateralAccelMaxMps2": 3,
+        "lateralJerkMaxMps3": 8
+      }
+    }
+  ],
+  "arrival": []
+}

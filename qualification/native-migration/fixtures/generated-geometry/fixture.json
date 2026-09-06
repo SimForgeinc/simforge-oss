@@ -1,0 +1,217 @@
+{
+  "schema": "simforge.native-migration.situation-fixture/v1",
+  "id": "sit-generated-geometry-proxy",
+  "mapId": "yale-street",
+  "seed": "generated-static-fixed",
+  "origin": {
+    "kind": "blender-workbench-export",
+    "state": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/generated-geometry-uitjyd",
+    "sessionDescriptor": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.generated-static-geometry.json",
+    "note": "Program revision 1 adopted the Blender-exported static closure proxy (role barrier) through adopt_geometry on 2026-09-04; extension transactions below are declared here and applied by the harness through applySituationTransaction."
+  },
+  "program": "program.json",
+  "geometryBinding": "geometry-binding.json",
+  "retainedArtifacts": [
+    {
+      "label": "descriptor",
+      "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.generated-static-geometry.json",
+      "sha256": "0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83",
+      "retainedAs": "artifacts/0303011c7492bbb719185b55e4d98cb0e92f3a5285796773172d95fd4a283f83.json",
+      "bytes": 14695
+    },
+    {
+      "label": "mesh",
+      "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d.glb",
+      "sha256": "7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d",
+      "retainedAs": "artifacts/7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d.glb",
+      "bytes": 2064
+    },
+    {
+      "label": "bounds",
+      "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/bounds-3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc.json",
+      "sha256": "3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc",
+      "retainedAs": "artifacts/3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc.json",
+      "bytes": 457
+    },
+    {
+      "label": "collision",
+      "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/collision-b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b.json",
+      "sha256": "b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b",
+      "retainedAs": "artifacts/b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b.json",
+      "bytes": 460
+    },
+    {
+      "label": "occlusion",
+      "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/occlusion-a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac.json",
+      "sha256": "a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac",
+      "retainedAs": "artifacts/a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac.json",
+      "bytes": 460
+    }
+  ],
+  "transactions": [
+    {
+      "id": "sensed",
+      "apply": {
+        "baseRevision": 1,
+        "baseDigest": "c35b0d30fa5b3e9d405351c8dc2d7617c4d533e25b8e4c77fb7b7e1d0039314f",
+        "label": "Opaque proxy sensor probe",
+        "templateOps": [
+          {
+            "type": "addRole",
+            "role": {
+              "id": "observer",
+              "kind": "scene_absolute",
+              "actor": {
+                "class": "car",
+                "static": true,
+                "sensors": [
+                  {
+                    "id": "front",
+                    "type": "dash_camera",
+                    "mount": {
+                      "position": {
+                        "x": 0,
+                        "y": 0.5,
+                        "z": 0
+                      }
+                    },
+                    "camera": {
+                      "horizontalFovDeg": 90,
+                      "verticalFovDeg": 60,
+                      "farM": 100
+                    }
+                  }
+                ],
+                "dims": {
+                  "length": 0.5,
+                  "width": 0.4,
+                  "height": 1
+                }
+              },
+              "essentiality": "required",
+              "initialSpeedKph": 0,
+              "pose": {
+                "position": {
+                  "x": 532.4957885742188,
+                  "y": 0,
+                  "z": -1792.19873046875
+                },
+                "headingRad": 0
+              }
+            }
+          },
+          {
+            "type": "addRole",
+            "role": {
+              "id": "target",
+              "kind": "scene_absolute",
+              "actor": {
+                "class": "car",
+                "static": true,
+                "sensors": [],
+                "dims": {
+                  "length": 0.5,
+                  "width": 0.4,
+                  "height": 1
+                }
+              },
+              "essentiality": "required",
+              "initialSpeedKph": 0,
+              "pose": {
+                "position": {
+                  "x": 544.4957885742188,
+                  "y": 0,
+                  "z": -1792.19873046875
+                },
+                "headingRad": 0
+              }
+            }
+          }
+        ],
+        "changes": {
+          "participants": [
+            {
+              "roleId": "barrier",
+              "intention": "Remain fixed as a declared opaque planar box proxy.",
+              "authority": [
+                {
+                  "startS": 0,
+                  "endS": 20,
+                  "kind": "controller"
+                }
+              ],
+              "appearance": {
+                "kind": "mesh",
+                "sourceId": "generated:7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d"
+              },
+              "information": []
+            },
+            {
+              "roleId": "observer",
+              "intention": "Remain fixed in sensor regression.",
+              "appearance": {
+                "kind": "mesh",
+                "sourceId": "asset:vehicle.sedan"
+              },
+              "authority": [
+                {
+                  "startS": 0,
+                  "endS": 20,
+                  "kind": "controller"
+                }
+              ],
+              "information": []
+            },
+            {
+              "roleId": "target",
+              "intention": "Remain fixed in sensor regression.",
+              "appearance": {
+                "kind": "mesh",
+                "sourceId": "asset:vehicle.sedan"
+              },
+              "authority": [
+                {
+                  "startS": 0,
+                  "endS": 20,
+                  "kind": "controller"
+                }
+              ],
+              "information": []
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "comparison": {
+    "transaction": {
+      "baseRevision": 2,
+      "baseDigest": "c874d7ec8c449d154624cc1df59c29bea7c62b2b2a9c99af4dbd6160a9350270",
+      "label": "Remove only proxy presence",
+      "templateOps": [
+        {
+          "type": "addInteraction",
+          "interaction": {
+            "id": "remove-proxy",
+            "actor": "barrier",
+            "verb": "exist",
+            "trigger": {
+              "kind": "at",
+              "t": 0
+            },
+            "target": {
+              "state": "absent"
+            }
+          }
+        }
+      ],
+      "preserve": {
+        "roles": [
+          "observer",
+          "target"
+        ]
+      }
+    },
+    "reactiveRoleIds": []
+  }
+}

@@ -18,24 +18,16 @@ import "server-only";
  * budget (position from the CARLA actor, facing from the `<signal>`, 8–15 deg
  * residual against the stop-line bearing) and needed a geometric fallback to
  * attribute a light to a junction at all. Here every relation is an id from the
- * map's own `<controller>` declarations: `buildSignalControlIndex`'s contract is
- * that "no geometric/proximity inference occurs".
+ * map's own `<controller>` declarations: the native signal control index's
+ * contract is that "no geometric/proximity inference occurs".
  *
  * ## Single source of truth
  *
- * The catalog, baseline programs, and control index are produced by
- * `@simforge-oss/compiler` — the same `parseMapSignalCatalog`,
- * `buildMapControlPlan`, and `buildSignalControlIndex` used by playback. The
- * projection also records the broad control-plan hash as provenance, while plan
- * validity is decided from immutable map and exact physical reference ids.
- *
- * `buildMapControlPlan` takes a `SignalMapBundle` whose `index` field is a
- * `DerivedMapIndex`. It is genuinely unused on the signal-program path —
- * `buildSignalPlanForJunction` reads only `signalCatalog`, `topology` and
- * `graph`, and `apps/web/test/unit/lib/uniscenario-signal-canary.test.ts` already
- * passes `{ junctionDescriptors: {} } as never` for it. That is asserted by a
- * test here rather than assumed, because it is the one place this module depends
- * on a package internal.
+ * The catalog, baseline programs, and control index are produced by the native
+ * compiler through one `MapBundle` — the same signal catalog, map control plan
+ * and control index playback executes against. The projection also records the
+ * broad control-plan hash as provenance, while plan validity is decided from
+ * immutable map and exact physical reference ids.
  *
  * ## §2.5 conformance
  *
@@ -49,13 +41,8 @@ import "server-only";
  * the bytes, which is what keeps that rule impossible to break here.
  */
 
+import { createMapBundle, type SignalControlIndex } from "@simforge-oss/compiler/node";
 import {
-  buildMapControlPlan,
-  buildSignalControlIndex,
-  parseMapSignalCatalog,
-} from "@simforge-oss/compiler";
-import {
-  buildLaneGraph,
   contentHash,
   type SignalProgram,
   type TopologyIndex,
@@ -71,7 +58,7 @@ import {
   type EditorSignalJunction,
   type EditorSignalMovement,
   type GateConflictPair,
-} from "./types";
+} from "@simforge-oss/studio-ui/lib/scenario/signals/types";
 
 /** `derived/topology-derived.json.gz`, reduced to the part this needs. */
 export type DerivedTopologyConflicts = {
@@ -114,20 +101,16 @@ export type ReadEditorSignalControlInput = {
 export function readEditorSignalControlProjection(
   input: ReadEditorSignalControlInput,
 ): EditorSignalControlProjection {
-  const signalCatalog = parseMapSignalCatalog(input.xodr, input.signalsGeoJson as never);
-  const graph = buildLaneGraph(input.topology);
-  const controlPlan = buildMapControlPlan({
-    // Unused on this path; see the module header. Asserted by a test.
-    index: { junctionDescriptors: {} } as never,
-    graph,
+  const bundle = createMapBundle({
+    mapId: input.mapId,
     topology: input.topology,
-    signalCatalog,
+    xodr: input.xodr,
+    signalsGeojson: input.signalsGeoJson,
   });
+  const signalCatalog = bundle.signalCatalog;
+  const controlPlan = bundle.controlPlan();
   const controlDigest = contentHash(controlPlan);
-  const controlIndex = buildSignalControlIndex(
-    controlPlan.signalPrograms,
-    signalCatalog.heads.map((head) => head.id),
-  );
+  const controlIndex = bundle.signalControlIndex();
 
   const gateById = new Map(input.topology.gates.map((gate) => [gate.id, gate]));
   const gatesByConnectingLane = new Map<string, string[]>();
@@ -137,7 +120,7 @@ export function readEditorSignalControlProjection(
     else gatesByConnectingLane.set(gate.connectingLaneRsl, [gate.id]);
   }
 
-  const movements: EditorSignalMovement[] = [...controlIndex.movements.values()]
+  const movements: EditorSignalMovement[] = Object.values(controlIndex.movements)
     .map((movement) => {
       const gateIds = [
         ...new Set(
@@ -173,7 +156,7 @@ export function readEditorSignalControlProjection(
   const catalogControllerById = new Map(
     signalCatalog.controllers.map((controller) => [controller.id, controller]),
   );
-  const controllers: EditorSignalController[] = [...controlIndex.controllers.values()]
+  const controllers: EditorSignalController[] = Object.values(controlIndex.controllers)
     .map((controller) => ({
       id: controller.id,
       // OpenDRIVE's own stage order. Falling back to Number.MAX_SAFE_INTEGER
@@ -187,7 +170,7 @@ export function readEditorSignalControlProjection(
     .sort((left, right) => left.id.localeCompare(right.id));
 
   const catalogHeadById = new Map(signalCatalog.heads.map((head) => [head.id, head]));
-  const heads: EditorSignalHead[] = [...controlIndex.heads.values()]
+  const heads: EditorSignalHead[] = Object.values(controlIndex.heads)
     .map((head) => {
       const physical = catalogHeadById.get(head.id);
       return {
@@ -260,7 +243,7 @@ function movementLabel(movementId: string, turnRelations: readonly string[]): st
  */
 function buildJunctions(
   topology: TopologyIndex,
-  controlIndex: ReturnType<typeof buildSignalControlIndex>,
+  controlIndex: SignalControlIndex,
 ): EditorSignalJunction[] {
   const out: EditorSignalJunction[] = [];
   for (const junction of Object.values(topology.junctions ?? {})) {
@@ -295,7 +278,7 @@ function buildJunctions(
       0,
     );
 
-    const control = controlIndex.junctions.get(junctionId);
+    const control = controlIndex.junctions[junctionId];
     const headIds = [...(control?.headIds ?? [])];
     out.push({
       junctionId,

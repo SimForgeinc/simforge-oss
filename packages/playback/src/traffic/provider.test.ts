@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
-  LEGACY_AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY,
   BrowserMaterializedTrafficCapture,
   ambientTrafficProviderFromExtensions,
   bindAmbientProvenanceToMaterializedTraffic,
   consumeMaterializedTrafficEvidence,
   consumeMaterializedTrafficTraceEvidence,
+  decodeSumoMaterializedActors,
   sumoOwnsPhysicalSignalStates,
 } from './provider';
 
@@ -27,7 +27,8 @@ describe('ambient traffic provider contract', () => {
   it('fails missing and unknown provider preferences closed', () => {
     expect(ambientTrafficProviderFromExtensions(undefined)).toBe('off');
     expect(ambientTrafficProviderFromExtensions({ [AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: 'broken' })).toBe('off');
-    expect(ambientTrafficProviderFromExtensions({ [LEGACY_AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: 'native' })).toBe('native');
+    expect(ambientTrafficProviderFromExtensions({ 'studio.presentation.ambientTrafficProvider.v1': 'native' })).toBe('off');
+    expect(ambientTrafficProviderFromExtensions({ [AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY]: 'native' })).toBe('native');
   });
 
   it('captures and binds complete SUMO materialized evidence', () => {
@@ -40,10 +41,10 @@ describe('ambient traffic provider contract', () => {
       fixedStepSeconds: 0.05,
       durationSeconds: 0.1,
     });
-    capture.recordSumoFrame(0, { actorCount: 1, states: packed(2, 0, 1) }, { head_b: 'red', head_a: 'green' });
-    capture.recordSumoFrame(0.05, { actorCount: 1, states: packed(2, 0.2, 2) }, { head_a: 'yellow', head_b: 'red' });
+    capture.recordProviderFrame(0, decodeSumoMaterializedActors({ actorCount: 1, states: packed(2, 0, 1) }), { head_b: 'red', head_a: 'green' });
+    capture.recordProviderFrame(0.05, decodeSumoMaterializedActors({ actorCount: 1, states: packed(2, 0.2, 2) }), { head_a: 'yellow', head_b: 'red' });
     expect(() => capture.finalize()).toThrow('incomplete');
-    capture.recordSumoFrame(0.1, { actorCount: 1, states: packed(2, 0.4, 3) }, { head_b: 'green', head_a: 'red' });
+    capture.recordProviderFrame(0.1, decodeSumoMaterializedActors({ actorCount: 1, states: packed(2, 0.4, 3) }), { head_b: 'green', head_a: 'red' });
     const result = capture.finalize();
     const binding = {
       sourceInputDigest,

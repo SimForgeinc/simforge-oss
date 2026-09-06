@@ -87,17 +87,6 @@ for (const entry of approved) {
   }
 }
 
-for (const [alias, canonicalId] of Object.entries({
-  'pedestrian.adult_standing': 'pedestrian.adult',
-  'pedestrian.adult_walking': 'pedestrian.adult',
-  'pedestrian.child_standing': 'pedestrian.child',
-  'pedestrian.child_walking': 'pedestrian.child',
-})) {
-  catalog[alias] = {
-    ...catalog[canonicalId],
-    legacyAliasOf: canonicalId,
-  };
-}
 const catalogRelative = 'catalog-models.json';
 const catalogBytes = Buffer.from(`${JSON.stringify(catalog, null, 2)}\n`);
 

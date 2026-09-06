@@ -1,5 +1,5 @@
 import { AppTopBar } from "@/app/components/AppTopBar";
-import { TopBarSlotProvider } from "@/app/components/TopBarSlot";
+import { TopBarSlotProvider } from "@simforge-oss/studio-ui/components/TopBarSlot";
 
 export default function SmokePage() {
   return (

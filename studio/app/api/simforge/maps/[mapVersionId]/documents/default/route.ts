@@ -18,7 +18,7 @@ import {
   requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
-import { withSceneMinutes } from "@/app/dashboard/scenario/editor/scene-time";
+import { withSceneMinutes } from "@simforge-oss/studio-ui/scenario/editor/scene-time";
 
 const EDITOR_APP_VERSION = "0.1.0-editor";
 

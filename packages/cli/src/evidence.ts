@@ -24,7 +24,6 @@ export interface EvidenceHashIssue {
     | 'matcher_index_digest_missing'
     | 'engine_graph_digest_missing'
     | 'trace_engine_graph_digest_mismatch'
-    | 'trace_topology_alias_mismatch'
     | 'catalog_provenance_mismatch'
     | 'catalog_provenance_invalid'
     | 'operational_conditions_mismatch'
@@ -50,10 +49,8 @@ export interface EvidenceHashReport {
   readonly matcherIndexDigest: string | null;
   readonly manifestEngineGraphDigest: string | null;
   readonly traceEngineGraphDigest: string | null;
-  /** Present when a trace was available; legacy failure reports may omit it. */
   readonly physicsMode?: MotionPhysicsMode | null;
-  /** `legacy-kinematic` is replayed as recorded and is never relabeled. */
-  readonly physicsProvenance?: 'matched' | 'legacy-kinematic' | 'mismatch';
+  readonly physicsProvenance?: 'matched' | 'mismatch';
   readonly issues: EvidenceHashIssue[];
 }
 
@@ -74,15 +71,6 @@ function sameCanonicalContent(a: unknown, b: unknown): boolean {
   return contentHash(a) === contentHash(b);
 }
 
-/** 0.3.0 is the controlled migration where omitted physics became dynamic-v1. */
-function isPreDynamicDefaultTrace(trace: SimTrace): boolean {
-  if ((trace.header?.traceVersion ?? 1) < 2) return true;
-  const version = trace.header?.physics?.solverVersion ?? trace.header?.engineVersion;
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version ?? '');
-  if (!match) return false;
-  const [major, minor] = [Number(match[1]), Number(match[2])];
-  return major === 0 && minor < 3;
-}
 
 export function verifyEvidenceHashes(instance: InstanceFile, trace: SimTrace): EvidenceHashReport {
   const recomputedInputHash = contentHash(instance.input);
@@ -101,7 +89,6 @@ export function verifyEvidenceHashes(instance: InstanceFile, trace: SimTrace): E
   const matcherIndexDigest = stringOrNull(replayKey?.['matcherIndexDigest']);
   const manifestEngineGraphDigest = stringOrNull(replayKey?.['engineGraphDigest']);
   const traceEngineGraphDigest = stringOrNull(trace.header?.engineGraphDigest);
-  const traceTopologyAlias = stringOrNull(trace.header?.topologyDigest);
   const instanceCatalogSlot = instance.catalogSlot;
   const traceCatalogSlot = trace.header?.catalogSlot;
   const operationalVariant = manifest?.['operationalVariant'] as Record<string, unknown> | null | undefined;
@@ -109,21 +96,15 @@ export function verifyEvidenceHashes(instance: InstanceFile, trace: SimTrace): E
   const inputOperationalConditions = instance.input.operationalConditions;
   const traceOperationalConditions = trace.header?.operationalConditions;
   const expectedPhysicsMode = resolvePhysicsConfig(instance.input).mode;
-  // Trace v1 predates the field and had one possible meaning: kinematic-v1.
-  const physicsMode: MotionPhysicsMode | null = trace.header?.physics?.mode
-    ?? ((trace.header?.traceVersion ?? 1) < 2 ? 'kinematic-v1' : null);
-  const legacyKinematic = instance.input.physics === undefined
-    && physicsMode === 'kinematic-v1'
-    && isPreDynamicDefaultTrace(trace);
-  const physicsProvenance: EvidenceHashReport['physicsProvenance'] = legacyKinematic
-    ? 'legacy-kinematic'
-    : physicsMode === expectedPhysicsMode ? 'matched' : 'mismatch';
+  const physicsMode: MotionPhysicsMode | null = trace.header?.physics?.mode ?? null;
+  const physicsProvenance: EvidenceHashReport['physicsProvenance'] =
+    physicsMode === expectedPhysicsMode ? 'matched' : 'mismatch';
   const issues: EvidenceHashIssue[] = [];
 
   if (physicsProvenance === 'mismatch') {
     issues.push({
       code: 'physics_mode_mismatch',
-      reason: 'trace physics mode must match the input selection/current default, except immutable pre-0.3 omitted-input traces which remain recorded kinematic evidence',
+      reason: 'trace physics mode must match the input selection/current default',
       expected: expectedPhysicsMode,
       actual: physicsMode,
     });
@@ -212,14 +193,6 @@ export function verifyEvidenceHashes(instance: InstanceFile, trace: SimTrace): E
       reason: 'trace engineGraphDigest must match the instance replay key engineGraphDigest',
       expected: manifestEngineGraphDigest ?? '',
       actual: traceEngineGraphDigest,
-    });
-  }
-  if (traceTopologyAlias !== traceEngineGraphDigest) {
-    issues.push({
-      code: 'trace_topology_alias_mismatch',
-      reason: 'deprecated trace topologyDigest must remain an exact alias of engineGraphDigest',
-      expected: traceEngineGraphDigest ?? '',
-      actual: traceTopologyAlias,
     });
   }
   if (JSON.stringify(traceCatalogSlot) !== JSON.stringify(instanceCatalogSlot)) {

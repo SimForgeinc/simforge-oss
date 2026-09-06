@@ -2,13 +2,9 @@ import {
   contentHash,
   CONTROL_INDICATIONS,
   decodeTraceGz,
-  SignalBook,
   safeParseSimScenarioInput,
   traceToSceneFrame,
   TRACE_FORMAT_VERSION,
-  LATERAL_OFFSET_TRACE_VERSION,
-  READABLE_TRACE_FORMAT_VERSIONS,
-  isReadableTraceFormatVersion,
   type SceneTrace,
   type SimActor,
   type SimScenarioInput,
@@ -330,11 +326,6 @@ export function parsePlaybackPair(
         `${source.traceName}: header.engineGraphDigest does not match manifest.replayKey.engineGraphDigest`,
       );
     }
-    if (typeof replayGraph === 'string' && trace.header.topologyDigest !== replayGraph) {
-      issues.push(
-        `${source.traceName}: header.topologyDigest does not match manifest.replayKey.engineGraphDigest`,
-      );
-    }
     if (contentHash(trace.header.operationalConditions) !== contentHash(input.operationalConditions)) {
       issues.push(
         `${source.traceName}: header.operationalConditions does not exactly match instance input.operationalConditions`,
@@ -554,10 +545,8 @@ function validateTrace(value: unknown, name: string, issues: string[]): SimTrace
     }
   }
   if (header) {
-    // v1 through v3 are immutable replay/evidence formats. New traces write v4,
-    // but saved campaigns and imported verified bundles remain readable.
-    if (!isReadableTraceFormatVersion(header['traceVersion'])) {
-      issues.push(`${name}: header.traceVersion must be one of ${READABLE_TRACE_FORMAT_VERSIONS.join(', ')} (current ${TRACE_FORMAT_VERSION}); got ${display(header['traceVersion'])}`);
+    if (header['traceVersion'] !== TRACE_FORMAT_VERSION) {
+      issues.push(`${name}: header.traceVersion must be ${TRACE_FORMAT_VERSION}; got ${display(header['traceVersion'])}`);
     }
     if (header['frame'] !== 'xodr-local') {
       issues.push(`${name}: header.frame must be "xodr-local"; got ${display(header['frame'])}`);
@@ -641,11 +630,7 @@ function validateTracks(
       }
     }
     const lateralOffset = track['lateralOffsetM'];
-    if (lateralOffset === undefined
-      && isReadableTraceFormatVersion(trace.header.traceVersion)
-      && trace.header.traceVersion < LATERAL_OFFSET_TRACE_VERSION) {
-      // v1-v3 did not define this channel; scene conversion synthesizes zeros.
-    } else if (!Array.isArray(lateralOffset) || lateralOffset.length !== count) {
+    if (!Array.isArray(lateralOffset) || lateralOffset.length !== count) {
       issues.push(
         `${name}: ticks.actors.${actor.id}.lateralOffsetM length ${Array.isArray(lateralOffset) ? lateralOffset.length : 'missing'} does not match ticks.t length ${count}`,
       );
@@ -893,18 +878,18 @@ export function samplePlaybackSignals(bundle: PlaybackBundle, time: number): Sam
   });
 }
 
-/** Evaluate physical signal-head states from the immutable program input. */
+/**
+ * Physical signal-head states at `time`, read from the engine's recorded
+ * signal track. The trace is the single authority for what each program
+ * showed; playback never re-evaluates programs itself.
+ */
 export function evaluatePlaybackSignalHeadStates(
   bundle: PlaybackBundle,
   time: number,
 ): Readonly<Record<string, ControlIndication>> {
-  const input = bundle.instance.input;
-  const book = new SignalBook(input.signalPrograms, input.warmupSeconds, input.roadControls);
   const headStates: Record<string, ControlIndication> = {};
-  for (const signal of bundle.signals) {
-    const phase = book.phaseAt(signal.id, time);
-    if (!phase) throw new Error(`validated input lost signal program ${signal.id}`);
-    for (const headId of signal.headIds) headStates[headId] = phase;
+  for (const signal of samplePlaybackSignals(bundle, time)) {
+    for (const headId of signal.headIds) headStates[headId] = signal.phase;
   }
   return headStates;
 }

@@ -5,7 +5,7 @@ import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
 import type { SelectedGeoJSONFeaturePayload } from "@/app/lib/maps/frontend/feature-inspection-types";
 import { useStreetFactsByFeatureId } from "@/app/lib/maps/frontend/use-street-facts-index";
 import { JsonTreeView } from "@/app/components/JsonTreeView";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the MapElementInspector component. */
 export type MapElementInspectorProps = {

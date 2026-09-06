@@ -14,7 +14,7 @@ import {
   type ScenarioRevisionDto,
 } from "./contracts";
 import { canonicalContentSha256, scenarioId } from "./core";
-import { simforgeEnv } from "@/lib/compat-env";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 type DocumentRow = {
   id: string;

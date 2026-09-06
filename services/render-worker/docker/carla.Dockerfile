@@ -1,14 +1,20 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22.14.0-bookworm-slim AS node-build
+FROM node:22.14.0-bookworm-slim AS node-toolchain
+FROM rust:1.95.0-bookworm AS node-build
+COPY --from=node-toolchain /usr/local /usr/local
 WORKDIR /src
-RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
+RUN rustup target add wasm32-unknown-unknown \
+ && corepack enable && corepack prepare pnpm@11.18.0 --activate
 COPY --from=source /package.json /pnpm-lock.yaml /pnpm-workspace.yaml /tsconfig.base.json ./
-COPY --from=source /packages/scenario ./packages/scenario
-COPY --from=source /packages/render ./packages/render
+COPY --from=source /packages ./packages
+COPY --from=source /native/Cargo.toml /native/Cargo.lock ./native/
+COPY --from=source /native/crates ./native/crates
 COPY --from=source /services/render-worker ./services/render-worker
 RUN pnpm install --frozen-lockfile --ignore-scripts \
- && pnpm --filter @simforge-oss/scenario --filter @simforge-oss/render --filter @simforge-oss/render-worker build \
- && pnpm deploy --legacy --filter @simforge-oss/render-worker --prod /out/worker
+ && pnpm --filter @simforge-oss/native-runtime rebuild wasm-pack \
+ && pnpm --filter @simforge-oss/render-worker... build \
+ && pnpm deploy --legacy --filter @simforge-oss/render-worker --prod /out/worker \
+ && node services/render-worker/finalize-deploy.mjs /out/worker services/render-worker
 
 FROM python:3.12.10-slim-bookworm AS python-build
 WORKDIR /src
@@ -25,13 +31,15 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /opt/simforge /scratch /cache /run/simforge \
  && chown -R carla:carla /scratch /cache /run/simforge
-COPY --from=node-build /usr/local /usr/local
+# The worker needs the Node binary alone; the build stage's /usr/local also
+# holds the Rust toolchain and must not ship.
+COPY --from=node-toolchain /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-build --chown=carla:carla /out/worker /opt/simforge/worker
 COPY --from=python-build /wheels /tmp/wheels
 RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla-*.whl /tmp/wheels/*.whl && rm -rf /tmp/wheels
 ENV NODE_ENV=production \
     PORT=8080 \
-    SIMFORGE_CARLA_BINARY=/usr/local/bin/simforge-oss-carla-api \
+    SIMFORGE_CARLA_BINARY=/usr/local/bin/simforge-oss-carla-exec \
     SIMFORGE_SCRATCH_DIR=/scratch \
     SIMFORGE_CARLA_BLUEPRINT_ID=vehicle.kia.carnival \
     SIMFORGE_CARLA_BLUEPRINT_CLASS=/Game/Carla/Blueprints/Vehicles/KiaCarnival2025/BP_KiaCarnival2025.BP_KiaCarnival2025_C \

@@ -93,15 +93,15 @@ export class ScenarioValidationError extends Error {
   }
 }
 
-/** A document could not be migrated to the current schema version. */
-export class ScenarioMigrationError extends Error {
-  override readonly name = 'ScenarioMigrationError';
-  /** The version found in the input, when one could be read. */
-  readonly fromVersion: number | undefined;
+/** A document is not a format/version this build reads. */
+export class ScenarioFormatError extends Error {
+  override readonly name = 'ScenarioFormatError';
+  /** The `scenarioVersion` found in the input, when one could be read. */
+  readonly version: number | undefined;
 
-  constructor(message: string, fromVersion?: number) {
+  constructor(message: string, version?: number) {
     super(message);
-    this.fromVersion = fromVersion;
+    this.version = version;
   }
 }
 

@@ -14,7 +14,7 @@ import type {
   HifiPreviewProvenance,
   HifiPreviewRecord,
   HifiPreviewStatus,
-} from "./contracts";
+} from "@simforge-oss/studio-ui/lib/hifi-preview/contracts";
 
 type RequestRow = {
   id: string;

@@ -82,10 +82,13 @@ roles); findings → exit 2. `export` formats: `xosc-1.4`, `xosc-1.3-esmini`,
 
 ## Determinism rules
 
-- The engine is fixed-step **20 ms**, pure TypeScript; headless CLI and editor
-  preview run the same engine byte-for-byte.
-- Same template × site × seed ⇒ byte-identical artifacts. Never use wall-clock
-  seeds; pass `--seed` (or `--draws` for the seeded matrix).
+- Execute the fixed-step **20 ms** runtime through the native Rust or browser
+  WASM bindings; never fall back to the retired TypeScript simulator.
+- Replay identity is scoped to the pinned runtime, backend, maps and assets.
+  Cross-host numerical conformance and cross-backend sensor fidelity are
+  separate qualification gates, not assumed byte identity.
+- Same pinned inputs × template × site × seed ⇒ replayable artifacts. Never use
+  wall-clock seeds; pass `--seed` (or `--draws` for the seeded matrix).
 - `template new` is a deterministic generator (fixed timestamps); stamp real
   times on first save.
 - Traces are gzipped and hash-pinned; `evidence verify` proves an instance and
@@ -93,6 +96,9 @@ roles); findings → exit 2. `export` formats: `xosc-1.4`, `xosc-1.3-esmini`,
 
 ## Docs
 
+- `docs/situation-authoring.md` — current situation-first experiment: gateway
+  identity, owned Blender workbench, C/D v2 benchmark, automated ensembles and
+  the replayable corpus.
 - `docs/agent-authoring-architecture.md` — the layer stack and build contract.
 - `docs/simcloud-convergence.md` — canonical ownership and the local-to-product
   flow.

@@ -1,0 +1,1663 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "b37a167ed0e237e9ec4081d89b815212a7f048310cb29e1c1fc375adc3dadf81",
+  "traceDigest": "b527c6f6f0c7e6533c0832c78af448cc1e4aa4a913ec99e6dcfd355b888ca1f0",
+  "dt": 0.02,
+  "clipSeconds": 16,
+  "warmupSeconds": 0,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 801,
+  "firstT": 0,
+  "lastT": 16,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [
+    "ambient:v1:08a66ba89bb6b32a",
+    "ambient:v1:1a043805f5d71c51",
+    "ambient:v1:1a396801d110ef25",
+    "ambient:v1:1a55772f6caffabd",
+    "ambient:v1:1cb05071b37d646e",
+    "ambient:v1:1d4d520116818e5f",
+    "ambient:v1:26958c70820655b2",
+    "ambient:v1:27df9f890fd0e7ba",
+    "ambient:v1:3015fa813b0dac91",
+    "ambient:v1:35694b64d073e44a",
+    "ambient:v1:3b0ce2668dbf4ce4",
+    "ambient:v1:3d410544e4587069",
+    "ambient:v1:428c07314c7d43c1",
+    "ambient:v1:441470939836af07",
+    "ambient:v1:448db56eb18d9d4a",
+    "ambient:v1:48bad5022550e100",
+    "ambient:v1:49652dec967d6539",
+    "ambient:v1:4ac67eff8deb36b7",
+    "ambient:v1:4bd6ee99b4204049",
+    "ambient:v1:52410d2ab7c58411",
+    "ambient:v1:554838e5d43d1482",
+    "ambient:v1:5ae43b0b0c5089c0",
+    "ambient:v1:5c9f1b14593f9348",
+    "ambient:v1:5f929efa32516244",
+    "ambient:v1:64e6eb39fc66bc8b",
+    "ambient:v1:678c104ffc703b2a",
+    "ambient:v1:7232ad99ed9af390",
+    "ambient:v1:8a0dd8d86e3145eb",
+    "ambient:v1:9aff90beeee72591",
+    "ambient:v1:9b57a2ab1818582c",
+    "ambient:v1:9e261e7c8d16c54f",
+    "ambient:v1:a26e9cc5a495a828",
+    "ambient:v1:a9a28f531ce11158",
+    "ambient:v1:affc8915bcd9cdd4",
+    "ambient:v1:b17155134bd8f710",
+    "ambient:v1:c805d44fdb576872",
+    "ambient:v1:d48ba09f9d6037c3",
+    "ambient:v1:d7f637eca4d64b65",
+    "ambient:v1:d976b81858ab133b",
+    "ambient:v1:e4c64eae21a40b53"
+  ],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ambient:v1:08a66ba89bb6b32a": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "van"
+      },
+      "ambient:v1:1a043805f5d71c51": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "ambient:v1:1a396801d110ef25": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:1a55772f6caffabd": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "motorcycle"
+      },
+      "ambient:v1:1cb05071b37d646e": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:1d4d520116818e5f": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "ambient:v1:26958c70820655b2": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:27df9f890fd0e7ba": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "ambient:v1:3015fa813b0dac91": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:35694b64d073e44a": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:3b0ce2668dbf4ce4": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:3d410544e4587069": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:428c07314c7d43c1": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:441470939836af07": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:448db56eb18d9d4a": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "van"
+      },
+      "ambient:v1:48bad5022550e100": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "ambient:v1:49652dec967d6539": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:4ac67eff8deb36b7": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:4bd6ee99b4204049": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:52410d2ab7c58411": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:554838e5d43d1482": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:5ae43b0b0c5089c0": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:5c9f1b14593f9348": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:5f929efa32516244": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:64e6eb39fc66bc8b": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:678c104ffc703b2a": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "van"
+      },
+      "ambient:v1:7232ad99ed9af390": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:8a0dd8d86e3145eb": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:9aff90beeee72591": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "motorcycle"
+      },
+      "ambient:v1:9b57a2ab1818582c": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:9e261e7c8d16c54f": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:a26e9cc5a495a828": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:a9a28f531ce11158": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:affc8915bcd9cdd4": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:b17155134bd8f710": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:c805d44fdb576872": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      },
+      "ambient:v1:d48ba09f9d6037c3": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:d7f637eca4d64b65": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bus"
+      },
+      "ambient:v1:d976b81858ab133b": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ambient:v1:e4c64eae21a40b53": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "overtaker": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "slow-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ambient:v1:08a66ba89bb6b32a": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.36,
+          "from": "344:0:1",
+          "to": "87:0:-4"
+        },
+        {
+          "t": 8.02,
+          "from": "87:0:-4",
+          "to": "1047:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:1a043805f5d71c51": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.08,
+          "from": "572:0:1",
+          "to": "51:0:1"
+        },
+        {
+          "t": 5.2,
+          "from": "51:0:1",
+          "to": "1067:0:1"
+        },
+        {
+          "t": 10.9,
+          "from": "1067:0:1",
+          "to": "37:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:1a396801d110ef25": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.72,
+          "from": "343:0:1",
+          "to": "87:0:-3"
+        },
+        {
+          "t": 7.12,
+          "from": "87:0:-3",
+          "to": "1035:0:-1"
+        },
+        {
+          "t": 8.74,
+          "from": "1035:0:-1",
+          "to": "26:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:1a55772f6caffabd": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.88,
+          "from": "276:0:-1",
+          "to": "30:0:-5"
+        },
+        {
+          "t": 2.82,
+          "from": "30:0:-5",
+          "to": "500:0:-1"
+        },
+        {
+          "t": 7.8,
+          "from": "500:0:-1",
+          "to": "78:0:-1"
+        },
+        {
+          "t": 9.9,
+          "from": "78:0:-1",
+          "to": "1072:0:-1"
+        },
+        {
+          "t": 11.700000000000001,
+          "from": "1072:0:-1",
+          "to": "51:0:-1"
+        },
+        {
+          "t": 12.64,
+          "from": "51:0:-1",
+          "to": "573:0:-1"
+        },
+        {
+          "t": 14.9,
+          "from": "573:0:-1",
+          "to": "52:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:1cb05071b37d646e": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:1d4d520116818e5f": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 8.38,
+          "from": "71:0:-5",
+          "to": "374:0:-1"
+        },
+        {
+          "t": 15,
+          "from": "374:0:-1",
+          "to": "27:0:4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:26958c70820655b2": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 4.28,
+          "from": "1074:0:1",
+          "to": "110:0:-1"
+        },
+        {
+          "t": 7.12,
+          "from": "110:0:-1",
+          "to": "1298:0:-1"
+        },
+        {
+          "t": 8.66,
+          "from": "1298:0:-1",
+          "to": "89:0:1"
+        },
+        {
+          "t": 11.44,
+          "from": "89:0:1",
+          "to": "863:0:1"
+        },
+        {
+          "t": 13.700000000000001,
+          "from": "863:0:1",
+          "to": "72:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:27df9f890fd0e7ba": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.48,
+          "from": "377:0:-1",
+          "to": "114:0:-3"
+        },
+        {
+          "t": 4.04,
+          "from": "114:0:-3",
+          "to": "549:0:-1"
+        },
+        {
+          "t": 5.3,
+          "from": "549:0:-1",
+          "to": "105:0:-4"
+        },
+        {
+          "t": 6.04,
+          "from": "105:0:-4",
+          "to": "461:0:-1"
+        },
+        {
+          "t": 8.36,
+          "from": "461:0:-1",
+          "to": "22:0:-3"
+        },
+        {
+          "t": 10.52,
+          "from": "22:0:-3",
+          "to": "1003:0:-3"
+        },
+        {
+          "t": 11.540000000000001,
+          "from": "1003:0:-3",
+          "to": "23:0:-3"
+        },
+        {
+          "t": 13.36,
+          "from": "23:0:-3",
+          "to": "877:0:-1"
+        },
+        {
+          "t": 15.18,
+          "from": "877:0:-1",
+          "to": "47:0:-4"
+        },
+        {
+          "t": 15.3,
+          "from": "47:0:-4",
+          "to": "1327:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:3015fa813b0dac91": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 5.36,
+          "from": "352:0:1",
+          "to": "27:0:4"
+        },
+        {
+          "t": 7.1000000000000005,
+          "from": "27:0:4",
+          "to": "127:0:1"
+        },
+        {
+          "t": 9.44,
+          "from": "127:0:1",
+          "to": "109:0:5"
+        },
+        {
+          "t": 11.92,
+          "from": "109:0:5",
+          "to": "344:0:1"
+        },
+        {
+          "t": 13.82,
+          "from": "344:0:1",
+          "to": "87:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:35694b64d073e44a": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:3b0ce2668dbf4ce4": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 7.74,
+          "from": "1073:0:1",
+          "to": "78:0:1"
+        },
+        {
+          "t": 10.08,
+          "from": "78:0:1",
+          "to": "491:0:1"
+        },
+        {
+          "t": 14.780000000000001,
+          "from": "491:0:1",
+          "to": "31:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:3d410544e4587069": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.9400000000000001,
+          "from": "133:0:1",
+          "to": "109:0:4"
+        },
+        {
+          "t": 3.16,
+          "from": "109:0:4",
+          "to": "343:0:1"
+        },
+        {
+          "t": 5.0200000000000005,
+          "from": "343:0:1",
+          "to": "87:0:-3"
+        },
+        {
+          "t": 11.82,
+          "from": "87:0:-3",
+          "to": "1035:0:-1"
+        },
+        {
+          "t": 13.5,
+          "from": "1035:0:-1",
+          "to": "26:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:428c07314c7d43c1": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:441470939836af07": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 4.8,
+          "from": "370:0:1",
+          "to": "114:0:-4"
+        },
+        {
+          "t": 8.28,
+          "from": "114:0:-4",
+          "to": "555:0:-1"
+        },
+        {
+          "t": 9.66,
+          "from": "555:0:-1",
+          "to": "105:0:-5"
+        },
+        {
+          "t": 10.46,
+          "from": "105:0:-5",
+          "to": "463:0:-1"
+        },
+        {
+          "t": 12.74,
+          "from": "463:0:-1",
+          "to": "22:0:-4"
+        },
+        {
+          "t": 14.82,
+          "from": "22:0:-4",
+          "to": "1003:0:-4"
+        },
+        {
+          "t": 15.780000000000001,
+          "from": "1003:0:-4",
+          "to": "23:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:448db56eb18d9d4a": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 5.22,
+          "from": "958:0:1",
+          "to": "84:0:2"
+        },
+        {
+          "t": 5.66,
+          "from": "84:0:2",
+          "to": "884:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:48bad5022550e100": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:49652dec967d6539": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 11.48,
+          "from": "374:0:-1",
+          "to": "27:0:4"
+        },
+        {
+          "t": 12.8,
+          "from": "27:0:4",
+          "to": "127:0:1"
+        },
+        {
+          "t": 15.14,
+          "from": "127:0:1",
+          "to": "109:0:5"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:4ac67eff8deb36b7": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 7.76,
+          "from": "574:0:1",
+          "to": "51:0:1"
+        },
+        {
+          "t": 11.24,
+          "from": "51:0:1",
+          "to": "1073:0:1"
+        },
+        {
+          "t": 14.700000000000001,
+          "from": "1073:0:1",
+          "to": "78:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:4bd6ee99b4204049": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.7800000000000002,
+          "from": "463:0:-1",
+          "to": "22:0:-4"
+        },
+        {
+          "t": 5.44,
+          "from": "22:0:-4",
+          "to": "1003:0:-4"
+        },
+        {
+          "t": 6.58,
+          "from": "1003:0:-4",
+          "to": "23:0:-4"
+        },
+        {
+          "t": 8.6,
+          "from": "23:0:-4",
+          "to": "869:0:-1"
+        },
+        {
+          "t": 10.540000000000001,
+          "from": "869:0:-1",
+          "to": "47:0:-5"
+        },
+        {
+          "t": 10.68,
+          "from": "47:0:-5",
+          "to": "1329:0:-1"
+        },
+        {
+          "t": 11.58,
+          "from": "1329:0:-1",
+          "to": "32:0:-5"
+        },
+        {
+          "t": 15.6,
+          "from": "32:0:-5",
+          "to": "205:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:52410d2ab7c58411": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:554838e5d43d1482": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:5ae43b0b0c5089c0": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.98,
+          "from": "109:0:5",
+          "to": "344:0:1"
+        },
+        {
+          "t": 4.96,
+          "from": "344:0:1",
+          "to": "87:0:-4"
+        },
+        {
+          "t": 12.3,
+          "from": "87:0:-4",
+          "to": "1040:0:-1"
+        },
+        {
+          "t": 13.98,
+          "from": "1040:0:-1",
+          "to": "26:0:-5"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:5c9f1b14593f9348": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:5f929efa32516244": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 6.82,
+          "from": "1284:0:1",
+          "to": "18:0:-8"
+        },
+        {
+          "t": 7.72,
+          "from": "18:0:-8",
+          "to": "380:0:-1"
+        },
+        {
+          "t": 10.02,
+          "from": "380:0:-1",
+          "to": "114:0:-4"
+        },
+        {
+          "t": 12.16,
+          "from": "114:0:-4",
+          "to": "555:0:-1"
+        },
+        {
+          "t": 13.32,
+          "from": "555:0:-1",
+          "to": "105:0:-5"
+        },
+        {
+          "t": 14.040000000000001,
+          "from": "105:0:-5",
+          "to": "463:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:64e6eb39fc66bc8b": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.96,
+          "from": "31:0:-4",
+          "to": "1122:0:-1"
+        },
+        {
+          "t": 2.62,
+          "from": "1122:0:-1",
+          "to": "70:0:-5"
+        },
+        {
+          "t": 4.26,
+          "from": "70:0:-5",
+          "to": "1377:0:-5"
+        },
+        {
+          "t": 10.18,
+          "from": "1377:0:-5",
+          "to": "71:0:-5"
+        },
+        {
+          "t": 13.16,
+          "from": "71:0:-5",
+          "to": "374:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:678c104ffc703b2a": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.92,
+          "from": "70:0:-2",
+          "to": "1377:0:-2"
+        },
+        {
+          "t": 2.36,
+          "from": "1377:0:-2",
+          "to": "71:0:-2"
+        },
+        {
+          "t": 3.34,
+          "from": "71:0:-2",
+          "to": "359:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:7232ad99ed9af390": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 4.5200000000000005,
+          "from": "1293:0:-1",
+          "to": "18:0:-3"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:8a0dd8d86e3145eb": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:9aff90beeee72591": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.38,
+          "from": "31:0:-2",
+          "to": "1115:0:-1"
+        },
+        {
+          "t": 2.36,
+          "from": "1115:0:-1",
+          "to": "70:0:-2"
+        },
+        {
+          "t": 3.74,
+          "from": "70:0:-2",
+          "to": "1377:0:-2"
+        },
+        {
+          "t": 5.62,
+          "from": "1377:0:-2",
+          "to": "71:0:-2"
+        },
+        {
+          "t": 7.4,
+          "from": "71:0:-2",
+          "to": "359:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:9b57a2ab1818582c": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 3.52,
+          "from": "1024:0:-1",
+          "to": "108:0:-1"
+        },
+        {
+          "t": 5.72,
+          "from": "108:0:-1",
+          "to": "120:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:9e261e7c8d16c54f": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:a26e9cc5a495a828": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 1.12,
+          "from": "952:0:-1",
+          "to": "49:0:-1"
+        },
+        {
+          "t": 7.76,
+          "from": "49:0:-1",
+          "to": "276:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:a9a28f531ce11158": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.24,
+          "from": "463:0:-1",
+          "to": "22:0:-4"
+        },
+        {
+          "t": 2.54,
+          "from": "22:0:-4",
+          "to": "1003:0:-4"
+        },
+        {
+          "t": 3.5,
+          "from": "1003:0:-4",
+          "to": "23:0:-4"
+        },
+        {
+          "t": 5.24,
+          "from": "23:0:-4",
+          "to": "869:0:-1"
+        },
+        {
+          "t": 6.98,
+          "from": "869:0:-1",
+          "to": "47:0:-5"
+        },
+        {
+          "t": 7.1000000000000005,
+          "from": "47:0:-5",
+          "to": "1329:0:-1"
+        },
+        {
+          "t": 7.92,
+          "from": "1329:0:-1",
+          "to": "32:0:-5"
+        },
+        {
+          "t": 11.3,
+          "from": "32:0:-5",
+          "to": "185:0:-1"
+        },
+        {
+          "t": 13.540000000000001,
+          "from": "185:0:-1",
+          "to": "15:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:affc8915bcd9cdd4": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 0.4,
+          "from": "70:0:-5",
+          "to": "1373:0:-1"
+        },
+        {
+          "t": 3.58,
+          "from": "1373:0:-1",
+          "to": "82:0:1"
+        },
+        {
+          "t": 6.78,
+          "from": "82:0:1",
+          "to": "1304:0:1"
+        },
+        {
+          "t": 9.26,
+          "from": "1304:0:1",
+          "to": "79:0:1"
+        },
+        {
+          "t": 11.82,
+          "from": "79:0:1",
+          "to": "419:0:1"
+        },
+        {
+          "t": 15.8,
+          "from": "419:0:1",
+          "to": "68:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:b17155134bd8f710": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:c805d44fdb576872": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:d48ba09f9d6037c3": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 8.58,
+          "from": "374:0:-1",
+          "to": "27:0:4"
+        },
+        {
+          "t": 10,
+          "from": "27:0:4",
+          "to": "127:0:1"
+        },
+        {
+          "t": 12.34,
+          "from": "127:0:1",
+          "to": "109:0:5"
+        },
+        {
+          "t": 15.02,
+          "from": "109:0:5",
+          "to": "344:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:d7f637eca4d64b65": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.14,
+          "from": "18:0:-3",
+          "to": "384:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:d976b81858ab133b": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 3.74,
+          "from": "49:0:-1",
+          "to": "276:0:-1"
+        },
+        {
+          "t": 11.56,
+          "from": "276:0:-1",
+          "to": "30:0:-5"
+        },
+        {
+          "t": 13.620000000000001,
+          "from": "30:0:-5",
+          "to": "489:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ambient:v1:e4c64eae21a40b53": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 4.24,
+          "from": "562:0:1",
+          "to": "51:0:1"
+        },
+        {
+          "t": 8.56,
+          "from": "51:0:1",
+          "to": "1073:0:1"
+        },
+        {
+          "t": 12.14,
+          "from": "1073:0:1",
+          "to": "78:0:1"
+        },
+        {
+          "t": 15.24,
+          "from": "78:0:1",
+          "to": "507:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 10.3,
+          "from": "41:0:-1",
+          "to": "1100:0:-1"
+        },
+        {
+          "t": 13.72,
+          "from": "1100:0:-1",
+          "to": "42:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "overtaker": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.62,
+          "from": "1099:0:1",
+          "to": "41:0:1"
+        },
+        {
+          "t": 10.540000000000001,
+          "from": "41:0:1",
+          "to": "41:0:-1"
+        },
+        {
+          "t": 11.42,
+          "from": "41:0:-1",
+          "to": "524:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "slow-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 8.44,
+          "from": "41:0:1",
+          "to": "519:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 0,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:35694b64d073e44a",
+      "laneRsl": "346:0:1",
+      "lateralErrorM": 2.11316895349799,
+      "allowedCenterOffsetM": 1.7840026699666407
+    },
+    {
+      "t": 0,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:5c9f1b14593f9348",
+      "laneRsl": "1073:0:1",
+      "lateralErrorM": 3.2219244498529562,
+      "allowedCenterOffsetM": 2.045464945260856
+    },
+    {
+      "t": 0.28,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:c805d44fdb576872",
+      "laneRsl": "442:0:1",
+      "lateralErrorM": 1.5117379470702055,
+      "allowedCenterOffsetM": 1.5113688055471894
+    },
+    {
+      "t": 0.36,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:8a0dd8d86e3145eb",
+      "laneRsl": "1412:0:-1",
+      "lateralErrorM": 1.8723749234669405,
+      "allowedCenterOffsetM": 1.8650577264905162
+    },
+    {
+      "t": 0.6,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:48bad5022550e100",
+      "laneRsl": "1299:0:-1",
+      "lateralErrorM": 0.5700719314547266,
+      "allowedCenterOffsetM": 0.5664490681976933
+    },
+    {
+      "t": 0.68,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:b17155134bd8f710",
+      "laneRsl": "1074:0:1",
+      "lateralErrorM": 1.0925802743556268,
+      "allowedCenterOffsetM": 1.083565695002116
+    },
+    {
+      "t": 0.8,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:428c07314c7d43c1",
+      "laneRsl": "820:0:1",
+      "lateralErrorM": 1.1474458834706167,
+      "allowedCenterOffsetM": 1.1426758288860817
+    },
+    {
+      "t": 0.84,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:52410d2ab7c58411",
+      "laneRsl": "1412:0:-1",
+      "lateralErrorM": 1.9319626017188805,
+      "allowedCenterOffsetM": 1.9299000832005617
+    },
+    {
+      "t": 1.12,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:1cb05071b37d646e",
+      "laneRsl": "321:0:1",
+      "lateralErrorM": 1.0753910036971261,
+      "allowedCenterOffsetM": 1.0670776416461822
+    },
+    {
+      "t": 1.28,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:9e261e7c8d16c54f",
+      "laneRsl": "374:0:-1",
+      "lateralErrorM": 1.2557423442430318,
+      "allowedCenterOffsetM": 1.213381721551413
+    },
+    {
+      "t": 1.5,
+      "kind": "trigger_fired",
+      "interactionId": "crosses-centerline",
+      "actorId": "overtaker",
+      "verb": "changeLane",
+      "forced": false
+    },
+    {
+      "t": 1.5,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "overtaker",
+      "interactionId": "crosses-centerline",
+      "requestedDurationS": 9.027170211722284,
+      "effectiveDurationS": 9.027170211722284,
+      "displacementM": 4.814490779585218
+    },
+    {
+      "t": 4.0600000000000005,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:554838e5d43d1482",
+      "laneRsl": "1072:0:-1",
+      "lateralErrorM": 0.8005518375263992,
+      "allowedCenterOffsetM": 0.7828617556442028
+    },
+    {
+      "t": 5.01883221385682,
+      "kind": "collision",
+      "a": "ambient:v1:678c104ffc703b2a",
+      "b": "ambient:v1:d7f637eca4d64b65"
+    },
+    {
+      "t": 5.01883221385682,
+      "kind": "crash_disabled",
+      "actorId": "ambient:v1:678c104ffc703b2a",
+      "otherId": "ambient:v1:d7f637eca4d64b65",
+      "reason": "material-collision"
+    },
+    {
+      "t": 5.01883221385682,
+      "kind": "crash_disabled",
+      "actorId": "ambient:v1:d7f637eca4d64b65",
+      "otherId": "ambient:v1:678c104ffc703b2a",
+      "reason": "material-collision"
+    },
+    {
+      "t": 6,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:9b57a2ab1818582c",
+      "laneRsl": "120:0:-1",
+      "lateralErrorM": 1.2934838768200947,
+      "allowedCenterOffsetM": 1.2925842050702618
+    },
+    {
+      "t": 6.24,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:448db56eb18d9d4a",
+      "laneRsl": "884:0:1",
+      "lateralErrorM": 0.8698736276550372,
+      "allowedCenterOffsetM": 0.8655586667737305
+    },
+    {
+      "t": 10,
+      "kind": "trigger_skipped",
+      "interactionId": "returns-opposing",
+      "actorId": "overtaker",
+      "reason": "window_elapsed"
+    },
+    {
+      "t": 10,
+      "kind": "trigger_skipped",
+      "interactionId": "settles-behind-lead",
+      "actorId": "overtaker",
+      "reason": "dependency_skipped"
+    },
+    {
+      "t": 10.52,
+      "kind": "lane_change",
+      "actorId": "overtaker",
+      "fromRsl": "41:0:1",
+      "toRsl": "41:0:-1",
+      "legal": true
+    },
+    {
+      "t": 10.52,
+      "kind": "interaction_completed",
+      "interactionId": "crosses-centerline",
+      "actorId": "overtaker",
+      "finalLateralOffsetM": 0
+    },
+    {
+      "t": 10.52,
+      "kind": "released",
+      "actorId": "overtaker",
+      "axis": "lateral",
+      "interactionId": "crosses-centerline",
+      "reason": "complete"
+    },
+    {
+      "t": 10.64,
+      "kind": "road_departure_prevented",
+      "actorId": "ambient:v1:08a66ba89bb6b32a",
+      "laneRsl": "1047:0:-1",
+      "lateralErrorM": 1.385771095743796,
+      "allowedCenterOffsetM": 1.3825475958964502
+    }
+  ],
+  "metrics": {
+    "collisions": [
+      {
+        "t": 5.01883221385682,
+        "a": "ambient:v1:678c104ffc703b2a",
+        "b": "ambient:v1:d7f637eca4d64b65"
+      }
+    ],
+    "triggerNeverFired": [
+      "returns-opposing",
+      "settles-behind-lead"
+    ],
+    "clippedCriticality": false,
+    "ticksSimulated": 801,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "ego",
+        "overtaker"
+      ],
+      [
+        "ego",
+        "slow-vehicle"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

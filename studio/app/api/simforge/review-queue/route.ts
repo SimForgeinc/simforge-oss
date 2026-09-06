@@ -2,7 +2,7 @@ import { connection, NextResponse, type NextRequest } from "next/server";
 import {
   SCENARIO_REVIEW_QUEUE_MAX_PAGE_SIZE,
   SCENARIO_REVIEW_QUEUE_PAGE_SIZE,
-} from "@/app/lib/scenario/review-contracts";
+} from "@simforge-oss/studio-ui/lib/scenario/review-contracts";
 import { listScenarioReviewQueue } from "@/app/lib/scenario/review-store";
 import {
   requireScenarioContext,

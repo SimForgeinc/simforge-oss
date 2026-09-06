@@ -9,8 +9,8 @@
  * The output rides existing draft-schema fields:
  *   - `spawnPoint` → `ScenarioEditorActorDraft.spawn_point`
  *   - `waypoints[1..n]` → `ScenarioEditorActorDraft.timed_waypoints`
- *   - callers set `placement_mode: "timed_path"` and `autopilot: false`,
- *     so the CARLA worker's path controller drives the planned polyline.
+ *   - callers set `placement_mode: "timed_path"`, so the base clip follows the
+ *     path and the CARLA worker's path controller drives the planned polyline.
  *
  * The planner consumes a small, radius-bounded projection of the
  * runtime-bound XODR topology index. `lane-graph.ts` keeps the bounded

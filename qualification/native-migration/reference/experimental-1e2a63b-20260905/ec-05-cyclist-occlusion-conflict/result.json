@@ -1,0 +1,103 @@
+{
+  "id": "ec-05-cyclist-occlusion-conflict",
+  "kind": "instance",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "bc2343ec67709e44117879fa92e7ad7faa2bc4604f150a2e278b0dd7e1ab2cd1",
+  "traceDigest": "cd51190bfc04bae8646a849e975597704f84162e6679b31a7b315804ea7d208d",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 139.382803,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 9.157087999999987,
+      "warm": {
+        "n": 4,
+        "min": 0.824051000000054,
+        "median": 1.0000719999999887,
+        "max": 2.2167759999999817,
+        "mean": 1.2602427500000033
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 285.78852400000005,
+      "warm": {
+        "n": 4,
+        "min": 0.002994999999941683,
+        "median": 0.0038170000000263826,
+        "max": 0.004525000000057844,
+        "mean": 0.003788500000013073
+      }
+    },
+    "simulate": {
+      "cold": 165.827184,
+      "warm": {
+        "n": 4,
+        "min": 76.21674799999994,
+        "median": 87.94897300000008,
+        "max": 104.43900499999995,
+        "mean": 89.13842475000001
+      }
+    },
+    "digest": {
+      "cold": 22.334640000000036,
+      "warm": {
+        "n": 4,
+        "min": 17.58979700000009,
+        "median": 20.621195,
+        "max": 22.442319999999995,
+        "mean": 20.31862675000002
+      }
+    },
+    "serialize": {
+      "cold": 32.477097999999955,
+      "warm": {
+        "n": 4,
+        "min": 18.711940000000027,
+        "median": 20.88820949999996,
+        "max": 26.975748000000067,
+        "mean": 21.866026750000003
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 9,
+  "issues": 3,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "1a9ed1eb72741f1866ceb58b5ad2f48f51a91cff73f25da60adeedf3b6e76a9a",
+    "traceDigest": "b29a2e7aaad31a82f7f278570e392c72965e67e5fb0d74b8c31659bdcba6644b",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.pedestrian.laneTransitions",
+        "events.2"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

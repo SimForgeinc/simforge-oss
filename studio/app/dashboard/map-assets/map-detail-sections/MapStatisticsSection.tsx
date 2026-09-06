@@ -3,7 +3,7 @@
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
 import { MapStatsDisplay } from "./MapStatsDisplay";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the MapStatisticsSection component. */
 type MapStatisticsSectionProps = {

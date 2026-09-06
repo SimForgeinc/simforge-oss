@@ -26,12 +26,12 @@
  *   start trigger as a named condition.
  */
 
-import { laneFrameSign } from "../scenario-behavior";
+import { laneTravelIncreasesSByConvention } from "@simforge-oss/maps/topology";
 import type {
   BehaviorAction,
   BehaviorActorRef,
   BehaviorWaypoint,
-} from "../scenario-behavior";
+} from "@simforge-oss/scenario/contracts";
 import {
   attrNumber,
   attrString,
@@ -40,6 +40,30 @@ import {
   descendantEl,
   type XmlElement,
 } from "../xosc/xml-dom";
+
+/**
+ * Sign converting a TRAVEL-relative lateral value to the lane REFERENCE-LINE
+ * frame, and back — it is its own inverse.
+ *
+ * Every lateral value in the behavior schema is relative to the way the actor
+ * drives: `offset_m` positive is the driver's left, `lane_change`/`cut_in`
+ * `side: "left"` is the driver's left. OpenSCENARIO expresses both against the
+ * lane reference line, and OpenDRIVE's left-side convention runs positive-id
+ * lanes AGAINST +s. On those lanes the frames are mirror images.
+ *
+ * Measured (esmini v3.1.0, Munich_Phase_1A, actor on lane +2): an authored
+ * +1.2 m emitted unchanged executed 1.2 m to the driver's RIGHT, and a
+ * `cut_in` authored to the left moved the actor away from its target and across
+ * the road centre line onto lane -1.
+ *
+ * Lane-id sign is a property of the MAP, not the scenario: Belmont stores
+ * 342/342 positive-id driving lanes against travel, Munich 195/195, and 0/194
+ * and 0/344 of their negative-id lanes. So this is a convention conversion, not
+ * a per-map calibration.
+ */
+export function laneFrameSign(laneId: number | null | undefined): 1 | -1 {
+  return laneTravelIncreasesSByConvention(laneId) ? 1 : -1;
+}
 
 /** The writer's comfortable ramp for an unqualified speed change (m/s²). */
 const DEFAULT_SPEED_RATE_MPS2 = 3;

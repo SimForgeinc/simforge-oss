@@ -1,29 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { externalActorToNetwork, toNetwork, toWorld, transformPackedStatesToWorld } from './coordinateTransform';
+import { externalActorToNetwork, transformPackedStatesToWorld } from './coordinateTransform';
 
 const transform = { translationX: 100, translationY: -40, rotationDegrees: 90, scale: 2, invertY: false };
 
 describe('SUMO network/world coordinates', () => {
-  it('round-trips points through map registration', () => {
-    const world = toWorld(4, -3, transform);
-    const network = toNetwork(world.x, world.y, transform);
-    expect(network.x).toBeCloseTo(4);
-    expect(network.y).toBeCloseTo(-3);
-  });
-
-  it('reflects OpenDRIVE y into renderer z without reflecting x', () => {
+  it('reflects packed OpenDRIVE y into scene z without reflecting x', () => {
     const reflected = { translationX: 352, translationY: -1482, rotationDegrees: 0, scale: 1, invertY: true };
-    expect(toWorld(300, 200, reflected)).toEqual({ x: 652, y: -1682 });
-    expect(toNetwork(652, -1682, reflected)).toEqual({ x: 300, y: 200 });
-  });
-
-  it('keeps Yale SUMO output and authored-proxy input in one scene frame', () => {
-    const yale = { translationX: 352.19, translationY: -1482.44, rotationDegrees: 0, scale: 1, invertY: true };
-    const rendered = toWorld(200, 100, yale);
-    expect(rendered).toEqual({ x: 552.19, y: -1582.44 });
-    const network = toNetwork(rendered.x, rendered.y, yale);
-    expect(network.x).toBeCloseTo(200, 9);
-    expect(network.y).toBeCloseTo(100, 9);
+    const floats = new Float32Array(8);
+    floats[1] = 300;
+    floats[2] = 200;
+    transformPackedStatesToWorld(floats.buffer, 1, reflected);
+    expect(floats[1]).toBe(652);
+    expect(floats[2]).toBe(-1682);
   });
 
   it('mirrors an authored Yale actor onto the same network point and heading', () => {

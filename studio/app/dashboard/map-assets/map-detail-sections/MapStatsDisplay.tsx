@@ -7,7 +7,7 @@ import type {
   MapStats,
 } from "@simforge-oss/studio-shared";
 import { Route, Gauge, PersonStanding, Bike, SquareParking, GitFork, ArrowUpDown, ChevronRight, ChevronsUpDown, Database } from "lucide-react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 function fmt(n: number | undefined): string {
   if (n == null) return "—";

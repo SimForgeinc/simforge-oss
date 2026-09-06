@@ -4,8 +4,8 @@
 # Two identical lockstep runs (scripted straight + one left turn), then:
 #   1. bag structure checks per run (clock monotonic, TF valid, counts)
 #   2. digest equality across the two runs (byte-stable sim trace)
-#   3. replay assert: recorded action channel re-fed into a fresh env-server
-#      session must reproduce the recorded digest
+#   3. replay assert: recorded action channel re-fed into a fresh native
+#      episode session must reproduce the recorded digest
 #
 # Usage: smoke_test.sh [RUN_DIR]   (default /tmp/sf-ros2-smoke)
 set -eo pipefail

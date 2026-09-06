@@ -12,8 +12,8 @@
   },
   "aliases": {
     "components": "@/app/components",
-    "utils": "@/app/lib/utils",
-    "ui": "@/app/components/ui",
+    "utils": "@simforge-oss/studio-ui/lib/utils",
+    "ui": "@simforge-oss/studio-ui/components/ui",
     "lib": "@/app/lib",
     "hooks": "@/app/hooks"
   }

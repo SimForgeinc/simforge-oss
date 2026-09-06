@@ -2,10 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
 import {
-  CANONICAL_RENDER_SPEC_V2_SCHEMA,
-  LEGACY_RENDER_SPEC_V2_SCHEMA,
   ScenarioTemplateV2Schema,
-  type RenderSpecV2,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
 import {
@@ -47,8 +44,8 @@ import {
   type JsonValue,
   type ReserveBrowserRecordingArtifactsInput,
   type UpdateBrowserRecordingProgressInput,
-} from "./recording-contracts";
-import { simforgeEnv } from "@/lib/compat-env";
+} from "@simforge-oss/studio-ui/lib/scenario/recording-contracts";
+import { simforgeEnv } from "@/lib/simforge-env";
 
 const RECORDING_SESSION_TTL_SECONDS = 20 * 60;
 const SUPPORTED_V3_ARTIFACTS = new Set([
@@ -103,27 +100,9 @@ function artifactIdentity(artifact: DeclaredRecordingArtifact): string {
     : artifact.role;
 }
 
-function declaredLegacyV2Artifacts(renderSpec: RenderSpecV2): DeclaredRecordingArtifact[] | null {
-  const legacyRoles = new Set(renderSpec.artifacts);
-  return renderSpec.artifacts.length === 2
-    && legacyRoles.has("video")
-    && legacyRoles.has("manifest")
-    ? [
-        { role: "video", sensor: null },
-        { role: "manifest", sensor: null },
-      ]
-    : null;
-}
-
 function declaredRecordingArtifacts(
   renderSpec: CreateBrowserRecordingInput["renderSpec"],
 ): DeclaredRecordingArtifact[] | null {
-  if (
-    renderSpec.schema === LEGACY_RENDER_SPEC_V2_SCHEMA ||
-    renderSpec.schema === CANONICAL_RENDER_SPEC_V2_SCHEMA
-  ) {
-    return declaredLegacyV2Artifacts(renderSpec);
-  }
   if (renderSpec.artifacts.some((artifact) => !SUPPORTED_V3_ARTIFACTS.has(artifact))) {
     return null;
   }
@@ -146,11 +125,7 @@ function declaredRecordingArtifacts(
         },
       });
     }
-    // `.some` rather than `.includes`: on a V2|V3 union tsc collapses the
-    // `includes` parameter to the intersection of both artifact enums, which
-    // excludes "sensorArchive" even though V3 (the only branch reaching here)
-    // declares it.
-    if (!isCamera && renderSpec.artifacts.some((artifact) => artifact === "sensorArchive")) {
+    if (!isCamera && renderSpec.artifacts.includes("sensorArchive")) {
       declared.push({
         role: "sensor_archive",
         sensor: {

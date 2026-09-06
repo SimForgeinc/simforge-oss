@@ -1,19 +1,19 @@
 /**
  * `simforge simulate <instance> [--trace out.trace.json.gz]`.
  *
- * One engine pass. `guards: 'collect'` rather than `'throw'`: a scenario that
- * fails a feasibility guard is still worth simulating — the resulting metrics
- * are how you tell "the runway is 8 m short" from "the runway is 200 m short".
+ * One native engine pass. Feasibility guards are collected, not thrown: a
+ * scenario that fails a guard is still worth simulating — the resulting
+ * metrics are how you tell "the runway is 8 m short" from "200 m short".
  */
 
 import path from 'node:path';
 
-import { runSimulation, traceDigest, type SimTrace } from '@simforge-oss/engine';
+import type { SimTrace } from '@simforge-oss/engine';
+import { parseTrace, runSimulation } from '@simforge-oss/engine/node';
+import { loadMap, readInstance, writeTraceFile } from '@simforge-oss/compiler/node';
 
 import { EXIT } from '../errors.js';
-import { loadMap } from '@simforge-oss/compiler/node';
 import { emit, emitLines, fixed, pad } from '../output.js';
-import { readInstance, writeTraceFile } from '@simforge-oss/compiler/node';
 
 export interface SimulateOptions {
   readonly file: string;
@@ -85,17 +85,19 @@ function round(value: number): number {
 export async function simulate(options: SimulateOptions): Promise<number> {
   const instance = await readInstance(options.file);
   const bundle = await loadMap(instance.input.mapId);
-  const result = runSimulation(instance.input, { graph: bundle.graph, guards: 'collect' });
+  const result = runSimulation(instance.input, { graph: bundle.graph });
+  const trace = parseTrace(result.trace);
+  const digest = trace.digest();
 
   if (options.trace) {
-    await writeTraceFile(options.trace, result.trace);
+    await writeTraceFile(options.trace, trace);
   }
 
   const payload = {
     file: options.file,
     mapId: instance.input.mapId,
     header: result.trace.header,
-    traceDigest: traceDigest(result.trace),
+    traceDigest: digest,
     metrics: metricsSummary(result.trace),
     events: countEvents(result.trace),
     issues: result.issues,
@@ -109,7 +111,7 @@ export async function simulate(options: SimulateOptions): Promise<number> {
     const m = result.trace.metrics;
     const lines = [
       `${options.file} on ${instance.input.mapId} — ${result.trace.ticks.t.length} recorded ticks, engine ${result.trace.header.engineVersion}`,
-      `inputHash ${result.trace.header.inputHash.slice(0, 16)}…  traceDigest ${traceDigest(result.trace).slice(0, 16)}…`,
+      `inputHash ${result.trace.header.inputHash.slice(0, 16)}…  traceDigest ${digest.slice(0, 16)}…`,
       '',
       `minTTC              ${m.minTTC ? `${fixed(m.minTTC.value)} s at t=${fixed(m.minTTC.t)} s (${m.minTTC.pair.join(' / ')})` : '— (no pair ever closed)'}`,
       `minDistance         ${m.minDistance

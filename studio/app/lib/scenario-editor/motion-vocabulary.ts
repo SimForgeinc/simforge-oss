@@ -36,9 +36,11 @@
  */
 
 import type {
-  BaselineChoice,
   BehaviorAction,
   BehaviorActionKind,
+} from "@simforge-oss/scenario/contracts";
+import type {
+  BaselineChoice,
   ScenarioEditorActorDraft,
 } from "@simforge-oss/studio-shared";
 

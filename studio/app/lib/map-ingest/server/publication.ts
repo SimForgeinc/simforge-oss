@@ -406,7 +406,7 @@ export async function publishUploadedMapVersion(
          AND coordinate_system_sha256 = :coordinate_system_sha256
          AND asset_catalog_version_id = :asset_catalog_version_id
          AND descriptor->>'browserClosureSha256' = :closure_sha256
-         AND (:registry_release_digest IS NULL
+         AND (CAST(:registry_release_digest AS text) IS NULL
            OR descriptor->>'registryReleaseDigest' = :registry_release_digest)`,
       {
         id: plan.mapVersionId,

@@ -23,7 +23,7 @@
  * nothing here: `isRisingSimulationTime` has to test the family too, and does.
  */
 
-import type { BehaviorActorRef, BehaviorSignalState, BehaviorTrigger } from "../scenario-behavior";
+import type { BehaviorActorRef, BehaviorSignalState, BehaviorTrigger } from "@simforge-oss/scenario/contracts";
 import { attrNumber, attrString, childEl, descendantEl, type XmlElement } from "../xosc/xml-dom";
 
 /** The writer's lamp strings, read backwards. A colour word is not accepted. */

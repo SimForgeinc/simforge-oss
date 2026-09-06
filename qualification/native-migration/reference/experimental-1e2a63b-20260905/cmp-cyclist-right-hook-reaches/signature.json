@@ -1,0 +1,174 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+  "traceDigest": "8561896ee99d412fdc3352d4a937ff0d1f4ad1a45fa2b61fca28d0cc9c7ce70f",
+  "dt": 0.02,
+  "clipSeconds": 14,
+  "warmupSeconds": 2,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 701,
+  "firstT": 0,
+  "lastT": 14,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "cyclist": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "bicycle"
+      },
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "cyclist": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 14
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 5.64,
+          "from": "109:0:5",
+          "to": "344:0:1"
+        },
+        {
+          "t": 12.34,
+          "from": "344:0:1",
+          "to": "87:0:-4"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 14
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 6.4,
+          "from": "109:0:5",
+          "to": "329:0:1"
+        },
+        {
+          "t": 11.16,
+          "from": "329:0:1",
+          "to": "76:0:1"
+        },
+        {
+          "t": 12.38,
+          "from": "76:0:1",
+          "to": "904:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {
+    "signal:1432": {
+      "initial": "green",
+      "transitions": [
+        {
+          "t": 2,
+          "from": "green",
+          "to": "yellow"
+        },
+        {
+          "t": 5,
+          "from": "yellow",
+          "to": "red"
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "t": 1,
+      "kind": "trigger_fired",
+      "interactionId": "ego-fails-to-yield-cyclist",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 1,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "rules.collisionAvoidance",
+      "value": false
+    },
+    {
+      "t": 1,
+      "kind": "trigger_fired",
+      "interactionId": "ego-indicates-right",
+      "actorId": "ego",
+      "verb": "set",
+      "forced": false
+    },
+    {
+      "t": 1,
+      "kind": "state_set",
+      "actorId": "ego",
+      "key": "lights.indicator",
+      "value": "right"
+    },
+    {
+      "t": 5.4,
+      "kind": "trigger_fired",
+      "interactionId": "ego-turns-right",
+      "actorId": "ego",
+      "verb": "route",
+      "forced": false
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [],
+    "clippedCriticality": false,
+    "ticksSimulated": 701,
+    "minTTCPair": [
+      "cyclist",
+      "ego"
+    ],
+    "minDistancePairs": [
+      [
+        "cyclist",
+        "ego"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

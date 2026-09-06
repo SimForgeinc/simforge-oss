@@ -1,0 +1,115 @@
+{
+  "id": "cmp-cyclist-right-hook-reaches",
+  "kind": "compiled",
+  "mapId": "yale-street",
+  "status": "completed",
+  "inputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+  "traceDigest": "8561896ee99d412fdc3352d4a937ff0d1f4ad1a45fa2b61fca28d0cc9c7ce70f",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 148.014197,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 15.777432000000005,
+      "warm": {
+        "n": 4,
+        "min": 1.0487909999999374,
+        "median": 1.079260999999974,
+        "max": 1.5219959999999446,
+        "mean": 1.1823272499999575
+      }
+    },
+    "compile": {
+      "cold": 989.0843970000001,
+      "warm": {
+        "n": 4,
+        "min": 2.270477000000028,
+        "median": 3.126720999999975,
+        "max": 10.31213600000001,
+        "mean": 4.709013749999997
+      }
+    },
+    "mapLoad": {
+      "cold": 302.607895,
+      "warm": {
+        "n": 4,
+        "min": 0.004238000000214015,
+        "median": 0.004468999999971857,
+        "max": 0.004819999999881475,
+        "mean": 0.004499000000009801
+      }
+    },
+    "simulate": {
+      "cold": 143.38897399999996,
+      "warm": {
+        "n": 4,
+        "min": 67.55497300000002,
+        "median": 74.11450649999995,
+        "max": 79.086546,
+        "mean": 73.71763299999998
+      }
+    },
+    "digest": {
+      "cold": 13.911673999999948,
+      "warm": {
+        "n": 4,
+        "min": 8.380942999999888,
+        "median": 10.101784500000008,
+        "max": 13.055200000000013,
+        "mean": 10.40992799999998
+      }
+    },
+    "serialize": {
+      "cold": 27.7014200000001,
+      "warm": {
+        "n": 4,
+        "min": 12.737654999999904,
+        "median": 14.677156999999852,
+        "max": 16.68414400000006,
+        "mean": 14.694028249999917
+      }
+    }
+  },
+  "tickCount": 701,
+  "events": 5,
+  "issues": 0,
+  "compileIdentity": {
+    "siteId": "810c8b2fbab4be67",
+    "siteScore": 1,
+    "degradation": "Exact match: every clause and role bound without relaxation.",
+    "inputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+    "instanceId": "810c8b2fbab4be67#-1",
+    "replayKey": {
+      "templateId": "cyclist-right-hook",
+      "templateVersion": 2,
+      "templateDigest": "b531127aa64d3e84",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "810c8b2fbab4be67",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.6.0",
+      "paramSeed": "native-migration-reference-2026-09-05",
+      "drawIndex": -1,
+      "ambientProfileHash": "none"
+    },
+    "feasible": true,
+    "notes": [
+      {
+        "path": "signalPrograms",
+        "reason": "5 physical map signal head(s) bound as 1 logical program(s) to junction 303 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
+      }
+    ],
+    "expectedInputHash": "6bd64f6519fd2b1594e232a9391b07782d6fa224c258848cdebfbfdcf57ce43a",
+    "matchesExpectedInputHash": true
+  },
+  "recordedTrace": null
+}

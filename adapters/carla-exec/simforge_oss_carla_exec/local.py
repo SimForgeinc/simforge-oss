@@ -41,9 +41,7 @@ from .runtime.executor import execute_lease, filesystem_validator
 # historical name retained for stored-data compat
 DEFAULT_XSD = Path(__file__).parent / "assets" / "OpenSCENARIO.xsd"
 INTENT_SCHEMA = "simforge.render-intent/v1"
-# historical name retained for stored-data compat
-HISTORICAL_INTENT_SCHEMA = "uniscenario.render-intent/v1"
-HISTORICAL_RENDER_SPEC_V3_SCHEMA = "uniscenario.render-spec/v3"
+RENDER_SPEC_V3_SCHEMA = "simforge.render-spec/v3"
 INPUT_PACKAGE_SCHEMA_FIELDS = {"intentSha256", "executionPackageControlSha256", "inputs"}
 
 
@@ -304,8 +302,8 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
     if not isinstance(value, Mapping) or set(value) not in (
         {"schema", "sources", "clip", "artifacts", "capabilityIntent", "authoredEnvironment"},
         {"schema", "sources", "clip", "video", "artifacts", "capabilityIntent", "authoredEnvironment"},
-    ) or value.get("schema") not in {"simforge.render-spec/v3", HISTORICAL_RENDER_SPEC_V3_SCHEMA}:
-        raise ContractError("renderSpec must be a strict simforge.render-spec/v3")
+    ) or value.get("schema") != RENDER_SPEC_V3_SCHEMA:
+        raise ContractError(f"renderSpec must be a strict {RENDER_SPEC_V3_SCHEMA}")
     sources, clip, artifacts = value["sources"], value["clip"], value["artifacts"]
     if not isinstance(sources, list) or not 1 <= len(sources) <= MAX_SENSOR_COUNT:
         raise ContractError(f"renderSpec.sources must contain 1..{MAX_SENSOR_COUNT} sources")
@@ -534,7 +532,7 @@ def _intent_lease(
     output_dir: Path,
 ) -> tuple[Any, dict[str, Path]]:
     expected_fields = {"schema", "intentId", "executionPackage", "scenarioRevision", "renderSpec", "sensorHosts", "assets", "seed"}
-    if set(intent) != expected_fields or intent.get("schema") not in {INTENT_SCHEMA, HISTORICAL_INTENT_SCHEMA}:
+    if set(intent) != expected_fields or intent.get("schema") != INTENT_SCHEMA:
         raise ContractError(f"render intent must use strict {INTENT_SCHEMA} fields")
     intent_id = intent.get("intentId")
     revision = intent.get("scenarioRevision")
@@ -1035,7 +1033,7 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="simforge-oss-carla-api")
+    parser = argparse.ArgumentParser(prog="simforge-oss-carla-exec")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=2000)
     commands = parser.add_subparsers(dest="command", required=True)

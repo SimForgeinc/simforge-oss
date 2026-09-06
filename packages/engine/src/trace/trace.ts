@@ -11,33 +11,19 @@
  *
  * Only `t ∈ [0, clipSeconds]` is recorded. The warm-up prologue is excluded by
  * construction; the state at `t = 0` *is* the prologue's final state.
+ *
+ * Traces are produced, quantised, digested and evaluated by the native runtime
+ * (`@simforge-oss/engine/node`, `@simforge-oss/engine/browser`); this module is
+ * the TypeScript view of that document.
  */
 
-import { quantize } from '../core/math.js';
 import type { SemanticLedger } from '@simforge-oss/scenario';
 import { toSceneXZ } from '../frames.js';
 import type { ActorKind, ControlIndication, Dims, MotionPhysicsMode, OperationalConditions, StaticProp } from '../schema/input.js';
-import {
-  quantizeSensorTracks,
-  type MapDivergenceTrack,
-  type PerceptionMetrics,
-  type SensorTrack,
-} from './sensor-track.js';
+import type { MapDivergenceTrack, PerceptionMetrics, SensorTrack } from './sensor-track.js';
 
-/** v4 adds the mandatory lane-relative lateral-offset actor channel. */
+/** The only readable format. v4 carries the mandatory lane-relative lateral-offset channel. */
 export const TRACE_FORMAT_VERSION = 4;
-export const LATERAL_OFFSET_TRACE_VERSION = 4;
-/**
- * Read compatibility is explicit and append-only. v1 is the pre-physics
- * Gallery/evidence envelope; v2 adds physics provenance; v3 adds collision
- * impulses; v4 adds lateral offsets. Unknown versions must fail closed.
- */
-export const READABLE_TRACE_FORMAT_VERSIONS = [1, 2, 3, TRACE_FORMAT_VERSION] as const;
-
-export function isReadableTraceFormatVersion(value: unknown): value is typeof READABLE_TRACE_FORMAT_VERSIONS[number] {
-  return typeof value === 'number'
-    && (READABLE_TRACE_FORMAT_VERSIONS as readonly number[]).includes(value);
-}
 
 /** Decimal places each channel is quantised to before serialisation. */
 export const TRACE_PRECISION = {
@@ -310,8 +296,6 @@ export interface TraceHeader {
   readonly mapId: string;
   /** Engine graph digest (currently source XODR sha256). */
   readonly engineGraphDigest: string;
-  /** @deprecated use engineGraphDigest; kept for older trace consumers. */
-  readonly topologyDigest: string;
   readonly dt: number;
   readonly clipSeconds: number;
   readonly warmupSeconds: number;
@@ -342,6 +326,10 @@ export interface TraceHeader {
   /** Optional catalog-cell provenance attached by batch/materialization layers. */
   readonly catalogSlot?: unknown;
   readonly metricSubject: string | null;
+  /** Ego-control provenance; replay imports do not run the native controller. */
+  readonly ego: {
+    readonly controllerProfile: 'sensor-limited' | 'external-replay';
+  };
   /** Exact hash-covered ambient conditions executed by this trace. */
   readonly operationalConditions?: OperationalConditions;
   /**
@@ -406,81 +394,6 @@ export interface SimTrace {
   readonly semanticLedger?: SemanticLedger;
 }
 
-function quantizeMetricValue(value: unknown): unknown {
-  if (typeof value === 'number') return quantize(value, TRACE_PRECISION.metric);
-  if (Array.isArray(value)) return value.map(quantizeMetricValue);
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, quantizeMetricValue(entry)]),
-    );
-  }
-  return value;
-}
-
-/** Quantise derived floats so trace digests do not encode insignificant ULPs. */
-export function quantizeMetrics(metrics: EpisodeMetrics): EpisodeMetrics {
-  return quantizeMetricValue(metrics) as EpisodeMetrics;
-}
-
-/** Quantise every channel — the last step before a trace is compared or hashed. */
-export function quantizeTrace(trace: SimTrace): SimTrace {
-  const actors: Record<string, ActorTrack> = {};
-  for (const id of Object.keys(trace.ticks.actors).sort()) {
-    const tr = trace.ticks.actors[id]!;
-    actors[id] = {
-      x: tr.x.map((v) => quantize(v, TRACE_PRECISION.position)),
-      y: tr.y.map((v) => quantize(v, TRACE_PRECISION.position)),
-      headingRad: tr.headingRad.map((v) => quantize(v, TRACE_PRECISION.heading)),
-      speedMps: tr.speedMps.map((v) => quantize(v, TRACE_PRECISION.speed)),
-      lateralOffsetM: lateralOffsetChannel(trace.header.traceVersion, id, tr, trace.ticks.t.length)
-        .map((v) => quantize(v, TRACE_PRECISION.position)),
-      ...(tr.motionDirection ? { motionDirection: [...tr.motionDirection] } : {}),
-      laneRsl: [...tr.laneRsl],
-      s: tr.s.map((v) => quantize(v, TRACE_PRECISION.s)),
-      present: [...tr.present],
-      ...(tr.physics ? {
-        physics: Object.fromEntries(
-          Object.entries(tr.physics).map(([key, values]: [string, number[]]) => [key, values.map((v: number) => quantize(v, TRACE_PRECISION.speed))]),
-        ) as unknown as ActorPhysicsTrack,
-      } : {}),
-    };
-  }
-  return {
-    ...trace,
-    ticks: {
-      t: trace.ticks.t.map((v) => quantize(v, TRACE_PRECISION.t)),
-      actors,
-      ...(trace.ticks.signals
-        ? {
-            signals: Object.fromEntries(
-              Object.keys(trace.ticks.signals)
-                .sort()
-                .map((id) => [id, { phase: [...trace.ticks.signals![id]!.phase] }]),
-            ),
-          }
-        : {}),
-      // A raw floating-point confidence product is exactly the kind of thing
-      // that breaks a bit-identical replay comparison, so it is quantised here
-      // with the rest of the channels rather than at the producer.
-      ...(trace.ticks.sensors ? { sensors: quantizeSensorTracks(trace.ticks.sensors) } : {}),
-      ...(trace.ticks.mapDivergence
-        ? {
-            mapDivergence: Object.fromEntries(
-              Object.keys(trace.ticks.mapDivergence)
-                .sort()
-                .map((id) => [id, { ...trace.ticks.mapDivergence![id]!, active: [...trace.ticks.mapDivergence![id]!.active] }]),
-            ),
-          }
-        : {}),
-    },
-    events: trace.events.map((event) => ({ ...event, t: quantize(event.t, TRACE_PRECISION.event) })),
-    metrics: quantizeMetrics(trace.metrics),
-    ...(trace.semanticLedger
-      ? { semanticLedger: quantizeMetricValue(trace.semanticLedger) as SemanticLedger }
-      : {}),
-  };
-}
-
 /** A trace whose tick channels are in the y-up scene frame. */
 export interface SceneTrace {
   readonly header: Omit<TraceHeader, 'frame'> & { readonly frame: 'scene' };
@@ -515,7 +428,7 @@ export function traceToSceneFrame(trace: SimTrace): SceneTrace {
       z,
       headingRad: [...tr.headingRad],
       speedMps: [...tr.speedMps],
-      lateralOffsetM: lateralOffsetChannel(trace.header.traceVersion, id, tr, trace.ticks.t.length),
+      lateralOffsetM: [...tr.lateralOffsetM],
       ...(tr.motionDirection ? { motionDirection: [...tr.motionDirection] } : {}),
       laneRsl: [...tr.laneRsl],
       s: [...tr.s],
@@ -548,33 +461,4 @@ export function traceToSceneFrame(trace: SimTrace): SceneTrace {
     metrics: trace.metrics,
     ...(trace.semanticLedger ? { semanticLedger: trace.semanticLedger } : {}),
   };
-}
-
-/**
- * Resolve the lateral channel at the serialized trace boundary. Versions 1–3
- * predate the channel and deterministically mean lane-centred when it is
- * absent. A present channel is always validated; v4+ requires it.
- */
-function lateralOffsetChannel(
-  traceVersion: number,
-  actorId: string,
-  track: ActorTrack,
-  tickCount: number,
-): number[] {
-  if (!isReadableTraceFormatVersion(traceVersion)) {
-    throw new TypeError(`header.traceVersion ${traceVersion} is not readable`);
-  }
-  const value = (track as unknown as Record<string, unknown>)['lateralOffsetM'];
-  if (value === undefined && traceVersion < LATERAL_OFFSET_TRACE_VERSION) {
-    return Array.from({ length: tickCount }, () => 0);
-  }
-  if (!Array.isArray(value) || value.length !== tickCount) {
-    throw new TypeError(
-      `ticks.actors.${actorId}.lateralOffsetM length ${Array.isArray(value) ? value.length : 'missing'} does not match ticks.t length ${tickCount}`,
-    );
-  }
-  if (value.some((entry) => !Number.isFinite(entry))) {
-    throw new TypeError(`ticks.actors.${actorId}.lateralOffsetM contains a non-finite value`);
-  }
-  return [...value] as number[];
 }

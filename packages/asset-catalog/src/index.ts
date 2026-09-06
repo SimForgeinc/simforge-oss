@@ -23,7 +23,9 @@ export type {
   CatalogEntry,
   CatalogActorClass,
   CatalogAnimationProfile,
+  CatalogOrigin,
   Dims,
+  ExternalAnimationAsset,
   ExternalModelBinding,
   ParamValue,
   PropClass,
@@ -66,6 +68,17 @@ export {
 } from './composites';
 
 export { parseCatalog, parseExternalCatalogEntries } from './schema';
+export {
+  assertGalleryDimensions,
+  DEFAULT_CATALOG_VISUAL_PROFILE,
+  GALLERY_CATALOG,
+  GALLERY_DIMENSION_GATE,
+  getCatalogVisualEntry,
+  installGalleryCatalog,
+  resolveCatalogVisualId,
+  type CatalogVisualProfile,
+} from './gallery';
+
 
 export {
   disposeMaterials,

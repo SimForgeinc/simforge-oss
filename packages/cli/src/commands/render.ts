@@ -39,33 +39,49 @@ async function readJson(path: string): Promise<unknown> {
   }
 }
 
+/**
+ * `--inputs` maps every intent input id to a local file: a bare path, or
+ * `{ path, relativePath }` when the engine binds the id to a closure path
+ * (native map members, whose ids derive from `relativePath`).
+ */
 async function localInputs(
   inputMapPath: string,
   intent: RenderIntentV1,
 ): Promise<ReadonlyMap<string, RenderInputFile>> {
   const raw = await readJson(inputMapPath);
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new CliError('bad_value', '--inputs must name a JSON object');
-  const paths = raw as Record<string, unknown>;
+  const entries = raw as Record<string, unknown>;
   const expected = new Map<string, { sha256: string; sizeBytes: number }>([
     ['scenario.xosc', intent.scenarioRevision.openScenario],
     ...intent.assets.map((asset) => [asset.assetId, asset] as const),
   ]);
   const result = new Map<string, RenderInputFile>();
   for (const [inputId, digest] of expected) {
-    const configuredPath = paths[inputId];
-    if (typeof configuredPath !== 'string' || configuredPath.length === 0) {
+    const configured = entries[inputId];
+    const entry = typeof configured === 'string'
+      ? { path: configured }
+      : configured && typeof configured === 'object' && !Array.isArray(configured)
+        ? configured as { path?: unknown; relativePath?: unknown }
+        : undefined;
+    if (!entry || typeof entry.path !== 'string' || entry.path.length === 0) {
       throw new CliError('missing_argument', `input map is missing "${inputId}"`);
     }
-    const path = isAbsolute(configuredPath) ? configuredPath : resolve(dirname(inputMapPath), configuredPath);
+    if (entry.relativePath !== undefined && (typeof entry.relativePath !== 'string' || entry.relativePath.length === 0)) {
+      throw new CliError('bad_value', `input "${inputId}" relativePath must be a non-empty string`);
+    }
+    const path = isAbsolute(entry.path) ? entry.path : resolve(dirname(inputMapPath), entry.path);
     const actual = await hashFile(path);
     if (actual.sha256 !== digest.sha256 || actual.sizeBytes !== digest.sizeBytes) {
       throw new CliError('input_mismatch', `input ${inputId} does not match render intent`, {
         detail: { expected: digest, actual },
       });
     }
-    result.set(inputId, { inputId, path, ...actual });
+    result.set(inputId, {
+      inputId, path, ...actual,
+      ...(entry.relativePath === undefined ? {} : { relativePath: entry.relativePath }),
+    });
   }
-  const extras = Object.keys(paths).filter((inputId) => !expected.has(inputId));
+  const extras = Object.keys(entries).filter((inputId) => !expected.has(inputId));
   if (extras.length > 0) throw new CliError('bad_value', 'input map contains entries absent from render intent', { detail: { extras } });
   return result;
 }

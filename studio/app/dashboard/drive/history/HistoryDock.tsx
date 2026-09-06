@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Input } from "@/app/components/ui/input";
+import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Card, CardContent } from "@simforge-oss/studio-ui/components/ui/card";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import type { WorldClock, WorldReplayCapabilities, WorldSource } from "@/app/lib/live-world/types";
 import {
   coverageTrackBackground,

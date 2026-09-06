@@ -14,21 +14,21 @@ import type { MapAsset } from "@simforge-oss/studio-shared";
 import {
   TopBarActionsPortal,
   TopBarTrailingPortal,
-} from "@/app/components/TopBarSlot";
-import { Button } from "@/app/components/ui/button";
+} from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
+} from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+} from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { toast } from "sonner";
 import { MapSwitcherDropdown } from "./MapSwitcherDropdown";
 

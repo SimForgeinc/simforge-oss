@@ -1,0 +1,154 @@
+{
+  "schema": "simforge.native-migration.protocols/v1",
+  "rule": "These protocols are distinct from the simulation reference in scenarios.json and from each other. None is executed by harness.mjs; `status` only reports whether their retained evidence is reachable and hashes it. Historical figures are evidence of the revision that produced them, never a pass for the native port. Absence of measured-twin access is a named blocker, not a reason for synthetic replacement evidence.",
+  "protocols": [
+    {
+      "id": "simulation-reference",
+      "owner": "BaselineIntake (this harness)",
+      "status": "recordable",
+      "description": "TypeScript engine reference over the pinned simulated scenario set (checked-in instances, pinned-site compiles, ambient populations, frozen situation fixtures, threshold-near derivations); discrete-exact plus tolerance-classed numeric comparison against a native candidate. Executed by `harness.mjs record` / `compare`. The frozen TS source for later candidate fa\u00e7ades is the Main-owned copy under /mnt/storage/simforge-native-migration/reference-source; runs against native-backed packages/{engine,compiler,training-env} are candidates, never references.",
+      "evidence": []
+    },
+    {
+      "id": "nurec-original20",
+      "owner": "AUTHOR/PYTHON NuRec work (separate)",
+      "status": "not-run",
+      "description": "Original O2 fidelity protocol over the 20 sample scenes: three SF seeds and three AS runs per scene, majority agreement threshold 16/20 (0.80). Historical inventory records 15/20 (0.75) majority agreement with five both-fail cases; the corrected collection (60 SF episodes) is recorded as not run. Never merge historical agreements with corrected disagreements.",
+      "evidence": [
+        {
+          "role": "historical inventory",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fidelity-preparation/historical-v1/inventory.json"
+        },
+        {
+          "role": "protocol",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fidelity-preparation/historical-v1/protocol.json"
+        },
+        {
+          "role": "corrected collection manifest (not-run)",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fidelity-preparation/corrected-collection-manifest.json"
+        },
+        {
+          "role": "local NuRec port provenance and scope",
+          "path": "renderer/splat/PROVENANCE.json",
+          "relativeToRepo": true
+        },
+        {
+          "role": "complete local scene bundle (one of twenty)",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fixture/007a5809-8a56-40b5-8af5-7e0f65229496"
+        }
+      ]
+    },
+    {
+      "id": "nurec-training24",
+      "owner": "AUTHOR/PYTHON NuRec work (separate)",
+      "status": "not-run",
+      "description": "Training cohort of 24 scenes. Excluded from the O2 original-20 denominator by protocol (includedInO2: false); it is its own qualification and may never substitute for the original-20 gate.",
+      "evidence": [
+        {
+          "role": "protocol trainingCohort clause",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fidelity-preparation/historical-v1/protocol.json"
+        }
+      ]
+    },
+    {
+      "id": "twin-evidence-fork",
+      "owner": "future v2x-digital-twin companion worktree",
+      "status": "blocked",
+      "description": "Measured-twin evidence for the twin fork. Only a lossy public-history API projection (129 production observations) is retained locally; the transaction-consistent SQLite export and calibration lineage are not reachable (Tailscale authorization). Missing rows, frames and calibration are not manufactured.",
+      "evidence": [
+        {
+          "role": "bounded public history response",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/measured-twin-api-v1/response.json"
+        },
+        {
+          "role": "receipt",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/measured-twin-api-v1/receipt.json"
+        },
+        {
+          "role": "external twin source (read-only, separate migration)",
+          "path": "/home/path/v2x-digital-twin"
+        },
+        {
+          "role": "existing OSS v2x truth-stream qualification",
+          "path": "qualification/v2x-truth-stream",
+          "relativeToRepo": true
+        }
+      ]
+    },
+    {
+      "id": "render-qualification",
+      "owner": "GraphicsFrameIdentity / existing render programs",
+      "status": "separate-program",
+      "description": "Renderer output identity and determinism are qualified by the existing golden harness, render-determinism harness and render qualification program, not by the simulation reference. Bake-off timings are workload-specific residency evidence, not native-port predictions.",
+      "evidence": [
+        {
+          "role": "render qualification program",
+          "path": "qualification/render-qualification-program.v1.json",
+          "relativeToRepo": true
+        },
+        {
+          "role": "golden harness",
+          "path": "qualification/golden-harness/golden.mjs",
+          "relativeToRepo": true
+        },
+        {
+          "role": "determinism harness",
+          "path": "qualification/render-determinism/determinism-harness.mjs",
+          "relativeToRepo": true
+        },
+        {
+          "role": "eight-camera conformance",
+          "path": "qualification/eight-camera-conformance.v1.json",
+          "relativeToRepo": true
+        },
+        {
+          "role": "renderer bake-off summary",
+          "path": "/home/path/tmp/renderer-bakeoff-2026-09-04/summary.json"
+        },
+        {
+          "role": "persistent-data summary",
+          "path": "/home/path/tmp/renderer-bakeoff-2026-09-04/persistent-data-summary.json"
+        }
+      ]
+    },
+    {
+      "id": "physics-golden-maneuvers",
+      "owner": "packages/engine physics tests; ArticulatedPhysics for MuJoCo extension",
+      "status": "separate-program",
+      "description": "Backend-neutral golden maneuver suite with explicit provenance (measured-carla, published-data, engine-derived). Planar dynamic-v1 limits are documented in docs/engineering/physics-validation.md; it is not evidence of articulated realism.",
+      "evidence": [
+        {
+          "role": "golden suite v2",
+          "path": "fixtures/physics/golden-maneuvers.v2.json",
+          "relativeToRepo": true
+        },
+        {
+          "role": "planar capability limits",
+          "path": "docs/engineering/physics-validation.md",
+          "relativeToRepo": true
+        }
+      ]
+    },
+    {
+      "id": "situation-authoring-benchmark",
+      "owner": "experiments/agentic-3d (intake) ",
+      "status": "separate-program",
+      "description": "C/D v2 frozen authoring benchmark, ensemble acceptance and replayable corpus. Its runners were imported by this intake; it is a model-authoring qualification, not a runtime port qualification.",
+      "evidence": [
+        {
+          "role": "operating guide",
+          "path": "docs/situation-authoring.md",
+          "relativeToRepo": true
+        },
+        {
+          "role": "frozen v39.5 experiment snapshot",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/frozen-v39.5"
+        },
+        {
+          "role": "frozen briefs (opus5 high v1)",
+          "path": "/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/benchmark-opus5-high-v1"
+        }
+      ]
+    }
+  ]
+}

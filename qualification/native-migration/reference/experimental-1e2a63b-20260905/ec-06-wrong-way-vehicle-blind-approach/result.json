@@ -1,0 +1,107 @@
+{
+  "id": "ec-06-wrong-way-vehicle-blind-approach",
+  "kind": "instance",
+  "mapId": "easterbrook-discovery-school",
+  "status": "completed",
+  "inputHash": "fa26902c1f76938a5a0225b2c7bd158b3e680bd869f48ab232894c41a57dd714",
+  "traceDigest": "63b159da6a482e8339202f833ab094b71abfc9deab17539ad6dcbdda3a6c3dcb",
+  "replayStable": true,
+  "iterations": {
+    "requested": 5,
+    "completed": 5,
+    "failed": 0,
+    "errors": []
+  },
+  "timingMs": {
+    "moduleLoad": {
+      "cold": 149.012813,
+      "warm": null
+    },
+    "instanceLoad": {
+      "cold": 11.395330000000001,
+      "warm": {
+        "n": 4,
+        "min": 0.9311600000000908,
+        "median": 1.2288320000000112,
+        "max": 1.5156569999999192,
+        "mean": 1.2261202500000081
+      }
+    },
+    "compile": {
+      "cold": null,
+      "warm": null
+    },
+    "mapLoad": {
+      "cold": 316.975529,
+      "warm": {
+        "n": 4,
+        "min": 0.003236999999899126,
+        "median": 0.0037490000000843793,
+        "max": 0.005519000000276719,
+        "mean": 0.004063500000086151
+      }
+    },
+    "simulate": {
+      "cold": 653.4160770000001,
+      "warm": {
+        "n": 4,
+        "min": 457.7455,
+        "median": 487.81192199999987,
+        "max": 546.619455,
+        "mean": 494.99719974999994
+      }
+    },
+    "digest": {
+      "cold": 26.940816999999925,
+      "warm": {
+        "n": 4,
+        "min": 22.602712000000338,
+        "median": 22.771278000000166,
+        "max": 24.92993299999989,
+        "mean": 23.26880025000014
+      }
+    },
+    "serialize": {
+      "cold": 48.91098499999998,
+      "warm": {
+        "n": 4,
+        "min": 35.478425000000016,
+        "median": 38.29522900000006,
+        "max": 41.618915000000015,
+        "mean": 38.42194950000004
+      }
+    }
+  },
+  "tickCount": 1001,
+  "events": 13,
+  "issues": 4,
+  "compileIdentity": null,
+  "recordedTrace": {
+    "file": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.trace.json.gz",
+    "engineVersion": "0.4.0",
+    "inputHash": "9778e2561d48f6b383706e2ec8d38c0568f1bc34d223495d0060a3db5f70e968",
+    "traceDigest": "4528ce12c0239f2554d98179d2fe7202cfd81abe77f748e88581c3504429bfd2",
+    "inputHashEqual": false,
+    "traceDigestEqual": false,
+    "discrete": {
+      "pass": false,
+      "mismatches": [
+        "ego",
+        "actors.focus-vehicle.laneTransitions",
+        "actors.following-motorcycle.laneTransitions",
+        "actors.opposing-bus.laneTransitions",
+        "actors.wrong-way-sedan.laneTransitions",
+        "events.length",
+        "events.0",
+        "metrics.revealToConflictPair"
+      ],
+      "inputHashEqual": false,
+      "traceDigestEqual": false,
+      "engineVersion": {
+        "reference": "0.4.0",
+        "candidate": "0.6.0"
+      }
+    },
+    "note": "Historical trace recorded by an earlier engine version; inequality here is retained engine evolution, not a port failure."
+  }
+}

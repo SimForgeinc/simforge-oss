@@ -22,5 +22,5 @@ Studio authoring, headless simulation, replay, native and web rendering, and
 training environments without separate behavioral implementations. SimForge
 Studio runs locally from `studio/` on port 5199; SimForge Cloud consumes the same
 immutable 13-package stack. The Rust SimForge Renderer lives in `renderer/`,
-and distinct CARLA API and CARLA execution adapters support replacement and
-reference-runtime workflows in opposite directions.
+and the CARLA execution adapter runs scenarios in a real CARLA runtime as the
+reference workflow.

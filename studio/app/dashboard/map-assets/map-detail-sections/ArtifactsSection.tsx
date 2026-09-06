@@ -2,7 +2,7 @@
 
 import { ChevronRight, Download, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

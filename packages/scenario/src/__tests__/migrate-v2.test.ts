@@ -1,22 +1,15 @@
 /**
- * v1 → v2 migration.
+ * v1 scene → v2 template conversion.
  *
- * The contract under test is as much about what the migration *refuses* to do
+ * The contract under test is as much about what the conversion *refuses* to do
  * as about what it does: no invented frame coordinates, no fabricated site id,
  * and a note for every piece of work it is handing back to a human.
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { ScenarioMigrationError, ScenarioValidationError } from '../errors.js';
-import { migrate, CURRENT_SCENARIO_VERSION, SCENARIO_MIGRATIONS } from '../migrate.js';
-import {
-  CURRENT_TEMPLATE_VERSION,
-  TEMPLATE_MIGRATIONS,
-  detectScenarioKind,
-  migrateToTemplate,
-  v1ToTemplateV2,
-} from '../migrate-v2.js';
+import { ScenarioFormatError, ScenarioValidationError } from '../errors.js';
+import { detectScenarioKind, migrateToTemplate, readScenarioVersion } from '../migrate-v2.js';
 import { parseScenario, parseTemplate, serializeTemplate } from '../serialize.js';
 import { validateTemplate } from '../validate/index.js';
 import { validScenario } from './fixtures.js';
@@ -47,24 +40,21 @@ function richV1() {
   });
 }
 
-describe('version dispatch', () => {
-  it('leaves the v1 lane untouched', () => {
-    expect(CURRENT_SCENARIO_VERSION).toBe(1);
-    expect(SCENARIO_MIGRATIONS).toHaveLength(0);
-    expect(migrate(validScenario()).migrated).toBe(false);
+describe('format detection', () => {
+  it('reads an integer scenarioVersion and nothing else', () => {
+    expect(readScenarioVersion(validScenario())).toBe(1);
+    expect(readScenarioVersion(ltapTemplateInput())).toBe(2);
+    for (const bad of [null, 42, [], {}, { scenarioVersion: '2' }, { scenarioVersion: 1.5 }]) {
+      expect(readScenarioVersion(bad)).toBeUndefined();
+    }
   });
 
   it('tells a loader which parser a file wants', () => {
     expect(detectScenarioKind(validScenario())).toBe('scene-v1');
     expect(detectScenarioKind(ltapTemplateInput())).toBe('template-v2');
-    for (const bad of [null, 42, [], {}, { scenarioVersion: '2' }]) {
+    for (const bad of [null, 42, [], {}, { scenarioVersion: '2' }, { scenarioVersion: 3 }]) {
       expect(detectScenarioKind(bad)).toBe('unknown');
     }
-  });
-
-  it('declares a chain that ends at v2', () => {
-    expect(CURRENT_TEMPLATE_VERSION).toBe(2);
-    expect(TEMPLATE_MIGRATIONS.map((m) => [m.from, m.to])).toEqual([[1, 2]]);
   });
 
   it('passes a v2 template through unmigrated', () => {
@@ -76,15 +66,24 @@ describe('version dispatch', () => {
   });
 
   it('refuses documents from a newer build', () => {
-    expect(() => migrateToTemplate({ ...validScenario(), scenarioVersion: 9 })).toThrow(
-      ScenarioMigrationError,
-    );
+    try {
+      migrateToTemplate({ ...validScenario(), scenarioVersion: 9 });
+      throw new Error('expected a throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ScenarioFormatError);
+      expect((error as ScenarioFormatError).version).toBe(9);
+    }
   });
 
   it('refuses things that are not scenarios', () => {
-    for (const bad of [null, 42, 'text', [], {}]) {
-      expect(() => migrateToTemplate(bad)).toThrow(ScenarioMigrationError);
+    for (const bad of [null, 42, 'text', [], {}, { scenarioVersion: '1' }]) {
+      expect(() => migrateToTemplate(bad)).toThrow(ScenarioFormatError);
     }
+  });
+
+  it('validates a v1 scene strictly before converting it', () => {
+    const { map: _dropped, ...noMap } = validScenario();
+    expect(() => migrateToTemplate(noMap)).toThrow(ScenarioValidationError);
   });
 });
 
@@ -221,13 +220,6 @@ describe('v1 scene -> v2 template', () => {
   it('keeps document-level extensions', () => {
     const source = { ...richV1(), extensions: { 'tool.x': 1 } };
     expect(migrateToTemplate(source).template.extensions).toEqual({ 'tool.x': 1 });
-  });
-
-  it('fails loudly rather than pinning to nothing when the map block is missing', () => {
-    const { map: _dropped, ...noMap } = validScenario();
-    expect(() => v1ToTemplateV2(noMap as unknown as Record<string, unknown>)).toThrow(
-      /no map; cannot pin/,
-    );
   });
 
   it('reports invalid output through the normal validation error', () => {

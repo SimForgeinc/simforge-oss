@@ -9,22 +9,31 @@ F4 adds *bundles*: one atomic record per sim tick covering ALL rig cameras, so
 a policy runner can consume a calibrated multi-camera frame set zero-copy and
 can never observe a torn (partially written) tick.
 
-## Wire op: `render_bundle` (protocol V2, additive)
+## Wire op: `render_bundle` (protocol V5)
 
-Request (`{i, op:"render_bundle", ...}` over the existing u32-LE
-length-prefixed msgpack socket):
+Request (`{i, op:"render_bundle", ...}` over the u32-LE length-prefixed
+msgpack socket):
 
 | field | type | semantics |
 |---|---|---|
 | `sim_tick` | u64 | bundle identity; becomes `tick_id` of every record |
-| `cameras` | `ServiceCamera[]?` | upserts the retained rig (registration order kept). Omit on the hot loop; the rig persists across calls. `reset_cameras` clears it. |
+| `cameras` | `ServiceCamera[]?` | upserts the retained rig (registration order kept). Omit on the hot loop; the rig persists across calls. `reset_cameras` clears it. A camera re-sent with a different size/FOV/profile is re-registered in place. Mounted (`attach`) cameras exclude their own host actor from their view only. |
+| `lidars`, `radars` | declarations? | upsert the retained CPU sensor rig |
 | `tick_index` | u32? | scene-state frame to apply before rendering (as in `render`) |
-| `passes` | string[]? | subset of `rgb\|id\|depth\|semantic`; default `["rgb"]`. GPU pass set is frozen per camera at first registration. |
+| `passes` | string[]? | subset of `rgb\|id\|depth\|semantic`; default `["rgb"]`. Selected per request: only these are copied off the GPU, and the instance-ID view renders only when `id`/`semantic` is requested. |
+| `device_sensors` | string[]? | cameras whose open device streams are filled by this submission (see Device-resident mode below) |
 
-Response: `{ok, sim_tick, bundle_offset, bundle_len, frames[], server_ms}` —
-`frames[]` are the usual FrameRecords plus `digest` (CRC32/IEEE of payload
-bytes, 8-char lowercase hex). `bundle_offset`/`bundle_len` locate the bundle
-record for `bundle_at`-style consumers and PolicyStep frameBundle refs.
+Response: `{ok, sim_tick, frame, bundle_offset, bundle_len, frames[], device{}, server_ms}`.
+`frame` is the identity of the single GPU submission every camera payload
+was copied from: `{simTick, sceneRevision, rigRevision, generation}`
+(`sceneRevision` bumps on every resident-scene mutation, `rigRevision` on
+camera registration/removal/resize/re-mount, `generation` once per rendered
+iteration). A response never mixes outputs of different submissions and
+never reports a pass that was not rendered by that submission. `frames[]`
+are FrameRecords with a mandatory `digest` (CRC32/IEEE of payload bytes,
+8-char lowercase hex). `bundle_offset`/`bundle_len` locate the bundle record
+for `bundle_at`-style consumers and PolicyStep frameBundle refs. `device`
+maps each requested device sensor to `{stream, slot, generation}`.
 
 Publish order per tick (single writer, deterministic): every camera in rig
 registration order × requested passes in canonical order (rgb, id, depth,
@@ -91,10 +100,69 @@ reader.bundle_at(offset, length)              # from a frameBundle ref
 # Push mode (same process as the RPC driver):
 client = NativeRenderClient(socket_path)
 obs, resp = client.step_bundle(sim_tick, cameras)   # cameras only on first call
+
+# Device-resident mode (service built with `gpu-interop`, same GPU):
+client.open_device_stream("front", ["rgb", "depth"], slots=3, wait_ms=50)
+imported = client.import_device_stream("front")     # SCM_RIGHTS handles -> CUDA
+resp = client.render_bundle(sim_tick, device_sensors=["front"], passes=[])
+with client.lease_device_frame(imported, resp, "front") as lease:
+    rgb = lease.plane("rgb").as_torch()             # GPU tensor on torch's current stream
+    del rgb                                          # slot hands back once no view is alive
+imported.close()                                     # False = deferred until last view dies
+client.close_device_stream("front")
 ```
+
+Device streams copy the camera's rendered planes GPU-locally into a leased
+exportable slot of the same submission; the slot's ready signal is bound
+to that submission. This is a GPU-local copy, not a copy-free alias of the
+render target. Lifetimes (`simforge_native.gpu`):
+
+- `lease.plane(name).as_torch()` registers torch's *current* stream on the
+  renderer's device (ready wait, and that stream joins the release); any
+  other device raises `GpuInteropError` (no-copy API). `lease.wait_on(stream)`
+  registers an extra consumer stream explicitly.
+- `lease.release()` / `with` exit *requests* hand-back and returns `bool`.
+  The release semaphore is signalled only after every `PlaneView`/tensor
+  built from the lease has been dropped, so a retained tensor keeps the
+  slot outstanding on the renderer (bounded backpressure holds: the next
+  bundle waits up to `wait_ms`, then fails explicitly) and its memory valid.
+  `lease.release_requested`, `lease.released`, `lease.live_views` report the state.
+- `ImportedStream.close()` returns `True` when the imports were destroyed
+  immediately, `False` when teardown is deferred until the last view/lease
+  dies (then automatic; `stream.closed`/`stream.torn_down`). Teardown waits
+  on per-lease completion events, never a device-wide sync.
+- The renderer's `close_device_stream(grace_ms)` counts consumer leases still
+  outstanding after the grace; their imported memory stays valid through the
+  consumer's own import.
 
 Zero-copy views pin the mmap: drop views before `reader.close()`.
 `verify=True` raises `TornBundleError` on any digest/liveness failure.
+
+The package depends on `msgpack` (wire codec) and `numpy`. The in-process
+`EmbeddedRenderer` resolves `libsimforge_render.so` from `library=`, then
+`$SIMFORGE_RENDER_LIB`, then `$SIMFORGE_NATIVE_RUNTIME_ROOT/lib/` (default
+`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime`), then the loader
+path; it never probes a source tree.
+
+The renderer's star/Moon plates (`starmap_2020_8k.skytex`,
+`moon_lroc_4k.skytex`, gitignored derivatives built by
+`renderer/tools/prepare_sky_assets.py` from the NASA sources in
+`renderer/render-core/assets/sky/SOURCES.json`) resolve from
+`$SIMFORGE_SKY_ASSETS`, then `$SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky`, then
+the source checkout's `renderer/render-core/assets/sky`. The chosen directory
+must hold `SOURCES.json`; each plate's size and sha256 are checked against it
+and any mismatch or absence fails `SceneApp` construction (service prewarm,
+`EmbeddedRenderer(...)`, job) instead of rendering a starless sky.
+
+**Runner workload `simforge.render-bundle/v1`** — `python -m simforge_native
+job --params P --out-dir D [--resume C]` renders a scene-state stream through
+`EmbeddedRenderer` following the provider job protocol (JSONL `progress` /
+`checkpoint` / `done{artifacts}` on stdout, `error` on stderr, exit
+0/1/2/130). Outputs: `frames/<sensorId>/<pass>/tick-<06d>.{png,bin,ply,csv}`,
+`bundles.jsonl` (per-tick `FrameIdentity` + records), `results.json`,
+`checkpoint/checkpoint-<n>.json`. `python -m simforge_native capabilities`
+prints protocol, passes, the resolved library (path, sha256) and whether it
+was built with `gpu-interop` (`simforge_render_gpu_interop()`).
 
 **TypeScript (studio worker, copying)** — `@simforge-oss/render/native`:
 

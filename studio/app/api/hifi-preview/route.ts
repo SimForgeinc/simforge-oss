@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CreateHifiPreviewSchema } from "@/app/lib/hifi-preview/contracts";
+import { CreateHifiPreviewSchema } from "@simforge-oss/studio-ui/lib/hifi-preview/contracts";
 import { createHifiPreviewRequest } from "@/app/lib/hifi-preview/store";
 import {
   readJson,

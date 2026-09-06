@@ -1,6 +1,6 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryOne, queryRows } from "@/app/lib/db/data-api";
-import type { ScenarioGalleryItemDto } from "./contracts";
+import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
 
 /**
  * Render gallery reads and the hide/unhide mutation.
@@ -39,7 +39,7 @@ const VISIBLE_ONLY = "rj.hidden_at IS NULL";
  * them is unbounded.
  */
 const GALLERY_SELECT = `
-  SELECT rj.id, rj.revision_id, rj.job_mode, rj.job_state, rj.attempt_count,
+  SELECT rj.id, rj.revision_id, rj.job_mode, rj.renderer_engine, rj.job_state, rj.attempt_count,
          rj.failure_code, rj.created_at, rj.completed_at,
          rj.parent_render_job_id, rj.model_family,
          r.document_id, r.content_sha256, r.source_draft_version,
@@ -72,6 +72,7 @@ type GalleryRow = {
   revision_id: string;
   document_id: string | null;
   job_mode: ScenarioGalleryItemDto["jobMode"];
+  renderer_engine: ScenarioGalleryItemDto["rendererEngine"];
   job_state: ScenarioGalleryItemDto["jobState"];
   attempt_count: number;
   failure_code: string | null;
@@ -93,6 +94,7 @@ function galleryItemDto(row: GalleryRow): ScenarioGalleryItemDto {
     revisionId: row.revision_id,
     documentId: row.document_id,
     jobMode: row.job_mode,
+    rendererEngine: row.renderer_engine,
     jobState: row.job_state,
     // `?? null` rather than `|| null`: a genuine 0 percent is meaningful and must survive.
     progressPercent: row.progress_percent === null ? null : Number(row.progress_percent),

@@ -1,7 +1,7 @@
 "use client";
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
-import { cn } from "@/app/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
 import {
   humanizeTag,

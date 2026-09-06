@@ -8,11 +8,10 @@
 
 import path from 'node:path';
 
+import { compileTemplate, findSite, readTemplate, writeJsonFile, type InstanceFile, type MaterializeResult } from '@simforge-oss/compiler/node';
+
 import { EXIT } from '../errors.js';
-import { materialize, type MaterializeResult } from '../materialize.js';
 import { emit, emitLines, fixed, pad } from '../output.js';
-import { findSite } from '@simforge-oss/compiler/node';
-import { readTemplate, writeJsonFile, type InstanceFile } from '@simforge-oss/compiler/node';
 
 export interface InstantiateOptions {
   readonly file: string;
@@ -36,7 +35,7 @@ export function instanceFile(result: MaterializeResult): InstanceFile {
 export async function instantiate(options: InstantiateOptions): Promise<number> {
   const template = await readTemplate(options.file);
   const { bundle, site } = await findSite(template, options.mapId, options.siteId);
-  const result = materialize(template, bundle, site, {
+  const result = compileTemplate(template, bundle, site, {
     ...(options.draw === undefined ? {} : { drawIndex: options.draw }),
     ...(options.seed === undefined ? {} : { seed: options.seed }),
   });

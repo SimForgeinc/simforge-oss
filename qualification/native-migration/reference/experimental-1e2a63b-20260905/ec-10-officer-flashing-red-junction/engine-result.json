@@ -1,0 +1,23 @@
+{
+  "issues": [
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.focus-vehicle.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "focus-vehicle"
+      }
+    },
+    {
+      "code": "traffic_control_route_unbound",
+      "severity": "warning",
+      "path": "actors.pedestrian-group.behavior.route",
+      "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+      "detail": {
+        "actorId": "pedestrian-group"
+      }
+    }
+  ],
+  "arrival": []
+}

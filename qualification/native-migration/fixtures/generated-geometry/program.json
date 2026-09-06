@@ -1,0 +1,1425 @@
+{
+  "situationVersion": 1,
+  "revision": 1,
+  "source": {
+    "id": "map:yale-street",
+    "kind": "authored",
+    "mapId": "yale-street",
+    "artifacts": [
+      {
+        "id": "map.xodr",
+        "uri": "file:///home/path/simforge-oss/dev-assets/yale-street/map.xodr",
+        "sha256": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "kind": "map"
+      },
+      {
+        "id": "topology-index.json.gz",
+        "uri": "file:///home/path/simforge-oss/dev-assets/yale-street/topology-index.json.gz",
+        "sha256": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+        "kind": "map"
+      },
+      {
+        "id": "derived/topology-derived.json.gz",
+        "uri": "file:///home/path/simforge-oss/dev-assets/yale-street/derived/topology-derived.json.gz",
+        "sha256": "0858a7fbbfa23a396e52b18c33e8a48de0bb39778c547c4f0e67f6cb7d2c404b",
+        "kind": "map"
+      },
+      {
+        "id": "derived/locations.json.gz",
+        "uri": "file:///home/path/simforge-oss/dev-assets/yale-street/derived/locations.json.gz",
+        "sha256": "90c66758800c2a43bade4495c947c50c8cf8af4bb9abf9bc2af0c18771cf4f93",
+        "kind": "map"
+      },
+      {
+        "id": "signals.geojson.gz",
+        "uri": "file:///home/path/simforge-oss/dev-assets/yale-street/signals.geojson.gz",
+        "sha256": "d11f6462b977465493d2bd5e680c63b9dded900c45cd6b72a913dd4a1e906029",
+        "kind": "map"
+      },
+      {
+        "id": "source:de7ba9d0b070470dbb70d0144294c8708068df353537b26ab59c394707e84377",
+        "uri": "file:///home/path/simforge-assets/hdri/clear-day-sky.hdr",
+        "sha256": "de7ba9d0b070470dbb70d0144294c8708068df353537b26ab59c394707e84377",
+        "kind": "baked"
+      },
+      {
+        "id": "source:49e497a63f2aa41213972ceed413f4b73e880b267996513e5ea1848dee61a422",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/road.glb",
+        "sha256": "49e497a63f2aa41213972ceed413f4b73e880b267996513e5ea1848dee61a422",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:1784d5542fbf49652f6619e4b6d48cc9339ef235e9a98c744d43d9cf7c6be73d",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_0_2.lod3.glb",
+        "sha256": "1784d5542fbf49652f6619e4b6d48cc9339ef235e9a98c744d43d9cf7c6be73d",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:5825fc5ef0118ca86516e09db20e3ad42327691a26a903485791518586c6948a",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_0_3.lod3.glb",
+        "sha256": "5825fc5ef0118ca86516e09db20e3ad42327691a26a903485791518586c6948a",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:9c08c7dddf0ffc30bcd590108a4ecba0858cd1025155cd01a1496eb5e8c3af53",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_0_4.lod3.glb",
+        "sha256": "9c08c7dddf0ffc30bcd590108a4ecba0858cd1025155cd01a1496eb5e8c3af53",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:48604d976339f05ba1a400595cbeed0802ec95251c9a7f7591a17e848126d6bf",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_1_1.lod3.glb",
+        "sha256": "48604d976339f05ba1a400595cbeed0802ec95251c9a7f7591a17e848126d6bf",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:49608bbc199b123be885713ca2fa5320c231ca544b935107f6d367e8f1fb7a8f",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_1_2.lod2.glb",
+        "sha256": "49608bbc199b123be885713ca2fa5320c231ca544b935107f6d367e8f1fb7a8f",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:12b0716325c18177844a4fad32e926228a741e0e53e8cdd684556fb9f716dc65",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_1_3.lod0.glb",
+        "sha256": "12b0716325c18177844a4fad32e926228a741e0e53e8cdd684556fb9f716dc65",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:4c9893e1ca7494a6209650a55ddc7267f7171e0150ef5dd644a7c32c50604104",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_1_4.lod0.glb",
+        "sha256": "4c9893e1ca7494a6209650a55ddc7267f7171e0150ef5dd644a7c32c50604104",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:343481885e6be8abaa9e9c70089420be01684ed053f995653af9a44606195454",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_2_1.lod3.glb",
+        "sha256": "343481885e6be8abaa9e9c70089420be01684ed053f995653af9a44606195454",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:02dccf76d6b6de83b0485a35c80dd0f837455e9ccb989773466bf16235bede8e",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_2_2.lod2.glb",
+        "sha256": "02dccf76d6b6de83b0485a35c80dd0f837455e9ccb989773466bf16235bede8e",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:ed8e14c18b11492f4cfe5204ebfc24a2c63c5f3e6e2a0b02ee89acb235f8ed74",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_2_3.lod0.glb",
+        "sha256": "ed8e14c18b11492f4cfe5204ebfc24a2c63c5f3e6e2a0b02ee89acb235f8ed74",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:2e94cd339c1a764690ca29d26fea1f24f3c2bd630a175cb7a42c0c7e69a5d305",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_2_4.lod0.glb",
+        "sha256": "2e94cd339c1a764690ca29d26fea1f24f3c2bd630a175cb7a42c0c7e69a5d305",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:2a9ad589aff953549b091e237540e6e7431ba8daa854271c1dd81afb88ef9bee",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_2_5.lod3.glb",
+        "sha256": "2a9ad589aff953549b091e237540e6e7431ba8daa854271c1dd81afb88ef9bee",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:f0ec172bbc744d2c85daa54685d0946088a25e468c71e234fdf637e1601b9d1c",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_3_2.lod2.glb",
+        "sha256": "f0ec172bbc744d2c85daa54685d0946088a25e468c71e234fdf637e1601b9d1c",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:3a135d3522236cc6047c78058c65263fbdb13f27f13990deff43e06f7f06aa10",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_3_3.lod2.glb",
+        "sha256": "3a135d3522236cc6047c78058c65263fbdb13f27f13990deff43e06f7f06aa10",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:cf7c6e76cda3e342fd1d68aa9605c0bfc8b4865652132904b46b21fbda808d1c",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_3_4.lod2.glb",
+        "sha256": "cf7c6e76cda3e342fd1d68aa9605c0bfc8b4865652132904b46b21fbda808d1c",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:dd62606caaf5c30c9b80d015d5a595fb99ad37c3c6babb3b28a96d7ce16207e3",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/tile_3_5.lod3.glb",
+        "sha256": "dd62606caaf5c30c9b80d015d5a595fb99ad37c3c6babb3b28a96d7ce16207e3",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:910e4ce63dcf921b45386f730718b62842c8c9d1dc8b8f9d1ddcd289ee81931e",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_2.instances.json",
+        "sha256": "910e4ce63dcf921b45386f730718b62842c8c9d1dc8b8f9d1ddcd289ee81931e",
+        "kind": "map"
+      },
+      {
+        "id": "source:9de9c7eebe84f8feb0d7a493cd4af3281339a05c3b54a9b2221f629518e90df0",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_2.lod3.glb",
+        "sha256": "9de9c7eebe84f8feb0d7a493cd4af3281339a05c3b54a9b2221f629518e90df0",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:b3c233b92692f96b564f864f5812389cb1d995fca023c2dbce31ee19c3e85c9a",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_3.instances.json",
+        "sha256": "b3c233b92692f96b564f864f5812389cb1d995fca023c2dbce31ee19c3e85c9a",
+        "kind": "map"
+      },
+      {
+        "id": "source:21a8842f12a18ace188db4a7094cd3b07642655f927819a664702c00c8994331",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_3.lod3.glb",
+        "sha256": "21a8842f12a18ace188db4a7094cd3b07642655f927819a664702c00c8994331",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:bdc4e660ef41a5a6951dba7e2037a42b48d7d411a4be1db40e902adeb7342d64",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_4.instances.json",
+        "sha256": "bdc4e660ef41a5a6951dba7e2037a42b48d7d411a4be1db40e902adeb7342d64",
+        "kind": "map"
+      },
+      {
+        "id": "source:e0418ee65f78669503c35da4d749b67dbcd37c003c358e9cfda354057acd8175",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_0_4.lod3.glb",
+        "sha256": "e0418ee65f78669503c35da4d749b67dbcd37c003c358e9cfda354057acd8175",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:8fe2e065d51142503c3bc343298cf63079bace65cf3ac49caa4aba7b6da0368e",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_1.instances.json",
+        "sha256": "8fe2e065d51142503c3bc343298cf63079bace65cf3ac49caa4aba7b6da0368e",
+        "kind": "map"
+      },
+      {
+        "id": "source:b221bf7b4700df897f89e36db49599abff477075a4e35344f26c6c80fce9faa3",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_1.lod3.glb",
+        "sha256": "b221bf7b4700df897f89e36db49599abff477075a4e35344f26c6c80fce9faa3",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:bcdac2903ce4be5f0f8e3ab55414b355b75029100e09c7d454b1a3c430ef7239",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_2.instances.json",
+        "sha256": "bcdac2903ce4be5f0f8e3ab55414b355b75029100e09c7d454b1a3c430ef7239",
+        "kind": "map"
+      },
+      {
+        "id": "source:df66d918af857a75150992cd7c45abd1806ce14ccfe4f2398a0e796486160b7a",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_2.lod2.glb",
+        "sha256": "df66d918af857a75150992cd7c45abd1806ce14ccfe4f2398a0e796486160b7a",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:9cbb048bc4053e6e1ec39a37dc4b0531441bb17977af71feba4949e1b999e5bc",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_3.instances.json",
+        "sha256": "9cbb048bc4053e6e1ec39a37dc4b0531441bb17977af71feba4949e1b999e5bc",
+        "kind": "map"
+      },
+      {
+        "id": "source:d60fc82892d1f091a6a0c0a2305131225ff1fe3cefdc69d3cd58d73f9a233764",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_3.lod0.glb",
+        "sha256": "d60fc82892d1f091a6a0c0a2305131225ff1fe3cefdc69d3cd58d73f9a233764",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:782e910d753d69854d193608ec8efd4f866370b30eef91a9ea63f0cdc8a455a5",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_4.instances.json",
+        "sha256": "782e910d753d69854d193608ec8efd4f866370b30eef91a9ea63f0cdc8a455a5",
+        "kind": "map"
+      },
+      {
+        "id": "source:221fb69977945780fb37438527358e78e9031878f8da85a89374dc6ebc03e4ab",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_4.lod0.glb",
+        "sha256": "221fb69977945780fb37438527358e78e9031878f8da85a89374dc6ebc03e4ab",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:46385cd1f4aa311ed752eddc4288154e583d4f20f38b5a08d33654b71105f81d",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_5.instances.json",
+        "sha256": "46385cd1f4aa311ed752eddc4288154e583d4f20f38b5a08d33654b71105f81d",
+        "kind": "map"
+      },
+      {
+        "id": "source:840c4250db558822d00897a4701881b36ea5dc58529e66b0c5e4a2d2a5a6dead",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_1_5.lod3.glb",
+        "sha256": "840c4250db558822d00897a4701881b36ea5dc58529e66b0c5e4a2d2a5a6dead",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:117038151d99e556a67543b33f53c9bd204ed387eea34ad2976545071b76d0a8",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_1.instances.json",
+        "sha256": "117038151d99e556a67543b33f53c9bd204ed387eea34ad2976545071b76d0a8",
+        "kind": "map"
+      },
+      {
+        "id": "source:de30ffde580d7811941b118513b84db6ba8733112dfe794343285c6fa032298f",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_1.lod3.glb",
+        "sha256": "de30ffde580d7811941b118513b84db6ba8733112dfe794343285c6fa032298f",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:24307c1ab97616fad90b645ea2d7ab803275e6be23b03d117efc9b16491b91a2",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_2.instances.json",
+        "sha256": "24307c1ab97616fad90b645ea2d7ab803275e6be23b03d117efc9b16491b91a2",
+        "kind": "map"
+      },
+      {
+        "id": "source:b2fea0866e0b9fca12cec68a6a757dd736a60448087627f3a28d341fbbe7d38b",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_2.lod2.glb",
+        "sha256": "b2fea0866e0b9fca12cec68a6a757dd736a60448087627f3a28d341fbbe7d38b",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:01de9ab3af98cc4a86cde63b0a164343fababa89fc84388f8fb46af9bb8c2c53",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_3.instances.json",
+        "sha256": "01de9ab3af98cc4a86cde63b0a164343fababa89fc84388f8fb46af9bb8c2c53",
+        "kind": "map"
+      },
+      {
+        "id": "source:877c475594a5fb0a265b7c368250a621942e09ca1358dc64291cd48d9b4fc0cd",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_3.lod0.glb",
+        "sha256": "877c475594a5fb0a265b7c368250a621942e09ca1358dc64291cd48d9b4fc0cd",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:5a1ab0898479b86e5a5645f551cd7a1b1aff9d566e87f77aa4544217a0fff1ef",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_4.instances.json",
+        "sha256": "5a1ab0898479b86e5a5645f551cd7a1b1aff9d566e87f77aa4544217a0fff1ef",
+        "kind": "map"
+      },
+      {
+        "id": "source:993aa9364bac3e8482922447804b6c6775f518eeb3c29b187155cfeda3a38656",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_4.lod0.glb",
+        "sha256": "993aa9364bac3e8482922447804b6c6775f518eeb3c29b187155cfeda3a38656",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:c966383421af4bd80f06b91305f30cb054d0c4b6d97d81c9f4e0aa26100d293b",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_5.instances.json",
+        "sha256": "c966383421af4bd80f06b91305f30cb054d0c4b6d97d81c9f4e0aa26100d293b",
+        "kind": "map"
+      },
+      {
+        "id": "source:a740021c56cbf08a44abed3a424d4209d6f3b7db9d945d69b1d34e45450447ce",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_2_5.lod3.glb",
+        "sha256": "a740021c56cbf08a44abed3a424d4209d6f3b7db9d945d69b1d34e45450447ce",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:9b263780ba97142930ae4eea560ab8ba027fb0075dc94253b6a0025c796b9f0d",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_1.instances.json",
+        "sha256": "9b263780ba97142930ae4eea560ab8ba027fb0075dc94253b6a0025c796b9f0d",
+        "kind": "map"
+      },
+      {
+        "id": "source:27e0c7424b7152cb0452115e8c8132d35201634e646e0a4f76dd5b16e294b1ff",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_1.lod3.glb",
+        "sha256": "27e0c7424b7152cb0452115e8c8132d35201634e646e0a4f76dd5b16e294b1ff",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:f578f4e7caa80905c5596c9c6a9f51f3047d14f10e500ef8eef5092e36d55d85",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_2.instances.json",
+        "sha256": "f578f4e7caa80905c5596c9c6a9f51f3047d14f10e500ef8eef5092e36d55d85",
+        "kind": "map"
+      },
+      {
+        "id": "source:f9c11509b072fe338175ee5470c4a912713697035f32e4b7d39dbc657f0b7afb",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_2.lod2.glb",
+        "sha256": "f9c11509b072fe338175ee5470c4a912713697035f32e4b7d39dbc657f0b7afb",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:a4125e0a5300e4a282757dde66339f5b3ee0f9c7badc1251c8ab57ffc7605f11",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_3.instances.json",
+        "sha256": "a4125e0a5300e4a282757dde66339f5b3ee0f9c7badc1251c8ab57ffc7605f11",
+        "kind": "map"
+      },
+      {
+        "id": "source:1d6915223647f5c70cc39d43a955d3d5a440670d0a8a790201ee22a667eb199f",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_3.lod2.glb",
+        "sha256": "1d6915223647f5c70cc39d43a955d3d5a440670d0a8a790201ee22a667eb199f",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:d34bbfe839127296f5cb1e081be4e8c7bf3625c746537c30752e6219fce4f389",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_4.instances.json",
+        "sha256": "d34bbfe839127296f5cb1e081be4e8c7bf3625c746537c30752e6219fce4f389",
+        "kind": "map"
+      },
+      {
+        "id": "source:7788cf4e657e8bf05d3f3f8777eb5afd5e5091ce48686e1fa088f2a0e0106ecc",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_4.lod2.glb",
+        "sha256": "7788cf4e657e8bf05d3f3f8777eb5afd5e5091ce48686e1fa088f2a0e0106ecc",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:fbede82c31adeb71a756861bca9056de126618a008a6afc42bf86920a3b0b165",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_5.instances.json",
+        "sha256": "fbede82c31adeb71a756861bca9056de126618a008a6afc42bf86920a3b0b165",
+        "kind": "map"
+      },
+      {
+        "id": "source:ad3c665db349f4334eca3c8ac40b4636cbb908a03d3a2eee14c8d9629e89a5f3",
+        "uri": "file:///home/path/simforge-oss/.corpus/yale-street/tiles/veg_3_5.lod3.glb",
+        "sha256": "ad3c665db349f4334eca3c8ac40b4636cbb908a03d3a2eee14c8d9629e89a5f3",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_coupe_audi_tt.glb",
+        "sha256": "2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.pedestrian.adult.glb",
+        "sha256": "7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+        "kind": "mesh"
+      },
+      {
+        "id": "source:5f704b5e02c807b6a25658a023c4ebf844de19a566ce6f9565a465c1477bddb1",
+        "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/workbench-runtime.json",
+        "sha256": "5f704b5e02c807b6a25658a023c4ebf844de19a566ce6f9565a465c1477bddb1",
+        "kind": "map"
+      },
+      {
+        "id": "asset:vehicle.sedan",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz.glb",
+        "sha256": "7243955057e273733036bb03dc9a4ece7f059cf9c20842e44fbbb3acec760b32",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.hatchback",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_hatchback_mini_cooper.glb",
+        "sha256": "f49ec6e4b9fdaee6fb9e0b490a1b511ff719aad4a11ddb1554fdcd1bd3bb38d0",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.suv",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_suv_nissan_patrol.glb",
+        "sha256": "edce2506049352e26a073efbcdf490cf2042542265850095f7df7d73f1d88e8b",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.pickup",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_pickup_tesla_cybertruck.glb",
+        "sha256": "de8452597568d1579e8b981d6be0ac8d731e5cc38ea83e7e346497462c5f999e",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.van",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_van_mercedes_sprinter.glb",
+        "sha256": "c8f91488d67a51e8fa298df4598558f84315d071e471e213fe5d7a137034f908",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.kia.carnival",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_minivan_bmw_gran_tourer.glb",
+        "sha256": "6733c345fef27f85888667c8cd6dac9f1ff037cbf40da0367710c22125a6abd7",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.box_truck",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_truck_carlacola.glb",
+        "sha256": "ac1003559a0e299acd8242b50b98e91f9851ad3724d11977ec64b23d3f2a87f7",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.semi_truck",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_truck_european_hgv.glb",
+        "sha256": "d2f607611a81b81082142e515a1787158f227146790285002e9f3462941ab06f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.bus",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_bus_mitsubishi_fusorosa.glb",
+        "sha256": "4c2061dac9d7351796029f6e8b79b1cedbaec43de660a9c6d29d510f88300048",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.motorcycle",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_motorcycle_harley.glb",
+        "sha256": "3a62ab86449571a6399673657db2a5679729b0b253b2e59636c17b5ee20b3eb9",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.bicycle",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/assets/custom.cyclist-with-rider/model.glb",
+        "sha256": "19ffb11064bf289931a40ba463b95aa164113dcf754544019cb20f5f99763942",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.ambulance",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_ambulance_ford.glb",
+        "sha256": "64566ed8a709afd21c5e7d8ca089c509446633606eb562193cc1b92be74831d8",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.honda_civic",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_sedan_dodge_charger.glb",
+        "sha256": "68d993ff00d645564b349011eacfd1fec09d69f7a78f4e771f10538a6a7ce24e",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.toyota_camry",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz.glb",
+        "sha256": "7243955057e273733036bb03dc9a4ece7f059cf9c20842e44fbbb3acec760b32",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.tesla_model_3",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_sedan_tesla_model3.glb",
+        "sha256": "f4906b8afc82a69d95132146ced52aa960c6cfe4c502929a3a6283318ce2722b",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.ford_mustang",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_coupe_ford_mustang.glb",
+        "sha256": "f4cc002c88e2126affeb7dd960bfc8aac34867e28841560014034a6136f0d937",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.chevrolet_corvette",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.chevrolet_corvette.glb",
+        "sha256": "e52b95cb48cc35469c394eaf54be0070337f20ae2c8bc668d395b30f903ac148",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.porsche_911",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.porsche_911.glb",
+        "sha256": "53974fe619b7cb77a112df4c25c1abb3c834abf2be1a3e20e6287cef9f509173",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.jeep_wrangler",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.jeep_wrangler.glb",
+        "sha256": "b20beb3a0b1aa677b19d0449a575d9201f950286da878a67dfaace3a2d6ec7bc",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.minivan",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_minivan_bmw_gran_tourer.glb",
+        "sha256": "6733c345fef27f85888667c8cd6dac9f1ff037cbf40da0367710c22125a6abd7",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.taxi",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_sedan_ford_crown.glb",
+        "sha256": "2b0c17f12d850f91101cc5c0cade1e5cd3c21204a43c54c4dbea91f9931e08a9",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.police_cruiser",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_police_dodge_charger.glb",
+        "sha256": "2d37575da0af3e815b41581a5b47d48440a2938bda5e75462c6cae76c5cfde89",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.police_suv",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.police_suv.glb",
+        "sha256": "bb50790613f86581fef2d7ecae9f2e4f4aa27461a420426e0f5e46e0e444f2f9",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.fire_engine",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.fire_engine.glb",
+        "sha256": "aca87570549b8e3e5e312170f18f625c4898290ba173f2e8ba27aae6b2198e39",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.dump_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.dump_truck.glb",
+        "sha256": "fe258ee0ff9232ec2514dd8458097cd12f105ac8b2448e97f71055b4040cdaa2",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.garbage_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.garbage_truck.glb",
+        "sha256": "e2063ebb89c761da9f9ac0fcc3f22808b0066760c5df378dd5fe8618fa82b2d9",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.tow_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.tow_truck.glb",
+        "sha256": "1876b9f04cae91320b92d706ee3dfe3fc0c72730de8d913192752bd19a2dcf98",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.cement_mixer",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.cement_mixer.glb",
+        "sha256": "27735ed1c6c09dbd206360464e9c9d6539bfbd056fc27be074f4d3f3ef5be2a7",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.utility_bucket_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.utility_bucket_truck.glb",
+        "sha256": "ade002c077e44dca67406e04d43dd62b1f1953130b02d721719f3bb3d32f4db2",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.tanker_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.tanker_truck.glb",
+        "sha256": "c537e7ac73745f2aea4ace44d00ad9504237f0337099924334b8ae6257512c88",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.flatbed_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.flatbed_truck.glb",
+        "sha256": "1d66bdb7c12df088b046291b0c9519c34bd33c38af6fda20f80f88fbd4744afc",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.school_bus",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.school_bus.glb",
+        "sha256": "5c7c7a975a268bba0bab13296ee636d95a8a8a2a0687a9f1e6bf7f286d53b601",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.shuttle_bus",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_bus_mitsubishi_fusorosa.glb",
+        "sha256": "4c2061dac9d7351796029f6e8b79b1cedbaec43de660a9c6d29d510f88300048",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:vehicle.delivery_van",
+        "uri": "file:///home/path/simforge-oss/catalog/vehicles-carla/models/vehicle_van_mercedes_sprinter.glb",
+        "sha256": "c8f91488d67a51e8fa298df4598558f84315d071e471e213fe5d7a137034f908",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:pedestrian.adult",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.pedestrian.adult.glb",
+        "sha256": "7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:pedestrian.child",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.pedestrian.child.glb",
+        "sha256": "5c1d10c329db4756c41972f053c631af7f52b46deb113daf9f2a5f7d492bd565",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.delivery_rover",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.delivery_rover.glb",
+        "sha256": "a2ded9213f24a1c694f654cbc3f512af6765c4331b225fe9e5f37e791fe0847a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.cooler_bot",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.cooler_bot.glb",
+        "sha256": "6e48a55e509a894639ab9fa5ea7f26d73b29e8099c6c9937224c59df33548881",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.quadruped_courier",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.quadruped_courier.glb",
+        "sha256": "4f8badfa713ec9e12b174d3e8785b078621ebb0a0186ccb643bbe297dff26a8a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.humanoid_general_purpose",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_general_purpose.glb",
+        "sha256": "6a6b2f7adc8799f7122e188fe9383c89b4fa04d8f2e1ef5c30e5ffeb7c231ad0",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.humanoid_delivery",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_delivery.glb",
+        "sha256": "ac02eae616578c55d286988673fb1f614a1abd000f3875128d884cf627207e6a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.humanoid_warehouse",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_warehouse.glb",
+        "sha256": "0ea8d8e893718590529c926068ca0214e5f3eb824cfaa7b4a7bf1d311b3eb912",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:sidewalk_robot.humanoid_construction",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_construction.glb",
+        "sha256": "b7e92b4835b9002e38b33df726b9b331bd18623725d8881d72fa7cb3f1d89a93",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:drone.camera_quadcopter",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.drone.camera_quadcopter.glb",
+        "sha256": "52ef97a16a21990178ea85b1ccfccc8fe3874b6c9cff84c9369f4f7969ab7d1c",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:animal.cat",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.cat.glb",
+        "sha256": "5775be3675f0fcc57db53cf1ec7a56e638a0a7ae50a62103fd712efe34abe02c",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:animal.deer",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.deer.glb",
+        "sha256": "15132e883956e66b1f0b6ba3e92c3da344ccf71ccc796cad008b6cb443cd23da",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:animal.goose",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.goose.glb",
+        "sha256": "3f25ff09847d5db8ac1778bbb68998f006284362976f27d734a1541323a503df",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:construction.traffic_cone",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.construction.traffic_cone.glb",
+        "sha256": "8b28d98c2761c0a8464f2303e31678b84fda5d9ff745f7adb665695e3d87611f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:construction.barricade_type3",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.construction.barricade_type3.glb",
+        "sha256": "7c35e36aba3b2d971504765cbc8976cbf8c5c4a5d479fb3d500ada6ae84903b6",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:construction.excavator",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.construction.excavator.glb",
+        "sha256": "df273f6bbed3744a12ac940e9c3cd372e57605e285d29d23195fb7f8ee7c58e6",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:construction.spoil_pile",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.construction.spoil_pile.glb",
+        "sha256": "089704167dcc4c16fd497b02d27f3ba819280cc7b6c0ba63ef515b09ca8e504f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:occluder.covered_car",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.occluder.covered_car.glb",
+        "sha256": "82542b92e49e36fa9df7b589bbb445a541e1df04d088f79577d1a8d0598694b3",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:street.mailbox_cluster",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.street.mailbox_cluster.glb",
+        "sha256": "e7b9c04fe118ff2e19d8a1d8a1c0d840f0e6894008564ca48eb1a57883c4022d",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:street.bus_shelter",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.street.bus_shelter.glb",
+        "sha256": "7bdc66959b069f163ec51b25d4c1b75927be34bb43c19c7aff80cddced3fdecb",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:street.food_cart",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.street.food_cart.glb",
+        "sha256": "29c8fce1e5e56adbe9f3dedbfb666485c6f2a024b60f6bc34bd7406e6f905f75",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:street.shopping_cart",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.street.shopping_cart.glb",
+        "sha256": "2af491723dbc60d49b70f31007758226e72653eed48419793625cc57fd466bf8",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:hazard.tire_debris",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.tire_debris.glb",
+        "sha256": "9f78ef21febde13af6327668261f481aad83cbf57d07d7416470987fe07edd42",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:hazard.cardboard_box",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.cardboard_box.glb",
+        "sha256": "57ce349fa920e6ade76e7dfba3f73511321d5572370c80299915c59cdbfb9b51",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:hazard.trash_bags",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.trash_bags.glb",
+        "sha256": "5cfcab91029030b70673baeba2a90ead879fa7fd45152ec079c23657d635de1f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:hazard.ladder",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.ladder.glb",
+        "sha256": "011c88a0cbb77971ff61bfd377cdb9d663899bcc8e3eecae8401bf2ab20e6026",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:hazard.debris",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.debris.glb",
+        "sha256": "08f838a01af058f543cb781360600ac6db1e5e07bbb3b17fca1c45c9151a6d29",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.sedan",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.sedan.glb",
+        "sha256": "488b6c76c4008a3584eab5d42ab75675c3dd1b87781ba7b40621876fa232efb3",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.pickup",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.pickup.glb",
+        "sha256": "daf29928248419d377f3a74b5014aba29c8a66d2aac4ea03fa9502add23f00a0",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.van",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.van.glb",
+        "sha256": "249af2a021b3da7b4987ddffd6797a035f300c87f04ca925dc24b52f42e01926",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.box_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.box_truck.glb",
+        "sha256": "69f7c139450f41fe7411008da5eb60bb4148a25523230d87f1a9e53bf03e9056",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.motorcycle",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.motorcycle.glb",
+        "sha256": "11ebcd1476a74afa3f64a533fabf1fe8ab41e3d76bab787e63c8a17743bb6cab",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.bicycle",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.bicycle.glb",
+        "sha256": "81be325b45ecbf7f0e56bb8eb9d3a2c2cdcbb436151c527d2869673f70af2228",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.toyota_camry",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.toyota_camry.glb",
+        "sha256": "e5a751e3b17e00fe695ab030c3e0087dc29a9f43871ee9359b785775b8ec7815",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.ford_mustang",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.ford_mustang.glb",
+        "sha256": "93afb9bf4a557cbd94833dfc0fe48ffffb433c12ac853dd02ef1ba14eda09e9e",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.porsche_911",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.porsche_911.glb",
+        "sha256": "53974fe619b7cb77a112df4c25c1abb3c834abf2be1a3e20e6287cef9f509173",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.jeep_wrangler",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.jeep_wrangler.glb",
+        "sha256": "b20beb3a0b1aa677b19d0449a575d9201f950286da878a67dfaace3a2d6ec7bc",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.fire_engine",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.fire_engine.glb",
+        "sha256": "aca87570549b8e3e5e312170f18f625c4898290ba173f2e8ba27aae6b2198e39",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.dump_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.dump_truck.glb",
+        "sha256": "fe258ee0ff9232ec2514dd8458097cd12f105ac8b2448e97f71055b4040cdaa2",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.garbage_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.garbage_truck.glb",
+        "sha256": "e2063ebb89c761da9f9ac0fcc3f22808b0066760c5df378dd5fe8618fa82b2d9",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.tow_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.tow_truck.glb",
+        "sha256": "1876b9f04cae91320b92d706ee3dfe3fc0c72730de8d913192752bd19a2dcf98",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.cement_mixer",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.cement_mixer.glb",
+        "sha256": "27735ed1c6c09dbd206360464e9c9d6539bfbd056fc27be074f4d3f3ef5be2a7",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.utility_bucket_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.utility_bucket_truck.glb",
+        "sha256": "ade002c077e44dca67406e04d43dd62b1f1953130b02d721719f3bb3d32f4db2",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.tanker_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.tanker_truck.glb",
+        "sha256": "c537e7ac73745f2aea4ace44d00ad9504237f0337099924334b8ae6257512c88",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.flatbed_truck",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.flatbed_truck.glb",
+        "sha256": "1d66bdb7c12df088b046291b0c9519c34bd33c38af6fda20f80f88fbd4744afc",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.vehicle.delivery_van",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.vehicle.delivery_van.glb",
+        "sha256": "0ce59e2117259199920bdb1e0c651fd5621e3ef935c3f69f6276b4094522fd09",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.pedestrian.adult",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.pedestrian.adult.glb",
+        "sha256": "7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.delivery_rover",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.delivery_rover.glb",
+        "sha256": "a2ded9213f24a1c694f654cbc3f512af6765c4331b225fe9e5f37e791fe0847a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.cooler_bot",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.cooler_bot.glb",
+        "sha256": "6e48a55e509a894639ab9fa5ea7f26d73b29e8099c6c9937224c59df33548881",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.quadruped_courier",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.quadruped_courier.glb",
+        "sha256": "4f8badfa713ec9e12b174d3e8785b078621ebb0a0186ccb643bbe297dff26a8a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.humanoid_general_purpose",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_general_purpose.glb",
+        "sha256": "6a6b2f7adc8799f7122e188fe9383c89b4fa04d8f2e1ef5c30e5ffeb7c231ad0",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.humanoid_delivery",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_delivery.glb",
+        "sha256": "ac02eae616578c55d286988673fb1f614a1abd000f3875128d884cf627207e6a",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.sidewalk_robot.humanoid_warehouse",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.sidewalk_robot.humanoid_warehouse.glb",
+        "sha256": "0ea8d8e893718590529c926068ca0214e5f3eb824cfaa7b4a7bf1d311b3eb912",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.drone.camera_quadcopter",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.drone.camera_quadcopter.glb",
+        "sha256": "52ef97a16a21990178ea85b1ccfccc8fe3874b6c9cff84c9369f4f7969ab7d1c",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.animal.cat",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.cat.glb",
+        "sha256": "5775be3675f0fcc57db53cf1ec7a56e638a0a7ae50a62103fd712efe34abe02c",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.animal.deer",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.deer.glb",
+        "sha256": "15132e883956e66b1f0b6ba3e92c3da344ccf71ccc796cad008b6cb443cd23da",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.animal.goose",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.animal.goose.glb",
+        "sha256": "3f25ff09847d5db8ac1778bbb68998f006284362976f27d734a1541323a503df",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.construction.spoil_pile",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.construction.spoil_pile.glb",
+        "sha256": "089704167dcc4c16fd497b02d27f3ba819280cc7b6c0ba63ef515b09ca8e504f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.occluder.covered_car",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.occluder.covered_car.glb",
+        "sha256": "82542b92e49e36fa9df7b589bbb445a541e1df04d088f79577d1a8d0598694b3",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.hazard.trash_bags",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.trash_bags.glb",
+        "sha256": "5cfcab91029030b70673baeba2a90ead879fa7fd45152ec079c23657d635de1f",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.hazard.ladder",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.ladder.glb",
+        "sha256": "011c88a0cbb77971ff61bfd377cdb9d663899bcc8e3eecae8401bf2ab20e6026",
+        "kind": "mesh"
+      },
+      {
+        "id": "asset:gallery.hazard.debris",
+        "uri": "file:///home/path/simforge-oss/experiments/agentic-3d/models/gallery/gallery.hazard.debris.glb",
+        "sha256": "08f838a01af058f543cb781360600ac6db1e5e07bbb3b17fca1c45c9151a6d29",
+        "kind": "mesh"
+      }
+    ],
+    "frame": {
+      "id": "scene",
+      "axes": "simforge-y-up",
+      "units": "m"
+    },
+    "time": {
+      "origin": 0,
+      "unit": "s"
+    },
+    "assumptions": [
+      "Static imported map, not a measured dynamic scene.",
+      "Runtime vehicle motion is planar; edited road pixels do not establish falling physics."
+    ]
+  },
+  "template": {
+    "scenarioVersion": 2,
+    "meta": {
+      "name": "Untitled situation",
+      "description": "Generated static geometry API smoke; not autonomous authoring or a benchmark result.",
+      "createdAt": "2026-09-05T09:30:14.797Z",
+      "modifiedAt": "2026-09-05T09:30:14.797Z",
+      "appVersion": "0.0.0-dev",
+      "tags": [],
+      "negativeControl": false
+    },
+    "sourceMap": {
+      "mapId": "yale-street",
+      "mapName": "yale-street_20260409-234639",
+      "xodrSha256": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5"
+    },
+    "params": {
+      "declarations": [],
+      "constraints": []
+    },
+    "environment": {
+      "weather": "cloudy",
+      "timeOfDay": "dusk",
+      "surfacePatches": []
+    },
+    "anchor": {
+      "features": [],
+      "policy": {
+        "allowMirror": false,
+        "maxSitesPerMap": 10,
+        "diversity": "strict",
+        "minScore": 0.5
+      },
+      "pin": {
+        "mapId": "yale-street"
+      }
+    },
+    "roles": [
+      {
+        "id": "barrier",
+        "actor": {
+          "class": "static_object",
+          "catalogId": "gallery.generated.7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d",
+          "dims": {
+            "length": 0.800048828125,
+            "width": 1,
+            "height": 2.3999996185302734
+          },
+          "static": true,
+          "sensors": []
+        },
+        "initialSpeedKph": 0,
+        "essentiality": "required",
+        "kind": "scene_absolute",
+        "pose": {
+          "position": {
+            "x": 538.4957885742188,
+            "y": 12.743200302124023,
+            "z": -1792.19873046875
+          },
+          "headingRad": 0
+        }
+      }
+    ],
+    "props": [],
+    "trafficControls": [],
+    "mapSignalPlans": [],
+    "choreography": {
+      "clipSeconds": 20,
+      "warmupSeconds": 5,
+      "interactions": []
+    },
+    "perception": {
+      "mapDivergences": []
+    },
+    "invariants": [],
+    "variants": [],
+    "reasoningTrace": []
+  },
+  "question": {
+    "brief": "Generated static geometry API smoke; not autonomous authoring or a benchmark result.",
+    "hypothesis": "",
+    "falsifier": ""
+  },
+  "participants": [
+    {
+      "roleId": "barrier",
+      "intention": "Remain fixed as a declared opaque planar box proxy.",
+      "authority": [
+        {
+          "startS": 0,
+          "endS": 20,
+          "kind": "controller"
+        }
+      ],
+      "appearance": {
+        "kind": "mesh",
+        "sourceId": "generated:7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d"
+      },
+      "information": []
+    }
+  ],
+  "events": [],
+  "constraints": [],
+  "knobs": [],
+  "geometryPatches": [
+    {
+      "id": "generated:15ca6bc815e23110c002fcde84ac440fa97fb7e32ba6be3ea55055ce537408f5",
+      "status": "executable",
+      "sourceArtifacts": [
+        {
+          "sourceId": "source:de7ba9d0b070470dbb70d0144294c8708068df353537b26ab59c394707e84377",
+          "sha256": "de7ba9d0b070470dbb70d0144294c8708068df353537b26ab59c394707e84377"
+        },
+        {
+          "sourceId": "source:49e497a63f2aa41213972ceed413f4b73e880b267996513e5ea1848dee61a422",
+          "sha256": "49e497a63f2aa41213972ceed413f4b73e880b267996513e5ea1848dee61a422"
+        },
+        {
+          "sourceId": "source:1784d5542fbf49652f6619e4b6d48cc9339ef235e9a98c744d43d9cf7c6be73d",
+          "sha256": "1784d5542fbf49652f6619e4b6d48cc9339ef235e9a98c744d43d9cf7c6be73d"
+        },
+        {
+          "sourceId": "source:5825fc5ef0118ca86516e09db20e3ad42327691a26a903485791518586c6948a",
+          "sha256": "5825fc5ef0118ca86516e09db20e3ad42327691a26a903485791518586c6948a"
+        },
+        {
+          "sourceId": "source:9c08c7dddf0ffc30bcd590108a4ecba0858cd1025155cd01a1496eb5e8c3af53",
+          "sha256": "9c08c7dddf0ffc30bcd590108a4ecba0858cd1025155cd01a1496eb5e8c3af53"
+        },
+        {
+          "sourceId": "source:48604d976339f05ba1a400595cbeed0802ec95251c9a7f7591a17e848126d6bf",
+          "sha256": "48604d976339f05ba1a400595cbeed0802ec95251c9a7f7591a17e848126d6bf"
+        },
+        {
+          "sourceId": "source:49608bbc199b123be885713ca2fa5320c231ca544b935107f6d367e8f1fb7a8f",
+          "sha256": "49608bbc199b123be885713ca2fa5320c231ca544b935107f6d367e8f1fb7a8f"
+        },
+        {
+          "sourceId": "source:12b0716325c18177844a4fad32e926228a741e0e53e8cdd684556fb9f716dc65",
+          "sha256": "12b0716325c18177844a4fad32e926228a741e0e53e8cdd684556fb9f716dc65"
+        },
+        {
+          "sourceId": "source:4c9893e1ca7494a6209650a55ddc7267f7171e0150ef5dd644a7c32c50604104",
+          "sha256": "4c9893e1ca7494a6209650a55ddc7267f7171e0150ef5dd644a7c32c50604104"
+        },
+        {
+          "sourceId": "source:343481885e6be8abaa9e9c70089420be01684ed053f995653af9a44606195454",
+          "sha256": "343481885e6be8abaa9e9c70089420be01684ed053f995653af9a44606195454"
+        },
+        {
+          "sourceId": "source:02dccf76d6b6de83b0485a35c80dd0f837455e9ccb989773466bf16235bede8e",
+          "sha256": "02dccf76d6b6de83b0485a35c80dd0f837455e9ccb989773466bf16235bede8e"
+        },
+        {
+          "sourceId": "source:ed8e14c18b11492f4cfe5204ebfc24a2c63c5f3e6e2a0b02ee89acb235f8ed74",
+          "sha256": "ed8e14c18b11492f4cfe5204ebfc24a2c63c5f3e6e2a0b02ee89acb235f8ed74"
+        },
+        {
+          "sourceId": "source:2e94cd339c1a764690ca29d26fea1f24f3c2bd630a175cb7a42c0c7e69a5d305",
+          "sha256": "2e94cd339c1a764690ca29d26fea1f24f3c2bd630a175cb7a42c0c7e69a5d305"
+        },
+        {
+          "sourceId": "source:2a9ad589aff953549b091e237540e6e7431ba8daa854271c1dd81afb88ef9bee",
+          "sha256": "2a9ad589aff953549b091e237540e6e7431ba8daa854271c1dd81afb88ef9bee"
+        },
+        {
+          "sourceId": "source:f0ec172bbc744d2c85daa54685d0946088a25e468c71e234fdf637e1601b9d1c",
+          "sha256": "f0ec172bbc744d2c85daa54685d0946088a25e468c71e234fdf637e1601b9d1c"
+        },
+        {
+          "sourceId": "source:3a135d3522236cc6047c78058c65263fbdb13f27f13990deff43e06f7f06aa10",
+          "sha256": "3a135d3522236cc6047c78058c65263fbdb13f27f13990deff43e06f7f06aa10"
+        },
+        {
+          "sourceId": "source:cf7c6e76cda3e342fd1d68aa9605c0bfc8b4865652132904b46b21fbda808d1c",
+          "sha256": "cf7c6e76cda3e342fd1d68aa9605c0bfc8b4865652132904b46b21fbda808d1c"
+        },
+        {
+          "sourceId": "source:dd62606caaf5c30c9b80d015d5a595fb99ad37c3c6babb3b28a96d7ce16207e3",
+          "sha256": "dd62606caaf5c30c9b80d015d5a595fb99ad37c3c6babb3b28a96d7ce16207e3"
+        },
+        {
+          "sourceId": "source:910e4ce63dcf921b45386f730718b62842c8c9d1dc8b8f9d1ddcd289ee81931e",
+          "sha256": "910e4ce63dcf921b45386f730718b62842c8c9d1dc8b8f9d1ddcd289ee81931e"
+        },
+        {
+          "sourceId": "source:9de9c7eebe84f8feb0d7a493cd4af3281339a05c3b54a9b2221f629518e90df0",
+          "sha256": "9de9c7eebe84f8feb0d7a493cd4af3281339a05c3b54a9b2221f629518e90df0"
+        },
+        {
+          "sourceId": "source:b3c233b92692f96b564f864f5812389cb1d995fca023c2dbce31ee19c3e85c9a",
+          "sha256": "b3c233b92692f96b564f864f5812389cb1d995fca023c2dbce31ee19c3e85c9a"
+        },
+        {
+          "sourceId": "source:21a8842f12a18ace188db4a7094cd3b07642655f927819a664702c00c8994331",
+          "sha256": "21a8842f12a18ace188db4a7094cd3b07642655f927819a664702c00c8994331"
+        },
+        {
+          "sourceId": "source:bdc4e660ef41a5a6951dba7e2037a42b48d7d411a4be1db40e902adeb7342d64",
+          "sha256": "bdc4e660ef41a5a6951dba7e2037a42b48d7d411a4be1db40e902adeb7342d64"
+        },
+        {
+          "sourceId": "source:e0418ee65f78669503c35da4d749b67dbcd37c003c358e9cfda354057acd8175",
+          "sha256": "e0418ee65f78669503c35da4d749b67dbcd37c003c358e9cfda354057acd8175"
+        },
+        {
+          "sourceId": "source:8fe2e065d51142503c3bc343298cf63079bace65cf3ac49caa4aba7b6da0368e",
+          "sha256": "8fe2e065d51142503c3bc343298cf63079bace65cf3ac49caa4aba7b6da0368e"
+        },
+        {
+          "sourceId": "source:b221bf7b4700df897f89e36db49599abff477075a4e35344f26c6c80fce9faa3",
+          "sha256": "b221bf7b4700df897f89e36db49599abff477075a4e35344f26c6c80fce9faa3"
+        },
+        {
+          "sourceId": "source:bcdac2903ce4be5f0f8e3ab55414b355b75029100e09c7d454b1a3c430ef7239",
+          "sha256": "bcdac2903ce4be5f0f8e3ab55414b355b75029100e09c7d454b1a3c430ef7239"
+        },
+        {
+          "sourceId": "source:df66d918af857a75150992cd7c45abd1806ce14ccfe4f2398a0e796486160b7a",
+          "sha256": "df66d918af857a75150992cd7c45abd1806ce14ccfe4f2398a0e796486160b7a"
+        },
+        {
+          "sourceId": "source:9cbb048bc4053e6e1ec39a37dc4b0531441bb17977af71feba4949e1b999e5bc",
+          "sha256": "9cbb048bc4053e6e1ec39a37dc4b0531441bb17977af71feba4949e1b999e5bc"
+        },
+        {
+          "sourceId": "source:d60fc82892d1f091a6a0c0a2305131225ff1fe3cefdc69d3cd58d73f9a233764",
+          "sha256": "d60fc82892d1f091a6a0c0a2305131225ff1fe3cefdc69d3cd58d73f9a233764"
+        },
+        {
+          "sourceId": "source:782e910d753d69854d193608ec8efd4f866370b30eef91a9ea63f0cdc8a455a5",
+          "sha256": "782e910d753d69854d193608ec8efd4f866370b30eef91a9ea63f0cdc8a455a5"
+        },
+        {
+          "sourceId": "source:221fb69977945780fb37438527358e78e9031878f8da85a89374dc6ebc03e4ab",
+          "sha256": "221fb69977945780fb37438527358e78e9031878f8da85a89374dc6ebc03e4ab"
+        },
+        {
+          "sourceId": "source:46385cd1f4aa311ed752eddc4288154e583d4f20f38b5a08d33654b71105f81d",
+          "sha256": "46385cd1f4aa311ed752eddc4288154e583d4f20f38b5a08d33654b71105f81d"
+        },
+        {
+          "sourceId": "source:840c4250db558822d00897a4701881b36ea5dc58529e66b0c5e4a2d2a5a6dead",
+          "sha256": "840c4250db558822d00897a4701881b36ea5dc58529e66b0c5e4a2d2a5a6dead"
+        },
+        {
+          "sourceId": "source:117038151d99e556a67543b33f53c9bd204ed387eea34ad2976545071b76d0a8",
+          "sha256": "117038151d99e556a67543b33f53c9bd204ed387eea34ad2976545071b76d0a8"
+        },
+        {
+          "sourceId": "source:de30ffde580d7811941b118513b84db6ba8733112dfe794343285c6fa032298f",
+          "sha256": "de30ffde580d7811941b118513b84db6ba8733112dfe794343285c6fa032298f"
+        },
+        {
+          "sourceId": "source:24307c1ab97616fad90b645ea2d7ab803275e6be23b03d117efc9b16491b91a2",
+          "sha256": "24307c1ab97616fad90b645ea2d7ab803275e6be23b03d117efc9b16491b91a2"
+        },
+        {
+          "sourceId": "source:b2fea0866e0b9fca12cec68a6a757dd736a60448087627f3a28d341fbbe7d38b",
+          "sha256": "b2fea0866e0b9fca12cec68a6a757dd736a60448087627f3a28d341fbbe7d38b"
+        },
+        {
+          "sourceId": "source:01de9ab3af98cc4a86cde63b0a164343fababa89fc84388f8fb46af9bb8c2c53",
+          "sha256": "01de9ab3af98cc4a86cde63b0a164343fababa89fc84388f8fb46af9bb8c2c53"
+        },
+        {
+          "sourceId": "source:877c475594a5fb0a265b7c368250a621942e09ca1358dc64291cd48d9b4fc0cd",
+          "sha256": "877c475594a5fb0a265b7c368250a621942e09ca1358dc64291cd48d9b4fc0cd"
+        },
+        {
+          "sourceId": "source:5a1ab0898479b86e5a5645f551cd7a1b1aff9d566e87f77aa4544217a0fff1ef",
+          "sha256": "5a1ab0898479b86e5a5645f551cd7a1b1aff9d566e87f77aa4544217a0fff1ef"
+        },
+        {
+          "sourceId": "source:993aa9364bac3e8482922447804b6c6775f518eeb3c29b187155cfeda3a38656",
+          "sha256": "993aa9364bac3e8482922447804b6c6775f518eeb3c29b187155cfeda3a38656"
+        },
+        {
+          "sourceId": "source:c966383421af4bd80f06b91305f30cb054d0c4b6d97d81c9f4e0aa26100d293b",
+          "sha256": "c966383421af4bd80f06b91305f30cb054d0c4b6d97d81c9f4e0aa26100d293b"
+        },
+        {
+          "sourceId": "source:a740021c56cbf08a44abed3a424d4209d6f3b7db9d945d69b1d34e45450447ce",
+          "sha256": "a740021c56cbf08a44abed3a424d4209d6f3b7db9d945d69b1d34e45450447ce"
+        },
+        {
+          "sourceId": "source:9b263780ba97142930ae4eea560ab8ba027fb0075dc94253b6a0025c796b9f0d",
+          "sha256": "9b263780ba97142930ae4eea560ab8ba027fb0075dc94253b6a0025c796b9f0d"
+        },
+        {
+          "sourceId": "source:27e0c7424b7152cb0452115e8c8132d35201634e646e0a4f76dd5b16e294b1ff",
+          "sha256": "27e0c7424b7152cb0452115e8c8132d35201634e646e0a4f76dd5b16e294b1ff"
+        },
+        {
+          "sourceId": "source:f578f4e7caa80905c5596c9c6a9f51f3047d14f10e500ef8eef5092e36d55d85",
+          "sha256": "f578f4e7caa80905c5596c9c6a9f51f3047d14f10e500ef8eef5092e36d55d85"
+        },
+        {
+          "sourceId": "source:f9c11509b072fe338175ee5470c4a912713697035f32e4b7d39dbc657f0b7afb",
+          "sha256": "f9c11509b072fe338175ee5470c4a912713697035f32e4b7d39dbc657f0b7afb"
+        },
+        {
+          "sourceId": "source:a4125e0a5300e4a282757dde66339f5b3ee0f9c7badc1251c8ab57ffc7605f11",
+          "sha256": "a4125e0a5300e4a282757dde66339f5b3ee0f9c7badc1251c8ab57ffc7605f11"
+        },
+        {
+          "sourceId": "source:1d6915223647f5c70cc39d43a955d3d5a440670d0a8a790201ee22a667eb199f",
+          "sha256": "1d6915223647f5c70cc39d43a955d3d5a440670d0a8a790201ee22a667eb199f"
+        },
+        {
+          "sourceId": "source:d34bbfe839127296f5cb1e081be4e8c7bf3625c746537c30752e6219fce4f389",
+          "sha256": "d34bbfe839127296f5cb1e081be4e8c7bf3625c746537c30752e6219fce4f389"
+        },
+        {
+          "sourceId": "source:7788cf4e657e8bf05d3f3f8777eb5afd5e5091ce48686e1fa088f2a0e0106ecc",
+          "sha256": "7788cf4e657e8bf05d3f3f8777eb5afd5e5091ce48686e1fa088f2a0e0106ecc"
+        },
+        {
+          "sourceId": "source:fbede82c31adeb71a756861bca9056de126618a008a6afc42bf86920a3b0b165",
+          "sha256": "fbede82c31adeb71a756861bca9056de126618a008a6afc42bf86920a3b0b165"
+        },
+        {
+          "sourceId": "source:ad3c665db349f4334eca3c8ac40b4636cbb908a03d3a2eee14c8d9629e89a5f3",
+          "sha256": "ad3c665db349f4334eca3c8ac40b4636cbb908a03d3a2eee14c8d9629e89a5f3"
+        },
+        {
+          "sourceId": "source:2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5",
+          "sha256": "2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5"
+        },
+        {
+          "sourceId": "source:7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+          "sha256": "7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452"
+        },
+        {
+          "sourceId": "source:5f704b5e02c807b6a25658a023c4ebf844de19a566ce6f9565a465c1477bddb1",
+          "sha256": "5f704b5e02c807b6a25658a023c4ebf844de19a566ce6f9565a465c1477bddb1"
+        }
+      ],
+      "assets": [
+        {
+          "id": "generated:7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d",
+          "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d.glb",
+          "sha256": "7a61f6a3fc970d744fead15528c103ffc15799fe2cacdc89f5097c0f51576b4d",
+          "kind": "mesh"
+        },
+        {
+          "id": "bounds:3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc",
+          "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/bounds-3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc.json",
+          "sha256": "3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc",
+          "kind": "bounds"
+        },
+        {
+          "id": "collision:b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b",
+          "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/collision-b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b.json",
+          "sha256": "b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b",
+          "kind": "collision"
+        },
+        {
+          "id": "occlusion:a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac",
+          "uri": "file:///home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/blender-state/session-aece52da6dc04012becd17de8ac85c1b/occlusion-a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac.json",
+          "sha256": "a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac",
+          "kind": "occlusion"
+        }
+      ],
+      "affected": {
+        "sourceIds": [
+          "source:de7ba9d0b070470dbb70d0144294c8708068df353537b26ab59c394707e84377",
+          "source:49e497a63f2aa41213972ceed413f4b73e880b267996513e5ea1848dee61a422",
+          "source:1784d5542fbf49652f6619e4b6d48cc9339ef235e9a98c744d43d9cf7c6be73d",
+          "source:5825fc5ef0118ca86516e09db20e3ad42327691a26a903485791518586c6948a",
+          "source:9c08c7dddf0ffc30bcd590108a4ecba0858cd1025155cd01a1496eb5e8c3af53",
+          "source:48604d976339f05ba1a400595cbeed0802ec95251c9a7f7591a17e848126d6bf",
+          "source:49608bbc199b123be885713ca2fa5320c231ca544b935107f6d367e8f1fb7a8f",
+          "source:12b0716325c18177844a4fad32e926228a741e0e53e8cdd684556fb9f716dc65",
+          "source:4c9893e1ca7494a6209650a55ddc7267f7171e0150ef5dd644a7c32c50604104",
+          "source:343481885e6be8abaa9e9c70089420be01684ed053f995653af9a44606195454",
+          "source:02dccf76d6b6de83b0485a35c80dd0f837455e9ccb989773466bf16235bede8e",
+          "source:ed8e14c18b11492f4cfe5204ebfc24a2c63c5f3e6e2a0b02ee89acb235f8ed74",
+          "source:2e94cd339c1a764690ca29d26fea1f24f3c2bd630a175cb7a42c0c7e69a5d305",
+          "source:2a9ad589aff953549b091e237540e6e7431ba8daa854271c1dd81afb88ef9bee",
+          "source:f0ec172bbc744d2c85daa54685d0946088a25e468c71e234fdf637e1601b9d1c",
+          "source:3a135d3522236cc6047c78058c65263fbdb13f27f13990deff43e06f7f06aa10",
+          "source:cf7c6e76cda3e342fd1d68aa9605c0bfc8b4865652132904b46b21fbda808d1c",
+          "source:dd62606caaf5c30c9b80d015d5a595fb99ad37c3c6babb3b28a96d7ce16207e3",
+          "source:910e4ce63dcf921b45386f730718b62842c8c9d1dc8b8f9d1ddcd289ee81931e",
+          "source:9de9c7eebe84f8feb0d7a493cd4af3281339a05c3b54a9b2221f629518e90df0",
+          "source:b3c233b92692f96b564f864f5812389cb1d995fca023c2dbce31ee19c3e85c9a",
+          "source:21a8842f12a18ace188db4a7094cd3b07642655f927819a664702c00c8994331",
+          "source:bdc4e660ef41a5a6951dba7e2037a42b48d7d411a4be1db40e902adeb7342d64",
+          "source:e0418ee65f78669503c35da4d749b67dbcd37c003c358e9cfda354057acd8175",
+          "source:8fe2e065d51142503c3bc343298cf63079bace65cf3ac49caa4aba7b6da0368e",
+          "source:b221bf7b4700df897f89e36db49599abff477075a4e35344f26c6c80fce9faa3",
+          "source:bcdac2903ce4be5f0f8e3ab55414b355b75029100e09c7d454b1a3c430ef7239",
+          "source:df66d918af857a75150992cd7c45abd1806ce14ccfe4f2398a0e796486160b7a",
+          "source:9cbb048bc4053e6e1ec39a37dc4b0531441bb17977af71feba4949e1b999e5bc",
+          "source:d60fc82892d1f091a6a0c0a2305131225ff1fe3cefdc69d3cd58d73f9a233764",
+          "source:782e910d753d69854d193608ec8efd4f866370b30eef91a9ea63f0cdc8a455a5",
+          "source:221fb69977945780fb37438527358e78e9031878f8da85a89374dc6ebc03e4ab",
+          "source:46385cd1f4aa311ed752eddc4288154e583d4f20f38b5a08d33654b71105f81d",
+          "source:840c4250db558822d00897a4701881b36ea5dc58529e66b0c5e4a2d2a5a6dead",
+          "source:117038151d99e556a67543b33f53c9bd204ed387eea34ad2976545071b76d0a8",
+          "source:de30ffde580d7811941b118513b84db6ba8733112dfe794343285c6fa032298f",
+          "source:24307c1ab97616fad90b645ea2d7ab803275e6be23b03d117efc9b16491b91a2",
+          "source:b2fea0866e0b9fca12cec68a6a757dd736a60448087627f3a28d341fbbe7d38b",
+          "source:01de9ab3af98cc4a86cde63b0a164343fababa89fc84388f8fb46af9bb8c2c53",
+          "source:877c475594a5fb0a265b7c368250a621942e09ca1358dc64291cd48d9b4fc0cd",
+          "source:5a1ab0898479b86e5a5645f551cd7a1b1aff9d566e87f77aa4544217a0fff1ef",
+          "source:993aa9364bac3e8482922447804b6c6775f518eeb3c29b187155cfeda3a38656",
+          "source:c966383421af4bd80f06b91305f30cb054d0c4b6d97d81c9f4e0aa26100d293b",
+          "source:a740021c56cbf08a44abed3a424d4209d6f3b7db9d945d69b1d34e45450447ce",
+          "source:9b263780ba97142930ae4eea560ab8ba027fb0075dc94253b6a0025c796b9f0d",
+          "source:27e0c7424b7152cb0452115e8c8132d35201634e646e0a4f76dd5b16e294b1ff",
+          "source:f578f4e7caa80905c5596c9c6a9f51f3047d14f10e500ef8eef5092e36d55d85",
+          "source:f9c11509b072fe338175ee5470c4a912713697035f32e4b7d39dbc657f0b7afb",
+          "source:a4125e0a5300e4a282757dde66339f5b3ee0f9c7badc1251c8ab57ffc7605f11",
+          "source:1d6915223647f5c70cc39d43a955d3d5a440670d0a8a790201ee22a667eb199f",
+          "source:d34bbfe839127296f5cb1e081be4e8c7bf3625c746537c30752e6219fce4f389",
+          "source:7788cf4e657e8bf05d3f3f8777eb5afd5e5091ce48686e1fa088f2a0e0106ecc",
+          "source:fbede82c31adeb71a756861bca9056de126618a008a6afc42bf86920a3b0b165",
+          "source:ad3c665db349f4334eca3c8ac40b4636cbb908a03d3a2eee14c8d9629e89a5f3",
+          "source:2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5",
+          "source:7a1c45666d8f3f471ebccb2394f957e311a581025445b24d7180380f24728452",
+          "source:5f704b5e02c807b6a25658a023c4ebf844de19a566ce6f9565a465c1477bddb1"
+        ],
+        "objectIds": [
+          "65e1d20a7fd8464f9b886097c8ede066:1481"
+        ],
+        "roleIds": [
+          "barrier"
+        ]
+      },
+      "requiredEffects": [
+        "bounds",
+        "collision",
+        "occlusion"
+      ],
+      "satisfiedEffects": [
+        {
+          "effect": "bounds",
+          "assetId": "bounds:3c6f4f6b9ec09534721b7b880ac81dee64656ad3ecb7c8070f2093987eb986fc"
+        },
+        {
+          "effect": "collision",
+          "assetId": "collision:b1f92c5085b4e1e9bc9d0b1bd9f85456b278aa9cf7a4d58511fb3786c389621b"
+        },
+        {
+          "effect": "occlusion",
+          "assetId": "occlusion:a2b76ded12748447affc8cb549031cfa25eea29767aa108f62cc52adb9e667ac"
+        }
+      ]
+    }
+  ]
+}

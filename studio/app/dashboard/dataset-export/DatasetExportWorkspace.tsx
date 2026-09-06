@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Database, LoaderCircle } from "lucide-react";
-import { useSetPageTitle } from "@/app/components/TopBarSlot";
-import { PageHeader } from "@/app/components/ui/page-header";
-import { EmptyState } from "@/app/components/ui/empty-state";
-import { cn } from "@/app/lib/utils";
+import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
+import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
+import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { DatasetExportPanel } from "./DatasetExportPanel";
 
 type DatasetSummary = {

@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronDown } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 
 type MapAssetDangerZoneProps = {
   dangerOpen: boolean;

@@ -12,7 +12,7 @@
   ], "policy": { "allowMirror": true, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 } },
   "roles": [
     { "id": "ego", "kind": "in_parking_zone", "feature": "parking", "slot": "any", "facing": "perpendicular", "actor": { "class": "car", "catalogId": "vehicle.suv" }, "initialSpeedKph": "param.reverseSpeedKph", "extensions": { "placementFeature": "parking", "motionSemantics": "reverse", "vehicleFacingRelativeToTravel": "opposite" } },
-    { "id": "pedestrian", "kind": "on_reference", "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult_walking" }, "pose": { "laneOffset": 0, "s": 22, "tFrac": -1, "headingOffsetRad": 0 }, "initialSpeedKph": "param.pedestrianSpeedKph", "extensions": { "placementFeature": "parking" } }
+    { "id": "pedestrian", "kind": "on_reference", "actor": { "class": "pedestrian", "catalogId": "pedestrian.adult", "dims": { "length": 0.85, "width": 0.5, "height": 1.75 } }, "pose": { "laneOffset": 0, "s": 22, "tFrac": -1, "headingOffsetRad": 0 }, "initialSpeedKph": "param.pedestrianSpeedKph", "extensions": { "placementFeature": "parking" } }
   ], "props": [],
   "choreography": { "clipSeconds": 12, "warmupSeconds": 1, "interactions": [
     { "id": "ego-backing-route", "actor": "ego", "verb": "route", "trigger": { "kind": "at", "t": 0 }, "target": { "mode": "polyline", "points": [

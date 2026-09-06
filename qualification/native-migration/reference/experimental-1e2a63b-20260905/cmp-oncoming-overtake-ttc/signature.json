@@ -1,0 +1,200 @@
+{
+  "schema": "simforge.native-migration.signature/v1",
+  "engineVersion": "0.6.0",
+  "traceVersion": 4,
+  "inputHash": "408d3a8b3189d28ca92e1119a71b82d36e6ccf5589215f9b5c7613d3a5dcffd3",
+  "traceDigest": "764bfa3eb855edbb244d1e3a390f3ec8dadbbb996fd154c54d9cc4e42e512e39",
+  "dt": 0.02,
+  "clipSeconds": 16,
+  "warmupSeconds": 0,
+  "mapId": "yale-street",
+  "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "topologyDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+  "tickCount": 801,
+  "firstT": 0,
+  "lastT": 16,
+  "ego": {
+    "controllerProfile": "sensor-limited"
+  },
+  "metricSubject": "ego",
+  "ambientActorIds": [],
+  "physics": {
+    "mode": "dynamic-v1",
+    "solver": "uniscenarios-sim-engine",
+    "resolvedProfileDigest": "b9417482a995c90b020adee2908a386354ae99b2f4e162e7ed1906d690a46b92",
+    "actorBackends": {
+      "ego": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "overtaker": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "car"
+      },
+      "slow-vehicle": {
+        "mode": "dynamic-v1",
+        "reason": "selected",
+        "profile": "truck"
+      }
+    }
+  },
+  "operationalConditions": {
+    "weather": "clear",
+    "timeOfDay": "day",
+    "traffic": "moderate",
+    "visibility": "unrestricted",
+    "effects": {
+      "visibilityRangeM": 1000,
+      "frictionScale": 1,
+      "trafficSpeedFactor": 1
+    }
+  },
+  "actors": {
+    "ego": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 10.3,
+          "from": "41:0:-1",
+          "to": "1100:0:-1"
+        },
+        {
+          "t": 13.72,
+          "from": "1100:0:-1",
+          "to": "42:0:-1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "overtaker": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 2.62,
+          "from": "1099:0:1",
+          "to": "41:0:1"
+        },
+        {
+          "t": 10.540000000000001,
+          "from": "41:0:1",
+          "to": "41:0:-1"
+        },
+        {
+          "t": 11.42,
+          "from": "41:0:-1",
+          "to": "524:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    },
+    "slow-vehicle": {
+      "presence": [
+        {
+          "fromT": 0,
+          "toT": 16
+        }
+      ],
+      "laneTransitions": [
+        {
+          "t": 8.44,
+          "from": "41:0:1",
+          "to": "519:0:1"
+        }
+      ],
+      "motionDirectionTransitions": [],
+      "downSinceS": null
+    }
+  },
+  "signals": {},
+  "events": [
+    {
+      "t": 1.5,
+      "kind": "trigger_fired",
+      "interactionId": "crosses-centerline",
+      "actorId": "overtaker",
+      "verb": "changeLane",
+      "forced": false
+    },
+    {
+      "t": 1.5,
+      "kind": "lateral_maneuver_planned",
+      "actorId": "overtaker",
+      "interactionId": "crosses-centerline",
+      "requestedDurationS": 9.027170211722284,
+      "effectiveDurationS": 9.027170211722284,
+      "displacementM": 4.814490779585218
+    },
+    {
+      "t": 10,
+      "kind": "trigger_skipped",
+      "interactionId": "returns-opposing",
+      "actorId": "overtaker",
+      "reason": "window_elapsed"
+    },
+    {
+      "t": 10,
+      "kind": "trigger_skipped",
+      "interactionId": "settles-behind-lead",
+      "actorId": "overtaker",
+      "reason": "dependency_skipped"
+    },
+    {
+      "t": 10.52,
+      "kind": "lane_change",
+      "actorId": "overtaker",
+      "fromRsl": "41:0:1",
+      "toRsl": "41:0:-1",
+      "legal": true
+    },
+    {
+      "t": 10.52,
+      "kind": "interaction_completed",
+      "interactionId": "crosses-centerline",
+      "actorId": "overtaker",
+      "finalLateralOffsetM": 0
+    },
+    {
+      "t": 10.52,
+      "kind": "released",
+      "actorId": "overtaker",
+      "axis": "lateral",
+      "interactionId": "crosses-centerline",
+      "reason": "complete"
+    }
+  ],
+  "metrics": {
+    "collisions": [],
+    "triggerNeverFired": [
+      "returns-opposing",
+      "settles-behind-lead"
+    ],
+    "clippedCriticality": false,
+    "ticksSimulated": 801,
+    "minTTCPair": null,
+    "minDistancePairs": [
+      [
+        "ego",
+        "overtaker"
+      ],
+      [
+        "ego",
+        "slow-vehicle"
+      ]
+    ],
+    "revealToConflictPair": null
+  }
+}

@@ -35,14 +35,14 @@ Start CARLA, then verify the client/server connection without mutating its
 world:
 
 ```sh
-simforge-oss-carla-api --host 127.0.0.1 --port 2000 probe
+simforge-oss-carla-exec --host 127.0.0.1 --port 2000 probe
 ```
 
 The unified Node CLI dispatches `--engine carla` to this installed process
 adapter:
 
 ```sh
-simforge-oss-carla-api --host 127.0.0.1 --port 2000 run-intent \
+simforge-oss-carla-exec --host 127.0.0.1 --port 2000 run-intent \
   --intent render-intent.json \
   --package input-package.json \
   --output output/carla \

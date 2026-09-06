@@ -4,7 +4,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildLaneGraph, parseSimScenarioInput, runSimulation, type TopologyIndex } from '@simforge-oss/engine';
+import { parseSimScenarioInput, type TopologyIndex } from '@simforge-oss/engine';
+import { buildLaneGraph, engine } from '@simforge-oss/engine/node';
 import { execa } from 'execa';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -267,6 +268,30 @@ function standardActionsXmlFixture() {
 }
 
 describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
+  it('exports strict distance rules with the same entry-side hysteresis thresholds as the runtime', () => {
+    const base = fixture();
+    const input = parseSimScenarioInput({
+      ...base,
+      actors: [...base.actors, { ...base.actors[0]!, id: 'target' }],
+      interactions: (['lt', 'lte', 'gt', 'gte'] as const).map((cmp) => ({
+        id: `distance-${cmp}`, actorId: 'ego',
+        trigger: {
+          kind: 'when',
+          condition: { kind: 'distance', a: 'ego', b: 'target', mode: 'euclidean', cmp, value: 10, hysteresis: 2 },
+          byLatest: 10, ifNever: 'fire',
+        },
+        verb: 'speed', target: { mode: 'stop' },
+        dynamics: { shape: 'step', constraint: 'time', value: 0.1 },
+      })),
+    });
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' });
+    const predicates = [...result.content.matchAll(/<RelativeDistanceCondition\b[^>]*rule="([^"]+)" value="([^"]+)"/g)]
+      .map((match) => [match[1], Number(match[2])]);
+    expect(predicates).toEqual([
+      ['lessThan', 8], ['lessOrEqual', 8], ['greaterThan', 12], ['greaterOrEqual', 12],
+    ]);
+  });
+
   it('exports robots and drones using valid pedestrian categories while preserving their exact kinds', () => {
     const base = fixture();
     const result = exportOpenScenarioXml14(parseSimScenarioInput({
@@ -287,7 +312,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
       ],
       interactions: [],
       occluders: [],
-    }), { graph, trustedAmbientActorIds: ['robot'] });
+    }), { engine: engine(), graph, trustedAmbientActorIds: ['robot'] });
 
     expect(result.content).toContain('<Pedestrian name="uniscenarios_sidewalk_robot" mass="70" pedestrianCategory="pedestrian">');
     expect(result.content).toContain('<Property name="uniscenarios.actorKind" value="sidewalk_robot"/>');
@@ -299,6 +324,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
 
   it('preserves near-miss criterion metadata and states the OSC limitation', () => {
     const result = exportOpenScenarioXml14(fixture(), {
+      engine: engine(),
       graph,
       nearMissCriteria: [{ pedestrianId: 'challenger', targetId: 'ego', clearanceM: 0.5, toleranceM: 0.1, pass: 'front', planHash: 'deadbeef' }],
     });
@@ -309,25 +335,25 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
   });
   it('exports the runtime-clamped effective lane-change duration', () => {
     const input = mappedLaneChangeFixture(1, 1);
-    const simulation = runSimulation(input, { graph: laneGraph, guards: 'collect' });
+    const simulation = engine().runSimulation(input, { engine: engine(), graph: laneGraph });
     const planned = simulation.trace.events.find((event) => event.kind === 'lateral_maneuver_planned')!;
     expect(planned.effectiveDurationS).toBeGreaterThan(1);
-    const result = exportOpenScenarioXml14(input, { graph: laneGraph, executionMode: 'actions' });
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph: laneGraph, executionMode: 'actions' });
     const exported = /LaneChangeActionDynamics dynamicsShape="cubic" dynamicsDimension="time" value="([^"]+)"/.exec(result.content);
     expect(Number(exported?.[1])).toBeCloseTo(planned.effectiveDurationS, 9);
   });
 
   it('fails closed when a requested multi-lane target has no final neighbour', () => {
-    expect(() => exportOpenScenarioXml14(mappedLaneChangeFixture(2, 6), { graph: laneGraph, executionMode: 'actions' })).toThrow(AsamExportError);
+    expect(() => exportOpenScenarioXml14(mappedLaneChangeFixture(2, 6), { engine: engine(), graph: laneGraph, executionMode: 'actions' })).toThrow(AsamExportError);
     try {
-      exportOpenScenarioXml14(mappedLaneChangeFixture(2, 6), { graph: laneGraph, executionMode: 'actions' });
+      exportOpenScenarioXml14(mappedLaneChangeFixture(2, 6), { engine: engine(), graph: laneGraph, executionMode: 'actions' });
     } catch (error) {
       expect((error as AsamExportError).issues).toContainEqual(expect.objectContaining({ code: 'lane_change_target_unreachable' }));
     }
   });
 
   it('emits deterministic concrete entities, routes, dependency triggers, and stop time', () => {
-    const result = exportOpenScenarioXml14(fixture(), { graph, roadFile: 'fixture.xodr' });
+    const result = exportOpenScenarioXml14(fixture(), { engine: engine(), graph, roadFile: 'fixture.xodr' });
     expect(result.standard).toBe('ASAM OpenSCENARIO XML 1.4.0');
     expect(result.content).toContain('<FileHeader revMajor="1" revMinor="4"');
     expect(result.content).toContain('<LogicFile filepath="fixture.xodr"/>');
@@ -341,11 +367,11 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
       code: 'field_omitted',
       path: 'metricSubject',
     }));
-    expect(exportOpenScenarioXml14(fixture(), { graph, roadFile: 'fixture.xodr' }).content).toBe(result.content);
+    expect(exportOpenScenarioXml14(fixture(), { engine: engine(), graph, roadFile: 'fixture.xodr' }).content).toBe(result.content);
   });
 
   it('reports every SimScenarioInput field and labels action export as editable semantic output', () => {
-    const result = exportOpenScenarioXml14(fixture(), { graph });
+    const result = exportOpenScenarioXml14(fixture(), { engine: engine(), graph });
     expect(result.profile).toBe('xml-1.4-actions');
     expect(result.intent).toBe('editable-semantic');
     expect(result.capabilityReport).toMatchObject({
@@ -363,7 +389,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
   });
 
   it('labels trajectory export and reports flattened causal intent instead of implying editable equivalence', () => {
-    const result = exportOpenScenarioXml14(fixture(), { graph, executionMode: 'trajectory-replay' });
+    const result = exportOpenScenarioXml14(fixture(), { engine: engine(), graph, executionMode: 'trajectory-replay' });
     expect(result.profile).toBe('xml-1.4-trajectory-replay');
     expect(result.intent).toBe('trajectory-replay');
     expect(result.capabilityReport.fields).toContainEqual(expect.objectContaining({
@@ -381,7 +407,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
 
   it('exports the omitted-input dynamic default with its actual 5 ms substep', () => {
     const { physics: _physics, ...input } = fixture();
-    const result = exportOpenScenarioXml14(input, { graph, executionMode: 'trajectory-replay' });
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'trajectory-replay' });
     expect(result.content).toContain('name="uniscenarios.physics.mode" value="dynamic-v1"');
     expect(result.content).toContain('name="uniscenarios.physics.substepS" value="0.005"');
     expect(result.content).toContain('name="uniscenarios.trajectoryReplay.physics.mode" value="dynamic-v1"');
@@ -389,7 +415,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
   });
 
   it('emits schema-shaped routes, lifecycle actions, conditions, and 1.4 signal semantics', () => {
-    const content = exportOpenScenarioXml14(extendedXmlFixture(), { graph }).content;
+    const content = exportOpenScenarioXml14(extendedXmlFixture(), { engine: engine(), graph }).content;
     expect(content).toContain('<LaneChangeAction>');
     expect(content).toContain('<AssignRouteAction>');
     expect(content).toContain('<DeleteEntityAction/>');
@@ -417,7 +443,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
         dynamics: { shape: 'step', constraint: 'time', value: 0.1 },
       }],
     });
-    const content = exportOpenScenarioXml14(input, { graph }).content;
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph }).content;
     // The engine evaluates authored interactions from recorded t=0 onward, so
     // a negative authored time fires at recorded t=0 (ASAM t=warmupSeconds).
     expect(content).toContain('<SimulationTimeCondition value="5" rule="greaterOrEqual"/>');
@@ -437,7 +463,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
         },
       })),
     });
-    const content = exportOpenScenarioXml14(input, { graph, executionMode: 'trajectory-replay' }).content;
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'trajectory-replay' }).content;
     expect(content).toContain('name="uniscenarios.executionMode" value="trajectory-replay"');
     expect(content).toContain('<FollowTrajectoryAction>');
     expect(content).toContain('<Timing domainAbsoluteRelative="absolute" scale="1" offset="0"/>');
@@ -451,6 +477,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
 
   it('carries replay provenance in standard extension properties', () => {
     const content = exportOpenScenarioXml14(fixture(), {
+      engine: engine(),
       graph,
       executionMode: 'trajectory-replay',
       provenance: { templateDigest: 'abc123', drawIndex: 7 },
@@ -479,7 +506,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
         dynamics: { shape: 'step', constraint: 'time', value: 0.1 },
       }],
     });
-    const content = exportOpenScenarioXml14(input, { graph }).content;
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph }).content;
     expect(content).toContain('trafficSignalControllerRef="odr-controller-7" phase="red"');
     expect(content).not.toContain('trafficSignalControllerRef="signal_controller_main_signal"');
   });
@@ -500,7 +527,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
         },
       })),
     });
-    const content = exportOpenScenarioXml14(input, { graph }).content;
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph }).content;
     expect(content.match(/<TrafficSignalController name="odr-controller-7">/g)).toHaveLength(1);
     expect(content.match(/<TrafficSignalController name="odr-controller-8">/g)).toHaveLength(1);
     expect(content).not.toMatch(/<TrafficSignalController[^>]+\breference=/);
@@ -532,14 +559,14 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
         offsetS: 0,
       }],
     });
-    const content = exportOpenScenarioXml14(input, { graph }).content;
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph }).content;
     for (const [phase, semantics] of phases) {
       expect(content).toContain(`<Phase name="${phase}" duration="1" semantics="${semantics}">`);
     }
   });
 
   it('preserves semantic actor classes in XML entity categories', () => {
-    const content = exportOpenScenarioXml14(semanticActorXmlFixture(), { graph }).content;
+    const content = exportOpenScenarioXml14(semanticActorXmlFixture(), { engine: engine(), graph }).content;
     expect(content).toContain('<Vehicle name="uniscenarios_bicycle" vehicleCategory="bicycle">');
     expect(content).toContain('<Vehicle name="uniscenarios_scooter" vehicleCategory="standupScooter">');
     expect(content).toContain('<Vehicle name="uniscenarios_motorcycle" vehicleCategory="motorcycle">');
@@ -552,7 +579,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
   });
 
   it('uses standard 1.4 appearance and lateral actions when their semantics close exactly', () => {
-    const content = exportOpenScenarioXml14(standardActionsXmlFixture(), { graph }).content;
+    const content = exportOpenScenarioXml14(standardActionsXmlFixture(), { engine: engine(), graph }).content;
     expect(content).toContain('<VehicleLight vehicleLightType="indicatorLeft"/>');
     expect(content).toContain('<LightState mode="flashing" flashingOnDuration="0.5" flashingOffDuration="0.5"/>');
     expect(content).toContain('<VehicleLight vehicleLightType="reversingLights"/>');
@@ -566,7 +593,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
 
 describe('ASAM OpenSCENARIO DSL 2.2.0 export', () => {
   it('emits the official import, concrete geometry, absolute schedules, and typed units', () => {
-    const result = exportOpenScenarioDsl22(fixture(), { graph, roadFile: 'fixture.xodr' });
+    const result = exportOpenScenarioDsl22(fixture(), { engine: engine(), graph, roadFile: 'fixture.xodr' });
     expect(result.standard).toBe('ASAM OpenSCENARIO DSL 2.2.0');
     expect(result.profile).toBe('dsl-2.2-actions');
     expect(result.intent).toBe('editable-semantic');
@@ -595,6 +622,7 @@ describe('ASAM OpenSCENARIO DSL 2.2.0 export', () => {
 
   it('carries replay provenance in comments without changing the grammar', () => {
     const content = exportOpenScenarioDsl22(fixture(), {
+      engine: engine(),
       graph,
       provenance: { templateDigest: 'abc123', drawIndex: 7 },
     }).content;
@@ -603,7 +631,7 @@ describe('ASAM OpenSCENARIO DSL 2.2.0 export', () => {
   });
 
   it('preserves every concrete semantic actor class supported by the 2.2 domain model', () => {
-    const content = exportOpenScenarioDsl22(semanticActorXmlFixture(), { graph }).content;
+    const content = exportOpenScenarioDsl22(semanticActorXmlFixture(), { engine: engine(), graph }).content;
     expect(content).toContain('actor_bicycle: vehicle with:\n        keep(it.vehicle_category == bicycle)');
     expect(content).toContain('actor_scooter: vehicle with:\n        keep(it.vehicle_category == stand_up_scooter)');
     expect(content).toContain('actor_motorcycle: vehicle with:\n        keep(it.vehicle_category == motorcycle)');
@@ -638,7 +666,7 @@ describe('honest unsupported-feature failures', () => {
     });
     for (const executionMode of ['actions', 'trajectory-replay'] as const) {
       try {
-        exportOpenScenarioXml14(input, { graph, executionMode });
+        exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode });
         throw new Error('expected export to fail');
       } catch (error) {
         expect(error).toBeInstanceOf(AsamExportError);
@@ -671,6 +699,7 @@ describe('honest unsupported-feature failures', () => {
     });
 
     const result = exportOpenScenarioXml14(input, {
+      engine: engine(),
       graph: laneGraph,
       executionMode: 'trajectory-replay',
     });
@@ -699,9 +728,9 @@ describe('honest unsupported-feature failures', () => {
         behavior: { ...actor.behavior, rules: { ...actor.behavior.rules, obeySignals: false } },
       })),
     });
-    expect(() => exportOpenScenarioXml14(changed, { graph })).toThrowError(AsamExportError);
+    expect(() => exportOpenScenarioXml14(changed, { engine: engine(), graph })).toThrowError(AsamExportError);
     try {
-      exportOpenScenarioXml14(changed, { graph });
+      exportOpenScenarioXml14(changed, { engine: engine(), graph });
     } catch (error) {
       expect((error as AsamExportError).issues).toEqual([
         expect.objectContaining({ code: 'unsupported_controller_rules', path: 'actors.0.behavior.rules' }),
@@ -718,7 +747,7 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     try {
-      exportOpenScenarioDsl22(input, { graph });
+      exportOpenScenarioDsl22(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -737,7 +766,7 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -759,11 +788,11 @@ describe('honest unsupported-feature failures', () => {
         mapBinding: { ...program.mapBinding!, timingSource: 'authored' as const },
       })),
     });
-    const replay = exportOpenScenarioXml14(input, { graph, executionMode: 'trajectory-replay' });
+    const replay = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'trajectory-replay' });
     expect(replay.content).toContain('<TrafficSignalStateAction name="odr-signal-11" state="green"/>');
     expect(replay.content).toContain('<TrafficSignalStateAction name="odr-signal-11" state="red"/>');
     try {
-      exportOpenScenarioXml14(input, { graph, executionMode: 'actions' });
+      exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -788,7 +817,7 @@ describe('honest unsupported-feature failures', () => {
       })),
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -814,7 +843,7 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -836,7 +865,7 @@ describe('honest unsupported-feature failures', () => {
         target: { key: 'pose.headingLookDeg', value: -90 },
       }],
     });
-    const result = exportOpenScenarioXml14(input, { graph });
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph });
     expect(result.content).toContain('userDefinedAnimationType="simforge:pose.headingLookDeg:-90"');
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: 'user_defined_animation',
@@ -857,7 +886,7 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     try {
-      exportOpenScenarioXml14(input, { graph, executionMode: 'trajectory-replay' });
+      exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'trajectory-replay' });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -886,7 +915,7 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -916,7 +945,7 @@ describe('honest unsupported-feature failures', () => {
       ],
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -945,7 +974,7 @@ describe('honest unsupported-feature failures', () => {
         },
       })),
     });
-    expect(() => exportOpenScenarioXml14(input, { graph })).toThrowError(expect.objectContaining({
+    expect(() => exportOpenScenarioXml14(input, { engine: engine(), graph })).toThrowError(expect.objectContaining({
       issues: [expect.objectContaining({
         code: 'duplicate_signal_group_membership',
         path: 'signalPrograms.0.mapBinding.controllerHeadGroups.1.headIds.0',
@@ -972,7 +1001,7 @@ describe('honest unsupported-feature failures', () => {
         },
       ],
     });
-    expect(() => exportOpenScenarioXml14(input, { graph })).toThrowError(expect.objectContaining({
+    expect(() => exportOpenScenarioXml14(input, { engine: engine(), graph })).toThrowError(expect.objectContaining({
       issues: [expect.objectContaining({
         code: 'duplicate_signal_controller_binding',
         path: 'signalPrograms.1.mapBinding.controllerHeadGroups.0.controllerId',
@@ -998,14 +1027,14 @@ describe('honest unsupported-feature failures', () => {
         dynamics: { shape: 'step', constraint: 'time', value: 0.1 },
       }],
     });
-    expect(() => exportOpenScenarioXml14(condition('missing', 'red'), { graph })).toThrowError(
+    expect(() => exportOpenScenarioXml14(condition('missing', 'red'), { engine: engine(), graph })).toThrowError(
       expect.objectContaining({ issues: [expect.objectContaining({ code: 'unknown_signal_program' })] }),
     );
     const greenOnly = parseSimScenarioInput({
       ...condition('main-signal', 'red'),
       signalPrograms: [{ ...base.signalPrograms[0]!, phases: [{ phase: 'green', durationS: 10 }], offsetS: 0 }],
     });
-    expect(() => exportOpenScenarioXml14(greenOnly, { graph })).toThrowError(
+    expect(() => exportOpenScenarioXml14(greenOnly, { engine: engine(), graph })).toThrowError(
       expect.objectContaining({ issues: [expect.objectContaining({ code: 'unknown_signal_phase' })] }),
     );
   });
@@ -1023,7 +1052,7 @@ describe('honest unsupported-feature failures', () => {
       })),
     });
     try {
-      exportOpenScenarioXml14(input, { graph });
+      exportOpenScenarioXml14(input, { engine: engine(), graph });
       throw new Error('expected export to fail');
     } catch (error) {
       expect(error).toBeInstanceOf(AsamExportError);
@@ -1040,13 +1069,13 @@ describe('honest unsupported-feature failures', () => {
       ...base,
       actors: base.actors.map((actor) => ({ ...actor, tags: ['motion:reverse'] })),
     });
-    expect(() => exportOpenScenarioXml14(reverse, { graph })).toThrowError(
+    expect(() => exportOpenScenarioXml14(reverse, { engine: engine(), graph })).toThrowError(
       expect.objectContaining({ issues: [expect.objectContaining({ code: 'unsupported_reverse_motion' })] }),
     );
-    expect(() => exportOpenScenarioDsl22(reverse, { graph })).toThrowError(
+    expect(() => exportOpenScenarioDsl22(reverse, { engine: engine(), graph })).toThrowError(
       expect.objectContaining({ issues: [expect.objectContaining({ code: 'unsupported_reverse_motion' })] }),
     );
-    const replay = exportOpenScenarioXml14(reverse, { graph, executionMode: 'trajectory-replay' }).content;
+    const replay = exportOpenScenarioXml14(reverse, { engine: engine(), graph, executionMode: 'trajectory-replay' }).content;
     expect(replay).toContain('speed_longitudinal="-');
   });
 
@@ -1064,11 +1093,12 @@ describe('honest unsupported-feature failures', () => {
       }],
     });
     for (const exportScenario of [exportOpenScenarioXml14, exportOpenScenarioDsl22]) {
-      expect(() => exportScenario(movingStatic, { graph })).toThrowError(
+      expect(() => exportScenario(movingStatic, { engine: engine(), graph })).toThrowError(
         expect.objectContaining({ issues: [expect.objectContaining({ code: 'unsupported_static_actor_action' })] }),
       );
     }
     const replay = exportOpenScenarioXml14(standardActionsXmlFixture(), {
+      engine: engine(),
       graph,
       executionMode: 'trajectory-replay',
     }).content;
@@ -1095,7 +1125,7 @@ describe('honest unsupported-feature failures', () => {
           target: { key, value },
         }],
       });
-      expect(() => exportOpenScenarioXml14(input, { graph })).toThrowError(expect.objectContaining({
+      expect(() => exportOpenScenarioXml14(input, { engine: engine(), graph })).toThrowError(expect.objectContaining({
         issues: [expect.objectContaining({ code: 'unsupported_appearance_actor' })],
       }));
     }
@@ -1148,14 +1178,14 @@ describe('official ASAM XML 1.4.0 schema', () => {
       ['standard-actions', standardActionsXmlFixture()],
     ] as const) {
       const file = path.join(dir, `${name}.xosc`);
-      await writeFile(file, exportOpenScenarioXml14(input, { graph }).content, 'utf8');
+      await writeFile(file, exportOpenScenarioXml14(input, { engine: engine(), graph }).content, 'utf8');
       const result = await validateOpenScenarioXml14(await readFile(file, 'utf8'), officialXsd!);
       expect(result.valid, result.diagnostics.join('\n')).toBe(true);
     }
     const replayFile = path.join(dir, 'trajectory-replay.xosc');
     await writeFile(
       replayFile,
-      exportOpenScenarioXml14(fixture(), { graph, executionMode: 'trajectory-replay' }).content,
+      exportOpenScenarioXml14(fixture(), { engine: engine(), graph, executionMode: 'trajectory-replay' }).content,
       'utf8',
     );
     const replayResult = await validateOpenScenarioXml14(await readFile(replayFile, 'utf8'), officialXsd!);
@@ -1164,7 +1194,7 @@ describe('official ASAM XML 1.4.0 schema', () => {
     const appearanceReplayFile = path.join(dir, 'trajectory-replay-appearance.xosc');
     await writeFile(
       appearanceReplayFile,
-      exportOpenScenarioXml14(standardActionsXmlFixture(), { graph, executionMode: 'trajectory-replay' }).content,
+      exportOpenScenarioXml14(standardActionsXmlFixture(), { engine: engine(), graph, executionMode: 'trajectory-replay' }).content,
       'utf8',
     );
     const appearanceReplayResult = await validateOpenScenarioXml14(await readFile(appearanceReplayFile, 'utf8'), officialXsd!);
@@ -1205,14 +1235,14 @@ describe('pinned ASAM OpenSCENARIO DSL 2.2.0 grammar profile', () => {
     ]) expect(grammarText).toContain(production);
 
     for (const input of [fixture(), semanticActorXmlFixture()]) {
-      const content = exportOpenScenarioDsl22(input, { graph }).content;
+      const content = exportOpenScenarioDsl22(input, { engine: engine(), graph }).content;
       expect(validateOpenScenarioDsl22ProfileSyntax(content)).toEqual([]);
       expect(() => assertOpenScenarioDsl22ProfileSyntax(content)).not.toThrow();
     }
   }, 60_000);
 
   it('reports deterministic line diagnostics for malformed generated-profile syntax', () => {
-    const malformed = exportOpenScenarioDsl22(fixture(), { graph }).content
+    const malformed = exportOpenScenarioDsl22(fixture(), { engine: engine(), graph }).content
       .replace('scenario uniscenarios_instance:', 'scenario uniscenarios_instance')
       .replace('        serial:', '       serial:');
     expect(validateOpenScenarioDsl22ProfileSyntax(malformed)).toEqual(expect.arrayContaining([

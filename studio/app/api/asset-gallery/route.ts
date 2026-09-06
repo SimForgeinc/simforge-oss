@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
-import { ListGalleryAssetsQuerySchema } from "@/app/lib/asset-gallery/contracts";
+import { ListGalleryAssetsQuerySchema } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { InvalidGalleryCursorError, listGalleryAssets } from "@/app/lib/asset-gallery/store";
 
 export async function GET(request: NextRequest) {
