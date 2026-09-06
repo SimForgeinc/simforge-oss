@@ -191,6 +191,22 @@ No work returns `{"schema":"uniscenario.render-worker-control/v2","type":"job.no
 }
 ```
 
+Native map transfers preserve `relativePath`: `map.tile.000000` names
+`master.gltf`, and `map.resource.<sha256>` names each other member, with the
+suffix hashing the exact UTF-8 relative path. The transfer's separate `sha256`
+and `sizeBytes` authenticate file contents. Managed control planes may declare
+the aggregate `map.native-corpus` intent asset; only that declaration authorizes
+implicit master/resource expansion. Explicitly declared assets still require
+their own digest and size to match.
+
+The native Docker image prepares its required sky textures from the sources in
+`renderer/render-core/assets/sky/SOURCES.json`, checks source and generated
+product digests, and sets `SIMFORGE_SKY_ASSETS` to the packaged directory.
+Initial scene prewarming is not capture readiness: after creating a real sensor
+rig, the service waits for consecutive fresh idle GPU pipeline/material samples
+before returning its first frame. Readiness timeout fails the request rather
+than publishing incomplete geometry.
+
 ### Heartbeat
 
 `POST /api/uniscenario/internal/render-jobs/{jobId}/heartbeat`
