@@ -1,24 +1,17 @@
 {
-  "schema": "uniscenarios.gallery-validation.v1",
-  "validatedAt": "2026-08-03T08:00:00.000Z",
-  "provider": "native",
-  "command": "simforge debug 04-child-emerging-behind-bus/scenario.instance.json --sample 0.5 --fail-on-fallback --fail-on-never-fired --fail-on-collision",
-  "acceptance": {
-    "ok": true,
-    "failures": []
-  },
+  "schema": "simforge.scenario-debug/v1",
   "input": {
-    "source": "/private/tmp/simforge-new-gallery/examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json",
+    "source": "/home/path/tmp/simforge-native-migration/examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json",
     "kind": "instance",
     "mapId": "yale-street",
     "provider": "native",
-    "inputHash": "bf1cf85f116f8c16ba3bb9734fe5a60c1116699e0f5fa291ff69e88f33081032",
-    "traceDigest": "09ca3eb61fa1a67edbb5850efb26916eef558f32ab39028ac415355ae049acdc",
+    "inputHash": "987e89a116b3a6d4c5f4b5ff32319af07033b8d0f1cdffc15ff55b53a2f00b56",
+    "traceDigest": "8649887ac8b7d83e57fc0e2db3285b96752980b2567c85bd1454b42ab0aade8f",
     "durationSeconds": 20,
     "sampleSeconds": 0.5
   },
   "compile": {
-    "milliseconds": 386.572625,
+    "milliseconds": 1.248961,
     "feasible": true,
     "manifest": {
       "kind": "scenario-instance-manifest",
@@ -117,7 +110,7 @@
       ],
       "props": [],
       "arrival": [],
-      "inputHash": "bf1cf85f116f8c16ba3bb9734fe5a60c1116699e0f5fa291ff69e88f33081032",
+      "inputHash": "987e89a116b3a6d4c5f4b5ff32319af07033b8d0f1cdffc15ff55b53a2f00b56",
       "feasible": true,
       "issues": [],
       "notes": [
@@ -125,13 +118,22 @@
           "path": "signalPrograms",
           "reason": "18 physical map signal head(s) bound as 3 logical program(s) to junction 345 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
         }
-      ]
+      ],
+      "contractMigration": {
+        "schema": "simforge.native-input-contract-reseal/v1",
+        "sourceSha256": "471316adaa5dbd0e2067b170d7bd5d1699932a8c785c41fdaf25697b0f8d49ef",
+        "sourceInputHash": "bf1cf85f116f8c16ba3bb9734fe5a60c1116699e0f5fa291ff69e88f33081032",
+        "targetAbi": 2,
+        "removedMasterFlags": 5,
+        "foldedFalseMasterFlags": 0,
+        "scope": "Rule-contract reseal only; authored poses, actors, actions, thresholds and signals unchanged. Replay metadata retains its historical materialization provenance."
+      }
     }
   },
   "performance": {
-    "nativeMilliseconds": 217.921625,
-    "nativeTicksPerSecond": 4593.394529,
-    "simulatedSecondsPerWallSecond": 91.776114,
+    "nativeMilliseconds": 49.299904,
+    "nativeTicksPerSecond": 20304.299173,
+    "simulatedSecondsPerWallSecond": 405.680303,
     "sumo": null
   },
   "summary": {
@@ -192,21 +194,27 @@
         },
         "displacementM": 14.247174,
         "maxSpeedMps": 2.390391,
-        "observedLanes": []
+        "observedLanes": [
+          "370:0:1",
+          "347:0:1",
+          "360:0:1",
+          "359:0:-1",
+          "346:0:1"
+        ]
       },
       "focus-vehicle": {
         "samples": 41,
         "start": {
-          "x": 746.983847,
-          "z": -1791.0043,
+          "x": 746.983882,
+          "z": -1791.004278,
           "laneRsl": "104:0:1"
         },
         "end": {
-          "x": 718.337498,
-          "z": -1747.32089,
+          "x": 718.489929,
+          "z": -1747.542746,
           "laneRsl": "102:0:1"
         },
-        "displacementM": 52.23843,
+        "displacementM": 51.969319,
         "maxSpeedMps": 8.888889,
         "observedLanes": [
           "104:0:1",
@@ -218,16 +226,16 @@
       "trailing-taxi": {
         "samples": 41,
         "start": {
-          "x": 758.983486,
-          "z": -1809.443554,
+          "x": 758.983492,
+          "z": -1809.44355,
           "laneRsl": "104:0:1"
         },
         "end": {
-          "x": 722.094559,
-          "z": -1752.91187,
+          "x": 722.928363,
+          "z": -1754.144419,
           "laneRsl": "102:0:1"
         },
-        "displacementM": 67.502772,
+        "displacementM": 66.014894,
         "maxSpeedMps": 8.888889,
         "observedLanes": [
           "104:0:1",
@@ -237,6 +245,4455 @@
         ]
       }
     }
+  },
+  "actors": {
+    "adult": [
+      {
+        "t": 0,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 0.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 1,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 1.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 2,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 2.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 3,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 3.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 4,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 4.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 5.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 6,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 6.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 7,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 7.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 8,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 8.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 9,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 9.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 10,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 10.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 11,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 11.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 12,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 12.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 13,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 13.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 14,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 14.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 15,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 15.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 16,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 16.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 17,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 17.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 18,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 18.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 19,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 19.5,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      },
+      {
+        "t": 20,
+        "x": 708.034251,
+        "z": -1745.894961,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 0.000059,
+        "present": true
+      }
+    ],
+    "bus": [
+      {
+        "t": 0,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 0.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 1,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 1.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 2,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 2.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 3,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 3.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 4,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 4.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 5.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 6,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 6.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 7,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 7.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 8,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 8.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 9,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 9.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 10,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 10.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 11,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 11.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 12,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 12.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 13,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 13.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 14,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 14.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 15,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 15.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 16,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 16.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 17,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 17.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 18,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 18.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 19,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 19.5,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      },
+      {
+        "t": 20,
+        "x": 716.36609,
+        "z": -1751.209315,
+        "headingRad": -2.16212,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:2",
+        "roadId": "102",
+        "routeS": 12.498987,
+        "present": true
+      }
+    ],
+    "child": [
+      {
+        "t": 0,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 0.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7.5,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8,
+        "x": 709.050917,
+        "z": -1745.186988,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.23886,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8.5,
+        "x": 709.067547,
+        "z": -1745.175407,
+        "headingRad": -0.608284,
+        "speedMps": 0.194356,
+        "accelerationMps2": 0.388712,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.259178,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.194356,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9,
+        "x": 709.299984,
+        "z": -1745.013545,
+        "headingRad": -0.608284,
+        "speedMps": 0.94784,
+        "accelerationMps2": 1.506968,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 1.542363,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.94784,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9.5,
+        "x": 709.845637,
+        "z": -1744.63357,
+        "headingRad": -0.608284,
+        "speedMps": 1.711693,
+        "accelerationMps2": 1.527705,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 2.207347,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.711693,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10,
+        "x": 710.700254,
+        "z": -1744.038441,
+        "headingRad": -0.608284,
+        "speedMps": 2.390391,
+        "accelerationMps2": 1.357396,
+        "laneRsl": "370:0:1",
+        "roadId": "370",
+        "routeS": 3.24875,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.390391,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10.5,
+        "x": 711.682398,
+        "z": -1743.354507,
+        "headingRad": -0.608284,
+        "speedMps": 2.232856,
+        "accelerationMps2": -0.31507,
+        "laneRsl": "370:0:1",
+        "roadId": "370",
+        "routeS": 4.44553,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.232856,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11,
+        "x": 712.547363,
+        "z": -1742.752173,
+        "headingRad": -0.608284,
+        "speedMps": 2.149658,
+        "accelerationMps2": -0.166397,
+        "laneRsl": "370:0:1",
+        "roadId": "370",
+        "routeS": 5.49955,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.149658,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11.5,
+        "x": 713.479424,
+        "z": -1742.103115,
+        "headingRad": -0.608284,
+        "speedMps": 2.231717,
+        "accelerationMps2": 0.164118,
+        "laneRsl": "347:0:1",
+        "roadId": "347",
+        "routeS": 6.635321,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.231717,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12,
+        "x": 714.384908,
+        "z": -1741.472565,
+        "headingRad": -0.608284,
+        "speedMps": 2.240799,
+        "accelerationMps2": 0.018165,
+        "laneRsl": "347:0:1",
+        "roadId": "347",
+        "routeS": 7.738708,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.240799,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12.5,
+        "x": 715.296568,
+        "z": -1740.837714,
+        "headingRad": -0.608284,
+        "speedMps": 2.222209,
+        "accelerationMps2": -0.037181,
+        "laneRsl": "360:0:1",
+        "roadId": "360",
+        "routeS": 8.849723,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.222209,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13,
+        "x": 716.208377,
+        "z": -1740.202758,
+        "headingRad": -0.608284,
+        "speedMps": 2.222222,
+        "accelerationMps2": 0.000027,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 9.960782,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.222222,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13.5,
+        "x": 717.120188,
+        "z": -1739.567802,
+        "headingRad": -0.608284,
+        "speedMps": 2.222222,
+        "accelerationMps2": 0,
+        "laneRsl": "359:0:-1",
+        "roadId": "359",
+        "routeS": 11.071877,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.222222,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14,
+        "x": 718.02604,
+        "z": -1738.936996,
+        "headingRad": -0.608284,
+        "speedMps": 2.123304,
+        "accelerationMps2": -0.197836,
+        "laneRsl": "346:0:1",
+        "roadId": "346",
+        "routeS": 12.175719,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.123304,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14.5,
+        "x": 718.738297,
+        "z": -1738.441002,
+        "headingRad": -0.608284,
+        "speedMps": 1.183846,
+        "accelerationMps2": -1.878918,
+        "laneRsl": "346:0:1",
+        "roadId": "346",
+        "routeS": 13.043668,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.183846,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15,
+        "x": 718.927824,
+        "z": -1738.309022,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": -2.367691,
+        "laneRsl": "346:0:1",
+        "roadId": "346",
+        "routeS": 13.274596,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15.5,
+        "x": 718.927824,
+        "z": -1738.309022,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": "346:0:1",
+        "roadId": "346",
+        "routeS": 13.274596,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16,
+        "x": 718.958418,
+        "z": -1738.287717,
+        "headingRad": -0.608284,
+        "speedMps": 0.291299,
+        "accelerationMps2": 0.582598,
+        "laneRsl": "346:0:1",
+        "roadId": "346",
+        "routeS": 13.311955,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.291299,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16.5,
+        "x": 719.234682,
+        "z": -1738.095335,
+        "headingRad": -0.608284,
+        "speedMps": 1.055152,
+        "accelerationMps2": 1.527705,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 13.648611,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.055152,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17,
+        "x": 719.818276,
+        "z": -1737.688939,
+        "headingRad": -0.608284,
+        "speedMps": 1.715284,
+        "accelerationMps2": 1.320265,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 14.35972,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.715284,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17.5,
+        "x": 720.515327,
+        "z": -1737.203535,
+        "headingRad": -0.608284,
+        "speedMps": 1.521226,
+        "accelerationMps2": -0.388117,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.209161,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.521226,
+          "vyBodyMps": 0,
+          "yawRateRadps": 0,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18,
+        "x": 720.74251,
+        "z": -1737.045205,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": -3.042451,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.486059,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.385039,
+          "vyBodyMps": 0,
+          "yawRateRadps": -3,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18.5,
+        "x": 720.74251,
+        "z": -1737.045205,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.486059,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.385039,
+          "vyBodyMps": 0,
+          "yawRateRadps": -3,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19,
+        "x": 720.74251,
+        "z": -1737.045205,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.486059,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.385039,
+          "vyBodyMps": 0,
+          "yawRateRadps": -3,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19.5,
+        "x": 720.74251,
+        "z": -1737.045205,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.486059,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.385039,
+          "vyBodyMps": 0,
+          "yawRateRadps": -3,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 20,
+        "x": 720.74251,
+        "z": -1737.045205,
+        "headingRad": -0.608284,
+        "speedMps": 0,
+        "accelerationMps2": 0,
+        "laneRsl": null,
+        "roadId": null,
+        "routeS": 15.486059,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.385039,
+          "vyBodyMps": 0,
+          "yawRateRadps": -3,
+          "steerRad": 0,
+          "wheelAngularSpeedRadps": 0,
+          "tireUtilization": 0,
+          "frontNormalForceN": 764.9187,
+          "rearNormalForceN": 0,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      }
+    ],
+    "focus-vehicle": [
+      {
+        "t": 0,
+        "x": 746.983882,
+        "z": -1791.004278,
+        "headingRad": -2.149445,
+        "speedMps": 8.888889,
+        "accelerationMps2": 0,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 57.908916,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.888889,
+          "vyBodyMps": 0.000125,
+          "yawRateRadps": 0.000136,
+          "steerRad": 0.000048,
+          "wheelAngularSpeedRadps": 28.673835,
+          "tireUtilization": 0.000162,
+          "frontNormalForceN": 8172.208328,
+          "rearNormalForceN": 6537.766672,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 0.5,
+        "x": 744.647605,
+        "z": -1787.427322,
+        "headingRad": -2.149346,
+        "speedMps": 8.049832,
+        "accelerationMps2": -1.678114,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 62.181228,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.049832,
+          "vyBodyMps": 0.000469,
+          "yawRateRadps": 0.000417,
+          "steerRad": 0.000266,
+          "wheelAngularSpeedRadps": 26.124501,
+          "tireUtilization": 0.154523,
+          "frontNormalForceN": 8591.423149,
+          "rearNormalForceN": 6118.551851,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1,
+        "x": 742.54113,
+        "z": -1784.192857,
+        "headingRad": -2.147196,
+        "speedMps": 7.346965,
+        "accelerationMps2": -1.405733,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 66.041151,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 7.346965,
+          "vyBodyMps": 0.009605,
+          "yawRateRadps": 0.008669,
+          "steerRad": 0.003513,
+          "wheelAngularSpeedRadps": 23.816306,
+          "tireUtilization": 0.147185,
+          "frontNormalForceN": 8571.01878,
+          "rearNormalForceN": 6138.95622,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1.5,
+        "x": 740.656391,
+        "z": -1781.275832,
+        "headingRad": -2.144153,
+        "speedMps": 6.555083,
+        "accelerationMps2": -1.583765,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 69.51408,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 6.555083,
+          "vyBodyMps": 0.002485,
+          "yawRateRadps": 0.002269,
+          "steerRad": 0.000712,
+          "wheelAngularSpeedRadps": 21.295786,
+          "tireUtilization": 0.171656,
+          "frontNormalForceN": 8643.060272,
+          "rearNormalForceN": 6066.914728,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2,
+        "x": 738.98524,
+        "z": -1778.684973,
+        "headingRad": -2.143638,
+        "speedMps": 5.777305,
+        "accelerationMps2": -1.555556,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 72.597122,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.777305,
+          "vyBodyMps": 0.001107,
+          "yawRateRadps": 0.000886,
+          "steerRad": 0.00046,
+          "wheelAngularSpeedRadps": 18.786825,
+          "tireUtilization": 0.171244,
+          "frontNormalForceN": 8643.056016,
+          "rearNormalForceN": 6066.918984,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2.5,
+        "x": 737.525984,
+        "z": -1776.420207,
+        "headingRad": -2.14316,
+        "speedMps": 4.999527,
+        "accelerationMps2": -1.555555,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 75.291368,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 4.999527,
+          "vyBodyMps": 0.001073,
+          "yawRateRadps": 0.000824,
+          "steerRad": 0.00044,
+          "wheelAngularSpeedRadps": 16.277864,
+          "tireUtilization": 0.170895,
+          "frontNormalForceN": 8643.05646,
+          "rearNormalForceN": 6066.91854,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3,
+        "x": 736.185169,
+        "z": -1774.337632,
+        "headingRad": -2.142842,
+        "speedMps": 5.094619,
+        "accelerationMps2": 0.190183,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 77.768192,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.094619,
+          "vyBodyMps": 0.00067,
+          "yawRateRadps": 0.000515,
+          "steerRad": 0.000272,
+          "wheelAngularSpeedRadps": 16.295719,
+          "tireUtilization": 0.025224,
+          "frontNormalForceN": 8138.444467,
+          "rearNormalForceN": 6571.530533,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3.5,
+        "x": 734.829449,
+        "z": -1772.23094,
+        "headingRad": -2.142619,
+        "speedMps": 5.020176,
+        "accelerationMps2": -0.148885,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 80.273494,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.020176,
+          "vyBodyMps": 0.000526,
+          "yawRateRadps": 0.000402,
+          "steerRad": 0.000218,
+          "wheelAngularSpeedRadps": 16.157063,
+          "tireUtilization": 0.034658,
+          "frontNormalForceN": 8229.41598,
+          "rearNormalForceN": 6480.55902,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4,
+        "x": 733.476568,
+        "z": -1770.128291,
+        "headingRad": -2.142575,
+        "speedMps": 5,
+        "accelerationMps2": -0.040352,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 82.773672,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.000984,
+          "yawRateRadps": -0.000739,
+          "steerRad": -0.000523,
+          "wheelAngularSpeedRadps": 16.129027,
+          "tireUtilization": 0.001618,
+          "frontNormalForceN": 8172.207243,
+          "rearNormalForceN": 6537.767757,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4.5,
+        "x": 732.121264,
+        "z": -1768.02754,
+        "headingRad": -2.143883,
+        "speedMps": 4.999999,
+        "accelerationMps2": -0.000001,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 85.273734,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 4.999999,
+          "vyBodyMps": -0.005971,
+          "yawRateRadps": -0.004539,
+          "steerRad": -0.002677,
+          "wheelAngularSpeedRadps": 16.12903,
+          "tireUtilization": 0.004135,
+          "frontNormalForceN": 8172.199191,
+          "rearNormalForceN": 6537.775809,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5,
+        "x": 730.759562,
+        "z": -1765.93093,
+        "headingRad": -2.146823,
+        "speedMps": 5,
+        "accelerationMps2": 0,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 87.7738,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.008929,
+          "yawRateRadps": -0.006807,
+          "steerRad": -0.003827,
+          "wheelAngularSpeedRadps": 16.129031,
+          "tireUtilization": 0.004155,
+          "frontNormalForceN": 8172.201631,
+          "rearNormalForceN": 6537.773369,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5.5,
+        "x": 729.38998,
+        "z": -1763.839457,
+        "headingRad": -2.150523,
+        "speedMps": 4.999999,
+        "accelerationMps2": 0,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 90.273789,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 4.999999,
+          "vyBodyMps": -0.010451,
+          "yawRateRadps": -0.007969,
+          "steerRad": -0.004459,
+          "wheelAngularSpeedRadps": 16.12903,
+          "tireUtilization": 0.004644,
+          "frontNormalForceN": 8172.19995,
+          "rearNormalForceN": 6537.77505,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6,
+        "x": 728.011718,
+        "z": -1761.753693,
+        "headingRad": -2.154627,
+        "speedMps": 5,
+        "accelerationMps2": 0.000002,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 92.773904,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.010391,
+          "yawRateRadps": -0.007936,
+          "steerRad": -0.004303,
+          "wheelAngularSpeedRadps": 16.129032,
+          "tireUtilization": 0.004084,
+          "frontNormalForceN": 8172.211369,
+          "rearNormalForceN": 6537.763631,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6.5,
+        "x": 726.626473,
+        "z": -1759.67256,
+        "headingRad": -2.157861,
+        "speedMps": 5,
+        "accelerationMps2": 0,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 95.273982,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.006186,
+          "yawRateRadps": -0.004736,
+          "steerRad": -0.002468,
+          "wheelAngularSpeedRadps": 16.129034,
+          "tireUtilization": 0.002487,
+          "frontNormalForceN": 8172.214557,
+          "rearNormalForceN": 6537.760443,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7,
+        "x": 725.237837,
+        "z": -1757.593691,
+        "headingRad": -2.159572,
+        "speedMps": 5,
+        "accelerationMps2": -0.000001,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 97.773982,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.00318,
+          "yawRateRadps": -0.002434,
+          "steerRad": -0.001279,
+          "wheelAngularSpeedRadps": 16.129033,
+          "tireUtilization": 0.001273,
+          "frontNormalForceN": 8172.209715,
+          "rearNormalForceN": 6537.765285,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7.5,
+        "x": 723.847418,
+        "z": -1755.516016,
+        "headingRad": -2.160499,
+        "speedMps": 5,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 100.273921,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.001793,
+          "yawRateRadps": -0.001371,
+          "steerRad": -0.000723,
+          "wheelAngularSpeedRadps": 16.129032,
+          "tireUtilization": 0.000717,
+          "frontNormalForceN": 8172.208741,
+          "rearNormalForceN": 6537.766259,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8,
+        "x": 722.456006,
+        "z": -1753.439005,
+        "headingRad": -2.161001,
+        "speedMps": 5,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 102.774015,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5,
+          "vyBodyMps": -0.000896,
+          "yawRateRadps": -0.000686,
+          "steerRad": -0.000354,
+          "wheelAngularSpeedRadps": 16.129032,
+          "tireUtilization": 0.000362,
+          "frontNormalForceN": 8172.208495,
+          "rearNormalForceN": 6537.766505,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8.5,
+        "x": 721.066792,
+        "z": -1751.366938,
+        "headingRad": -2.161439,
+        "speedMps": 4.895677,
+        "accelerationMps2": -0.208647,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 105.26869,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 4.895677,
+          "vyBodyMps": -0.002002,
+          "yawRateRadps": -0.001515,
+          "steerRad": -0.000938,
+          "wheelAngularSpeedRadps": 15.895597,
+          "tireUtilization": 0.144934,
+          "frontNormalForceN": 8568.479728,
+          "rearNormalForceN": 6141.495272,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9,
+        "x": 719.882979,
+        "z": -1749.605123,
+        "headingRad": -2.162332,
+        "speedMps": 3.369761,
+        "accelerationMps2": -3.051832,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 107.391291,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 3.369761,
+          "vyBodyMps": -0.002068,
+          "yawRateRadps": -0.001467,
+          "steerRad": -0.001172,
+          "wheelAngularSpeedRadps": 11.218373,
+          "tireUtilization": 0.398631,
+          "frontNormalForceN": 9229.392767,
+          "rearNormalForceN": 5480.582233,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9.5,
+        "x": 719.147102,
+        "z": -1748.512255,
+        "headingRad": -2.163027,
+        "speedMps": 2.016218,
+        "accelerationMps2": -2.707086,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 108.708786,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.016218,
+          "vyBodyMps": -0.002138,
+          "yawRateRadps": -0.001457,
+          "steerRad": -0.001998,
+          "wheelAngularSpeedRadps": 6.711028,
+          "tireUtilization": 0.228449,
+          "frontNormalForceN": 8804.755535,
+          "rearNormalForceN": 5905.219465,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10,
+        "x": 718.705856,
+        "z": -1747.858629,
+        "headingRad": -2.163694,
+        "speedMps": 1.207165,
+        "accelerationMps2": -1.618106,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.497395,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.207165,
+          "vyBodyMps": -0.001673,
+          "yawRateRadps": -0.001123,
+          "steerRad": -0.002516,
+          "wheelAngularSpeedRadps": 4.018032,
+          "tireUtilization": 0.138002,
+          "frontNormalForceN": 8550.932212,
+          "rearNormalForceN": 6159.042788,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10.5,
+        "x": 718.505742,
+        "z": -1747.56292,
+        "headingRad": -2.164137,
+        "speedMps": 0.142324,
+        "accelerationMps2": -2.129681,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.854404,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.142324,
+          "vyBodyMps": -0.001118,
+          "yawRateRadps": -0.000745,
+          "steerRad": -0.002732,
+          "wheelAngularSpeedRadps": 0.636408,
+          "tireUtilization": 0.197138,
+          "frontNormalForceN": 8724.192937,
+          "rearNormalForceN": 5985.782063,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11,
+        "x": 718.502328,
+        "z": -1747.55875,
+        "headingRad": -2.16447,
+        "speedMps": 0.002245,
+        "accelerationMps2": -0.280159,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.85984,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000862,
+          "yawRateRadps": -0.000575,
+          "steerRad": -0.002066,
+          "wheelAngularSpeedRadps": 0.00675,
+          "tireUtilization": 0.0001,
+          "frontNormalForceN": 8172.208846,
+          "rearNormalForceN": 6537.766154,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11.5,
+        "x": 718.501396,
+        "z": -1747.558026,
+        "headingRad": -2.164714,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.86094,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.00062,
+          "yawRateRadps": -0.000413,
+          "steerRad": -0.001485,
+          "wheelAngularSpeedRadps": 0.00724,
+          "tireUtilization": 0.000073,
+          "frontNormalForceN": 8172.208602,
+          "rearNormalForceN": 6537.766398,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12,
+        "x": 718.500549,
+        "z": -1747.557243,
+        "headingRad": -2.16489,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.862087,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000445,
+          "yawRateRadps": -0.000296,
+          "steerRad": -0.001065,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000052,
+          "frontNormalForceN": 8172.208471,
+          "rearNormalForceN": 6537.766529,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12.5,
+        "x": 718.499764,
+        "z": -1747.556419,
+        "headingRad": -2.165016,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.863231,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000319,
+          "yawRateRadps": -0.000213,
+          "steerRad": -0.000765,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000038,
+          "frontNormalForceN": 8172.208404,
+          "rearNormalForceN": 6537.766596,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13,
+        "x": 718.499023,
+        "z": -1747.555565,
+        "headingRad": -2.165107,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.864323,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000229,
+          "yawRateRadps": -0.000153,
+          "steerRad": -0.00055,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000027,
+          "frontNormalForceN": 8172.20837,
+          "rearNormalForceN": 6537.76663,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13.5,
+        "x": 718.498313,
+        "z": -1747.55469,
+        "headingRad": -2.165172,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.865449,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000165,
+          "yawRateRadps": -0.00011,
+          "steerRad": -0.000395,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000019,
+          "frontNormalForceN": 8172.208352,
+          "rearNormalForceN": 6537.766648,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14,
+        "x": 718.497627,
+        "z": -1747.5538,
+        "headingRad": -2.165219,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.866492,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000119,
+          "yawRateRadps": -0.000079,
+          "steerRad": -0.000285,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000014,
+          "frontNormalForceN": 8172.208343,
+          "rearNormalForceN": 6537.766657,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14.5,
+        "x": 718.496956,
+        "z": -1747.552898,
+        "headingRad": -2.165253,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.867629,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000086,
+          "yawRateRadps": -0.000057,
+          "steerRad": -0.000206,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.00001,
+          "frontNormalForceN": 8172.208338,
+          "rearNormalForceN": 6537.766662,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15,
+        "x": 718.496297,
+        "z": -1747.551989,
+        "headingRad": -2.165277,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.868815,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000062,
+          "yawRateRadps": -0.000041,
+          "steerRad": -0.000149,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000007,
+          "frontNormalForceN": 8172.208336,
+          "rearNormalForceN": 6537.766664,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15.5,
+        "x": 718.495646,
+        "z": -1747.551074,
+        "headingRad": -2.165295,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.869854,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000045,
+          "yawRateRadps": -0.00003,
+          "steerRad": -0.000108,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000005,
+          "frontNormalForceN": 8172.208335,
+          "rearNormalForceN": 6537.766665,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16,
+        "x": 718.495002,
+        "z": -1747.550155,
+        "headingRad": -2.165308,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.870981,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000033,
+          "yawRateRadps": -0.000022,
+          "steerRad": -0.000079,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000004,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16.5,
+        "x": 718.494361,
+        "z": -1747.549233,
+        "headingRad": -2.165317,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.872204,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000024,
+          "yawRateRadps": -0.000016,
+          "steerRad": -0.000058,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000003,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17,
+        "x": 718.493724,
+        "z": -1747.54831,
+        "headingRad": -2.165324,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.873265,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000018,
+          "yawRateRadps": -0.000012,
+          "steerRad": -0.000043,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000002,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17.5,
+        "x": 718.493089,
+        "z": -1747.547384,
+        "headingRad": -2.165329,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.874369,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000014,
+          "yawRateRadps": -0.000009,
+          "steerRad": -0.000033,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18,
+        "x": 718.492455,
+        "z": -1747.546458,
+        "headingRad": -2.165333,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.875558,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.00001,
+          "yawRateRadps": -0.000007,
+          "steerRad": -0.000025,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18.5,
+        "x": 718.491823,
+        "z": -1747.545531,
+        "headingRad": -2.165336,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.876596,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000008,
+          "yawRateRadps": -0.000005,
+          "steerRad": -0.000019,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19,
+        "x": 718.491191,
+        "z": -1747.544603,
+        "headingRad": -2.165339,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.877722,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000006,
+          "yawRateRadps": -0.000004,
+          "steerRad": -0.000016,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19.5,
+        "x": 718.49056,
+        "z": -1747.543675,
+        "headingRad": -2.165341,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.878875,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000005,
+          "yawRateRadps": -0.000004,
+          "steerRad": -0.000013,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 20,
+        "x": 718.489929,
+        "z": -1747.542746,
+        "headingRad": -2.165342,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 109.880037,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000004,
+          "yawRateRadps": -0.000003,
+          "steerRad": -0.000011,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      }
+    ],
+    "trailing-taxi": [
+      {
+        "t": 0,
+        "x": 758.983492,
+        "z": -1809.44355,
+        "headingRad": -2.144005,
+        "speedMps": 8.888889,
+        "accelerationMps2": 0,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 35.908828,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.888889,
+          "vyBodyMps": 0.000027,
+          "yawRateRadps": 0.000027,
+          "steerRad": 0.000009,
+          "wheelAngularSpeedRadps": 28.673835,
+          "tireUtilization": 0.000028,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 0.5,
+        "x": 756.572385,
+        "z": -1805.709966,
+        "headingRad": -2.144501,
+        "speedMps": 8.888881,
+        "accelerationMps2": -0.000015,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 40.353371,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.888881,
+          "vyBodyMps": -0.004958,
+          "yawRateRadps": -0.004667,
+          "steerRad": -0.002137,
+          "wheelAngularSpeedRadps": 28.673822,
+          "tireUtilization": 0.009858,
+          "frontNormalForceN": 8172.204,
+          "rearNormalForceN": 6537.771,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1,
+        "x": 754.15027,
+        "z": -1801.983527,
+        "headingRad": -2.148286,
+        "speedMps": 8.888876,
+        "accelerationMps2": -0.00001,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 44.797786,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.888876,
+          "vyBodyMps": -0.004378,
+          "yawRateRadps": -0.005535,
+          "steerRad": -0.001303,
+          "wheelAngularSpeedRadps": 28.673782,
+          "tireUtilization": 0.00603,
+          "frontNormalForceN": 8172.199868,
+          "rearNormalForceN": 6537.775132,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 1.5,
+        "x": 751.721474,
+        "z": -1798.261495,
+        "headingRad": -2.14895,
+        "speedMps": 8.885608,
+        "accelerationMps2": -0.006535,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 49.242157,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.885608,
+          "vyBodyMps": 0.000488,
+          "yawRateRadps": 0.000502,
+          "steerRad": 0.000113,
+          "wheelAngularSpeedRadps": 28.671597,
+          "tireUtilization": 0.025657,
+          "frontNormalForceN": 8206.195105,
+          "rearNormalForceN": 6503.779895,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2,
+        "x": 749.328165,
+        "z": -1794.594557,
+        "headingRad": -2.149177,
+        "speedMps": 8.551671,
+        "accelerationMps2": -0.667875,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 53.621024,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 8.551671,
+          "vyBodyMps": -0.000947,
+          "yawRateRadps": -0.001001,
+          "steerRad": -0.000318,
+          "wheelAngularSpeedRadps": 27.686458,
+          "tireUtilization": 0.122467,
+          "frontNormalForceN": 8496.389014,
+          "rearNormalForceN": 6213.585986,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 2.5,
+        "x": 747.076313,
+        "z": -1791.146775,
+        "headingRad": -2.149376,
+        "speedMps": 7.883607,
+        "accelerationMps2": -1.336129,
+        "laneRsl": "104:0:1",
+        "roadId": "104",
+        "routeS": 57.738997,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 7.883607,
+          "vyBodyMps": 0.000209,
+          "yawRateRadps": 0.000168,
+          "steerRad": 0.000086,
+          "wheelAngularSpeedRadps": 25.576982,
+          "tireUtilization": 0.169212,
+          "frontNormalForceN": 8633.876048,
+          "rearNormalForceN": 6076.098952,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3,
+        "x": 745.018624,
+        "z": -1787.995829,
+        "headingRad": -2.149293,
+        "speedMps": 7.232785,
+        "accelerationMps2": -1.301642,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 61.502393,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 7.232785,
+          "vyBodyMps": 0.000075,
+          "yawRateRadps": 0.000073,
+          "steerRad": 0.000028,
+          "wheelAngularSpeedRadps": 23.421755,
+          "tireUtilization": 0.104617,
+          "frontNormalForceN": 8445.314735,
+          "rearNormalForceN": 6264.660265,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 3.5,
+        "x": 743.10306,
+        "z": -1785.058112,
+        "headingRad": -2.148153,
+        "speedMps": 6.80943,
+        "accelerationMps2": -0.846711,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 65.009436,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 6.80943,
+          "vyBodyMps": 0.00742,
+          "yawRateRadps": 0.006281,
+          "steerRad": 0.002985,
+          "wheelAngularSpeedRadps": 22.035256,
+          "tireUtilization": 0.084595,
+          "frontNormalForceN": 8384.513063,
+          "rearNormalForceN": 6325.461937,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4,
+        "x": 741.297626,
+        "z": -1782.268859,
+        "headingRad": -2.144863,
+        "speedMps": 6.495148,
+        "accelerationMps2": -0.628564,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 68.332023,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 6.495148,
+          "vyBodyMps": 0.004774,
+          "yawRateRadps": 0.004177,
+          "steerRad": 0.001505,
+          "wheelAngularSpeedRadps": 21.005919,
+          "tireUtilization": 0.069686,
+          "frontNormalForceN": 8338.717871,
+          "rearNormalForceN": 6371.257129,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 4.5,
+        "x": 739.570932,
+        "z": -1779.59312,
+        "headingRad": -2.143854,
+        "speedMps": 6.252571,
+        "accelerationMps2": -0.485153,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 71.516571,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 6.252571,
+          "vyBodyMps": 0.00129,
+          "yawRateRadps": 0.00108,
+          "steerRad": 0.000481,
+          "wheelAngularSpeedRadps": 20.211842,
+          "tireUtilization": 0.058204,
+          "frontNormalForceN": 8303.140927,
+          "rearNormalForceN": 6406.834073,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5,
+        "x": 737.904338,
+        "z": -1777.007557,
+        "headingRad": -2.143285,
+        "speedMps": 6.058829,
+        "accelerationMps2": -0.387484,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 74.592705,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 6.058829,
+          "vyBodyMps": 0.001339,
+          "yawRateRadps": 0.001101,
+          "steerRad": 0.000491,
+          "wheelAngularSpeedRadps": 19.578788,
+          "tireUtilization": 0.050284,
+          "frontNormalForceN": 8278.244207,
+          "rearNormalForceN": 6431.730793,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 5.5,
+        "x": 736.286417,
+        "z": -1774.494907,
+        "headingRad": -2.142859,
+        "speedMps": 5.900113,
+        "accelerationMps2": -0.317432,
+        "laneRsl": "1367:0:1",
+        "roadId": "1367",
+        "routeS": 77.581198,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.900113,
+          "vyBodyMps": 0.000762,
+          "yawRateRadps": 0.000621,
+          "steerRad": 0.000279,
+          "wheelAngularSpeedRadps": 19.060902,
+          "tireUtilization": 0.044525,
+          "frontNormalForceN": 8260.047621,
+          "rearNormalForceN": 6449.927379,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6,
+        "x": 734.708404,
+        "z": -1772.042813,
+        "headingRad": -2.142601,
+        "speedMps": 5.767643,
+        "accelerationMps2": -0.264941,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 80.497193,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.767643,
+          "vyBodyMps": 0.000565,
+          "yawRateRadps": 0.000454,
+          "steerRad": 0.000214,
+          "wheelAngularSpeedRadps": 18.629029,
+          "tireUtilization": 0.040087,
+          "frontNormalForceN": 8245.957863,
+          "rearNormalForceN": 6464.017137,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 6.5,
+        "x": 733.163398,
+        "z": -1769.641862,
+        "headingRad": -2.142668,
+        "speedMps": 5.655846,
+        "accelerationMps2": -0.223593,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 83.352223,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.655846,
+          "vyBodyMps": -0.002049,
+          "yawRateRadps": -0.00159,
+          "steerRad": -0.001012,
+          "wheelAngularSpeedRadps": 18.264779,
+          "tireUtilization": 0.036567,
+          "frontNormalForceN": 8234.719404,
+          "rearNormalForceN": 6475.255596,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7,
+        "x": 731.64193,
+        "z": -1767.287103,
+        "headingRad": -2.144744,
+        "speedMps": 5.560845,
+        "accelerationMps2": -0.190002,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 86.155728,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.560845,
+          "vyBodyMps": -0.008092,
+          "yawRateRadps": -0.006367,
+          "steerRad": -0.003319,
+          "wheelAngularSpeedRadps": 17.9553,
+          "tireUtilization": 0.033799,
+          "frontNormalForceN": 8225.304216,
+          "rearNormalForceN": 6484.670784,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 7.5,
+        "x": 730.135408,
+        "z": -1764.974859,
+        "headingRad": -2.148477,
+        "speedMps": 5.48025,
+        "accelerationMps2": -0.161191,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 88.91557,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.48025,
+          "vyBodyMps": -0.010408,
+          "yawRateRadps": -0.008175,
+          "steerRad": -0.004193,
+          "wheelAngularSpeedRadps": 17.692736,
+          "tireUtilization": 0.031452,
+          "frontNormalForceN": 8217.30393,
+          "rearNormalForceN": 6492.67107,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8,
+        "x": 728.639241,
+        "z": -1762.700341,
+        "headingRad": -2.152809,
+        "speedMps": 5.411482,
+        "accelerationMps2": -0.137537,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 91.638054,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.411482,
+          "vyBodyMps": -0.011524,
+          "yawRateRadps": -0.009016,
+          "steerRad": -0.004641,
+          "wheelAngularSpeedRadps": 17.468806,
+          "tireUtilization": 0.02951,
+          "frontNormalForceN": 8210.768951,
+          "rearNormalForceN": 6499.206049,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 8.5,
+        "x": 727.151044,
+        "z": -1760.458957,
+        "headingRad": -2.156925,
+        "speedMps": 5.347462,
+        "accelerationMps2": -0.128038,
+        "laneRsl": "1395:0:1",
+        "roadId": "1395",
+        "routeS": 94.328653,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 5.347462,
+          "vyBodyMps": -0.008372,
+          "yawRateRadps": -0.006556,
+          "steerRad": -0.0032,
+          "wheelAngularSpeedRadps": 17.268082,
+          "tireUtilization": 0.036219,
+          "frontNormalForceN": 8233.421573,
+          "rearNormalForceN": 6476.553427,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9,
+        "x": 725.707583,
+        "z": -1758.29614,
+        "headingRad": -2.159177,
+        "speedMps": 4.932749,
+        "accelerationMps2": -0.829426,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 96.928936,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 4.932749,
+          "vyBodyMps": -0.003714,
+          "yawRateRadps": -0.002844,
+          "steerRad": -0.001506,
+          "wheelAngularSpeedRadps": 16.056605,
+          "tireUtilization": 0.171601,
+          "frontNormalForceN": 8645.119806,
+          "rearNormalForceN": 6064.855194,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 9.5,
+        "x": 724.529685,
+        "z": -1756.534993,
+        "headingRad": -2.160123,
+        "speedMps": 3.351694,
+        "accelerationMps2": -3.16211,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 99.047695,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 3.351694,
+          "vyBodyMps": -0.001627,
+          "yawRateRadps": -0.001153,
+          "steerRad": -0.000925,
+          "wheelAngularSpeedRadps": 11.156529,
+          "tireUtilization": 0.396185,
+          "frontNormalForceN": 9223.724909,
+          "rearNormalForceN": 5486.250091,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10,
+        "x": 723.800634,
+        "z": -1755.446043,
+        "headingRad": -2.160513,
+        "speedMps": 2.00543,
+        "accelerationMps2": -2.692528,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 100.358126,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 2.00543,
+          "vyBodyMps": -0.000752,
+          "yawRateRadps": -0.000511,
+          "steerRad": -0.000686,
+          "wheelAngularSpeedRadps": 6.675117,
+          "tireUtilization": 0.227191,
+          "frontNormalForceN": 8801.371245,
+          "rearNormalForceN": 5908.603755,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 10.5,
+        "x": 723.364124,
+        "z": -1754.794316,
+        "headingRad": -2.160694,
+        "speedMps": 1.200708,
+        "accelerationMps2": -1.609445,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.142565,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 1.200708,
+          "vyBodyMps": -0.000377,
+          "yawRateRadps": -0.000253,
+          "steerRad": -0.000569,
+          "wheelAngularSpeedRadps": 3.99654,
+          "tireUtilization": 0.13731,
+          "frontNormalForceN": 8548.906464,
+          "rearNormalForceN": 6161.068536,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11,
+        "x": 723.102738,
+        "z": -1754.404129,
+        "headingRad": -2.160786,
+        "speedMps": 0.718902,
+        "accelerationMps2": -0.963612,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.612141,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.718902,
+          "vyBodyMps": -0.000204,
+          "yawRateRadps": -0.000136,
+          "steerRad": -0.000493,
+          "wheelAngularSpeedRadps": 2.392855,
+          "tireUtilization": 0.086962,
+          "frontNormalForceN": 8397.749426,
+          "rearNormalForceN": 6312.225574,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 11.5,
+        "x": 722.950042,
+        "z": -1754.176258,
+        "headingRad": -2.160851,
+        "speedMps": 0.304841,
+        "accelerationMps2": -0.828121,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.886481,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.304841,
+          "vyBodyMps": -0.00018,
+          "yawRateRadps": -0.00012,
+          "steerRad": -0.000442,
+          "wheelAngularSpeedRadps": 1.14557,
+          "tireUtilization": 0.209922,
+          "frontNormalForceN": 8755.066212,
+          "rearNormalForceN": 5954.908788,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12,
+        "x": 722.938536,
+        "z": -1754.159221,
+        "headingRad": -2.160905,
+        "speedMps": 0.002483,
+        "accelerationMps2": -0.604717,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.907005,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002483,
+          "vyBodyMps": -0.000142,
+          "yawRateRadps": -0.000094,
+          "steerRad": -0.000339,
+          "wheelAngularSpeedRadps": 0.003734,
+          "tireUtilization": 0.000685,
+          "frontNormalForceN": 8173.141236,
+          "rearNormalForceN": 6536.833764,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 12.5,
+        "x": 722.93786,
+        "z": -1754.15832,
+        "headingRad": -2.160945,
+        "speedMps": 0.002245,
+        "accelerationMps2": -0.000476,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.908158,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000102,
+          "yawRateRadps": -0.000068,
+          "steerRad": -0.000244,
+          "wheelAngularSpeedRadps": 0.007237,
+          "tireUtilization": 0.000012,
+          "frontNormalForceN": 8172.208341,
+          "rearNormalForceN": 6537.766659,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13,
+        "x": 722.9372,
+        "z": -1754.157412,
+        "headingRad": -2.160974,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.90932,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000073,
+          "yawRateRadps": -0.000049,
+          "steerRad": -0.000175,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000009,
+          "frontNormalForceN": 8172.208337,
+          "rearNormalForceN": 6537.766663,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 13.5,
+        "x": 722.936549,
+        "z": -1754.156496,
+        "headingRad": -2.160994,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.910476,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000052,
+          "yawRateRadps": -0.000035,
+          "steerRad": -0.000126,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000006,
+          "frontNormalForceN": 8172.208335,
+          "rearNormalForceN": 6537.766665,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14,
+        "x": 722.935906,
+        "z": -1754.155576,
+        "headingRad": -2.161009,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.911524,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000038,
+          "yawRateRadps": -0.000025,
+          "steerRad": -0.00009,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000004,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 14.5,
+        "x": 722.935268,
+        "z": -1754.154653,
+        "headingRad": -2.16102,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.912671,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000027,
+          "yawRateRadps": -0.000018,
+          "steerRad": -0.000065,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000003,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15,
+        "x": 722.934634,
+        "z": -1754.153727,
+        "headingRad": -2.161028,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.913782,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000019,
+          "yawRateRadps": -0.000013,
+          "steerRad": -0.000047,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000002,
+          "frontNormalForceN": 8172.208334,
+          "rearNormalForceN": 6537.766666,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 15.5,
+        "x": 722.934003,
+        "z": -1754.152799,
+        "headingRad": -2.161033,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.91492,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000014,
+          "yawRateRadps": -0.000009,
+          "steerRad": -0.000034,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000002,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16,
+        "x": 722.933373,
+        "z": -1754.15187,
+        "headingRad": -2.161037,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.916048,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.00001,
+          "yawRateRadps": -0.000007,
+          "steerRad": -0.000024,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 16.5,
+        "x": 722.932745,
+        "z": -1754.15094,
+        "headingRad": -2.16104,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.917195,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000007,
+          "yawRateRadps": -0.000005,
+          "steerRad": -0.000018,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17,
+        "x": 722.932117,
+        "z": -1754.150009,
+        "headingRad": -2.161042,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.918265,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000005,
+          "yawRateRadps": -0.000004,
+          "steerRad": -0.000013,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0.000001,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 17.5,
+        "x": 722.931491,
+        "z": -1754.149078,
+        "headingRad": -2.161044,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.919355,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000004,
+          "yawRateRadps": -0.000003,
+          "steerRad": -0.000009,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18,
+        "x": 722.930865,
+        "z": -1754.148147,
+        "headingRad": -2.161045,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.920512,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000003,
+          "yawRateRadps": -0.000002,
+          "steerRad": -0.000007,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 18.5,
+        "x": 722.930239,
+        "z": -1754.147215,
+        "headingRad": -2.161046,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.921698,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000002,
+          "yawRateRadps": -0.000001,
+          "steerRad": -0.000005,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19,
+        "x": 722.929614,
+        "z": -1754.146283,
+        "headingRad": -2.161046,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.922824,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000002,
+          "yawRateRadps": -0.000001,
+          "steerRad": -0.000004,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 19.5,
+        "x": 722.928988,
+        "z": -1754.145351,
+        "headingRad": -2.161047,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.923872,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000001,
+          "yawRateRadps": -0.000001,
+          "steerRad": -0.000003,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      },
+      {
+        "t": 20,
+        "x": 722.928363,
+        "z": -1754.144419,
+        "headingRad": -2.161047,
+        "speedMps": 0.002245,
+        "accelerationMps2": 0,
+        "laneRsl": "102:0:1",
+        "roadId": "102",
+        "routeS": 101.925006,
+        "present": true,
+        "physics": {
+          "vxBodyMps": 0.002245,
+          "vyBodyMps": -0.000001,
+          "yawRateRadps": -0.000001,
+          "steerRad": -0.000002,
+          "wheelAngularSpeedRadps": 0.007241,
+          "tireUtilization": 0,
+          "frontNormalForceN": 8172.208333,
+          "rearNormalForceN": 6537.766667,
+          "collisionImpulseNs": 0,
+          "collisionCount": 0
+        }
+      }
+    ]
+  },
+  "ambientActors": {},
+  "signals": {
+    "signal:1426": [
+      {
+        "t": 0,
+        "phase": "red"
+      },
+      {
+        "t": 0.5,
+        "phase": "red"
+      },
+      {
+        "t": 1,
+        "phase": "red"
+      },
+      {
+        "t": 1.5,
+        "phase": "red"
+      },
+      {
+        "t": 2,
+        "phase": "red"
+      },
+      {
+        "t": 2.5,
+        "phase": "red"
+      },
+      {
+        "t": 3,
+        "phase": "red"
+      },
+      {
+        "t": 3.5,
+        "phase": "red"
+      },
+      {
+        "t": 4,
+        "phase": "red"
+      },
+      {
+        "t": 4.5,
+        "phase": "red"
+      },
+      {
+        "t": 5,
+        "phase": "red"
+      },
+      {
+        "t": 5.5,
+        "phase": "red"
+      },
+      {
+        "t": 6,
+        "phase": "green"
+      },
+      {
+        "t": 6.5,
+        "phase": "green"
+      },
+      {
+        "t": 7,
+        "phase": "green"
+      },
+      {
+        "t": 7.5,
+        "phase": "green"
+      },
+      {
+        "t": 8,
+        "phase": "green"
+      },
+      {
+        "t": 8.5,
+        "phase": "green"
+      },
+      {
+        "t": 9,
+        "phase": "green"
+      },
+      {
+        "t": 9.5,
+        "phase": "green"
+      },
+      {
+        "t": 10,
+        "phase": "green"
+      },
+      {
+        "t": 10.5,
+        "phase": "green"
+      },
+      {
+        "t": 11,
+        "phase": "green"
+      },
+      {
+        "t": 11.5,
+        "phase": "green"
+      },
+      {
+        "t": 12,
+        "phase": "green"
+      },
+      {
+        "t": 12.5,
+        "phase": "green"
+      },
+      {
+        "t": 13,
+        "phase": "green"
+      },
+      {
+        "t": 13.5,
+        "phase": "green"
+      },
+      {
+        "t": 14,
+        "phase": "green"
+      },
+      {
+        "t": 14.5,
+        "phase": "green"
+      },
+      {
+        "t": 15,
+        "phase": "green"
+      },
+      {
+        "t": 15.5,
+        "phase": "green"
+      },
+      {
+        "t": 16,
+        "phase": "green"
+      },
+      {
+        "t": 16.5,
+        "phase": "green"
+      },
+      {
+        "t": 17,
+        "phase": "green"
+      },
+      {
+        "t": 17.5,
+        "phase": "green"
+      },
+      {
+        "t": 18,
+        "phase": "yellow"
+      },
+      {
+        "t": 18.5,
+        "phase": "yellow"
+      },
+      {
+        "t": 19,
+        "phase": "yellow"
+      },
+      {
+        "t": 19.5,
+        "phase": "yellow"
+      },
+      {
+        "t": 20,
+        "phase": "yellow"
+      }
+    ],
+    "signal:1427": [
+      {
+        "t": 0,
+        "phase": "red"
+      },
+      {
+        "t": 0.5,
+        "phase": "red"
+      },
+      {
+        "t": 1,
+        "phase": "red"
+      },
+      {
+        "t": 1.5,
+        "phase": "red"
+      },
+      {
+        "t": 2,
+        "phase": "red"
+      },
+      {
+        "t": 2.5,
+        "phase": "red"
+      },
+      {
+        "t": 3,
+        "phase": "red"
+      },
+      {
+        "t": 3.5,
+        "phase": "red"
+      },
+      {
+        "t": 4,
+        "phase": "red"
+      },
+      {
+        "t": 4.5,
+        "phase": "red"
+      },
+      {
+        "t": 5,
+        "phase": "red"
+      },
+      {
+        "t": 5.5,
+        "phase": "red"
+      },
+      {
+        "t": 6,
+        "phase": "red"
+      },
+      {
+        "t": 6.5,
+        "phase": "red"
+      },
+      {
+        "t": 7,
+        "phase": "red"
+      },
+      {
+        "t": 7.5,
+        "phase": "red"
+      },
+      {
+        "t": 8,
+        "phase": "red"
+      },
+      {
+        "t": 8.5,
+        "phase": "red"
+      },
+      {
+        "t": 9,
+        "phase": "red"
+      },
+      {
+        "t": 9.5,
+        "phase": "red"
+      },
+      {
+        "t": 10,
+        "phase": "red"
+      },
+      {
+        "t": 10.5,
+        "phase": "red"
+      },
+      {
+        "t": 11,
+        "phase": "red"
+      },
+      {
+        "t": 11.5,
+        "phase": "red"
+      },
+      {
+        "t": 12,
+        "phase": "red"
+      },
+      {
+        "t": 12.5,
+        "phase": "red"
+      },
+      {
+        "t": 13,
+        "phase": "red"
+      },
+      {
+        "t": 13.5,
+        "phase": "red"
+      },
+      {
+        "t": 14,
+        "phase": "red"
+      },
+      {
+        "t": 14.5,
+        "phase": "red"
+      },
+      {
+        "t": 15,
+        "phase": "red"
+      },
+      {
+        "t": 15.5,
+        "phase": "red"
+      },
+      {
+        "t": 16,
+        "phase": "red"
+      },
+      {
+        "t": 16.5,
+        "phase": "red"
+      },
+      {
+        "t": 17,
+        "phase": "red"
+      },
+      {
+        "t": 17.5,
+        "phase": "red"
+      },
+      {
+        "t": 18,
+        "phase": "red"
+      },
+      {
+        "t": 18.5,
+        "phase": "red"
+      },
+      {
+        "t": 19,
+        "phase": "red"
+      },
+      {
+        "t": 19.5,
+        "phase": "red"
+      },
+      {
+        "t": 20,
+        "phase": "red"
+      }
+    ],
+    "signal:1477": [
+      {
+        "t": 0,
+        "phase": "green"
+      },
+      {
+        "t": 0.5,
+        "phase": "green"
+      },
+      {
+        "t": 1,
+        "phase": "green"
+      },
+      {
+        "t": 1.5,
+        "phase": "green"
+      },
+      {
+        "t": 2,
+        "phase": "green"
+      },
+      {
+        "t": 2.5,
+        "phase": "green"
+      },
+      {
+        "t": 3,
+        "phase": "green"
+      },
+      {
+        "t": 3.5,
+        "phase": "green"
+      },
+      {
+        "t": 4,
+        "phase": "green"
+      },
+      {
+        "t": 4.5,
+        "phase": "green"
+      },
+      {
+        "t": 5,
+        "phase": "green"
+      },
+      {
+        "t": 5.5,
+        "phase": "green"
+      },
+      {
+        "t": 6,
+        "phase": "green"
+      },
+      {
+        "t": 6.5,
+        "phase": "green"
+      },
+      {
+        "t": 7,
+        "phase": "green"
+      },
+      {
+        "t": 7.5,
+        "phase": "green"
+      },
+      {
+        "t": 8,
+        "phase": "green"
+      },
+      {
+        "t": 8.5,
+        "phase": "green"
+      },
+      {
+        "t": 9,
+        "phase": "green"
+      },
+      {
+        "t": 9.5,
+        "phase": "green"
+      },
+      {
+        "t": 10,
+        "phase": "green"
+      },
+      {
+        "t": 10.5,
+        "phase": "green"
+      },
+      {
+        "t": 11,
+        "phase": "green"
+      },
+      {
+        "t": 11.5,
+        "phase": "green"
+      },
+      {
+        "t": 12,
+        "phase": "green"
+      },
+      {
+        "t": 12.5,
+        "phase": "green"
+      },
+      {
+        "t": 13,
+        "phase": "green"
+      },
+      {
+        "t": 13.5,
+        "phase": "green"
+      },
+      {
+        "t": 14,
+        "phase": "green"
+      },
+      {
+        "t": 14.5,
+        "phase": "green"
+      },
+      {
+        "t": 15,
+        "phase": "green"
+      },
+      {
+        "t": 15.5,
+        "phase": "green"
+      },
+      {
+        "t": 16,
+        "phase": "green"
+      },
+      {
+        "t": 16.5,
+        "phase": "green"
+      },
+      {
+        "t": 17,
+        "phase": "green"
+      },
+      {
+        "t": 17.5,
+        "phase": "green"
+      },
+      {
+        "t": 18,
+        "phase": "green"
+      },
+      {
+        "t": 18.5,
+        "phase": "green"
+      },
+      {
+        "t": 19,
+        "phase": "green"
+      },
+      {
+        "t": 19.5,
+        "phase": "green"
+      },
+      {
+        "t": 20,
+        "phase": "green"
+      }
+    ]
   },
   "interactions": [
     {
@@ -253,8 +4710,8 @@
       },
       "events": [
         {
-          "t": 5,
           "kind": "trigger_fired",
+          "t": 5,
           "interactionId": "adult-waits-at-curb",
           "actorId": "adult",
           "verb": "set",
@@ -276,8 +4733,8 @@
       },
       "events": [
         {
-          "t": 0,
           "kind": "trigger_fired",
+          "t": 0,
           "interactionId": "bus-doors-open",
           "actorId": "bus",
           "verb": "set",
@@ -299,8 +4756,8 @@
       },
       "events": [
         {
-          "t": 8,
           "kind": "trigger_fired",
+          "t": 8,
           "interactionId": "child-commits",
           "actorId": "child",
           "verb": "set",
@@ -327,16 +4784,16 @@
       },
       "events": [
         {
-          "t": 15.3,
           "kind": "trigger_fired",
+          "t": 15.3,
           "interactionId": "child-continues",
           "actorId": "child",
           "verb": "speed",
           "forced": false
         },
         {
-          "t": 15.3,
           "kind": "preemption",
+          "t": 15.3,
           "actorId": "child",
           "axis": "longitudinal",
           "byInteractionId": "child-continues",
@@ -362,24 +4819,24 @@
       },
       "events": [
         {
-          "t": 13.8,
           "kind": "trigger_fired",
+          "t": 13.8,
           "interactionId": "child-hesitates-at-lane-line",
           "actorId": "child",
           "verb": "speed",
           "forced": false
         },
         {
-          "t": 13.8,
           "kind": "preemption",
+          "t": 13.8,
           "actorId": "child",
           "axis": "longitudinal",
           "byInteractionId": "child-hesitates-at-lane-line",
           "preemptedInteractionId": "child-runs-from-bus"
         },
         {
-          "t": 15.3,
           "kind": "preemption",
+          "t": 15.3,
           "actorId": "child",
           "axis": "longitudinal",
           "byInteractionId": "child-continues",
@@ -401,8 +4858,8 @@
       },
       "events": [
         {
-          "t": 8,
           "kind": "trigger_fired",
+          "t": 8,
           "interactionId": "child-ignores-pedestrian-phase",
           "actorId": "child",
           "verb": "set",
@@ -429,16 +4886,16 @@
       },
       "events": [
         {
-          "t": 8.2,
           "kind": "trigger_fired",
+          "t": 8.2,
           "interactionId": "child-runs-from-bus",
           "actorId": "child",
           "verb": "speed",
           "forced": false
         },
         {
-          "t": 13.8,
           "kind": "preemption",
+          "t": 13.8,
           "actorId": "child",
           "axis": "longitudinal",
           "byInteractionId": "child-hesitates-at-lane-line",
@@ -465,16 +4922,16 @@
       },
       "events": [
         {
-          "t": 0,
           "kind": "trigger_fired",
+          "t": 0,
           "interactionId": "focus-vehicle-controls-approach",
           "actorId": "focus-vehicle",
           "verb": "speed",
           "forced": false
         },
         {
-          "t": 8.36,
           "kind": "preemption",
+          "t": 8.36,
           "actorId": "focus-vehicle",
           "axis": "longitudinal",
           "byInteractionId": "focus-vehicle-stops-before-crossing",
@@ -496,8 +4953,8 @@
       },
       "events": [
         {
-          "t": 17,
           "kind": "trigger_fired",
+          "t": 17,
           "interactionId": "focus-vehicle-holds-for-full-clearance",
           "actorId": "focus-vehicle",
           "verb": "set",
@@ -519,8 +4976,8 @@
       },
       "events": [
         {
-          "t": 0,
           "kind": "trigger_fired",
+          "t": 0,
           "interactionId": "focus-vehicle-signal-green",
           "actorId": "focus-vehicle",
           "verb": "set",
@@ -546,16 +5003,16 @@
       },
       "events": [
         {
-          "t": 8.36,
           "kind": "trigger_fired",
+          "t": 8.36,
           "interactionId": "focus-vehicle-stops-before-crossing",
           "actorId": "focus-vehicle",
           "verb": "speed",
           "forced": false
         },
         {
-          "t": 8.36,
           "kind": "preemption",
+          "t": 8.36,
           "actorId": "focus-vehicle",
           "axis": "longitudinal",
           "byInteractionId": "focus-vehicle-stops-before-crossing",
@@ -582,8 +5039,8 @@
       },
       "events": [
         {
-          "t": 9.02,
           "kind": "trigger_fired",
+          "t": 9.02,
           "interactionId": "taxi-brakes-behind",
           "actorId": "trailing-taxi",
           "verb": "speed",
@@ -593,7 +5050,17 @@
     }
   ],
   "diagnostics": {
-    "issues": [],
+    "issues": [
+      {
+        "code": "traffic_control_route_unbound",
+        "severity": "warning",
+        "path": "actors.child.behavior.route",
+        "reason": "This vehicle has a freeform route, so map stop signs and traffic signals cannot be applied. Move it onto a lane or choose an explicit violator profile.",
+        "detail": {
+          "actorId": "child"
+        }
+      }
+    ],
     "collisions": [],
     "roadDepartures": [],
     "laneChangeRejections": [],
@@ -601,24 +5068,24 @@
     "neverFired": [],
     "preemptions": [
       {
-        "t": 8.36,
         "kind": "preemption",
+        "t": 8.36,
         "actorId": "focus-vehicle",
         "axis": "longitudinal",
         "byInteractionId": "focus-vehicle-stops-before-crossing",
         "preemptedInteractionId": "focus-vehicle-controls-approach"
       },
       {
-        "t": 13.8,
         "kind": "preemption",
+        "t": 13.8,
         "actorId": "child",
         "axis": "longitudinal",
         "byInteractionId": "child-hesitates-at-lane-line",
         "preemptedInteractionId": "child-runs-from-bus"
       },
       {
-        "t": 15.3,
         "kind": "preemption",
+        "t": 15.3,
         "actorId": "child",
         "axis": "longitudinal",
         "byInteractionId": "child-continues",
@@ -809,7 +5276,13 @@
           ]
         },
         "initialLane": null,
-        "observedLanes": [],
+        "observedLanes": [
+          "370:0:1",
+          "347:0:1",
+          "360:0:1",
+          "359:0:-1",
+          "346:0:1"
+        ],
         "routeDistanceM": 14.247198,
         "backend": {
           "mode": "dynamic-v1",
@@ -842,7 +5315,7 @@
           "1395:0:1",
           "102:0:1"
         ],
-        "routeDistanceM": 52.240317,
+        "routeDistanceM": 51.971121,
         "backend": {
           "mode": "dynamic-v1",
           "reason": "selected",
@@ -874,7 +5347,7 @@
           "1395:0:1",
           "102:0:1"
         ],
-        "routeDistanceM": 67.504303,
+        "routeDistanceM": 66.016178,
         "backend": {
           "mode": "dynamic-v1",
           "reason": "selected",
@@ -885,11 +5358,11 @@
   },
   "metrics": {
     "minTTC": {
-      "value": 1.509,
-      "t": 10.56,
+      "value": 2.756,
+      "t": 9.44,
       "pair": [
-        "focus-vehicle",
-        "trailing-taxi"
+        "child",
+        "focus-vehicle"
       ]
     },
     "minDistance": [
@@ -898,7 +5371,7 @@
           "child",
           "focus-vehicle"
         ],
-        "minDistanceM": 4.071,
+        "minDistanceM": 4.34,
         "t": 11.96
       },
       {
@@ -906,18 +5379,33 @@
           "focus-vehicle",
           "trailing-taxi"
         ],
-        "minDistanceM": 1.573,
-        "t": 11.62
+        "minDistanceM": 2.792,
+        "t": 11.64
       }
     ],
     "requiredDecelMax": {
       "adult": 0,
       "bus": 0,
       "child": 0,
-      "focus-vehicle": 0.493,
-      "trailing-taxi": 0.656
+      "focus-vehicle": 8,
+      "trailing-taxi": 0.598
     },
-    "revealToConflict": null,
+    "revealToConflict": {
+      "observer": "focus-vehicle",
+      "target": "child",
+      "value": 2.096,
+      "firstBlockedT": 0,
+      "losOpenT": 10.1,
+      "conflictT": 12.196,
+      "pair": [
+        "child",
+        "focus-vehicle"
+      ],
+      "occluderId": "actor:bus",
+      "relevantOccluderIds": [
+        "actor:bus"
+      ]
+    },
     "declaredOcclusion": [
       {
         "observer": "focus-vehicle",
@@ -932,9 +5420,9 @@
         ],
         "status": "revealed_before_conflict",
         "firstBlockedT": 0,
-        "losOpenT": 10.06,
-        "conflictT": 11.882,
-        "revealToConflictS": 1.822
+        "losOpenT": 10.1,
+        "conflictT": 12.196,
+        "revealToConflictS": 2.096
       }
     ],
     "occluderIneffective": [],
@@ -943,5 +5431,12 @@
     "clippedCriticality": false,
     "ticksSimulated": 1001
   },
-  "adaptationsDeclaredIn": "intent.json"
+  "invariants": [],
+  "comparison": null,
+  "acceptance": {
+    "ok": true,
+    "failures": []
+  },
+  "validatedAt": "2026-09-06T14:06:28.245Z",
+  "command": "simforge debug examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json --sample 0.5 --fail-on-fallback --fail-on-never-fired --fail-on-collision"
 }

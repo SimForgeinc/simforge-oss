@@ -3,7 +3,7 @@
   "version": 1,
   "manifest": {
     "instanceId": "ec-12-12-fire-engine-gridlock-escape-v2#0",
-    "inputHash": "a2b9be8ab353b965743d5c5e354fbeccde07e68c219085400a88a31e6a696ef9",
+    "inputHash": "49b81c82df2599151cf7bc73419f1fc3d61d6489309cea49aa682561a65dbbe6",
     "replayKey": {
       "mapId": "yale-street",
       "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
@@ -60,7 +60,16 @@
       }
     ],
     "archetype": "gallery.12-fire-engine-gridlock-escape",
-    "metricSubject": "focus-vehicle"
+    "metricSubject": "focus-vehicle",
+    "contractMigration": {
+      "schema": "simforge.native-input-contract-reseal/v1",
+      "sourceSha256": "e1f0da824047f896b0f904e4634720be2bdbcb441fe3ab6c27b8c6817ff1a8b4",
+      "sourceInputHash": "a2b9be8ab353b965743d5c5e354fbeccde07e68c219085400a88a31e6a696ef9",
+      "targetAbi": 2,
+      "removedMasterFlags": 5,
+      "foldedFalseMasterFlags": 0,
+      "scope": "Rule-contract reseal only; authored poses, actors, actions, thresholds and signals unchanged. Replay metadata retains its historical materialization provenance."
+    }
   },
   "input": {
     "schemaVersion": 1,
@@ -101,7 +110,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -153,7 +161,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -201,7 +208,6 @@
         "behavior": {
           "rules": {
             "obeySignals": false,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -263,7 +269,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -315,7 +320,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,

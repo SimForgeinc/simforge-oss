@@ -5,32 +5,31 @@
     "kind": "scenario-instance-manifest",
     "manifestVersion": 1,
     "replayKey": {
-      "templateId": "double-turn-mobility-scooter",
+      "templateId": "ec-11-11-double-threat-crosswalk-v2",
       "templateVersion": 2,
-      "templateDigest": "320e855fb21ea180",
+      "templateDigest": "7b74b6fb75b9e608",
       "mapId": "el-camino-road",
       "matcherIndexDigest": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
       "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
       "siteId": "1f964815a5bfd7cb",
       "matcherVersion": "1.0.0",
-      "solverVersion": "0.6.0",
+      "solverVersion": "0.2.5",
       "paramSeed": "ec-11-11-double-threat-crosswalk-v2",
-      "drawIndex": 0,
-      "ambientProfileHash": "none"
+      "drawIndex": 0
     },
-    "instanceId": "1f964815a5bfd7cb#0",
+    "instanceId": "ec-11-11-double-threat-crosswalk-v2#0",
     "archetype": "gallery.11-double-threat-crosswalk",
     "negativeControl": false,
     "metricSubject": "focus-vehicle",
     "operationalVariant": null,
     "site": {
       "siteId": "1f964815a5bfd7cb",
-      "score": 0,
-      "verdict": "infeasible",
+      "score": 0.5335,
+      "verdict": "degraded",
       "originFeatureId": "junction:590",
       "entryLaneRsl": "128:1:-3",
       "egoTurn": "left",
-      "degradationSummary": "Infeasible at this site. loc_db13e7605599f19b2d8f3c78 carries no map evidence for signal-controlled. loc_db13e7605599f19b2d8f3c78 carries no map evidence for marked. Required clauses this map index cannot answer: features.xw.controlled, features.xw.marked.",
+      "degradationSummary": "Degraded match (score 0.53). speeds clamped to the site limit 64 kph (arrival invariants re-solved over the speed parameter). corridor.speedLimitKph worst value 64 at s=-45 m, wanted [20, 55]. Presentation was relaxed; the scenario still tests what it was written to test.",
       "matchedReasons": [
         "59.46 m of runway available, 45 m needed",
         "95.36 m of runway available, 45 m needed",
@@ -38,12 +37,11 @@
         "corridor.throughLanesSameDir holds over the whole interval (worst 5)",
         "origin feature sits at s = 0 by construction",
         "4-arm junction",
-        "conflicting opposing right movement crosses the ego path at 0°",
+        "conflicting opposing right movement crosses the focus-vehicle path at 0°",
         "signalized junction as requested",
         "reference path turns left",
         "junction has a marked crossing",
         "crossing loc_db13e7605599f19b2d8f3c78 at s=18.86 m (projected 5.31 m from feature point)",
-        "loc_db13e7605599f19b2d8f3c78 is a junction-leg crossing",
         "mobility-scooter: walks the crossing loc_db13e7605599f19b2d8f3c78 left_to_right",
         "cyclist: walks the crossing loc_db13e7605599f19b2d8f3c78 right_to_left",
         "opposing-left-turner: bound to gate 590:11:-6--1 (opposing right), crossing at 0° (template 135°)",
@@ -52,8 +50,8 @@
     },
     "params": {
       "values": {
-        "cyclistSpeedKph": 7.492746510542929,
-        "scooterSpeedKph": 3.9703622130909935
+        "scooterSpeedKph": 4.5,
+        "cyclistSpeedKph": 19
       },
       "categorical": {},
       "rejectedConstraints": []
@@ -62,16 +60,16 @@
       {
         "id": "cyclist",
         "actorKind": "bicycle",
-        "roleKind": "on_crossing",
+        "roleKind": "supporting",
         "laneRsl": null,
-        "spawnS": 11.992145822648167,
+        "spawnS": 0,
         "initialSpeedMps": 0,
-        "bindingStatus": "bound"
+        "bindingStatus": "scene-absolute"
       },
       {
         "id": "focus-vehicle",
         "actorKind": "car",
-        "roleKind": "on_reference",
+        "roleKind": "focus",
         "laneRsl": "128:0:-3",
         "spawnS": 79.36108146758178,
         "initialSpeedMps": 0,
@@ -80,27 +78,27 @@
       {
         "id": "mobility-scooter",
         "actorKind": "scooter",
-        "roleKind": "on_crossing",
+        "roleKind": "supporting",
         "laneRsl": null,
-        "spawnS": 2.3984291645296336,
-        "initialSpeedMps": 1.102878392525276,
-        "bindingStatus": "bound"
+        "spawnS": 0,
+        "initialSpeedMps": 1.25,
+        "bindingStatus": "scene-absolute"
       },
       {
         "id": "opposing-left-turner",
         "actorKind": "car",
-        "roleKind": "conflicting_gate",
+        "roleKind": "supporting",
         "laneRsl": "729:0:-1",
-        "spawnS": 0,
+        "spawnS": 51.201696198102994,
         "initialSpeedMps": 5,
         "bindingStatus": "bound"
       },
       {
         "id": "outer-pickup",
         "actorKind": "truck",
-        "roleKind": "lane_offset",
+        "roleKind": "supporting",
         "laneRsl": "627:0:-1",
-        "spawnS": 97.36209641792848,
+        "spawnS": 1.997384110080148,
         "initialSpeedMps": 0,
         "bindingStatus": "bound"
       }
@@ -111,26 +109,34 @@
         "interactionId": "role:opposing-left-turner",
         "actorId": "opposing-left-turner",
         "referenceActorId": "focus-vehicle",
-        "spawnDeltaS": 115.70725861717679,
-        "spawnS": 115.70725861717679,
+        "spawnDeltaS": 116.31800661424279,
+        "spawnS": 116.31800661424279,
         "targetDeltaT": 13.5,
-        "achievedDeltaT": 13.499923067172901,
-        "achievedTtc": -13.499923067172901,
-        "fireTime": 19.6687433689525,
+        "achievedDeltaT": 13.500037368944017,
+        "achievedTtc": -13.500037368944017,
+        "fireTime": 19.716833522165306,
         "iterations": 18,
         "converged": true
       }
     ],
-    "inputHash": "4c6b5a19b01281ae65ad321703d4d652d5f42ee907d72d1a417888766de22bf0",
+    "inputHash": "7daf05626db6264e66e27272ccbf2c45d6f24bf34585a8d7a83a3c95dd0e07a6",
     "feasible": true,
     "issues": [],
-    "initialInteractionOutcomes": [],
     "notes": [
       {
         "path": "signalPrograms",
         "reason": "22 physical map signal head(s) bound as 4 logical program(s) to junction 590 with authoritative OpenDRIVE controller-stage provenance; phase durations and t=0 state use the explicit synthetic-default cycle because authoritative timing/state data is absent"
       }
-    ]
+    ],
+    "contractMigration": {
+      "schema": "simforge.native-input-contract-reseal/v1",
+      "sourceSha256": "99fd0208b6a5d73a0b5a6e2c315e5e69bc4ddde6654555cc62a306549a61b8f1",
+      "sourceInputHash": "8dd0c1ff33d8ab82d12b649e4b5df8d07c4bbdf1dc238529095730685322f89f",
+      "targetAbi": 2,
+      "removedMasterFlags": 5,
+      "foldedFalseMasterFlags": 0,
+      "scope": "Rule-contract reseal only; authored poses, actors, actions, thresholds and signals unchanged. Replay metadata retains its historical materialization provenance."
+    }
   },
   "input": {
     "schemaVersion": 1,
@@ -138,10 +144,7 @@
     "clipSeconds": 20,
     "warmupSeconds": 1,
     "dt": 0.02,
-    "seed": "ec-11-11-double-",
-    "physics": {
-      "mode": "dynamic-v1"
-    },
+    "seed": "ec-11-11-double-threat-crosswalk-v2",
     "operationalConditions": {
       "weather": "clear",
       "timeOfDay": "day",
@@ -381,10 +384,6 @@
               }
             ]
           },
-          "drivingProfile": {
-            "comfortableLateralAccelerationMps2": 2.2,
-            "comfortableDecelerationMps2": 2.5
-          },
           "cruiseSpeedMps": 0
         },
         "presentAtStart": true,
@@ -392,7 +391,6 @@
         "tags": [
           "role:cyclist",
           "class:bicycle",
-          "driver-profile:lawful",
           "binding:on_crossing"
         ]
       },
@@ -400,9 +398,9 @@
         "id": "focus-vehicle",
         "kind": "car",
         "dims": {
-          "l": 4.7,
-          "w": 1.82,
-          "h": 1.45
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
         },
         "initial": {
           "laneRef": {
@@ -433,10 +431,6 @@
               "128:1:-3",
               "624:0:-1"
             ]
-          },
-          "drivingProfile": {
-            "comfortableLateralAccelerationMps2": 2.2,
-            "comfortableDecelerationMps2": 2.5
           }
         },
         "presentAtStart": true,
@@ -444,7 +438,6 @@
         "tags": [
           "role:focus-vehicle",
           "class:car",
-          "driver-profile:lawful",
           "binding:on_reference",
           "catalog:vehicle.sedan"
         ]
@@ -463,7 +456,7 @@
             "z": -1456.1368021541746,
             "headingRad": -0.2920493253462437
           },
-          "speedMps": 1.102878392525276
+          "speedMps": 1.25
         },
         "behavior": {
           "rules": {
@@ -675,18 +668,13 @@
               }
             ]
           },
-          "drivingProfile": {
-            "comfortableLateralAccelerationMps2": 2.2,
-            "comfortableDecelerationMps2": 2.5
-          },
-          "cruiseSpeedMps": 1.102878392525276
+          "cruiseSpeedMps": 1.25
         },
         "presentAtStart": true,
         "static": false,
         "tags": [
           "role:mobility-scooter",
           "class:scooter",
-          "driver-profile:lawful",
           "binding:on_crossing",
           "catalog:vehicle.mobility_scooter"
         ]
@@ -695,20 +683,20 @@
         "id": "opposing-left-turner",
         "kind": "car",
         "dims": {
-          "l": 4.85,
-          "w": 1.95,
-          "h": 1.78
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
         },
         "initial": {
           "laneRef": {
             "rsl": "729:0:-1",
-            "s": 50.590948201036994,
+            "s": 51.201696198102994,
             "tFrac": 0
           },
           "pose": {
-            "x": 1218.0437777877664,
-            "z": -1398.2125497349703,
-            "headingRad": 2.533809426510354
+            "x": 1217.5422249196567,
+            "z": -1398.5610577025468,
+            "headingRad": 2.534497059275206
           },
           "speedMps": 5
         },
@@ -736,10 +724,6 @@
               "1:0:-3"
             ]
           },
-          "drivingProfile": {
-            "comfortableLateralAccelerationMps2": 2.2,
-            "comfortableDecelerationMps2": 2.5
-          },
           "cruiseSpeedMps": 5
         },
         "presentAtStart": true,
@@ -747,7 +731,6 @@
         "tags": [
           "role:opposing-left-turner",
           "class:car",
-          "driver-profile:lawful",
           "binding:conflicting_gate",
           "catalog:vehicle.suv"
         ]
@@ -793,10 +776,6 @@
               "1:0:-2"
             ]
           },
-          "drivingProfile": {
-            "comfortableLateralAccelerationMps2": 2.2,
-            "comfortableDecelerationMps2": 2.5
-          },
           "cruiseSpeedMps": 0
         },
         "presentAtStart": true,
@@ -804,7 +783,6 @@
         "tags": [
           "role:outer-pickup",
           "class:truck",
-          "driver-profile:lawful",
           "binding:lane_offset",
           "catalog:vehicle.pickup"
         ]
@@ -821,7 +799,7 @@
         "verb": "speed",
         "target": {
           "mode": "absolute",
-          "value": 2.081318475150814
+          "value": 1.5
         },
         "dynamics": {
           "shape": "step",
@@ -1309,7 +1287,6 @@
       }
     ],
     "roadControls": [],
-    "surfacePatches": [],
     "props": [],
     "occluders": [],
     "occlusionPairs": [
@@ -1318,7 +1295,6 @@
         "target": "cyclist",
         "occluderId": "actor:outer-pickup"
       }
-    ],
-    "nearMissCriteria": []
+    ]
   }
 }

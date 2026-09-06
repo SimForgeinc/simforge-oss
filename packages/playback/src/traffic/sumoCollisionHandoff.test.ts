@@ -5,7 +5,7 @@ import { engine } from "@simforge-oss/engine/node";
 import { SumoCollisionHandoff } from "./sumoCollisionHandoff";
 import { decodeSumoMaterializedActors } from "./provider";
 
-type SumoExternalActorView = SumoAuthoredOccupancySource;
+type SumoExternalActorView = SumoAuthoredOccupancySource & { readonly render: ActorView };
 
 function authored(
   overrides: Partial<SumoExternalActorView> = {},
@@ -21,6 +21,17 @@ function authored(
     widthM: 1.9,
     static: false,
     present: true,
+    render: {
+      id: "authored:ego",
+      catalogId: "vehicle.sedan",
+      kind: "car",
+      x: 2,
+      y: 0,
+      z: 0,
+      headingRad: 0,
+      speedMps: 12,
+      dims: { l: 4.8, w: 1.9, h: 1.6 },
+    },
     ...overrides,
   };
 }

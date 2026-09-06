@@ -392,7 +392,7 @@
       }
     ],
     "arrival": [],
-    "inputHash": "b47e2d89d582235f54ae9c6dbb38785041cef8497176e0df9713c866f88c443b",
+    "inputHash": "7e9d31a37f2a90b820a553fc2947a0dbc23d0169da77f1449dfc9a028ea7b87e",
     "feasible": true,
     "issues": [],
     "notes": [
@@ -401,7 +401,16 @@
         "reason": "route(polyline) at t=0 folded into rideshare's spawn route (170.0 m), so the arrival solver can place the actor along it",
         "impact": "informational"
       }
-    ]
+    ],
+    "contractMigration": {
+      "schema": "simforge.native-input-contract-reseal/v1",
+      "sourceSha256": "89c25abf000f8978a88672a61cdaaef5c12ce8264eb1d365bac0ab969d1db9e4",
+      "sourceInputHash": "b47e2d89d582235f54ae9c6dbb38785041cef8497176e0df9713c866f88c443b",
+      "targetAbi": 2,
+      "removedMasterFlags": 6,
+      "foldedFalseMasterFlags": 0,
+      "scope": "Rule-contract reseal only; authored poses, actors, actions, thresholds and signals unchanged. Replay metadata retains its historical materialization provenance."
+    }
   },
   "input": {
     "schemaVersion": 1,
@@ -447,7 +456,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -499,7 +507,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -569,7 +576,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -639,7 +645,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -687,7 +692,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -1418,7 +1422,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,

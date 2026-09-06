@@ -9,15 +9,13 @@
         "arch": "x86_64"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "fresh-install gate: package-runtime.sh + install-runtime.sh on a clean root, then `runtime show` with components installed:true",
-          "end-to-end gate: simforge.compile/v1 -> simforge.simulate/v1 -> in-process evaluate on a real published map/scenario through the installed binary, artifact hashes verified by `job artifacts`",
-          "runner crash/reconnect/cancel gates on the installed binary (detach, SIGKILL owner, worker reconcile, resume, cancel at safe boundary)"
-        ],
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "installed-v5-a/report.json; candidate-abi2-conformance-v1/comparison.json; reference-abi2-sealed-v1/input-contract-reseal.json",
         "observed": [
-          "isolated lifecycle tests (8) passed against a counting engine in a /tmp copy on 2026-09-05; not the installed binary",
-          "core/session unit tests reported by their owners; narrower than the end-to-end gate"
+          "Installed compile, simulate, evaluate and content-addressed output verification passed; detached execution, owner crash, checkpoint resume and safe cancellation passed.",
+          "ABI 2 matched all 62 frozen discrete and numeric execution cases after an explicit input-contract reseal. Historical input hashes differ because the retired master yield field was removed; the strict same-input comparison is not claimed.",
+          "Qualification covers deterministic simulated execution, not real-world validity of a map or physical model."
         ]
       }
     },
@@ -30,13 +28,11 @@
         "python": ">=3.10"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "install-runtime.sh must build <root>/venv from the bundled wheels on a clean host and import every provider module",
-          "one provider job (simforge.articulated-mujoco/v1 mujoco-cpu) must complete through the installed runner with verified artifacts"
-        ],
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "installed-v5-a/report.json",
         "observed": [
-          "Main ran the simforge_oss_physics job CLI directly (seeds 3,4; 120 decisions; 4 checkpoints); not through the installed runner"
+          "Fresh installed runtime imported every bundled provider module and completed a MuJoCo CPU provider job through the installed runner with verified artifacts."
         ]
       }
     },
@@ -48,9 +44,12 @@
         "mujoco": ">=3.2"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "adapters/physics qualification gates (simforge-oss-physics qualify) must pass on the packaged wheel"
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "articulated-warp-installed-v6.json",
+        "observed": [
+          "Delivery-robot curb/ramp workload passed analytic free-fall, force balance, rolling, torque threshold, curb recovery, timestep convergence, same-build replay and snapshot continuation gates.",
+          "These analytic and identity gates do not establish real-world tyre/terrain validity or generic vehicle-scale suspension validity."
         ]
       }
     },
@@ -64,9 +63,12 @@
         "mujoco-warp": "pinned by simforge-oss-physics[warp]"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "mujoco-warp gates and measured CPU/Warp divergence on a real device"
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "articulated-warp-installed-v6.json",
+        "observed": [
+          "Installed MuJoCo/Warp workload passed cross-world identity and contact-capacity rejection gates on a CUDA device.",
+          "CPU/Warp divergence was measured, not asserted to be bitwise parity."
         ]
       }
     },
@@ -80,9 +82,12 @@
         "torch": ">=2.0 (optional, tensor leases)"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "simforge-oss-gpu-conformance and qualify on a real device"
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "roadway-gpu/conformance.json; roadway-gpu/throughput-large.json",
+        "observed": [
+          "Declared roadway GPU profile passed discrete/numeric conformance, cross-world identity and replay checks.",
+          "The two-actor synthetic straight-road workload matched final state at 1024 and 4096 worlds; measured median GPU/CPU throughput ratios were 1.5178 and 5.6928 respectively. These are not whole-product throughput claims."
         ]
       }
     },
@@ -94,14 +99,12 @@
         "gpu": "Vulkan-capable; CUDA >=12 for gpu-interop"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "captured frames must be non-blank and change with the scene (visual inspection), not merely byte-parity or a successful build",
-          "complete resource closure: share/sky plates present and digest-verified, scene assets resolvable from the runtime root"
-        ],
-        "evidence": "set by Main after real scene renders are inspected",
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "articulated-sensors-host-v6/report.json; articulated-sensors-device-v6/report.json",
         "observed": [
-          "CUDA transport/lease mechanics passed but the captured image was black; transport mechanics are not visual qualification"
+          "Inspected visible RGB and depth captures passed on the resident renderer through both declared host-copy and CUDA device-tensor transports.",
+          "State and sensor continuation after checkpoint restore were exact in both exercised transports; sky assets were present and digest-verified."
         ]
       }
     },
@@ -116,9 +119,12 @@
         "assets": "pinned .usdz packages, scenes root, catalog roots, hood dir"
       },
       "qualification": {
-        "status": "unqualified",
-        "blockers": [
-          "provider capabilities available:true on the target host and inspected non-blank renders"
+        "status": "qualified",
+        "blockers": [],
+        "evidence": "nurec-tensor-v5/report.json",
+        "observed": [
+          "Pinned source-observation rendering passed visible RGB/depth/ID, repeated-pixel identity, host-pack identity, bounded tensor-slot exhaustion and retained-view lifetime checks.",
+          "Qualification is for the source-observation tensor adapter on the exercised CUDA host. It does not qualify a native physical counterfactual, whole-scene fidelity, measured twin export or calibration."
         ]
       }
     }

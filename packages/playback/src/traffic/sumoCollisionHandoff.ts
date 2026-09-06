@@ -274,7 +274,10 @@ export class SumoCollisionHandoff {
         this.authoredById.set(id, body);
         if (!this.authoredRenders.has(id)) {
           const source = released(authored, id);
-          this.authoredRenders.set(id, source.render ?? authoredRenderFallback(source));
+          if (!source.render) {
+            throw new Error(`authored actor ${id} has no appearance for native traffic handoff`);
+          }
+          this.authoredRenders.set(id, source.render);
         }
       }
     });
@@ -288,18 +291,4 @@ function released<T extends { readonly id: string }>(actors: readonly T[], id: s
   const actor = actors.find((candidate) => candidate.id === id);
   if (!actor) throw new Error(`native handoff released unknown actor ${id}`);
   return actor;
-}
-
-function authoredRenderFallback(source: SumoExternalActorView): ActorView {
-  return {
-    id: source.id,
-    catalogId: "vehicle.sedan",
-    kind: source.kind,
-    x: source.x,
-    y: 0,
-    z: source.z,
-    headingRad: source.headingRad,
-    speedMps: source.speedMps,
-    dims: { l: source.lengthM, w: source.widthM, h: 1.5 },
-  };
 }

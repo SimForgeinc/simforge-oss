@@ -92,7 +92,7 @@
     ],
     "props": [],
     "arrival": [],
-    "inputHash": "f38564b35983fb73ba48b5aae8bb87d53950087dcd696cd3d8d537a0dcfa933c",
+    "inputHash": "494bf0d4e0015d70bb8877dee2e839c6dec8b60e08ac36c1a40bb188a1ad87d2",
     "feasible": true,
     "issues": [],
     "notes": [
@@ -136,7 +136,16 @@
         "path": "roles.cart.extensions.placementFeature",
         "reason": "placementFeature \"access\" is not bound at this site; using frame origin"
       }
-    ]
+    ],
+    "contractMigration": {
+      "schema": "simforge.native-input-contract-reseal/v1",
+      "sourceSha256": "caaac1ee7fff0ad3774fbdd38c435f75ba0d0b331b455db5ab7058e203359685",
+      "sourceInputHash": "f38564b35983fb73ba48b5aae8bb87d53950087dcd696cd3d8d537a0dcfa933c",
+      "targetAbi": 2,
+      "removedMasterFlags": 5,
+      "foldedFalseMasterFlags": 1,
+      "scope": "Rule-contract reseal only; authored poses, actors, actions, thresholds and signals unchanged. Replay metadata retains its historical materialization provenance."
+    }
   },
   "input": {
     "schemaVersion": 1,
@@ -182,7 +191,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -238,7 +246,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -292,7 +299,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
@@ -343,9 +349,8 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": false,
             "yieldToVehicles": false,
-            "yieldToPedestrians": true,
+            "yieldToPedestrians": false,
             "collisionAvoidance": false,
             "aggression": 0.5,
             "speedFactor": 1
@@ -394,7 +399,6 @@
         "behavior": {
           "rules": {
             "obeySignals": true,
-            "yield": true,
             "yieldToVehicles": true,
             "yieldToPedestrians": true,
             "collisionAvoidance": true,
