@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -45,37 +46,47 @@ function failureOf(error: unknown): { code: string; message: string; retryable: 
 }
 
 const NATIVE_CORPUS_ASSET_ID = 'map.native-corpus';
-const NATIVE_TILE_INPUT_PATTERN = /^map\.tile\.[A-Za-z0-9._-]+$/;
+const NATIVE_MASTER_INPUT_ID = 'map.tile.000000';
+const NATIVE_RESOURCE_INPUT_PATTERN = /^map\.resource\.[a-f0-9]{64}$/u;
 
 export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'inputs'>): void {
+  const nativeCorpus = job.intent.assets.find((asset) => asset.assetId === NATIVE_CORPUS_ASSET_ID && asset.kind === 'map');
   const expectedInputs = new Map<string, { sha256: string; sizeBytes: number }>([
     ['scenario.xosc', job.intent.scenarioRevision.openScenario],
     ...job.intent.assets
-      .filter((asset) => asset.assetId !== NATIVE_CORPUS_ASSET_ID)
+      .filter((asset) => asset !== nativeCorpus)
       .map((asset) => [asset.assetId, asset] as const),
   ]);
-  const expectsNativeCorpus = job.intent.assets.some((asset) => asset.assetId === NATIVE_CORPUS_ASSET_ID);
   const claimedInputIds = new Set<string>();
-  let nativeTileCount = 0;
+  let nativeMasterFound = false;
 
   for (const input of job.inputs) {
     if (claimedInputIds.has(input.inputId)) throw new Error(`invalid duplicate claimed input ${input.inputId}`);
     claimedInputIds.add(input.inputId);
-    if (expectsNativeCorpus && NATIVE_TILE_INPUT_PATTERN.test(input.inputId)) {
-      nativeTileCount += 1;
-      continue;
+    const nativeMaster = nativeCorpus !== undefined && input.inputId === NATIVE_MASTER_INPUT_ID;
+    const nativeResource = nativeCorpus !== undefined && NATIVE_RESOURCE_INPUT_PATTERN.test(input.inputId);
+    if (nativeMaster && input.relativePath !== 'master.gltf') {
+      throw new Error(`invalid native master path for ${input.inputId}`);
     }
+    // The transfer schema checks path safety; resource IDs bind that exact path, not file contents.
+    if (nativeResource && (!input.relativePath || input.relativePath === 'master.gltf'
+      || input.inputId !== `map.resource.${createHash('sha256').update(input.relativePath).digest('hex')}`)) {
+      throw new Error(`invalid native resource path binding for ${input.inputId}`);
+    }
+    if (nativeMaster) nativeMasterFound = true;
     const expected = expectedInputs.get(input.inputId);
-    if (!expected) throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
-    if (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes) {
+    if (!expected && !nativeMaster && !nativeResource) {
+      throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
+    }
+    if (expected && (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes)) {
       throw new Error(`invalid claimed input metadata for ${input.inputId}`);
     }
   }
   for (const inputId of expectedInputs.keys()) {
     if (!claimedInputIds.has(inputId)) throw new Error(`invalid missing claimed input ${inputId}`);
   }
-  if (expectsNativeCorpus && nativeTileCount === 0) {
-    throw new Error('invalid missing claimed map.tile.* inputs for map.native-corpus');
+  if (nativeCorpus && !nativeMasterFound) {
+    throw new Error('invalid missing claimed native map master');
   }
 }
 
