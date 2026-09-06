@@ -860,7 +860,11 @@ fn render_tick(
             auto_meter(state, cam, &eye, &target);
         }
     }
-    let _ = any_new_camera;
+    if any_new_camera {
+        if let Err(error) = state.app.wait_for_capture_ready() {
+            return WireResponse::error(i, format!("capture readiness: {error:#}"));
+        }
+    }
     // Readback returns the PREVIOUS render's buffer: pose/scene updates lag
     // one render_once (empirically shown by the two-pose hash probe: pose-A
     // request returned pose-B pixels; new cameras return stale buffers).
@@ -1199,8 +1203,9 @@ fn render_bundle_op(
             .app
             .set_actor_visual_hidden(actor_id, hidden_hosts.contains(actor_id));
     }
+    let mut any_new_camera = false;
     for cam in &rig {
-        ensure_camera(state, cam, want);
+        any_new_camera |= ensure_camera(state, cam, want);
         let (eye, target) = match resolve_pose(state, cam) {
             Ok(pose) => pose,
             Err(error) => return WireResponse::error(i, error),
@@ -1210,6 +1215,11 @@ fn render_bundle_op(
         }
         if cam.sensor_id == rig[0].sensor_id {
             auto_meter(state, cam, &eye, &target);
+        }
+    }
+    if any_new_camera {
+        if let Err(error) = state.app.wait_for_capture_ready() {
+            return WireResponse::error(i, format!("capture readiness: {error:#}"));
         }
     }
     // Same double-render flush as `render`: readback lags one render_once.

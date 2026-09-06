@@ -3384,6 +3384,33 @@ impl SceneApp {
         self.next_camera_order = 0;
     }
 
+    /// Wait for the current capture cameras' GPU permutations, not the prewarm rig.
+    pub fn wait_for_capture_ready(&mut self) -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(300);
+        let mut last_sample = self.app.world().resource::<GpuPending>().samples();
+        let mut idle_frames = 0;
+        loop {
+            self.app.update();
+            while self.receiver.try_recv().is_ok() {}
+            let pending = self.app.world().resource::<GpuPending>();
+            let sample = pending.samples();
+            if sample != last_sample {
+                last_sample = sample;
+                idle_frames = if pending.is_idle() { idle_frames + 1 } else { 0 };
+                if idle_frames >= GPU_IDLE_FRAMES {
+                    return Ok(());
+                }
+            }
+            if Instant::now() > deadline {
+                bail!(
+                    "capture cameras failed to become ready within 300 s ({} pipelines compiling, {} materials unbound)",
+                    pending.pipelines(),
+                    pending.materials()
+                );
+            }
+        }
+    }
+
     /// Update until all tiles are loaded, scenes spawned and instances built.
     /// Then builds the deterministic instance-ID pass. Returns the legend.
     pub fn wait_until_ready(&mut self) -> Result<Vec<LegendEntry>> {
