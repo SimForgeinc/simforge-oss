@@ -108,5 +108,3 @@ export async function schemas(options: SchemasOptions): Promise<number> {
   ]);
   return EXIT.ok;
 }
-
-export { fileURLToPath };
