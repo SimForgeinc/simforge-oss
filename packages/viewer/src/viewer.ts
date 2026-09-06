@@ -27,6 +27,7 @@ import {
   estimateResourceBytes,
   getGLTFLoader,
   resourceDirectory,
+  disposeTrackedLoader,
 } from './gltf';
 import { createSun } from './environment';
 import {
@@ -269,6 +270,7 @@ export class CityViewer {
   private readonly options: Required<CityViewerOptions>;
   private readonly frameStats = new FrameStats(150);
   private readonly downloadTracker = new AssetDownloadTracker();
+  private textureLoadAbort = new AbortController();
   private readonly phaseStats = {
     controls: new FrameStats(150),
     streaming: new FrameStats(150),
@@ -432,7 +434,7 @@ export class CityViewer {
       ),
       maxConcurrentDerivatives: 2,
       loadDerivative: async (derivative, signal) => {
-        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath);
+        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
         const gltf = await loader.parseAsync(buffer, resourceDirectory(derivativeUrl));
@@ -496,14 +498,20 @@ export class CityViewer {
       if (this.disposed) return;
       if (this.mapLoaded) this.releaseMapResources();
       this.mapLoaded = true;
+      this.textureLoadAbort.abort();
+      disposeTrackedLoader(this.downloadTracker);
+      this.textureLoadAbort = new AbortController();
       this.downloadTracker.reset();
+      this.streamingError = null;
       this.mapLoadActive = true;
       try {
         await this.loadMapInner(manifestUrl);
       } catch (err) {
         // dispose() aborts every in-flight request; that is not a failure.
         if (this.disposed || (err as { name?: string } | null)?.name === 'AbortError') return;
-        throw err;
+        const error = new Error(`Map bootstrap downloading/decoding failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+        this.recordStreamingError(error);
+        throw error;
       } finally {
         this.mapLoadActive = false;
       }
@@ -531,7 +539,7 @@ export class CityViewer {
     this.assetBase = url.replace(/[^/]*$/, '');
     const manifest = (await fetch(url, { signal: this.abort.signal }).then((r) => {
       if (!r.ok) throw new Error(`manifest ${r.status} ${url}`);
-      return r.json();
+      return this.readJsonResponse(r);
     })) as CityManifest;
     if (this.disposed) return;
     this.manifest = manifest;
@@ -589,7 +597,7 @@ export class CityViewer {
     this.refreshSkyEnvironment();
     if (this.ultraLowFidelity) this.disableEnvironment();
     this.visualResourcesPromise = atlas
-      .load(manifest, this.assetBase, this.abort.signal)
+      .load(manifest, this.assetBase, this.abort.signal, this.downloadTracker)
       .then(() => undefined);
     return this.visualResourcesPromise;
   }
@@ -825,12 +833,20 @@ export class CityViewer {
     return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes);
   }
 
+  private async readJsonResponse(response: Response): Promise<unknown> {
+    const decoded = this.downloadTracker.trackDecode();
+    const buffer = await readResponseBufferWithProgress(response, this.downloadTracker);
+    const value: unknown = JSON.parse(new TextDecoder().decode(buffer));
+    decoded();
+    return value;
+  }
+
   private async loadVariantManifest(): Promise<CityAssetVariantManifest | null> {
     const relative = this.options.variantManifestUrl || 'variants/manifest.json';
     try {
       const response = await fetch(resolveUrl(this.assetBase, relative), { signal: this.abort.signal });
       if (!response.ok) return null;
-      const value: unknown = await response.json();
+      const value = await this.readJsonResponse(response);
       return isCityAssetVariantManifest(value) ? value : null;
     } catch (error) {
       if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
@@ -849,7 +865,7 @@ export class CityViewer {
         signal: this.abort.signal,
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return parseStaticSemantics(await response.json());
+      return parseStaticSemantics(await this.readJsonResponse(response));
     } catch (error) {
       if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
       console.warn('[CityViewer] Static semantics unavailable:', error);
@@ -875,7 +891,7 @@ export class CityViewer {
       this.canvas.dataset.assetVariant = `${requiredVariant}-unavailable`;
       throw new Error(`${this.roadsOnlyFidelity ? 'Roads Only' : 'Ultra Low'} requires a ${requiredVariant} derivative for ${sourceFile}`);
     }
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
@@ -916,7 +932,7 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await loader.parseAsync(buffer, resourceDirectory(fileUrl));
@@ -1008,6 +1024,7 @@ export class CityViewer {
       name: 'road-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs: [def],
       maxConcurrent: 1,
       memory: this.memory,
@@ -1067,6 +1084,7 @@ export class CityViewer {
       name: 'city-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs,
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
@@ -1108,21 +1126,22 @@ export class CityViewer {
   }
 
   private async loadVegetationInstances(manifest: CityManifest): Promise<void> {
-    const tiles = manifest.vegetationTiles ?? [];
-    await Promise.all(
-      tiles.map(async (tile) => {
-        if (!tile.instanceFile) return;
+    const tiles = (manifest.vegetationTiles ?? []).values();
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (const tile of tiles) {
+        if (this.disposed || this.abort.signal.aborted) return;
+        if (!tile.instanceFile) continue;
         try {
           const res = await fetch(resolveUrl(this.assetBase, tile.instanceFile), {
             signal: this.abort.signal,
           });
-          if (!res.ok) return;
-          this.vegetationData.set(tile.id, (await res.json()) as VegetationInstanceFile);
+          if (!res.ok) continue;
+          this.vegetationData.set(tile.id, (await this.readJsonResponse(res)) as VegetationInstanceFile);
         } catch {
           /* a tile without instance data simply renders no vegetation */
         }
-      }),
-    );
+      }
+    }));
   }
 
   private createVegetationLayer(manifest: CityManifest): void {
@@ -1143,6 +1162,7 @@ export class CityViewer {
       name: 'vegetation-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs,
       maxConcurrent: 2,
       memory: this.memory,
@@ -1318,6 +1338,7 @@ export class CityViewer {
       return this.freeSpace(budget - bytes, priority);
     },
     maxAssetBytes: (): number => this.options.byteBudget * 0.45,
+    pendingBytes: (): number => Math.max(0, this.totalBytes() - this.residentBytes()),
   };
 
   private enforceBudget(): void {
@@ -1373,6 +1394,14 @@ export class CityViewer {
     const snowStreaming = snowStreamingContribution(snow);
     const sum = (pick: (s: NonNullable<typeof city>) => number): number =>
       (city ? pick(city) : 0) + (veg ? pick(veg) : 0) + (road ? pick(road) : 0);
+    const downloads = this.downloadTracker.snapshot();
+    const auxiliaryPending = Number(this.mapLoadActive) + this.presetTransitions
+      + this.auxiliaryLoads + snowStreaming.loading + snowStreaming.queued;
+    const stage = downloads.active > 0 ? 'downloading'
+      : sum((s) => s.pendingTextureUploads) > 0 ? 'uploading'
+      : sum((s) => s.compiling) > 0 ? 'compiling'
+      : sum((s) => s.loading + s.queued + s.uploading) + auxiliaryPending > 0 ? 'decoding'
+      : 'ready';
     return {
       fps: this.fps,
       frameMsAvg: this.frameStats.avg(),
@@ -1395,7 +1424,14 @@ export class CityViewer {
       queued: sum((s) => s.queued) + snowStreaming.queued,
       uploading: sum((s) => s.uploading),
       pendingTextureUploads: sum((s) => s.pendingTextureUploads),
-      downloads: this.downloadTracker.snapshot(),
+      downloads,
+      requiredPendingAssets: sum((s) => s.requiredPendingAssets) + auxiliaryPending,
+      loadProgress: {
+        decodedAssets: sum((s) => s.decodedAssets) + this.downloadTracker.decodedAssets,
+        uploadedTextures: sum((s) => s.uploadedTextures),
+        compiledAssets: sum((s) => s.compiledAssets),
+        stage,
+      },
       jsHeapMB: jsHeapMB(),
       cameraMode: this.controls.mode,
       renderingSuspended: this.renderingSuspended,
@@ -1403,6 +1439,7 @@ export class CityViewer {
       roadsOnlyFidelity: this.roadsOnlyFidelity,
       roadVisible: this.roadReady && this.roadGroup.visible,
       streamingError: this.streamingError,
+      requiredError: this.streamingError,
       uiTicksPerSecond: this.fps,
       surfaceMaterials: this.surfaceMaterials.report(),
       snowCover: snow,
@@ -1603,7 +1640,7 @@ export class CityViewer {
   private recordStreamingError(error: unknown): void {
     if (this.disposed || (error as { name?: string } | null)?.name === 'AbortError') return;
     this.streamingError = error instanceof Error ? error.message : String(error);
-    console.error('[city-renderer] preset transition failed', error);
+    console.error('[city-renderer] streaming failed', error);
   }
 
   private applyRoadsOnlyMode(): void {
@@ -2070,6 +2107,8 @@ export class CityViewer {
     this.disposed = true;
     cancelAnimationFrame(this.rafHandle);
     this.abort.abort();
+    this.textureLoadAbort.abort();
+    disposeTrackedLoader(this.downloadTracker);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.controls.dispose();

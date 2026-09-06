@@ -25,8 +25,8 @@ const SAMPLE_INTERVAL_MS = 100;
 /**
  * Session-scoped byte telemetry for streamed asset responses.
  *
- * This intentionally reports network bytes only. Decode, texture upload, and
- * shader work stay represented by the renderer's existing queue counters.
+ * This reports network bytes separately from completed decode work; upload and
+ * shader completion counters are maintained by the streaming layers.
  */
 export class AssetDownloadTracker {
   private generation = 0;
@@ -37,6 +37,14 @@ export class AssetDownloadTracker {
   private unknownActive = 0;
   private lastProgressAt: number | null = null;
   private samples: Sample[] = [];
+  decodedAssets = 0;
+
+  trackDecode(): () => void {
+    const generation = this.generation;
+    return () => {
+      if (generation === this.generation) this.decodedAssets++;
+    };
+  }
 
   reset(): void {
     this.generation++;
@@ -46,6 +54,7 @@ export class AssetDownloadTracker {
     this.unknownActive = 0;
     this.lastProgressAt = null;
     this.samples = [];
+    this.decodedAssets = 0;
   }
 
   begin(totalBytes?: number | null): number {
@@ -152,6 +161,10 @@ export async function readResponseBufferWithProgress(
     }
   }
 
+  // A trustworthy uncompressed Content-Length avoids retaining every chunk
+  // plus a second full-size concatenation buffer for large GLBs.
+  let output = validBytes(headerBytes) && !response.headers.get('content-encoding')
+    ? new Uint8Array(headerBytes) : null;
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {
@@ -159,18 +172,28 @@ export async function readResponseBufferWithProgress(
       const { done, value } = await reader.read();
       if (done) break;
       if (!value || value.byteLength === 0) continue;
-      chunks.push(value);
+      if (output && length + value.byteLength <= output.byteLength) {
+        output.set(value, length);
+      } else {
+        if (output) {
+          chunks.push(output.subarray(0, length));
+          output = null;
+        }
+        chunks.push(value);
+      }
       length += value.byteLength;
       tracker.advance(id, value.byteLength);
     }
-    const output = new Uint8Array(length);
-    let offset = 0;
-    for (const chunk of chunks) {
-      output.set(chunk, offset);
-      offset += chunk.byteLength;
+    if (!output) {
+      output = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) {
+        output.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
     }
     tracker.finish(id);
-    return output.buffer;
+    return length === output.byteLength ? output.buffer : output.buffer.slice(0, length);
   } catch (error) {
     tracker.fail(id);
     throw error;

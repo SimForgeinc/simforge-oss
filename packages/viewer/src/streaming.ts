@@ -64,6 +64,11 @@ export interface LayerStats {
   queued: number;
   uploading: number;
   pendingTextureUploads: number;
+  decodedAssets: number;
+  uploadedTextures: number;
+  compiledAssets: number;
+  compiling: number;
+  requiredPendingAssets: number;
 }
 
 export interface MemoryGovernor {
@@ -76,6 +81,8 @@ export interface MemoryGovernor {
   admit(bytes: number, priority: number): boolean;
   /** Largest single asset worth holding; coarser LODs are used above this. */
   maxAssetBytes(): number;
+  /** Shared in-flight estimates may shrink after decoding or replacement. */
+  pendingBytes?(): number;
 }
 
 export interface TileStreamLayerOptions {
@@ -105,6 +112,8 @@ export interface TileStreamLayerOptions {
   onDisplay?: (def: StreamTileDef, asset: PreparedAsset, index: number) => void;
   /** Called every frame for the displayed asset (vegetation density LOD). */
   onTick?: (def: StreamTileDef, asset: PreparedAsset, distance: number, index: number) => void;
+  /** Terminal preparation failures; never publish a failed asset as ready. */
+  onError?: (error: Error) => void;
 }
 
 const MAX_FAILURES = 2;
@@ -139,6 +148,9 @@ export class TileStreamLayer {
   private disposed = false;
   private generation = 0;
   private bootstrapped: boolean;
+  private decodedAssets = 0;
+  private uploadedTextures = 0;
+  private compiledAssets = 0;
 
   constructor(opts: TileStreamLayerOptions) {
     this.opts = opts;
@@ -184,11 +196,19 @@ export class TileStreamLayer {
     let residentAssets = 0;
     let queued = 0;
     let loading = 0;
+    let requiredPendingAssets = 0;
     for (const entry of this.entries.values()) {
       if (entry.resident.size > 0) residentTiles++;
       residentAssets += entry.resident.size;
       if (entry.loading) loading++;
       else if (entry.preparing === null && !entry.budgetBlocked && entry.desired > this.finestResident(entry)) queued++;
+      if ((this.opts.essentialAll || this.opts.pinCoarsest)
+        && (!this.opts.want || this.opts.want(entry.def, entry.distance))) {
+        const requiredIndex = this.opts.essentialAll
+          ? (this.opts.maxDesiredIndex?.(entry.def) ?? entry.def.lods.length - 1)
+          : 0;
+        if (!entry.resident.has(requiredIndex)) requiredPendingAssets++;
+      }
     }
     let pendingTextureUploads = 0;
     for (const job of this.uploadQueue) pendingTextureUploads += job.asset.pendingTextures.length;
@@ -201,6 +221,11 @@ export class TileStreamLayer {
       queued,
       uploading: this.uploadQueue.length + this.compiling.size,
       pendingTextureUploads,
+      decodedAssets: this.decodedAssets,
+      uploadedTextures: this.uploadedTextures,
+      compiledAssets: this.compiledAssets,
+      compiling: this.compiling.size,
+      requiredPendingAssets,
     };
   }
 
@@ -252,9 +277,11 @@ export class TileStreamLayer {
         || (Number.isFinite(previousDistance) && Math.abs(distance - previousDistance) > Math.max(10, previousDistance * 0.2))) {
         entry.budgetBlocked = false;
       }
+      if (entry.budgetBlocked && this.opts.pinCoarsest && !entry.resident.has(0)
+        && this.opts.memory.pendingBytes?.() === 0) entry.budgetBlocked = false;
       entry.desired = desired;
 
-      if (this.opts.pinCoarsest && !entry.resident.has(0) && entry.failures < MAX_FAILURES) {
+      if (this.opts.pinCoarsest && wanted && !entry.resident.has(0)) {
         bootstrapped = false;
       }
 
@@ -280,7 +307,7 @@ export class TileStreamLayer {
     // pacer uploads it. Letting the fetchers run ahead of the (deliberately
     // slow) upload pacer is how the transient footprint explodes, so the
     // backlog is capped.
-    if (this.uploadQueue.length >= MAX_UPLOAD_BACKLOG) return;
+    if (this.uploadQueue.length + this.compiling.size >= MAX_UPLOAD_BACKLOG) return;
     let active = 0;
     for (const entry of this.entries.values()) if (entry.loading) active++;
     if (active >= this.opts.maxConcurrent) return;
@@ -297,7 +324,8 @@ export class TileStreamLayer {
     wanted.sort((a, b) => b.gain - a.gain || a.distance - b.distance);
 
     for (const entry of wanted) {
-      if (active >= this.opts.maxConcurrent) break;
+      if (active >= this.opts.maxConcurrent
+        || active + this.uploadQueue.length + this.compiling.size >= MAX_UPLOAD_BACKLOG) break;
       // Admission can refuse (budget full); try the next tile instead of stalling.
       if (this.startLoad(entry, entry.desired)) active++;
     }
@@ -311,6 +339,10 @@ export class TileStreamLayer {
       || (this.opts.essentialCoarsest === true && index === 0);
     if (!essential && !this.opts.memory.admit(estimate, entry.distance)) {
       entry.budgetBlocked = true;
+      if (this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
+        entry.failures = MAX_FAILURES;
+        this.reportFailure(entry, index, new Error(`[${this.opts.name}] required coarse asset ${entry.def.id} cannot fit the memory budget`));
+      }
       return false;
     }
     this.pending += estimate;
@@ -320,23 +352,26 @@ export class TileStreamLayer {
     this.opts
       .build(entry.def, lod, controller.signal)
       .then((asset) => {
-        if (generation === this.generation) entry.loading = null;
+        if (entry.loading?.controller === controller) entry.loading = null;
         this.pending -= estimate;
-        if (this.disposed || controller.signal.aborted) {
+        if (this.disposed || controller.signal.aborted || generation !== this.generation) {
           asset.dispose?.();
           disposeResources(asset.resources);
           return;
         }
         entry.preparing = index;
+        this.decodedAssets++;
         this.pending += asset.bytes;
         this.uploadQueue.push({ entry, index, asset });
       })
       .catch((err: unknown) => {
-        if (generation === this.generation) entry.loading = null;
+        if (entry.loading?.controller === controller) entry.loading = null;
         this.pending -= estimate;
-        if (!controller.signal.aborted && !this.disposed) {
+        if (!controller.signal.aborted && !this.disposed && generation === this.generation) {
           entry.failures++;
-          console.error(`[city-renderer] ${entry.def.id} lod${lod.level} failed`, err);
+          const error = new Error(`[${this.opts.name}] downloading/decoding ${entry.def.id} lod${lod.level} failed`, { cause: err });
+          console.error(error);
+          if (entry.failures >= MAX_FAILURES) this.reportFailure(entry, index, error);
         }
       });
     return true;
@@ -360,7 +395,18 @@ export class TileStreamLayer {
         // Charged before the upload so one 2048px texture (~4.2 Mpx, the
         // dominant cost at LOD0/LOD1) is all a frame ever does.
         pixelBudget.remaining -= (image?.width ?? 0) * (image?.height ?? 0);
-        uploadTexture(this.opts.renderer, tex);
+        try {
+          uploadTexture(this.opts.renderer, tex);
+          this.uploadedTextures++;
+        } catch (cause) {
+          this.uploadQueue.shift();
+          this.pending -= job.asset.bytes;
+          job.entry.preparing = null;
+          job.entry.failures = MAX_FAILURES;
+          job.asset.dispose?.();
+          disposeResources(job.asset.resources);
+          this.reportFailure(job.entry, job.index, new Error(`[${this.opts.name}] uploading ${job.entry.def.id} failed`, { cause }));
+        }
         continue;
       }
       this.uploadQueue.shift();
@@ -370,36 +416,49 @@ export class TileStreamLayer {
   }
 
   private finishAsset(entry: Entry, index: number, asset: PreparedAsset, camera: Camera): void {
-    asset.object.updateMatrixWorld(true);
     this.compiling.add(asset);
     this.pending += asset.bytes;
-    const job = this.opts.renderer
-      .compileAsync(asset.object, camera, this.opts.scene)
-      .catch((error: unknown) => {
-        // A compile failure is still useful diagnostic information. Disposal is
-        // the only expected cancellation path, and compileAsync itself has no
-        // AbortSignal, so do not turn unrelated failures into silent success.
-        if (!this.disposed) console.error(`[city-renderer] ${entry.def.id} shader compilation failed`, error);
+    // Start in a promise so synchronous driver/compile failures use the same
+    // cleanup path as asynchronous shader failures.
+    const job = Promise.resolve()
+      .then(() => {
+        asset.object.updateMatrixWorld(true);
+        return this.opts.renderer.compileAsync(asset.object, camera, this.opts.scene);
       })
       .then((): void => {
-        this.compiling.delete(asset);
-        this.pending -= asset.bytes;
-        if (entry.preparing === index) entry.preparing = null;
         if (this.disposed) {
           asset.dispose?.();
           disposeResources(asset.resources);
           return;
         }
+        this.compiledAssets++;
         this.swapIn(entry, index, asset);
+      }, (cause: unknown): void => {
+        asset.dispose?.();
+        disposeResources(asset.resources);
+        if (!this.disposed) {
+          entry.failures = MAX_FAILURES;
+          this.reportFailure(entry, index, new Error(`[${this.opts.name}] compiling ${entry.def.id} failed`, { cause }));
+        }
+      })
+      .finally(() => {
+        this.compiling.delete(asset);
+        this.pending -= asset.bytes;
+        if (entry.preparing === index) entry.preparing = null;
       });
     this.compilationJobs.add(job);
     void job.then(
       () => this.compilationJobs.delete(job),
       (error: unknown) => {
         this.compilationJobs.delete(job);
-        console.error(`[city-renderer] ${entry.def.id} compilation finalization failed`, error);
+        this.reportFailure(entry, index, new Error(`[${this.opts.name}] finalizing ${entry.def.id} failed`, { cause: error }));
       },
     );
+  }
+
+  private reportFailure(entry: Entry, index: number, error: Error): void {
+    console.error(error);
+    if (this.opts.essentialAll || (this.opts.pinCoarsest && index === 0)) this.opts.onError?.(error);
   }
 
   /** Resolves after all non-cancellable Three.js shader polls have stopped. */

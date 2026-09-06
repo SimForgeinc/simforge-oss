@@ -239,6 +239,17 @@ export interface CityViewerStats {
   pendingTextureUploads: number;
   /** Live byte-level network telemetry for the current map or preset load. */
   downloads: import('./download-progress').AssetDownloadStats;
+  /** Required scene work only; optional LOD refinement may continue after zero. */
+  requiredPendingAssets?: number;
+  /** Terminal failure of required scene preparation, not optional refinement. */
+  requiredError?: string | null;
+  /** Completion counters never decrease during a map load, including LOD eviction. */
+  loadProgress?: {
+    decodedAssets: number;
+    uploadedTextures: number;
+    compiledAssets: number;
+    stage: 'downloading' | 'decoding' | 'uploading' | 'compiling' | 'ready';
+  };
   jsHeapMB: number | null;
   cameraMode: 'orbit' | 'fly';
   /** True when GPU rendering and scene streaming are bypassed but integrations still tick. */

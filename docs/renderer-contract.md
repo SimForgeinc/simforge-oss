@@ -26,6 +26,22 @@ of the two existing Three surfaces; Bevy work lands in the native lane. A
 Bevy WASM editor is gated behind the strategy-A feasibility spike and is out
 of scope for this contract version.
 
+### CityViewer map-loading observability
+
+`CityViewerStats` reports implementation telemetry separately from the frozen
+renderer wire contract. `downloads.transferredBytes` counts actual received
+bytes, including external textures and startup metadata. `loadProgress`
+reports the current stage and completed decode, texture-upload, and compile
+counts; elapsed time alone is never progress.
+
+Readiness requires road geometry and all wanted pinned coarse city tiles to
+finish GPU preparation. `requiredPendingAssets` excludes optional refinements;
+`requiredError` surfaces required download, decode, upload, compile, or memory
+admission failures. A failed compile must not publish the asset as resident.
+Consumers should poll from bootstrap start, use stage-specific idle deadlines
+and an overall deadline, and report processing as indeterminate when no byte
+denominator is available.
+
 ## Frozen wire identifiers
 
 `scene-state.v1` and `uniscenario.static-semantics/v1` are referenced

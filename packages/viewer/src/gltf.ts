@@ -3,6 +3,7 @@ import { CompressedTexture, Mesh, RGBA_S3TC_DXT1_Format } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -111,6 +112,48 @@ class SharedTextureCache {
 export const sharedTextures = new SharedTextureCache();
 
 class SharedKTX2Loader extends KTX2Loader {
+  tracker?: AssetDownloadTracker;
+  signal?: AbortSignal;
+  private activeDownloads = 0;
+  private readonly waiting: (() => void)[] = [];
+  private disposeWhenIdle = false;
+
+  override dispose(): void {
+    // Terminating a worker mid-transcode leaves its parser promise unresolved.
+    // Aborted queued requests drain without starting work; active decodes finish.
+    if (this.activeDownloads > 0) this.disposeWhenIdle = true;
+    else super.dispose();
+  }
+
+  private async fetchTracked(url: string): Promise<CompressedTexture> {
+    const tracker = this.tracker!;
+    const decoded = tracker.trackDecode();
+    const signal = this.signal;
+    if (this.activeDownloads >= 4) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    else this.activeDownloads++;
+    try {
+      signal?.throwIfAborted();
+      const response = await fetch(url, { signal, credentials: this.withCredentials ? 'include' : 'same-origin' });
+      if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
+      const buffer = await readResponseBufferWithProgress(response, tracker);
+      signal?.throwIfAborted();
+      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parse(buffer, resolve, reject));
+      if (signal?.aborted) {
+        texture.dispose();
+        signal.throwIfAborted();
+      }
+      decoded();
+      return texture;
+    } catch (cause) {
+      if (signal?.aborted) throw signal.reason;
+      throw new Error(`downloading/decoding texture ${url} failed`, { cause });
+    } finally {
+      const next = this.waiting.shift();
+      if (next) next();
+      else this.activeDownloads--;
+      if (this.activeDownloads === 0 && this.disposeWhenIdle) super.dispose();
+    }
+  }
   override load(
     url: string,
     onLoad: (texture: CompressedTexture) => void,
@@ -120,11 +163,12 @@ class SharedKTX2Loader extends KTX2Loader {
     // GLTFLoader only uses the onLoad texture; the synchronous return is
     // the Loader contract and never bound to a material.
     const placeholder = new CompressedTexture([], 0, 0, RGBA_S3TC_DXT1_Format);
-    void onProgress;
     sharedTextures
-      .acquire(url, () => new Promise<CompressedTexture>((resolve, reject) => {
-        super.load(url, resolve, undefined, reject);
-      }))
+      .acquire(url, () => this.tracker
+        ? this.fetchTracked(url)
+        : new Promise<CompressedTexture>((resolve, reject) => {
+          super.load(url, resolve, onProgress, reject);
+        }))
       .then(onLoad, (error: unknown) => onError?.(error));
     return placeholder;
   }
@@ -133,6 +177,7 @@ class SharedKTX2Loader extends KTX2Loader {
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string }>();
 
 /**
  * One GLTFLoader for the whole app.
@@ -144,14 +189,14 @@ let sharedKtx2Path = '';
  *   image encoding. The transcoder path is the embedder's, else `/basis/`
  *   at the origin root, independent of the current application route.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = ''): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
     loader.setMeshoptDecoder(MeshoptDecoder);
     sharedLoader = loader;
   }
-  if (renderer) {
+  if (renderer && !tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     if (!sharedKtx2 || sharedKtx2Path !== path) {
       sharedKtx2?.dispose();
@@ -160,10 +205,32 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '')
       sharedLoader.setKTX2Loader(sharedKtx2);
     }
   }
+  if (renderer && tracker) {
+    const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
+    let tracked = trackedLoaders.get(tracker);
+    if (!tracked || tracked.path !== path) {
+      tracked?.ktx2.dispose();
+      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
+      ktx2.tracker = tracker;
+      ktx2.signal = signal;
+      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
+      tracked = { loader, ktx2, path };
+      trackedLoaders.set(tracker, tracked);
+    }
+    return tracked.loader;
+  }
   return sharedLoader;
 }
 
+export function disposeTrackedLoader(tracker: AssetDownloadTracker): void {
+  const tracked = trackedLoaders.get(tracker);
+  trackedLoaders.delete(tracker);
+  tracked?.ktx2.dispose();
+}
+
 export function disposeSharedLoader(): void {
+  for (const { ktx2 } of trackedLoaders.values()) ktx2.dispose();
+  trackedLoaders.clear();
   sharedKtx2?.dispose();
   sharedKtx2 = null;
   sharedKtx2Path = '';
