@@ -23,7 +23,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=source /renderer/tools/prepare_sky_assets.py /renderer/tools/prepare_sky_assets.py
 COPY --from=source /renderer/render-core/assets/sky/SOURCES.json /sky-pins.json
-RUN python3 /renderer/tools/prepare_sky_assets.py \
+RUN python3 -c 'import hashlib,json,pathlib,urllib.request; root=pathlib.Path("/renderer/assets-src"); root.mkdir(parents=True); pins=json.loads(pathlib.Path("/sky-pins.json").read_text()); [(urllib.request.urlretrieve(item["file_url"], root / item["download"])) for item in pins["sources"]]; assert all((root / item["download"]).stat().st_size == item["download_bytes"] and hashlib.file_digest((root / item["download"]).open("rb"), "sha256").hexdigest() == item["download_sha256"] for item in pins["sources"]), "sky source digest mismatch"' \
+ && python3 /renderer/tools/prepare_sky_assets.py \
  && python3 -c 'import hashlib,json,pathlib; root=pathlib.Path("/renderer/render-core/assets/sky"); pins=json.loads(pathlib.Path("/sky-pins.json").read_text()); assert all((root / item["product"]).stat().st_size == item["product_bytes"] and hashlib.file_digest((root / item["product"]).open("rb"), "sha256").hexdigest() == item["product_sha256"] for item in pins["sources"]), "sky asset digest mismatch"'
 
 FROM node:22.14.0-bookworm-slim AS runtime
