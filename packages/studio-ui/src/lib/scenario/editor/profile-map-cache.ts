@@ -1,10 +1,10 @@
 import type { RenderingPreference } from "../../../components/rendering-preference";
 import type { ScenarioMapOption } from "../../../scenario/list/document-map-groups";
 import {
-  availableStorageBytes,
-  fetchMapAsset,
+  ensureMapAsset,
   flushMapAssetCacheIndex,
   hasCachedMapAsset,
+  mapAssetCacheStatus,
   mapCacheReceiptKey,
   prepareMapAssetCache,
   writeCacheReceipt,
@@ -83,17 +83,10 @@ export type ProfileMapCacheProgress = {
 
 export type ProfileMapCacheResult = {
   failedAssets: number;
+  /** The last verification/storage error, so the UI can say what to fix. */
+  failureReason: string | null;
   completedMapVersionIds: string[];
 };
-
-/** Fetch a stable first-party map URL from persistent storage before the network. */
-export async function fetchProfileMapAsset(
-  url: string,
-  init: RequestInit = {},
-  contentSha256?: string,
-): Promise<Response> {
-  return fetchMapAsset(url, init, contentSha256);
-}
 
 async function mapWithConcurrency<T, R>(
   values: readonly T[],
@@ -327,7 +320,7 @@ export async function createProfileMapPlan(
     map.remainingBytes = uniquePending.reduce((total, asset) => total + (asset.bytes ?? 0), 0);
     map.fullyCached = map.remainingAssets === 0;
     if (map.fullyCached) {
-      writeCacheReceipt(
+      await writeCacheReceipt(
         mapCacheReceiptKey(map.mapVersionId, map.closureSha256),
         map.assets.length,
         map.totalBytes,
@@ -371,15 +364,21 @@ export async function cacheProfileMapPlan(
   onProgress: (progress: ProfileMapCacheProgress) => void,
 ): Promise<ProfileMapCacheResult> {
   await prepareMapAssetCache();
-  const available = await availableStorageBytes();
+  const status = await mapAssetCacheStatus();
+  const available = status.availableBytes;
   if (available !== null && plan.remainingBytes > available * 0.9) {
+    const requiredMb = Math.ceil(plan.remainingBytes / (1024 * 1024));
+    const availableMb = Math.floor(available / (1024 * 1024));
     throw new Error(
-      `Caching requires ${Math.ceil(plan.remainingBytes / (1024 * 1024))} MB, but this browser has only ${Math.floor(available / (1024 * 1024))} MB available.`,
+      status.backend === "filesystem"
+        ? `Caching requires ${requiredMb} MB, but only ${availableMb} MB is free at ${status.directory}. Choose another cache location or free up disk space.`
+        : `Caching requires ${requiredMb} MB, but this browser has only ${availableMb} MB available.`,
     );
   }
   let completedAssets = 0;
   let completedBytes = 0;
   let failedAssets = 0;
+  let failureReason: string | null = null;
   const assetsToCache = plan.pendingAssets ?? plan.assets;
   const report = (mapVersionId: string | null) => onProgress({
     completedAssets,
@@ -398,26 +397,33 @@ export async function cacheProfileMapPlan(
         let stored = false;
         for (let attempt = 0; attempt < MAX_ASSET_DOWNLOAD_ATTEMPTS && !stored; attempt += 1) {
           try {
-            await withAssetAttemptDeadline(signal, async (attemptSignal) => {
-              const response = await fetchMapAsset(
-                asset.url,
-                { credentials: "same-origin", signal: attemptSignal },
-                asset.sha256,
-                downloadUrls.get(asset.url),
-                true,
-              );
-              if (!response.ok) throw new Error(`${response.status} ${asset.url}`);
-            });
+            // Ensure-only: the asset becomes resident in the cache backend
+            // without its bytes being read back into this renderer.
+            await withAssetAttemptDeadline(signal, (attemptSignal) => ensureMapAsset(asset.url, {
+              sha256: asset.sha256,
+              networkUrl: downloadUrls.get(asset.url),
+              sizeBytes: asset.bytes ?? undefined,
+              signal: attemptSignal,
+              deferIndexWrite: true,
+            }));
             stored = true;
-          } catch {
+          } catch (reason) {
             if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-            if (attempt + 1 === MAX_ASSET_DOWNLOAD_ATTEMPTS) failedAssets += 1;
+            if (attempt + 1 === MAX_ASSET_DOWNLOAD_ATTEMPTS) {
+              failedAssets += 1;
+              failureReason = reason instanceof Error ? reason.message : String(reason);
+            }
           }
         }
         if (stored) {
-          await Promise.all((asset.aliases ?? []).map((alias) =>
-            hasCachedMapAsset(alias, asset.sha256)
-          ));
+          // Content is deduplicated; teach every alias path its identity so
+          // the offline runtime answers by URL alone.
+          if (asset.sha256) {
+            const sha256 = asset.sha256;
+            await Promise.all((asset.aliases ?? []).map((alias) =>
+              ensureMapAsset(alias, { sha256, signal, deferIndexWrite: true })
+            ));
+          }
           completedAssets++;
           completedBytes += asset.bytes ?? 0;
           report(asset.mapVersionId);
@@ -438,7 +444,7 @@ export async function cacheProfileMapPlan(
       )
     ).every(Boolean);
     if (complete) {
-      writeCacheReceipt(
+      await writeCacheReceipt(
         mapCacheReceiptKey(map.mapVersionId, map.closureSha256),
         map.assets.length,
         map.totalBytes,
@@ -448,5 +454,5 @@ export async function cacheProfileMapPlan(
   }
   flushMapAssetCacheIndex();
   report(null);
-  return { failedAssets, completedMapVersionIds };
+  return { failedAssets, failureReason, completedMapVersionIds };
 }

@@ -104,18 +104,18 @@ describe("unified map asset cache", () => {
     )).rejects.toThrow("Asset integrity check failed");
   });
 
-  it("records completion only under the release and rendering profile", () => {
+  it("records completion only under the release and rendering profile", async () => {
     const key = cacheReceiptKey("release-a", "high");
-    writeCacheReceipt(key, 12, 1000);
-    expect(hasCacheReceipt(key)).toBe(true);
-    expect(hasCacheReceipt(cacheReceiptKey("release-a", "minimal"))).toBe(false);
+    await writeCacheReceipt(key, 12, 1000);
+    expect(await hasCacheReceipt(key)).toBe(true);
+    expect(await hasCacheReceipt(cacheReceiptKey("release-a", "minimal"))).toBe(false);
   });
 
   it("clears the single consolidated cache and receipt index", async () => {
-    writeCacheReceipt(cacheReceiptKey("release-a", "high"), 1, 1);
+    await writeCacheReceipt(cacheReceiptKey("release-a", "high"), 1, 1);
     await clearMapAssetCache();
     expect(caches.delete).toHaveBeenCalledWith("simforge-map-assets-v4");
-    expect(hasCacheReceipt(cacheReceiptKey("release-a", "high"))).toBe(false);
+    expect(await hasCacheReceipt(cacheReceiptKey("release-a", "high"))).toBe(false);
   });
 
   it("continues caching when the browser declines persistent storage", async () => {

@@ -141,8 +141,8 @@ describe("complete map closure cache planning", () => {
     const progress = vi.fn();
     const result = await cacheProfileMapPlan(plan, controller.signal, progress);
 
-    expect(result).toEqual({ failedAssets: 0, completedMapVersionIds: ["map-1"] });
-    expect(hasCacheReceipt(mapCacheReceiptKey("map-1", CLOSURE_SHA))).toBe(true);
+    expect(result).toEqual({ failedAssets: 0, failureReason: null, completedMapVersionIds: ["map-1"] });
+    expect(await hasCacheReceipt(mapCacheReceiptKey("map-1", CLOSURE_SHA))).toBe(true);
     expect(progress).toHaveBeenLastCalledWith(expect.objectContaining({
       completedAssets: 7,
       completedBytes: 7,

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>SimForge Studio</title>
+    <title>SimForge</title>
     <style>
       html, body { height: 100%; margin: 0; background: #0b0e14; color: #d7dbe3; font: 14px system-ui, sans-serif; }
       main { height: 100%; display: grid; place-items: center; text-align: center; }
@@ -15,9 +15,21 @@
     <main>
       <div>
         <div class="pulse"></div>
-        <strong>Starting the local Studio host</strong>
-        <p>Applying migrations, seeding, and waiting for the server to answer.</p>
+        <strong id="title">Starting</strong>
+        <p id="detail"></p>
       </div>
     </main>
+    <script>
+      const query = new URLSearchParams(location.search);
+      const product = query.get("product") ?? "SimForge Studio";
+      document.title = product;
+      if (query.get("mode") === "cloud") {
+        document.getElementById("title").textContent = `Connecting to ${product}`;
+        document.getElementById("detail").textContent = "Opening the hosted product in your signed-in session.";
+      } else {
+        document.getElementById("title").textContent = "Starting the local Studio host";
+        document.getElementById("detail").textContent = "Applying migrations, seeding, and waiting for the server to answer.";
+      }
+    </script>
   </body>
 </html>

@@ -25,6 +25,10 @@
         "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
         "default": "./dist/components/DashboardLoadingCoordinator.js"
       },
+      "./components/MapAssetCacheStorage": {
+        "types": "./dist/components/MapAssetCacheStorage.d.ts",
+        "default": "./dist/components/MapAssetCacheStorage.js"
+      },
       "./components/SkyCloudBackdrop": {
         "types": "./dist/components/SkyCloudBackdrop.d.ts",
         "default": "./dist/components/SkyCloudBackdrop.js"
@@ -354,6 +358,11 @@
       "development": "./src/components/DashboardLoadingCoordinator.tsx",
       "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
       "default": "./dist/components/DashboardLoadingCoordinator.js"
+    },
+    "./components/MapAssetCacheStorage": {
+      "development": "./src/components/MapAssetCacheStorage.tsx",
+      "types": "./dist/components/MapAssetCacheStorage.d.ts",
+      "default": "./dist/components/MapAssetCacheStorage.js"
     },
     "./components/SkyCloudBackdrop": {
       "development": "./src/components/SkyCloudBackdrop.tsx",

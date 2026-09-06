@@ -1,5 +1,7 @@
-# SimForge Studio desktop packaging. Run from studio/ after `node desktop/stage.mjs`:
+# SimForge Studio desktop packaging, local mode (fully bundled runtime). Run
+# from studio/ after `node desktop/stage.mjs`:
 #   pnpm desktop:dist        (stage + this config, Linux targets)
+# The SimCloud-connected package is desktop/electron-builder.cloud.yml.
 #
 # Two-package layout: the Electron application is the dependency-free
 # directory the stage writes (dist/desktop/app), and the whole local host is
@@ -19,6 +21,7 @@ nodeGypRebuild: false
 asar: true
 files:
   - main.mjs
+  - cache-preload.cjs
   - starting.html
   - host-exited.html
   - package.json

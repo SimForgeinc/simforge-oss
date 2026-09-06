@@ -5,8 +5,9 @@
 //
 // Produces, under studio/dist/desktop:
 //   app/        the Electron application: a dependency-free package.json, the
-//               bundled shell (main.mjs) and its static pages; packed into the
-//               asar by electron-builder.
+//               bundled shell (main.mjs, local mode), the cache preload and
+//               static pages; packed into the asar by electron-builder
+//               (see desktop/stage-app.mjs).
 //   resources/  the self-contained local host, shipped as extraResources
 //               `studio/`. Its root mirrors the repository layout so the
 //               bundled host finds staged assets where the workspace keeps
@@ -33,7 +34,6 @@
 //   scripts/native-runtime/package-runtime.sh     runner, renderer, Python wheels and sky assets
 //   packages/*/dist for packages Next resolves through `exports` (pnpm -r build)
 
-import { build } from "esbuild";
 import { execFile, spawn } from "node:child_process";
 import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -41,6 +41,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { bundleNode, stageApp } from "./stage-app.mjs";
 import { STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
@@ -282,36 +283,6 @@ async function verifySealed() {
   return symlinks;
 }
 
-/**
- * @param {Record<string, string>} entryPoints
- * @param {string} outdir
- * @param {string[]} external
- * @returns {Promise<Record<string, string[]>>} bundled source inputs per entry name
- */
-async function bundle(entryPoints, outdir, external) {
-  const result = await build({
-    entryPoints,
-    outdir,
-    outExtension: { ".js": ".mjs" },
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    target: "node22",
-    tsconfig: join(studioRoot, "tsconfig.json"),
-    external,
-    sourcemap: false,
-    metafile: true,
-    assetNames: "assets/[name]-[hash]",
-    loader: { ".wasm": "file", ".glb": "file", ".svg": "file", ".png": "file" },
-    // Bundled CommonJS dependencies call `require`; ESM output has none by default.
-    banner: { js: "import { createRequire as __stageCreateRequire } from 'node:module';\nconst require = __stageCreateRequire(import.meta.url);" },
-    logLevel: "warning",
-  });
-  return Object.fromEntries(Object.entries(result.metafile.outputs)
-    .filter(([, output]) => output.entryPoint)
-    .map(([file, output]) => [file, Object.keys(output.inputs)]));
-}
-
 const studioPackage = JSON.parse(await readFile(join(studioRoot, "package.json"), "utf8"));
 const electronVersion = require("electron/package.json").version;
 const addonName = await nativeAddon();
@@ -347,7 +318,7 @@ await cp(join(studioRoot, "migrations"), join(stageStudio, "migrations"), { recu
 
 // 2. The supervisor and the CPU worker as self-contained ESM bundles.
 const hostDir = join(stageStudio, "host");
-const bundled = await bundle(
+const bundled = await bundleNode(
   { "host-main": join(desktopDir, "host.ts"), worker: join(studioRoot, "worker", "index.ts") },
   hostDir,
   [...RUNTIME_ASSET_PACKAGES, ...NEVER_BUNDLED],
@@ -406,26 +377,13 @@ const manifest = {
 await writeFile(join(stageRoot, STAGE_MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
 
 // 6. The Electron application directory (two-package layout: no runtime dependencies here).
-await mkdir(appDir, { recursive: true });
-await bundle({ main: join(desktopDir, "main.mjs") }, appDir, ["electron"]);
-for (const page of ["starting.html", "host-exited.html"]) await cp(join(desktopDir, page), join(appDir, page));
-await writeFile(join(appDir, "package.json"), `${JSON.stringify({
-  name: "simforge-studio",
-  productName: "SimForge Studio",
-  version: studioPackage.version,
-  description: "SimForge Studio desktop: the local Studio host and its shell.",
-  homepage: "https://github.com/SimForgeinc/simforge-oss",
-  license: studioPackage.license ?? "Apache-2.0",
-  author: { name: "SimForge", email: "oss@simforge.ai" },
-  private: true,
-  type: "module",
-  main: "main.mjs",
-}, null, 2)}\n`);
+const application = await stageApp({ appDir, mode: "local", version: studioPackage.version, license: studioPackage.license });
 
 process.stdout.write(`${JSON.stringify({
   component: "simforge-desktop-stage",
   event: "stage.complete",
   app: appDir,
+  appFiles: application.files,
   resources: stageRoot,
   symlinks,
   nativeRuntimeArchive: nativeRuntime.archive,

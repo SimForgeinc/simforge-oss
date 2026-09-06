@@ -1,0 +1,143 @@
+name: SimCloud desktop
+
+# Builds the SimCloud-connected desktop installers on native runners:
+# Windows x64 NSIS, macOS arm64 + x64 DMG/ZIP, and a Linux AppImage qualifier.
+# Manual dispatch only: nothing here runs on push, publishes, or deploys.
+# Artifacts are uploaded to the workflow run; releasing them is a separate,
+# separately authorized step.
+#
+# Signing is real or absent. Windows artifacts are signed only when
+# WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD hold a code-signing certificate; macOS
+# artifacts are signed only when MAC_CSC_LINK / MAC_CSC_KEY_PASSWORD hold a
+# Developer ID Application identity, and notarized only when APPLE_ID,
+# APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are present as well. Without
+# those secrets the build disables identity auto-discovery, produces unsigned
+# artifacts, and names them so. With them, forceCodeSigning makes an unsigned
+# result a build failure instead of a quiet fallback.
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: SimCloud origin baked into the shell (https://…)
+        required: true
+        default: https://simforge.ai
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-2022
+            targets: --win --x64
+          - name: macos-arm64-x64
+            os: macos-14
+            targets: --mac --arm64 --x64
+          - name: linux-x64
+            os: ubuntu-24.04
+            targets: --linux --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install the Studio workspace (shell, esbuild, electron, electron-builder)
+        run: pnpm install --frozen-lockfile --filter @simforge-oss/studio
+        working-directory: .
+      - name: Stage the SimCloud shell
+        run: node desktop/stage-cloud.mjs --origin="${{ inputs.origin }}"
+
+      - name: Decide code signing from the secrets actually present
+        id: signing
+        env:
+          HAS_WIN_CERT: ${{ secrets.WIN_CSC_LINK != '' && secrets.WIN_CSC_KEY_PASSWORD != '' }}
+          HAS_MAC_CERT: ${{ secrets.MAC_CSC_LINK != '' && secrets.MAC_CSC_KEY_PASSWORD != '' }}
+          HAS_APPLE_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          case "$RUNNER_OS" in
+            Windows) signed="$HAS_WIN_CERT"; notarized=false ;;
+            macOS)   signed="$HAS_MAC_CERT"; notarized=$([ "$HAS_MAC_CERT" = true ] && [ "$HAS_APPLE_NOTARY" = true ] && echo true || echo false) ;;
+            *)       signed=false; notarized=false ;;
+          esac
+          echo "signed=$signed" >> "$GITHUB_OUTPUT"
+          echo "notarized=$notarized" >> "$GITHUB_OUTPUT"
+          echo "Signing: $signed, notarization: $notarized"
+
+      - name: Package (unsigned)
+        if: steps.signing.outputs.signed != 'true'
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never
+
+      - name: Package and sign (Windows)
+        if: steps.signing.outputs.signed == 'true' && runner.os == 'Windows'
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true
+
+      - name: Package, sign and notarize (macOS)
+        if: steps.signing.outputs.signed == 'true' && runner.os == 'macOS'
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_TEAM_ID || '' }}
+        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true -c.mac.notarize=${{ steps.signing.outputs.notarized }}
+
+      - name: Verify the package is the slim shell (no local runtime, exact asar contents)
+        run: node desktop/verify-cloud-package.mjs --origin="${{ inputs.origin }}"
+
+      - name: Verify macOS signature and notarization ticket
+        if: runner.os == 'macOS' && steps.signing.outputs.signed == 'true'
+        run: |
+          for app in dist/desktop-cloud/out/mac*/SimCloud.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            if [ "${{ steps.signing.outputs.notarized }}" = true ]; then
+              spctl --assess --type execute --verbose=2 "$app"
+              xcrun stapler validate "$app"
+            fi
+          done
+
+      - name: Verify Windows Authenticode signature
+        if: runner.os == 'Windows' && steps.signing.outputs.signed == 'true'
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/desktop-cloud/out/*.exe | ForEach-Object {
+            $sig = Get-AuthenticodeSignature $_.FullName
+            if ($sig.Status -ne 'Valid') { throw "$($_.Name): signature status $($sig.Status)" }
+            Write-Host "$($_.Name): signed by $($sig.SignerCertificate.Subject)"
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simcloud-${{ matrix.name }}-${{ steps.signing.outputs.signed == 'true' && (steps.signing.outputs.notarized == 'true' && 'signed-notarized' || 'signed') || 'unsigned' }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            studio/dist/desktop-cloud/out/*.exe
+            studio/dist/desktop-cloud/out/*.dmg
+            studio/dist/desktop-cloud/out/*.zip
+            studio/dist/desktop-cloud/out/*.AppImage
+            studio/dist/desktop-cloud/out/*.blockmap

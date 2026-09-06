@@ -4,6 +4,7 @@ import { useStudioHost } from "../../host";
 import { Check, Database } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
+import { MapAssetCacheStorage, formatCacheBytes } from "../../components/MapAssetCacheStorage";
 import { readRenderingPreference } from "../../components/rendering-preference"
 import { Button } from "../../components/ui/button";
 import {
@@ -13,12 +14,6 @@ import {
 } from "../../lib/scenario/editor/profile-map-cache";
 
 type State = "idle" | "planning" | "downloading" | "complete" | "error";
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 export function CacheAllMapAssetsButton() {
   const studioHost = useStudioHost();
@@ -48,7 +43,9 @@ export function CacheAllMapAssetsButton() {
       setState("downloading");
       const result = await cacheProfileMapPlan(plan, controller.signal, setProgress);
       if (result.failedAssets > 0) {
-        throw new Error(`${result.failedAssets} assets could not be verified and cached.`);
+        throw new Error(
+          `${result.failedAssets} assets could not be verified and cached.${result.failureReason ? ` ${result.failureReason}` : ""}`,
+        );
       }
       setState("complete");
     } catch (reason) {
@@ -86,13 +83,21 @@ export function CacheAllMapAssetsButton() {
             : state === "planning"
               ? "Calculating the complete offline map library…"
               : state === "downloading"
-                ? `Caching all map assets · ${percent}%${progress ? ` · ${formatBytes(progress.completedBytes)} / ${formatBytes(progress.totalBytes)}` : ""}`
+                ? `Caching all map assets · ${percent}%${progress ? ` · ${formatCacheBytes(progress.completedBytes)} / ${formatCacheBytes(progress.totalBytes)}` : ""}`
                 : state === "complete"
                   ? "Every published map closure is fully cached."
                   : "Caching stopped. Click to retry."}
         </span>
       </Button>
       {error ? <p className="mt-2 px-3 text-xs leading-5 text-red-300" role="alert">{error}</p> : null}
+      <MapAssetCacheStorage
+        className="mt-4"
+        refreshKey={state}
+        onCleared={() => {
+          setState("idle");
+          setProgress(null);
+        }}
+      />
     </div>
   );
 }

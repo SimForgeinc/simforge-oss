@@ -1,5 +1,6 @@
 export * from "./contracts";
 export * from "./capabilities";
+export * from "./desktop-map-cache";
 export { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError, STUDIO_HOST_ERROR_MESSAGES } from "./errors";
 export type {
   MaterializedTrafficUpload,
