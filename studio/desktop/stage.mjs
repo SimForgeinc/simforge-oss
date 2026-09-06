@@ -414,6 +414,7 @@ await writeFile(join(appDir, "package.json"), `${JSON.stringify({
   productName: "SimForge Studio",
   version: studioPackage.version,
   description: "SimForge Studio desktop: the local Studio host and its shell.",
+  homepage: "https://github.com/SimForgeinc/simforge-oss",
   license: studioPackage.license ?? "Apache-2.0",
   author: { name: "SimForge", email: "oss@simforge.ai" },
   private: true,

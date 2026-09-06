@@ -12,7 +12,7 @@
     "host:stop": "tsx scripts/stop-local-host.ts",
     "desktop": "electron .",
     "desktop:stage": "node desktop/stage.mjs",
-    "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --linux",
+    "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --linux --publish never",
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "worker": "tsx worker/index.ts",
