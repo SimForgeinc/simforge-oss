@@ -18,7 +18,11 @@ npmRebuild: false
 nodeGypRebuild: false
 asar: true
 files:
-  - "**/*"
+  - main.mjs
+  - starting.html
+  - host-exited.html
+  - package.json
+  - "!node_modules/**/*"
 afterPack: desktop/after-pack.mjs
 linux:
   target:
