@@ -1,6 +1,7 @@
 import { DataTexture, LinearFilter, ClampToEdgeWrapping, RedFormat, UnsignedByteType, Vector4 } from 'three';
 import type { CityManifest, ManifestTile } from './types';
 import { resolveUrl } from './manifest';
+import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 
 /**
  * Stitches the per-tile baked sun-shadow PNGs into one scene-wide R8 texture
@@ -60,9 +61,14 @@ export class ShadowAtlas {
   }
 
   /** Fetches every tile lightmap and blits it into the atlas. Never rejects. */
-  async load(manifest: CityManifest, baseUrl: string, signal: AbortSignal): Promise<void> {
-    const jobs = manifest.tiles.map((tile) => this.loadTile(tile, baseUrl, signal));
-    await Promise.all(jobs);
+  async load(manifest: CityManifest, baseUrl: string, signal: AbortSignal, tracker?: AssetDownloadTracker): Promise<void> {
+    const tiles = manifest.tiles.values();
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (const tile of tiles) {
+        if (signal.aborted || this.disposed) return;
+        await this.loadTile(tile, baseUrl, signal, tracker);
+      }
+    }));
     this.flush();
   }
 
@@ -75,13 +81,16 @@ export class ShadowAtlas {
     return preferred?.file ?? null;
   }
 
-  private async loadTile(tile: ManifestTile, baseUrl: string, signal: AbortSignal): Promise<void> {
+  private async loadTile(tile: ManifestTile, baseUrl: string, signal: AbortSignal, tracker?: AssetDownloadTracker): Promise<void> {
     const file = this.pickLightmap(tile);
     if (!file) return;
+    const decoded = tracker?.trackDecode();
     try {
       const res = await fetch(resolveUrl(baseUrl, file), { signal });
       if (!res.ok) return;
-      const blob = await res.blob();
+      const blob = tracker
+        ? new Blob([await readResponseBufferWithProgress(res, tracker)], { type: res.headers.get('content-type') ?? '' })
+        : await res.blob();
       const bitmap = await createImageBitmap(blob);
       if (this.disposed) {
         bitmap.close();
@@ -89,6 +98,7 @@ export class ShadowAtlas {
       }
       this.writeCell(tile.gridX, tile.gridZ, bitmap);
       bitmap.close();
+      decoded?.();
       this.scheduleFlush();
     } catch {
       /* a missing lightmap just means that cell stays fully lit */

@@ -12,6 +12,7 @@ import {
   VK_FORMAT_BC7_SRGB_BLOCK,
   VK_FORMAT_UNDEFINED,
 } from 'three/addons/libs/ktx-parse.module.js';
+import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -214,7 +215,6 @@ class SharedKTX2Loader extends KTX2Loader {
     }
     this.rgbaLoader.parse(selected.buffer, onLoad, onError);
   }
-
   override load(
     url: string,
     onLoad: (texture: CompressedTexture) => void,
@@ -246,6 +246,7 @@ class SharedKTX2Loader extends KTX2Loader {
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string }>();
 
 /**
  * One GLTFLoader for the whole app.
@@ -260,14 +261,14 @@ let sharedKtx2Path = '';
  *   renderer's `MAX_TEXTURE_SIZE` can hold, so a software GL (SwiftShader) or
  *   a small GPU never receives a `texStorage2D` it must reject.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = ''): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
     loader.setMeshoptDecoder(MeshoptDecoder);
     sharedLoader = loader;
   }
-  if (renderer) {
+  if (renderer && !tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     // The context's MAX_TEXTURE_SIZE; a stub renderer that reports none is unlimited.
     const maxTextureDimension = renderer.capabilities.maxTextureSize > 0 ? renderer.capabilities.maxTextureSize : Infinity;
@@ -279,10 +280,32 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '')
       sharedLoader.setKTX2Loader(sharedKtx2);
     }
   }
+  if (renderer && tracker) {
+    const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
+    let tracked = trackedLoaders.get(tracker);
+    if (!tracked || tracked.path !== path) {
+      tracked?.ktx2.dispose();
+      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
+      ktx2.tracker = tracker;
+      ktx2.signal = signal;
+      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
+      tracked = { loader, ktx2, path };
+      trackedLoaders.set(tracker, tracked);
+    }
+    return tracked.loader;
+  }
   return sharedLoader;
 }
 
+export function disposeTrackedLoader(tracker: AssetDownloadTracker): void {
+  const tracked = trackedLoaders.get(tracker);
+  trackedLoaders.delete(tracker);
+  tracked?.ktx2.dispose();
+}
+
 export function disposeSharedLoader(): void {
+  for (const { ktx2 } of trackedLoaders.values()) ktx2.dispose();
+  trackedLoaders.clear();
   sharedKtx2?.dispose();
   sharedKtx2 = null;
   sharedKtx2Path = '';
