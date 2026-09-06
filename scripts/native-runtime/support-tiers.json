@@ -11,7 +11,7 @@
       "qualification": {
         "status": "qualified",
         "blockers": [],
-        "evidence": "installed-v5-a/report.json; candidate-abi2-conformance-v1/comparison.json; reference-abi2-sealed-v1/input-contract-reseal.json",
+        "evidence": "installed-v5-a/report.json; candidate-abi2-conformance-v1/contract-migration-conformance.json; reference-abi2-sealed-v1/input-contract-reseal.json",
         "observed": [
           "Installed compile, simulate, evaluate and content-addressed output verification passed; detached execution, owner crash, checkpoint resume and safe cancellation passed.",
           "ABI 2 matched all 62 frozen discrete and numeric execution cases after an explicit input-contract reseal. Historical input hashes differ because the retired master yield field was removed; the strict same-input comparison is not claimed.",

@@ -4,7 +4,7 @@ FROM rust:1.95.0-bookworm AS node-build
 COPY --from=node-toolchain /usr/local /usr/local
 WORKDIR /src
 RUN rustup target add wasm32-unknown-unknown \
- && corepack enable && corepack prepare pnpm@11.18.0 --activate
+ && corepack enable pnpm && corepack prepare pnpm@11.18.0 --activate
 COPY --from=source /package.json /pnpm-lock.yaml /pnpm-workspace.yaml /tsconfig.base.json ./
 COPY --from=source /packages ./packages
 COPY --from=source /native/Cargo.toml /native/Cargo.lock ./native/
