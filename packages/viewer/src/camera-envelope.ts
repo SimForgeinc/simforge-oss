@@ -87,6 +87,30 @@ export function constrainCameraToEnvelope(
   };
 }
 
+/** Terrain bounds can be much wider than the authored city; start on real content. */
+export function initialEditorFocus(
+  sceneCenter: Vector3,
+  tiles: readonly { bounds: { min: readonly number[]; max: readonly number[] } }[],
+): Vector3 {
+  let nearest: typeof tiles[number] | undefined;
+  let nearestDistance = Infinity;
+  for (const tile of tiles) {
+    const x = (tile.bounds.min[0]! + tile.bounds.max[0]!) * 0.5;
+    const z = (tile.bounds.min[2]! + tile.bounds.max[2]!) * 0.5;
+    const distance = (x - sceneCenter.x) ** 2 + (z - sceneCenter.z) ** 2;
+    if (distance < nearestDistance) {
+      nearest = tile;
+      nearestDistance = distance;
+    }
+  }
+  if (!nearest) return sceneCenter.clone();
+  return new Vector3(
+    (nearest.bounds.min[0]! + nearest.bounds.max[0]!) * 0.5,
+    (nearest.bounds.min[1]! + nearest.bounds.max[1]!) * 0.5,
+    (nearest.bounds.min[2]! + nearest.bounds.max[2]!) * 0.5,
+  );
+}
+
 export function initialEditorCameraPose(
   center: Vector3,
   size: Vector3,
