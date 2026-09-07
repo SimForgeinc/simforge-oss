@@ -58,6 +58,23 @@ The Cloud intake follows [simcloud-sync.md](simcloud-sync.md): its stack lock,
 vendored artifacts, import rewrites, package-manager lockfile, and divergence
 audit expectations change atomically.
 
+## Packaged content that a bundler does not emit
+
+`files` lists what is published, but a package only ships what its `build`
+actually writes. `packages/evaluation` carries a Python measurement tool
+(`src/replay-context/python/replay_measure.py`) that tsup does not copy, so
+its `build` script copies it into `dist/replay-context/python/` and the
+default resolution — next to the built module — works from a packed tarball
+with no change to `files: ["dist"]`. `SIMFORGE_REPLAY_MEASURE` remains a
+documented override for a worker image that ships the tool elsewhere; it is
+not required, and it is not the primary mechanism.
+
+The general rule for any package in the stack: if a published entry point
+resolves a non-JS file at runtime, the `build` script must place that file
+inside the published directory. `release:verify-artifacts` checks export
+targets exist, which catches a missing entry point but not a missing data
+file, so this is a contract to keep rather than a check to rely on.
+
 ## Source-bound vendored artifacts precede registry publication
 
 SimForge Cloud consumes published artifacts, and it may consume them before
