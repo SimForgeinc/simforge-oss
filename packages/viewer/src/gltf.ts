@@ -111,9 +111,26 @@ class SharedTextureCache {
 
 export const sharedTextures = new SharedTextureCache();
 
+/** Select authored compressed mip levels without decompressing or resampling pixels. */
+export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDimension: number): CompressedTexture {
+  let first = 0;
+  while (first + 1 < texture.mipmaps.length) {
+    const mip = texture.mipmaps[first]!;
+    if (Math.max(mip.width, mip.height) <= maxDimension) break;
+    first++;
+  }
+  if (first > 0) {
+    texture.mipmaps = texture.mipmaps.slice(first);
+    const base = texture.mipmaps[0]!;
+    texture.image = { width: base.width, height: base.height };
+  }
+  return texture;
+}
+
 class SharedKTX2Loader extends KTX2Loader {
   tracker?: AssetDownloadTracker;
   signal?: AbortSignal;
+  maxTextureDimension = Infinity;
   private activeDownloads = 0;
   private readonly waiting: (() => void)[] = [];
   private disposeWhenIdle = false;
@@ -163,12 +180,16 @@ class SharedKTX2Loader extends KTX2Loader {
     // GLTFLoader only uses the onLoad texture; the synchronous return is
     // the Loader contract and never bound to a material.
     const placeholder = new CompressedTexture([], 0, 0, RGBA_S3TC_DXT1_Format);
+    const maxDimension = this.maxTextureDimension;
     sharedTextures
-      .acquire(url, () => this.tracker
-        ? this.fetchTracked(url)
-        : new Promise<CompressedTexture>((resolve, reject) => {
-          super.load(url, resolve, onProgress, reject);
-        }))
+      .acquire(`${url}|mip-limit=${maxDimension}`, async () => {
+        const texture = this.tracker
+          ? await this.fetchTracked(url)
+          : await new Promise<CompressedTexture>((resolve, reject) => {
+            super.load(url, resolve, onProgress, reject);
+          });
+        return limitCompressedTextureMipmaps(texture, maxDimension);
+      })
       .then(onLoad, (error: unknown) => onError?.(error));
     return placeholder;
   }
@@ -177,7 +198,7 @@ class SharedKTX2Loader extends KTX2Loader {
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
-const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string }>();
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal; maxTextureDimension: number }>();
 
 /**
  * One GLTFLoader for the whole app.
@@ -189,7 +210,7 @@ const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2:
  *   image encoding. The transcoder path is the embedder's, else `/basis/`
  *   at the origin root, independent of the current application route.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal, maxTextureDimension = Infinity): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
@@ -204,17 +225,19 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
       sharedKtx2Path = path;
       sharedLoader.setKTX2Loader(sharedKtx2);
     }
+    sharedKtx2.maxTextureDimension = maxTextureDimension;
   }
   if (renderer && tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     let tracked = trackedLoaders.get(tracker);
-    if (!tracked || tracked.path !== path) {
+    if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension) {
       tracked?.ktx2.dispose();
       const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
       ktx2.tracker = tracker;
       ktx2.signal = signal;
+      ktx2.maxTextureDimension = maxTextureDimension;
       const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
-      tracked = { loader, ktx2, path };
+      tracked = { loader, ktx2, path, signal, maxTextureDimension };
       trackedLoaders.set(tracker, tracked);
     }
     return tracked.loader;
