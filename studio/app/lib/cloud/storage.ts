@@ -313,6 +313,7 @@ async function materializeImportedArtifact(
          'stream_sha256', :sha256,
          'artifact_postprocess', :producer_job_id, CAST(:provenance AS jsonb)
        ) ON CONFLICT (workspace_id, sha256, artifact_kind)
+         WHERE artifact_state IN ('pending', 'available') AND deleted_at IS NULL
        DO UPDATE SET
          producer_job_id = CASE WHEN simforge.artifacts.artifact_state = 'pending'
            THEN EXCLUDED.producer_job_id ELSE simforge.artifacts.producer_job_id END,
