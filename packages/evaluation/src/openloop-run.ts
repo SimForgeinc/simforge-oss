@@ -95,6 +95,7 @@ function refusedItem(
     refusal,
     error: null,
     coldStart: false,
+    rngProvenance: null,
   };
 }
 
@@ -257,6 +258,9 @@ export async function executeOpenloop(options: OpenloopRunOptions): Promise<Open
       // The clip path never replicates frames: a short window is refused in
       // buildObservation, so an accepted item always had a real 4-frame window.
       coldStart: false,
+      // Verbatim from the engine; for text tasks it names the upstream task
+      // that actually ran, which is not re-derivable from our task spelling.
+      rngProvenance: (result.rng_provenance ?? null) as Record<string, unknown> | null,
     });
   }
 
