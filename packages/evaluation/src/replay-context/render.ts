@@ -300,8 +300,10 @@ export async function renderProbe(
 /**
  * The Python measurement tool that owns all pixel comparison.
  *
- * Resolved next to this module by default. `SIMFORGE_REPLAY_MEASURE` overrides it, which is
- * what a packaged build or a worker image uses when the tool ships outside the JS bundle.
+ * Resolved next to this module by default, which works from source and from a packaged build:
+ * the package build copies `src/replay-context/python` into `dist/replay-context/python`, so
+ * the relative path holds in both. `SIMFORGE_REPLAY_MEASURE` is an override for a worker image
+ * that places the tool elsewhere, not a requirement.
  */
 function measureToolPath(): string {
   return process.env['SIMFORGE_REPLAY_MEASURE'] ?? fileURLToPath(new URL('./python/replay_measure.py', import.meta.url));
