@@ -5,6 +5,13 @@ import type { AssetResources } from './gltf';
 import { disposeResources, uploadTexture } from './gltf';
 import { estimateLodBytes } from './manifest';
 
+export class RequiredAssetBudgetError extends Error {
+  constructor(layerName: string, readonly assetId: string, readonly layer: TileStreamLayer, readonly generation: number) {
+    super(`[${layerName}] required coarse asset ${assetId} cannot fit the memory budget`);
+    this.name = 'RequiredAssetBudgetError';
+  }
+}
+
 export interface StreamTileDef {
   id: string;
   box: Box3;
@@ -181,6 +188,10 @@ export class TileStreamLayer {
     return this.pending;
   }
 
+  get generationId(): number {
+    return this.generation;
+  }
+
   /** True once every tile has its coarsest LOD on screen. */
   get ready(): boolean {
     return this.bootstrapped;
@@ -341,7 +352,7 @@ export class TileStreamLayer {
       entry.budgetBlocked = true;
       if (this.opts.pinCoarsest && index === 0 && this.opts.memory.pendingBytes?.() === 0) {
         entry.failures = MAX_FAILURES;
-        this.reportFailure(entry, index, new Error(`[${this.opts.name}] required coarse asset ${entry.def.id} cannot fit the memory budget`));
+        this.reportFailure(entry, index, new RequiredAssetBudgetError(this.opts.name, entry.def.id, this, this.generation));
       }
       return false;
     }
