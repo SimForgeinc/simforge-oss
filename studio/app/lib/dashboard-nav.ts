@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Brain,
   CarFront,
   CloudUpload,
   Database,
@@ -48,6 +49,13 @@ export const DASHBOARD_APPS: NavItem[] = [
     description: "Eval campaigns, playback, and promotion",
     icon: FlaskConical,
     match: (p) => p.startsWith("/dashboard/evaluation"),
+  },
+  {
+    href: "/dashboard/models",
+    label: "Models",
+    description: "Download, verify and remove model weights",
+    icon: Brain,
+    match: (p) => p.startsWith("/dashboard/models"),
   },
   {
     href: "/dashboard/dataset-export",

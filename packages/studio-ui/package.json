@@ -17,6 +17,18 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./evaluation": {
+        "types": "./dist/evaluation/index.d.ts",
+        "default": "./dist/evaluation/index.js"
+      },
+      "./evaluation/model-catalog": {
+        "types": "./dist/evaluation/model-catalog.d.ts",
+        "default": "./dist/evaluation/model-catalog.js"
+      },
+      "./evaluation/model-store": {
+        "types": "./dist/evaluation/model-store.d.ts",
+        "default": "./dist/evaluation/model-store.js"
+      },
       "./components/CarlaCompatibilityPill": {
         "types": "./dist/components/CarlaCompatibilityPill.d.ts",
         "default": "./dist/components/CarlaCompatibilityPill.js"
@@ -348,6 +360,21 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./evaluation": {
+      "development": "./src/evaluation/index.ts",
+      "types": "./dist/evaluation/index.d.ts",
+      "default": "./dist/evaluation/index.js"
+    },
+    "./evaluation/model-catalog": {
+      "development": "./src/evaluation/model-catalog.ts",
+      "types": "./dist/evaluation/model-catalog.d.ts",
+      "default": "./dist/evaluation/model-catalog.js"
+    },
+    "./evaluation/model-store": {
+      "development": "./src/evaluation/model-store.ts",
+      "types": "./dist/evaluation/model-store.d.ts",
+      "default": "./dist/evaluation/model-store.js"
     },
     "./components/CarlaCompatibilityPill": {
       "development": "./src/components/CarlaCompatibilityPill.tsx",
