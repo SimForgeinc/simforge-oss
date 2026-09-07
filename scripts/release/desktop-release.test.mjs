@@ -30,7 +30,7 @@ import {
 } from "./desktop-release-lib.mjs";
 import { auditBundledComponents, blockingReasons, loadLedger, pinDrift } from "./third-party-audit-lib.mjs";
 import { evaluateStableGates } from "./stable-gates.mjs";
-import { eligibleReleases, manifestReleases } from "../../studio/desktop/update-check.mjs";
+import { checkForUpdates, describeUpdate, eligibleReleases, manifestReleases } from "../../studio/desktop/update-check.mjs";
 
 const repoRoot = new URL("../..", import.meta.url).pathname;
 
@@ -307,4 +307,74 @@ test("an unlabelled build is recognized rather than assumed current", () => {
     { label: "preview.1", tag: "studio-preview.1", channel: "preview", embeddedVersion: "0.1.0" },
   );
   assert.equal(readDistributionIdentity({ label: "v1", channel: "stable", embeddedVersion: "1.0.0" }), null);
+});
+
+/** @param {Record<string, unknown>} routes */
+function stubFetch(routes) {
+  /** @type {string[]} */
+  const requested = [];
+  const impl = async (/** @type {string} */ url) => {
+    requested.push(url);
+    const answer = routes[new URL(url).host];
+    if (answer === undefined) throw new Error(`unstubbed ${url}`);
+    if (answer instanceof Error) throw answer;
+    return { ok: true, status: 200, json: async () => answer };
+  };
+  return { impl, requested };
+}
+
+const PREVIEW_IDENTITY = { label: "preview.1", tag: "studio-preview.1", channel: "preview", embeddedVersion: "0.1.0" };
+
+test("the update check compares against the newest release of its own channel", async () => {
+  const { impl } = stubFetch({ "api.github.com": RELEASE_LIST });
+  const behind = await checkForUpdates({ identity: PREVIEW_IDENTITY, userAgent: "t", fetch: impl });
+  assert.equal(behind.state, "update-available");
+  assert.equal(behind.latest?.tag, "studio-0.1.1");
+  assert.equal(behind.source, "github");
+  assert.match(describeUpdate(behind).detail, /not downloaded automatically/);
+
+  const current = await checkForUpdates({
+    identity: { ...PREVIEW_IDENTITY, label: "0.1.1", tag: "studio-0.1.1", channel: "stable", embeddedVersion: "0.1.1" },
+    userAgent: "t",
+    fetch: impl,
+  });
+  assert.equal(current.state, "current");
+});
+
+test("a rate-limited GitHub falls back to the product site's manifest", async () => {
+  const manifest = {
+    channels: { stable: null, preview: "studio-preview.1" },
+    releases: { "studio-preview.1": { releasePage: "https://example.invalid/tag" } },
+  };
+  const { impl, requested } = stubFetch({
+    "api.github.com": new Error("HTTP 403 rate limit exceeded"),
+    "staging.simforge.ai": manifest,
+  });
+  const result = await checkForUpdates({
+    identity: PREVIEW_IDENTITY,
+    cloudOrigin: "https://staging.simforge.ai",
+    userAgent: "t",
+    fetch: impl,
+  });
+  assert.equal(result.source, "downloads-manifest");
+  assert.equal(result.state, "current", "the manifest still advertises the installed release");
+  assert.ok(requested.some((url) => url.endsWith("/download/releases.json")));
+
+  const offline = await checkForUpdates({
+    identity: PREVIEW_IDENTITY,
+    cloudOrigin: null,
+    userAgent: "t",
+    fetch: stubFetch({ "api.github.com": new Error("getaddrinfo ENOTFOUND") }).impl,
+  });
+  assert.equal(offline.state, "unavailable");
+  assert.equal(offline.latest, null);
+  assert.match(describeUpdate(offline).detail, /Nothing was downloaded/);
+});
+
+test("an unlabelled build never reports itself up to date", async () => {
+  const { impl } = stubFetch({ "api.github.com": RELEASE_LIST });
+  const result = await checkForUpdates({ identity: null, userAgent: "t", fetch: impl });
+  assert.equal(result.state, "unlabelled");
+  assert.equal(result.latest?.tag, "studio-0.1.1", "it still offers the newest release to install");
+  assert.match(describeUpdate(result).message, /cannot be compared/);
 });

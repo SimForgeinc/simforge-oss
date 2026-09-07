@@ -10,8 +10,9 @@ name: SimForge Studio desktop
 # desktop/stage.mjs, desktop/after-pack.mjs and desktop/verify-package.mjs
 # each refuse a payload holding native code or per-target packages of any
 # other platform. Runs only on manual dispatch or explicitly named desktop CI
-# candidate branches. Artifacts are uploaded to the workflow run; this workflow
-# never publishes a release or deploys a service.
+# candidate branches. Artifacts are uploaded to the workflow run; the release
+# job below can create a maintainers-only draft, and nothing here ever makes
+# a release public or deploys a service.
 #
 # Signing is real or absent. Windows artifacts are signed only when
 # WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD hold a code-signing certificate; macOS
@@ -24,6 +25,16 @@ name: SimForge Studio desktop
 # 26 has no ad-hoc fallback and an unsigned bundle is killed at launch on
 # Apple silicon. With the secrets, forceCodeSigning makes an unsigned result
 # a build failure instead of a quiet fallback.
+#
+# Verified 2026-09-07: this repository has 0 Actions secrets and 0
+# organization secrets available to it, and its only environments are `npm`
+# and `pypi`. Every artifact this workflow can currently produce is
+# unsigned/ad-hoc, and the artifact names say so. When the seven signing
+# secrets are provisioned into a reviewed `desktop-release` environment, add
+# `environment: desktop-release` to the package job so the job can read them;
+# no other change is needed, because the signing decision below is made from
+# the secrets actually present and scripts/release/publish-desktop-release.mjs
+# reads the resulting signing state back out of the artifact names.
 
 on:
   workflow_dispatch:
