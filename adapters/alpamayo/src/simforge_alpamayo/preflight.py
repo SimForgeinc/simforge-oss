@@ -479,13 +479,18 @@ def qualify(
     else:
         qualification = "qualified"
 
+    # Tier thresholds are the NOMINAL device class, not the reported figure: a
+    # "16 GB" card reports ~15.46 GiB usable and an "80 GB" H100 ~79.2 GiB, so
+    # comparing against the round number would leave every real device
+    # untiered. Whether a model actually fits is decided by min_vram_gib
+    # above, not by this label.
     tier = None
     if observed_vram is not None:
-        if observed_vram >= 80:
+        if observed_vram >= 78.0:
             tier = "local-80"
-        elif observed_vram >= 24:
+        elif observed_vram >= 23.0:
             tier = "local-24"
-        elif observed_vram >= 16:
+        elif observed_vram >= 15.0:
             tier = "local-16"
     if qualification != "qualified":
         tier = tier if not reasons else "remote-only"

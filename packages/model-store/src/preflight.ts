@@ -188,9 +188,14 @@ export function qualify(
     qualification = "qualified";
   }
 
+  // Tier thresholds are the NOMINAL device class, not the reported figure: a
+  // "16 GB" card reports ~15.46 GiB usable and an "80 GB" H100 ~79.2 GiB, so
+  // comparing against the round number would leave every real device
+  // untiered. Whether a model actually fits is decided by minVramGiB above,
+  // not by this label.
   let tier: ModelExecutionEligibility["tier"] = null;
   if (qualification === "qualified" && host.vramGiB !== null) {
-    tier = host.vramGiB >= 80 ? "local-80" : host.vramGiB >= 24 ? "local-24" : "local-16";
+    tier = host.vramGiB >= 78 ? "local-80" : host.vramGiB >= 23 ? "local-24" : "local-16";
   } else if (offer.status !== "unsupported") {
     // Not runnable here, but runnable: the honest tier is the cloud.
     tier = "remote-only";
