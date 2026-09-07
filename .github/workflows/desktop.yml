@@ -201,17 +201,11 @@ jobs:
 
       - name: Verify macOS signatures (ad-hoc or Developer ID) and notarization ticket
         if: runner.os == 'macOS'
-        # Every Mach-O in the bundle, the pinned encoders and the native
-        # runtime included, was (re)signed by electron-builder; verify-package
-        # proved the encoders' code is still the pinned release, codesign
-        # proves the signatures over it are intact, so each executable launches.
+        # verify-package resolves encoder paths from the stage manifest and
+        # verifies their pinned code and signatures. Check the enclosing bundle here.
         run: |
           for app in dist/desktop/out/mac*/"SimForge Studio.app"; do
             codesign --verify --deep --strict --verbose=2 "$app"
-            for tool in "$app"/Contents/Resources/studio/tools/ffmpeg "$app"/Contents/Resources/studio/tools/ffprobe; do
-              codesign --verify --strict --verbose=2 "$tool"
-              codesign --display --verbose=2 "$tool" 2>&1 | sed -En '/^(Identifier=|CodeDirectory |Signature=|Authority=)/p'
-            done
             if [ "${{ steps.signing.outputs.notarized }}" = true ]; then
               spctl --assess --type execute --verbose=2 "$app"
               xcrun stapler validate "$app"

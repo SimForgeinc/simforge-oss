@@ -34,6 +34,7 @@
 // signature itself is well formed is codesign's to verify (the workflow does).
 
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
@@ -197,8 +198,19 @@ for (const rel of archives) {
   const closures = await readdir(join(stage, manifest.actorAssetsRoot, "closures")).catch(() => []);
   if (closures.length === 0) problems.push(`${rel}: ${manifest.actorAssetsRoot} carries no actor closure`);
   for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
-    const mismatch = await toolMismatch(join(stage, manifest.tools[name]), reference[name]);
-    if (mismatch) problems.push(`${rel}: ${manifest.tools[name]} ${mismatch}`);
+    const toolPath = join(stage, manifest.tools[name]);
+    const mismatch = await toolMismatch(toolPath, reference[name]);
+    if (mismatch) {
+      problems.push(`${rel}: ${manifest.tools[name]} ${mismatch}`);
+      continue;
+    }
+    if (platform === "darwin" && process.platform === "darwin") {
+      try {
+        execFileSync("codesign", ["--verify", "--strict", "--verbose=2", toolPath], { stdio: ["ignore", "ignore", "pipe"] });
+      } catch (error) {
+        problems.push(`${rel}: ${manifest.tools[name]} has an invalid code signature: ${String(error.stderr ?? error.message).trim()}`);
+      }
+    }
   }
   const runtimeManifest = JSON.parse(await readFile(join(stage, manifest.nativeRuntimeRoot, "bin", "runtime-manifest.json"), "utf8").catch(() => "null"));
   if (!runtimeManifest || runtimeManifest.target !== target.triple) problems.push(`${rel}: runtime manifest is missing or targets ${runtimeManifest?.target}`);

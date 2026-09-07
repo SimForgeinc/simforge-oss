@@ -156,9 +156,12 @@ function assertPublicationInput(input: PublishUploadedMapVersionInput) {
   ) {
     throw new Error("invalid_browser_asset_members");
   }
+  // Browser-only downloads already carry their immutable registry identity.
+  // A native profile may be added later, but must match that same identity.
   if (
-    (input.registryReleaseDigest === undefined) !== (input.nativePlan === undefined) ||
+    (input.registryReleaseDigest !== undefined && !SHA256.test(input.registryReleaseDigest)) ||
     (input.nativePlan && (
+      input.registryReleaseDigest === undefined ||
       input.nativePlan.mapVersionId !== plan.mapVersionId ||
       input.nativePlan.workspaceId !== input.workspaceId ||
       input.nativePlan.registryReleaseDigest !== input.registryReleaseDigest
