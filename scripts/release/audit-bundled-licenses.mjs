@@ -13,7 +13,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { auditBundledComponents, loadLedger, renderThirdPartyNotices } from "./third-party-audit-lib.mjs";
+import { auditBundledComponents, loadLedger, renderThirdPartyNotices, verifyEncoderReceipts } from "./third-party-audit-lib.mjs";
 import { NOTICES_FILE } from "./desktop-release-lib.mjs";
 
 export const AUDIT_FILE = "license-audit.json";
@@ -39,12 +39,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = parseArgs(process.argv.slice(2));
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const platforms = typeof args.platforms === "string" ? args.platforms.split(",").map((entry) => entry.trim()) : undefined;
-  // Platforms whose corresponding-source archive is part of the publication.
-  // Without it the GPL accompaniment obligation is unmet, so the audit blocks.
-  const correspondingSource = typeof args["corresponding-source"] === "string"
-    ? args["corresponding-source"].split(",").map((entry) => entry.trim())
-    : [];
-  const receipt = await auditBundledComponents({ repoRoot, platforms, correspondingSource });
+  // Encoder-build receipts, verified against the source pins and the bytes on
+  // disk. There is deliberately no way to assert accompaniment by naming a
+  // platform: the archive and its build manifest have to be there.
+  const encoderReceipts = typeof args["encoder-receipts"] === "string"
+    ? await verifyEncoderReceipts({ repoRoot, dir: resolve(args["encoder-receipts"]) })
+    : null;
+  const receipt = await auditBundledComponents({ repoRoot, platforms, encoderReceipts });
   const { components } = await loadLedger(repoRoot);
   const notices = renderThirdPartyNotices({ receipt, components });
 
@@ -60,6 +61,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const state = /** @type {any} */ (verdict);
       process.stdout.write(`${state.redistribution === "cleared" ? "CLEARED" : "BLOCKED"}  ${platform}\n`);
       for (const reason of state.blockedBy) process.stdout.write(`         ${reason}\n`);
+    }
+    for (const problem of receipt.encoders.receiptProblems) {
+      process.stdout.write(`RECEIPT  ${problem}\n`);
     }
     for (const drift of receipt.sourceDrift) {
       process.stdout.write(`DRIFT    ${drift.source}: ledger ${drift.ledger} vs lock ${drift.lock}\n`);

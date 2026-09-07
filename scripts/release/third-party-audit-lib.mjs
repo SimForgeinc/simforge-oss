@@ -16,8 +16,13 @@
 //      is not permission. `satisfied-by-accompaniment` is the GPL
 //      corresponding-source case: it clears only when the release actually
 //      carries the archive for that platform, which the caller proves by
-//      passing `correspondingSource`. A promise to ship source later is not
-//      accompaniment.
+//      passing the receipts `verifyEncoderReceipts` produced. Those are not
+//      an assertion: each one is a tools-manifest.json written by the build
+//      that made the binaries, proven to name the sources this repository
+//      pins, next to a corresponding-source archive whose bytes hash to the
+//      digest that manifest recorded. A promise to ship source later, a
+//      platform name passed on a command line, or a fixture standing in for
+//      an archive are all rejected.
 //   3. It produces the notices text the release page and the download page
 //      must carry, generated from the same record rather than written by
 //      hand beside it.
@@ -26,8 +31,9 @@
 // publicly readable unless this audit clears the platforms it is publishing.
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createReadStream } from "node:fs";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 export const AUDIT_SCHEMA = "simforge.desktop-license-audit/v1";
 export const COMPONENTS_SCHEMA = "simforge.desktop-bundled-components/v1";
@@ -94,15 +100,105 @@ export function sourceDrift(components, encodersLock) {
   return drift;
 }
 
+/** @param {string} path */
+async function sha256File(path) {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest("hex");
+}
+
 /**
- * @param {{ repoRoot: string; platforms?: string[]; correspondingSource?: string[]; now?: string }} options
+ * The encoder-build receipts found under a directory, verified against both
+ * this repository's source pins and the bytes on disk.
+ *
+ * A platform is only reported verified when all of this holds: a
+ * tools-manifest.json of schema simforge.desktop-tools/v2 exists for it, it
+ * was produced by a source build (`origin: "built-from-source"`), the source
+ * commits it names are exactly the ones studio/desktop/encoders.lock.json
+ * pins, and the corresponding-source archive it points at exists with the
+ * size and sha256 it recorded. Anything else is a problem, reported by name.
+ *
+ * This is what makes "cleared with archives" a statement about the artifacts
+ * a publication is actually carrying rather than about a flag someone typed.
+ *
+ * @param {{ repoRoot: string; dir: string }} options
+ * @returns {Promise<{ verified: string[]; receipts: any[]; problems: string[] }>}
+ */
+export async function verifyEncoderReceipts({ repoRoot, dir }) {
+  const encodersLock = JSON.parse(await readFile(join(repoRoot, "studio/desktop/encoders.lock.json"), "utf8"));
+  const pinned = new Map((encodersLock.sources ?? []).map((/** @type {any} */ entry) => [entry.id, entry.commit]));
+  /** @type {string[]} */
+  const problems = [];
+  /** @type {any[]} */
+  const receipts = [];
+  /** @type {Set<string>} */
+  const verified = new Set();
+
+  const entries = await readdir(dir, { withFileTypes: true, recursive: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isFile() || entry.name !== "tools-manifest.json") continue;
+    const manifestPath = join(entry.parentPath ?? dir, entry.name);
+    /** @type {any} */
+    let manifest;
+    try {
+      manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    } catch (error) {
+      problems.push(`${manifestPath}: unreadable (${error instanceof Error ? error.message : String(error)})`);
+      continue;
+    }
+    const platform = LOCK_TARGET_PLATFORM[manifest.target];
+    if (!platform) {
+      problems.push(`${manifestPath}: target ${JSON.stringify(manifest.target)} is not a release platform`);
+      continue;
+    }
+    /** @type {string[]} */
+    const failures = [];
+    if (manifest.schema !== "simforge.desktop-tools/v2") failures.push(`schema is ${manifest.schema}`);
+    if (manifest.origin !== "built-from-source") {
+      failures.push(`origin is ${JSON.stringify(manifest.origin ?? null)}, so these encoders were not built from source`);
+    }
+    for (const [id, commit] of pinned) {
+      const named = (manifest.sources ?? []).find((/** @type {any} */ source) => source.id === id);
+      if (named?.commit !== commit) {
+        failures.push(`${id} was built from ${named?.commit ?? "an unnamed commit"}, not the pinned ${commit}`);
+      }
+    }
+    const declared = manifest.correspondingSource;
+    if (!declared?.file || typeof declared.sha256 !== "string") {
+      failures.push("records no corresponding-source archive");
+    } else {
+      const archive = join(dirname(manifestPath), declared.file);
+      const info = await stat(archive).catch(() => null);
+      if (!info?.isFile()) failures.push(`corresponding-source archive ${declared.file} is missing`);
+      else if (info.size !== declared.sizeBytes) failures.push(`${declared.file} is ${info.size} bytes, the build recorded ${declared.sizeBytes}`);
+      else if ((await sha256File(archive)) !== declared.sha256) failures.push(`${declared.file} does not hash to the digest the build recorded`);
+    }
+    if (failures.length > 0) {
+      problems.push(...failures.map((failure) => `${platform}: ${failure}`));
+      continue;
+    }
+    verified.add(platform);
+    receipts.push({
+      platform,
+      manifest: manifestPath,
+      builtAt: manifest.builtAt ?? null,
+      tools: manifest.tools,
+      sources: manifest.sources,
+      correspondingSource: { ...declared, path: join(dirname(manifestPath), declared.file) },
+    });
+  }
+  return { verified: [...verified].sort(), receipts, problems };
+}
+
+/**
+ * @param {{ repoRoot: string; platforms?: string[]; encoderReceipts?: { verified: string[]; problems: string[] } | null; now?: string }} options
  * @returns {Promise<any>} a simforge.desktop-license-audit/v1 receipt
  */
-export async function auditBundledComponents({ repoRoot, platforms, correspondingSource = [], now = new Date().toISOString() }) {
+export async function auditBundledComponents({ repoRoot, platforms, encoderReceipts = null, now = new Date().toISOString() }) {
   const { components, componentsDigest, encodersLock } = await loadLedger(repoRoot);
   const audited = platforms ?? Object.values(LOCK_TARGET_PLATFORM);
   const drift = sourceDrift(components, encodersLock);
-  const accompanied = new Set(correspondingSource);
+  const accompanied = new Set(encoderReceipts?.verified ?? []);
 
   /** @type {any[]} */
   const obligations = [];
@@ -136,7 +232,7 @@ export async function auditBundledComponents({ repoRoot, platforms, correspondin
         return true;
       })
       .map((entry) => (CLEARED_BY_ASSET.has(entry.status)
-        ? `${entry.component}: ${entry.kind} requires the corresponding-source archive for ${platform} in the publication`
+        ? `${entry.component}: ${entry.kind} requires a verified encoder-build receipt and corresponding-source archive for ${platform}`
         : `${entry.component}: ${entry.kind} (${entry.status})`));
     const driftHere = drift.map((entry) => `ffmpeg-encoders: ledger names ${entry.source} ${entry.ledger}, encoders.lock.json pins ${entry.lock}`);
     const blockedBy = [...blocking, ...driftHere];
@@ -152,7 +248,8 @@ export async function auditBundledComponents({ repoRoot, platforms, correspondin
       file: "studio/desktop/encoders.lock.json",
       license: encodersLock.license?.id ?? null,
       sources: (encodersLock.sources ?? []).map((/** @type {any} */ entry) => ({ id: entry.id, commit: entry.commit })),
-      correspondingSourceProvided: [...accompanied].sort(),
+      correspondingSourceVerified: [...accompanied].sort(),
+      receiptProblems: encoderReceipts?.problems ?? [],
     },
     platforms: perPlatform,
     obligations,

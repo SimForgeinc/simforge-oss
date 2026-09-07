@@ -6,7 +6,8 @@
 // license determination that silently outlived the binary it was made from.
 
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -28,7 +29,7 @@ import {
   formatSums,
   parseSums,
 } from "./desktop-release-lib.mjs";
-import { auditBundledComponents, blockingReasons, loadLedger, sourceDrift } from "./third-party-audit-lib.mjs";
+import { auditBundledComponents, blockingReasons, loadLedger, sourceDrift, verifyEncoderReceipts } from "./third-party-audit-lib.mjs";
 import { evaluateStableGates } from "./stable-gates.mjs";
 import { checkForUpdates, describeUpdate, eligibleReleases, manifestReleases } from "../../studio/desktop/update-check.mjs";
 
@@ -183,21 +184,100 @@ test("the download page only advertises a release anonymous users can fetch", ()
   assert.equal(carried.channels.stable, "studio-0.1.1");
 });
 
-test("the license audit blocks a publication that does not carry the GPL corresponding source", async () => {
-  const withoutSource = await auditBundledComponents({ repoRoot });
-  assert.equal(withoutSource.publicRedistribution, "blocked");
+/**
+ * A real encoder-build receipt directory: a tools-manifest.json of the shape
+ * build-encoders.mjs writes, next to an archive whose bytes actually hash to
+ * the digest it records.
+ * @param {(manifest: any) => void} [mutate]
+ */
+async function encoderReceiptFixture(mutate) {
+  const dir = await mkdtemp(join(tmpdir(), "simforge-encoders-"));
+  const { encodersLock } = await loadLedger(repoRoot);
+  for (const [lockTarget, platform] of Object.entries({ "linux-x64": "linux-x64", "win32-x64": "windows-x64", "darwin-arm64": "macos-arm64", "darwin-x64": "macos-x64" })) {
+    const targetDir = join(dir, platform, "corresponding-source");
+    await mkdir(targetDir, { recursive: true });
+    const archiveName = `simforge-studio-encoders-${lockTarget}-corresponding-source.tar.gz`;
+    const bytes = `pretend source archive for ${lockTarget}`;
+    await writeFile(join(targetDir, archiveName), bytes);
+    const manifest = {
+      schema: "simforge.desktop-tools/v2",
+      target: lockTarget,
+      origin: "built-from-source",
+      builtAt: "2026-09-07T00:00:00.000Z",
+      sources: encodersLock.sources.map((/** @type {any} */ entry) => ({ id: entry.id, commit: entry.commit })),
+      tools: { ffmpeg: { file: "ffmpeg", sha256: "a".repeat(64), sizeBytes: 1 }, ffprobe: { file: "ffprobe", sha256: "b".repeat(64), sizeBytes: 1 } },
+      correspondingSource: {
+        file: `corresponding-source/${archiveName}`,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+        sizeBytes: Buffer.byteLength(bytes),
+      },
+    };
+    mutate?.(manifest);
+    await writeFile(join(dir, platform, "tools-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+  return dir;
+}
+
+test("GPL accompaniment clears only for a verified build receipt and a real archive", async () => {
+  const blocked = await auditBundledComponents({ repoRoot });
+  assert.equal(blocked.publicRedistribution, "blocked");
   assert.ok(
-    blockingReasons(withoutSource, ["linux-x64"]).some((reason) => reason.includes("corresponding-source")),
-    "GPL accompaniment must be proven by the archive being in the publication, not by the ledger claiming it",
+    blockingReasons(blocked, ["linux-x64"]).some((reason) => reason.includes("corresponding-source")),
+    "with no receipts at all the obligation must block",
   );
 
-  const withSource = await auditBundledComponents({
+  const receipts = await verifyEncoderReceipts({ repoRoot, dir: await encoderReceiptFixture() });
+  assert.deepEqual(receipts.problems, []);
+  assert.deepEqual(receipts.verified, ["linux-x64", "macos-arm64", "macos-x64", "windows-x64"]);
+  const cleared = await auditBundledComponents({ repoRoot, encoderReceipts: receipts });
+  assert.equal(cleared.publicRedistribution, "cleared", JSON.stringify(cleared.platforms, null, 2));
+  assert.deepEqual(cleared.sourceDrift, []);
+  assert.equal(blockingReasons(cleared, ["not-a-platform"]).length, 1, "an unaudited platform is blocked, not cleared");
+});
+
+test("a receipt is refused when the archive, the origin or the source commits do not hold", async () => {
+  // An archive that does not hash to what the build recorded: a fixture
+  // standing in for the real source must not clear the obligation.
+  const tampered = await verifyEncoderReceipts({
     repoRoot,
-    correspondingSource: ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"],
+    dir: await encoderReceiptFixture((manifest) => {
+      manifest.correspondingSource.sha256 = "c".repeat(64);
+    }),
   });
-  assert.equal(withSource.publicRedistribution, "cleared", JSON.stringify(withSource.platforms, null, 2));
-  assert.deepEqual(withSource.sourceDrift, [], "the ledger must name the sources encoders.lock.json pins");
-  assert.equal(blockingReasons(withSource, ["not-a-platform"]).length, 1, "an unaudited platform is blocked, not cleared");
+  assert.deepEqual(tampered.verified, []);
+  assert.ok(tampered.problems.every((problem) => /does not hash to the digest/.test(problem)));
+  const stillBlocked = await auditBundledComponents({ repoRoot, encoderReceipts: tampered });
+  assert.equal(stillBlocked.publicRedistribution, "blocked");
+
+  // Encoders that were downloaded rather than built.
+  const notBuilt = await verifyEncoderReceipts({
+    repoRoot,
+    dir: await encoderReceiptFixture((manifest) => {
+      manifest.origin = "downloaded";
+    }),
+  });
+  assert.deepEqual(notBuilt.verified, []);
+  assert.ok(notBuilt.problems.some((problem) => /not built from source/.test(problem)));
+
+  // Built from a commit this repository does not pin.
+  const otherSources = await verifyEncoderReceipts({
+    repoRoot,
+    dir: await encoderReceiptFixture((manifest) => {
+      manifest.sources[0].commit = "d".repeat(40);
+    }),
+  });
+  assert.deepEqual(otherSources.verified, []);
+  assert.ok(otherSources.problems.some((problem) => /not the pinned/.test(problem)));
+
+  // A missing archive.
+  const missing = await verifyEncoderReceipts({
+    repoRoot,
+    dir: await encoderReceiptFixture((manifest) => {
+      manifest.correspondingSource.file = "corresponding-source/absent.tar.gz";
+    }),
+  });
+  assert.deepEqual(missing.verified, []);
+  assert.ok(missing.problems.some((problem) => /is missing/.test(problem)));
 });
 
 test("repinning the encoder sources invalidates the license determination", async () => {

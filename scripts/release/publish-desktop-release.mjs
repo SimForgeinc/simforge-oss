@@ -61,7 +61,7 @@ import {
   signingFromArtifactDirs,
   sumsFromReleaseRecord,
 } from "./desktop-release-lib.mjs";
-import { LOCK_TARGET_PLATFORM, auditBundledComponents, blockingReasons, loadLedger, renderThirdPartyNotices } from "./third-party-audit-lib.mjs";
+import { LOCK_TARGET_PLATFORM, auditBundledComponents, blockingReasons, loadLedger, renderThirdPartyNotices, verifyEncoderReceipts } from "./third-party-audit-lib.mjs";
 import { readdir } from "node:fs/promises";
 import { evaluateStableGates } from "./stable-gates.mjs";
 
@@ -282,11 +282,15 @@ async function main() {
   );
 
   // 3. What the third-party payload obliges us to do.
-  const audit = await auditBundledComponents({
+  // The receipts CI wrote beside the installers, verified here: manifest
+  // schema, built-from-source origin, source commits equal to this
+  // repository's pins, and an archive whose bytes hash to the digest the
+  // build recorded. Only these clear the GPL accompaniment obligation.
+  const encoderReceipts = await verifyEncoderReceipts({
     repoRoot,
-    platforms,
-    correspondingSource: correspondingSource.map((entry) => entry.platform),
+    dir: typeof args["corresponding-source"] === "string" ? resolve(args["corresponding-source"]) : installersDir,
   });
+  const audit = await auditBundledComponents({ repoRoot, platforms, encoderReceipts });
   const { components } = await loadLedger(repoRoot);
   const blocked = blockingReasons(audit, platforms);
 
@@ -417,7 +421,8 @@ async function main() {
     platforms,
     assets: record.assets.length,
     licenseAudit: audit.publicRedistribution,
-    correspondingSource: correspondingSource.map((entry) => entry.platform),
+    correspondingSource: encoderReceipts.verified,
+    encoderReceiptProblems: encoderReceipts.problems,
     blockedPlatforms: audit.blockedPlatforms,
     publication: record.publication,
     refusals,

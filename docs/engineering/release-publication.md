@@ -58,6 +58,27 @@ The Cloud intake follows [simcloud-sync.md](simcloud-sync.md): its stack lock,
 vendored artifacts, import rewrites, package-manager lockfile, and divergence
 audit expectations change atomically.
 
+## Source-bound vendored artifacts precede registry publication
+
+SimForge Cloud consumes published artifacts, and it may consume them before
+npm and PyPI carry them. Vendored tarballs are built from the exact
+integrated OSS commit, digest-verified, and recorded with the full stack
+manifest and source revision, which is the same provenance a registry
+release carries — so the portal and the desktop app ship source-bound
+without waiting for a public registry release. This is the existing vendor
+source-distribution path, not a shim: `scripts/sync-simforge-oss-stack.mjs`
+packs the same package contracts, `verify-simforge-oss-vendor.mjs` proves
+the vendored bytes against the lock, and a hand-edited vendor tree is never
+acceptable.
+
+Registry publication keeps its own, separate checks: the `v<stackVersion>`
+tag, the portable/export-map/packed-content verification in `publish.yml`,
+and provenance. Those are not bypassed or relaxed because a vendored
+prerelease exists, and a **stable** desktop release still requires the
+registry publication to have succeeded (see `stable-gates.mjs`
+`stack-identity-published`). Failing portable tests are repaired, never
+skipped.
+
 ## Desktop releases
 
 SimForge Studio installers are a separate publication of the same tree, with
