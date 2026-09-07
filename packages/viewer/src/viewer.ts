@@ -120,6 +120,7 @@ const DEFAULTS = {
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
   textureMaxDimension: Infinity,
+  resolveAssetUrls: null,
   maxConcurrentLoads: 2,
   uploadBudgetMs: 5,
   /** ~one 2048px texture per frame; the pacer stops as soon as this is spent. */
@@ -440,7 +441,7 @@ export class CityViewer {
       ),
       maxConcurrentDerivatives: 2,
       loadDerivative: async (derivative, signal) => {
-        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension);
+        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls);
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
         const gltf = await loader.parseAsync(buffer, resourceDirectory(derivativeUrl));
@@ -901,7 +902,7 @@ export class CityViewer {
       this.canvas.dataset.assetVariant = `${requiredVariant}-unavailable`;
       throw new Error(`${this.roadsOnlyFidelity ? 'Roads Only' : 'Ultra Low'} requires a ${requiredVariant} derivative for ${sourceFile}`);
     }
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
@@ -942,7 +943,7 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls);
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await loader.parseAsync(buffer, resourceDirectory(fileUrl));

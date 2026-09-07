@@ -118,6 +118,8 @@ export interface CityViewerOptions {
   byteBudget?: number;
   /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
   textureMaxDimension?: number;
+  /** Resolve external image URLs in batches before a GLTF starts loading its textures. */
+  resolveAssetUrls?: ((urls: readonly string[], signal: AbortSignal) => Promise<ReadonlyMap<string, string>>) | null;
   /** Concurrent tile fetch/parse slots. */
   maxConcurrentLoads?: number;
   /** Per-frame milliseconds spent pushing new textures to the GPU. */

@@ -13,6 +13,7 @@ import {
   VK_FORMAT_UNDEFINED,
 } from 'three/addons/libs/ktx-parse.module.js';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
+import type { CityViewerOptions } from './types';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -190,15 +191,47 @@ export function selectKtx2MipLevels(buffer: ArrayBuffer, maxDimension: number): 
 class SharedKTX2Loader extends KTX2Loader {
   /** Largest base level the renderer can allocate; `Infinity` until a renderer is known. */
   maxTextureDimension = Infinity;
-  private rgbaLoader: KTX2Loader | null = null;
+  readonly resolvedUrls = new Map<string, string>();
+  private activeDownloads = 0;
+  private readonly waiting: (() => void)[] = [];
+  private disposeWhenIdle = false;
 
-  override parse(buffer: ArrayBuffer, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
-    let selected: { buffer: ArrayBuffer; forceRgba: boolean };
+  override dispose(): void {
+    // Terminating a worker mid-transcode leaves its parser promise unresolved.
+    // Aborted queued requests drain without starting work; active decodes finish.
+    if (this.activeDownloads > 0) this.disposeWhenIdle = true;
+    else super.dispose();
+  }
+
+  private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
+    const tracker = this.tracker!;
+    const decoded = tracker.trackDecode();
+    const signal = this.signal;
+    if (this.activeDownloads >= 8) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    else this.activeDownloads++;
     try {
-      selected = selectKtx2MipLevels(buffer, this.maxTextureDimension);
-    } catch (error) {
-      onError?.(error);
-      return;
+      signal?.throwIfAborted();
+      const resolvedUrl = this.resolvedUrls.get(new URL(url, document.baseURI).href) ?? url;
+      const response = await fetch(resolvedUrl, { signal, credentials: this.withCredentials ? 'include' : 'same-origin' });
+      if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
+      const buffer = await readResponseBufferWithProgress(response, tracker);
+      signal?.throwIfAborted();
+      const selected = selectKtx2MipLevels(buffer, maxDimension);
+      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parse(selected, resolve, reject));
+      if (signal?.aborted) {
+        texture.dispose();
+        signal.throwIfAborted();
+      }
+      decoded();
+      return texture;
+    } catch (cause) {
+      if (signal?.aborted) throw signal.reason;
+      throw new Error(`downloading/decoding texture ${url} failed`, { cause });
+    } finally {
+      const next = this.waiting.shift();
+      if (next) next();
+      else this.activeDownloads--;
+      if (this.activeDownloads === 0 && this.disposeWhenIdle) super.dispose();
     }
     if (!selected.forceRgba) {
       super.parse(selected.buffer, onLoad, onError);
@@ -249,7 +282,7 @@ class SharedKTX2Loader extends KTX2Loader {
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
-const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal; maxTextureDimension: number }>();
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal; maxTextureDimension: number; resolver: CityViewerOptions['resolveAssetUrls'] }>();
 
 /**
  * One GLTFLoader for the whole app.
@@ -264,7 +297,7 @@ const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2:
  *   renderer's `MAX_TEXTURE_SIZE` can hold, so a software GL (SwiftShader) or
  *   a small GPU never receives a `texStorage2D` it must reject.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal, maxTextureDimension = Infinity): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal, maxTextureDimension = Infinity, resolver: CityViewerOptions['resolveAssetUrls'] = null): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
@@ -287,14 +320,26 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
   if (renderer && tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     let tracked = trackedLoaders.get(tracker);
-    if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension) {
+    if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension || tracked.resolver !== resolver) {
       tracked?.ktx2.dispose();
       const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
       ktx2.tracker = tracker;
       ktx2.signal = signal;
       ktx2.maxTextureDimension = maxTextureDimension;
       const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
-      tracked = { loader, ktx2, path, signal, maxTextureDimension };
+      if (resolver && signal) loader.register(parser => ({
+        name: 'SIMFORGE_asset_urls',
+        beforeRoot: async () => {
+          const base = new URL(parser.options.path, document.baseURI);
+          const urls = [...new Set<string>((parser.json.images ?? []).flatMap((image: { uri?: string }) =>
+            image.uri && !/^(data|blob):/.test(image.uri) ? [new URL(image.uri, base).href] : []))];
+          if (urls.length === 0) return;
+          const resolved = await resolver(urls, signal);
+          signal.throwIfAborted();
+          for (const [url, target] of resolved) ktx2.resolvedUrls.set(url, target);
+        },
+      }));
+      tracked = { loader, ktx2, path, signal, maxTextureDimension, resolver };
       trackedLoaders.set(tracker, tracked);
     }
     return tracked.loader;
