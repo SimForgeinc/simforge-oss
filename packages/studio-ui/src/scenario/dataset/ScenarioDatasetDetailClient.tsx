@@ -102,7 +102,7 @@ export function ScenarioDatasetDetailClient({
   renderActiveDocumentId?: string | null;
   /** Render job liveness from the pane that owns the job state. Omit when unavailable. */
   renderWorkLive?: boolean;
-  /** Increments on a live-to-terminal transition so badges reconcile exactly once. */
+  /** Increments when the render owner settles a scope on no live work, so badges reconcile exactly once. */
   renderCompletionGeneration?: number;
 }) {
   const studioHost = useStudioHost();
@@ -292,7 +292,8 @@ export function ScenarioDatasetDetailClient({
   // Standalone routes do not own render-job state, so they retain the existing
   // five-second polling for correctness. The integrated surface stops after
   // its initial snapshot and resumes only while its render owner reports live
-  // work, with one keyed reconciliation after completion.
+  // work, with one keyed reconciliation each time the owner settles a scope on
+  // no live work — after completion, or on opening a scope that already finished.
   useVisiblePolling(
     pollReadiness,
     READINESS_POLL_MS,

@@ -20,11 +20,35 @@ when it leaves the editor.
 | **SimForge Engine** | Deterministic fixed-step simulation, scenario execution, traces, and portable scene-state output. |
 | **SimForge Renderer** | Native Rust/Bevy rendering for sensor-grade frames and datasets, with web rendering available through the same render-job contract. |
 | **SimForge Studio** | The local product app for editing scenarios, maps, assets, playback, datasets, and renders. |
-| **SimForge Cloud** | The hosted product, consuming the same immutable SimForge package stack and frozen wire contracts. |
+| **SimCloud** | Optional hosted identity, authenticated map distribution, and project/artifact storage. Editing, simulation, and rendering stay in the local Studio app. |
+
+## Installed desktop
+
+SimForge Studio is one local-first Electron application. Its installer includes
+the local database, compiler, Bevy render service, actor assets, and video encoders;
+running it does not require a separate development server or cloud render worker.
+The [desktop workflow](https://github.com/SimForgeinc/simforge-oss/actions/workflows/desktop.yml)
+builds Windows x64 NSIS, macOS arm64/x64 DMG and ZIP, and Linux x64 AppImage and
+Debian installers on their native platforms. Builds without signing credentials
+are unsigned; macOS bundles receive only an ad-hoc signature, not notarization
+or Gatekeeper trust.
+
+Use **Connect** in the app switcher for optional SimCloud access. Connecting does
+not move the workspace into the cloud: projects, jobs, and render outputs remain
+on this computer, and Cloud Storage transfers are explicit. Credentials use the
+operating-system vault when available; otherwise the app reports session-only
+storage rather than writing plaintext credentials.
+
+Richmond Field Station downloads without an account. After its verified map
+profiles are installed, local authoring, rendering, and playback work without
+Cloud access. Other published maps require a current SimCloud connection, even
+when their bytes are cached; disconnecting locks those maps without deleting
+local projects or renders.
 
 ## Quickstart
 
-Requires Node.js and pnpm.
+Source development requires Node.js 24, pnpm, and the native build tools listed
+in the desktop workflow.
 
 ```sh
 pnpm install
@@ -33,12 +57,12 @@ pnpm dev
 
 SimForge Studio is then available at <http://localhost:5199>.
 
-On first boot, Studio discovers complete map installations from the common
-`${SIMFORGE_MAPS_CACHE_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/maps}`
-cache populated by `simforge maps pull`. A registry map is published only when
-its semantic, web, and native profiles carry matching verified release receipts.
-When no complete installation exists, Studio generates the compact Starter Road
-from checked-in source assets.
+On first boot, development Studio discovers complete map installations from
+`${SIMFORGE_MAPS_CACHE_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/maps}`,
+populated by `simforge maps pull`. A registry map is published only when its
+semantic, web, and native profiles carry matching verified release receipts.
+The installed desktop downloads the real Richmond Field Station through its map
+catalog; it does not substitute a generated starter scene for that map.
 
 Studio claims `host.lock` in `${SIMFORGE_CLOUD_ROOT:-~/.simforge/cloud}` before
 opening the database for migration and seeding. A concurrent start exits with

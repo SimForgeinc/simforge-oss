@@ -183,7 +183,13 @@ export function ScenarioDatasetsClient({
         // progress. Keep readiness polling rather than allowing stale badges.
         return;
       }
-      if (previous?.live && previous.activityKey === activityKey && !live) {
+      // The pane's loaded gallery is the authority on this scope's render state. Any time it settles
+      // on "nothing live" from a state the list has not reconciled against — a live-to-terminal
+      // transition, or a scope first seen already finished because the job ran while the pane was
+      // closed or was submitted outside it — the readiness counters get one keyed refresh.
+      const settled =
+        !live && !(previous && !previous.live && previous.activityKey === activityKey);
+      if (settled) {
         setRenderCompletionGeneration((generation) => generation + 1);
       }
       renderActivityRef.current = { activityKey, live };
