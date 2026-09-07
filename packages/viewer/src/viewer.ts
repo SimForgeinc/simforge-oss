@@ -118,6 +118,7 @@ const DEFAULTS = {
    * own copy on top of whatever is already resident.
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
+  textureMaxDimension: Infinity,
   maxConcurrentLoads: 2,
   uploadBudgetMs: 5,
   /** ~one 2048px texture per frame; the pacer stops as soon as this is spent. */
@@ -434,7 +435,7 @@ export class CityViewer {
       ),
       maxConcurrentDerivatives: 2,
       loadDerivative: async (derivative, signal) => {
-        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
+        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.options.textureMaxDimension);
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
         const gltf = await loader.parseAsync(buffer, resourceDirectory(derivativeUrl));
@@ -891,7 +892,7 @@ export class CityViewer {
       this.canvas.dataset.assetVariant = `${requiredVariant}-unavailable`;
       throw new Error(`${this.roadsOnlyFidelity ? 'Roads Only' : 'Ultra Low'} requires a ${requiredVariant} derivative for ${sourceFile}`);
     }
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.options.textureMaxDimension);
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
@@ -932,7 +933,7 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.options.textureMaxDimension);
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
     const parsed = await loader.parseAsync(buffer, resourceDirectory(fileUrl));
@@ -1528,11 +1529,12 @@ export class CityViewer {
     ultraLow: boolean;
     roadsOnly: boolean;
     cinematicLighting?: boolean;
+    textureMaxDimension?: number;
   }): void {
     if (modes.cinematicLighting !== undefined) {
       this.setCinematicLighting(modes.cinematicLighting);
     }
-    this.setFidelityModes(modes.ultraLow, modes.roadsOnly);
+    this.setFidelityModes(modes.ultraLow, modes.roadsOnly, modes.textureMaxDimension);
   }
 
   /**
@@ -1559,11 +1561,15 @@ export class CityViewer {
     this.configureSunShadow();
   }
 
-  private setFidelityModes(requestedUltraLow: boolean, roadsOnly: boolean): void {
+  private setFidelityModes(requestedUltraLow: boolean, roadsOnly: boolean, requestedTextureDimension = this.options.textureMaxDimension): void {
     const enabled = requestedUltraLow || roadsOnly;
     const ultraChanged = enabled !== this.ultraLowFidelity;
     const roadsChanged = roadsOnly !== this.roadsOnlyFidelity;
-    if (!ultraChanged && !roadsChanged) return;
+    const textureDimension = Number.isFinite(requestedTextureDimension)
+      ? Math.max(128, Math.floor(requestedTextureDimension)) : Infinity;
+    const textureChanged = textureDimension !== this.options.textureMaxDimension;
+    if (!ultraChanged && !roadsChanged && !textureChanged) return;
+    this.options.textureMaxDimension = textureDimension;
     // Restore the unweathered scene before swapping renderer-owned materials or
     // environment resources. The desired appearance is reapplied atomically at
     // the end of the transition.
@@ -1608,7 +1614,7 @@ export class CityViewer {
       if (!this.visualResourcesStarted) {
         void this.ensureVisualResources().then(() => {
           this.refreshWeatherAppearance();
-          if (!this.disposed && !this.ultraLowFidelity && this.variantManifest?.variants['geometry-only']) {
+          if (!this.disposed && !this.ultraLowFidelity && (textureChanged || this.variantManifest?.variants['geometry-only'])) {
             void this.runPresetTransition(() => this.reloadAssetVariant());
           }
         });
@@ -1618,7 +1624,7 @@ export class CityViewer {
       }
     }
     this.applyRoadsOnlyMode();
-    if (ultraChanged && this.variantManifest?.variants['geometry-only']) {
+    if (textureChanged || (ultraChanged && this.variantManifest?.variants['geometry-only'])) {
       void this.runPresetTransition(() => this.reloadAssetVariant());
     } else if (roadsChanged) {
       void this.runPresetTransition(() => this.reloadRoadsOnlyLayers());

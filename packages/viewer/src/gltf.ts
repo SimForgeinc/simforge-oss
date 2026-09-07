@@ -138,6 +138,7 @@ export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDim
     const mip = texture.mipmaps[first]!;
     if (Math.max(mip.width, mip.height) <= maxDimension) break;
     first++;
+
   }
   while (first > 0 && (texture as Texture).format !== RGBAFormat
     && (texture.mipmaps[first]!.width % 4 !== 0 || texture.mipmaps[first]!.height % 4 !== 0)) first--;
@@ -224,14 +225,16 @@ class SharedKTX2Loader extends KTX2Loader {
     // GLTFLoader only uses the onLoad texture; the synchronous return is
     // the Loader contract and never bound to a material.
     const placeholder = new CompressedTexture([], 0, 0, RGBA_S3TC_DXT1_Format);
-    void onProgress;
     const maxDimension = this.maxTextureDimension;
-    // The decoded levels depend on the cap, so a renderer with a different
-    // limit must not share a source cropped for another.
     sharedTextures
-      .acquire(`${url}|mip-limit=${maxDimension}`, () => new Promise<CompressedTexture>((resolve, reject) => {
-        super.load(url, (texture) => resolve(limitCompressedTextureMipmaps(texture, maxDimension)), undefined, reject);
-      }))
+      .acquire(`${url}|mip-limit=${maxDimension}`, async () => {
+        const texture = this.tracker
+          ? await this.fetchTracked(url)
+          : await new Promise<CompressedTexture>((resolve, reject) => {
+            super.load(url, resolve, onProgress, reject);
+          });
+        return limitCompressedTextureMipmaps(texture, maxDimension);
+      })
       .then(onLoad, (error: unknown) => onError?.(error));
     return placeholder;
   }
@@ -246,7 +249,7 @@ class SharedKTX2Loader extends KTX2Loader {
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
-const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string }>();
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal; maxTextureDimension: number }>();
 
 /**
  * One GLTFLoader for the whole app.
@@ -261,7 +264,7 @@ const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2:
  *   renderer's `MAX_TEXTURE_SIZE` can hold, so a software GL (SwiftShader) or
  *   a small GPU never receives a `texStorage2D` it must reject.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal, maxTextureDimension = Infinity): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
@@ -279,17 +282,19 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
       sharedKtx2Path = path;
       sharedLoader.setKTX2Loader(sharedKtx2);
     }
+    sharedKtx2.maxTextureDimension = maxTextureDimension;
   }
   if (renderer && tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     let tracked = trackedLoaders.get(tracker);
-    if (!tracked || tracked.path !== path) {
+    if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension) {
       tracked?.ktx2.dispose();
       const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
       ktx2.tracker = tracker;
       ktx2.signal = signal;
+      ktx2.maxTextureDimension = maxTextureDimension;
       const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
-      tracked = { loader, ktx2, path };
+      tracked = { loader, ktx2, path, signal, maxTextureDimension };
       trackedLoaders.set(tracker, tracked);
     }
     return tracked.loader;

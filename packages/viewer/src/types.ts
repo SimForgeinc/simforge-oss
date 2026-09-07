@@ -116,6 +116,8 @@ export interface CityViewerOptions {
   vegetationScreenSpaceError?: number;
   /** Resident geometry+texture budget in bytes (estimated GPU footprint). */
   byteBudget?: number;
+  /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
+  textureMaxDimension?: number;
   /** Concurrent tile fetch/parse slots. */
   maxConcurrentLoads?: number;
   /** Per-frame milliseconds spent pushing new textures to the GPU. */
