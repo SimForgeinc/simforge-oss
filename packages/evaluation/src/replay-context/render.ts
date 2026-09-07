@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { CapabilityError } from './capability.js';
 import { deferred } from './deferred.js';
 import { poseAt } from './envelope.js';
 import { RawBackgroundSchema } from './importers/raw-schema.js';
@@ -47,13 +48,6 @@ import type { GateVerdict, ReplayContext } from './schema.js';
 /** Decision rate the closed loop runs at, and therefore the rate probes are rendered at. */
 export const PROBE_TICK_HZ = 10;
 
-/** Raised when the external render tier is absent or refuses the request. */
-export class CapabilityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'CapabilityError';
-  }
-}
 
 export interface RenderTier {
   /** `simforge-oss-splat` console script, or an interpreter invocation of it. */
