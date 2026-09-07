@@ -403,7 +403,8 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
   };
 
   const artifacts: StudioArtifactService = {
-    listMaps(signal) {
+    listMaps(signal, options) {
+      if (options?.fresh) shared.invalidate(MAP_READ_KEY);
       return shared.read(
         MAP_READ_KEY,
         MAP_SHARE_MS,

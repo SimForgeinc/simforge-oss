@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import { LOCAL_SESSION, type AuthenticatedUser } from "./session";
 
 type RouteSessionSuccess = {
@@ -15,6 +15,7 @@ type RouteSessionFailure = {
 export type RouteSessionResult = RouteSessionSuccess | RouteSessionFailure;
 
 export async function requireRouteSession(_request: NextRequest): Promise<RouteSessionResult> {
+  await connection();
   return {
     ok: true,
     session: LOCAL_SESSION,

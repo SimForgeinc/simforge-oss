@@ -273,6 +273,9 @@ async function signedDownloadUrl(
     }
     await pool.inflight;
   }
+  // A queued member can arrive in the final batch we just awaited.
+  const delivered = pool.signed.get(relativePath);
+  if (delivered && delivered.expiresAt > Date.now()) return delivered.url;
   throw new MapAccessError("NotFound", "map_asset_not_found", `SimCloud did not deliver ${relativePath}`);
 }
 

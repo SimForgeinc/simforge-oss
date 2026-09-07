@@ -159,8 +159,8 @@ export interface StudioProjectService {
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */
 export interface StudioArtifactService {
-  /** The published map catalog. Shared across callers for five minutes. */
-  listMaps(signal?: AbortSignal): Promise<StudioMapEntry[]>;
+  /** The usable map catalog. Refresh after installation or an authorization change. */
+  listMaps(signal?: AbortSignal, options?: { fresh?: boolean }): Promise<StudioMapEntry[]>;
   getArtifact(artifactId: string, options?: { download?: boolean; signal?: AbortSignal }): Promise<ScenarioArtifactDto>;
   /** Resolve and open an artifact in a new tab. */
   openArtifact(artifactId: string): Promise<void>;

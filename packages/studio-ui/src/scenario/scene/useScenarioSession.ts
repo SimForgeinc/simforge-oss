@@ -203,7 +203,7 @@ export function useScenarioSession({
       if ((reason as { name?: string } | null)?.name !== "AbortError") setFailed(true);
     });
     return () => abort.abort();
-  }, [studioHost]);
+  }, [studioHost, documentId]);
 
   useEffect(() => {
     if (!maps) return;

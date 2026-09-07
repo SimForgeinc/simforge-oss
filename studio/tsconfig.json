@@ -88,6 +88,7 @@
   ],
   "exclude": [
     "node_modules",
+    "dist",
     "worker",
     "test-only",
     "**/*.test.ts",

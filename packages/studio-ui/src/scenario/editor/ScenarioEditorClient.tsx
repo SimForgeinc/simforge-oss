@@ -156,6 +156,10 @@ function ScenarioEditorWorkspace({
   );
 
   useEffect(() => {
+    if (initialMaps) setMaps(initialMaps.filter(mapSupportsScenarioPreview));
+  }, [initialMaps]);
+
+  useEffect(() => {
     recordRef.current = record;
   }, [record]);
 

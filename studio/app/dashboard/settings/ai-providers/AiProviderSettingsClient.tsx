@@ -248,6 +248,7 @@ export function AiProviderSettingsClient() {
               })}
             </fieldset>
 
+            {status.assistant.backend === "anthropic" ? (
             <div className="mt-5 space-y-4">
               <KeyField
                 label="Anthropic API key"
@@ -280,10 +281,16 @@ export function AiProviderSettingsClient() {
                   </div>
                 </label>
                 <p className="text-[11px] leading-4 text-white/40">
-                  Anthropic model id used by both backends. Clear the field to return to the default.
+                  Anthropic model id for your API key. Clear the field to return to the default.
                 </p>
               </form>
             </div>
+            ) : (
+              <p className="mt-5 text-xs text-white/50">
+                SimCloud selects its managed model. Your Anthropic key and model settings are used only
+                when you choose My Anthropic API key.
+              </p>
+            )}
           </section>
 
           <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">

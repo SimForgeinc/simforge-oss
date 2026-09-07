@@ -9,8 +9,10 @@
 // must be a complete stage for the package's own platform: a readable
 // stage-manifest.json naming this platform, the native runner and Bevy render
 // service, the FFI library, the pinned encoders with their locked digests, the
-// actor closure and the standalone server. This is what an installer ships;
-// nothing is inferred from a build succeeding.
+// actor closure, the standalone server, and the per-target native bindings
+// (@napi-rs/keyring, sharp) resolving inside the package with every native
+// binding, executable and library built for this platform. This is what an
+// installer ships; nothing is inferred from a build succeeding.
 
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -18,7 +20,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { APP_FILES } from "./stage-app.mjs";
-import { readStageManifest, targetFor } from "./stage-manifest.mjs";
+import { readStageManifest, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
 // @electron/asar is a dependency of electron-builder's app-builder-lib, not of studio.
@@ -102,6 +104,7 @@ for (const rel of archives) {
   if (runtimeManifest && !(runtimeManifest.supportTiers ?? []).some((tier) => tier.tier === "bevy-sensor-render")) {
     problems.push(`${rel}: native runtime carries no bevy-sensor-render tier; local Bevy rendering would be unavailable`);
   }
+  for (const problem of await verifyNativeClosure(stage, manifest)) problems.push(`${rel}: ${problem}`);
 }
 
 if (problems.length > 0) {

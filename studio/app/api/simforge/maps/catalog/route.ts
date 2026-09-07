@@ -2,12 +2,10 @@ import { connection } from "next/server";
 import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
 import { requireScenarioContext, scenarioJsonWithEtag } from "@/app/lib/scenario/http";
 
-/** Editor maps must already be installed and authorized on this host. */
+/** Available downloads and installed maps, including explicit account/installation state. */
 export async function GET(request: Request) {
   await connection();
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
-  return await scenarioJsonWithEtag(request, {
-    maps: (await listLocalMapCatalog(request.signal)).filter((map) => map.installed.browser && !map.locked),
-  });
+  return scenarioJsonWithEtag(request, { maps: await listLocalMapCatalog(request.signal) });
 }

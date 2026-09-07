@@ -17,7 +17,8 @@
 //                 studio/migrations                               SQL migrations
 //                 studio/tools/{ffmpeg,ffprobe}[.exe]             pinned encoders (desktop/tools.lock.json)
 //                 studio/actor-assets                             pinned actor-appearance closure
-//                 studio/node_modules, node_modules/.pnpm         traced runtime closure
+//                 studio/node_modules, node_modules/.pnpm         traced runtime closure (POSIX: pnpm links;
+//                                                                 Windows: plain copies under studio/node_modules)
 //                 packages/…                                      assets read by path
 //                 packages/native-runtime/native/*.node           N-API addon for this target
 //                 runtime/                                        verified native runtime archive
@@ -28,13 +29,16 @@
 // resolve inside the stage, so an artifact never depends on the checkout or
 // on a global pnpm/tsx/Node/Python. The interpreter at runtime is Electron in
 // Node mode. Native pieces are staged for the build host's target only (the
-// N-API addon, sharp, the runtime archive are all target-specific and are not
-// cross-built here); the manifest records that target and the shell refuses
-// to run elsewhere. Windows, macOS and Linux artifacts are therefore staged
-// on their own platform (see .github/workflows/desktop.yml).
+// N-API addon, sharp, the keyring binding, the runtime archive are all
+// target-specific and are not cross-built here); the manifest records that
+// target, `verifyNativeClosure` proves every native binding, executable and
+// library in the stage was built for it, and the shell refuses to run
+// elsewhere. Windows, macOS and Linux artifacts are therefore staged on their
+// own platform (see .github/workflows/desktop.yml).
 //
 // Prerequisites (checked, never silently skipped):
-//   pnpm install                                            workspace with esbuild/electron installed
+//   pnpm install                                            workspace with esbuild/electron and this platform's
+//                                                           optional native packages (@napi-rs/keyring-*, @img/sharp-*) installed
 //   pnpm --filter @simforge-oss/native-runtime build:node   addon for this target
 //   pnpm --filter @simforge-oss/render build                browser render harness (dist/harness.html)
 //   node scripts/native-runtime/package-runtime.mjs --target <triple>  runtime archive for this target (baseline: no --providers)
@@ -54,7 +58,7 @@ import { extractRuntimeArchive, verifyRuntimeStage } from "../../scripts/native-
 import { targetLayout } from "../../scripts/native-runtime/target-layout.mjs";
 import { fetchTools, matchesPin } from "./fetch-tools.mjs";
 import { bundleNode, stageApp } from "./stage-app.mjs";
-import { STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor } from "./stage-manifest.mjs";
+import { resolvePackageDir, STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
 const desktopDir = dirname(fileURLToPath(import.meta.url));
@@ -71,7 +75,7 @@ const stageStudio = join(stageRoot, "studio");
  * of `@simforge-oss/studio` so it resolves from `studio/host/` at runtime;
  * the stage copies the package and its pnpm dependency closure.
  */
-const RUNTIME_ASSET_PACKAGES = ["@electric-sql/pglite", "@simforge-oss/native-runtime", "@simforge-oss/render", "sharp", "playwright-core"];
+const RUNTIME_ASSET_PACKAGES = ["@electric-sql/pglite", "@napi-rs/keyring", "@simforge-oss/native-runtime", "@simforge-oss/render", "sharp", "playwright-core"];
 /** Externals that are never loaded from the artifact: optional or workspace-plan-only. */
 const NEVER_BUNDLED = ["pg-native", "next", "tsx"];
 
@@ -81,10 +85,14 @@ const RENDER_DIST = join(repoRoot, "packages", "render", "dist");
 /**
  * pnpm links packages with symlinks on POSIX and with junctions (absolute
  * targets) on Windows. The stage keeps POSIX links verbatim, sealed by
- * `verifySealed`; on Windows it dereferences them, so the artifact holds
- * plain copies and no link can point outside it.
+ * `verifySealed`. A Windows install cannot carry links (NSIS extracts plain
+ * files, junctions are absolute), so the Windows stage holds plain copies
+ * laid out npm-style by `drainPlacements`, where Node resolution needs no
+ * link at all.
  */
 const PRESERVE_LINKS = process.platform !== "win32";
+const marker = `${sep}node_modules${sep}`;
+const store = join(repoRoot, "node_modules", ".pnpm") + sep;
 
 const target = targetFor();
 const skipNextBuild = process.argv.includes("--skip-next-build");
@@ -229,20 +237,15 @@ async function stageActorAssets() {
 
 /**
  * Copy `source` (a path under the repository) to the same relative path in
- * the stage, preserving symlinks verbatim on POSIX.
+ * the stage, preserving symlinks verbatim (POSIX layout only).
  * @param {string} source
- * @param {(source: string) => boolean} [filter]
  */
-async function stageMirror(source, filter) {
+async function stageMirror(source) {
   const rel = relative(repoRoot, source);
   if (rel.startsWith("..") || isAbsolute(rel)) fail(`${source} is outside the repository`);
   const target = join(stageRoot, rel);
   await mkdir(dirname(target), { recursive: true });
   if ((await lstat(source)).isSymbolicLink()) {
-    if (!PRESERVE_LINKS) {
-      if (!(await exists(target))) await cp(await realpath(source), target, { recursive: true, dereference: true, filter });
-      return target;
-    }
     const link = await readlink(source);
     const existing = await lstat(target).catch((error) => {
       if (error.code === "ENOENT") return null;
@@ -257,85 +260,253 @@ async function stageMirror(source, filter) {
     }
     return target;
   }
-  await cp(source, target, { recursive: true, verbatimSymlinks: PRESERVE_LINKS, dereference: !PRESERVE_LINKS, force: false, errorOnExist: false, filter });
+  await cp(source, target, { recursive: true, verbatimSymlinks: true, force: false, errorOnExist: false });
   return target;
 }
 
 /**
- * Stage published workspace packages and installed virtual-store packages with
- * their runtime dependency links. Workspace `src/` and development dependencies
- * never become an accidental desktop runtime: `pnpm pack` supplies the same
- * files and export conditions as a published consumer receives.
- * @param {string} packageDir real path of the package
- * @param {Set<string>} seen
+ * Stage a workspace package as `pnpm pack` publishes it, at its repository
+ * path: workspace `src/` and development dependencies never become an
+ * accidental desktop runtime, and the packed tree carries the same files and
+ * export conditions a published consumer receives.
+ * @param {string} packageDir real path of the workspace package
+ * @returns {Promise<{ metadata: Record<string, any>; target: string }>}
  */
-async function stagePackageClosure(packageDir, seen) {
+async function packWorkspacePackage(packageDir) {
   const packageRelative = relative(repoRoot, packageDir);
   if (packageRelative.startsWith("..") || isAbsolute(packageRelative)) fail(`${packageDir} is outside the repository`);
-  if (seen.has(packageDir)) return;
-  seen.add(packageDir);
-  const marker = `${sep}node_modules${sep}`;
-  const store = join(repoRoot, "node_modules", ".pnpm") + sep;
-  if (!packageDir.startsWith(store)) {
-    const metadata = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
-    const packed = await mkdtemp(join(tmpdir(), "simforge-desktop-package-"));
-    const target = join(stageRoot, packageRelative);
-    try {
-      await promisify(execFile)("pnpm", ["pack", "--pack-destination", packed], {
-        cwd: packageDir,
-        env: { ...process.env, npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" },
-        maxBuffer: 4 * 1024 * 1024,
-        shell: process.platform === "win32",
-      });
-      const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
-      if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
-      await rm(target, { recursive: true, force: true });
-      await mkdir(target, { recursive: true });
-      await run("tar", ["-xzf", join(packed, tarballs[0]), "--strip-components=1", "-C", target]);
-    } finally {
-      await rm(packed, { recursive: true, force: true });
-    }
-    const dependencies = Object.keys({
-      ...metadata.dependencies,
-      ...metadata.peerDependencies,
-      ...metadata.optionalDependencies,
-    }).sort();
-    for (const name of dependencies) {
-      const linkPath = join(packageDir, "node_modules", name);
-      if (!(await exists(linkPath))) {
-        if (metadata.optionalDependencies?.[name] || metadata.peerDependenciesMeta?.[name]?.optional) continue;
-        fail(`${metadata.name} has an uninstalled runtime dependency ${name}`);
-      }
-      await stageMirror(linkPath);
-      await stagePackageClosure(await realpath(linkPath), seen);
-    }
-    return;
+  const metadata = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
+  const packed = await mkdtemp(join(tmpdir(), "simforge-desktop-package-"));
+  const target = join(stageRoot, packageRelative);
+  try {
+    await promisify(execFile)("pnpm", ["pack", "--pack-destination", packed], {
+      cwd: packageDir,
+      env: { ...process.env, npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" },
+      maxBuffer: 4 * 1024 * 1024,
+      shell: process.platform === "win32",
+    });
+    const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
+    if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
+    await rm(target, { recursive: true, force: true });
+    await mkdir(target, { recursive: true });
+    await run("tar", ["-xzf", join(packed, tarballs[0]), "--strip-components=1", "-C", target]);
+  } finally {
+    await rm(packed, { recursive: true, force: true });
   }
-  await stageMirror(packageDir);
+  return { metadata, target };
+}
+
+/**
+ * Runtime dependency links of a workspace package; an uninstalled required
+ * dependency is an incomplete workspace, not a runtime surprise.
+ * @param {string} packageDir
+ * @param {Record<string, any>} metadata
+ * @returns {Promise<Array<[name: string, link: string]>>}
+ */
+async function workspaceDependencyLinks(packageDir, metadata) {
+  const names = Object.keys({ ...metadata.dependencies, ...metadata.peerDependencies, ...metadata.optionalDependencies }).sort();
+  /** @type {Array<[string, string]>} */
+  const links = [];
+  for (const name of names) {
+    const linkPath = join(packageDir, "node_modules", name);
+    if (!(await exists(linkPath))) {
+      if (metadata.optionalDependencies?.[name] || metadata.peerDependenciesMeta?.[name]?.optional) continue;
+      fail(`${metadata.name} has an uninstalled runtime dependency ${name}`);
+    }
+    links.push([name, linkPath]);
+  }
+  return links;
+}
+
+/**
+ * Dependency links pnpm placed beside a virtual-store package
+ * (`.pnpm/<id>/node_modules/<dependency>`).
+ * @param {string} packageDir real path under a `.pnpm` store
+ * @returns {Promise<Array<[name: string, link: string]>>}
+ */
+async function storeDependencyLinks(packageDir) {
   const linkRoot = packageDir.slice(0, packageDir.lastIndexOf(marker) + marker.length - 1);
+  /** @type {Array<[string, string]>} */
+  const links = [];
   for (const entry of await readdir(linkRoot, { withFileTypes: true })) {
     const names = entry.name.startsWith("@")
       ? (await readdir(join(linkRoot, entry.name))).map((name) => join(entry.name, name))
       : [entry.name];
     for (const name of names) {
       const linkPath = join(linkRoot, name);
-      if (!(await lstat(linkPath)).isSymbolicLink()) continue;
-      await stageMirror(linkPath);
-      await stagePackageClosure(await realpath(linkPath), seen);
+      if ((await lstat(linkPath)).isSymbolicLink()) links.push([name.split(sep).join("/"), linkPath]);
     }
+  }
+  return links;
+}
+
+/**
+ * POSIX: stage published workspace packages and installed virtual-store
+ * packages with their runtime dependency links, mirroring the workspace layout.
+ * @param {string} packageDir real path of the package
+ * @param {Set<string>} seen
+ */
+async function stagePackageClosure(packageDir, seen) {
+  if (seen.has(packageDir)) return;
+  seen.add(packageDir);
+  /** @type {Array<[string, string]>} */
+  let links;
+  if (packageDir.startsWith(store)) {
+    await stageMirror(packageDir);
+    links = await storeDependencyLinks(packageDir);
+  } else {
+    const { metadata } = await packWorkspacePackage(packageDir);
+    links = await workspaceDependencyLinks(packageDir, metadata);
+  }
+  for (const [, linkPath] of links) {
+    await stageMirror(linkPath);
+    await stagePackageClosure(await realpath(linkPath), seen);
   }
 }
 
 /**
- * Recreate `studio/node_modules/<name>` in the stage with the workspace's own
- * link text (relative, so it resolves inside the stage).
+ * Windows: plain copies placed npm-style. A package is hoisted to the
+ * outermost `node_modules` its dependent resolves through where its name is
+ * free, nested closer when another version already holds the name, and never
+ * placed where it would shadow a name a dependent below already resolved
+ * through that directory. Placement is breadth-first, so a package's own
+ * dependencies take their names before anything nested deeper competes for
+ * them. A package is identified by its repository-relative real path, the
+ * same whether it comes from the Next standalone trace (traced files only) or
+ * from the workspace store (complete), so both merge into one copy.
+ */
+const placements = {
+  /** @type {Array<{ source: string; name: string; scopes: string[] }>} */
+  queue: [],
+  /** @type {Map<string, { key: string; sources: Set<string> }>} */
+  placed: new Map(),
+  /** @type {Map<string, Set<string>>} */
+  reserved: new Map(),
+};
+
+/**
+ * @param {string} source real package directory in the workspace or the standalone output
+ * @param {string} name package name
+ * @param {string[]} scopes `node_modules` directories the dependent resolves through, nearest first
+ */
+function enqueuePlacement(source, name, scopes) {
+  placements.queue.push({ source, name, scopes });
+}
+
+/** @param {string} path */
+async function notLink(path) {
+  return !(await lstat(path)).isSymbolicLink();
+}
+
+async function drainPlacements() {
+  const { queue, placed, reserved } = placements;
+  while (queue.length > 0) {
+    const { source, name, scopes } = /** @type {{ source: string; name: string; scopes: string[] }} */ (queue.shift());
+    const key = relative(source.startsWith(standalone + sep) ? standalone : repoRoot, source);
+    if (key.startsWith("..") || isAbsolute(key)) fail(`${source} is outside the repository`);
+    let found = -1;
+    let free = -1;
+    for (let i = 0; i < scopes.length; i += 1) {
+      const existing = placed.get(join(scopes[i], name));
+      if (existing?.key === key) {
+        found = i;
+        break;
+      }
+      if (existing || reserved.get(scopes[i])?.has(name)) break;
+      free = i;
+    }
+    const index = found >= 0 ? found : free;
+    if (index < 0) fail(`${name} (${key}) cannot be placed for ${relative(stageRoot, scopes[0])}: another version holds every resolvable location`);
+    const location = join(scopes[index], name);
+    for (const scope of scopes.slice(0, index)) {
+      const names = reserved.get(scope) ?? new Set();
+      names.add(name);
+      reserved.set(scope, names);
+    }
+    const entry = placed.get(location) ?? { key, sources: new Set() };
+    placed.set(location, entry);
+    if (entry.sources.has(source)) continue;
+    entry.sources.add(source);
+    let copySource = source;
+    /** @type {Array<[string, string]>} */
+    let links;
+    if (key.startsWith(join("node_modules", ".pnpm") + sep)) {
+      links = await storeDependencyLinks(source);
+    } else {
+      const { metadata, target } = await packWorkspacePackage(source);
+      copySource = target;
+      links = await workspaceDependencyLinks(source, metadata);
+    }
+    await mkdir(dirname(location), { recursive: true });
+    await cp(copySource, location, { recursive: true, force: false, errorOnExist: false, filter: notLink });
+    const inner = [join(location, "node_modules"), ...scopes.slice(index)];
+    for (const [dependency, linkPath] of links) enqueuePlacement(await realpath(linkPath), dependency, inner);
+  }
+}
+
+/**
+ * Stage a direct dependency of `@simforge-oss/studio` the bundles load from
+ * disk, with its runtime closure, resolvable from `studio/`.
+ * @param {string} name
+ * @param {Set<string>} seen
+ */
+async function stageDependency(name, seen) {
+  const installed = join(studioRoot, "node_modules", name);
+  if (!(await exists(installed))) fail(`${name} is not installed under studio/node_modules; add it to studio/package.json dependencies and run pnpm install`);
+  const real = await realpath(installed);
+  if (!PRESERVE_LINKS) {
+    enqueuePlacement(real, name, [join(stageStudio, "node_modules")]);
+    return;
+  }
+  await stagePackageClosure(real, seen);
+  await ensureStudioLink(name);
+}
+
+/**
+ * Recreate `studio/node_modules/<name>` in the stage: the workspace's own
+ * link text on POSIX (relative, so it resolves inside the stage); on Windows
+ * a plain copy of what the stage already holds at the link's target.
  * @param {string} name
  */
 async function ensureStudioLink(name) {
   const source = join(studioRoot, "node_modules", name);
   const target = join(stageStudio, "node_modules", name);
   if (await exists(target)) return;
-  await stageMirror(source);
+  if (PRESERVE_LINKS) {
+    await stageMirror(source);
+    return;
+  }
+  const staged = join(stageRoot, relative(repoRoot, await realpath(source)));
+  if (!(await exists(staged))) fail(`${name} is not staged at ${relative(stageRoot, staged)}; nothing to place under studio/node_modules`);
+  await mkdir(dirname(target), { recursive: true });
+  await cp(staged, target, { recursive: true, filter: notLink });
+}
+
+/**
+ * The per-target binding packages the disk-loaded dependencies resolve in
+ * the stage, as the manifest records them. Resolution happens exactly as at
+ * runtime, from the standalone server; a binding that does not resolve is a
+ * pnpm install that lacked this platform's optional package or a trace that
+ * dropped it, never a session-only vault or a sharp that loads nothing.
+ * @param {string} server stage-relative server entry
+ * @returns {Promise<Record<string, Record<string, string>>>}
+ */
+async function stagedNativeBindings(server) {
+  const root = await realpath(stageRoot);
+  /** @type {Record<string, Record<string, string>>} */
+  const bindings = {};
+  for (const [owner, packages] of Object.entries(target.bindings)) {
+    const ownerDir = await resolvePackageDir(join(root, server), owner);
+    if (!ownerDir) fail(`${owner} does not resolve from ${server} in the stage`);
+    bindings[owner] = {};
+    for (const name of packages) {
+      const dir = await resolvePackageDir(join(ownerDir, "package.json"), name);
+      if (!dir) fail(`${owner} cannot resolve its ${target.key} binding ${name} in the stage; pnpm install on this platform must provide it (optionalDependencies) and the closure must keep it`);
+      if (!dir.startsWith(root + sep)) fail(`${name} resolves outside the stage: ${dir}`);
+      bindings[owner][name] = relative(root, dir).split(sep).join("/");
+    }
+  }
+  return bindings;
 }
 
 /**
@@ -367,7 +538,7 @@ async function verifySealed() {
     }
   }
   if (dangling.length > 0) fail(`unresolved dependency links: ${dangling.join("; ")}`);
-  if (!PRESERVE_LINKS && symlinks > 0) fail(`${symlinks} symlinks remain in a dereferenced (Windows) stage`);
+  if (!PRESERVE_LINKS && symlinks > 0) fail(`${symlinks} symlinks remain in a link-free (Windows) stage`);
   return symlinks;
 }
 
@@ -395,7 +566,22 @@ if (!(await exists(join(standalone, "studio", "server.js")))) {
   fail(`${standalone}/studio/server.js missing; build with SIMFORGE_DESKTOP_BUILD=1 (drop --skip-next-build)`);
 }
 await mkdir(stageRoot, { recursive: true });
-await cp(standalone, stageRoot, { recursive: true, verbatimSymlinks: PRESERVE_LINKS, dereference: !PRESERVE_LINKS });
+if (PRESERVE_LINKS) {
+  await cp(standalone, stageRoot, { recursive: true, verbatimSymlinks: true });
+} else {
+  // Files only: the traced virtual store and the links into it become
+  // npm-style plain copies placed from the standalone's own top-level links.
+  const standaloneStore = join(standalone, "node_modules", ".pnpm");
+  await cp(standalone, stageRoot, { recursive: true, filter: async (path) => path !== standaloneStore && (await notLink(path)) });
+  const roots = join(standalone, "studio", "node_modules");
+  for (const entry of await readdir(roots, { withFileTypes: true })) {
+    const names = entry.name.startsWith("@") ? (await readdir(join(roots, entry.name))).map((name) => `${entry.name}/${name}`) : [entry.name];
+    for (const name of names) {
+      const linkPath = join(roots, name);
+      if ((await lstat(linkPath)).isSymbolicLink()) enqueuePlacement(await realpath(linkPath), name, [join(stageStudio, "node_modules")]);
+    }
+  }
+}
 await cp(join(studioRoot, ".next", "static"), join(stageStudio, ".next", "static"), { recursive: true });
 await cp(join(studioRoot, "public"), join(stageStudio, "public"), {
   recursive: true,
@@ -423,12 +609,8 @@ await writeFile(join(hostDir, "host.mjs"), "import \"./host-main.mjs\";\n");
 
 // 3. Packages the bundles load from disk, with their pnpm closure and studio-level links.
 const seen = new Set();
-for (const name of RUNTIME_ASSET_PACKAGES) {
-  const installed = join(studioRoot, "node_modules", name);
-  if (!(await exists(installed))) fail(`${name} is not installed under studio/node_modules; add it to studio/package.json dependencies and run pnpm install`);
-  await stagePackageClosure(await realpath(installed), seen);
-  await ensureStudioLink(name);
-}
+for (const name of RUNTIME_ASSET_PACKAGES) await stageDependency(name, seen);
+await drainPlacements();
 
 // 4. Workspace assets the bundles read by path, resolved through the packed
 //    packages exactly as at runtime; then the native payload for this target.
@@ -444,9 +626,11 @@ const nativeRuntime = await stageNativeRuntime();
 const tools = await stageTools();
 const actorAssetsRoot = await stageActorAssets();
 
-// 5. Seal and describe.
+// 5. Seal and describe: no link leaves the stage, and every native binding,
+//    executable and library in it was built for this target.
 if (await exists(join(stageStudio, ".next", "cache"))) fail("standalone output carried .next/cache");
 const symlinks = await verifySealed();
+const nativeBindings = await stagedNativeBindings("studio/server.js");
 const gitRevision = await promisify(execFile)("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" })
   .then(({ stdout }) => stdout.trim())
   .catch(() => null);
@@ -471,6 +655,7 @@ const manifest = {
   nativeRenderService: posix(nativeRuntime.renderService),
   nativeRenderLibrary: posix(nativeRuntime.renderLibrary),
   tools: { ffmpeg: posix(tools.ffmpeg), ffprobe: posix(tools.ffprobe), version: tools.version, license: tools.license },
+  nativeBindings,
   actorAssetsRoot: posix(actorAssetsRoot),
   browserHarness: "packages/render/dist/harness.html",
   server: "studio/server.js",
@@ -478,6 +663,8 @@ const manifest = {
   workerEntry: "studio/host/worker.mjs",
 };
 await writeFile(join(stageRoot, STAGE_MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
+const closure = await verifyNativeClosure(stageRoot, manifest);
+if (closure.length > 0) fail(`native closure is not ${target.key}:\n${closure.map((problem) => `- ${problem}`).join("\n")}`);
 
 // 6. The Electron application directory (two-package layout: no runtime dependencies here).
 const application = await stageApp({ appDir, version: studioPackage.version, license: studioPackage.license });

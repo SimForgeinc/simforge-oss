@@ -1,4 +1,5 @@
 import type { LocalMapInstallState } from "@/app/lib/cloud/maps";
+import { studioHost } from "@/app/lib/host";
 
 export type LocalMapInstallProfile = LocalMapInstallState["profile"];
 
@@ -34,4 +35,37 @@ export function startMapInstall(mapVersionId: string, profile: LocalMapInstallPr
 
 export function readMapInstall(mapVersionId: string, profile: LocalMapInstallProfile, signal?: AbortSignal) {
   return installRequest(mapVersionId, profile, { signal });
+}
+
+/** Observe a service-owned install; cancelling the observer never cancels other consumers. */
+export async function followMapInstall(
+  mapVersionId: string,
+  profile: LocalMapInstallProfile,
+  first: Promise<LocalMapInstallState>,
+  signal: AbortSignal,
+  onProgress: (state: LocalMapInstallState) => void,
+): Promise<LocalMapInstallState> {
+  let current = await first;
+  signal.throwIfAborted();
+  onProgress(current);
+  while (current.state === "materializing") {
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", onAbort);
+        reject(signal.reason ?? new DOMException("Map observation cancelled", "AbortError"));
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      }, 1_500);
+      signal.addEventListener("abort", onAbort, { once: true });
+      if (signal.aborted) onAbort();
+    });
+    current = await readMapInstall(mapVersionId, profile, signal);
+    signal.throwIfAborted();
+    onProgress(current);
+  }
+  if (current.state === "ready") await studioHost.artifacts.listMaps(signal, { fresh: true });
+  return current;
 }

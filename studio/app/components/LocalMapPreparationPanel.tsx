@@ -1,14 +1,14 @@
 "use client";
 
 import { Check, Cpu, Download, ExternalLink, Globe, LoaderCircle, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { LocalMapDescriptor, LocalMapInstallState } from "@/app/lib/cloud/maps";
-import { readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
+import { followMapInstall, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
 
-const INSTALL_POLL_INTERVAL_MS = 1_500;
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
 
 function formatBytes(bytes: number): string {
@@ -41,20 +41,7 @@ function useMapInstall(mapVersionId: string, profile: LocalMapInstallProfile): M
       const own = new AbortController();
       controller.current = own;
       try {
-        let current = await first;
-        setStatus(current);
-        while (!own.signal.aborted && current.state === "materializing") {
-          await new Promise<void>((resolve) => {
-            const timer = setTimeout(resolve, INSTALL_POLL_INTERVAL_MS);
-            own.signal.addEventListener("abort", () => {
-              clearTimeout(timer);
-              resolve();
-            }, { once: true });
-          });
-          if (own.signal.aborted) return;
-          current = await readMapInstall(mapVersionId, profile, own.signal);
-          setStatus(current);
-        }
+        await followMapInstall(mapVersionId, profile, first, own.signal, setStatus);
         setError(null);
       } catch (reason) {
         if (own.signal.aborted) return;
@@ -93,6 +80,7 @@ function ProfileRow({
   label,
   detail,
   install,
+  installed,
   locked,
   actionLabel,
 }: {
@@ -100,11 +88,12 @@ function ProfileRow({
   label: string;
   detail: string;
   install: MapInstall;
+  installed: boolean;
   locked: boolean;
   actionLabel: string;
 }) {
   const { status, error, starting, start } = install;
-  const ready = status?.state === "ready";
+  const ready = status?.state === "ready" || (status?.state === "idle" && installed);
   const running = status?.state === "materializing";
   const requiresConnection = status?.state === "error" && status.message === REQUIRES_CONNECTION;
   const progress = status?.progress;
@@ -115,7 +104,7 @@ function ProfileRow({
       : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 py-2" data-testid={`map-install-${label.toLowerCase().replace(/\s+/g, "-")}`} data-install-state={status?.state ?? "loading"}>
+    <div className="flex flex-wrap items-center gap-3 py-2" data-testid={`map-install-${label.toLowerCase().replace(/\s+/g, "-")}`} data-install-state={ready ? "ready" : status?.state ?? "loading"}>
       <span className="grid size-7 shrink-0 place-items-center text-[#E8E044]">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 text-xs font-semibold text-white/85">
@@ -182,12 +171,16 @@ function ProfileRow({
  */
 export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDescriptor; className?: string }) {
   const cloud = useStudioCloudStatus();
+  const router = useRouter();
   const browser = useMapInstall(map.mapVersionId, "browser");
   const semantic = useMapInstall(map.mapVersionId, "semantic");
   const requiresConnection = [browser.status, semantic.status].some(
     (status) => status?.state === "error" && status.message === REQUIRES_CONNECTION,
   );
   const locked = map.locked || (map.access === "cloud" && cloud.status?.state !== "connected") || requiresConnection;
+  useEffect(() => {
+    if (browser.status?.state === "ready" || semantic.status?.state === "ready") router.refresh();
+  }, [browser.status?.state, semantic.status?.state, router]);
 
   return (
     <div
@@ -230,6 +223,7 @@ export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDesc
             detail="Viewport assets for browsing and authoring on this map."
             icon={<Globe className="size-4" aria-hidden="true" />}
             install={browser}
+            installed={map.installed.browser}
             label="Browser preview"
             locked={locked}
           />
@@ -238,6 +232,7 @@ export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDesc
             detail="Full semantic closure the local Bevy renderer reads directly from disk."
             icon={<Cpu className="size-4" aria-hidden="true" />}
             install={semantic}
+            installed={map.installed.semantic}
             label="Local render"
             locked={locked}
           />

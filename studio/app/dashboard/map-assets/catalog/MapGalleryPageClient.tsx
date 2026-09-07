@@ -43,6 +43,7 @@ import {
 import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
 import { LocalMapPreparationPanel } from "@/app/components/LocalMapPreparationPanel";
 import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
+import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { getCardStats } from "./map-card-data";
 import { MapGallerySumoTraffic } from "./MapGallerySumoTraffic";
 
@@ -192,6 +193,10 @@ export function MapGalleryPageClient({
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [sumoEnabled, setSumoEnabled] = useState(false);
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
+  const cloudState = useStudioCloudStatus().status?.state;
+  useEffect(() => {
+    if (cloudState && cloudState !== "connecting") router.refresh();
+  }, [cloudState, router]);
 
   const entries = useMemo<GalleryEntry[]>(() => {
     const assetsById = new Map(assets.map((asset) => [asset.map_asset_id, asset]));
@@ -238,7 +243,7 @@ export function MapGalleryPageClient({
         [
           entries[(selectedIndex - 1 + entries.length) % entries.length],
           entries[(selectedIndex + 1) % entries.length],
-        ].map((candidate) => (candidate?.map.locked ? null : candidate?.map.browserManifestUrl)),
+        ].map((candidate) => (!candidate?.map.installed.browser || candidate.map.locked || (candidate.map.access === "cloud" && cloudState !== "connected") ? null : candidate.map.browserManifestUrl)),
       );
       for (const manifestUrl of adjacent) {
         if (!manifestUrl) continue;
@@ -249,7 +254,7 @@ export function MapGalleryPageClient({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [entries, selectedIndex]);
+  }, [entries, selectedIndex, cloudState]);
 
   if (entries.length === 0) {
     return (
@@ -280,9 +285,10 @@ export function MapGalleryPageClient({
   const sumoAvailable = Boolean(entry.map.sumoNetworkSha256);
   const sumoLoading = sumoEnabled && sumoAvailable && sumoStatus.phase === "loading";
   const sumoFailed = sumoEnabled && sumoStatus.phase === "fallback";
+  const locked = entry.map.access === "cloud" ? cloudState !== "connected" : entry.map.locked;
 
   const createScenario = async () => {
-    if (creating) return;
+    if (creating || locked || !entry.map.installed.browser) return;
     setCreating(true);
     try {
       const response = await fetch(
@@ -309,12 +315,11 @@ export function MapGalleryPageClient({
       <AddMapTopBarAction />
       <main className="relative h-full min-h-[32rem] overflow-hidden bg-[#07100d] text-white">
         <div className="absolute inset-0">
-          {entry.map.locked ? (
-            // A locked map's browser assets are not authorized; a viewer here
-            // would only surface fetch failures. The overlay explains and offers Connect.
+          {locked || !entry.map.installed.browser ? (
+            // Do not mount a viewer before its local closure is installed and authorized.
             <div
               className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,224,68,0.08),transparent_60%)]"
-              data-testid="map-gallery-locked-backdrop"
+              data-testid={locked ? "map-gallery-locked-backdrop" : "map-gallery-uninstalled-backdrop"}
             />
           ) : (
             <MapGalleryWorldPreview
@@ -463,8 +468,8 @@ export function MapGalleryPageClient({
                 type="button"
                 size="lg"
                 onClick={createScenario}
-                disabled={creating || entry.map.locked}
-                title={entry.map.locked ? "Connect to SimCloud to author on this map." : undefined}
+                disabled={creating || locked || !entry.map.installed.browser}
+                title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
                 className="h-11 rounded-none bg-[#E8E044] px-4 text-sm font-semibold text-black shadow-xl hover:bg-[#f0e84e] sm:px-5"
               >
                 {creating ? <Loader2 className="size-4 animate-spin" /> : null}

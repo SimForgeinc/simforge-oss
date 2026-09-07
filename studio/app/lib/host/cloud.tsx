@@ -16,6 +16,7 @@ import {
   type StudioCloudService,
   type StudioCloudStatus,
 } from "@simforge-oss/studio-host";
+import { studioHost } from "@/app/lib/host";
 
 /**
  * The local SimCloud connector: same-origin `/api/simforge/cloud/*` routes on
@@ -61,6 +62,15 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const poll = useRef<AbortController | null>(null);
+  const mapScope = status?.state === "connected" ? status.user?.id : status?.state;
+  useEffect(() => {
+    if (!mapScope || mapScope === "connecting") return;
+    const controller = new AbortController();
+    void studioHost.artifacts.listMaps(controller.signal, { fresh: true }).catch((reason: unknown) => {
+      if (!controller.signal.aborted) setError(cloudErrorMessage(reason, "The local map library could not be refreshed."));
+    });
+    return () => controller.abort();
+  }, [mapScope]);
 
   useEffect(() => {
     const controller = new AbortController();

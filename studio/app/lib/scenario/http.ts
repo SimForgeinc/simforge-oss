@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { getCurrentSession } from "@/app/lib/auth/session";
 import { getAppContext, type AppContext } from "@/app/lib/db/app-context";
 import {
@@ -18,6 +18,7 @@ export function requireScenarioMutationOrigin(_request: Request): NextResponse |
 export async function requireScenarioContext(): Promise<
   { context: AppContext; response?: never } | { context?: never; response: NextResponse }
 > {
+  await connection();
   const session = await getCurrentSession();
   if (!session) {
     return {

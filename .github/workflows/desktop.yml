@@ -3,11 +3,15 @@ name: SimForge Studio desktop
 # Builds the SimForge Studio installers on native runners: Windows x64 NSIS,
 # macOS arm64 and x64 DMG/ZIP, Linux x64 AppImage/deb. Each leg builds the
 # whole native payload for its own target (N-API addon, simforge-runner, the
-# Bevy render service and FFI library, sky plates), fetches the pinned
-# encoders and actor closure, stages and packages; nothing is cross-built or
-# inferred from another platform. Manual dispatch only: nothing here runs on
-# push, publishes, or deploys. Artifacts are uploaded to the workflow run;
-# releasing them is a separate, separately authorized step.
+# Bevy render service and FFI library, sky plates), installs this platform's
+# optional native npm packages (@napi-rs/keyring-*, @img/sharp-*) through a
+# native pnpm install, fetches the pinned encoders and actor closure, stages
+# and packages; nothing is cross-built or inferred from another platform, and
+# desktop/stage.mjs, desktop/after-pack.mjs and desktop/verify-package.mjs
+# each refuse a payload holding native code or per-target packages of any
+# other platform. Runs only on manual dispatch or explicitly named desktop CI
+# candidate branches. Artifacts are uploaded to the workflow run; this workflow
+# never publishes a release or deploys a service.
 #
 # Signing is real or absent. Windows artifacts are signed only when
 # WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD hold a code-signing certificate; macOS
@@ -23,6 +27,8 @@ name: SimForge Studio desktop
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["ci/unified-desktop/**"]
 
 permissions:
   contents: read
@@ -47,7 +53,8 @@ jobs:
             targets: --mac --arm64
             triple: aarch64-apple-darwin
           - name: macos-x64
-            os: macos-13
+            # macos-13 was retired on 2025-12-04; macos-15-intel is the remaining x86_64 image.
+            os: macos-15-intel
             targets: --mac --x64
             triple: x86_64-apple-darwin
           - name: linux-x64
@@ -70,7 +77,16 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.triple }}
+          targets: ${{ matrix.triple }},wasm32-unknown-unknown
+      - name: Install the pinned WASM build tool
+        run: cargo install wasm-pack --version 0.13.1 --locked
+        working-directory: .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install sky conversion build dependencies
+        run: python -m pip install --disable-pip-version-check numpy==2.3.3 pillow==11.3.0
+        working-directory: .
       - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
@@ -82,13 +98,51 @@ jobs:
       - name: Build workspace packages and the N-API addon
         run: |
           pnpm -r --filter './packages/**' build
-          pnpm --filter @simforge-oss/native-runtime build:node
         working-directory: .
       - name: Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)
-        run: node scripts/native-runtime/package-runtime.mjs --target ${{ matrix.triple }}
+        run: |
+          node studio/desktop/fetch-tools.mjs
+          python - <<'PY'
+          import hashlib, json, os, platform, subprocess, sys, urllib.request
+          from pathlib import Path
+          root = Path.cwd()
+          manifest = root / "renderer/render-core/assets/sky/SOURCES.json"
+          pinned = manifest.read_bytes()
+          sources = json.loads(pinned)["sources"]
+          inputs = root / "renderer/assets-src"
+          inputs.mkdir(parents=True, exist_ok=True)
+          def digest(path):
+              with path.open("rb") as stream:
+                  return hashlib.file_digest(stream, "sha256").hexdigest()
+          for source in sources:
+              target = inputs / source["download"]
+              if target.exists() and target.stat().st_size == source["download_bytes"] and digest(target) == source["download_sha256"]:
+                  continue
+              temporary = target.with_suffix(target.suffix + ".partial")
+              size = 0
+              with urllib.request.urlopen(source["file_url"], timeout=120) as response, temporary.open("wb") as output:
+                  while chunk := response.read(1024 * 1024):
+                      size += len(chunk)
+                      if size > source["download_bytes"]:
+                          raise RuntimeError("NASA source exceeds its pinned length")
+                      output.write(chunk)
+              if size != source["download_bytes"] or digest(temporary) != source["download_sha256"]:
+                  raise RuntimeError("NASA source differs from SOURCES.json")
+              temporary.replace(target)
+          system = {"Windows": "win32", "Darwin": "darwin", "Linux": "linux"}[platform.system()]
+          arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+          tools = root / "studio/dist/desktop-tools" / f"{system}-{arch}"
+          environment = {**os.environ, "PATH": str(tools) + os.pathsep + os.environ["PATH"]}
+          subprocess.run([sys.executable, "renderer/tools/prepare_sky_assets.py"], env=environment, check=True)
+          for source in sources:
+              product = manifest.parent / source["product"]
+              if product.stat().st_size != source["product_bytes"] or digest(product) != source["product_sha256"]:
+                  raise RuntimeError("Generated sky product differs from its canonical pin")
+          # Builds verify the canonical pins; they do not author replacement metadata.
+          manifest.write_bytes(pinned)
+          PY
+          node scripts/native-runtime/package-runtime.mjs --target ${{ matrix.triple }} --no-gpu-interop
         working-directory: .
-      - name: Fetch the pinned encoders
-        run: node desktop/fetch-tools.mjs
       - name: Stage the desktop artifact
         run: node desktop/stage.mjs
 

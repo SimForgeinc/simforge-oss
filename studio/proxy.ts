@@ -64,7 +64,11 @@ export function proxy(request: NextRequest) {
   if (!READ_METHODS.has(request.method)) {
     const origin = request.headers.get("origin");
     const site = request.headers.get("sec-fetch-site");
-    const sameOrigin = origin !== null ? origin === request.nextUrl.origin : site === "same-origin";
+    // NextURL normalizes loopback names to localhost. Browser Origin retains
+    // the actual authority, so compare against the received Host header.
+    const expected = new URL(request.nextUrl.href);
+    expected.host = request.headers.get("host") ?? expected.host;
+    const sameOrigin = origin !== null ? origin === expected.origin : site === "same-origin";
     if (!sameOrigin) return json(403, "local_origin_rejected", "Local mutations must come from the Studio origin.");
   }
   return NextResponse.next();
