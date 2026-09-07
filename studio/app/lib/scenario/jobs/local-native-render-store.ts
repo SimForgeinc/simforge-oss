@@ -682,7 +682,7 @@ export async function recordLocalNativeSuccess(
   verified: LocalNativeVerifiedCompletion,
 ): Promise<void> {
   const fenced = await tx.queryOne<{ id: string }>(
-    `SELECT id FROM simforge.render_jobs
+    `SELECT id FROM simforge.render_jobs job
       WHERE id = :job_id AND intent_sha256 = :intent_sha256 AND job_state = 'running'
         AND cancel_requested_at IS NULL AND ${LOCAL_NATIVE_RENDER_JOB_FILTER}
       FOR UPDATE`,
