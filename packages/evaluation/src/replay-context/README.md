@@ -1,0 +1,180 @@
+# Clip → replayable scene
+
+Input contracts, importers, reconstruction and validity gates for closed-loop evaluation on
+recorded clips.
+
+The product claim this module has to keep honest is narrow: **a recorded drive can carry a
+policy only inside a region we measured.** Outside it, the renderer extrapolates unobserved
+surface and the recorded actors replay a drive that did not happen — so the episode is
+truncated, not scored as a model failure. Everything here exists to make that boundary
+explicit, measured and enforced.
+
+## Documents
+
+| Schema | Produced by | Meaning |
+|---|---|---|
+| `simforge.eval-clip/v1` | user upload, dataset export | recorded frames plus the sidecars that make them metrically interpretable |
+| `simforge.replay-context/v1` | the importers here | a world a closed loop can execute, with its measured validity envelope |
+
+Canonical bundle file: `<bundleDir>/replay-context.json`.
+
+### Cross-owner field contract (frozen)
+
+The Python episode runner reads the bundle directly, with no TypeScript import. These paths
+are a breaking change if renamed:
+
+- `validity.envelope.lateralM` / `.longitudinalS` / `.headingRad`
+- `validity.qualified` — `false` means **refuse the model episode**
+- `ego.recordedPath[] = {tUs, x, y, headingRad}`, `ego.originUs`, `ego.endUs`
+- `cameras[].cameraId` (0..6, the inference-wire camera index)
+- `qualification/stock-replay.json` — the G5 verdict the campaign runner checks as a precondition
+
+## What is refused, and why
+
+No input is ever padded to make it evaluable.
+
+| Input | Outcome |
+|---|---|
+| Video with no calibration / no ego history | `missing_fields` listing `cameras`, `ego`; offered the frame-only text tasks (VQA, meta-actions, auto-labelling), explicitly labelled as not a driving evaluation |
+| Calibrated clip, no seed point cloud | reconstruction refused — 3DGUT initialises from a measured point cloud, and seeding from noise would produce a confident scene that is not the user's world |
+| Calibrated clip, planar ego path only | reconstruction refused — `ego.recordedPose6dof` required; zero roll/pitch builds a flat world that never existed |
+| f-theta rig on the COLMAP reconstruction path | refused — no COLMAP camera model expresses an f-theta polynomial, and refitting to `OPENCV_FISHEYE` would silently change the calibration. Needs the NCore v4 path (`pip install nvidia-ncore`) |
+| Encoded video for reconstruction | refused — frame extraction needs ffmpeg; the clip must supply an image sequence rather than have an undeclared binary invoked |
+| Scene with no dynamic tracks | refused unless `dynamics` is declared with an explicitly empty track list — "no other road users" and "actors were never tracked" are different facts |
+| AlpaSim scene not in the local cache | refused with the exact artifact, revision and path — the dataset is gated and non-redistributable, so nothing is fetched implicitly |
+
+## Gates and thresholds
+
+Thresholds are admission floors, fixed before any result was produced. Each verdict carries
+its own `rationale` string, so no consumer has to trust an unexplained constant.
+
+| Gate | Measures | Threshold | Basis |
+|---|---|---|---|
+| G1 | PSNR/SSIM of re-renders at recorded poses, **worst camera** | ≥ 22 dB and ≥ 0.75 SSIM | Renders at recorded poses are near-training views, so they should beat published novel-view quality comfortably; this floor fails a broken or mis-posed reconstruction while passing a legitimately hard night capture. Provisional: tightened from the measured distribution once three sequences pass (the reconstruction path stays beta until then) |
+| G2 | *Newly* unsupported pixels at ±0.5/1.0/1.5 m and ±5°, vs the on-trajectory baseline | ≤ 2% | Above this the renderer is showing unobserved surface as a hole rather than an edge artefact. Baseline subtraction keeps a scene from being punished for its sky |
+| G3 | Re-derived 16-step ego history vs the recorded poses | ≤ 0.01 m, ≤ 0.001 rad | Numerical, not physical: both sides come from the same poses, so anything larger is a derivation bug |
+| G4 | Track-to-camera time skew; recorded actors intersecting the recorded ego path | ≤ 20 ms; exactly 0 intersections | Half a decision period at 10 Hz. An intersection means tracks and ego disagree about the world |
+| G5 | Replaying the recorded trajectory through the full sim/executor/scoring chain | max ≤ 0.35 m, p95 ≤ 0.10 m, 0 infractions | `docs/policy-step.md` bounds the pure-pursuit executor at p95 cross-track ≤ 0.35 m (measured there: p50 0.14 / p95 0.24 / max 0.29); the NuRec importer's own accepted report records ego replay at p95 0.0039 m / max 0.163 m. G5 qualifies our chain, never a model |
+
+The **envelope** is the largest probed offset that passed *with every smaller offset also
+passing*. A scene that fails at 0.5 m but passes at 1.5 m yields a zero-width envelope, not a
+1.5 m one. Zero width is a valid on-trajectory-replay-only scene, not an error.
+
+`validity.qualified` is true only when all five gates pass. A `synthetic-fixture` bundle can
+never be qualified — the schema rejects it.
+
+## Reconstruction
+
+Real upstream tooling, driven not reimplemented:
+
+1. clip → COLMAP text dataset (`sparse/0/{cameras,images,points3D}.txt`), poses converted to
+   COLMAP's world-to-camera convention;
+2. `python train.py --config-name apps/colmap_3dgut.yaml path=<dataset> out_dir=<runs>
+   experiment_name=<id> export_usd.enabled=true export_usd.format=nurec`
+   (upstream [`nv-tlabs/3dgrut`](https://github.com/nv-tlabs/3dgrut));
+3. exported NuRec `.usdz` → `importUserBundle` → gates.
+
+Rendering for G1/G2 uses the shipped `simforge-oss-splat` durable job
+(`simforge.render-bundle-nurec/v1`, `renderer/splat/python/simforge_splat/job.py`). No
+renderer code is modified by this module.
+
+### External prerequisites (not satisfiable in-repo)
+
+| Prerequisite | Needed for | Status on this host |
+|---|---|---|
+| 3DGRUT checkout + compiled tracer (`THREEDGRUT_ROOT`) | reconstruction **and** splat rendering | **absent** — `THREEDGRUT_ROOT` unset, `threedgrut` not importable |
+| NVIDIA Kaolin for the installed torch/CUDA | splat rendering | absent |
+| CUDA PyTorch | both | present (torch 2.11.0+cu128, CUDA 12.8, device available) |
+| numpy + Pillow | `replay_measure.py` | present |
+| `nvidia-ncore` | the NCore v4 reconstruction path (f-theta rigs) | absent |
+| A NuRec `.usdz` scene package | any import/render of a real scene | not in-repo; gated, non-redistributable |
+
+Absence surfaces as a `capability_error` from `scene reconstruct --preflight-only` and from
+the render tier, before any GPU is allocated — never as a crash or a fake success.
+
+## CLI
+
+```sh
+S=node packages/evaluation/dist/replay-context/cli.js   # or tsx src/replay-context/cli.ts
+
+$S admit       --clip <dir>                                   # what can this clip do, and why not
+$S import      --package <usdz> --license <id> --out <dir>    # NuRec artifact  -> bundle
+$S import      --scene-dir <dir> --license <id> --out <dir>   # imported scene  -> bundle
+$S import      --alpasim-root <dir> --scene <id> --suite public_2601 --license <id> --out <dir>
+$S import      --clip <dir> --geometry <usdz> --out <dir>     # user bundle     -> bundle
+$S qualify     --bundle <dir> --scene-dir <dir> --catalog <dir> --hood none
+$S reconstruct --preflight-only
+$S reconstruct --clip <dir> --out <dir> [--iterations N]
+```
+
+Exit codes follow `AGENTS.md`: `0` done, `1` could not run (bad flags or a missing
+capability), `2` ran and refused the input. Errors print the compute worker envelope
+`{error: {code, retryable: false, message, fields?}}` on stderr, so a refusal is classified
+non-retryable instead of re-billing the same rejection.
+
+## Proof commands
+
+Run these in the integrated validation phase, not mid-flight.
+
+**Behaviour regressions (no GPU, no dataset, fixtures are in-repo and license-clean):**
+
+```sh
+cd packages/evaluation && npx vitest run src/replay-context/__tests__/replay-context.test.ts
+```
+
+Covers: video-only refusal with the exact field list, reconstruction refusal without seed
+geometry, camera-set family capability, envelope truncation at 2 m with `envelope_exceeded`,
+in-envelope acceptance at 0.5 m, path-projection (not vertex-snap) deviation, time-support
+exit, the G2 first-failure envelope rule, G4 ego/track intersection, and the schema
+invariants that a bundle cannot claim qualification with a failing gate or as a synthetic
+fixture.
+
+**Negative envelope proof, standalone:**
+
+```sh
+node --experimental-strip-types -e "
+  const {loadReplayContext,createEnvelopeMonitor}=await import('./packages/evaluation/src/replay-context/index.ts');
+  const b=await loadReplayContext('packages/evaluation/src/replay-context/fixtures/straight-envelope');
+  const m=createEnvelopeMonitor(b);
+  console.log(JSON.stringify(m.check({tUs:b.ego.originUs+1e6,x:10,y:2,headingRad:0}),null,2));"
+```
+
+Expected: `inside: false`, `term: "envelope_exceeded"`, `breached: ["lateral"]`.
+
+**Capability probe (no GPU work, expected to fail on a host without 3DGRUT):**
+
+```sh
+node packages/evaluation/dist/replay-context/cli.js reconstruct --preflight-only
+# exit 1, stderr: {"error":{"code":"capability_error","retryable":false,...}}
+```
+
+**Real calibrated scene (needs the gated dataset package on the executing host):**
+
+```sh
+# 1. import an imported NuRec scene directory + its source package
+$S import --scene-dir <sceneDir> \
+          --package <.../<uuid>.usdz> \
+          --license "NVIDIA PhysicalAI-AV Dataset License (non-redistributable)" \
+          --out /tmp/rc-bundle
+
+# 2. measure G1/G2 and write the envelope (requires THREEDGRUT_ROOT + CUDA + Kaolin)
+$S qualify --bundle /tmp/rc-bundle --scene-dir <sceneDir> \
+           --catalog <glbCatalogDir> --hood <hoodDir|none> --threedgrut-root $THREEDGRUT_ROOT
+```
+
+A local imported-scene fixture of the shape step 1 consumes exists outside the repo at
+`/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fixture/007a5809-8a56-40b5-8af5-7e0f65229496`
+(sidecars only; its `.usdz` is the external, gated prerequisite). It is **not** copied into
+the repository: it derives from the PhysicalAI-AV NuRec dataset, which is gated and
+non-redistributable.
+
+## Licensing and provenance
+
+- Every bundle records `source.license` (never guessed — the importers require it) and
+  `source.redistributable`, which is `false` for all dataset-derived scenes.
+- Dataset bytes, NuRec packages and reconstructions of licensed clips are never committed and
+  are never release assets.
+- In-repo fixtures are authored here, contain no third-party bytes, and are marked
+  `source.kind: "synthetic-fixture"` so they cannot be scored.
+- AlpaSim imports record the suite, artifact uuid, NRE version and dataset revision, which is
+  the only basis on which a SimForge number and an AlpaSim number could be compared.

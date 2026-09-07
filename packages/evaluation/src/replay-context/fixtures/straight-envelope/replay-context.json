@@ -1,0 +1,433 @@
+{
+  "schema": "simforge.replay-context/v1",
+  "sceneId": "fixture-straight-envelope",
+  "source": {
+    "kind": "synthetic-fixture",
+    "sceneId": "fixture-straight-envelope",
+    "origin": "authored envelope fixture: a 2 s straight drive used to exercise envelope truncation and the trajectory gates. It has no reconstruction, and the schema forbids marking a synthetic-fixture bundle qualified, so it can never be scored.",
+    "license": "Apache-2.0 (authored in this repository; contains no third-party or dataset bytes)",
+    "redistributable": true,
+    "inputs": [],
+    "importer": {
+      "name": "simforge.replay-context.fixture",
+      "version": "1"
+    }
+  },
+  "cameras": [
+    {
+      "cameraId": 1,
+      "sensorId": "camera_front_wide_120fov",
+      "width": 1920,
+      "height": 1080,
+      "intrinsics": {
+        "model": "pinhole",
+        "fx": 960.0,
+        "fy": 960.0,
+        "cx": 960.0,
+        "cy": 540.0
+      },
+      "extrinsics": {
+        "matrix": [
+          [
+            0,
+            -1,
+            0,
+            0.0
+          ],
+          [
+            0,
+            0,
+            -1,
+            1.5
+          ],
+          [
+            1,
+            0,
+            0,
+            2.0
+          ]
+        ]
+      },
+      "timing": {
+        "kind": "explicit",
+        "timestampsUs": [
+          1000000,
+          1100000,
+          1200000,
+          1300000,
+          1400000,
+          1500000,
+          1600000,
+          1700000,
+          1800000,
+          1900000,
+          2000000,
+          2100000,
+          2200000,
+          2300000,
+          2400000,
+          2500000,
+          2600000,
+          2700000,
+          2800000,
+          2900000,
+          3000000
+        ],
+        "shutterUs": 0
+      }
+    }
+  ],
+  "ego": {
+    "frame": "fixture-enu",
+    "originUs": 1000000,
+    "endUs": 3000000,
+    "recordedPath": [
+      {
+        "tUs": 1000000,
+        "x": 0.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1100000,
+        "x": 1.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1200000,
+        "x": 2.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1300000,
+        "x": 3.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1400000,
+        "x": 4.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1500000,
+        "x": 5.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1600000,
+        "x": 6.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1700000,
+        "x": 7.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1800000,
+        "x": 8.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 1900000,
+        "x": 9.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2000000,
+        "x": 10.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2100000,
+        "x": 11.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2200000,
+        "x": 12.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2300000,
+        "x": 13.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2400000,
+        "x": 14.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2500000,
+        "x": 15.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2600000,
+        "x": 16.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2700000,
+        "x": 17.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2800000,
+        "x": 18.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 2900000,
+        "x": 19.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      },
+      {
+        "tUs": 3000000,
+        "x": 20.0,
+        "y": 0.0,
+        "headingRad": 0.0
+      }
+    ],
+    "speedMps": [
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0,
+      10.0
+    ],
+    "source": "dataset"
+  },
+  "dynamics": {
+    "agentMode": "replay",
+    "tracks": [
+      {
+        "trackId": "lead-1",
+        "sourceClass": "car",
+        "class": "car",
+        "dims": {
+          "l": 4.5,
+          "w": 1.9,
+          "h": 1.5
+        },
+        "samples": [
+          {
+            "tUs": 1000000,
+            "x": 25.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1100000,
+            "x": 26.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1200000,
+            "x": 27.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1300000,
+            "x": 28.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1400000,
+            "x": 29.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1500000,
+            "x": 30.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1600000,
+            "x": 31.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1700000,
+            "x": 32.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1800000,
+            "x": 33.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 1900000,
+            "x": 34.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2000000,
+            "x": 35.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2100000,
+            "x": 36.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2200000,
+            "x": 37.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2300000,
+            "x": 38.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2400000,
+            "x": 39.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2500000,
+            "x": 40.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2600000,
+            "x": 41.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2700000,
+            "x": 42.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2800000,
+            "x": 43.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 2900000,
+            "x": 44.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          },
+          {
+            "tUs": 3000000,
+            "x": 45.0,
+            "y": 5.0,
+            "headingRad": 0.0,
+            "speedMps": 10.0
+          }
+        ]
+      }
+    ],
+    "excluded": []
+  },
+  "geometry": {
+    "kind": "nurec-usdz",
+    "sourcePackage": "geometry/absent.usdz",
+    "sourcePackageSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "renderer": "nurec-splat-renderer"
+  },
+  "map": {
+    "source": "derived-from-reconstruction",
+    "confidence": "low"
+  },
+  "validity": {
+    "qualified": false,
+    "envelope": {
+      "lateralM": 1.0,
+      "longitudinalS": 0.5,
+      "headingRad": 0.0872664625997165
+    },
+    "gates": {},
+    "envelopeBasis": {
+      "offsetsTestedM": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "headingsTestedRad": [
+        0.0872664625997165
+      ],
+      "largestPassingLateralM": 1.0,
+      "largestPassingHeadingRad": 0.0872664625997165
+    }
+  }
+}
