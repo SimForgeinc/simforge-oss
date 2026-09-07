@@ -93,8 +93,8 @@ export type ComputeJobModelRef = {
 };
 
 export type ComputeJobEstimate = {
-  low: number;
-  high: number;
+  lowCents: number;
+  highCents: number;
   /** `unbenchmarked` means no measured cold/warm figures exist: render a bound, not a price. */
   basis: "measured" | "unbenchmarked";
 };
@@ -110,7 +110,8 @@ export type ComputeJobErrorCode =
   | "cancelled";
 
 export type ComputeJobResultArtifact = {
-  role: EvalArtifactRole;
+  /** The producer's role string, widened as the control plane types it. */
+  role: string;
   artifactId: string;
   mediaType: string;
   bytes: number;
