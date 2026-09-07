@@ -60,10 +60,10 @@ import {
   type ResultStatus,
 } from './protocol/manifest.js';
 import {
-  assertModelEpisodeAdmissible,
-  loadReplayContextSummary,
-  type ReplayContextSummary,
-} from './protocol/replay-envelope.js';
+  loadReplayContext,
+  replayContextInputRef,
+  type ReplayContext,
+} from './replay-context/index.js';
 import { APPROXIMATED_EXTRINSICS_OOD, rigHasApproximatedExtrinsics } from './protocol/params.js';
 
 import {
@@ -215,7 +215,7 @@ export interface ResolvedScenario {
   readonly scoring: Partial<ScoringConfig>;
   /** Resolved replay-context bundle (absolute) and its validity summary. */
   readonly replayContextDir: string | null;
-  readonly replayContext: ReplayContextSummary | null;
+  readonly replayContext: ReplayContext | null;
   /** Resolved frame-source spec with any relative `dir:` path made absolute. */
   readonly frameSource: string | null;
 }
@@ -340,7 +340,7 @@ export async function resolveCampaign(configPath: string): Promise<ResolvedCampa
         ? facts.cruiseSpeedMps * facts.clipSeconds
         : null);
     const replayContextDir = scenario.replayContext ? path.resolve(configDir, scenario.replayContext) : null;
-    const replayContext = replayContextDir ? await loadReplayContextSummary(replayContextDir) : null;
+    const replayContext = replayContextDir ? await loadReplayContext(replayContextDir) : null;
     const frameSource = scenario.frameSource?.startsWith('dir:')
       ? `dir:${path.resolve(configDir, scenario.frameSource.slice('dir:'.length))}`
       : scenario.frameSource?.startsWith('bevy:')
@@ -389,7 +389,22 @@ export async function resolveCampaign(configPath: string): Promise<ResolvedCampa
           'camera observations are never synthesized',
       );
     }
-    if (resolved.replayContext) assertModelEpisodeAdmissible(resolved.replayContext);
+    const bundle = resolved.replayContext;
+    if (!bundle) continue;
+    // `validity.qualified` is schema-enforced by the reconstruction module:
+    // true only when all five gates are recorded and passing and the source
+    // is not a synthetic fixture. A freshly imported or reconstructed bundle
+    // is legitimately unqualified, and refusing a model episode on it is the
+    // intended outcome, not a defect — an unvalidated reconstruction cannot
+    // produce a meaningful policy score.
+    if (!bundle.validity.qualified) {
+      const failed = Object.entries(bundle.validity.gates)
+        .filter(([, gate]) => !gate?.passed)
+        .map(([id]) => id);
+      throw new Error(
+        `scene ${bundle.sceneId} is not qualified for model episodes (failing or missing gates: ${failed.join(', ') || 'unknown'})`,
+      );
+    }
   }
   return { config, configDir, campaignDir, episodes, scenarios };
 }
@@ -555,7 +570,7 @@ async function writeEpisodeArtifacts(
     input: {
       kind: resolved.replayContext ? 'replay-context' : 'scenario',
       ref: path.relative(REPO_ROOT, resolved.replayContextDir ?? resolved.specPath),
-      digest: resolved.replayContext?.digest ?? resolved.fixtureSha256,
+      digest: resolved.replayContext ? replayContextInputRef(resolved.replayContext).digest : resolved.fixtureSha256,
       ood: modelProvenance && rigHasApproximatedExtrinsics(plan.policy.cameraProfile) ? [APPROXIMATED_EXTRINSICS_OOD] : [],
       replayContext: (outcome.summary['replay_context'] ?? null) as Record<string, unknown> | null,
     },
