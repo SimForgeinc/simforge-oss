@@ -14,6 +14,7 @@ import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { localObjectPath, registerLocalFile } from "@/app/lib/s3/s3-object";
 import { getFinalizedArtifact } from "@/app/lib/scenario/control-plane-store";
 import { scenarioId } from "@/app/lib/scenario/core";
+import { CreateArtifactReservationSchema } from "@/app/lib/scenario/contracts";
 import {
   createLocalArtifactProducer,
   finalizeLocalArtifactProducer,
@@ -34,7 +35,6 @@ import { CloudTransferError, cloudResponseError } from "./projects";
  * bearer never leaves `cloudRequest`.
  */
 
-const ARTIFACT_KIND_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const TRANSFER_TIMEOUT_MS = 30 * 60_000;
 
 export async function listCloudArtifacts(workspaceId: string, signal?: AbortSignal): Promise<WorkspaceArtifact[]> {
@@ -134,7 +134,7 @@ async function upsertArtifactLink(
 const RemoteArtifactSchema = z.object({
   id: z.string().min(1),
   revisionId: z.string().nullable(),
-  kind: z.string().regex(ARTIFACT_KIND_PATTERN),
+  kind: CreateArtifactReservationSchema.shape.artifactKind,
   mediaType: z.string().min(1).max(200),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   sizeBytes: z.number().int().nonnegative(),
@@ -494,7 +494,7 @@ export async function uploadCloudArtifact(
   const origin = status.origin;
   const local = await readLocalArtifact(context, input.artifactId);
   if (!local) throw new CloudTransferError("artifact_not_found", 404, "That local artifact is not available.");
-  if (!ARTIFACT_KIND_PATTERN.test(local.artifact_kind)) {
+  if (!CreateArtifactReservationSchema.shape.artifactKind.safeParse(local.artifact_kind).success) {
     throw new CloudTransferError("cloud_artifact_kind_rejected", 422, `Artifact kind "${local.artifact_kind}" cannot be uploaded.`);
   }
   const sizeBytes = Number(local.byte_length);
