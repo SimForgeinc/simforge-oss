@@ -65,6 +65,8 @@ export function CityView({
   const onErrorRef = useRef(onError);
   const onMapLoadedRef = useRef(onMapLoaded);
   const onCapabilitiesChangeRef = useRef(onCapabilitiesChange);
+  const manifestUrlRef = useRef(manifestUrl);
+  manifestUrlRef.current = manifestUrl;
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
   onMapLoadedRef.current = onMapLoaded;
@@ -76,8 +78,16 @@ export function CityView({
     const viewer = new CityViewer(canvas, optionsRef.current);
     diagnosticsRef.current = installViewerRuntimeDiagnostics(viewer);
     viewerRef.current = viewer;
+    const onContextLost = () => {
+      const failure = new Error('WebGL context was lost; reload the map to recreate its GPU resources');
+      setError(failure);
+      diagnosticsRef.current?.mapLoadFailed(manifestUrlRef.current, failure);
+      onErrorRef.current?.(failure, manifestUrlRef.current);
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
     onReadyRef.current?.(viewer);
     return () => {
+      canvas.removeEventListener('webglcontextlost', onContextLost);
       diagnosticsRef.current?.dispose();
       diagnosticsRef.current = null;
       viewerRef.current = null;
