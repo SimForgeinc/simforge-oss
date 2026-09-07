@@ -2,7 +2,7 @@ import { CompressedTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RGBA_S3TC
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDefaultContainer, read as readKtx2, write as writeKtx2 } from 'ktx-parse';
 
-import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, resourceDirectory, selectKtx2MipLevels, sharedTextures } from './gltf';
+import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, resourceDirectory, selectKtx2MipLevels, sharedTextures, textureDimensionForBudget } from './gltf';
 
 function decoded(bytes: number): CompressedTexture {
   const texture = new CompressedTexture([{ data: new Uint8Array(bytes), width: 4, height: 4 }], 4, 4, RGBA_S3TC_DXT1_Format);
@@ -77,6 +77,15 @@ describe('shared KTX2 texture cache', () => {
 });
 
 describe('compressed texture mip budgets', () => {
+  it('fits a large map image set before allocating its authored high-detail mips', () => {
+    const imageCount = 250;
+    const bytesPerAsset = 1.5 * 1024 ** 3 * 0.5 / 28;
+    const dimension = textureDimensionForBudget(imageCount, bytesPerAsset, 2048);
+    expect(imageCount * dimension ** 2 * 4 / 3).toBeLessThanOrEqual(bytesPerAsset);
+    expect(imageCount * (dimension * 2) ** 2 * 4 / 3).toBeGreaterThan(bytesPerAsset);
+    expect(textureDimensionForBudget(imageCount, bytesPerAsset, 128)).toBe(128);
+  });
+
   it('removes oversized encoded levels before the texture decoder sees them', () => {
     const container = createDefaultContainer();
     container.pixelWidth = 8;
