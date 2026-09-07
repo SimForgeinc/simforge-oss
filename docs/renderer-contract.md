@@ -48,6 +48,10 @@ this limit with their quality preset's memory budget. It can change atomically
 through `setAuthoringFidelity`; textures are cached separately by URL and mip
 limit. Map changes renew the decoder's cancellation signal so an aborted prior
 map cannot cancel the next map's texture requests.
+Before any image decode, the map's tile count and each GLTF's image count
+determine an initial mip budget, reserving half the memory budget for geometry,
+environment resources, and in-flight work. This avoids preparing oversized
+textures merely to discover later that the required coarse map cannot fit.
 If required coarse tiles cannot fit, the viewer estimates the full-map footprint
 from resident tiles and lowers the mip ceiling in power-of-two steps, never
 below 128 pixels. Geometry remains required. The effective limit is reported in

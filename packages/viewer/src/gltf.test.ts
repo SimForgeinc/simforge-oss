@@ -95,6 +95,15 @@ describe('shared KTX2 texture cache', () => {
 });
 
 describe('compressed texture mip budgets', () => {
+  it('fits a large map image set before allocating its authored high-detail mips', () => {
+    const imageCount = 250;
+    const bytesPerAsset = 1.5 * 1024 ** 3 * 0.5 / 28;
+    const dimension = textureDimensionForBudget(imageCount, bytesPerAsset, 2048);
+    expect(imageCount * dimension ** 2 * 4 / 3).toBeLessThanOrEqual(bytesPerAsset);
+    expect(imageCount * (dimension * 2) ** 2 * 4 / 3).toBeGreaterThan(bytesPerAsset);
+    expect(textureDimensionForBudget(imageCount, bytesPerAsset, 128)).toBe(128);
+  });
+
   it('removes oversized encoded levels before the texture decoder sees them', () => {
     const container = createDefaultContainer();
     container.pixelWidth = 8;
