@@ -139,3 +139,19 @@ export const TEXT_TASK_LABELS: Record<TextTask, string> = {
   autolabel: "Auto-label the scene",
   grounding: "Ground a referring expression",
 };
+
+/**
+ * Free text in a params document that the control plane will refuse.
+ *
+ * The worker never dereferences anything from customer params, so the control
+ * plane rejects any string that looks like a URL or a filesystem path — which
+ * includes a question a user typed. Checked here so the user gets that
+ * explanation next to the field instead of an opaque `invalid_job` after the
+ * upload and the estimate are already done.
+ */
+const URL_OR_PATH_SHAPED = /(^|\s)(?:[a-z][a-z0-9+.-]*:\/\/|\/{1,2}[^\s]|[a-z]:\\|\.{1,2}\/)/i;
+
+export function pathShapedRefusal(field: string, value: string): string | null {
+  if (!URL_OR_PATH_SHAPED.test(value)) return null;
+  return `${field} looks like a URL or a file path. Job parameters cannot contain either: the worker never fetches or opens anything named in them, so the run would be refused. Describe what you want in words instead.`;
+}

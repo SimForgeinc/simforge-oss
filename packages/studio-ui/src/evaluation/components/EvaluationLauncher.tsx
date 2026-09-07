@@ -34,6 +34,7 @@ import {
   TEXT_TASK_LABELS,
   type OpenLoopItemKind,
   type TextTask,
+  pathShapedRefusal,
 } from "../params";
 
 /** Step numbering exists only so the copy can refer to it; the form is one page. */
@@ -250,10 +251,16 @@ export function EvaluationLauncher({
 
   const blockedReason = activeOffer?.blocked ?? null;
   const textReady = kind !== "alpamayo.text" || prompt.trim().length > 0 || textTask !== "vqa";
+  // The control plane refuses any URL- or path-shaped string in params, and a
+  // question is free text, so say so here rather than after the upload.
+  const paramsRefusal =
+    (kind === "alpamayo.text" ? pathShapedRefusal("Your question", prompt) : null) ??
+    pathShapedRefusal("The navigation instruction", navText);
   const canSubmit =
     prepared !== null &&
     submissionInput !== null &&
     blockedReason === null &&
+    paramsRefusal === null &&
     textReady &&
     !submitting &&
     (selection.target === "local"
@@ -474,6 +481,10 @@ export function EvaluationLauncher({
             </p>
           )}
         </section>
+      ) : null}
+
+      {paramsRefusal ? (
+        <RefusalNotice title="This run cannot be submitted as written" reasons={[paramsRefusal]} />
       ) : null}
 
       {error ? <RefusalNotice title="Submission failed" reasons={[error]} /> : null}
