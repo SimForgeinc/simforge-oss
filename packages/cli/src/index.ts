@@ -137,3 +137,20 @@ export {
   type RenderEngineAdapter,
   type RenderExecutionContext,
 } from '@simforge-oss/render';
+export {
+  modelsCache,
+  modelsCancel,
+  modelsInstall,
+  modelsList,
+  modelsLock,
+  modelsPreflight,
+  modelsUninstall,
+  modelsVerify,
+  type ModelsOptions,
+  type ModelsInstallOptions,
+  type ModelsVerifyOptions,
+  type ModelsUninstallOptions,
+  type ModelsCancelOptions,
+  type ModelsPreflightOptions,
+  type ModelsCacheOptions,
+} from './commands/models.js';

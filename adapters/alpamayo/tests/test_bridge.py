@@ -180,7 +180,12 @@ def test_wire_observation_decodes_on_the_server_side():
             "camera_front_tele_30fov": np.full((6, 8, 4), tick + 100, dtype=np.uint8),
         })
     decoded = decode_observation(bridge.observation(HIST))
-    assert decoded["frames"].shape == (8, 3, 6, 8)
+    # Two shapes, both contractual: A1/A1.5 pass `frames_flat` to upstream
+    # `helper.create_message` (N_total, C, H, W), while A2's input profiles
+    # index `frames` per camera and per source frame.
+    assert decoded["frames"].shape == (2, 4, 3, 6, 8)
+    assert decoded["frames_flat"].shape == (8, 3, 6, 8)
+    assert torch.equal(decoded["frames"].flatten(0, 1), decoded["frames_flat"])
     assert decoded["frames"].dtype == torch.uint8
     assert decoded["camera_indices"].tolist() == [1, 6]
     assert decoded["ego_history_xyz"].shape == (1, 1, 16, 3)

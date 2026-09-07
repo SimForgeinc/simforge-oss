@@ -1,0 +1,60 @@
+{
+  "name": "@simforge-oss/model-store",
+  "version": "0.1.0-rc.61",
+  "description": "Alpamayo model catalog, digest-pinned resumable installer, integrity verification and hardware preflight, shared by the SimForge CLI, the desktop host and the product UI.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimForgeinc/simforge-oss.git",
+    "directory": "packages/model-store"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./catalog": {
+        "types": "./dist/catalog.d.ts",
+        "default": "./dist/catalog.js"
+      }
+    }
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./catalog": {
+      "development": "./src/catalog.ts",
+      "types": "./dist/catalog.d.ts",
+      "default": "./dist/catalog.js"
+    },
+    "./models.lock.json": "./models.lock.json"
+  },
+  "files": [
+    "dist",
+    "models.lock.json"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/catalog.ts --format esm --dts --sourcemap --clean --out-dir dist",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@napi-rs/keyring": "2.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
