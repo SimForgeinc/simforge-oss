@@ -42,6 +42,13 @@ Consumers should poll from bootstrap start, use stage-specific idle deadlines
 and an overall deadline, and report processing as indeterminate when no byte
 denominator is available.
 
+`textureMaxDimension` selects existing compressed mip levels before GPU upload;
+it does not remove geometry or resample authored pixels. Embedders should pair
+this limit with their quality preset's memory budget. It can change atomically
+through `setAuthoringFidelity`; textures are cached separately by URL and mip
+limit. Map changes renew the decoder's cancellation signal so an aborted prior
+map cannot cancel the next map's texture requests.
+
 ## Frozen wire identifiers
 
 `scene-state.v1` and `uniscenario.static-semantics/v1` are referenced
