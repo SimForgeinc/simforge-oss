@@ -6,7 +6,7 @@ import { loadEvalClip, reconstructionRefusal } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
-import { loadReplayContext } from '../qualify.js';
+import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
 import { ReplayContextSchema, type GateVerdict } from '../schema.js';
 
 const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url));
@@ -203,5 +203,29 @@ describe('episode outcomes', () => {
     expect(partition.aggregate.map((outcome) => outcome.episodeId)).toEqual(['a']);
     expect(partition.diagnostic.map((outcome) => outcome.episodeId)).toEqual(['b', 'c']);
     expect(partition.counts).toEqual({ total: 3, complete: 1, truncated: 1, invalid: 1 });
+  });
+});
+
+describe('bundle loading', () => {
+  it('reports a malformed bundle as a value with the offending field paths', async () => {
+    const result = await tryLoadReplayContext(fixture('video-only-clip/clip.json'));
+
+    // An eval-clip is well-formed JSON but is not a replay context.
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('replay_context_invalid');
+    expect(result.fields.length).toBeGreaterThan(0);
+  });
+
+  it('distinguishes an absent bundle from a malformed one', async () => {
+    const result = await tryLoadReplayContext(fixture('straight-envelope/does-not-exist.json'));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('replay_context_missing');
+  });
+
+  it('still throws from the loading variant, carrying the same detail', async () => {
+    await expect(loadReplayContext(fixture('video-only-clip/clip.json'))).rejects.toThrow(/replay-context/);
   });
 });
