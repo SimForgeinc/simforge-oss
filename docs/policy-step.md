@@ -4,7 +4,7 @@ Session-oriented policy ops — `policy.hello` / `policy.reset` / `policy.act`
 / `policy.close` — layered on the existing env-server wire. Source of truth
 for types and codecs: `packages/training-env/src/policy-step.ts`; server
 glue: `packages/training-env/src/policy-session.ts`; reference client:
-`adapters/policy-runner`.
+`adapters/gym` (`simforge_oss_gym.tools.policy_runner`).
 
 Protocol version: **1** (`POLICY_STEP_PROTOCOL_VERSION`). Any breaking
 change to the shapes below bumps it; `policy.hello` rejects mismatches.
@@ -219,13 +219,22 @@ bytes. The server never inspects it and it never affects stepping.
 
 ## Reference runner
 
-`adapters/policy-runner` (`simforge_oss_policy_runner`) is the canonical
-client: it spawns/attaches to an env-server, runs seeded episodes against
-scripted control and scripted-trajectory policies and a small PyTorch MLP,
-records per-step inference timing and deadline misses, and writes an
-episode trace as JSONL. Each record carries the deterministic step fields
+`adapters/gym` (`python -m simforge_oss_gym.tools.policy_runner`, console
+script `simforge-oss-policy-runner`) is the canonical client: it drives seeded
+episodes with the scripted control, scripted-trajectory and torch-mlp
+reference policies or a real model endpoint (`--policy endpoint`, the
+`simforge.policy-endpoint/v2` MessagePack socket), records per-step inference
+timing and deadline verdicts, and writes an episode trace as JSONL. Each record
+carries the deterministic step fields
 — including the wire action, the policy's per-act `reasoning` text and the
 `ex` executor telemetry — plus a `digest`: a SHA-256 chained over the
 canonical JSON of every deterministic record so far (wall-clock timing is
 excluded). The final line holds the chained episode digest — two runs with
 the same seed and policy must match digests exactly.
+
+A run declares one timing mode. In `offline-simtime` the runner passes no
+`elapsedMs`, so no deadline is enforced anywhere and the loop itself is the
+inference barrier; in `realtime` it reports the measured latency against an
+explicit `deadlineMs` and the fallback applies on a miss. The trace's `reset`
+record carries `mode` and `deadline_ms` so a reader can never mistake one for
+the other.

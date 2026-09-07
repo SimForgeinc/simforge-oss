@@ -228,6 +228,12 @@ export type LeasedModelRun = {
   attemptId: string;
   attemptNumber: number;
   maxAttempts: number;
+  /**
+   * Registry identity of the model this run names (`family`, `quant`,
+   * `checkpoint_digest`). The executor refuses an engine that reports a
+   * different identity, so results are never attributed to the wrong model.
+   */
+  modelIdentity: { family: string; quant: string; checkpointDigest: string };
   /** Snapshot taken at FIRST lease; identical for every retry of the run. */
   resolvedDescriptor: ModelEndpointDescriptor;
 };
@@ -248,10 +254,14 @@ export async function leaseNextModelRun(input: {
   if (kinds.length === 0) return null;
   const kindList = kinds.map((kind) => `'${kind}'`).join(", ");
   return withTransaction(async (tx) => {
-    const candidate = await tx.queryOne<RunRow & { ep_row_id: string }>(
-      `SELECT r.*, e.id AS ep_row_id
+    const candidate = await tx.queryOne<
+      RunRow & { ep_row_id: string; mv_family: string; mv_quant: string; mv_checkpoint_digest: string }
+    >(
+      `SELECT r.*, e.id AS ep_row_id,
+              v.family AS mv_family, v.quant AS mv_quant, v.checkpoint_digest AS mv_checkpoint_digest
        FROM simforge.model_runs r
        JOIN simforge.model_endpoints e ON e.id = r.endpoint_id
+       JOIN simforge.model_versions v ON v.id = r.model_version_id
        WHERE r.status = 'queued' AND r.kind IN (${kindList})
        ORDER BY r.created_at, r.id
        LIMIT 1`,
@@ -310,6 +320,11 @@ export async function leaseNextModelRun(input: {
       attemptId,
       attemptNumber,
       maxAttempts: candidate.max_attempts,
+      modelIdentity: {
+        family: candidate.mv_family,
+        quant: candidate.mv_quant,
+        checkpointDigest: candidate.mv_checkpoint_digest,
+      },
       resolvedDescriptor: descriptor,
     };
   });

@@ -2,17 +2,29 @@
  * The `model_run` job family: leases queued `simforge.model_runs`, spawns (or
  * connects to) the run's endpoint from the descriptor that was resolved into
  * the attempt at first lease, health-checks it, executes the run, and writes
- * outputs + metrics + the attempt trail.
+ * artifacts + metrics + the attempt trail.
  *
- * Only the `openloop` kind executes today: a JSON input manifest is POSTed
- * item-by-item to the endpoint and every response lands on disk under
- * `~/simforge-assets/runs/<run_id>/` (override with SIMFORGE_RUNS_ROOT).
- * `policy_episode`/`artifact` runs stay queued for their future executors.
+ * Two kinds execute:
  *
- * Endpoint transports: `http-json` (TCP port or unix socket) is implemented;
- * `unix-msgpack` (the Alpamayo/env-server wire) descriptors are accepted by
- * the registry and the process is spawned/health-checked identically, but an
- * openloop attempt that needs it fails with `endpoint_transport_unsupported`.
+ * - `openloop` — the shared open-loop core (`@simforge-oss/evaluation`
+ *   `executeOpenloop`) materialises each `simforge.eval-clip/v1` observation
+ *   bundle, invokes the engine's `POST /invoke` facade, and writes
+ *   `openloop.json` + `trajectories.json` + `result.json`.
+ * - `policy_episode` — the shared episode core (`executeEpisode`) runs one
+ *   episode through the native gym runner, scores it, and writes
+ *   `trace.jsonl` + `events.json` + `score.json` + `result.json`.
+ *
+ * Both cores are the same code the cloud worker CLI runs, so a local and a
+ * remote run of the same input produce identical documents. Everything lands
+ * under `~/simforge-assets/runs/<run_id>/` (override `SIMFORGE_RUNS_ROOT`),
+ * and `result.json` (`simforge.eval-result-manifest/v1`) is written last as
+ * the completion marker. `artifact` runs stay queued for their executor.
+ *
+ * Endpoint transports: `http-json` (TCP port or unix socket) serves open loop;
+ * `unix-msgpack` descriptors carry the closed-loop policy socket, which the
+ * episode runner speaks. An openloop attempt pointed at a msgpack-only
+ * endpoint fails with `endpoint_transport_unsupported` — the engine exposes
+ * an HTTP facade for exactly this reason.
  *
  * Unlike the render worker this loop talks to the store directly (PGlite is
  * in-process), so it must run in the process that owns the local database:
@@ -21,14 +33,28 @@
  */
 
 import { spawn, type ChildProcessByStdio } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { request as httpRequest } from "node:http";
+import { mkdir } from "node:fs/promises";
 import { createServer, connect } from "node:net";
 import { homedir, hostname } from "node:os";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
+
+import {
+  endpointHealth,
+  executeEpisode,
+  executeOpenloop,
+  isRetryableErrorCode,
+  modelIdentityMismatch,
+  writeResultManifest,
+  type EndpointHealth,
+  type EndpointTarget,
+  type EvalArtifact,
+  type ResultManifest,
+} from "@simforge-oss/evaluation";
+
 import {
   OpenloopParamsSchema,
+  PolicyEpisodeRunParamsSchema,
   type ModelEndpointDescriptor,
   type ModelRunKind,
 } from "../app/lib/models/contracts.js";
@@ -74,7 +100,7 @@ export async function runModelRunLoop(options: ModelRunWorkerOptions): Promise<v
   const workerId = options.workerId
     ?? `model-${hostname().replace(/[^A-Za-z0-9._:-]/g, "-")}-${process.pid}`;
   const pollMs = options.pollMs ?? 1_000;
-  const kinds = options.kinds ?? (["openloop"] as const);
+  const kinds = options.kinds ?? (["openloop", "policy_episode"] as const);
   const runsRoot = options.runsRoot
     ?? process.env.SIMFORGE_RUNS_ROOT?.trim()
     ?? join(homedir(), "simforge-assets", "runs");
@@ -96,7 +122,9 @@ export async function runModelRunLoop(options: ModelRunWorkerOptions): Promise<v
     }
     log("attempt.started", { runId: lease.runId, attempt: lease.attemptNumber });
     try {
-      const result = await executeOpenloopRun(lease, { runsRoot, signal });
+      const result = lease.kind === "policy_episode"
+        ? await executePolicyEpisodeRun(lease, { runsRoot, signal })
+        : await executeOpenloopRun(lease, { runsRoot, signal });
       await completeModelRun(lease, result);
       log("run.succeeded", { runId: lease.runId, attempt: lease.attemptNumber, metrics: result.metrics });
     } catch (error) {
@@ -239,50 +267,51 @@ async function waitForHealth(handle: EndpointHandle, signal: AbortSignal): Promi
   throw new ModelRunFailure("endpoint_unhealthy", `endpoint failed its ${health.kind} health check within ${health.timeoutMs}ms`);
 }
 
-/** POST one JSON document to the endpoint (TCP port or unix socket). */
-async function invokeHttpJson(
-  handle: EndpointHandle,
-  path: string,
-  timeoutMs: number,
-  body: unknown,
-): Promise<unknown> {
-  const payload = JSON.stringify(body);
-  if (handle.socketPath) {
-    const { promise, resolve, reject } = Promise.withResolvers<unknown>();
-    const request = httpRequest(
-      { socketPath: handle.socketPath, path, method: "POST", headers: { "content-type": "application/json" }, timeout: timeoutMs },
-      (response) => {
-        const chunks: Buffer[] = [];
-        response.on("data", (chunk: Buffer) => chunks.push(chunk));
-        response.on("end", () => {
-          const text = Buffer.concat(chunks).toString("utf8");
-          if ((response.statusCode ?? 500) >= 400) {
-            reject(new ModelRunFailure("endpoint_invoke_failed", `endpoint returned ${response.statusCode}: ${text.slice(0, 500)}`));
-            return;
-          }
-          try { resolve(JSON.parse(text)); } catch (error) { reject(error); }
-        });
-      },
-    );
-    request.once("timeout", () => { request.destroy(new ModelRunFailure("endpoint_invoke_timeout", `invoke exceeded ${timeoutMs}ms`)); });
-    request.once("error", reject);
-    request.end(payload);
-    return promise;
-  }
+/** Where this endpoint handle is reachable for HTTP `/invoke` + `/healthz`. */
+function targetOf(handle: EndpointHandle): EndpointTarget {
+  const timeoutMs = handle.descriptor.invoke.kind === "http-json" ? handle.descriptor.invoke.timeoutMs : 600_000;
+  if (handle.socketPath) return { url: `unix:${handle.socketPath}`, timeoutMs };
   if (handle.port === null) {
     throw new ModelRunFailure("endpoint_descriptor_invalid", "http-json invoke requires a TCP port or socket path");
   }
-  const response = await fetch(`http://127.0.0.1:${handle.port}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: payload,
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    throw new ModelRunFailure("endpoint_invoke_failed", `endpoint returned ${response.status}: ${text.slice(0, 500)}`);
+  return { url: `http://127.0.0.1:${handle.port}`, timeoutMs };
+}
+
+/**
+ * Refuse before inference when the engine is not the model this run names.
+ *
+ * The registry row already pins family/revision/quant; a run whose engine
+ * reports something else would produce numbers attributed to the wrong model.
+ */
+async function requireEngineIdentity(
+  handle: EndpointHandle,
+  expected: { family: string; revision: string; quant: string } | null,
+): Promise<EndpointHealth> {
+  const health = await endpointHealth(targetOf(handle));
+  if (!expected) return health;
+  const mismatch = modelIdentityMismatch(health, expected);
+  if (mismatch.length > 0) {
+    throw new ModelRunFailure("model_revision_mismatch", mismatch.join("; "));
   }
-  return JSON.parse(text);
+  return health;
+}
+
+function manifestBase(lease: LeasedModelRun): Pick<ResultManifest, "schema" | "runId" | "attemptId" | "jobId" | "workspaceId"> {
+  return {
+    schema: "simforge.eval-result-manifest/v1",
+    runId: lease.runId,
+    attemptId: String(lease.attemptNumber),
+    jobId: null,
+    workspaceId: null,
+  };
+}
+
+function outputRefs(runDir: string, artifacts: readonly EvalArtifact[]): unknown[] {
+  return [
+    { kind: "directory", path: runDir },
+    { kind: "file", path: join(runDir, "result.json") },
+    ...artifacts.map((artifact) => ({ kind: "file", path: join(runDir, artifact.path), role: artifact.role })),
+  ];
 }
 
 export async function executeOpenloopRun(
@@ -290,84 +319,236 @@ export async function executeOpenloopRun(
   options: { runsRoot: string; signal: AbortSignal },
 ): Promise<{ metrics: Record<string, unknown>; outputRefs: unknown[] }> {
   if (lease.kind !== "openloop") {
-    throw new ModelRunFailure("unsupported_run_kind", `no executor for run kind ${lease.kind}`);
+    throw new ModelRunFailure("unsupported_run_kind", `no openloop executor for run kind ${lease.kind}`);
   }
   const params = OpenloopParamsSchema.safeParse(lease.params);
   if (!params.success) {
-    throw new ModelRunFailure("invalid_openloop_params", params.error.issues.map((issue) => issue.message).join("; "));
+    throw new ModelRunFailure(
+      "invalid_openloop_params",
+      params.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`).join("; "),
+    );
   }
   const descriptor = lease.resolvedDescriptor;
   if (descriptor.invoke.kind !== "http-json") {
     throw new ModelRunFailure(
       "endpoint_transport_unsupported",
-      `openloop executor speaks http-json only; endpoint requires ${descriptor.invoke.kind}`,
+      `openloop needs the engine's http-json facade; this endpoint declares ${descriptor.invoke.kind}. ` +
+        "Start the engine with --http and register an http-json invoke.",
     );
   }
 
-  let items: unknown[];
-  if ("items" in params.data.input) {
-    items = params.data.input.items;
-  } else {
-    const manifest = JSON.parse(await readFile(params.data.input.manifestPath, "utf8")) as { items?: unknown[] };
-    if (!Array.isArray(manifest.items) || manifest.items.length === 0) {
-      throw new ModelRunFailure("invalid_input_manifest", `${params.data.input.manifestPath} has no "items" array`);
-    }
-    items = manifest.items;
-  }
-
   const runDir = join(options.runsRoot, lease.runId);
-  const outputsDir = join(runDir, "outputs");
-  await mkdir(outputsDir, { recursive: true });
-
+  await mkdir(runDir, { recursive: true });
+  const startedAt = new Date().toISOString();
   const endpoint = await startEndpoint(descriptor, options.signal);
-  const outputFiles: string[] = [];
-  const invokeStarted = Date.now();
   try {
-    for (let index = 0; index < items.length; index += 1) {
-      if (options.signal.aborted) throw new ModelRunFailure("worker_stopped", "worker stopped mid-run");
-      const response = await invokeHttpJson(endpoint, descriptor.invoke.path, descriptor.invoke.timeoutMs, {
-        runId: lease.runId,
-        seed: lease.seed,
-        index,
-        request: params.data.request,
-        input: items[index],
-      });
-      const fileName = `item-${String(index).padStart(5, "0")}.json`;
-      await writeFile(join(outputsDir, fileName), `${JSON.stringify(response, null, 2)}\n`, "utf8");
-      outputFiles.push(join("outputs", fileName));
-    }
+    const health = await requireEngineIdentity(endpoint, lease.modelIdentity ?? null);
+    const outcome = await executeOpenloop({
+      runId: lease.runId,
+      attemptId: String(lease.attemptNumber),
+      params: params.data,
+      target: targetOf(endpoint),
+      health,
+      outDir: runDir,
+      // Host runs name their bundles by path; there is no job input table.
+      resolveInput: (item) => {
+        const ref = item.ref;
+        if (!ref) {
+          throw new ModelRunFailure("invalid_openloop_params", `item ${item.role ?? "?"} has no local \`ref\` path`);
+        }
+        return ref;
+      },
+      signal: options.signal,
+      fallbackModel: lease.modelIdentity ?? undefined,
+    });
+    const completedAt = new Date().toISOString();
+    await writeResultManifest(runDir, {
+      ...manifestBase(lease),
+      kind: params.data.task === "text" ? "text" : "openloop",
+      status: outcome.status,
+      scored: outcome.scored,
+      promotable: outcome.scored && outcome.status === "succeeded",
+      exploratory: outcome.exploratory,
+      mode: "openloop",
+      truncation: outcome.status === "cancelled" ? "cancelled" : null,
+      metrics: { ...outcome.metrics, spawnMs: endpoint.spawnMs, healthMs: endpoint.healthMs },
+      artifacts: [...outcome.artifacts],
+      provenance: {
+        model: {
+          family: (outcome.model["family"] as string | null) ?? null,
+          revision: (outcome.model["revision"] as string | null) ?? null,
+          checkpointDigest: (outcome.model["checkpointDigest"] as string | null) ?? null,
+          quant: (outcome.model["quant"] as string | null) ?? null,
+          attn: (outcome.model["attn"] as string | null) ?? null,
+          torch: (outcome.model["torch"] as string | null) ?? null,
+          cuda: (outcome.model["cuda"] as string | null) ?? null,
+          diffusionSteps: (outcome.model["diffusionSteps"] as number | null) ?? null,
+          numTrajSamples: (outcome.model["numTrajSamples"] as number | null) ?? null,
+          cameraProfile: (outcome.model["cameraProfile"] as string | null) ?? null,
+          rngProvenance: (outcome.model["rngProvenance"] as Record<string, unknown> | null) ?? null,
+          determinismScope: "same-host-same-device",
+        },
+        input: { kind: outcome.inputKind, ref: null, digest: outcome.inputDigest, ood: [], replayContext: null },
+        runtime: { host: "desktop", worker: "model-run", node: process.version },
+        controller: {},
+        compute: null,
+        metricVersion: "simforge.eval-metrics/v1",
+      },
+      timing: {
+        startedAt,
+        completedAt,
+        durationMs: Math.max(0, Date.parse(completedAt) - Date.parse(startedAt)),
+        executionMs: null,
+      },
+      error: null,
+    });
+    return { metrics: outcome.metrics, outputRefs: outputRefs(runDir, outcome.artifacts) };
   } finally {
     await endpoint.stop();
   }
-  const invokeTotalMs = Date.now() - invokeStarted;
+}
 
-  const metrics = {
-    itemCount: items.length,
-    failedItems: 0,
-    spawnMs: endpoint.spawnMs,
-    healthMs: endpoint.healthMs,
-    invokeTotalMs,
-    meanItemMs: Math.round(invokeTotalMs / items.length),
-  };
-  const manifestPath = join(runDir, "manifest.json");
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify({
+/**
+ * `policy_episode`: one closed-loop episode through the native gym runner.
+ *
+ * A model episode needs the engine's MessagePack policy socket (frames are
+ * shared memory, never HTTP), so the endpoint descriptor must carry a
+ * `socketPath`. The episode's own artifacts and `result.json` land in the run
+ * directory the eval tab already reads.
+ */
+export async function executePolicyEpisodeRun(
+  lease: LeasedModelRun,
+  options: { runsRoot: string; signal: AbortSignal },
+): Promise<{ metrics: Record<string, unknown>; outputRefs: unknown[] }> {
+  if (lease.kind !== "policy_episode") {
+    throw new ModelRunFailure("unsupported_run_kind", `no episode executor for run kind ${lease.kind}`);
+  }
+  const parsed = PolicyEpisodeRunParamsSchema.safeParse(lease.params);
+  if (!parsed.success) {
+    throw new ModelRunFailure(
+      "invalid_episode_params",
+      parsed.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`).join("; "),
+    );
+  }
+  const params = parsed.data;
+  const descriptor = lease.resolvedDescriptor;
+  const runDir = join(options.runsRoot, lease.runId);
+  await mkdir(runDir, { recursive: true });
+  const startedAt = new Date().toISOString();
+
+  const needsEngine = params.runnerPolicy === "endpoint";
+  if (needsEngine && !descriptor.socketPath) {
+    throw new ModelRunFailure(
+      "endpoint_transport_unsupported",
+      "a model episode needs the endpoint's unix socket (msgpack policy wire); this descriptor has none",
+    );
+  }
+  const endpoint = needsEngine ? await startEndpoint(descriptor, options.signal) : null;
+  try {
+    const outcome = await executeEpisode({
       runId: lease.runId,
-      attemptNumber: lease.attemptNumber,
-      seed: lease.seed,
-      itemCount: items.length,
-      outputs: outputFiles,
-      metrics,
-      completedAt: new Date().toISOString(),
-    }, null, 2)}\n`,
-    "utf8",
-  );
-  return {
-    metrics,
-    outputRefs: [
-      { kind: "directory", path: runDir },
-      { kind: "file", path: manifestPath },
-    ],
-  };
+      outDir: runDir,
+      signal: options.signal,
+      scoring: params.scoring,
+      expectedRouteM: params.expectedRouteM,
+      speedLimitMps: params.speedLimitMps,
+      runner: {
+        specPath: params.spec,
+        session: params.session,
+        runnerPolicy: params.runnerPolicy,
+        seed: params.seed,
+        policySeed: params.policySeed,
+        steps: params.steps,
+        mode: params.mode,
+        deadlineMs: params.deadlineMs,
+        fallback: params.fallback,
+        execution: params.execution,
+        decisionHz: params.decisionHz,
+        tracePath: join(runDir, "trace.jsonl"),
+        forceMissAt: params.forceMissAt,
+        replayContextDir: params.replayContext,
+        endpointSocket: endpoint?.socketPath ?? null,
+        cameraProfile: params.cameraProfile,
+        frameSource: params.frameSource,
+        replanHz: params.replanHz,
+        numTrajSamples: params.numTrajSamples,
+        navText: params.navText,
+        model: lease.modelIdentity ?? null,
+        allowColdStart: params.allowColdStart,
+        warmupPolicy: params.warmupPolicy,
+        warmupSteps: params.warmupSteps,
+      },
+    });
+    const completedAt = new Date().toISOString();
+    await writeResultManifest(runDir, {
+      ...manifestBase(lease),
+      kind: "closedloop-episode",
+      status: outcome.status,
+      scored: outcome.scored,
+      promotable: outcome.scored && outcome.status === "succeeded" && params.runnerPolicy === "endpoint",
+      exploratory: false,
+      mode: params.mode,
+      truncation: outcome.truncation,
+      metrics: outcome.metrics,
+      artifacts: [...outcome.artifacts],
+      provenance: {
+        model: outcome.model
+          ? {
+              family: (outcome.model["family"] as string | null) ?? null,
+              revision: (outcome.model["revision"] as string | null) ?? null,
+              checkpointDigest: (outcome.model["checkpointDigest"] as string | null) ?? null,
+              quant: (outcome.model["quant"] as string | null) ?? null,
+              attn: (outcome.model["attn"] as string | null) ?? null,
+              torch: (outcome.model["torch"] as string | null) ?? null,
+              cuda: (outcome.model["cuda"] as string | null) ?? null,
+              diffusionSteps: null,
+              numTrajSamples: params.numTrajSamples,
+              cameraProfile: params.cameraProfile,
+              rngProvenance: (outcome.model["rngProvenance"] as Record<string, unknown> | null) ?? null,
+              determinismScope: "same-host-same-device",
+            }
+          : null,
+        input: {
+          kind: params.replayContext ? "replay-context" : "scenario",
+          ref: params.spec,
+          digest: null,
+          ood: [],
+          replayContext: null,
+        },
+        runtime: { host: "desktop", worker: "model-run", node: process.version },
+        controller: { execution: params.execution, decisionHz: params.decisionHz, fallback: params.fallback },
+        compute: null,
+        metricVersion: "simforge.eval-metrics/v1",
+      },
+      timing: {
+        startedAt,
+        completedAt,
+        durationMs: Math.max(0, Date.parse(completedAt) - Date.parse(startedAt)),
+        executionMs: null,
+      },
+      error: outcome.error
+        ? {
+            code: /camera|capability|frame|replay_context|revision|unsupported/.test(outcome.error.code)
+              ? "capability_error"
+              : "internal",
+            retryable: isRetryableErrorCode(
+              /camera|capability|frame|replay_context|revision|unsupported/.test(outcome.error.code)
+                ? "capability_error"
+                : "internal",
+            ),
+            message: outcome.error.message,
+            fields: [outcome.error.code],
+          }
+        : null,
+    });
+    if (outcome.status === "failed") {
+      throw new ModelRunFailure(
+        outcome.error?.code ?? "episode_failed",
+        outcome.error?.message ?? "episode produced no scoreable result",
+      );
+    }
+    return { metrics: outcome.metrics, outputRefs: outputRefs(runDir, outcome.artifacts) };
+  } finally {
+    if (endpoint) await endpoint.stop();
+  }
 }
