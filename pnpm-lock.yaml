@@ -130,6 +130,9 @@ importers:
       '@simforge-oss/maps':
         specifier: workspace:*
         version: link:../maps
+      '@simforge-oss/model-store':
+        specifier: workspace:*
+        version: link:../model-store
       '@simforge-oss/native-runtime':
         specifier: workspace:*
         version: link:../native-runtime
@@ -388,6 +391,25 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(supports-color@7.2.0)(tsx@4.23.12)
 
+  packages/model-store:
+    dependencies:
+      '@napi-rs/keyring':
+        specifier: 2.0.0
+        version: 2.0.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.4.0))(supports-color@7.2.0)(tsx@4.23.12)
+
   packages/native-runtime:
     devDependencies:
       '@napi-rs/cli':
@@ -617,9 +639,15 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../engine
+      '@simforge-oss/evaluation':
+        specifier: workspace:*
+        version: link:../evaluation
       '@simforge-oss/maps':
         specifier: workspace:*
         version: link:../maps
+      '@simforge-oss/model-store':
+        specifier: workspace:*
+        version: link:../model-store
       '@simforge-oss/openscenario':
         specifier: workspace:*
         version: link:../openscenario
@@ -834,9 +862,15 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../packages/engine
+      '@simforge-oss/evaluation':
+        specifier: workspace:*
+        version: link:../packages/evaluation
       '@simforge-oss/maps':
         specifier: workspace:*
         version: link:../packages/maps
+      '@simforge-oss/model-store':
+        specifier: workspace:*
+        version: link:../packages/model-store
       '@simforge-oss/native-runtime':
         specifier: workspace:*
         version: link:../packages/native-runtime
