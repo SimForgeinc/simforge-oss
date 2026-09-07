@@ -26,6 +26,40 @@ of the two existing Three surfaces; Bevy work lands in the native lane. A
 Bevy WASM editor is gated behind the strategy-A feasibility spike and is out
 of scope for this contract version.
 
+### CityViewer map-loading observability
+
+`CityViewerStats` reports implementation telemetry separately from the frozen
+renderer wire contract. `downloads.transferredBytes` counts actual received
+bytes, including external textures and startup metadata. `loadProgress`
+reports the current stage and completed decode, texture-upload, and compile
+counts; elapsed time alone is never progress.
+
+Readiness requires road geometry and all wanted pinned coarse city tiles to
+finish GPU preparation. `requiredPendingAssets` excludes optional refinements;
+`requiredError` surfaces required download, decode, upload, compile, or memory
+admission failures. A failed compile must not publish the asset as resident.
+Consumers should poll from bootstrap start, use stage-specific idle deadlines
+and an overall deadline, and report processing as indeterminate when no byte
+denominator is available.
+
+`textureMaxDimension` selects existing compressed mip levels before GPU upload;
+it does not remove geometry or resample authored pixels. Embedders should pair
+this limit with their quality preset's memory budget. It can change atomically
+through `setAuthoringFidelity`; textures are cached separately by URL and mip
+limit. Map changes renew the decoder's cancellation signal so an aborted prior
+map cannot cancel the next map's texture requests.
+If required coarse tiles cannot fit, the viewer estimates the full-map footprint
+from resident tiles and lowers the mip ceiling in power-of-two steps, never
+below 128 pixels. Geometry remains required. The effective limit is reported in
+`loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
+Each new map starts from the user's selected preset ceiling.
+
+`resolveAssetUrls` optionally resolves a GLTF's external image URLs together
+before texture loading. This lets authenticated embedders batch authorization
+instead of serializing one database-backed request per image. Eight bounded
+texture requests feed four transcoder workers; encoded unused mip levels are
+removed before transcoding.
+
 ## Frozen wire identifiers
 
 `scene-state.v1` and `uniscenario.static-semantics/v1` are referenced

@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { parseSimScenarioInput } from '../schema/input.js';
 import { runSimulation } from '../sim/engine.js';
 import { SignalBook, phaseForbidsEntry } from '../sim/signals.js';
+import { routePointsHash } from '../map/route.js';
 import { LANE_LEFT, scenario, syntheticGraph, vehicle } from './fixtures/scenarios.js';
 
 const graph = syntheticGraph();
@@ -39,6 +40,52 @@ function signalScenario(obeySignals: boolean) {
 }
 
 describe('signal compliance', () => {
+  it('stops a world-route actor at its bound red signal, without applying a different route hash', () => {
+    const base = signalScenario(true);
+    const points = [{ x: 0, z: 0 }, { x: 400, z: 0 }];
+    const run = (hash: string) => runSimulation(parseSimScenarioInput({
+      ...base,
+      actors: [{
+        ...base.actors[0]!,
+        initial: { pose: { x: 20, z: 0, headingRad: 0 }, speedMps: 12 },
+        behavior: { ...base.actors[0]!.behavior, route: { kind: 'polyline', points } },
+      }],
+      signalPrograms: [{
+        ...base.signalPrograms[0]!,
+        stopLines: [{ actorId: 'ego', routePointsHash: hash, s: STOP_LINE_S }],
+      }],
+    }), { graph }).trace.ticks.actors['ego']!;
+    const stopped = run(routePointsHash(points.map(point => ({ x: point.x, y: -point.z }))));
+    expect(stopped.speedMps.at(-1)).toBeLessThan(0.05);
+    expect(stopped.x.at(-1)).toBeLessThan(STOP_LINE_S);
+    const unrelated = run(routePointsHash([{ x: 0, y: 5 }, { x: 400, y: 5 }]));
+    expect(unrelated.x.at(-1)).toBeGreaterThan(STOP_LINE_S);
+    expect(Math.min(...unrelated.speedMps)).toBeGreaterThan(5);
+  });
+
+  it('preserves dwell and release for a static stop on a world route', () => {
+    const base = signalScenario(true);
+    const points = [{ x: 0, z: 0 }, { x: 400, z: 0 }];
+    const input = parseSimScenarioInput({
+      ...base,
+      actors: [{
+        ...base.actors[0]!,
+        initial: { pose: { x: 20, z: 0, headingRad: 0 }, speedMps: 12 },
+        behavior: { ...base.actors[0]!.behavior, route: { kind: 'polyline', points } },
+      }],
+      signalPrograms: [],
+      roadControls: [{
+        id: 'route-stop', kind: 'stop', dwellS: 1,
+        stopLines: [{ actorId: 'ego', routePointsHash: routePointsHash(points.map(point => ({ x: point.x, y: -point.z }))), s: STOP_LINE_S }],
+      }],
+    });
+    const { trace } = runSimulation(input, { graph });
+    const track = trace.ticks.actors['ego']!;
+    const stopped = trace.ticks.t.filter((_, index) => track.speedMps[index]! < 0.05 && track.x[index]! > STOP_LINE_S - 5 && track.x[index]! < STOP_LINE_S);
+    expect(stopped.at(-1)! - stopped[0]!).toBeGreaterThanOrEqual(0.9);
+    expect(track.x.at(-1)).toBeGreaterThan(STOP_LINE_S);
+  });
+
   it('requires flattened physical ids to close over controller-stage membership', () => {
     const base = signalScenario(true);
     const binding = {

@@ -142,10 +142,25 @@ export const FramePoseSchema = z.strictObject({
  * imply an event at t=0 and force every consumer to rediscover the actor's
  * initial route by scanning interactions.
  */
-export const SceneAbsoluteInitialRouteSchema = z.strictObject({
+export const SceneAbsoluteLaneRouteSchema = z.strictObject({
   mode: z.literal('lanePath'),
   lanes: z.array(z.string().min(1)).min(1).max(128),
 });
+
+export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
+  SceneAbsoluteLaneRouteSchema,
+  z.strictObject({
+    mode: z.literal('worldPath'),
+    points: z.array(z.strictObject({ x: z.number().finite(), z: z.number().finite() })).min(2).max(20000),
+    /** Source-proven static stops retained on this exact world-space route. */
+    stopControls: z.array(z.strictObject({
+      id: z.string().min(1),
+      s: z.number().finite().nonnegative(),
+      dwellS: z.number().finite().positive(),
+      coordinationId: z.string().min(1).optional(),
+    })).optional(),
+  }),
+]);
 
 /** A frame-relative pose. */
 export type FramePose = z.infer<typeof FramePoseSchema>;

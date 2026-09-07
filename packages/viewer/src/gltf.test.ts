@@ -1,7 +1,8 @@
 import { CompressedTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RGBA_S3TC_DXT1_Format, Group } from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createDefaultContainer, read as readKtx2, write as writeKtx2 } from 'ktx-parse';
 
-import { collectResources, disposeResources, estimateResourceBytes, resourceDirectory, sharedTextures } from './gltf';
+import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, resourceDirectory, selectKtx2MipLevels, sharedTextures } from './gltf';
 
 function decoded(bytes: number): CompressedTexture {
   const texture = new CompressedTexture([{ data: new Uint8Array(bytes), width: 4, height: 4 }], 4, 4, RGBA_S3TC_DXT1_Format);
@@ -72,6 +73,38 @@ describe('shared KTX2 texture cache', () => {
     const texture = await sharedTextures.acquire('images/bad.ktx2', async () => decoded(8));
     expect(texture.source).toBeDefined();
     expect(sharedTextures.stats()).toMatchObject({ textures: 1, refs: 1, misses: 2 });
+  });
+});
+
+describe('compressed texture mip budgets', () => {
+  it('removes oversized encoded levels before the texture decoder sees them', () => {
+    const container = createDefaultContainer();
+    container.pixelWidth = 8;
+    container.pixelHeight = 8;
+    container.levelCount = 4;
+    container.levels = [8, 4, 2, 1].map(size => ({
+      levelData: new Uint8Array(size * size * 4).fill(size),
+      uncompressedByteLength: size * size * 4,
+    }));
+    const encoded = writeKtx2(container);
+    const selected = readKtx2(new Uint8Array(selectKtx2MipLevels(encoded.buffer as ArrayBuffer, 2)));
+    expect([selected.pixelWidth, selected.pixelHeight, selected.levelCount]).toEqual([2, 2, 2]);
+    expect(selected.levels.map(level => [...level.levelData])).toEqual([
+      [...new Uint8Array(16).fill(2)], [...new Uint8Array(4).fill(1)],
+    ]);
+  });
+
+  it('keeps the authored lower mip chain and charges only its actual compressed footprint', () => {
+    const texture = new CompressedTexture([
+      { data: new Uint8Array(32), width: 2048, height: 1024 },
+      { data: new Uint8Array(16), width: 1024, height: 512 },
+      { data: new Uint8Array(8), width: 512, height: 256 },
+    ], 2048, 1024, RGBA_S3TC_DXT1_Format);
+    limitCompressedTextureMipmaps(texture, 1024);
+    expect(texture.image).toEqual({ width: 1024, height: 512 });
+    expect(texture.mipmaps.map(mip => [mip.width, mip.height])).toEqual([[1024, 512], [512, 256]]);
+    expect(estimateResourceBytes({ geometries: [], materials: [], textures: [texture] })).toBe(24);
+    texture.dispose();
   });
 });
 

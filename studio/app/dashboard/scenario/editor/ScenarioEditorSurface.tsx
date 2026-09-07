@@ -1363,6 +1363,8 @@ function EditorTimelineOverlayBridge({
         projection: signalIndex.projection,
         junctionId: selectedSignal.junctionId,
         clips: layout.clips,
+        displayBaselines: plan?.displayBaselines,
+        routeSignals: plan?.routeSignals,
       });
       if (plan) document.replaceMapSignalPlan(plan.id, nextPlan);
       else document.addMapSignalPlan(nextPlan);

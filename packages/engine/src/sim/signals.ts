@@ -43,7 +43,7 @@ export function resolveOverlappingControlLanes(
   }));
   const repairs: ControlBindingRepair[] = [];
 
-  const repairLines = <T extends { rsl: string; s: number; connectingLaneRsls: readonly string[] }>(
+  const repairLines = <T extends { rsl: string; s: number; actorId?: string; connectingLaneRsls: readonly string[] }>(
     sourceKind: ControlBindingRepair['source'],
     controlId: string,
     lines: readonly T[],
@@ -51,6 +51,7 @@ export function resolveOverlappingControlLanes(
     const repaired = [...lines];
     const keys = new Set(lines.map((line) => `${line.rsl}\0${line.connectingLaneRsls.join('\0')}`));
     for (const line of lines) {
+      if (line.actorId !== undefined) continue;
       const sourceGeometry = graph.geometry(line.rsl);
       if (!sourceGeometry) continue;
       const source = graph.sampleStorage(sourceGeometry, line.s);
@@ -172,6 +173,9 @@ function failureStateOf(phase: SignalPhase): 'off' | 'flashing-red' | undefined 
 }
 
 export interface StopLineBinding {
+  /** When present, s is this actor's route arc rather than lane storage s. */
+  readonly actorId?: string;
+  readonly routePointsHash?: string;
   readonly controlId: string;
   /** Shared junction arbitration key for static all-way-stop approaches. */
   readonly coordinationId: string;
@@ -191,6 +195,7 @@ export class SignalBook {
   private readonly cycleLength = new Map<string, number>();
   readonly stopLines: StopLineBinding[] = [];
   private readonly stopLinesByLane = new Map<LaneRsl, StopLineBinding[]>();
+  private readonly stopLinesByActorRoute = new Map<string, StopLineBinding[]>();
   private readonly overrides = new Map<string, SignalPhase>();
 
   constructor(
@@ -217,12 +222,16 @@ export class SignalBook {
           dwellS: 0,
           rsl: sl.rsl,
           s: sl.s,
+          ...(sl.actorId !== undefined ? { actorId: sl.actorId } : {}),
+          ...(sl.routePointsHash !== undefined ? { routePointsHash: sl.routePointsHash } : {}),
           connectingLaneRsls: [...sl.connectingLaneRsls].sort(),
         };
         this.stopLines.push(binding);
-        const arr = this.stopLinesByLane.get(sl.rsl);
+        const index = sl.actorId !== undefined ? this.stopLinesByActorRoute : this.stopLinesByLane;
+        const key = sl.actorId ?? sl.rsl;
+        const arr = index.get(key);
         if (arr) arr.push(binding);
-        else this.stopLinesByLane.set(sl.rsl, [binding]);
+        else index.set(key, [binding]);
       }
     }
     for (const control of [...roadControls].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -235,12 +244,16 @@ export class SignalBook {
           dwellS: control.dwellS,
           rsl: sl.rsl,
           s: sl.s,
+          ...(sl.actorId !== undefined ? { actorId: sl.actorId } : {}),
+          ...(sl.routePointsHash !== undefined ? { routePointsHash: sl.routePointsHash } : {}),
           connectingLaneRsls: [...sl.connectingLaneRsls].sort(),
         };
         this.stopLines.push(binding);
-        const arr = this.stopLinesByLane.get(sl.rsl);
+        const index = sl.actorId !== undefined ? this.stopLinesByActorRoute : this.stopLinesByLane;
+        const key = sl.actorId ?? sl.rsl;
+        const arr = index.get(key);
         if (arr) arr.push(binding);
-        else this.stopLinesByLane.set(sl.rsl, [binding]);
+        else index.set(key, [binding]);
       }
     }
   }
@@ -449,6 +462,11 @@ export class SignalBook {
   /** Stop lines on a lane, in storage-`s` order. */
   onLane(rsl: LaneRsl): readonly StopLineBinding[] {
     return this.stopLinesByLane.get(rsl) ?? [];
+  }
+
+  /** Explicit actor world-route controls, independent of topology lanes. */
+  onActorRoute(actorId: string): readonly StopLineBinding[] {
+    return this.stopLinesByActorRoute.get(actorId) ?? [];
   }
 }
 

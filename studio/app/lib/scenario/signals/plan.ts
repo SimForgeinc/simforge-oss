@@ -49,7 +49,7 @@ import {
   cycleSeconds,
   DEFAULT_REFERENCE_TIMING,
 } from "./reference-cycle";
-import { selectSignalHead, type EditorSignalIndex } from "./stages";
+import { selectSignalClipReference, selectSignalHead, type EditorSignalIndex } from "./stages";
 import type { EditorSignalControlProjection, MapSignalIndication } from "./types";
 
 /** `MapSignalPlanSchema` caps `clips` at 256. */
@@ -143,7 +143,12 @@ export function layOutCycle(input: LayOutCycleInput): LayOutCycleResult {
         id: clipId(input.junctionId, ordinal),
         startS: cursor,
         endS,
-        reference: { controllerId: interval.controllerId, headId: interval.headId },
+        reference: {
+          controllerId: interval.controllerId, headId: interval.headId,
+          ...(interval.additionalStages ? { additionalStages: interval.additionalStages } : {}),
+          ...(interval.displayHeadIds ? { displayHeadIds: interval.displayHeadIds } : {}),
+          ...(interval.movements !== undefined ? { movements: interval.movements } : {}),
+        },
         indication: interval.indication,
       });
       ordinal += 1;
@@ -170,6 +175,8 @@ export function buildMapSignalPlan(input: {
   readonly projection: EditorSignalControlProjection;
   readonly junctionId: string;
   readonly clips: readonly MapSignalPlanClip[];
+  readonly displayBaselines?: MapSignalPlan['displayBaselines'];
+  readonly routeSignals?: MapSignalPlan['routeSignals'];
 }): MapSignalPlan {
   return MapSignalPlanSchema.parse({
     id: mapSignalPlanId(input.junctionId),
@@ -180,6 +187,8 @@ export function buildMapSignalPlan(input: {
       controlDigest: input.projection.controlDigest,
     },
     clips: [...input.clips],
+    ...(input.displayBaselines ? { displayBaselines: input.displayBaselines } : {}),
+    ...(input.routeSignals ? { routeSignals: input.routeSignals } : {}),
   });
 }
 
@@ -253,6 +262,7 @@ export function checkPlanBinding(
       message: `This signal plan belongs to map "${plan.binding.mapId}", not "${projection.mapId}".`,
     };
   }
+  if (plan.clips.length === 0 && !plan.displayBaselines?.length && plan.routeSignals?.length) return { ok: true };
   const junction = index.junctionById.get(plan.binding.junctionId);
   if (!junction || !junction.signalized) {
     return {
@@ -261,13 +271,12 @@ export function checkPlanBinding(
       message: `Junction "${plan.binding.junctionId}" has no controllable signal programs on this map.`,
     };
   }
+  if (plan.displayBaselines?.some((baseline) => !index.controlIndex.physicalHeadIds?.has(baseline.headId))) {
+    return { ok: false, code: "map_signal_plan_reference_unbound", message: "A display baseline names a missing or virtual signal housing." };
+  }
   const unbound = plan.clips.filter((clip) => {
-    const controller = index.controllerById.get(clip.reference.controllerId);
-    return (
-      !controller ||
-      controller.junctionId !== plan.binding.junctionId ||
-      !controller.headIds.includes(clip.reference.headId)
-    );
+    const selection = selectSignalClipReference(index, clip.reference);
+    return !selection || selection.junctionId !== plan.binding.junctionId;
   });
   if (unbound.length > 0) {
     return {
@@ -303,6 +312,9 @@ export function decompilePlanToCycle(
       at > 0 &&
       clip.reference.controllerId === first.reference.controllerId &&
       clip.reference.headId === first.reference.headId &&
+      JSON.stringify(clip.reference.additionalStages ?? []) === JSON.stringify(first.reference.additionalStages ?? []) &&
+      JSON.stringify(clip.reference.displayHeadIds ?? []) === JSON.stringify(first.reference.displayHeadIds ?? []) &&
+      JSON.stringify(clip.reference.movements) === JSON.stringify(first.reference.movements) &&
       clip.indication === first.indication
     ) {
       break;
@@ -311,6 +323,9 @@ export function decompilePlanToCycle(
     intervals.push({
       controllerId: clip.reference.controllerId,
       headId: clip.reference.headId,
+      ...(clip.reference.additionalStages ? { additionalStages: clip.reference.additionalStages } : {}),
+      ...(clip.reference.displayHeadIds ? { displayHeadIds: clip.reference.displayHeadIds } : {}),
+      ...(clip.reference.movements !== undefined ? { movements: clip.reference.movements } : {}),
       indication: clip.indication,
       durationS: round(clip.endS - clip.startS),
       label: labelForInterval(clip.indication, controller?.sequence ?? at),

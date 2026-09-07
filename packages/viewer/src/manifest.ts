@@ -50,5 +50,5 @@ const BYTES_PER_FILE_BYTE = [6.6, 3.3, 2.3, 2.0];
  */
 export function estimateLodBytes(lod: ManifestLod): number {
   const ratio = BYTES_PER_FILE_BYTE[Math.min(lod.level, BYTES_PER_FILE_BYTE.length - 1)] ?? 2;
-  return lod.fileSize * ratio;
+  return Math.ceil(lod.fileSize * ratio);
 }

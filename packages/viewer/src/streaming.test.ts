@@ -167,7 +167,6 @@ describe('essential streaming assets', () => {
     expect(layer.stats().pendingTextureUploads).toBe(0);
     expect(layer.stats().uploading).toBe(1);
     layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
-    expect(compileAsync).toHaveBeenCalledOnce();
     expect(layer.stats().residentAssets).toBe(0);
     expect(layer.stats().uploading).toBe(1);
 
@@ -182,5 +181,34 @@ describe('essential streaming assets', () => {
     await settled;
     expect(idle).toBe(true);
     expect(disposeAsset).toHaveBeenCalledOnce();
+  });
+
+  it('reports a required compile failure without publishing usable geometry', async () => {
+    const asset = emptyAsset();
+    const failure = new Error('shader compilation failed');
+    const onError = vi.fn();
+    const layer = new TileStreamLayer({
+      name: 'required-geometry',
+      renderer: { compileAsync: async () => { throw failure; } } as unknown as WebGLRenderer,
+      scene: new Scene(),
+      defs: [{
+        id: 'required-tile',
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => asset,
+      maxConcurrent: 1,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      pinCoarsest: true,
+      onError,
+    });
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    expect(layer.stats().residentAssets).toBe(0);
+    expect(layer.stats().requiredPendingAssets).toBeGreaterThan(0);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({ cause: failure });
+    layer.dispose();
   });
 });

@@ -395,7 +395,7 @@ export function routeExecutionParity(
   input: Pick<SimScenarioInput, 'actors' | 'interactions'>,
 ): RouteExecutionParity {
   const routeRoles = template.roles
-    .flatMap((role) => role.kind === 'scene_absolute' && role.initialRoute?.lanes.length ? [role] : [])
+    .flatMap((role) => role.kind === 'scene_absolute' && role.initialRoute ? [role] : [])
     .sort((a, b) => a.id.localeCompare(b.id));
   const canonicalAuthoredInteraction = (interaction: Interaction): unknown | null => {
     if (interaction.verb === 'route' && interaction.target.mode === 'lanePath') {
@@ -416,7 +416,7 @@ export function routeExecutionParity(
   };
   const authored = routeRoles.map((role) => ({
     id: role.id,
-    initialRoute: role.initialRoute!.lanes,
+    initialRoute: role.initialRoute!.mode === 'lanePath' ? role.initialRoute!.lanes : role.initialRoute!.points,
     interactions: template.choreography.interactions
       .filter((interaction) => interaction.actor === role.id)
       .map(canonicalAuthoredInteraction)
@@ -443,7 +443,7 @@ export function routeExecutionParity(
     const actor = input.actors.find((candidate) => candidate.id === role.id);
     return {
       id: role.id,
-      initialRoute: actor?.behavior.route.kind === 'lanePath' ? actor.behavior.route.lanes : null,
+      initialRoute: actor?.behavior.route.kind === 'lanePath' ? actor.behavior.route.lanes : actor?.behavior.route.kind === 'polyline' ? actor.behavior.route.points : null,
       interactions: input.interactions
         .filter((interaction) => interaction.actorId === role.id)
         .map(canonicalCompiledInteraction)
@@ -513,10 +513,10 @@ export function routesFromTemplate(
       || role.actor.class === 'pedestrian'
       || role.actor.class === 'static_object'
     ) return [];
-    const lanes = role.kind === 'scene_absolute' ? role.initialRoute?.lanes : undefined;
-    if (!lanes?.length) return [];
+    const initialRoute = role.kind === 'scene_absolute' ? role.initialRoute : undefined;
+    if (!initialRoute) return [];
     const planned = resolvedRoutePoints(
-      { kind: 'lanePath', lanes },
+      initialRoute.mode === 'lanePath' ? { kind: 'lanePath', lanes: initialRoute.lanes } : { kind: 'polyline', points: initialRoute.points },
       index,
       role.kind === 'scene_absolute' && role.laneRef
         ? {

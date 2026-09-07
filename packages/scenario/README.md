@@ -319,6 +319,28 @@ quietly does it wrong.
    validator as options precisely so each step is testable in isolation.
 4. `pnpm run schema` to regenerate (a test fails if you forget).
 
+### Map-bound routes and signal plans
+
+A `scene_absolute` role may own an `initialRoute` with either a current-map
+`lanePath` or explicit scene-frame `worldPath` points. A world path preserves
+authored geometry; it does not invent target-map lane membership. Lane-dependent
+commands still require a proved lane binding.
+
+World paths can retain static `stopControls` (`id`, route-arc `s`, `dwellS`,
+optional shared-junction `coordinationId`). Signal plans can retain actor-local
+`routeSignals`, bound to the exact `routePointsHash` and validated route length.
+The engine stops applying these controls after an actor changes to a different
+route. Signal baselines preserve warmup, gaps, blackout policy and coordination;
+`selectedByClipIds` follows clip timing/indication edits, while `baselineOnly`
+controls remain independent of those clips.
+
+Signal clip references support `additionalStages` unions and exact `movements`
+(`approachLaneRsl`, `connectingLaneRsl`) within the bound junction. An explicit
+empty movement list controls no movement. Independent programs on one movement
+retain conjunctive authority; a green lamp does not override another red lamp.
+Physical `displayHeadIds` and plan `displayBaselines` affect only verified map
+housings, not movement authority. These fields must survive authoring roundtrips.
+
 ## Scripts
 
 ```sh

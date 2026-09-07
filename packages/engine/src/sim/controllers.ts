@@ -496,14 +496,17 @@ export function distanceToStopLine(
   leader: { gapM: number; speedMps: number } | null = null,
   canReleaseStop: ((controlId: string, coordinationId: string, actorId: string, t: number) => boolean) | null = null,
 ): number | null {
-  if (!a.rules.obeySignals || signals.isEmpty || a.route.isFreeform) return null;
+  if (!a.rules.obeySignals || signals.isEmpty) return null;
   let best: number | null = null;
-  for (const leg of a.route.legs) {
-    if (leg.sStart + leg.lengthM < a.routeS) continue;
-    if (leg.sStart - a.routeS > lookaheadM) break;
-    for (const line of signals.onLane(leg.rsl)) {
+  for (let legIndex = -1; legIndex < (a.route.isFreeform ? 0 : a.route.legs.length); legIndex += 1) {
+    const leg = legIndex >= 0 ? a.route.legs[legIndex]! : undefined;
+    if (leg && leg.sStart + leg.lengthM < a.routeS) continue;
+    if (leg && leg.sStart - a.routeS > lookaheadM) break;
+    const lines = leg ? signals.onLane(leg.rsl) : signals.onActorRoute(a.id);
+    for (const line of lines) {
+      if (line.actorId !== undefined && line.routePointsHash !== a.route.pointsHash) continue;
       if (
-        line.connectingLaneRsls.length > 0 &&
+        leg && line.connectingLaneRsls.length > 0 &&
         !a.route.legs.some(
           (candidate) =>
             candidate.sStart >= leg.sStart && line.connectingLaneRsls.includes(candidate.rsl),
@@ -511,8 +514,8 @@ export function distanceToStopLine(
       ) {
         continue;
       }
-      const laneS = leg.reversed ? leg.lengthM - line.s : line.s;
-      const routeS = leg.sStart + laneS;
+      const laneS = leg?.reversed ? leg.lengthM - line.s : line.s;
+      const routeS = leg ? leg.sStart + laneS : line.s;
       const d = routeS - a.routeS;
       if (d < -0.5 || d > lookaheadM) continue;
       // Authority is resolved per tick, not per binding: a signal that is dark
@@ -575,7 +578,7 @@ export function distanceToStopLine(
         // immediate exit are occupied by a stopped queue. This is the compact
         // browser-native equivalent of a keep-clear/intersection-box rule.
         const connectingLeg = line.connectingLaneRsls
-          .map((rsl) => a.route.legs.find((candidate) => candidate.sStart >= leg.sStart && candidate.rsl === rsl))
+          .map((rsl) => a.route.legs.find((candidate) => candidate.sStart >= (leg?.sStart ?? line.s) && candidate.rsl === rsl))
           .find((candidate) => candidate !== undefined);
         const blockedExit = leader !== null
           && leader.speedMps < 1.5

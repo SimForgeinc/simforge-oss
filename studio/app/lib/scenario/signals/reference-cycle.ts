@@ -38,6 +38,7 @@
  * quantity read off the map instead of derived. See `stages.ts`.
  */
 
+import type { MapSignalPlanClip } from "@simforge-oss/scenario";
 import type { EditorSignalIndex } from "./stages";
 import { orderedStages } from "./stages";
 import type { MapSignalIndication } from "./types";
@@ -136,6 +137,9 @@ export type StageInterval = {
   /** The head within that stage a clip will name. Any of its heads would do;
    * this one is chosen deterministically so the clip list is reproducible. */
   readonly headId: string;
+  readonly additionalStages?: MapSignalPlanClip['reference']['additionalStages'];
+  readonly displayHeadIds?: MapSignalPlanClip['reference']['displayHeadIds'];
+  readonly movements?: MapSignalPlanClip['reference']['movements'];
   readonly indication: MapSignalIndication;
   readonly durationS: number;
   /** For the phase-list editor's row label. */
@@ -318,7 +322,8 @@ export function readReferenceTiming(input: {
     stages.find((stage) => stage.headIds.includes(input.referenceHeadId)) ?? stages[0];
   const leadId = lead?.id;
 
-  const isLead = (interval: StageInterval) => interval.controllerId === leadId;
+  const isLead = (interval: StageInterval) => interval.controllerId === leadId
+    || interval.additionalStages?.some((stage) => stage.controllerId === leadId) === true;
   const total = cycleSeconds(input.cycle);
   const green = round(
     input.cycle
@@ -365,7 +370,8 @@ function phaseOrderFromCycle(
 ): readonly ReferenceCyclePhase[] {
   const firstAt = new Map<ReferenceCyclePhase, number>();
   for (const [at, interval] of cycle.entries()) {
-    const phase: ReferenceCyclePhase = interval.controllerId === leadId
+    const phase: ReferenceCyclePhase = (interval.controllerId === leadId
+      || interval.additionalStages?.some((stage) => stage.controllerId === leadId) === true)
       && (interval.indication === "green" || interval.indication === "yellow")
       ? interval.indication
       : "red";
@@ -387,6 +393,9 @@ function sameCycle(
     return (
       interval.controllerId === other.controllerId &&
       interval.headId === other.headId &&
+      JSON.stringify(interval.additionalStages ?? []) === JSON.stringify(other.additionalStages ?? []) &&
+      JSON.stringify(interval.displayHeadIds ?? []) === JSON.stringify(other.displayHeadIds ?? []) &&
+      JSON.stringify(interval.movements) === JSON.stringify(other.movements) &&
       interval.indication === other.indication &&
       interval.durationS === other.durationS
     );
