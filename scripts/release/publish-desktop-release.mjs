@@ -393,10 +393,19 @@ async function main() {
     await gh(["release", "upload", tag, `${file}#${uploadName}`, "--repo", REPOSITORY, "--clobber"]);
   }
 
-  const verification = await verifyUploadedAssets(tag, [
-    ...record.assets,
-    { assetName: SUMS_FILE, sha256: createHash("sha256").update(sums).digest("hex"), sizeBytes: Buffer.byteLength(sums) },
-  ]);
+  // Everything uploaded is verified, documents included: a truncated
+  // THIRD_PARTY_NOTICES.md on a public release is a missing license notice,
+  // not a cosmetic defect.
+  const documents = [
+    { assetName: SUMS_FILE, text: sums },
+    { assetName: RELEASE_FILE, text: `${JSON.stringify(record, null, 2)}\n` },
+    { assetName: NOTICES_FILE, text: notices },
+  ].map((document) => ({
+    assetName: document.assetName,
+    sha256: createHash("sha256").update(document.text).digest("hex"),
+    sizeBytes: Buffer.byteLength(document.text),
+  }));
+  const verification = await verifyUploadedAssets(tag, [...record.assets, ...documents]);
   if (verification.problems.length > 0) {
     process.stderr.write(`release ${tag} is incomplete; it stays a draft:\n  ${verification.problems.join("\n  ")}\n`);
     return 2;
@@ -419,7 +428,7 @@ async function main() {
     publication: record.publication,
     releaseId: verification.releaseId,
     page: releasePageUrl(tag),
-    assetsVerified: record.assets.length + 1,
+    assetsVerified: record.assets.length + documents.length,
   }, null, 2)}\n`);
   return 0;
 }
