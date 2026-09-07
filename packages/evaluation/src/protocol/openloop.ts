@@ -78,6 +78,13 @@ export const OpenloopItemSchema = z.object({
     .default(null),
   error: z.object({ code: z.string(), message: z.string() }).nullable().default(null),
   coldStart: z.boolean().default(false),
+  /**
+   * The engine's `rng_provenance` for THIS item, verbatim. It carries the
+   * upstream task name (`upstream_task`) for text tasks, so a result document
+   * names the upstream code that actually ran without anyone re-deriving it
+   * from the job's task spelling.
+   */
+  rngProvenance: z.record(z.string(), z.unknown()).nullable().default(null),
 });
 export type OpenloopItem = z.infer<typeof OpenloopItemSchema>;
 
