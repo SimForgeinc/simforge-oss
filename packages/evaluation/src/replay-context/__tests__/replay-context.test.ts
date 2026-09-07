@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadEvalClip, reconstructionRefusal } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2 } from '../gates.js';
+import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { loadReplayContext } from '../qualify.js';
 import { ReplayContextSchema, type GateVerdict } from '../schema.js';
 
@@ -170,5 +171,37 @@ describe('bundle invariants', () => {
     const forced = { ...bundle, validity: { ...bundle.validity, qualified: true } };
     const parsed = ReplayContextSchema.safeParse(forced);
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe('episode outcomes', () => {
+  it('never lets a truncated episode count as a success or enter a scored aggregate', () => {
+    const truncated = classifyEpisodeOutcome({
+      episodeId: 'ep-1',
+      complete: false,
+      truncation: 'envelope_exceeded',
+      breached: ['lateral'],
+      atStep: 83,
+    });
+
+    expect(truncated.succeeded).toBe(false);
+    expect(truncated.aggregateEligible).toBe(false);
+    expect(truncated.diagnosticsOnly).toBe(true);
+    expect(truncated.status).toBe('truncated');
+    expect(truncated.reason).toContain('step 83');
+    expect(truncated.reason).toContain('lateral');
+  });
+
+  it('partitions a run so held-out episodes are counted, not dropped', () => {
+    const outcomes = [
+      classifyEpisodeOutcome({ episodeId: 'a', complete: true }),
+      classifyEpisodeOutcome({ episodeId: 'b', complete: false, truncation: 'envelope_exceeded' }),
+      classifyEpisodeOutcome({ episodeId: 'c', complete: false, truncation: 'invalid_scene' }),
+    ];
+    const partition = partitionOutcomes(outcomes);
+
+    expect(partition.aggregate.map((outcome) => outcome.episodeId)).toEqual(['a']);
+    expect(partition.diagnostic.map((outcome) => outcome.episodeId)).toEqual(['b', 'c']);
+    expect(partition.counts).toEqual({ total: 3, complete: 1, truncated: 1, invalid: 1 });
   });
 });

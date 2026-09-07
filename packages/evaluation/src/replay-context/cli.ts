@@ -34,6 +34,7 @@ import { importNurecScene } from './importers/nurec.js';
 import { importUserBundle } from './importers/user-bundle.js';
 import { qualifyBundle, loadReplayContext, writeReplayContext } from './qualify.js';
 import { preflightReconstruction, reconstructClip } from './reconstruct.js';
+import { resolveEncoder } from './video.js';
 import { CapabilityError } from './render.js';
 import { RefusalError, workerErrorEnvelope } from './refusal.js';
 import { servableFamilies, servableRigPresets } from './cameras.js';
@@ -160,16 +161,28 @@ async function runReconstruct(args: Args): Promise<Record<string, unknown>> {
   const admission = await loadEvalClip(required(args, 'clip'));
   const refusal = reconstructionRefusal(admission);
   if (refusal !== undefined) throw new RefusalError(refusal);
+  const encoder = await resolveEncoder({
+    ...(args.flags['ffmpeg'] === undefined ? {} : { ffmpeg: args.flags['ffmpeg'] }),
+    ...(args.flags['ffprobe'] === undefined ? {} : { ffprobe: args.flags['ffprobe'] }),
+    ...(args.flags['desktop-manifest'] === undefined ? {} : { manifestPath: args.flags['desktop-manifest'] }),
+  });
   const result = await reconstructClip({
     admission,
     workDir: required(args, 'out'),
     tier,
+    ...(encoder === undefined ? {} : { encoder }),
     ...(args.flags['iterations'] === undefined ? {} : { iterations: Number(args.flags['iterations']) }),
   });
   const bundleFile = await writeReplayContext(path.join(required(args, 'out'), 'bundle'), result.bundle);
   return {
     ...summarise(result.bundle, bundleFile),
-    reconstruction: { usdz: result.usdzPath, dataset: result.datasetDir, run: result.runDir },
+    reconstruction: {
+      usdz: result.usdzPath,
+      dataset: result.datasetDir,
+      run: result.runDir,
+      images: result.dataset.images,
+      frameExtraction: result.dataset.extractions,
+    },
     note: 'geometry exists but is not qualified; run `scene qualify` before any closed-loop episode',
   };
 }

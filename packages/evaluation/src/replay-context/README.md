@@ -39,7 +39,7 @@ No input is ever padded to make it evaluable.
 | Calibrated clip, no seed point cloud | reconstruction refused — 3DGUT initialises from a measured point cloud, and seeding from noise would produce a confident scene that is not the user's world |
 | Calibrated clip, planar ego path only | reconstruction refused — `ego.recordedPose6dof` required; zero roll/pitch builds a flat world that never existed |
 | f-theta rig on the COLMAP reconstruction path | refused — no COLMAP camera model expresses an f-theta polynomial, and refitting to `OPENCV_FISHEYE` would silently change the calibration. Needs the NCore v4 path (`pip install nvidia-ncore`) |
-| Encoded video for reconstruction | refused — frame extraction needs ffmpeg; the clip must supply an image sequence rather than have an undeclared binary invoked |
+| Encoded video for reconstruction | **supported** — frames are extracted with the pinned ffmpeg the desktop already ships, and every frame's container timestamp is verified against the manifest before it is used. Refused only when timestamps are absent, the frame counts disagree, or the container timing drifts more than 20 ms from the declared timing |
 | Scene with no dynamic tracks | refused unless `dynamics` is declared with an explicitly empty track list — "no other road users" and "actors were never tracked" are different facts |
 | AlpaSim scene not in the local cache | refused with the exact artifact, revision and path — the dataset is gated and non-redistributable, so nothing is fetched implicitly |
 
@@ -82,12 +82,28 @@ renderer code is modified by this module.
 
 | Prerequisite | Needed for | Status on this host |
 |---|---|---|
-| 3DGRUT checkout + compiled tracer (`THREEDGRUT_ROOT`) | reconstruction **and** splat rendering | **absent** — `THREEDGRUT_ROOT` unset, `threedgrut` not importable |
-| NVIDIA Kaolin for the installed torch/CUDA | splat rendering | absent |
+| 3DGRUT checkout + compiled tracer (`THREEDGRUT_ROOT`) | reconstruction **and** splat rendering | pinned, not yet provisioned on this host |
+| NVIDIA Kaolin for the installed torch/CUDA | splat rendering | pinned, not yet provisioned |
 | CUDA PyTorch | both | present (torch 2.11.0+cu128, CUDA 12.8, device available) |
 | numpy + Pillow | `replay_measure.py` | present |
-| `nvidia-ncore` | the NCore v4 reconstruction path (f-theta rigs) | absent |
+| pinned ffmpeg/ffprobe b6.1.1 | frame extraction from encoded video | shipped by the desktop (`studio/desktop/tools.lock.json`); resolved at runtime |
+| `nvidia-ncore` | the NCore v4 reconstruction path (f-theta rigs) | optional; absence is an explicit capability restriction, never a silent remap |
 | A NuRec `.usdz` scene package | any import/render of a real scene | not in-repo; gated, non-redistributable |
+
+These are **installable prerequisites, provisioned onto product-owned worker images and
+storage** — not permanent blockers, and never satisfied by borrowing a research host or
+allocation. The pins live in `tier-lock.ts` as the single source of truth:
+
+| Component | Pin |
+|---|---|
+| 3DGRUT | `nv-tlabs/3dgrut` @ `a37ef721012dea0f29c0fcfff2d525023b4e854a` — the same revision `renderer/splat/PROVENANCE.json` documents the NuRec splat port against, so the reconstruction tier and the shipped renderer share one upstream revision |
+| Kaolin | NVIDIA Kaolin `0.18.0` from NVIDIA's index for the image's exact torch/CUDA (the PyPI project of the same name is unrelated and is never a substitute) |
+| torch | `>=2.8`, CUDA build matching the driver; the tracer compiles against it, so they are resolved together |
+
+`BUILD_VERIFIED` is `false` and stays false until every item in `BUILD_EVIDENCE_OWED` has been
+produced on the image that will run the work. `preflightReconstruction` compares a resolved
+checkout's `HEAD` against the pin and fails when they differ — gate numbers measured against a
+different upstream revision are not comparable with anything else recorded.
 
 Absence surfaces as a `capability_error` from `scene reconstruct --preflight-only` and from
 the render tier, before any GPU is allocated — never as a crash or a fake success.
@@ -104,7 +120,8 @@ $S import      --alpasim-root <dir> --scene <id> --suite public_2601 --license <
 $S import      --clip <dir> --geometry <usdz> --out <dir>     # user bundle     -> bundle
 $S qualify     --bundle <dir> --scene-dir <dir> --catalog <dir> --hood none
 $S reconstruct --preflight-only
-$S reconstruct --clip <dir> --out <dir> [--iterations N]
+$S reconstruct --clip <dir> --out <dir> [--iterations N] \
+               [--ffmpeg <path> --ffprobe <path> | --desktop-manifest <runtime-manifest.json>]
 ```
 
 Exit codes follow `AGENTS.md`: `0` done, `1` could not run (bad flags or a missing
@@ -167,6 +184,35 @@ A local imported-scene fixture of the shape step 1 consumes exists outside the r
 (sidecars only; its `.usdz` is the external, gated prerequisite). It is **not** copied into
 the repository: it derives from the PhysicalAI-AV NuRec dataset, which is gated and
 non-redistributable.
+
+## Frame extraction
+
+Encoded calibrated video is extracted with the digest-pinned `ffmpeg`/`ffprobe` b6.1.1 the
+desktop already stages (`studio/desktop/tools.lock.json` → `studio/tools/`), spawned as
+separate programs and never linked. Resolution order: explicit paths, then
+`SIMFORGE_FFMPEG`/`SIMFORGE_FFPROBE`, then the staged desktop runtime manifest, then `PATH`
+(recorded as an unpinned build in provenance).
+
+Timestamp integrity is the point of the step, not a side effect. Two independent sources must
+agree before a frame is used: the container's own per-frame presentation timestamps (via
+`ffprobe`, preferring `best_effort_timestamp_time`) and the clip manifest's declared
+`cameras[].timing`. Frames are extracted one-per-decoded-frame (`-vsync 0`, no re-encode, no
+resampling) and named `<absoluteTimestampUs>.png`, matching the NuRec packages' own convention.
+Extraction refuses — rather than renumbering to fit — when timestamps are unreadable, the
+counts disagree, or elapsed time drifts more than 20 ms (the same bound G4 applies to
+actor/camera alignment). Each of those is a real defect that would shear the imagery against
+the ego history.
+
+## Truncated episodes never become scores
+
+`outcome.ts` owns one rule: an episode that left the envelope produced real numbers up to the
+breach and nothing trustworthy after it. `classifyEpisodeOutcome` marks it
+`succeeded: false`, `aggregateEligible: false`, `diagnosticsOnly: true` regardless of how far
+it got, and `partitionOutcomes` is the single place a run is split into `aggregate` (complete,
+in-envelope — the only episodes a headline score, comparison or promotion may use) and
+`diagnostic` (retained, reported, never averaged in). The partition also returns counts, so a
+report always states how many episodes were held out and why. "It drove well for eight seconds
+before the world ran out" is a statement about the scene, not a model result.
 
 ## Licensing and provenance
 

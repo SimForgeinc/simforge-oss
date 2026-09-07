@@ -39,12 +39,14 @@ import { copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { cameraTimestamps } from './cameras.js';
+import { PINNED_ENCODER, extractVideoFrames, resolveEncoder, type EncoderTools } from './video.js';
 import { deferred } from './deferred.js';
 import { reconstructionRefusal, type ClipAdmission } from './clip.js';
 import { importUserBundle } from './importers/user-bundle.js';
 import { CapabilityError } from './render.js';
 import { RefusalError, type Refusal } from './refusal.js';
 import type { CalibratedCamera, ReplayContext } from './schema.js';
+import { BUILD_VERIFIED, THREEDGRUT } from './tier-lock.js';
 
 /** Upstream app config used for the reconstruction. */
 export const THREEDGRUT_CONFIG = 'apps/colmap_3dgut.yaml';
@@ -61,6 +63,12 @@ export interface PreflightReport {
   readonly threedgrutRoot?: string;
   readonly torchVersion?: string;
   readonly cudaAvailable?: boolean;
+  /** Commit the tier lock pins. */
+  readonly pinnedCommit: string;
+  /** Commit the resolved checkout is actually at, when it is a git working tree. */
+  readonly resolvedCommit?: string;
+  /** False until the build evidence in the tier lock has been produced on this image. */
+  readonly buildVerified: boolean;
   readonly missing: readonly string[];
 }
 
@@ -140,11 +148,34 @@ export async function preflightReconstruction(tier: ReconstructionTier = {}): Pr
     missing.push(`a CUDA-enabled PyTorch is not importable from ${python}`);
   }
 
+  // A checkout at the wrong revision is worse than none: the tracer, the config names and the
+  // export block all move upstream, and gate numbers measured against a different revision are
+  // not comparable with anything else we recorded.
+  let resolvedCommit: string | undefined;
+  if (resolvedRoot !== undefined) {
+    const head = await run('git', ['-C', resolvedRoot, 'rev-parse', 'HEAD']).catch(
+      () => ({ code: -1, stdout: '', stderr: '' }),
+    );
+    if (head.code === 0) {
+      resolvedCommit = head.stdout.trim();
+      if (resolvedCommit !== THREEDGRUT.commit) {
+        missing.push(
+          `the 3DGRUT checkout at ${resolvedRoot} is at ${resolvedCommit}, but the tier lock pins `
+          + `${THREEDGRUT.commit}; check it out at the pinned revision (gate measurements are not `
+          + 'comparable across upstream revisions)',
+        );
+      }
+    }
+  }
+
   return {
     ok: missing.length === 0,
     ...(resolvedRoot === undefined ? {} : { threedgrutRoot: resolvedRoot }),
     ...(torchVersion === undefined ? {} : { torchVersion }),
     ...(cudaAvailable === undefined ? {} : { cudaAvailable }),
+    pinnedCommit: THREEDGRUT.commit,
+    ...(resolvedCommit === undefined ? {} : { resolvedCommit }),
+    buildVerified: BUILD_VERIFIED,
     missing,
   };
 }
@@ -229,10 +260,19 @@ function worldToCameraQuat(
   return { q: [x, y, z, w], r: cameraFromWorld };
 }
 
+export interface FrameExtractionRecord {
+  readonly sensorId: string;
+  readonly frames: number;
+  readonly encoder: string;
+  readonly maxTimestampSkewUs: number;
+}
+
 export interface ColmapDataset {
   readonly datasetDir: string;
   readonly images: number;
   readonly cameras: number;
+  /** One entry per camera whose frames were extracted from encoded video. */
+  readonly extractions: readonly FrameExtractionRecord[];
 }
 
 /**
@@ -244,10 +284,15 @@ export interface ColmapDataset {
  * written next to the clip and the loader reads through, so a multi-gigabyte clip is not
  * duplicated on a worker's disk.
  */
-export async function writeColmapDataset(admission: ClipAdmission, datasetDir: string): Promise<ColmapDataset> {
+export async function writeColmapDataset(
+  admission: ClipAdmission,
+  datasetDir: string,
+  encoder?: EncoderTools,
+): Promise<ColmapDataset> {
   const { clip, clipDir } = admission;
   const cameras = clip.cameras!;
   const poses = clip.ego!.recordedPose6dof!;
+  const extractions: FrameExtractionRecord[] = [];
   const sparse = path.join(datasetDir, 'sparse', '0');
   await mkdir(sparse, { recursive: true });
 
@@ -266,20 +311,38 @@ export async function writeColmapDataset(admission: ClipAdmission, datasetDir: s
   for (const camera of cameras) {
     const video = clip.videos.find((entry) => entry.cameraId === camera.cameraId);
     if (video === undefined) continue;
-    if (video.kind !== 'image-sequence') {
-      throw new RefusalError({
-        code: 'unsupported_input',
-        message:
-          `camera ${camera.sensorId} supplies an encoded video. Reconstruction needs individual frames, and SimForge does not `
-          + 'shell out to an undeclared ffmpeg to produce them.',
-        missing: [{ path: 'videos[].kind', requirement: 'an image-sequence directory of extracted frames, one file per timestamp' }],
-        alternatives: ['Open-loop evaluation accepts encoded video directly.'],
+    // Encoded video is extracted with the encoder the desktop already pins, into a directory
+    // beside the dataset. `extractVideoFrames` verifies each frame's container timestamp
+    // against the manifest before writing it, so a frame only reaches COLMAP once we know
+    // when it was taken.
+    let sequenceDir: string;
+    let files: string[];
+    if (video.kind === 'image-sequence') {
+      sequenceDir = path.resolve(clipDir, video.path);
+      files = (await readdir(sequenceDir)).filter((name) => /\.(png|jpe?g)$/i.test(name)).sort();
+    } else {
+      const tools = encoder ?? await resolveEncoder();
+      if (tools === undefined) {
+        throw new CapabilityError(
+          `camera ${camera.sensorId} supplies encoded video and no frame extractor is available. `
+          + `Provide the pinned encoder (${PINNED_ENCODER}) via SIMFORGE_FFMPEG / SIMFORGE_FFPROBE, the staged desktop `
+          + 'runtime manifest, or PATH.',
+        );
+      }
+      sequenceDir = path.join(datasetDir, 'extracted', camera.sensorId);
+      const extraction = await extractVideoFrames(path.resolve(clipDir, video.path), camera, sequenceDir, tools);
+      extractions.push({
+        sensorId: camera.sensorId,
+        frames: extraction.frames.length,
+        encoder: extraction.encoder,
+        maxTimestampSkewUs: extraction.maxTimestampSkewUs,
       });
+      files = extraction.frames.map((frame) => frame.file);
     }
     const timestamps = cameraTimestamps(camera);
-    const sequenceDir = path.resolve(clipDir, video.path);
-    const files = (await readdir(sequenceDir)).filter((name) => /\.(png|jpe?g)$/i.test(name)).sort();
-
+    // COLMAP image names are relative to the dataset root when frames were extracted there,
+    // and relative to the clip when the user supplied a sequence.
+    const nameBase = video.kind === 'image-sequence' ? video.path : path.relative(datasetDir, sequenceDir);
     for (let index = 0; index < Math.min(files.length, timestamps.length); index += 1) {
       const tUs = timestamps[index]!;
       // Nearest measured rig pose; poses are the reconstruction's ground truth, never resampled
@@ -298,7 +361,7 @@ export async function writeColmapDataset(admission: ClipAdmission, datasetDir: s
       }
       imageId += 1;
       imageLines.push(
-        `${imageId} ${q[3]} ${q[0]} ${q[1]} ${q[2]} ${t[0]} ${t[1]} ${t[2]} ${cameraIdBySensor.get(camera.sensorId)} ${path.join(video.path, files[index]!)}`,
+        `${imageId} ${q[3]} ${q[0]} ${q[1]} ${q[2]} ${t[0]} ${t[1]} ${t[2]} ${cameraIdBySensor.get(camera.sensorId)} ${path.join(nameBase, files[index]!)}`,
       );
       imageLines.push('');
     }
@@ -314,13 +377,15 @@ export async function writeColmapDataset(admission: ClipAdmission, datasetDir: s
     await writeFile(path.join(sparse, 'points3D.txt'), '# seeded from points3D.ply\n', 'utf8');
   }
 
-  return { datasetDir, images: imageId, cameras: cameras.length };
+  return { datasetDir, images: imageId, cameras: cameras.length, extractions };
 }
 
 /* ------------------------------------------------------------------- driver */
 
 export interface ReconstructOptions {
   readonly admission: ClipAdmission;
+  /** Pre-resolved frame extractor; resolved on demand when absent. */
+  readonly encoder?: EncoderTools;
   /** Working directory for the dataset, the training run and the export. */
   readonly workDir: string;
   readonly tier?: ReconstructionTier;
@@ -333,6 +398,7 @@ export interface ReconstructResult {
   readonly usdzPath: string;
   readonly datasetDir: string;
   readonly runDir: string;
+  readonly dataset: ColmapDataset;
 }
 
 /**
@@ -369,7 +435,7 @@ export async function reconstructClip(options: ReconstructOptions): Promise<Reco
   }
 
   const datasetDir = path.join(options.workDir, 'colmap');
-  await writeColmapDataset(options.admission, datasetDir);
+  const dataset = await writeColmapDataset(options.admission, datasetDir, options.encoder);
 
   const runsDir = path.join(options.workDir, 'runs');
   await mkdir(runsDir, { recursive: true });
@@ -401,10 +467,10 @@ export async function reconstructClip(options: ReconstructOptions): Promise<Reco
       datasetFormat: 'colmap',
       config: THREEDGRUT_CONFIG,
       iterations: options.iterations ?? 0,
-      ...(preflight.threedgrutRoot === undefined ? {} : { threedgrutCommit: preflight.threedgrutRoot }),
+      threedgrutCommit: preflight.resolvedCommit ?? THREEDGRUT.commit,
     },
   });
-  return { bundle, usdzPath, datasetDir, runDir };
+  return { bundle, usdzPath, datasetDir, runDir, dataset };
 }
 
 /** Locate the exported NuRec package under a training run directory. */
