@@ -144,6 +144,8 @@ export {
   modelsList,
   modelsLock,
   modelsPreflight,
+  modelsPrepare,
+  modelsRuntime,
   modelsUninstall,
   modelsVerify,
   type ModelsOptions,
@@ -153,4 +155,5 @@ export {
   type ModelsCancelOptions,
   type ModelsPreflightOptions,
   type ModelsCacheOptions,
+  type ModelsPrepareOptions,
 } from './commands/models.js';

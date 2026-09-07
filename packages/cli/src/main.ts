@@ -50,6 +50,8 @@ import {
   modelsList,
   modelsLock,
   modelsPreflight,
+  modelsPrepare,
+  modelsRuntime,
   modelsUninstall,
   modelsVerify,
 } from './commands/models.js';
@@ -99,6 +101,8 @@ const COMMANDS = [
   { name: 'runtime show', summary: 'verified native runtime identity, engines and support tiers' },
   { name: 'models list', summary: 'Alpamayo model catalog with per-machine download and execution eligibility' },
   { name: 'models install', summary: 'resumable digest-verified install of a pinned model into ~/simforge-assets (needs --accept-license)' },
+  { name: 'models prepare', summary: 'build the isolated Python runtime for an installed model from its pinned upstream lockfile' },
+  { name: 'models runtime', summary: 'the prepared runtime for a model: interpreter, pinned code commit and upstream lock' },
   { name: 'models verify', summary: 're-verify an installed model against the committed lock (--deep re-hashes every shard)' },
   { name: 'models uninstall', summary: 'remove an installed model, optionally purging its shared Hugging Face cache entries' },
   { name: 'models cancel', summary: 'stop a running install, keeping partial files unless --discard-partials' },
@@ -862,6 +866,8 @@ async function dispatch(argv: readonly string[]): Promise<number> {
           'discard-partials',
           'reserve-renderer',
           'reclaim',
+          'flash-attn',
+          'force',
         ],
         values: ['family', 'quant'],
       });
@@ -888,6 +894,16 @@ async function dispatch(argv: readonly string[]): Promise<number> {
           pretty,
         });
       }
+      if (sub === 'prepare') {
+        return modelsPrepare({
+          family,
+          quant: optionalString(args, 'quant'),
+          flashAttn: boolFlag(args, 'flash-attn'),
+          force: boolFlag(args, 'force'),
+          pretty,
+        });
+      }
+      if (sub === 'runtime') return modelsRuntime({ family, pretty });
       if (sub === 'verify') return modelsVerify({ family, deep: boolFlag(args, 'deep'), pretty });
       if (sub === 'uninstall') {
         return modelsUninstall({
@@ -905,7 +921,18 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       }
       throw new CliError('unknown_command', `simforge models ${sub ?? ''}`.trim(), {
         detail: {
-          known: ['list', 'install', 'verify', 'uninstall', 'cancel', 'preflight', 'cache', 'lock'],
+          known: [
+            'list',
+            'install',
+            'prepare',
+            'runtime',
+            'verify',
+            'uninstall',
+            'cancel',
+            'preflight',
+            'cache',
+            'lock',
+          ],
         },
       });
     }

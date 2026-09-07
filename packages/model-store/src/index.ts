@@ -168,7 +168,7 @@ export {
 } from "./install";
 export { preflight, observeHost, qualify, PREFLIGHT_SCHEMA, type ObservedHost, type PreflightReport } from "./preflight";
 export { loadModelLock, lockEntry, installFiles, MODEL_LOCK_SCHEMA, type ModelLock, type ModelLockEntry } from "./lock";
-export { installLayout, endpointCommand, assetsRoot, modelsRoot, hfCacheRoot, type InstallLayout } from "./paths";
+export { installLayout, endpointCommand, assetsRoot, modelsRoot, hfCacheRoot, venvPython, type InstallLayout } from "./paths";
 export { verifyFile, checkpointDigestFromLock, type FileVerdict } from "./integrity";
 export {
   InstallRequestSchema,
@@ -197,3 +197,14 @@ export {
   type DownloadResult,
   type DownloadProgress,
 } from "./download";
+export {
+  prepareRuntime,
+  readRuntimeRecord,
+  runtimeRecordPath,
+  PrepareError,
+  RUNTIME_SCHEMA,
+  type PrepareOptions,
+  type PrepareProgress,
+  type PrepareStep,
+  type RuntimeRecord,
+} from "./prepare";

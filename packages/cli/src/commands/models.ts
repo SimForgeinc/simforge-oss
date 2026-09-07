@@ -9,6 +9,8 @@ import {
   isModelFamilyId,
   loadModelLock,
   preflight,
+  prepareRuntime,
+  readRuntimeRecord,
   reclaimCache,
   startInstall,
   storeHfToken,
@@ -284,6 +286,68 @@ export async function modelsCache(options: ModelsCacheOptions): Promise<number> 
   const result = await reclaimCache({ dryRun });
   emit({ schema: 'simforge.models-cache/v1', dryRun, ...result }, { pretty: options.pretty ?? false });
   return 0;
+}
+
+export type ModelsPrepareOptions = ModelsOptions & {
+  family: string | undefined;
+  quant?: string;
+  /** Build flash-attn instead of using the SDPA fallback. Requires nvcc. */
+  flashAttn?: boolean;
+  /** Discard an existing venv and code checkout and rebuild. */
+  force?: boolean;
+};
+
+/**
+ * Provision the isolated Python runtime for an installed family.
+ *
+ * Separate from `install` on purpose: a user who only wants weights for cloud
+ * execution should not be made to build a torch/CUDA environment, and a venv
+ * failure must never discard verified weights.
+ */
+export async function modelsPrepare(options: ModelsPrepareOptions): Promise<number> {
+  const family = requireFamily(options.family);
+  const quant = requireQuant(family, options.quant);
+  const steps: { step: string; detail: string }[] = [];
+  try {
+    const record = await prepareRuntime({
+      family,
+      quant,
+      flashAttn: options.flashAttn ?? false,
+      force: options.force ?? false,
+      onProgress: (progress) => {
+        steps.push(progress);
+        // Progress goes to stderr: stdout stays one JSON document.
+        process.stderr.write(`${JSON.stringify(progress)}\n`);
+      },
+    });
+    emit({ schema: 'simforge.models-prepare/v1', ...record }, { pretty: options.pretty ?? false });
+    return 0;
+  } catch (error) {
+    const code =
+      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? error.code
+        : 'prepare_failed';
+    const step =
+      error && typeof error === 'object' && 'step' in error ? error.step : null;
+    const detail =
+      error && typeof error === 'object' && 'detail' in error
+        ? (error.detail as Record<string, unknown>)
+        : undefined;
+    throw new CliError(code, error instanceof Error ? error.message : String(error), {
+      detail: { ...(detail ?? {}), step, completedSteps: steps.map((entry) => entry.step) },
+    });
+  }
+}
+
+/** The prepared runtime for a family, or null when none exists yet. */
+export async function modelsRuntime(options: ModelsOptions & { family: string | undefined }): Promise<number> {
+  const family = requireFamily(options.family);
+  const record = await readRuntimeRecord(family);
+  emit(
+    { schema: 'simforge.models-runtime/v1', family, prepared: record !== null, runtime: record },
+    { pretty: options.pretty ?? false },
+  );
+  return record === null ? 2 : 0;
 }
 
 /** The committed lock, for review and for comparing against a machine. */
