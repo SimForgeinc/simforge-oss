@@ -22,7 +22,54 @@ import type {
   ModelInstallState,
   ModelQuant,
 } from "./model-catalog";
+import { MODEL_CATALOG } from "./model-catalog";
 import type { ComputeJobStatus } from "./contracts";
+
+/** Highest precision first: what a user would pick if the hardware allowed it. */
+const PRECISION_PREFERENCE: readonly ModelQuant[] = ["bf16", "fp8", "nf4"] as const;
+
+/** Families in the order the launcher should consider them. */
+const FAMILY_PREFERENCE: readonly ModelFamilyId[] = [
+  "alpamayo-1.5",
+  "alpamayo-1",
+  "alpamayo-2-super",
+] as const;
+
+/**
+ * The model, precision and execution target the launcher should open on.
+ *
+ * Derived from this machine's measured eligibility rather than from a constant,
+ * because a static default is wrong on most machines: "1.5 at bf16" is a
+ * supported offer that needs 24 GiB, so on a 16 GiB box it would open the form
+ * on a combination that cannot run while a runnable one sits one row down.
+ *
+ * Local execution wins when any profile is actually qualified here, at the
+ * highest such precision. Otherwise the highest supported precision plus cloud
+ * execution, which is what the backend will accept. Nothing needs to be kept in
+ * sync: when a measurement lands and flips a quant from pending to supported,
+ * this follows.
+ */
+export function preferredSelection(
+  host: HostExecutionSnapshot,
+  runtime: ModelRuntimeSnapshot | null,
+): { family: ModelFamilyId; quant: ModelQuant; target: ExecutionTarget } {
+  if (host.host === "desktop" && runtime) {
+    for (const family of FAMILY_PREFERENCE) {
+      for (const quant of PRECISION_PREFERENCE) {
+        const eligibility = runtime.eligibility[runtimeKey(family, quant)];
+        if (eligibility?.executionEligible) return { family, quant, target: "local" };
+      }
+    }
+  }
+  for (const family of FAMILY_PREFERENCE) {
+    for (const quant of PRECISION_PREFERENCE) {
+      const offered = MODEL_CATALOG[family].quants.find((offer) => offer.quant === quant);
+      if (offered?.status === "supported") return { family, quant, target: "runpod" };
+    }
+  }
+  const fallback = FAMILY_PREFERENCE[0];
+  return { family: fallback, quant: MODEL_CATALOG[fallback].quants[0].quant, target: "runpod" };
+}
 
 export type EvaluationHostKind = "browser" | "desktop";
 export type ExecutionTarget = "local" | "runpod";
