@@ -17,6 +17,12 @@ export interface MapSignalHead {
   readonly roadId: string;
   readonly s: number;
   readonly dynamic: boolean;
+  /** RoadRunner gate records control movements but are not renderable housings. */
+  readonly kind?: 'physical' | 'virtual';
+  /** Stable RoadRunner physical asset identity, not an OpenDRIVE signal id. */
+  readonly signalId?: string;
+  /** Stable RoadRunner movement identity, not a topology gate id. */
+  readonly gateId?: string;
 }
 
 export interface MapRoadControlHead {
@@ -24,6 +30,8 @@ export interface MapRoadControlHead {
   readonly kind: 'stop';
   readonly roadId: string;
   readonly s: number;
+  /** Persistent RoadRunner physical-sign identity for exact correspondence. */
+  readonly signalId?: string;
 }
 
 export interface MapSpeedLimitHead {
@@ -113,8 +121,8 @@ export const SYNTHETIC_SIGNAL_OFFSET_S = 23;
 
 function attrs(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const match of text.matchAll(/([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*"([^"]*)"/g)) {
-    out[match[1]!] = match[2]!;
+  for (const match of text.matchAll(/([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    out[match[1]!] = match[2] ?? match[3]!;
   }
   return out;
 }
@@ -144,16 +152,27 @@ function xodrSignalElements(roadBody: string): XodrSignalElement[] {
   return elements;
 }
 
-/** Parse only the small controller seam needed by the CLI; no XML mutation. */
+/** Bind dynamic OpenDRIVE definitions independently of display-name metadata.
+ * GeoJSON remains the static-sign source and supplies incomplete XML metadata. */
 export function parseMapSignalCatalog(xodr: string, geojson: SignalGeoJson): MapSignalCatalog {
-  const heads = (geojson.features ?? [])
+  const controllers: MapSignalController[] = [];
+  for (const match of xodr.matchAll(/<controller\b(?![^>]*\/\s*>)([^>]*)>([\s\S]*?)<\/controller>/g)) {
+    const a = attrs(match[1]!);
+    if (!a['id']) continue;
+    const signalIds = [...match[2]!.matchAll(/<control\b([^>]*)\/?\s*>/g)]
+      .map((entry) => attrs(entry[1]!)['signalId'])
+      .filter((id): id is string => Boolean(id));
+    controllers.push({ id: a['id'], sequence: finite(a['sequence']), signalIds: [...new Set(signalIds)].sort() });
+  }
+  controllers.sort((a, b) => a.sequence - b.sequence || a.id.localeCompare(b.id));
+  const geoHeads = (geojson.features ?? [])
     .map((feature): MapSignalHead | null => {
       const p = feature.properties ?? {};
       if (p.signal_category !== 'traffic_light' || (p.dynamic !== 'yes' && p.dynamic !== true)) return null;
       const id = String(p.id ?? '');
       const roadId = String(p.road_id ?? '');
       if (!id || !roadId) return null;
-      return { id, roadId, s: finite(p.s), dynamic: true };
+      return { id, roadId, s: finite(p.s), dynamic: true, kind: 'physical' };
     })
     .filter((head): head is MapSignalHead => head !== null)
     .sort((a, b) => a.id.localeCompare(b.id));
@@ -182,6 +201,48 @@ export function parseMapSignalCatalog(xodr: string, geojson: SignalGeoJson): Map
     })
     .filter((head): head is MapSpeedLimitHead => head !== null)
     .sort((a, b) => a.roadId.localeCompare(b.roadId) || a.s - b.s || a.id.localeCompare(b.id));
+
+  const headsById = new Map(geoHeads.map((head) => [head.id, head]));
+  const roadControlIndexById = new Map(roadControls.map((head, index) => [head.id, index]));
+  const controlledIds = new Set(controllers.flatMap((controller) => controller.signalIds));
+  for (const road of xodr.matchAll(/<road\b([^>]*)>([\s\S]*?)<\/road>/g)) {
+    const roadId = attrs(road[1]!)['id'];
+    if (!roadId) continue;
+    for (const signal of xodrSignalElements(road[2]!)) {
+      if (signal.kind !== 'signal') continue;
+      const a = attrs(signal.attributes);
+      const id = a['id'];
+      if (!id) continue;
+      const vector = signal.body.match(/<vectorSignal\b([^>]*)\/?\s*>/);
+      const metadata = vector ? attrs(vector[1]!) : {};
+      const roadControlIndex = roadControlIndexById.get(id);
+      if (roadControlIndex !== undefined) {
+        const head = roadControls[roadControlIndex]!;
+        roadControls[roadControlIndex] = {
+          ...head, roadId, s: finite(a['s'], head.s),
+          ...(metadata['signalId'] ? { signalId: metadata['signalId'] } : {}),
+        };
+      }
+      const dynamic = a['dynamic'] === 'yes' || (a['dynamic'] === undefined && headsById.has(id));
+      // Dynamic traffic signals use the OpenDRIVE 1000001..1000013 family.
+      // Exact controller membership and RoadRunner movement metadata also
+      // identify signals whose exporter uses a country-specific type.
+      const type = Number(a['type']);
+      const trafficSignal = headsById.has(id) || controlledIds.has(id) || Boolean(metadata['gateId'])
+        || (Number.isInteger(type) && type >= 1000001 && type <= 1000013);
+      if (!dynamic || !trafficSignal) {
+        headsById.delete(id);
+        continue;
+      }
+      headsById.set(id, {
+        id, roadId, s: finite(a['s']), dynamic: true,
+        kind: metadata['gateId'] && !metadata['signalId'] ? 'virtual' : 'physical',
+        ...(metadata['signalId'] ? { signalId: metadata['signalId'] } : {}),
+        ...(metadata['gateId'] ? { gateId: metadata['gateId'] } : {}),
+      });
+    }
+  }
+  const heads = [...headsById.values()].sort((a, b) => a.id.localeCompare(b.id));
 
   const applicability: MapSignalApplicability[] = [];
   const dynamicHeadIds = new Set(heads.map((head) => head.id));
@@ -236,17 +297,6 @@ export function parseMapSignalCatalog(xodr: string, geojson: SignalGeoJson): Map
       entry.toLane !== all[index - 1]!.toLane ||
       entry.source !== all[index - 1]!.source,
   );
-
-  const controllers: MapSignalController[] = [];
-  for (const match of xodr.matchAll(/<controller\b([^>]*)>([\s\S]*?)<\/controller>/g)) {
-    const a = attrs(match[1]!);
-    if (!a['id']) continue;
-    const signalIds = [...match[2]!.matchAll(/<control\b([^>]*)\/?\s*>/g)]
-      .map((entry) => attrs(entry[1]!)['signalId'])
-      .filter((id): id is string => Boolean(id));
-    controllers.push({ id: a['id'], sequence: finite(a['sequence']), signalIds: [...new Set(signalIds)].sort() });
-  }
-  controllers.sort((a, b) => a.sequence - b.sequence || a.id.localeCompare(b.id));
 
   const junctions: MapSignalJunction[] = [];
   for (const match of xodr.matchAll(/<junction\b([^>]*)>([\s\S]*?)<\/junction>/g)) {

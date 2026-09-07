@@ -14,6 +14,7 @@
  */
 
 import { clamp, dist, normalizeAngle, pointSegment, type Vec2 } from '../core/math.js';
+import { sha256 } from '../core/hash.js';
 import { localFromScene } from '../frames.js';
 import type { RouteSpec, TurnRelation } from '../schema/input.js';
 import { ENDPOINT_TOL_M, type DirectedLane, type LaneGraph } from './lane-graph.js';
@@ -76,9 +77,23 @@ function routeDirectedKey(lane: DirectedLane): string {
   return `${lane.rsl}${lane.reversed ? '#r' : '#f'}`;
 }
 
+/** Identity of canonical local-coordinate polyline geometry, shared by
+ * authored route controls and the runtime Route cache. */
+export function routePointsHash(points: readonly Vec2[]): string {
+  const parts: string[] = [];
+  let previous: Vec2 | undefined;
+  for (const point of points) {
+    if (previous && dist(previous, point) < 1e-9) continue;
+    parts.push(`${point.x},${point.y}`);
+    previous = point;
+  }
+  return sha256(parts.join(';'));
+}
+
 export class Route {
   readonly legs: readonly RouteLeg[];
   readonly lengthM: number;
+  readonly pointsHash: string | null;
   private readonly freePoints: readonly Vec2[] | null;
   private readonly freeCum: readonly number[] | null;
   private readonly freeHeadings: readonly number[] | null;
@@ -91,6 +106,7 @@ export class Route {
   ) {
     this.legs = legs;
     this.freePoints = free?.points ?? null;
+    this.pointsHash = free ? routePointsHash(free.points) : null;
     this.freeCum = free?.cum ?? null;
     this.freeHeadings = free?.headings ?? null;
     this.lengthM = free

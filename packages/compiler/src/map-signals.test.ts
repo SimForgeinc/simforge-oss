@@ -23,6 +23,29 @@ describe('map-wide ambient physical controls', () => {
     ]);
   });
 
+  it('retains unnamed authoritative movement signals separately from physical housings', () => {
+    const catalog = parseMapSignalCatalog(`
+      <road id="17"><signals>
+        <signal id="gate" name="" dynamic="yes" type="1000011" s="4">
+          <validity fromLane="-1" toLane="-1"/>
+          <userData><vectorSignal gateId="{movement-guid}" turnRelation="Left"/></userData>
+        </signal>
+        <signal id="lamp" name="Signal head" dynamic="yes" type="1000001" s="6">
+          <validity fromLane="0" toLane="0"/>
+          <userData><vectorSignal signalId="{physical-guid}"/></userData>
+        </signal>
+      </signals></road>
+      <controller id="stage"><control signalId="gate"/></controller>
+      <junction id="junction"><controller id="stage"/></junction>
+    `, { features: [{ properties: { id: 'gate', road_id: '17', signal_category: 'unknown', dynamic: 'yes' } }] });
+    expect(catalog.heads).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'gate', kind: 'virtual', gateId: '{movement-guid}' }),
+      expect.objectContaining({ id: 'lamp', kind: 'physical', signalId: '{physical-guid}' }),
+    ]));
+    expect(catalog.applicability).toContainEqual({ headId: 'gate', roadId: '17', fromLane: -1, toLane: -1, source: 'signal' });
+    expect(catalog.controllers).toContainEqual(expect.objectContaining({ id: 'stage', signalIds: ['gate'] }));
+  });
+
   it('makes a physical speed-limit sign authoritative before graph compilation', () => {
     const catalog = parseMapSignalCatalog('', {
       features: [{ properties: {

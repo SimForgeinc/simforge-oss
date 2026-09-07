@@ -126,7 +126,7 @@ export function readEditorSignalControlProjection(
   const controlDigest = contentHash(controlPlan);
   const controlIndex = buildSignalControlIndex(
     controlPlan.signalPrograms,
-    signalCatalog.heads.map((head) => head.id),
+    signalCatalog.heads,
   );
 
   const gateById = new Map(input.topology.gates.map((gate) => [gate.id, gate]));
@@ -163,6 +163,7 @@ export function readEditorSignalControlProjection(
         headIds: [...movement.headIds],
         approachLaneRsls: [...movement.approachLaneRsls],
         connectingLaneRsls: [...movement.connectingLaneRsls],
+        lanePairs: movement.lanePairs,
         gateIds,
         turnRelations,
         label: movementLabel(movement.id, turnRelations),
@@ -195,6 +196,9 @@ export function readEditorSignalControlProjection(
         roadId: physical?.roadId ?? "",
         s: physical?.s ?? 0,
         dynamic: physical?.dynamic ?? false,
+        kind: physical?.kind,
+        signalId: physical?.signalId,
+        gateId: physical?.gateId,
         junctionIds: [...head.junctionIds],
         controllerIds: [...head.controllerIds],
         movementIds: [...head.movementIds],

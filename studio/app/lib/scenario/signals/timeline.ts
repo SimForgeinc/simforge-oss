@@ -41,8 +41,21 @@
 
 import type { MapSignalPlan } from "@simforge-oss/scenario";
 
-import { canonicalStageForController, orderedStages, selectSignalHead, type EditorSignalIndex } from "./stages";
+import { canonicalStageForController, orderedStages, selectSignalClipReference, type EditorSignalIndex } from "./stages";
 import type { ControlIndication, EditorSignalBaseline, MapSignalIndication } from "./types";
+
+function displayBaselinesForPlan(plan: MapSignalPlan | undefined): EditorSignalBaseline[] {
+  return (plan?.displayBaselines ?? []).map((baseline) => ({
+    movementId: `signal:display:${baseline.headId}`,
+    junctionId: plan!.binding.junctionId,
+    headIds: [baseline.headId],
+    controllerIds: [],
+    phases: baseline.phases.map((phase) => ({ indication: phase.phase, durationS: phase.durationS })),
+    offsetS: baseline.offsetS,
+    loop: baseline.loop,
+    timingSource: 'authored',
+  }));
+}
 
 /** Grid the lane snaps drag and paint gestures to. Matches v1's 0.1 s. */
 export const TIMELINE_TIME_GRID_S = 0.1;
@@ -220,7 +233,7 @@ export function buildSignalTimelineRows(input: SignalTimelineInput): SignalTimel
   const rows: SignalTimelineRow[] = [];
   for (const junctionId of [...wanted].sort()) {
     const plan = input.plans.find((candidate) => candidate.binding.junctionId === junctionId);
-    const baselines = baselinesByJunction.get(junctionId) ?? [];
+    const baselines = [...(baselinesByJunction.get(junctionId) ?? []), ...displayBaselinesForPlan(plan)];
     if (!plan && baselines.length === 0) continue;
     const clips = plan?.clips ?? [];
     const edges = boundaries(clips, baselines, clipSeconds, input.warmupSeconds);
@@ -315,13 +328,15 @@ export function editorSignalStatesAt(input: {
 
   for (const plan of input.plans) {
     if (plan.binding.mapId !== input.index.projection.mapId) continue;
+    for (const baseline of displayBaselinesForPlan(plan)) {
+      const indication = baselineIndicationAt(baseline, sampleTime, input.warmupSeconds);
+      if (indication) for (const headId of baseline.headIds) states[headId] = indication;
+    }
     const clip = plan.clips.find(
       (candidate) => sampleTime >= candidate.startS && sampleTime < candidate.endS,
     );
     if (!clip) continue;
-    const selection = selectSignalHead(input.index, clip.reference.headId, {
-      controllerId: clip.reference.controllerId,
-    });
+    const selection = selectSignalClipReference(input.index, clip.reference);
     if (!selection || selection.junctionId !== plan.binding.junctionId) continue;
     const stageHeads = new Set(selection.movementHeadIds);
     for (const headId of selection.intersectionHeadIds) {
@@ -329,6 +344,11 @@ export function editorSignalStatesAt(input: {
         ? clip.indication
         : siblingIndication(clip.indication);
     }
+    for (const headId of new Set([
+      ...(plan.displayBaselines ?? []).map((baseline) => baseline.headId),
+      ...plan.clips.flatMap((candidate) => candidate.reference.displayHeadIds ?? []),
+    ])) states[headId] = siblingIndication(clip.indication);
+    for (const headId of selection.displayHeadIds ?? []) states[headId] = clip.indication;
   }
   return states;
 }
@@ -366,6 +386,7 @@ export function buildStageTimelineRows(input: SignalTimelineInput & { readonly j
   const baselines = input.index.projection.baselines.filter(
     (baseline) => baseline.junctionId === junctionId,
   );
+  baselines.push(...displayBaselinesForPlan(plan));
   const edges = boundaries(clips, baselines, clipSeconds, warmupSeconds);
   const intervals = edges.slice(0, -1).flatMap((startS, at) => {
     const endS = edges[at + 1]!;
@@ -395,14 +416,12 @@ export function buildStageTimelineRows(input: SignalTimelineInput & { readonly j
       );
       if (!indication) continue;
       const source: SignalBandSource = interval.clip ? "authored" : "baseline";
-      const activeStage = interval.clip
-        ? canonicalStageForController(
-            input.index,
-            junctionId,
-            interval.clip.reference.controllerId,
+      const activeStageIds = interval.clip
+        ? [interval.clip.reference, ...(interval.clip.reference.additionalStages ?? [])].map((reference) =>
+            canonicalStageForController(input.index, junctionId, reference.controllerId)?.id,
           )
-        : null;
-      const clipId = interval.clip && activeStage?.id === stage.id
+        : [];
+      const clipId = interval.clip && activeStageIds.includes(stage.id)
         ? interval.clip.id
         : null;
       const previous = merged[merged.length - 1];
@@ -471,6 +490,7 @@ export function buildReferenceSignalTimelineRow(
   const baselines = input.index.projection.baselines.filter(
     (baseline) => baseline.junctionId === junctionId,
   );
+  baselines.push(...displayBaselinesForPlan(input.plan));
   const edges = boundaries(
     input.plan.clips,
     baselines,
@@ -528,7 +548,7 @@ export function buildReferenceSignalTimelineRow(
  * that does not follow the pointer, which reads as a broken drag.
  */
 export function retimeClipBoundary(
-  clips: readonly { id: string; startS: number; endS: number; reference: { controllerId: string; headId: string }; indication: MapSignalIndication }[],
+  clips: readonly MapSignalPlan['clips'][number][],
   boundaryS: number,
   nextS: number,
 ): typeof clips {

@@ -298,7 +298,7 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
             ),
           );
         }
-        if (role.initialRoute) {
+        if (role.initialRoute?.mode === 'lanePath') {
           const placedLane = role.laneRef
             ? `${role.laneRef.roadId}:${role.laneRef.section}:${role.laneRef.laneId}`
             : null;

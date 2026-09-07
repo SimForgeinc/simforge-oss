@@ -1,4 +1,5 @@
 import type { ControlIndication, SignalProgram } from '@simforge-oss/engine';
+import type { MapSignalPlanClip } from '@simforge-oss/scenario';
 
 export type SignalControlDiagnosticCode =
   | 'unresolved_head'
@@ -25,6 +26,7 @@ export interface SignalMovementBinding {
   readonly headIds: readonly string[];
   readonly approachLaneRsls: readonly string[];
   readonly connectingLaneRsls: readonly string[];
+  readonly lanePairs?: readonly { readonly approachLaneRsl: string; readonly connectingLaneRsl: string }[];
 }
 
 export interface SignalControllerBinding {
@@ -56,6 +58,7 @@ export interface SignalControlIndex {
   readonly controllers: ReadonlyMap<string, SignalControllerBinding>;
   readonly junctions: ReadonlyMap<string, SignalJunctionControlBinding>;
   readonly diagnostics: readonly SignalControlDiagnostic[];
+  readonly physicalHeadIds?: ReadonlySet<string>;
 }
 
 export interface SignalReferenceSelection {
@@ -70,6 +73,8 @@ export interface SignalReferenceSelection {
   readonly intersectionHeadIds: readonly string[];
   readonly relatedMovementIds: readonly string[];
   readonly diagnostics: readonly SignalControlDiagnostic[];
+  /** Explicit display-only housings; never executable movement membership. */
+  readonly displayHeadIds?: readonly string[];
 }
 
 export interface SignalReferenceEvaluationInput {
@@ -104,8 +109,11 @@ function add(map: Map<string, Set<string>>, key: string, values: Iterable<string
  * OpenDRIVE controller-stage metadata. No geometric/proximity inference occurs. */
 export function buildSignalControlIndex(
   programs: readonly SignalProgram[],
-  physicalHeadIds: readonly string[] = [],
+  catalogHeads: readonly (string | { readonly id: string; readonly kind?: 'physical' | 'virtual' })[] = [],
 ): SignalControlIndex {
+  const physicalHeadIds = new Set(catalogHeads.flatMap((head) =>
+    typeof head === 'string' ? [head] : head.kind === 'virtual' ? [] : [head.id],
+  ));
   const diagnostics: SignalControlDiagnostic[] = [];
   const movements = new Map<string, SignalMovementBinding>();
   const headsToMovements = new Map<string, Set<string>>();
@@ -146,6 +154,9 @@ export function buildSignalControlIndex(
       headIds,
       approachLaneRsls: unique(program.stopLines.map((line) => line.rsl)),
       connectingLaneRsls: unique(program.stopLines.flatMap((line) => line.connectingLaneRsls)),
+      lanePairs: program.stopLines.flatMap((line) => line.connectingLaneRsls.map((connectingLaneRsl) => ({
+        approachLaneRsl: line.rsl, connectingLaneRsl,
+      }))),
     };
     movements.set(movement.id, movement);
     add(junctionHeads, movement.junctionId, headIds);
@@ -169,7 +180,7 @@ export function buildSignalControlIndex(
   }
 
   const allHeadIds = unique([
-    ...physicalHeadIds,
+    ...catalogHeads.map((head) => typeof head === 'string' ? head : head.id),
     ...headsToMovements.keys(),
     ...headsToControllers.keys(),
   ]);
@@ -215,7 +226,7 @@ export function buildSignalControlIndex(
       headIds: unique(junctionHeads.get(id) ?? []),
     });
   }
-  return { heads, movements, controllers, junctions, diagnostics };
+  return { heads, movements, controllers, junctions, diagnostics, physicalHeadIds };
 }
 
 /** Resolve a clicked physical head into a deterministic reference movement and
@@ -263,6 +274,69 @@ export function selectSignalReference(
   };
 }
 
+/** Resolve a simultaneous union of exact controller stages. The primary
+ * reference remains the display anchor; no unselected stage is activated. */
+export function selectSignalPlanReference(
+  index: SignalControlIndex,
+  reference: MapSignalPlanClip['reference'],
+): SignalReferenceSelection | null {
+  const resolve = (stage: { readonly controllerId: string; readonly headId: string }) => {
+    const controller = index.controllers.get(stage.controllerId);
+    const head = index.heads.get(stage.headId);
+    const movementId = controller?.movementIds.find((id) => head?.movementIds.includes(id));
+    return movementId
+      ? selectSignalReference(index, stage.headId, movementId, stage.controllerId)
+      : null;
+  };
+  const primary = resolve(reference);
+  if (!primary) return null;
+  const displayHeadIds = unique(reference.displayHeadIds ?? []);
+  if (displayHeadIds.some((id) => !index.physicalHeadIds?.has(id))) return null;
+  if (!reference.additionalStages?.length && displayHeadIds.length === 0 && reference.movements === undefined) return primary;
+  const seen = new Set([reference.controllerId]);
+  const movementIds = new Set(primary.stageMovementIds);
+  const headIds = new Set(primary.movementHeadIds);
+  for (const stage of reference.additionalStages ?? []) {
+    if (seen.has(stage.controllerId)) return null;
+    seen.add(stage.controllerId);
+    const selection = resolve(stage);
+    if (!selection || selection.junctionId !== primary.junctionId) return null;
+    for (const id of selection.stageMovementIds) movementIds.add(id);
+    for (const id of selection.movementHeadIds) headIds.add(id);
+  }
+  if (reference.movements !== undefined) {
+    movementIds.clear();
+    for (const id of primary.stageMovementIds) {
+      if (index.movements.get(id)?.lanePairs?.length === 0) movementIds.add(id);
+    }
+    const pairs = new Set<string>();
+    for (const pair of reference.movements) {
+      const key = JSON.stringify([pair.approachLaneRsl, pair.connectingLaneRsl]);
+      if (pairs.has(key)) return null;
+      pairs.add(key);
+      let found = false;
+      for (const id of primary.relatedMovementIds) {
+        const movement = index.movements.get(id);
+        if (movement?.lanePairs?.some((candidate) =>
+          candidate.approachLaneRsl === pair.approachLaneRsl && candidate.connectingLaneRsl === pair.connectingLaneRsl,
+        )) {
+          movementIds.add(id);
+          found = true;
+        }
+      }
+      if (!found) return null;
+    }
+  }
+  return {
+    ...primary,
+    controllerIds: unique(seen),
+    stageMovementIds: unique(movementIds),
+    movementHeadIds: unique(headIds),
+    displayHeadIds,
+    intersectionHeadIds: unique([...primary.intersectionHeadIds, ...displayHeadIds]),
+  };
+}
+
 /** Project authored movement state onto every physical head at the selected
  * intersection. Exact controller-stage head membership is authoritative;
  * programs that cannot express the resulting per-head state fail closed in
@@ -307,5 +381,6 @@ export function evaluateSignalReferencePhase(
         ? input.referencePhase
         : siblingPhase;
   }
+  for (const headId of selection.displayHeadIds ?? []) headStates[headId] = input.referencePhase;
   return { timeSeconds: input.timeSeconds, headStates, movementStates, diagnostics };
 }

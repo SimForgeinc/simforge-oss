@@ -278,7 +278,7 @@ function normalizeRuntimeRouteIntent(template: ScenarioTemplateV2): {
 } {
   let changed = false;
   const roles = template.roles.map((role) => {
-    if (role.kind !== 'scene_absolute' || !role.initialRoute) return role;
+    if (role.kind !== 'scene_absolute' || role.initialRoute?.mode !== 'lanePath') return role;
     changed = true;
     const { initialRoute: _initialRoute, ...runtimeRouted } = role;
     return runtimeRouted;
@@ -726,7 +726,7 @@ export class EditorDocument {
           role.driverProfile = update.driverProfile;
         }
         // Exact lane chains are runtime products, never editor-owned actor state.
-        delete role.initialRoute;
+        if (role.initialRoute?.mode === 'lanePath') delete role.initialRoute;
         if (update.bodyColor !== undefined) {
           role.extensions = { ...current.extensions, 'studio.presentation.bodyColor': update.bodyColor };
         }
@@ -1295,7 +1295,7 @@ function recordFromRole(role: RoleBinding): ActorRecord | null {
       ? undefined
       : role.driverProfile ?? 'lawful',
     static: role.actor.static,
-    routeLaneRsls: role.initialRoute?.lanes,
+    routeLaneRsls: role.initialRoute?.mode === 'lanePath' ? role.initialRoute.lanes : undefined,
     sensors: role.actor.sensors,
   };
 }

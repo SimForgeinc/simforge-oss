@@ -122,6 +122,7 @@ export {
   buildSeededPlacementRoute,
   buildDefaultPlacementRoute,
   Route,
+  routePointsHash,
   retargetToLane,
   retargetToNeighbour,
 } from './map/route.js';

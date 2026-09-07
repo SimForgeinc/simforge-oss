@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SignalBook, contentHash, type SignalProgram } from '@simforge-oss/engine';
+import { SignalBook, contentHash, routePointsHash, type SignalProgram } from '@simforge-oss/engine';
 import type { MapSignalPlan } from '@simforge-oss/scenario';
 
 import { compileMapSignalPlans, MapSignalPlanCompileError } from './map-signal-plan-compiler.js';
@@ -37,6 +37,71 @@ const options = {
 };
 
 describe('map signal plan compiler', () => {
+  it('selects one exact movement from a merged controller without releasing its other turn', () => {
+    const merged = [
+      { ...programs[0]!, stopLines: [{ rsl: 'a', s: 9, connectingLaneRsls: ['ja', 'jc'] }] },
+      programs[1]!,
+    ];
+    const authored = {
+      ...plan,
+      clips: [{ ...plan.clips[0]!, indication: 'green' as const, reference: {
+        ...plan.clips[0]!.reference, movements: [{ approachLaneRsl: 'a', connectingLaneRsl: 'ja' }],
+      } }],
+    };
+    const compiled = compileMapSignalPlans(merged, [authored], options);
+    const book = new SignalBook(compiled, 2);
+    const phasesFor = (connector: string, time: number) => compiled
+      .filter(program => program.stopLines.some(line => line.rsl === 'a' && line.connectingLaneRsls.includes(connector)))
+      .map(program => book.phaseAt(program.id, time));
+    expect(phasesFor('ja', 4)).toEqual(['green']);
+    expect(phasesFor('jc', 4)).toEqual(['red']);
+    expect(phasesFor('ja', -1)).toEqual(['green']);
+    expect(phasesFor('jc', -1)).toEqual(['green']);
+    expect(book.phaseAt('signal:h1', 4)).toBe('green');
+  });
+
+  it('retimes preserved route signals with their clips while leaving unrelated baselines unchanged', () => {
+    const pointsHash = routePointsHash([{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const routeSignal = {
+      id: 'retained-route', actorId: 'ego', routePointsHash: pointsHash, s: 40,
+      selectedByClipIds: ['clip'], phases: [{ phase: 'red' as const, durationS: 120 }], offsetS: 0, loop: true,
+    };
+    const authored: MapSignalPlan = {
+      ...plan,
+      routeSignals: [
+        routeSignal,
+        { ...routeSignal, id: 'other-junction', baselineOnly: true, selectedByClipIds: [], coordinationId: 'j2', phases: [{ phase: 'green', durationS: 120 }] },
+      ],
+    };
+    const withRoutes = { ...options, worldRoutes: { ego: { pointsHash, lengthM: 100 } } };
+    const before = new SignalBook(compileMapSignalPlans(programs, [authored], withRoutes), 2);
+    expect(before.phaseAt(routeSignal.id, -1)).toBe('red');
+    expect(before.phaseAt(routeSignal.id, 4)).toBe('yellow');
+    expect(before.phaseAt('other-junction', 4)).toBe('green');
+    const retimed = { ...authored, clips: [{ ...authored.clips[0]!, startS: 6, endS: 7, indication: 'green' as const }] };
+    const after = new SignalBook(compileMapSignalPlans(programs, [retimed], withRoutes), 2);
+    expect(after.phaseAt(routeSignal.id, 4)).toBe('red');
+    expect(after.phaseAt(routeSignal.id, 6.5)).toBe('green');
+    expect(after.phaseAt(routeSignal.id, 7)).toBe('red');
+    expect(after.phaseAt('other-junction', 6.5)).toBe('green');
+  });
+
+  it('supports route-only source controls but rejects stale geometry and out-of-route stops', () => {
+    const pointsHash = routePointsHash([{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const authored: MapSignalPlan = {
+      id: 'source-route-controls', version: 1, binding: { mapId: 'map', junctionId: 'source-junction', controlDigest: contentHash({ signalPrograms: [], roadControls: [] }) }, clips: [],
+      routeSignals: [{
+        id: 'route-baseline', actorId: 'ego', routePointsHash: pointsHash, s: 40,
+        selectedByClipIds: [], baselineOnly: true, phases: [{ phase: 'red', durationS: 120 }], offsetS: 0, loop: true,
+      }],
+    };
+    const withRoutes = { ...options, worldRoutes: { ego: { pointsHash, lengthM: 100 } } };
+    const book = new SignalBook(compileMapSignalPlans([], [authored], withRoutes), 2);
+    expect(book.phaseAt('route-baseline', 4)).toBe('red');
+    expect(() => compileMapSignalPlans([], [authored], { ...withRoutes, worldRoutes: { ego: { pointsHash: '0'.repeat(64), lengthM: 100 } } })).toThrow(MapSignalPlanCompileError);
+    expect(() => compileMapSignalPlans([], [authored], { ...withRoutes, worldRoutes: { ego: { pointsHash, lengthM: 30 } } })).toThrow(MapSignalPlanCompileError);
+  });
+
   it('preserves baseline warm-up/gaps and atomically holds other stages red', () => {
     const compiled = compileMapSignalPlans(programs, [plan], options);
     const book = new SignalBook(compiled, 2);
@@ -47,6 +112,37 @@ describe('map signal plan compiler', () => {
     expect(book.phaseAt('signal:h1', 5)).toBe('red');
     expect(book.phaseAt('signal:h1', 8)).toBe('red');
     expect(compiled.every((program) => !program.loop && program.mapBinding?.timingSource === 'authored')).toBe(true);
+  });
+
+  it('executes a union of controller stages without forcing a selected stage red', () => {
+    const authored = {
+      ...plan,
+      clips: [{ ...plan.clips[0]!, indication: 'green' as const, reference: {
+        controllerId: 'c1', headId: 'h1', additionalStages: [{ controllerId: 'c2', headId: 'h2' }],
+      } }],
+    };
+    const book = new SignalBook(compileMapSignalPlans(programs, [authored], options), 2);
+    expect(book.phaseAt('signal:h1', 4)).toBe('green');
+    expect(book.phaseAt('signal:h2', 4)).toBe('green');
+    expect(book.phaseAt('signal:h1', 5)).toBe('red');
+  });
+
+  it('preserves a detached physical lamp baseline and clip without changing movement control', () => {
+    const authored: MapSignalPlan = {
+      ...plan,
+      displayBaselines: [{ headId: 'housing', phases: [{ phase: 'green', durationS: 2 }, { phase: 'red', durationS: 2 }], offsetS: 0, loop: true }],
+      clips: [{ ...plan.clips[0]!, reference: { ...plan.clips[0]!.reference, displayHeadIds: ['housing'] } }],
+    };
+    const compiled = compileMapSignalPlans(programs, [authored], {
+      ...options, signalCatalog: { ...catalog, heads: [...catalog.heads, { id: 'housing', kind: 'physical', roadId: '17', s: 1, dynamic: true }] },
+    });
+    const display = compiled.find(program => program.mapBinding?.headIds.includes('housing'))!;
+    expect(display.stopLines).toEqual([]);
+    const book = new SignalBook(compiled, 2);
+    expect(book.phaseAt(display.id, -1)).toBe('green');
+    expect(book.phaseAt(display.id, 4)).toBe('yellow');
+    expect(book.phaseAt(display.id, 5)).toBe('red');
+    expect(book.phaseAt('signal:h2', 4)).toBe('red');
   });
 
   it.each(['green', 'yellow', 'red', 'flashing_yellow', 'flashing_red', 'off'] as const)(

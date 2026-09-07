@@ -568,6 +568,19 @@ export type Interaction = z.infer<typeof interactionSchema>;
 
 /* ----------------------------------------------------- signals & occluders */
 
+const stopLineSchema = z.object({
+  /** Empty only for an explicitly actor-route-bound stop line. */
+  rsl: z.string().default(''),
+  actorId: z.string().min(1).optional(),
+  routePointsHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  s: nonNeg,
+  /** Optional connecting-lane movement filter for topology-bound lines. */
+  connectingLaneRsls: z.array(z.string().min(1)).default([]),
+}).refine((line) => line.actorId !== undefined
+  ? line.rsl === '' && line.connectingLaneRsls.length === 0 && line.routePointsHash !== undefined
+  : line.rsl.length > 0 && line.routePointsHash === undefined,
+{ message: 'stop line requires either a lane binding or a geometry-identified actor-route binding, not both' });
+
 export const signalProgramSchema = z.object({
   id: idSchema,
   /**
@@ -600,24 +613,13 @@ export const signalProgramSchema = z.object({
    * Stop lines this program controls. An actor whose route crosses one of these
    * lanes brakes for the line when the phase forbids entry.
    */
-  stopLines: z
-    .array(z.object({
-      rsl: z.string().min(1),
-      s: nonNeg,
-      /**
-       * Optional movement filter. A stop line only applies when the actor's
-       * route continues through one of these junction lanes. This keeps a
-       * protected left-turn head from stopping adjacent through traffic that
-       * happens to share the same approach lane.
-       */
-      connectingLaneRsls: z.array(z.string().min(1)).default([]),
-    }))
-    .default([]),
+  stopLines: z.array(stopLineSchema).default([]),
   /** Stable binding back to the map's physical signal furniture/export ids. */
   mapBinding: z.object({
     junctionId: z.string().min(1),
     controllerIds: z.array(z.string().min(1)).default([]),
-    headIds: z.array(z.string().min(1)).min(1),
+    /** Empty for movement-only programs whose housings have explicit display timelines. */
+    headIds: z.array(z.string().min(1)),
     /**
      * Authoritative OpenDRIVE controller-sequence membership. A physical head
      * may occur in more than one ordered controller stage; flattening that
@@ -627,7 +629,7 @@ export const signalProgramSchema = z.object({
      */
     controllerHeadGroups: z.array(z.object({
       controllerId: z.string().min(1),
-      headIds: z.array(z.string().min(1)).min(1),
+      headIds: z.array(z.string().min(1)),
     })).optional(),
     /** Honest provenance for programs derived without authoritative timing. */
     timingSource: z.enum(['map', 'synthetic-default', 'authored']),
@@ -662,11 +664,7 @@ export const roadControlSchema = z.object({
   kind: z.literal('stop'),
   /** Minimum continuous standstill before this actor may proceed. */
   dwellS: positive.default(1),
-  stopLines: z.array(z.object({
-    rsl: z.string().min(1),
-    s: nonNeg,
-    connectingLaneRsls: z.array(z.string().min(1)).default([]),
-  })).min(1),
+  stopLines: z.array(stopLineSchema).min(1),
   mapBinding: z.object({
     junctionId: z.string().min(1),
     controlIds: z.array(z.string().min(1)).min(1),

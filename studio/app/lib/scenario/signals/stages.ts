@@ -12,6 +12,9 @@
  * only the authoring projection of executable stages.
  */
 
+import { selectSignalPlanReference, type SignalControlIndex } from "@simforge-oss/compiler";
+import type { MapSignalPlanClip } from "@simforge-oss/scenario";
+
 import type {
   EditorSignalController,
   EditorSignalControlProjection,
@@ -28,18 +31,34 @@ export type EditorSignalIndex = {
   readonly controllerById: ReadonlyMap<string, EditorSignalController>;
   readonly movementById: ReadonlyMap<string, EditorSignalMovement>;
   readonly junctionById: ReadonlyMap<string, EditorSignalJunction>;
+  readonly controlIndex: SignalControlIndex;
 };
 
 export function buildEditorSignalIndex(
   projection: EditorSignalControlProjection,
 ): EditorSignalIndex {
+  const headById = new Map(projection.heads.map((head) => [head.id, head]));
+  const controllerById = new Map(projection.controllers.map((controller) => [controller.id, controller]));
   return {
     projection,
-    headById: new Map(projection.heads.map((head) => [head.id, head])),
-    controllerById: new Map(projection.controllers.map((controller) => [controller.id, controller])),
+    headById,
+    controllerById,
     movementById: new Map(projection.movements.map((movement) => [movement.id, movement])),
     junctionById: new Map(projection.junctions.map((junction) => [junction.junctionId, junction])),
+    controlIndex: {
+      heads: headById,
+      controllers: controllerById,
+      movements: new Map(projection.movements.map((movement) => [movement.id, { ...movement, programId: movement.id }])),
+      junctions: new Map(projection.junctions.map((junction) => [junction.junctionId, { ...junction, id: junction.junctionId }])),
+      diagnostics: projection.diagnostics,
+      physicalHeadIds: new Set(projection.heads.filter((head) => head.kind !== 'virtual').map((head) => head.id)),
+    },
   };
+}
+
+/** Use the runtime's exact simultaneous-stage semantics for persisted clips. */
+export function selectSignalClipReference(index: EditorSignalIndex, reference: MapSignalPlanClip['reference']) {
+  return selectSignalPlanReference(index.controlIndex, reference);
 }
 
 function controllerStageKey(controller: EditorSignalController): string {

@@ -1724,9 +1724,35 @@ class Materializer {
       let route: Route;
       let routeSpec: SimActor['behavior']['route'];
       let laneRef: SimActor['initial']['laneRef'];
-      if (rsl) {
+      if (role.initialRoute?.mode === 'worldPath') {
+        routeSpec = { kind: 'polyline', points: role.initialRoute.points };
+        route = Route.fromPolyline(role.initialRoute.points.map(point => ({ x: point.x, y: -point.z })));
+        for (const [stopIndex, stop] of (role.initialRoute.stopControls ?? []).entries()) {
+          if (stop.s > route.lengthM + 1e-6) {
+            throw new CliError('route_stop_out_of_range', `static stop "${stop.id}" lies beyond the world route`, {
+              path: `${path}.initialRoute.stopControls[${stopIndex}].s`,
+            });
+          }
+          const id = `route:${stop.id}`;
+          const line = { actorId: role.id, routePointsHash: route.pointsHash!, rsl: '', s: stop.s, connectingLaneRsls: [] };
+          const existing = this.roadControls.find(control => control.id === id);
+          if (existing) {
+            if (existing.dwellS !== stop.dwellS || existing.mapBinding?.junctionId !== stop.coordinationId) {
+              throw new CliError('route_stop_conflict', `static stop "${stop.id}" has inconsistent coordination or dwell`, {
+                path: `${path}.initialRoute.stopControls[${stopIndex}]`,
+              });
+            }
+            existing.stopLines.push(line);
+          } else {
+            this.roadControls.push({
+              id, kind: 'stop', dwellS: stop.dwellS, stopLines: [line],
+              ...(stop.coordinationId ? { mapBinding: { junctionId: stop.coordinationId, controlIds: [stop.id], source: 'authored' as const } } : {}),
+            });
+          }
+        }
+      } else if (rsl) {
         const distance = Math.max(100, authoredSpeedCeilingMps * (this.template.choreography.clipSeconds + this.template.choreography.warmupSeconds) * 1.6);
-        const authoredLanePath = role.initialRoute?.lanes ?? this.spawnRouteLanePathFor(role.id);
+        const authoredLanePath = role.initialRoute?.mode === 'lanePath' ? role.initialRoute.lanes : this.spawnRouteLanePathFor(role.id);
         if (authoredLanePath && authoredLanePath[0] !== rsl) {
           throw new CliError('route_disconnected', `authored lane path for "${role.id}" does not start on its placed lane`, {
             path: `${path}.laneRef`, detail: { placedLane: rsl, routeStart: authoredLanePath[0] },
@@ -2591,6 +2617,12 @@ class Materializer {
   private compileAuthoredMapSignals(): void {
     if (this.template.mapSignalPlans.length === 0) return;
     const controls = buildMapControlPlan(this.bundle);
+    const worldRoutes: Record<string, { pointsHash: string; lengthM: number }> = {};
+    for (const role of this.template.roles) {
+      if (role.kind !== 'scene_absolute' || role.initialRoute?.mode !== 'worldPath') continue;
+      const route = this.routeByRole.get(role.id);
+      if (route?.pointsHash) worldRoutes[role.id] = { pointsHash: route.pointsHash, lengthM: route.lengthM };
+    }
     try {
       this.compiledMapSignalPrograms = compileMapSignalPlans(
         controls.signalPrograms,
@@ -2600,6 +2632,8 @@ class Materializer {
           clipSeconds: this.template.choreography.clipSeconds,
           warmupSeconds: this.template.choreography.warmupSeconds,
           signalCatalog: this.bundle.signalCatalog,
+          worldRoutes,
+          worldSignalSetIds: this.worldSignalSetIds(controls.signalPrograms),
         },
       );
       this.notes.push({
@@ -3689,8 +3723,8 @@ class Materializer {
     assertMaterializableRuleControls(this.template);
     this.buildReferenceRoute();
     this.buildTrafficControls();
-    this.compileAuthoredMapSignals();
     this.buildActors();
+    this.compileAuthoredMapSignals();
     this.assertTerminatingLaneMergeClosure();
     this.foldInitialRules();
     // Rules folded after the actors were built: rebuild the ones that changed.

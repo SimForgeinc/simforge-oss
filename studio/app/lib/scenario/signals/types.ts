@@ -106,6 +106,9 @@ export type EditorSignalHead = {
   readonly s: number;
   /** `dynamic="yes"`: a state-changing device. A static sign is not authorable. */
   readonly dynamic: boolean;
+  readonly kind?: 'physical' | 'virtual';
+  readonly signalId?: string;
+  readonly gateId?: string;
   /** Junctions claiming this head. More than one is a map defect. */
   readonly junctionIds: readonly string[];
   readonly controllerIds: readonly string[];
@@ -147,6 +150,7 @@ export type EditorSignalMovement = {
   readonly headIds: readonly string[];
   readonly approachLaneRsls: readonly string[];
   readonly connectingLaneRsls: readonly string[];
+  readonly lanePairs?: readonly { readonly approachLaneRsl: string; readonly connectingLaneRsl: string }[];
   /** Gate ids realised by this movement. */
   readonly gateIds: readonly string[];
   /** Distinct `TopologyGate.turnRelation` values across those gates, sorted. */
