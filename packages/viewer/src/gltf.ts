@@ -1,3 +1,5 @@
+/// <reference path="./ktx-parse.d.ts" />
+
 import type { BufferGeometry, Material, Object3D, Texture, WebGLRenderer } from 'three';
 import { CompressedTexture, Mesh, RGBAFormat, RGBA_S3TC_DXT1_Format } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
