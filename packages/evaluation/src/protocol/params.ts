@@ -36,6 +36,27 @@ export type RefusalCode = (typeof REFUSAL_CODES)[number];
 export const EPISODE_MODES = ['offline-simtime', 'realtime'] as const;
 export type EpisodeMode = (typeof EPISODE_MODES)[number];
 
+/**
+ * Every authored `alpamayo-*` rig preset has APPROXIMATED extrinsics and a
+ * wider vertical FoV than the calibrated dataset rig: the presets reproduce
+ * the horizontal FoV but render 4:3 where the dataset cameras are 1920x1208,
+ * so frames show more sky and hood than the training distribution. The real
+ * per-vehicle calibration lives inside the gated dataset and the policy wire
+ * carries no intrinsics or extrinsics at all (cameras are identified by index
+ * only) \u2014 see the comment above `ALPAMAYO_CAMERA_TEMPLATES` in
+ * packages/scenario/src/schema/v2/sensor-rigs.ts.
+ *
+ * An episode rendered from these mounts is therefore a valid engineering run
+ * and never upstream parity, and every result stamps it as such. The test is
+ * a prefix rather than a fixed id list because a future authored preset is
+ * approximated too, unless someone lands real calibration.
+ */
+export const APPROXIMATED_EXTRINSICS_OOD = 'approximated_extrinsics';
+
+export function rigHasApproximatedExtrinsics(cameraProfile: string | null | undefined): boolean {
+  return typeof cameraProfile === 'string' && cameraProfile.startsWith('alpamayo-');
+}
+
 export const OpenloopSamplingSchema = z.object({
   numTrajSamples: z.number().int().min(1).max(64).default(1),
   topP: z.number().min(0).max(1).default(0.98),

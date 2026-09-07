@@ -64,6 +64,7 @@ import {
   loadReplayContextSummary,
   type ReplayContextSummary,
 } from './protocol/replay-envelope.js';
+import { APPROXIMATED_EXTRINSICS_OOD, rigHasApproximatedExtrinsics } from './protocol/params.js';
 
 import {
   FINAL_EPISODE_STATUSES as FINAL_STATUSES,
@@ -555,7 +556,7 @@ async function writeEpisodeArtifacts(
       kind: resolved.replayContext ? 'replay-context' : 'scenario',
       ref: path.relative(REPO_ROOT, resolved.replayContextDir ?? resolved.specPath),
       digest: resolved.replayContext?.digest ?? resolved.fixtureSha256,
-      ood: [],
+      ood: modelProvenance && rigHasApproximatedExtrinsics(plan.policy.cameraProfile) ? [APPROXIMATED_EXTRINSICS_OOD] : [],
       replayContext: (outcome.summary['replay_context'] ?? null) as Record<string, unknown> | null,
     },
     controller: {
@@ -661,7 +662,7 @@ async function writeEpisodeArtifacts(
         kind: provenance.input.kind,
         ref: provenance.input.ref,
         digest: provenance.input.digest,
-        ood: [],
+        ood: provenance.input.ood,
         replayContext: provenance.input.replayContext,
       },
       runtime: {

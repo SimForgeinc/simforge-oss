@@ -38,7 +38,11 @@ import {
   verifyJobInputs,
   type ComputeJobInput,
 } from './protocol/compute-job.js';
-import { PolicyEpisodeParamsSchema } from './protocol/params.js';
+import {
+  APPROXIMATED_EXTRINSICS_OOD,
+  PolicyEpisodeParamsSchema,
+  rigHasApproximatedExtrinsics,
+} from './protocol/params.js';
 import {
   endpointHealth,
   EndpointTransportError,
@@ -144,6 +148,8 @@ interface ManifestParts {
   readonly model: Record<string, unknown> | null;
   readonly inputKind: string;
   readonly inputDigest: string | null;
+  /** Out-of-distribution stamps, e.g. `approximated_extrinsics`. */
+  readonly ood: readonly string[];
   readonly replayContext: Record<string, unknown> | null;
   readonly error: { code: ErrorCode; message: string; fields?: readonly string[] } | null;
 }
@@ -206,7 +212,7 @@ async function emitManifest(
         kind: parts.inputKind,
         ref: null,
         digest: parts.inputDigest,
-        ood: [],
+        ood: [...parts.ood],
         replayContext: parts.replayContext,
       },
       runtime: { worker: 'simforge-eval-worker', node: process.version, jobKind: job.kind },
@@ -286,6 +292,7 @@ async function main(): Promise<number> {
         artifacts: outcome.artifacts,
         model: outcome.model,
         inputKind: outcome.inputKind,
+        ood: [],
         inputDigest: outcome.inputDigest,
         replayContext: null,
         error: null,
@@ -354,6 +361,12 @@ async function main(): Promise<number> {
       artifacts: outcome.artifacts,
       model: outcome.model,
       inputKind: replayContextDir ? 'replay-context' : 'scenario',
+      // Rendered from an authored rig: its extrinsics are approximations of
+      // the dataset rig, so the result says so and cannot be read as parity.
+      ood:
+        params.runnerPolicy === 'endpoint' && rigHasApproximatedExtrinsics(params.cameraProfile)
+          ? [APPROXIMATED_EXTRINSICS_OOD]
+          : [],
       inputDigest: null,
       replayContext:
         outcome.summary['replay_context'] && typeof outcome.summary['replay_context'] === 'object'
@@ -393,6 +406,7 @@ async function main(): Promise<number> {
       artifacts: [],
       model: null,
       inputKind: 'unknown',
+      ood: [],
       inputDigest: null,
       replayContext: null,
       error: { code: failure.code, message: failure.message, fields: failure.fields },
