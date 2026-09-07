@@ -40,16 +40,20 @@ const REFUSAL_TITLES: Record<string, string> = {
 };
 
 function HorizonTable({ label, metrics }: { label: string; metrics: HorizonMetrics }) {
-  const horizons = Object.keys(metrics).sort((a, b) => Number(a) - Number(b));
+  // Whatever horizons the producer actually wrote, in ascending order — a
+  // horizon this build predates is shown rather than dropped.
+  const horizons = Object.entries(metrics)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number")
+    .sort((left, right) => Number(left[0]) - Number(right[0]));
   if (horizons.length === 0) return null;
   return (
     <div>
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
-        {horizons.map((horizon) => (
+        {horizons.map(([horizon, metric]) => (
           <div key={horizon} className="text-sm">
             <dt className="text-xs text-muted-foreground">{horizon}s</dt>
-            <dd className="tabular-nums text-foreground">{metrics[horizon].toFixed(3)} m</dd>
+            <dd className="tabular-nums text-foreground">{metric.toFixed(3)} m</dd>
           </div>
         ))}
       </dl>

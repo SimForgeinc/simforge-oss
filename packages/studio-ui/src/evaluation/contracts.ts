@@ -19,6 +19,22 @@
  * empty success, and never leaves a screen loading forever.
  */
 
+import type {
+  ArtifactRole,
+  EpisodeMode,
+  EvalArtifact,
+  InputKind,
+  InputProvenance,
+  ModelProvenance,
+  OpenloopItem,
+  OpenloopParams,
+  OpenloopResult,
+  RefusalCode,
+  ResultKind,
+  ResultManifest,
+  ResultStatus,
+  Truncation,
+} from "@simforge-oss/evaluation/protocol";
 import type { ModelFamilyId, ModelQuant } from "./model-catalog";
 
 export const EVAL_RESULT_MANIFEST_SCHEMA = "simforge.eval-result-manifest/v1" as const;
@@ -208,143 +224,44 @@ export type UploadCompletion = {
 /* Durable results                                                            */
 /* -------------------------------------------------------------------------- */
 
-/** Frozen by the evaluation package: an unknown role fails its validation. */
-export type EvalArtifactRole =
-  | "result-manifest"
-  | "openloop-result"
-  | "video"
-  | "frames"
-  | "overlay-frames"
-  | "trajectories"
-  | "trace"
-  | "events"
-  | "score"
-  | "provenance"
-  | "evidence"
-  | "log";
-
-export type EvalManifestArtifact = {
-  role: EvalArtifactRole;
-  /** Relative to the manifest directory. */
-  path: string;
-  sha256: string;
-  bytes: number;
-  mediaType?: string;
-};
-
-export type EvalModelProvenance = {
-  family: string;
-  revision: string;
-  checkpointDigest: string;
-  quant: string;
-  attn?: string;
-  torch?: string;
-  cuda?: string;
-  diffusionSteps?: number;
-  numTrajSamples?: number;
-  cameraProfile?: string;
-  rngProvenance?: string;
-};
-
-export type EvalInputProvenance = {
-  kind: string;
-  digest: string;
-  ood?: string[];
-  replayContext?: string;
-};
-
-export type EvalProvenance = {
-  model?: EvalModelProvenance;
-  input?: EvalInputProvenance;
-  [key: string]: unknown;
-};
-
-export type EvalResultManifest = {
-  schema: string;
-  kind: "openloop" | "text" | "closedloop-episode";
-  runId: string;
-  attemptId: string;
-  status: "succeeded" | "failed" | "cancelled" | "partial";
-  /** False whenever no reference future existed: a prediction is not a score. */
-  scored: boolean;
-  artifacts: EvalManifestArtifact[];
-  metrics: Record<string, unknown>;
-  provenance: EvalProvenance;
-  timing: Record<string, unknown>;
-  /** Closed-loop only. An offline run must never be labelled real-time. */
-  mode?: "offline-simtime" | "realtime";
-  truncation?: "envelope_exceeded" | "deadline_budget" | null;
-};
-
-/** Metric buckets keyed by horizon seconds, as strings: "1.0" | "3.0" | "6.4". */
-export type HorizonMetrics = Record<string, number>;
-
-/** Per-item refusal codes emitted by the evaluation worker. */
-export type OpenLoopRefusalCode =
-  | "missing_fields"
-  | "camera_set_invalid"
-  | "calibration_invalid"
-  | "reference_missing"
-  | "unsupported_op"
-  | "input_error";
-
 /**
- * Where a reference future came from.
+ * The evaluation package's own document types, re-exported under the names this
+ * UI uses.
  *
- * Only `dataset` and `recorded-replay` are recorded human futures. An
- * `authored` scenario or a `reference-policy` trajectory is a reference, and
- * presenting either as human ground truth would misstate what was measured.
+ * These are the canonical definitions, imported type-only from the
+ * `./protocol` subpath, which does not re-export the episode runner or any
+ * execution core. Type imports are erased, so this costs the portal bundle
+ * nothing; duplicating them here would only create a second definition free to
+ * drift. Runtime validation stays local (see {@link readEvalResultManifest}),
+ * because a UI should degrade on an older document rather than throw.
  */
-export type OpenLoopReference = {
-  kind: "dataset" | "recorded-replay" | "authored" | "reference-policy" | "none";
-  points?: number[][];
-  frame?: string;
-  convention?: string;
-  dtS?: number;
-};
+export type EvalArtifactRole = ArtifactRole;
+export type EvalManifestArtifact = EvalArtifact;
+export type EvalModelProvenance = ModelProvenance;
+export type EvalInputProvenance = InputProvenance;
+export type EvalResultManifest = ResultManifest;
+export type EvalResultStatus = ResultStatus;
+export type EvalResultKind = ResultKind;
+export type EvalTruncation = Truncation;
+export type OpenLoopItem = OpenloopItem;
+export type OpenLoopResult = OpenloopResult;
+export type OpenLoopRefusalCode = RefusalCode;
+export type OpenLoopParams = OpenloopParams;
+export type OpenLoopInputKind = InputKind;
+export type EpisodeRunMode = EpisodeMode;
 
 /**
- * One evaluated input. `refused` is a first-class outcome: the model was not
- * given the driving inputs it requires and nothing was fabricated to fill the
- * gap, so `refusal.missingFields` is what the user must see.
+ * A metric bucket keyed by horizon seconds.
+ *
+ * Widened on purpose: the producer keys these by its own horizon union, and a
+ * result written by a newer worker may carry a horizon this build has never
+ * heard of. The tables render whatever keys are present, so an unknown horizon
+ * shows up instead of being dropped.
  */
-export type OpenLoopItem = {
-  index: number;
-  itemId: string;
-  status: "ok" | "refused" | "error";
-  /** Ego-frame at t0 by default; read `frame`/`convention` rather than assuming. */
-  frame?: string;
-  convention?: string;
-  dtS?: number;
-  horizonS?: number;
-  /** One entry per sampled trajectory, each a list of [x, y, z] metric points. */
-  points?: number[][][];
-  rotations?: number[][][] | null;
-  reasoning?: string | null;
-  metrics?: { minADE_k?: HorizonMetrics; minFDE_k?: HorizonMetrics } & Record<string, unknown>;
-  reference?: OpenLoopReference;
-  latencyMs?: number;
-  refusal?: { code?: OpenLoopRefusalCode; missingFields: string[]; message?: string } | null;
-  /** Text runs only: the model's answer and any structured fields it returned. */
-  text?: string | null;
-  fields?: Record<string, unknown> | null;
-  error?: { code?: string; message?: string } | null;
-};
+export type HorizonMetrics = Record<string, number | undefined>;
 
-export type OpenLoopResult = {
-  schema: string;
-  model?: EvalModelProvenance;
-  input?: EvalInputProvenance;
-  items: OpenLoopItem[];
-  aggregate?: {
-    minADE?: HorizonMetrics;
-    minFDE?: HorizonMetrics;
-    scoredItems?: number;
-    refusedItems?: number;
-    failedItems?: number;
-  };
-  provenance?: EvalProvenance;
-};
+/** Where a reference future came from, as the producer records it. */
+export type OpenLoopReference = NonNullable<OpenloopItem["reference"]>;
 
 /**
  * Camera calibration for drawing an image-space overlay.
@@ -414,35 +331,16 @@ export function readEvalResultManifest(value: unknown): ContractReadResult<EvalR
   if (status !== "succeeded" && status !== "failed" && status !== "cancelled" && status !== "partial") {
     return { ok: false, reason: `unknown result status ${JSON.stringify(status)}` };
   }
-  const artifacts = Array.isArray(value.artifacts)
-    ? value.artifacts.filter(isRecord).map((entry) => ({
-        role: entry.role as EvalArtifactRole,
-        path: typeof entry.path === "string" ? entry.path : "",
-        sha256: typeof entry.sha256 === "string" ? entry.sha256 : "",
-        bytes: typeof entry.bytes === "number" ? entry.bytes : 0,
-        mediaType: typeof entry.mediaType === "string" ? entry.mediaType : undefined,
-      }))
-    : [];
-  return {
-    ok: true,
-    value: {
-      schema: value.schema,
-      kind,
-      status,
-      runId: typeof value.runId === "string" ? value.runId : "",
-      attemptId: typeof value.attemptId === "string" ? value.attemptId : "",
-      scored: value.scored === true,
-      artifacts,
-      metrics: isRecord(value.metrics) ? value.metrics : {},
-      provenance: isRecord(value.provenance) ? (value.provenance as EvalProvenance) : {},
-      timing: isRecord(value.timing) ? value.timing : {},
-      mode: value.mode === "offline-simtime" || value.mode === "realtime" ? value.mode : undefined,
-      truncation:
-        value.truncation === "envelope_exceeded" || value.truncation === "deadline_budget"
-          ? value.truncation
-          : null,
-    },
-  };
+  if (!Array.isArray(value.artifacts)) {
+    return { ok: false, reason: "the result manifest carries no `artifacts` array" };
+  }
+  if (!isRecord(value.provenance)) {
+    return { ok: false, reason: "the result manifest carries no `provenance` block" };
+  }
+  // Validated at the boundary above, then asserted rather than rebuilt
+  // field-by-field: rebuilding would silently drop any field a newer worker
+  // added, and the discriminating fields are exactly what was just checked.
+  return { ok: true, value: value as unknown as EvalResultManifest };
 }
 
 export function readOpenLoopResult(value: unknown): ContractReadResult<OpenLoopResult> {
