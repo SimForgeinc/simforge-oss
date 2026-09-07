@@ -42,6 +42,50 @@ describe('essential streaming assets', () => {
     layer.dispose();
   });
 
+  it('reclaims an offscreen pinned fallback and reloads it when the view returns', async () => {
+    let wanted = true;
+    const layer = new TileStreamLayer({
+      name: 'view-scoped-city',
+      renderer: { compileAsync: async () => undefined } as never,
+      scene: new Scene(),
+      defs: [{
+        id: 'tile', box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => emptyAsset(), maxConcurrent: 1,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      pinCoarsest: true,
+      want: () => wanted,
+    });
+    const load = async () => {
+      layer.update(new Vector3(), 1, 9999);
+      await Promise.resolve();
+      layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+      await layer.whenCompilationIdle();
+    };
+    await load();
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+    const visibleCandidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(visibleCandidates);
+    expect(visibleCandidates).toEqual([]);
+
+    wanted = false;
+    layer.update(new Vector3(), 1, 9999);
+    const offscreenCandidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(offscreenCandidates);
+    expect(offscreenCandidates).toHaveLength(1);
+    layer.evict(offscreenCandidates[0]!);
+    expect(layer.stats().residentAssets).toBe(0);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+
+    wanted = true;
+    expect(layer.stats().requiredPendingAssets).toBe(1);
+    await load();
+    expect(layer.stats().residentAssets).toBe(1);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+    layer.dispose();
+  });
+
   it('does not report an unaffordable optional LOD as endlessly queued', () => {
     const build = vi.fn(async () => emptyAsset());
     const layer = new TileStreamLayer({

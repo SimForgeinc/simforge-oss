@@ -34,8 +34,11 @@ bytes, including external textures and startup metadata. `loadProgress`
 reports the current stage and completed decode, texture-upload, and compile
 counts; elapsed time alone is never progress.
 
-Readiness requires road geometry and all wanted pinned coarse city tiles to
-finish GPU preparation. `requiredPendingAssets` excludes optional refinements;
+Readiness requires road geometry and pinned coarse city tiles intersecting the
+current camera frustum to finish GPU preparation. Offscreen tiles do not gate
+startup or fetch solely to complete a whole-map bootstrap. Their resident
+fallbacks may be evicted under memory pressure; newly visible tiles load their
+coarse fallback before refinement. `requiredPendingAssets` excludes optional refinements;
 `requiredError` surfaces required download, decode, upload, compile, or memory
 admission failures. A failed compile must not publish the asset as resident.
 Consumers should poll from bootstrap start, use stage-specific idle deadlines
@@ -52,8 +55,8 @@ Before any image decode, the map's tile count and each GLTF's image count
 determine an initial mip budget, reserving half the memory budget for geometry,
 environment resources, and in-flight work. This avoids preparing oversized
 textures merely to discover later that the required coarse map cannot fit.
-If required coarse tiles cannot fit, the viewer estimates the full-map footprint
-from resident tiles and lowers the mip ceiling in power-of-two steps, never
+If required coarse tiles cannot fit, the viewer estimates the footprint of
+resident and required visible tiles and lowers the mip ceiling in power-of-two steps, never
 below 128 pixels. Geometry remains required. The effective limit is reported in
 `loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
 Each new map starts from the user's selected preset ceiling.
