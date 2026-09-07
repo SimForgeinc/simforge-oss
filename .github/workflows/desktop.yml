@@ -81,8 +81,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Verify signed-payload integrity rules
-        run: node --test desktop/stage-manifest.test.mjs
+      - name: Verify dependency placement and signed-payload integrity
+        run: node --test desktop/stage-dependencies.test.mjs desktop/stage-manifest.test.mjs
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.triple }},wasm32-unknown-unknown

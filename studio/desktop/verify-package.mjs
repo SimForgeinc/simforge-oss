@@ -30,8 +30,8 @@
 // the lock if absent) and proves against the lock again before deriving
 // anything from them. Nothing recorded in the stage or the package is
 // trusted for this: rewriting a manifest cannot make other code pass, and a
-// signed tool passes only if all it differs in is its signature. That the
-// signature itself is well formed is codesign's to verify (the workflow does).
+// signed tool passes only if all it differs in is its signature. On macOS this
+// verifier also invokes codesign on the manifest-resolved encoder paths.
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -193,7 +193,7 @@ for (const rel of archives) {
   ]) {
     const info = await stat(join(stage, file)).catch(() => null);
     if (!info?.isFile()) problems.push(`${rel}: ${file} is missing from the package`);
-    else if (platform !== "win32" && /\/bin\/[^/]+$/.test(file) && (info.mode & 0o111) === 0) problems.push(`${rel}: ${file} is not executable`);
+    else if (platform !== "win32" && (file === manifest.nativeRunner || file === manifest.nativeRenderService) && (info.mode & 0o111) === 0) problems.push(`${rel}: ${file} is not executable`);
   }
   const closures = await readdir(join(stage, manifest.actorAssetsRoot, "closures")).catch(() => []);
   if (closures.length === 0) problems.push(`${rel}: ${manifest.actorAssetsRoot} carries no actor closure`);

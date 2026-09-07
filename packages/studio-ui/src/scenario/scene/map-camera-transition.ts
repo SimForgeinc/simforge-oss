@@ -34,6 +34,8 @@ export function mapModelsFullyLoaded(snapshot: MapModelLoadSnapshot): boolean {
  * Require a quiet window rather than trusting one empty queue sample. Tile and
  * model decoders can briefly reach zero between batches, which used to start
  * the zoom-in while destination buildings were still appearing.
+ * Quiet and inactivity windows count only visible time: browser occlusion can
+ * suspend the animation frames that drain GPU uploads.
  */
 export function waitForMapModelsFullyLoaded(
   readSnapshot: () => MapModelLoadSnapshot,
@@ -49,23 +51,37 @@ export function waitForMapModelsFullyLoaded(
   const stableMs = options.stableMs ?? MAP_MODEL_STABLE_MS;
   const timeoutMs = options.timeoutMs ?? MAP_MODEL_LOAD_TIMEOUT_MS;
   const pollMs = options.pollMs ?? 100;
-  const startedAt = Date.now();
-  let lastActivityAt = startedAt;
+  const visibilityDocument = typeof document === "undefined" ? null : document;
+  let visible = visibilityDocument?.visibilityState !== "hidden";
+  let lastClockAt = Date.now();
+  let activeTime = 0;
+  let lastActivityAt = 0;
   let previousActivityKey: string | null = null;
   let stableSince: number | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timer: number | NodeJS.Timeout | undefined;
   let cancelled = false;
+
+  const cancel = () => {
+    cancelled = true;
+    clearTimeout(timer);
+    visibilityDocument?.removeEventListener("visibilitychange", onVisibilityChange);
+  };
 
   const finish = (callback: () => void) => {
     if (cancelled) return;
-    cancelled = true;
-    if (timer !== null) clearTimeout(timer);
+    cancel();
     callback();
   };
 
   const poll = () => {
     if (cancelled) return;
-    const now = Date.now();
+    const wallTime = Date.now();
+    if (visible) activeTime += Math.max(0, wallTime - lastClockAt);
+    lastClockAt = wallTime;
+    const nextVisible = visibilityDocument?.visibilityState !== "hidden";
+    if (visible !== nextVisible) stableSince = null;
+    visible = nextVisible;
+    const now = activeTime;
     let snapshot: MapModelLoadSnapshot;
     try {
       snapshot = readSnapshot();
@@ -90,34 +106,38 @@ export function waitForMapModelsFullyLoaded(
       finish(() => onFailure(new Error(snapshot.streamingError!)));
       return;
     }
-    if (mapModelsFullyLoaded(snapshot)) {
-      stableSince ??= now;
-      if (now - stableSince >= stableMs) {
-        finish(onComplete);
+    if (visible) {
+      if (mapModelsFullyLoaded(snapshot)) {
+        stableSince ??= now;
+        if (now - stableSince >= stableMs) {
+          finish(onComplete);
+          return;
+        }
+      } else {
+        stableSince = null;
+      }
+      if (now - lastActivityAt >= timeoutMs) {
+        finish(() =>
+          onFailure(
+            new Error(
+              `Map models made no progress for ${timeoutMs} ms ` +
+                `(loading ${snapshot.loading}, queued ${snapshot.queued}, uploading ${snapshot.uploading}).`,
+            ),
+          ),
+        );
         return;
       }
-    } else {
-      stableSince = null;
     }
-    if (now - lastActivityAt >= timeoutMs) {
-      finish(() =>
-        onFailure(
-          new Error(
-            `Map models made no progress for ${timeoutMs} ms ` +
-              `(loading ${snapshot.loading}, queued ${snapshot.queued}, uploading ${snapshot.uploading}).`,
-          ),
-        ),
-      );
-      return;
-    }
-    timer = setTimeout(poll, pollMs);
+    if (!cancelled) timer = setTimeout(poll, pollMs);
   };
 
-  poll();
-  return () => {
-    cancelled = true;
-    if (timer !== null) clearTimeout(timer);
+  const onVisibilityChange = () => {
+    clearTimeout(timer);
+    poll();
   };
+  visibilityDocument?.addEventListener("visibilitychange", onVisibilityChange);
+  poll();
+  return cancel;
 }
 
 function snapshotActivityKey(snapshot: MapModelLoadSnapshot): string {

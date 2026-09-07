@@ -74,14 +74,26 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    void studioCloud.status(controller.signal)
-      .then((next) => {
-        if (!controller.signal.aborted) setStatus(next);
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(cloudErrorMessage(reason, "SimCloud connection status is unavailable."));
-      });
+    const readStatus = () => {
+      void studioCloud.status(controller.signal)
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setStatus(next);
+            setError(next.state === "error" ? next.message : null);
+          }
+        })
+        .catch((reason: unknown) => {
+          if (!controller.signal.aborted) setError(cloudErrorMessage(reason, "SimCloud connection status is unavailable."));
+        });
+    };
+    readStatus();
+    // Browser consent can finish after the bounded poll has stopped.
+    const onFocus = () => {
+      if (!poll.current) readStatus();
+    };
+    window.addEventListener("focus", onFocus);
     return () => {
+      window.removeEventListener("focus", onFocus);
       controller.abort();
       poll.current?.abort();
     };

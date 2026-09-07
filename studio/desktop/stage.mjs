@@ -50,7 +50,7 @@ import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -58,6 +58,7 @@ import { extractRuntimeArchive, verifyRuntimeStage } from "../../scripts/native-
 import { targetLayout } from "../../scripts/native-runtime/target-layout.mjs";
 import { fetchTools, matchesPin } from "./fetch-tools.mjs";
 import { bundleNode, stageApp } from "./stage-app.mjs";
+import { reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
 import { resolvePackageDir, STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
@@ -371,21 +372,20 @@ async function stagePackageClosure(packageDir, seen) {
  * placed where it would shadow a name a dependent below already resolved
  * through that directory. Placement is breadth-first, so a package's own
  * dependencies take their names before anything nested deeper competes for
- * them. A package is identified by its repository-relative real path, the
- * same whether it comes from the Next standalone trace (traced files only) or
- * from the workspace store (complete), so both merge into one copy.
+ * them. Identity and complete package payloads come from canonical workspace
+ * paths; the Next trace selects roots but is never used as a package store.
  */
 const placements = {
   /** @type {Array<{ source: string; name: string; scopes: string[] }>} */
   queue: [],
-  /** @type {Map<string, { key: string; sources: Set<string> }>} */
+  /** @type {Map<string, string>} */
   placed: new Map(),
-  /** @type {Map<string, Set<string>>} */
+  /** @type {Map<string, Map<string, string>>} */
   reserved: new Map(),
 };
 
 /**
- * @param {string} source real package directory in the workspace or the standalone output
+ * @param {string} source real package directory in the workspace
  * @param {string} name package name
  * @param {string[]} scopes `node_modules` directories the dependent resolves through, nearest first
  */
@@ -402,31 +402,12 @@ async function drainPlacements() {
   const { queue, placed, reserved } = placements;
   while (queue.length > 0) {
     const { source, name, scopes } = /** @type {{ source: string; name: string; scopes: string[] }} */ (queue.shift());
-    const key = relative(source.startsWith(standalone + sep) ? standalone : repoRoot, source);
+    const key = relative(repoRoot, source);
     if (key.startsWith("..") || isAbsolute(key)) fail(`${source} is outside the repository`);
-    let found = -1;
-    let free = -1;
-    for (let i = 0; i < scopes.length; i += 1) {
-      const existing = placed.get(join(scopes[i], name));
-      if (existing?.key === key) {
-        found = i;
-        break;
-      }
-      if (existing || reserved.get(scopes[i])?.has(name)) break;
-      free = i;
-    }
-    const index = found >= 0 ? found : free;
-    if (index < 0) fail(`${name} (${key}) cannot be placed for ${relative(stageRoot, scopes[0])}: another version holds every resolvable location`);
+    const index = reserveDependencyScope(name, key, scopes, placed, reserved);
     const location = join(scopes[index], name);
-    for (const scope of scopes.slice(0, index)) {
-      const names = reserved.get(scope) ?? new Set();
-      names.add(name);
-      reserved.set(scope, names);
-    }
-    const entry = placed.get(location) ?? { key, sources: new Set() };
-    placed.set(location, entry);
-    if (entry.sources.has(source)) continue;
-    entry.sources.add(source);
+    if (placed.has(location)) continue;
+    placed.set(location, key);
     let copySource = source;
     /** @type {Array<[string, string]>} */
     let links;
@@ -559,7 +540,14 @@ await rm(stageRoot, { recursive: true, force: true });
 const nextBin = require.resolve("next/dist/bin/next");
 if (!skipNextBuild) {
   await run(process.execPath, [join(studioRoot, "scripts", "sync-studio-assets.mjs")]);
-  await run(process.execPath, [nextBin, "build", "--webpack"], { SIMFORGE_DESKTOP_BUILD: "1" });
+  // Runtime tool discovery must not make NFT trace the build machine's PATH.
+  // Next and its workers use process.execPath; only project-local CLI shims
+  // belong in this build's dependency closure.
+  const pathKey = Object.keys(process.env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
+  await run(process.execPath, [nextBin, "build", "--webpack"], {
+    SIMFORGE_DESKTOP_BUILD: "1",
+    [pathKey]: [join(studioRoot, "node_modules", ".bin"), join(repoRoot, "node_modules", ".bin")].join(delimiter),
+  });
 }
 const standalone = join(studioRoot, ".next", "standalone");
 if (!(await exists(join(standalone, "studio", "server.js")))) {
@@ -569,17 +557,13 @@ await mkdir(stageRoot, { recursive: true });
 if (PRESERVE_LINKS) {
   await cp(standalone, stageRoot, { recursive: true, verbatimSymlinks: true });
 } else {
-  // Files only: the traced virtual store and the links into it become
-  // npm-style plain copies placed from the standalone's own top-level links.
+  // The trace selects roots, but copied Windows junctions are not authoritative.
+  // Materialize complete packages from their original workspace resolution.
   const standaloneStore = join(standalone, "node_modules", ".pnpm");
   await cp(standalone, stageRoot, { recursive: true, filter: async (path) => path !== standaloneStore && (await notLink(path)) });
   const roots = join(standalone, "studio", "node_modules");
-  for (const entry of await readdir(roots, { withFileTypes: true })) {
-    const names = entry.name.startsWith("@") ? (await readdir(join(roots, entry.name))).map((name) => `${entry.name}/${name}`) : [entry.name];
-    for (const name of names) {
-      const linkPath = join(roots, name);
-      if ((await lstat(linkPath)).isSymbolicLink()) enqueuePlacement(await realpath(linkPath), name, [join(stageStudio, "node_modules")]);
-    }
+  for (const [name, source] of await tracedDependencySources(roots, join(studioRoot, "package.json"))) {
+    enqueuePlacement(source, name, [join(stageStudio, "node_modules")]);
   }
 }
 await cp(join(studioRoot, ".next", "static"), join(stageStudio, ".next", "static"), { recursive: true });

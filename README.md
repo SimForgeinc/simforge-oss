@@ -33,6 +33,11 @@ Debian installers on their native platforms. Builds without signing credentials
 are unsigned; macOS bundles receive only an ad-hoc signature, not notarization
 or Gatekeeper trust.
 
+Download the artifact for your platform from the workflow run. On Linux, mark
+the AppImage executable; `--appimage-extract-and-run` launches it without FUSE.
+Debian packages use the normal package manager. Ordinary use does not require
+disabling Electron's sandbox.
+
 Use **Connect** in the app switcher for optional SimCloud access. Connecting does
 not move the workspace into the cloud: projects, jobs, and render outputs remain
 on this computer, and Cloud Storage transfers are explicit. Credentials use the

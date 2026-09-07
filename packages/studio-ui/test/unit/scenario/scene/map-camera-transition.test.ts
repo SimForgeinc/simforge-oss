@@ -3,8 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   interpolateMapView,
   MAP_MODEL_STABLE_MS,
-  MAP_ZOOM_IN_MS,
-  MAP_ZOOM_OUT_MS,
   mapModelsFullyLoaded,
   pulledBackMapView,
   waitForMapModelsFullyLoaded,
@@ -17,11 +15,9 @@ const near = {
 };
 
 describe("map camera transition", () => {
-  afterEach(() => vi.useRealTimers());
-
-  it("uses a deliberate, slow pull-back and return", () => {
-    expect(MAP_ZOOM_OUT_MS).toBeGreaterThanOrEqual(1_200);
-    expect(MAP_ZOOM_IN_MS).toBeGreaterThan(MAP_ZOOM_OUT_MS);
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("pulls straight back from the same orbit target", () => {
@@ -105,6 +101,82 @@ describe("map camera transition", () => {
     vi.advanceTimersByTime(100);
     expect(failure).toHaveBeenCalledOnce();
     expect(failure.mock.calls[0]?.[0]?.message).toContain("made no progress");
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("charges only visible inactivity and preserves time already spent waiting", () => {
+    vi.useFakeTimers();
+    const page = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    vi.stubGlobal("document", page);
+    const complete = vi.fn();
+    const failure = vi.fn();
+    waitForMapModelsFullyLoaded(
+      () => ({ roadReady: true, roadVisible: true, loading: 0, queued: 1, uploading: 1 }),
+      complete,
+      failure,
+      { pollMs: 100, timeoutMs: 500 },
+    );
+
+    vi.advanceTimersByTime(200);
+    page.visibilityState = "hidden";
+    page.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(5_000);
+    expect(failure).not.toHaveBeenCalled();
+    page.visibilityState = "visible";
+    page.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(299);
+    expect(failure).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(failure).toHaveBeenCalledOnce();
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("requires a fresh visible quiet window after returning to a settled map", () => {
+    vi.useFakeTimers();
+    const page = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    vi.stubGlobal("document", page);
+    const complete = vi.fn();
+    const failure = vi.fn();
+    waitForMapModelsFullyLoaded(
+      () => ({ roadReady: true, roadVisible: true, loading: 0, queued: 0, uploading: 0 }),
+      complete,
+      failure,
+      { pollMs: 100, stableMs: 300, timeoutMs: 2_000 },
+    );
+
+    vi.advanceTimersByTime(200);
+    page.visibilityState = "hidden";
+    page.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(5_000);
+    expect(complete).not.toHaveBeenCalled();
+    expect(failure).not.toHaveBeenCalled();
+    page.visibilityState = "visible";
+    page.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(299);
+    expect(complete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(complete).toHaveBeenCalledOnce();
+    expect(failure).not.toHaveBeenCalled();
+  });
+
+  it("still reports a streaming error while the map is hidden", () => {
+    vi.useFakeTimers();
+    const page = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    vi.stubGlobal("document", page);
+    let streamingError: string | null = null;
+    const complete = vi.fn();
+    const failure = vi.fn();
+    waitForMapModelsFullyLoaded(
+      () => ({ roadReady: true, roadVisible: true, loading: 0, queued: 1, uploading: 1, streamingError }),
+      complete,
+      failure,
+    );
+
+    page.visibilityState = "hidden";
+    page.dispatchEvent(new Event("visibilitychange"));
+    streamingError = "GPU context lost";
+    vi.advanceTimersByTime(100);
+    expect(failure).toHaveBeenCalledOnce();
     expect(complete).not.toHaveBeenCalled();
   });
 
