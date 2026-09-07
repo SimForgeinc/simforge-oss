@@ -26,7 +26,7 @@ import type { EvaluationGateway } from "../gateway";
 import { ComputeApiError } from "../gateway";
 import { MODEL_CATALOG } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
-import { formatCentsRange, submissionIdempotencyKey } from "../presentation";
+import { formatCentsRange, preferredSelection, submissionIdempotencyKey } from "../presentation";
 import { offerableJobKinds } from "../input-kinds";
 import {
   availableTextTasks,
@@ -70,11 +70,12 @@ export function EvaluationLauncher({
   onSubmitted: (job: ComputeJob) => void;
   onRunLocally?: LocalRunLauncher;
 }) {
-  const [selection, setSelection] = useState<ModelSelection>({
-    family: "alpamayo-1.5",
-    quant: "bf16",
-    target: host.host === "desktop" ? "local" : "runpod",
-  });
+  const [selection, setSelection] = useState<ModelSelection>(() =>
+    preferredSelection(host, runtime),
+  );
+  // A derived default must not fight the user: once they choose, the
+  // eligibility-derived preference stops applying.
+  const [selectionChosen, setSelectionChosen] = useState(false);
   const [prepared, setPrepared] = useState<PreparedInput | null>(null);
   const [kind, setKind] = useState<ComputeJobKind>("alpamayo.openloop");
   const [numTrajSamples, setNumTrajSamples] = useState(4);
@@ -88,6 +89,14 @@ export function EvaluationLauncher({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attemptNonce, setAttemptNonce] = useState(() => Math.random().toString(36).slice(2, 10));
+
+  // The host's capability report and the model store arrive after first paint,
+  // so the derived default is applied again when they land — but never over a
+  // choice the user has already made.
+  useEffect(() => {
+    if (selectionChosen) return;
+    setSelection(preferredSelection(host, runtime));
+  }, [selectionChosen, host, runtime]);
 
   const entry = MODEL_CATALOG[selection.family];
   const textTasks = availableTextTasks(entry);
@@ -275,7 +284,10 @@ export function EvaluationLauncher({
           host={host}
           runtime={runtime}
           selection={selection}
-          onChange={setSelection}
+          onChange={(next) => {
+            setSelectionChosen(true);
+            setSelection(next);
+          }}
           disabled={submitting}
         />
       </section>
