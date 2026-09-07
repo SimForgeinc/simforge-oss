@@ -229,7 +229,7 @@ class SharedKTX2Loader extends KTX2Loader {
     sharedTextures
       .acquire(`${url}|mip-limit=${maxDimension}`, async () => {
         const texture = this.tracker
-          ? await this.fetchTracked(url)
+          ? await this.fetchTracked(url, maxDimension)
           : await new Promise<CompressedTexture>((resolve, reject) => {
             super.load(url, resolve, onProgress, reject);
           });
