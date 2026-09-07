@@ -43,7 +43,7 @@ import { PINNED_ENCODER, extractVideoFrames, resolveEncoder, type EncoderTools }
 import { deferred } from './deferred.js';
 import { reconstructionRefusal, type ClipAdmission } from './clip.js';
 import { importUserBundle } from './importers/user-bundle.js';
-import { CapabilityError } from './render.js';
+import { CapabilityError } from './capability.js';
 import { RefusalError, type Refusal } from './refusal.js';
 import type { CalibratedCamera, ReplayContext } from './schema.js';
 import { BUILD_VERIFIED, THREEDGRUT } from './tier-lock.js';

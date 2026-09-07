@@ -35,7 +35,7 @@ import { importUserBundle } from './importers/user-bundle.js';
 import { qualifyBundle, loadReplayContext, writeReplayContext } from './qualify.js';
 import { preflightReconstruction, reconstructClip } from './reconstruct.js';
 import { resolveEncoder } from './video.js';
-import { CapabilityError } from './render.js';
+import { CapabilityError } from './capability.js';
 import { RefusalError, workerErrorEnvelope } from './refusal.js';
 import { servableFamilies, servableRigPresets } from './cameras.js';
 import type { ReplayContext } from './schema.js';

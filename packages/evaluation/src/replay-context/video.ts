@@ -31,11 +31,13 @@
  */
 
 import { spawn } from 'node:child_process';
-import { access, mkdir, readdir, readFile, rename } from 'node:fs/promises';
+import { access, mkdir, readdir, readFile, rename, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { cameraTimestamps } from './cameras.js';
+import { CapabilityError } from './capability.js';
 import { deferred } from './deferred.js';
+import { sha256File } from './digest.js';
 import { RefusalError } from './refusal.js';
 import type { CalibratedCamera } from './schema.js';
 
@@ -58,6 +60,52 @@ export interface EncoderTools {
   readonly version?: string;
   /** Pinned upstream source commits, passed through verbatim from the stage manifest. */
   readonly sources?: unknown;
+  /** Corresponding-source archive reference, passed through verbatim. */
+  readonly correspondingSource?: unknown;
+  /**
+   * True when the binaries were hashed and matched the digests the stage recorded. False for
+   * env/PATH sources and pre-digest manifests, where no digest exists to check against — the
+   * frames are still usable, but provenance says the bytes were not verified.
+   */
+  readonly bytesVerified: boolean;
+}
+
+/**
+ * Per-process digest cache, keyed by path plus mtime and size.
+ *
+ * Hashing an ~80 MB binary once is cheap; doing it per extraction is not, and it buys no extra
+ * guarantee within a single process. A changed mtime or size invalidates the entry, so a
+ * swapped binary is re-hashed rather than trusted from the cache.
+ */
+const digestCache = new Map<string, string>();
+
+async function cachedDigest(filePath: string): Promise<string> {
+  const info = await stat(filePath);
+  const key = `${filePath}:${info.mtimeMs}:${info.size}`;
+  const cached = digestCache.get(key);
+  if (cached !== undefined) return cached;
+  const digest = await sha256File(filePath);
+  digestCache.set(key, digest);
+  return digest;
+}
+
+/**
+ * Verify a staged binary against the digest the stage recorded.
+ *
+ * A mismatch is a capability error, not a refusal: the input is fine and the host is wrong.
+ * It is also not something to warn about and continue — an encoder whose bytes we cannot
+ * account for makes every frame it produces unattributable, which is the whole reason the
+ * digest is published.
+ */
+async function verifyStagedBinary(name: string, filePath: string, expected: string): Promise<void> {
+  const actual = await cachedDigest(filePath);
+  if (actual !== expected) {
+    throw new CapabilityError(
+      `staged ${name} at ${filePath} does not match the digest the desktop stage recorded `
+      + `(expected ${expected}, found ${actual}). Frames produced by an unaccounted-for encoder cannot be `
+      + 'attributed, so extraction stops rather than continuing with unknown bytes.',
+    );
+  }
 }
 
 interface CommandResult {
@@ -108,6 +156,9 @@ interface StagedManifest {
     readonly ffprobe?: string;
     readonly version?: string;
     readonly sources?: unknown;
+    readonly correspondingSource?: unknown;
+    /** sha256 of the exact staged bytes; the stage validates the shape when it writes them. */
+    readonly digests?: { readonly ffmpeg?: string; readonly ffprobe?: string };
   };
 }
 
@@ -118,21 +169,34 @@ async function fromStagedManifest(manifestPath: string): Promise<EncoderTools | 
   } catch {
     return undefined;
   }
-  const { ffmpeg, ffprobe, version, sources } = parsed.tools ?? {};
+  const { ffmpeg, ffprobe, version, sources, correspondingSource, digests } = parsed.tools ?? {};
   if (typeof ffmpeg !== 'string' || typeof ffprobe !== 'string') return undefined;
   const root = path.dirname(manifestPath);
   const resolvedFfmpeg = path.resolve(root, ffmpeg);
   const resolvedFfprobe = path.resolve(root, ffprobe);
   if (!(await isExecutable(resolvedFfmpeg)) || !(await isExecutable(resolvedFfprobe))) return undefined;
-  // Provenance names the build, and the pinned source commits when the stage recorded them, so a
-  // measurement can be traced to the exact encoder that produced its frames.
+
+  // Digests are absent only on a manifest staged before the stage began recording them; when
+  // they are present the stage has already validated their shape, so a mismatch is real.
+  let bytesVerified = false;
+  if (typeof digests?.ffmpeg === 'string' && typeof digests.ffprobe === 'string') {
+    await verifyStagedBinary('ffmpeg', resolvedFfmpeg, digests.ffmpeg);
+    await verifyStagedBinary('ffprobe', resolvedFfprobe, digests.ffprobe);
+    bytesVerified = true;
+  }
+
+  // Provenance names the build, its pinned source commits and whether the bytes were checked, so
+  // a measurement can be traced to the exact encoder that produced its frames.
   const built = sources === undefined ? '' : ` from ${JSON.stringify(sources)}`;
+  const checked = bytesVerified ? 'digest-verified' : 'bytes unverified (stage recorded no digest)';
   return {
     ffmpeg: resolvedFfmpeg,
     ffprobe: resolvedFfprobe,
-    origin: `staged desktop manifest ${manifestPath}: ffmpeg ${version ?? 'unversioned'}${built}`,
+    origin: `staged desktop manifest ${manifestPath}: ffmpeg ${version ?? 'unversioned'}${built}, ${checked}`,
+    bytesVerified,
     ...(version === undefined ? {} : { version }),
     ...(sources === undefined ? {} : { sources }),
+    ...(correspondingSource === undefined ? {} : { correspondingSource }),
   };
 }
 
@@ -154,12 +218,12 @@ export interface EncoderResolution {
  */
 export async function resolveEncoder(resolution: EncoderResolution = {}): Promise<EncoderTools | undefined> {
   if (resolution.ffmpeg !== undefined && resolution.ffprobe !== undefined) {
-    return { ffmpeg: resolution.ffmpeg, ffprobe: resolution.ffprobe, origin: 'explicitly supplied paths' };
+    return { ffmpeg: resolution.ffmpeg, ffprobe: resolution.ffprobe, origin: 'explicitly supplied paths', bytesVerified: false };
   }
   const envFfmpeg = process.env['SIMFORGE_FFMPEG'];
   const envFfprobe = process.env['SIMFORGE_FFPROBE'];
   if (envFfmpeg !== undefined && envFfprobe !== undefined) {
-    return { ffmpeg: envFfmpeg, ffprobe: envFfprobe, origin: 'SIMFORGE_FFMPEG / SIMFORGE_FFPROBE' };
+    return { ffmpeg: envFfmpeg, ffprobe: envFfprobe, origin: 'SIMFORGE_FFMPEG / SIMFORGE_FFPROBE', bytesVerified: false };
   }
   if (resolution.manifestPath !== undefined) {
     const staged = await fromStagedManifest(resolution.manifestPath);
@@ -167,7 +231,7 @@ export async function resolveEncoder(resolution: EncoderResolution = {}): Promis
   }
   const probe = await run('ffprobe', ['-version']).catch(() => ({ code: -1, stdout: '', stderr: '' }));
   if (probe.code === 0) {
-    return { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe', origin: 'PATH (unpinned system build)' };
+    return { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe', origin: 'PATH (unpinned system build)', bytesVerified: false };
   }
   return undefined;
 }
