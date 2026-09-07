@@ -122,7 +122,8 @@ export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDim
     first++;
   }
   // A cropped BC chain becomes a new base level, which must remain block-aligned.
-  while (first > 0 && texture.format !== RGBAFormat
+  // KTX2Loader also returns CompressedTexture for its uncompressed RGBA output.
+  while (first > 0 && (texture as Texture).format !== RGBAFormat
     && (texture.mipmaps[first]!.width % 4 !== 0 || texture.mipmaps[first]!.height % 4 !== 0)) first--;
   if (first > 0) {
     texture.mipmaps = texture.mipmaps.slice(first);
