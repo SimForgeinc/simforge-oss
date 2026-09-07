@@ -506,6 +506,9 @@ importers:
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
+      ktx-parse:
+        specifier: 1.1.0
+        version: 1.1.0
       three:
         specifier: ^0.185.0
         version: 0.185.1

@@ -3,6 +3,7 @@ import { CompressedTexture, Mesh, RGBA_S3TC_DXT1_Format } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { read as readKtx2, write as writeKtx2 } from 'ktx-parse';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 
 /**
@@ -127,6 +128,26 @@ export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDim
   return texture;
 }
 
+/** Drop unneeded encoded mip levels before Basis/Zstd allocates and decodes them. */
+export function selectKtx2MipLevels(buffer: ArrayBuffer, maxDimension: number): ArrayBuffer {
+  if (!Number.isFinite(maxDimension)) return buffer;
+  const container = readKtx2(new Uint8Array(buffer));
+  if (container.pixelDepth > 0) return buffer;
+  let first = 0;
+  while (first + 1 < container.levels.length
+    && Math.max(container.pixelWidth >> first, container.pixelHeight >> first) > maxDimension) first++;
+  if (first === 0) return buffer;
+  container.pixelWidth = Math.max(1, container.pixelWidth >> first);
+  container.pixelHeight = Math.max(1, container.pixelHeight >> first);
+  container.levels = container.levels.slice(first);
+  container.levelCount = container.levels.length;
+  if (container.globalData) {
+    const imagesPerLevel = Math.max(1, container.layerCount) * container.faceCount;
+    container.globalData.imageDescs = container.globalData.imageDescs.slice(first * imagesPerLevel);
+  }
+  return writeKtx2(container, { keepWriter: true }).buffer as ArrayBuffer;
+}
+
 class SharedKTX2Loader extends KTX2Loader {
   tracker?: AssetDownloadTracker;
   signal?: AbortSignal;
@@ -142,7 +163,7 @@ class SharedKTX2Loader extends KTX2Loader {
     else super.dispose();
   }
 
-  private async fetchTracked(url: string): Promise<CompressedTexture> {
+  private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
     const tracker = this.tracker!;
     const decoded = tracker.trackDecode();
     const signal = this.signal;
@@ -154,7 +175,8 @@ class SharedKTX2Loader extends KTX2Loader {
       if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
       const buffer = await readResponseBufferWithProgress(response, tracker);
       signal?.throwIfAborted();
-      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parse(buffer, resolve, reject));
+      const selected = selectKtx2MipLevels(buffer, maxDimension);
+      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parse(selected, resolve, reject));
       if (signal?.aborted) {
         texture.dispose();
         signal.throwIfAborted();
@@ -184,7 +206,7 @@ class SharedKTX2Loader extends KTX2Loader {
     sharedTextures
       .acquire(`${url}|mip-limit=${maxDimension}`, async () => {
         const texture = this.tracker
-          ? await this.fetchTracked(url)
+          ? await this.fetchTracked(url, maxDimension)
           : await new Promise<CompressedTexture>((resolve, reject) => {
             super.load(url, resolve, onProgress, reject);
           });
