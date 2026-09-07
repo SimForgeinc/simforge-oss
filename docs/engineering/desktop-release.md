@@ -155,3 +155,14 @@ artifacts, map cache and native job state outside the install directory
 installs, updates and uninstalls never touch user data. Release notes say so,
 because NSIS is configured with `deleteAppDataOnUninstall: false` and users
 should know their data survives.
+
+Two locations, not one. The data root above is what the release notes
+promise installs and uninstalls never touch. The model store is separate and
+explicitly user-managed: `${SIMFORGE_ASSETS_ROOT:-~/simforge-assets}` holds
+`hf-cache/` and `models/<family>/<revision>/{weights,sidecars,code,.venv,licenses,install.json}`,
+tens of gigabytes of downloaded model weights that are deliberately outside
+the data root so an app uninstall neither deletes them nor silently strands
+them. Only `simforge models uninstall`, or Remove on the Models screen,
+deletes anything there. Release notes and the download page state both
+locations, because a user who uninstalls the app is entitled to know that
+72 GB of weights is still on their disk and how to remove it.

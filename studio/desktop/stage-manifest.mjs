@@ -90,7 +90,7 @@ export function targetFor(platform = process.platform, arch = process.arch) {
  * @property {string} nativeRunner Stage-relative path of `simforge-runner[.exe]`.
  * @property {string} nativeRenderService Stage-relative path of `native-render-service[.exe]`.
  * @property {string} nativeRenderLibrary Stage-relative path of the renderer FFI library.
- * @property {{ ffmpeg: string; ffprobe: string; version: string; license: string }} tools Bundled encoder binaries.
+ * @property {{ ffmpeg: string; ffprobe: string; version: string; license: string; digests?: { ffmpeg: string; ffprobe: string }; sources?: { id: string; commit: string }[]; correspondingSource?: { file: string; sha256: string; sizeBytes: number } }} tools Bundled encoder binaries, the digests of the staged bytes, and the sources they were built from.
  * @property {Record<string, Record<string, string>>} nativeBindings Per disk-loaded dependency, the stage-relative directory of each per-target binding package it resolves.
  * @property {string} actorAssetsRoot Stage-relative root of the pinned actor-appearance closure.
  * @property {string} browserHarness Stage-relative path of the browser render harness.
@@ -140,6 +140,12 @@ export async function readStageManifest(stageRoot) {
   const tools = parsed.tools;
   if (!isRecord(tools) || typeof tools.ffmpeg !== "string" || typeof tools.ffprobe !== "string" || typeof tools.version !== "string" || typeof tools.license !== "string") {
     throw incomplete('has a malformed "tools"');
+  }
+  // Optional, because a manifest may predate them; malformed is still refused
+  // so a consumer that verifies digests can trust the shape when present.
+  if (tools.digests !== undefined
+    && (!isRecord(tools.digests) || !/^[0-9a-f]{64}$/.test(String(tools.digests.ffmpeg)) || !/^[0-9a-f]{64}$/.test(String(tools.digests.ffprobe)))) {
+    throw incomplete('has malformed "tools.digests"');
   }
   const bindings = parsed.nativeBindings;
   if (

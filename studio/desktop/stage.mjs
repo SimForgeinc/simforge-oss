@@ -234,6 +234,7 @@ async function stageTools() {
     ...staged,
     version: layout.version,
     license: layout.licenseId,
+    digests: { ffmpeg: pins.ffmpeg.sha256, ffprobe: pins.ffprobe.sha256 },
     sources: pins.manifest.sources.map((/** @type {any} */ entry) => ({ id: entry.id, commit: entry.commit })),
     correspondingSource: pins.manifest.correspondingSource,
   };
@@ -626,6 +627,11 @@ const manifest = {
     ffprobe: posix(tools.ffprobe),
     version: tools.version,
     license: tools.license,
+    // The digests of the exact bytes staged here, so anything that resolves
+    // and spawns these executables can verify them first: a swapped staged
+    // binary is then a refusal, and extraction provenance becomes a
+    // statement about specific bytes rather than about a path.
+    digests: tools.digests,
     // Which sources these executables were built from, so a package can be
     // traced to the corresponding source published with its release.
     sources: tools.sources,

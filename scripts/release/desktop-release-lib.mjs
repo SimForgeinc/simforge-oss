@@ -393,7 +393,13 @@ export function buildReleaseRecord(input) {
     checksums: { file: SUMS_FILE, url: assetUrl(tag, SUMS_FILE) },
     notices: {
       thirdParty: assetUrl(tag, NOTICES_FILE),
+      // Per platform, filled in by the publisher from the archives it
+      // actually attaches; null when none accompany the release.
       correspondingSource: null,
+      // The licence the bundled encoders are distributed under, stated once
+      // here so a download page renders our metadata instead of hardcoding a
+      // claim that could drift from the real closure.
+      bundledEncoderLicense: "GPL-3.0-or-later",
     },
   };
 }
@@ -503,6 +509,7 @@ export function renderReleaseNotes({ release, audit }) {
   }
   lines.push(
     "- Your data (database, artifacts, map cache, job state) lives outside the install directory and is not removed by uninstalling.",
+    "- Downloaded model weights live separately again, under `$SIMFORGE_ASSETS_ROOT` (default `~/simforge-assets`), and can be tens of gigabytes. Uninstalling the app does not delete them; `simforge models uninstall` or Remove on the Models screen does.",
     "- Local use needs no account. `richmond-field-station` is the only public map; other maps require an authorized SimCloud session.",
     "",
     "## Verifying what you downloaded",
@@ -514,9 +521,14 @@ export function renderReleaseNotes({ release, audit }) {
     "",
     "## Third-party components",
     "",
-    `See \`${NOTICES_FILE}\`. The installers do not carry identical third-party payloads: the bundled ffmpeg/ffprobe encoders come from a different upstream build on each platform, with different licenses.`,
+    `See \`${NOTICES_FILE}\`. The bundled ffmpeg/ffprobe encoders are built from pinned sources (FFmpeg and libx264) and are distributed under ${release.notices.bundledEncoderLicense}; the complete corresponding source of those executables is published with this release.`,
     "",
   );
+  if (Array.isArray(release.notices.correspondingSource) && release.notices.correspondingSource.length > 0) {
+    lines.push("Corresponding source of the bundled encoders:", "");
+    for (const entry of release.notices.correspondingSource) lines.push(`- ${entry.platform}: ${entry.url}`);
+    lines.push("");
+  }
 
   if (audit.publicRedistribution !== "cleared") {
     lines.push("**Unresolved redistribution obligations:**", "");
