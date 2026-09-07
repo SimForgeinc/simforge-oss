@@ -133,8 +133,8 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
         try {
           const parsed = readOpenLoopResult(await loadJson(gateway, job.id, openLoopArtifact));
           if (cancelled) return;
-          if (parsed) setOpenLoop(parsed);
-          else record("openloop.json does not match simforge.openloop-result/v1 and was not displayed.");
+          if (parsed.ok) setOpenLoop(parsed.value);
+          else record(`openloop.json could not be displayed: ${parsed.reason}`);
         } catch (cause) {
           if (!cancelled) record(cause instanceof ComputeApiError ? cause.message : String(cause));
         }

@@ -25,7 +25,7 @@ import type {
   UploadPurpose,
   UploadReservation,
 } from "./contracts";
-import { readEvalResultManifest } from "./contracts";
+import { EVAL_RESULT_MANIFEST_SCHEMA, readEvalResultManifest } from "./contracts";
 
 export class ComputeApiError extends Error {
   readonly status: number;
@@ -183,15 +183,15 @@ export function createHttpEvaluationGateway(
         signal,
       });
       const manifest = readEvalResultManifest(payload);
-      if (!manifest) {
+      if (!manifest.ok) {
         throw new ComputeApiError(
           200,
           "result_unreadable",
-          "The stored result does not match simforge.eval-result-manifest/v1 and cannot be displayed.",
+          `The stored result cannot be displayed: ${manifest.reason}. This means the producer's ${EVAL_RESULT_MANIFEST_SCHEMA} document and this client's reader disagree.`,
           payload,
         );
       }
-      return manifest;
+      return manifest.value;
     },
 
     async artifactDownloadGrant(jobId, artifactId, signal) {

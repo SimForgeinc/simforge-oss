@@ -1,22 +1,22 @@
 /**
  * The wire contracts the shared evaluation UI reads.
  *
- * Two producers own these documents; this module owns neither. It is a
- * structural mirror so one set of components can render them in the desktop
- * app (which cannot import the SimCloud packages) and in the web portal (which
- * cannot import the desktop app), without a second implementation of the
- * screens.
+ * OWNERSHIP — this module owns none of these documents. It is a structural
+ * mirror, and the mirror exists for one reason: no single package can be
+ * imported by both hosts.
  *
- * - `ComputeJob*` mirrors SimCloud's `@simcloud/shared` compute-job DTOs,
- *   served under `/api/simforge/compute`. SimCloud is authoritative.
- * - `EvalResultManifest` / `OpenLoopResult` mirror
- *   `simforge.eval-result-manifest/v1` and `simforge.openloop-result/v1` from
- *   `@simforge-oss/evaluation`. The evaluation package is authoritative.
+ * | Document | Producer / owner | Why it is mirrored here |
+ * |---|---|---|
+ * | `ComputeJob*`, `ComputeEstimate`, `Upload*` | SimCloud, `@simcloud/shared` (`packages/shared/src/compute-jobs.ts`), served under `/api/simforge/compute` | `@simcloud/shared` is a private Cloud workspace package; the OSS desktop app cannot depend on it. The DTOs are structurally identical, so a Cloud page may pass its own typed DTOs straight into these components. |
+ * | `EvalResultManifest`, `OpenLoopResult`, `EvalArtifactRole` | `@simforge-oss/evaluation` (`src/protocol/**`) | The web portal must not import that package: its episode runner reaches `node:child_process`, which would drag a Node-only graph into a browser bundle. The desktop app, which already depends on it, may import the canonical types directly. |
+ * | `ModelCatalogEntry` and friends | model-runtime workstream, in `./model-catalog` | Owned in this package precisely so there is exactly one table. |
  *
- * Nothing here validates a document into existence: every reader below is
- * tolerant of unknown fields and returns null rather than a fabricated default,
- * because a result the UI cannot understand must be shown as unreadable, not as
- * an empty success.
+ * DRIFT POLICY — a mirror that silently tolerates disagreement is worse than
+ * no mirror. Every reader below therefore returns {@link ContractReadResult}:
+ * on a schema, kind or status this mirror does not recognise it reports the
+ * mismatch, the gateway raises `result_unreadable`, and the result screen shows
+ * that error. A document the UI cannot understand is never rendered as an
+ * empty success, and never leaves a screen loading forever.
  */
 
 import type { ModelFamilyId, ModelQuant } from "./model-catalog";
@@ -376,7 +376,7 @@ export type FramesManifest = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* Tolerant readers                                                           */
+/* Boundary readers                                                           */
 /* -------------------------------------------------------------------------- */
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -384,17 +384,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Accept a durable manifest only when it identifies itself and carries the
- * fields every result screen depends on. Returning null makes an unreadable
- * document render as unreadable instead of as an empty success.
+ * The outcome of reading a producer's document.
+ *
+ * Rejection carries a reason on purpose: a result the UI cannot understand has
+ * to be reported as unreadable, with the mismatch named, so a schema drift
+ * between this mirror and the producer surfaces as a visible error instead of
+ * an empty success or a screen that stays blank forever.
  */
-export function readEvalResultManifest(value: unknown): EvalResultManifest | null {
-  if (!isRecord(value)) return null;
-  if (value.schema !== EVAL_RESULT_MANIFEST_SCHEMA) return null;
+export type ContractReadResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: string };
+
+/**
+ * Accept a durable manifest only when it identifies itself and carries the
+ * fields every result screen depends on.
+ */
+export function readEvalResultManifest(value: unknown): ContractReadResult<EvalResultManifest> {
+  if (!isRecord(value)) return { ok: false, reason: "the stored result is not a JSON object" };
+  if (value.schema !== EVAL_RESULT_MANIFEST_SCHEMA) {
+    return {
+      ok: false,
+      reason: `expected schema ${EVAL_RESULT_MANIFEST_SCHEMA}, found ${JSON.stringify(value.schema)}`,
+    };
+  }
   const { kind, status } = value;
-  if (kind !== "openloop" && kind !== "text" && kind !== "closedloop-episode") return null;
+  if (kind !== "openloop" && kind !== "text" && kind !== "closedloop-episode") {
+    return { ok: false, reason: `unknown result kind ${JSON.stringify(kind)}` };
+  }
   if (status !== "succeeded" && status !== "failed" && status !== "cancelled" && status !== "partial") {
-    return null;
+    return { ok: false, reason: `unknown result status ${JSON.stringify(status)}` };
   }
   const artifacts = Array.isArray(value.artifacts)
     ? value.artifacts.filter(isRecord).map((entry) => ({
@@ -406,29 +424,41 @@ export function readEvalResultManifest(value: unknown): EvalResultManifest | nul
       }))
     : [];
   return {
-    schema: value.schema,
-    kind,
-    status,
-    runId: typeof value.runId === "string" ? value.runId : "",
-    attemptId: typeof value.attemptId === "string" ? value.attemptId : "",
-    scored: value.scored === true,
-    artifacts,
-    metrics: isRecord(value.metrics) ? value.metrics : {},
-    provenance: isRecord(value.provenance) ? (value.provenance as EvalProvenance) : {},
-    timing: isRecord(value.timing) ? value.timing : {},
-    mode: value.mode === "offline-simtime" || value.mode === "realtime" ? value.mode : undefined,
-    truncation:
-      value.truncation === "envelope_exceeded" || value.truncation === "deadline_budget"
-        ? value.truncation
-        : null,
+    ok: true,
+    value: {
+      schema: value.schema,
+      kind,
+      status,
+      runId: typeof value.runId === "string" ? value.runId : "",
+      attemptId: typeof value.attemptId === "string" ? value.attemptId : "",
+      scored: value.scored === true,
+      artifacts,
+      metrics: isRecord(value.metrics) ? value.metrics : {},
+      provenance: isRecord(value.provenance) ? (value.provenance as EvalProvenance) : {},
+      timing: isRecord(value.timing) ? value.timing : {},
+      mode: value.mode === "offline-simtime" || value.mode === "realtime" ? value.mode : undefined,
+      truncation:
+        value.truncation === "envelope_exceeded" || value.truncation === "deadline_budget"
+          ? value.truncation
+          : null,
+    },
   };
 }
 
-export function readOpenLoopResult(value: unknown): OpenLoopResult | null {
-  if (!isRecord(value)) return null;
-  if (value.schema !== OPENLOOP_RESULT_SCHEMA) return null;
-  if (!Array.isArray(value.items)) return null;
-  return value as unknown as OpenLoopResult;
+export function readOpenLoopResult(value: unknown): ContractReadResult<OpenLoopResult> {
+  if (!isRecord(value)) return { ok: false, reason: "openloop.json is not a JSON object" };
+  if (value.schema !== OPENLOOP_RESULT_SCHEMA) {
+    return {
+      ok: false,
+      reason: `openloop.json declares schema ${JSON.stringify(value.schema)}, not ${OPENLOOP_RESULT_SCHEMA}`,
+    };
+  }
+  if (!Array.isArray(value.items)) {
+    return { ok: false, reason: "openloop.json carries no `items` array" };
+  }
+  // Structurally identical to the producer's type; the discriminating fields
+  // above are exactly what distinguishes this document from another.
+  return { ok: true, value: value as unknown as OpenLoopResult };
 }
 
 /**
