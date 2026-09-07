@@ -108,6 +108,7 @@ describe('compressed texture mip budgets', () => {
     container.pixelWidth = 600;
     container.pixelHeight = 1000;
     container.levelCount = 4;
+    container.supercompressionScheme = 1;
     container.levels = [0, 1, 2, 3].map(level => ({
       levelData: new Uint8Array(16).fill(level), uncompressedByteLength: 16,
     }));
@@ -124,14 +125,15 @@ describe('compressed texture mip budgets', () => {
     container.pixelWidth = 600;
     container.pixelHeight = 1000;
     container.levelCount = 4;
-    container.levels = [0, 1, 2, 3].map(level => ({
-      levelData: new Uint8Array(16).fill(level), uncompressedByteLength: 16,
-    }));
+    container.levels = [0, 1, 2, 3].map(level => {
+      const bytes = Math.ceil((600 >> level) / 4) * Math.ceil((1000 >> level) / 4) * 16;
+      return { levelData: new Uint8Array(bytes).fill(level), uncompressedByteLength: bytes };
+    });
     const selected = selectKtx2MipLevels(writeKtx2(container).buffer as ArrayBuffer, 128);
     const decoded = readKtx2(new Uint8Array(selected.buffer));
     expect(selected.forceRgba).toBe(false);
     expect([decoded.pixelWidth, decoded.pixelHeight]).toEqual([300, 500]);
-    expect([...decoded.levels[0]!.levelData]).toEqual([...new Uint8Array(16).fill(1)]);
+    expect(decoded.levels[0]!.levelData).toEqual(container.levels[1]!.levelData);
   });
 
   it('keeps the authored lower mip chain and charges only its actual compressed footprint', () => {
