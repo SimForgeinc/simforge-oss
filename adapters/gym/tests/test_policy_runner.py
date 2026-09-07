@@ -9,6 +9,7 @@ cloud worker depend on.
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,7 @@ from simforge_oss_gym.replay_envelope import (
 )
 from simforge_oss_gym.tools.endpoint_policy import waypoints_to_plan
 from simforge_oss_gym.tools.policies import make_policy
+from simforge_oss_gym.scene_state import make_env_scene_state_provider
 from simforge_oss_gym.tools.policy_runner import run_episode
 
 
@@ -206,3 +208,70 @@ def test_waypoints_become_a_policy_step_plan_with_derived_heading_and_speed() ->
     assert plan[2][3] == pytest.approx(11.3137, abs=1e-3)
     assert plan[2][2] == pytest.approx(0.7853982, abs=1e-6)
     assert [row[4] for row in plan] == pytest.approx([0.1, 0.2, 0.3])
+
+
+class _FakeSession:
+    """Minimal stand-in for the engine's actor table (no renderer needed)."""
+
+    actor_ids = ["ego", "lead"]
+    actor_kinds = ["vehicle", "truck"]
+    actor_dims = [[4.6, 1.9, 1.5], [7.0, 2.4, 3.0]]
+
+    def __init__(self) -> None:
+        self.t = 0.0
+        self.rows = [[0.0, 0.0, 0.0, 8.0, 0, 0, 0, 0], [20.0, 3.5, 1.5707963, 4.0, 0, 0, 0, 0]]
+        self.flags = [True, True]
+
+    def actors(self) -> list[list[float]]:
+        return self.rows
+
+    def present(self) -> list[bool]:
+        return self.flags
+
+    def ego_pose(self) -> tuple[float, float, float, float, float]:
+        return (self.t, self.rows[0][0], self.rows[0][1], self.rows[0][2], self.rows[0][3])
+
+
+class _FakeEnv:
+    def __init__(self, session: _FakeSession) -> None:
+        self._session = session
+        self.episode = type("Episode", (), {"map_id": "richmond-field-station"})()
+
+    @property
+    def native(self) -> _FakeSession:
+        return self._session
+
+
+def test_scene_state_export_follows_the_policy_and_manages_actor_lifecycle() -> None:
+    session = _FakeSession()
+    provider = make_env_scene_state_provider(_FakeEnv(session))
+    first = provider()[0]
+    assert first["version"] == "simforge.scene-state.v1"
+    assert first["mapId"] == "richmond-field-station"
+    ego = next(actor for actor in first["actors"] if actor["id"] == "ego")
+    lead = next(actor for actor in first["actors"] if actor["id"] == "lead")
+    # First appearance carries the static descriptor the renderer needs.
+    assert ego["kind"] == "spawn"
+    assert ego["catalogId"] == "vehicle.sedan"
+    assert ego["actorClass"] == "car"
+    assert lead["catalogId"] == "vehicle.box-truck"
+    # scene = (x, groundY, -y); a heading is a y-up quaternion about +Y.
+    assert lead["transform"]["position"] == [20.0, 0.0, -3.5]
+    assert lead["transform"]["rotation"][1] == pytest.approx(0.7071068, abs=1e-6)
+
+    # The policy steered: the very next document the renderer receives differs,
+    # which is what makes the rendered cameras closed-loop rather than replay.
+    session.t, session.rows[0][0], session.rows[0][1], session.rows[0][2] = 0.1, 0.8, 0.25, 0.3
+    second = provider()[0]
+    moved = next(actor for actor in second["actors"] if actor["id"] == "ego")
+    assert moved["kind"] == "update"
+    assert moved["transform"]["position"] == pytest.approx([0.8, 0.0, -0.25])
+    assert moved["transform"]["rotation"][1] == pytest.approx(math.sin(0.15), abs=1e-9)
+    assert second["actors"] != first["actors"]
+
+    # An actor that leaves the world despawns exactly once.
+    session.flags[1] = False
+    third = provider()[0]
+    assert ("lead", "despawn") in [(actor["id"], actor["kind"]) for actor in third["actors"]]
+    fourth = provider()[0]
+    assert [actor["id"] for actor in fourth["actors"]] == ["ego"]

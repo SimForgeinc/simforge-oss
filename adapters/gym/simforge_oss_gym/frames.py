@@ -15,16 +15,18 @@ actually rendered or recorded them and refuses to invent any:
   pipelines.
 - ``bevy:<rig.json>`` — the resident Bevy renderer
   (:class:`~simforge_oss_gym.bevy_sensors.BevySensorRig`). The rig document
-  supplies the render scene, the renderer camera descriptors and the
-  ``simforge.scene-state.v1`` provider to render from:
-  ``{"scene": <doc|path>, "cameras": [...], "passes": ["rgb"],
-     "sceneState": {"module": "pkg.mod", "factory": "make_provider", "options": {...}}}``.
-  The factory is called with the live environment and must return a
-  callable yielding the scene-state documents recorded since the previous
-  call (the ``SceneStateProvider`` contract). ``EnvSession`` does not export
-  scene state itself, so the provider is whoever owns the world/renderer
-  wiring; a missing or broken binding is a typed
-  ``frame_source_unavailable`` failure, never a synthetic frame.
+  supplies the render scene (map tiles, lighting) and the renderer camera
+  descriptors: ``{"scene": <doc|path>, "cameras": [...], "passes": ["rgb"]}``.
+  Scene state — what is rendered — comes by DEFAULT from the live episode via
+  :class:`~simforge_oss_gym.scene_state.EnvSceneStateExporter`, which publishes
+  the world as it is after the last applied action, so each rendered frame
+  reflects what the policy just did (closed-loop feedback, not replay). A rig
+  may add ``"sceneState": {"options": {...}}`` to tune that exporter (map id,
+  ground height, weather, catalog overrides), or
+  ``{"module", "factory", "options"}`` to hand rendering to another world
+  owner such as a reconstruction renderer; a named binding that cannot be
+  imported is a typed ``frame_source_unavailable`` failure, never a synthetic
+  frame.
 
 There is deliberately no "synthetic" source. An episode that cannot get real
 camera frames fails with ``frame_source_required``; fabricating views would
@@ -212,11 +214,30 @@ class BevyFrameSource:
 
     @staticmethod
     def _resolve_provider(binding: Mapping[str, Any] | None, env: Any) -> Any:
-        if not binding:
+        """The scene-state source the renderer renders from.
+
+        Default: the live episode itself
+        (:class:`~simforge_oss_gym.scene_state.EnvSceneStateExporter`), which
+        publishes the world as it is after the last applied action — so the
+        rendered cameras react to what the policy did. A rig may name a
+        different provider (`sceneState: {module, factory, options}`) when
+        another component owns the world, e.g. a reconstruction renderer.
+        """
+        if env is None:
             raise FrameSourceError(
                 "frame_source_unavailable",
-                "bevy rig needs `sceneState: {module, factory}`; EnvSession does not export scene state itself",
+                "a bevy rig needs the live environment to render from; none was passed",
             )
+        if not binding:
+            from .scene_state import make_env_scene_state_provider
+
+            return make_env_scene_state_provider(env)
+        if binding.get("module") is None and binding.get("factory") is None:
+            from .scene_state import make_env_scene_state_provider
+
+            # Options-only binding: tune the built-in exporter (map id, ground
+            # height, weather, catalog overrides) without replacing it.
+            return make_env_scene_state_provider(env, **dict(binding.get("options") or {}))
         import importlib
 
         module_name = str(binding.get("module") or "")
