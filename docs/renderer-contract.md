@@ -44,6 +44,10 @@ admission failures. A failed compile must not publish the asset as resident.
 Consumers should poll from bootstrap start, use stage-specific idle deadlines
 and an overall deadline, and report processing as indeterminate when no byte
 denominator is available.
+Initial and reset views focus the nearest authored city tile rather than empty
+terrain bounds. WebGL context loss is a required error, including after startup;
+the React surface reports it to its host so a blank canvas cannot remain ready.
+
 
 `textureMaxDimension` selects existing compressed mip levels before GPU upload;
 it does not remove geometry or resample authored pixels. Embedders should pair
@@ -60,6 +64,12 @@ resident and required visible tiles and lowers the mip ceiling in power-of-two s
 below 128 pixels. Geometry remains required. The effective limit is reported in
 `loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
 Each new map starts from the user's selected preset ceiling.
+Trimmed Basis mips whose base dimensions are not divisible by four decode to
+RGBA with the same authored pixels, avoiding illegal BC GPU allocations.
+Already-transcoded BC sources retain the nearest block-aligned authored mip.
+Those legal dimensions may exceed the requested ceiling; residency accounting
+still charges their actual bytes.
+
 
 `resolveAssetUrls` optionally resolves a GLTF's external image URLs together
 before texture loading. This lets authenticated embedders batch authorization
