@@ -5,10 +5,17 @@
 #   electron-builder --config desktop/electron-builder.yml --win --x64 --publish never
 #   electron-builder --config desktop/electron-builder.yml --mac --arm64 --publish never   (or --x64)
 #   electron-builder --config desktop/electron-builder.yml --linux --x64 --publish never
-# A macOS or Windows artifact needs the stage produced on that platform
-# (addon, sharp, runtime archive, Electron): desktop/after-pack.mjs refuses a
-# stage whose manifest names another platform. .github/workflows/desktop.yml
-# runs each matrix leg on its native runner.
+# No target lists an `arch`: electron-builder then packages the architecture
+# named on the command line, or the host's when none is named, and a listed
+# arch would override the command line (a `--mac --arm64` run with both
+# arches listed packages both). A macOS or Windows artifact needs the stage
+# produced on that platform (addon, sharp, runtime archive, Electron):
+# desktop/after-pack.mjs refuses a stage whose manifest names another
+# platform or architecture than the one being packaged. Because afterPack
+# runs before signing, the stage's pinned encoders are proven byte-identical
+# to desktop/tools.lock.json there; desktop/verify-package.mjs proves the
+# signed package afterwards. .github/workflows/desktop.yml runs each matrix
+# leg on its native runner with its own `--<arch>`.
 #
 # Two-package layout: the Electron application is the dependency-free
 # directory the stage writes (dist/desktop/app), and the whole local host is
@@ -45,9 +52,7 @@ artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 
 win:
   target:
-    - target: nsis
-      arch:
-        - x64
+    - nsis
   # Native binaries are MSVC builds; the VC++ runtime ships with Windows 10/11 updates
   # and with Electron itself, nothing to install separately.
 nsis:
@@ -61,14 +66,8 @@ nsis:
 
 mac:
   target:
-    - target: dmg
-      arch:
-        - arm64
-        - x64
-    - target: zip
-      arch:
-        - arm64
-        - x64
+    - dmg
+    - zip
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false

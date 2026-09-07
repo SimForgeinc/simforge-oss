@@ -40,6 +40,18 @@ export async function matchesPin(path, pin) {
 }
 
 /**
+ * The lock's pins for one target: the only statement of what the bundled
+ * encoders are, read from the repository, never from a stage or package.
+ * @param {ReturnType<typeof targetFor>["key"]} targetKey
+ * @returns {Record<"ffmpeg" | "ffprobe" | "license", { url: string; sha256: string; sizeBytes: number }>}
+ */
+export function toolPins(targetKey) {
+  const pins = lock.ffmpeg.targets[targetKey];
+  if (!pins) throw new Error(`desktop/tools.lock.json has no encoder pins for ${targetKey}`);
+  return pins;
+}
+
+/**
  * The tools directory for one target and what the stage expects in it.
  * @param {string} distRoot studio/dist
  * @param {ReturnType<typeof targetFor>} target
@@ -52,7 +64,7 @@ export function toolsLayout(distRoot, target) {
     ffprobe: join(dir, `ffprobe${target.exe}`),
     license: join(dir, "LICENSE"),
     manifest: join(dir, TOOLS_MANIFEST_FILE),
-    pins: lock.ffmpeg.targets[target.key],
+    pins: toolPins(target.key),
     version: lock.ffmpeg.version,
     licenseId: lock.ffmpeg.license,
   };
@@ -81,7 +93,6 @@ async function download(url, destination, pin) {
  */
 export async function fetchTools(distRoot, target) {
   const layout = toolsLayout(distRoot, target);
-  if (!layout.pins) throw new Error(`desktop/tools.lock.json has no encoder pins for ${target.key}`);
   await mkdir(layout.dir, { recursive: true });
   for (const [name, path] of [["ffmpeg", layout.ffmpeg], ["ffprobe", layout.ffprobe], ["license", layout.license]]) {
     const pin = layout.pins[name];

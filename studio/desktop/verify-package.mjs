@@ -1,26 +1,46 @@
 #!/usr/bin/env node
 // Checks every packaged SimForge Studio application under dist/desktop/out:
 //
-//   node desktop/verify-package.mjs [output-directory]
+//   node desktop/verify-package.mjs [output-directory] [--target=<platform>-<arch>]
 //
-// For each app.asar electron-builder produced (linux-unpacked, win-unpacked,
-// mac*/SimForge Studio.app), the archive must hold exactly the staged shell
-// files (no collected workspace node_modules), and the resources beside it
-// must be a complete stage for the package's own platform: a readable
-// stage-manifest.json naming this platform, the native runner and Bevy render
-// service, the FFI library, the pinned encoders with their locked digests, the
-// actor closure, the standalone server, and the per-target native bindings
-// (@napi-rs/keyring, sharp) resolving inside the package with every native
-// binding, executable and library built for this platform. This is what an
-// installer ships; nothing is inferred from a build succeeding.
+// Every package and installer in the directory must be for one target, the
+// build host's unless --target names another: a matrix leg packages its own
+// architecture and nothing else. For each app.asar electron-builder produced
+// (linux-unpacked, win-unpacked, mac*/SimForge Studio.app), the archive must
+// hold exactly the staged shell files (no collected workspace node_modules),
+// and the resources beside it must be a complete stage for that target: a
+// readable stage-manifest.json naming it, the native runner and Bevy render
+// service, the FFI library, the pinned encoders, the actor closure, the
+// standalone server, and the per-target native bindings (@napi-rs/keyring,
+// sharp) resolving inside the package with every native binding, executable
+// and library built for this target. This is what an installer ships; nothing
+// is inferred from a build succeeding.
+//
+// Encoder integrity chain. desktop/tools.lock.json is the root: it pins the
+// upstream ffmpeg/ffprobe release bytes by sha256 and size. fetch-tools.mjs
+// keeps only bytes matching the lock, stage.mjs re-checks them when it copies
+// them into the stage, and after-pack.mjs re-checks them in the package right
+// before electron-builder signs. Signing then legitimately rewrites macOS
+// executables in place (@electron/osx-sign signs every Mach-O in the bundle,
+// ad-hoc or with a Developer ID, hardened runtime and entitlements), so the
+// packaged bytes can no longer equal the lock's. Here the packaged tool must
+// either still be the pinned bytes, or be a Mach-O whose image with the code
+// signature removed (stage-manifest.mjs unsignedMachO) equals that of the
+// pinned bytes, which this script reads from dist/desktop-tools (fetched by
+// the lock if absent) and proves against the lock again before deriving
+// anything from them. Nothing recorded in the stage or the package is
+// trusted for this: rewriting a manifest cannot make other code pass, and a
+// signed tool passes only if all it differs in is its signature. That the
+// signature itself is well formed is codesign's to verify (the workflow does).
 
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchTools, toolPins } from "./fetch-tools.mjs";
 import { APP_FILES } from "./stage-app.mjs";
-import { readStageManifest, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
+import { readStageManifest, targetFor, unsignedMachO, verifyNativeClosure } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
 // @electron/asar is a dependency of electron-builder's app-builder-lib, not of studio.
@@ -28,11 +48,27 @@ const builderRequire = createRequire(require.resolve("electron-builder/package.j
 const asar = createRequire(builderRequire.resolve("app-builder-lib/package.json"))("@electron/asar");
 
 const desktopDir = dirname(fileURLToPath(import.meta.url));
-const outDir = process.argv[2] ? resolve(process.argv[2]) : resolve(desktopDir, "..", "dist", "desktop", "out");
-const lock = JSON.parse(await readFile(join(desktopDir, "tools.lock.json"), "utf8"));
+const distRoot = resolve(desktopDir, "..", "dist");
+const args = process.argv.slice(2);
+const requested = args.find((arg) => arg.startsWith("--target="))?.slice("--target=".length);
+const [positional] = args.filter((arg) => !arg.startsWith("--"));
+const outDir = positional ? resolve(positional) : join(distRoot, "desktop", "out");
+const expected = requested
+  ? targetFor(/** @type {NodeJS.Platform} */ (requested.split("-")[0]), requested.split("-")[1])
+  : targetFor();
+const expectedPlatform = /** @type {NodeJS.Platform} */ (expected.key.split("-")[0]);
+const expectedArch = expected.key.split("-")[1];
 
-/** Platform a packaged directory name stands for. */
-const PLATFORM_BY_DIR = { "linux-unpacked": "linux", "win-unpacked": "win32", mac: "darwin", "mac-arm64": "darwin", "mac-x64": "darwin" };
+/** Platform and architecture a packaged directory name stands for. */
+const TARGET_BY_DIR = {
+  "linux-unpacked": ["linux", "x64"], "linux-arm64-unpacked": ["linux", "arm64"],
+  "win-unpacked": ["win32", "x64"], "win-arm64-unpacked": ["win32", "arm64"],
+  mac: ["darwin", "x64"], "mac-x64": ["darwin", "x64"], "mac-arm64": ["darwin", "arm64"], "mac-universal": ["darwin", "universal"],
+};
+/** Architecture tokens electron-builder puts in installer names (${arch}: x64, x86_64 for AppImage, amd64 for deb). */
+const ARCH_TOKENS = { x64: ["x64", "x86_64", "amd64"], arm64: ["arm64"] };
+const INSTALLER = /\.(dmg|zip|exe|AppImage|deb)$/;
+const installerArch = new RegExp(`[-_](${ARCH_TOKENS[expectedArch].join("|")})[-_.]`);
 
 const problems = [];
 const entries = await readdir(outDir, { recursive: true }).catch(() => {
@@ -41,26 +77,94 @@ const entries = await readdir(outDir, { recursive: true }).catch(() => {
 });
 const archives = entries.filter((entry) => entry.endsWith("app.asar") && !entry.includes(".asar.unpacked"));
 if (archives.length === 0 && problems.length === 0) problems.push(`no app.asar under ${outDir}`);
+for (const entry of entries) {
+  if (entry.includes(sep) || !INSTALLER.test(entry)) continue;
+  if (!installerArch.test(entry)) problems.push(`${entry}: installer is not for ${expected.key}; this leg must package --${expectedArch} only`);
+}
 
-/** @param {string} path */
-async function digest(path) {
-  return createHash("sha256").update(await readFile(path)).digest("hex");
+/** @param {Buffer} bytes */
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+/**
+ * The pinned upstream bytes for `expected`, proven against the lock here, and
+ * their unsigned Mach-O digests when the target is macOS (null otherwise).
+ * Read once; the package's tools are compared against these, never against
+ * anything the package carries.
+ * @returns {Promise<Record<"ffmpeg" | "ffprobe", { sha256: string; sizeBytes: number; unsigned: string | null }>>}
+ */
+async function pinnedReference() {
+  const pins = toolPins(expected.key);
+  const layout = expectedPlatform === "darwin" ? await fetchTools(distRoot, expected) : null;
+  const reference = {};
+  for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
+    if (layout === null) {
+      reference[name] = { ...pins[name], unsigned: null };
+      continue;
+    }
+    const bytes = await readFile(layout[name]);
+    if (bytes.length !== pins[name].sizeBytes || sha256(bytes) !== pins[name].sha256) {
+      throw new Error(`${layout[name]} does not match desktop/tools.lock.json; the reference for ${expected.key} is not the pinned upstream release`);
+    }
+    reference[name] = { ...pins[name], unsigned: expectedPlatform === "darwin" ? unsignedMachO(bytes).sha256 : null };
+  }
+  return reference;
+}
+const reference = archives.length > 0 ? await pinnedReference() : null;
+
+/**
+ * Why the packaged tool is not the pinned one, or null when it is: the pinned
+ * bytes themselves, or (macOS) a Mach-O differing from them only in its code
+ * signature.
+ * @param {string} path
+ * @param {{ sha256: string; sizeBytes: number; unsigned: string | null }} pin
+ */
+async function toolMismatch(path, pin) {
+  const info = await stat(path).catch(() => null);
+  if (!info?.isFile()) return "is missing";
+  const bytes = await readFile(path);
+  if (bytes.length === pin.sizeBytes && sha256(bytes) === pin.sha256) return null;
+  if (pin.unsigned === null) return "does not match desktop/tools.lock.json";
+  let image;
+  try {
+    image = unsignedMachO(bytes);
+  } catch (error) {
+    return `does not match desktop/tools.lock.json and ${error instanceof Error ? error.message : String(error)}`;
+  }
+  if (!image.signed) return "differs from the pinned tool without a code signature";
+  if (image.sha256 !== pin.unsigned) return "is not the pinned tool: its image differs from desktop/tools.lock.json beyond the code signature";
+  return null;
 }
 
 for (const rel of archives) {
   const archive = join(outDir, rel);
   const packageRoot = rel.split(sep)[0];
-  const platform = PLATFORM_BY_DIR[packageRoot];
-  if (!platform) {
+  const packaged = TARGET_BY_DIR[packageRoot];
+  if (!packaged) {
     problems.push(`${rel}: unrecognised package directory ${packageRoot}`);
     continue;
   }
+  if (packaged[0] !== expectedPlatform || packaged[1] !== expectedArch) {
+    problems.push(`${rel}: package is ${packaged.join("-")}, this leg must package ${expected.key} only`);
+    continue;
+  }
+  const platform = packaged[0];
   const listed = asar.listPackage(archive, { isPack: false })
     .map((entry) => entry.replace(/^[\\/]/, ""))
     .filter((entry) => entry.length > 0)
     .sort();
   if (listed.join("\n") !== APP_FILES.join("\n")) {
     problems.push(`${rel}: app.asar holds [${listed.join(", ")}], expected [${APP_FILES.join(", ")}]`);
+  }
+  const metadata = JSON.parse(asar.extractFile(archive, "package.json").toString("utf8"));
+  try {
+    const origin = new URL(metadata.simforgeCloudOrigin);
+    if (typeof metadata.simforgeCloudOrigin !== "string" || origin.protocol !== "https:" || origin.origin !== metadata.simforgeCloudOrigin) {
+      throw new Error("invalid origin");
+    }
+  } catch {
+    problems.push(`${rel}: package.json has no normalized HTTPS Cloud service origin`);
   }
   const main = asar.extractFile(archive, "main.mjs").toString("utf8");
   if (/SIMFORGE_DESKTOP_MODE|persist:simcloud/.test(main)) problems.push(`${rel}: main.mjs still carries a cloud mode`);
@@ -73,7 +177,7 @@ for (const rel of archives) {
     problems.push(`${rel}: ${error instanceof Error ? error.message : String(error)}`);
     continue;
   }
-  if (manifest.platform !== platform) problems.push(`${rel}: stage targets ${manifest.platform}-${manifest.arch}, package is ${platform}`);
+  if (manifest.platform !== platform || manifest.arch !== expectedArch) problems.push(`${rel}: stage targets ${manifest.platform}-${manifest.arch}, package is ${expected.key}`);
   let target;
   try {
     target = targetFor(manifest.platform, manifest.arch);
@@ -92,12 +196,9 @@ for (const rel of archives) {
   }
   const closures = await readdir(join(stage, manifest.actorAssetsRoot, "closures")).catch(() => []);
   if (closures.length === 0) problems.push(`${rel}: ${manifest.actorAssetsRoot} carries no actor closure`);
-  const pins = lock.ffmpeg.targets[target.key];
-  for (const name of ["ffmpeg", "ffprobe"]) {
-    const path = join(stage, manifest.tools[name]);
-    const info = await stat(path).catch(() => null);
-    if (!info?.isFile()) problems.push(`${rel}: ${manifest.tools[name]} is missing`);
-    else if (info.size !== pins[name].sizeBytes || (await digest(path)) !== pins[name].sha256) problems.push(`${rel}: ${manifest.tools[name]} does not match desktop/tools.lock.json`);
+  for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
+    const mismatch = await toolMismatch(join(stage, manifest.tools[name]), reference[name]);
+    if (mismatch) problems.push(`${rel}: ${manifest.tools[name]} ${mismatch}`);
   }
   const runtimeManifest = JSON.parse(await readFile(join(stage, manifest.nativeRuntimeRoot, "bin", "runtime-manifest.json"), "utf8").catch(() => "null"));
   if (!runtimeManifest || runtimeManifest.target !== target.triple) problems.push(`${rel}: runtime manifest is missing or targets ${runtimeManifest?.target}`);
@@ -111,4 +212,4 @@ if (problems.length > 0) {
   process.stderr.write(`${problems.map((problem) => `- ${problem}`).join("\n")}\n`);
   process.exit(1);
 }
-process.stdout.write(`${JSON.stringify({ component: "simforge-desktop-stage", event: "verify-package.ok", archives })}\n`);
+process.stdout.write(`${JSON.stringify({ component: "simforge-desktop-stage", event: "verify-package.ok", target: expected.key, archives })}\n`);

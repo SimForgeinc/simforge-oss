@@ -59,6 +59,11 @@ export async function bundleNode(entryPoints, outdir, external) {
  * @returns {Promise<{ files: string[]; inputs: string[] }>} staged file names and bundled shell inputs
  */
 export async function stageApp({ appDir, version, license }) {
+  const cloudOrigin = new URL(process.env.SIMFORGE_DESKTOP_CLOUD_ORIGIN?.trim() || "https://simforge.ai");
+  if (cloudOrigin.protocol !== "https:" || cloudOrigin.username || cloudOrigin.password
+    || cloudOrigin.pathname !== "/" || cloudOrigin.search || cloudOrigin.hash) {
+    throw new Error("SIMFORGE_DESKTOP_CLOUD_ORIGIN must be an HTTPS origin");
+  }
   const preloadSource = join(desktopDir, CACHE_PRELOAD);
   await access(preloadSource).catch(() => {
     throw new Error(`${preloadSource} missing: the desktop map cache preload is part of the shell.`);
@@ -75,6 +80,7 @@ export async function stageApp({ appDir, version, license }) {
     name: PRODUCT.packageName,
     productName: PRODUCT.name,
     version,
+    simforgeCloudOrigin: cloudOrigin.origin,
     description: "SimForge Studio desktop: the local Studio host, native rendering and the SimCloud connector.",
     homepage: "https://github.com/SimForgeinc/simforge-oss",
     license: license ?? "Apache-2.0",

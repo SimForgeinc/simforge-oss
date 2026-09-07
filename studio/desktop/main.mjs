@@ -20,7 +20,7 @@
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { installDesktopMapCache } from "./map-cache.mjs";
 import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
@@ -318,10 +318,20 @@ if (!app.requestSingleInstanceLock()) {
     const win = createWindow();
     try {
       const dataRoot = await resolveDataRoot();
+      let cloudOrigin = process.env.SIMFORGE_CLOUD_ORIGIN?.trim();
+      if (app.isPackaged) {
+        const metadata = JSON.parse(await readFile(join(pagesDir, "package.json"), "utf8"));
+        if (typeof metadata.simforgeCloudOrigin !== "string") throw new Error("The desktop package has no Cloud service origin");
+        const configured = new URL(metadata.simforgeCloudOrigin);
+        if (configured.protocol !== "https:" || configured.origin !== metadata.simforgeCloudOrigin) {
+          throw new Error("The desktop package has an invalid Cloud service origin");
+        }
+        cloudOrigin ||= metadata.simforgeCloudOrigin;
+      }
       localHost = createLocalHost({
         port: Number(process.env.PORT ?? "5199"),
         dataRoot,
-        env: {},
+        env: cloudOrigin ? { SIMFORGE_CLOUD_ORIGIN: cloudOrigin } : {},
         onExit: (code) => {
           if (window && !window.isDestroyed()) {
             void window.loadFile(join(pagesDir, "host-exited.html"), { query: { code: String(code ?? "unknown") } });

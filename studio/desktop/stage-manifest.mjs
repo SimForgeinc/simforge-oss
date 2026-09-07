@@ -5,6 +5,7 @@
 // JS so the unbundled shell (`electron desktop/main.mjs`), the bundled host
 // and the package verifier share it.
 
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
@@ -208,6 +209,89 @@ export async function binaryTarget(path) {
     return { platform: "win32", archs: [PE_ARCH[header.readUInt16LE(offset + 4)] ?? "unknown"] };
   }
   return null;
+}
+
+const LC_SEGMENT_64 = 0x19;
+const LC_CODE_SIGNATURE = 0x1d;
+
+/**
+ * SHA-256 of a thin 64-bit Mach-O image with its code signature removed:
+ * the image `codesign` reads and rewrites when it (re)signs the file. Every
+ * byte a signature does not own is covered; only the parts `codesign` itself
+ * rewrites are normalised, each to the value an unsigned image holds:
+ * - the header's `ncmds`/`sizeofcmds` with LC_CODE_SIGNATURE not counted, and
+ *   that command's 16 bytes zeroed (codesign appends it as the last command
+ *   into the zero padding after the load commands);
+ * - `__LINKEDIT`'s `vmsize`/`filesize` zeroed (they grow by the signature);
+ * - the file cut at the signature's `dataoff` (the signature is the trailing
+ *   blob of `__LINKEDIT`; nothing may follow it), then zero-padded to the
+ *   16-byte boundary codesign aligns a new signature to.
+ * So a pinned unsigned or linker-ad-hoc-signed tool and the same tool after
+ * `codesign --force` (ad-hoc or Developer ID, hardened runtime, entitlements)
+ * hash alike, while any change to code, data, other load commands or the
+ * link-edit tables, or any bytes smuggled beyond the signature, does not.
+ * Throws for anything but a well-formed thin 64-bit Mach-O with at most one
+ * trailing LC_CODE_SIGNATURE, so a fat, foreign or mangled file never has an
+ * unsigned digest.
+ * @param {Buffer} bytes whole file
+ * @returns {{ sha256: string; signed: boolean }}
+ */
+export function unsignedMachO(bytes) {
+  const malformed = (/** @type {string} */ reason) => new Error(`not a signable thin 64-bit Mach-O image: ${reason}`);
+  if (bytes.length < 32 || bytes.readUInt32LE(0) !== 0xfeedfacf) throw malformed("bad magic");
+  const ncmds = bytes.readUInt32LE(16);
+  const sizeofcmds = bytes.readUInt32LE(20);
+  const commandsEnd = 32 + sizeofcmds;
+  if (commandsEnd > bytes.length) throw malformed("load commands exceed the file");
+  let linkedit = -1;
+  let signature = -1;
+  for (let i = 0, offset = 32; i < ncmds; i += 1) {
+    if (offset + 8 > commandsEnd) throw malformed("load commands overrun sizeofcmds");
+    const cmd = bytes.readUInt32LE(offset);
+    const cmdsize = bytes.readUInt32LE(offset + 4);
+    if (cmdsize < 8 || offset + cmdsize > commandsEnd) throw malformed(`load command ${i} has size ${cmdsize}`);
+    if (cmd === LC_SEGMENT_64 && cmdsize >= 56 && bytes.toString("latin1", offset + 8, offset + 24).replace(/\0+$/, "") === "__LINKEDIT") {
+      if (linkedit !== -1) throw malformed("two __LINKEDIT segments");
+      linkedit = offset;
+    } else if (cmd === LC_CODE_SIGNATURE) {
+      if (signature !== -1) throw malformed("two LC_CODE_SIGNATURE commands");
+      if (cmdsize !== 16) throw malformed(`LC_CODE_SIGNATURE has size ${cmdsize}`);
+      if (i !== ncmds - 1) throw malformed("LC_CODE_SIGNATURE is not the last load command");
+      signature = offset;
+    }
+    offset += cmdsize;
+  }
+  if (linkedit === -1) throw malformed("no __LINKEDIT segment");
+  if (signature !== -1 && signature < linkedit) throw malformed("LC_CODE_SIGNATURE precedes __LINKEDIT");
+  let content = bytes.length;
+  if (signature !== -1) {
+    const dataoff = bytes.readUInt32LE(signature + 8);
+    const datasize = bytes.readUInt32LE(signature + 12);
+    const linkeditOffset = Number(bytes.readBigUInt64LE(linkedit + 40));
+    if (dataoff < linkeditOffset || dataoff + datasize !== bytes.length) throw malformed("the code signature is not the trailing blob of __LINKEDIT");
+    content = dataoff;
+  }
+  const header = Buffer.alloc(8);
+  header.writeUInt32LE(signature === -1 ? ncmds : ncmds - 1, 0);
+  header.writeUInt32LE(signature === -1 ? sizeofcmds : sizeofcmds - 16, 4);
+  const zeros = Buffer.alloc(16);
+  /** In file order: [offset, replacement] for every span a signature rewrites. */
+  const replaced = [
+    [16, header],
+    [linkedit + 32, zeros.subarray(0, 8)], // vmsize
+    [linkedit + 48, zeros.subarray(0, 8)], // filesize
+  ];
+  if (signature !== -1) replaced.push([signature, zeros]);
+  const hash = createHash("sha256");
+  let cursor = 0;
+  for (const [offset, replacement] of replaced) {
+    hash.update(bytes.subarray(cursor, offset));
+    hash.update(replacement);
+    cursor = offset + replacement.length;
+  }
+  hash.update(bytes.subarray(cursor, content));
+  hash.update(zeros.subarray(0, (16 - (content % 16)) % 16));
+  return { sha256: hash.digest("hex"), signed: signature !== -1 };
 }
 
 /**

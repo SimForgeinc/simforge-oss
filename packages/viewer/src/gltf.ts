@@ -1,8 +1,15 @@
 import type { BufferGeometry, Material, Object3D, Texture, WebGLRenderer } from 'three';
-import { CompressedTexture, Mesh, RGBA_S3TC_DXT1_Format } from 'three';
+import { CompressedTexture, Mesh, RGBAFormat, RGBA_S3TC_DXT1_Format } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import {
+  read as readKtx2,
+  write as writeKtx2,
+  VK_FORMAT_BC1_RGB_UNORM_BLOCK,
+  VK_FORMAT_BC7_SRGB_BLOCK,
+  VK_FORMAT_UNDEFINED,
+} from 'three/addons/libs/ktx-parse.module.js';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -110,7 +117,102 @@ class SharedTextureCache {
 
 export const sharedTextures = new SharedTextureCache();
 
+/**
+ * Drop authored mip levels larger than `maxDimension` without decompressing or
+ * resampling pixels: the first retained level becomes the new base.
+ *
+ * Three uploads a compressed texture as one `texStorage2D` at the base
+ * dimensions and never resizes it, so a base above the renderer's
+ * `MAX_TEXTURE_SIZE` is a `GL_INVALID_VALUE` followed by failed sub-image
+ * uploads for every level. A cropped BC chain must keep a block-aligned base,
+ * so the crop retreats to the nearest aligned level. KTX2Loader also returns a
+ * `CompressedTexture` for its uncompressed RGBA output, which has no such
+ * constraint.
+ */
+export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDimension: number): CompressedTexture {
+  let first = 0;
+  while (first + 1 < texture.mipmaps.length) {
+    const mip = texture.mipmaps[first]!;
+    if (Math.max(mip.width, mip.height) <= maxDimension) break;
+    first++;
+  }
+  while (first > 0 && (texture as Texture).format !== RGBAFormat
+    && (texture.mipmaps[first]!.width % 4 !== 0 || texture.mipmaps[first]!.height % 4 !== 0)) first--;
+  if (first > 0) {
+    texture.mipmaps = texture.mipmaps.slice(first);
+    const base = texture.mipmaps[0]!;
+    texture.image = { width: base.width, height: base.height };
+  }
+  return texture;
+}
+
+/**
+ * Select the encoded mip levels to decode before any pixels are allocated.
+ *
+ * Returns the original buffer when every level fits; an uncropped texture is
+ * decoded exactly as authored. Otherwise the container is rewritten with the
+ * levels at or below `maxDimension`, so the transcoder never touches the
+ * oversized levels. `forceRgba` reports a Basis image whose cropped base is not
+ * block-aligned: it is not a legal BC base level, so the caller must transcode
+ * the same pixels to RGBA instead. Already-BC data cannot be re-encoded and
+ * keeps its nearest aligned level.
+ */
+export function selectKtx2MipLevels(buffer: ArrayBuffer, maxDimension: number): { buffer: ArrayBuffer; forceRgba: boolean } {
+  const container = readKtx2(new Uint8Array(buffer));
+  if (container.pixelDepth > 0) return { buffer, forceRgba: false };
+  let first = 0;
+  while (first + 1 < container.levels.length
+    && Math.max(container.pixelWidth >> first, container.pixelHeight >> first) > maxDimension) first++;
+  const blockAligned = () => Math.max(1, container.pixelWidth >> first) % 4 === 0
+    && Math.max(1, container.pixelHeight >> first) % 4 === 0;
+  if (first === 0) return { buffer, forceRgba: false };
+  const rawBc = container.vkFormat >= VK_FORMAT_BC1_RGB_UNORM_BLOCK && container.vkFormat <= VK_FORMAT_BC7_SRGB_BLOCK;
+  if (rawBc) {
+    while (first > 0 && !blockAligned()) first--;
+    if (first === 0) return { buffer, forceRgba: false };
+  }
+  const forceRgba = container.vkFormat === VK_FORMAT_UNDEFINED && !blockAligned();
+  container.pixelWidth = Math.max(1, container.pixelWidth >> first);
+  container.pixelHeight = Math.max(1, container.pixelHeight >> first);
+  container.levels = container.levels.slice(first);
+  container.levelCount = container.levels.length;
+  if (container.globalData) {
+    const imagesPerLevel = Math.max(1, container.layerCount) * container.faceCount;
+    container.globalData.imageDescs = container.globalData.imageDescs.slice(first * imagesPerLevel);
+  }
+  return { buffer: writeKtx2(container, { keepWriter: true }).buffer as ArrayBuffer, forceRgba };
+}
+
 class SharedKTX2Loader extends KTX2Loader {
+  /** Largest base level the renderer can allocate; `Infinity` until a renderer is known. */
+  maxTextureDimension = Infinity;
+  private rgbaLoader: KTX2Loader | null = null;
+
+  override parse(buffer: ArrayBuffer, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
+    let selected: { buffer: ArrayBuffer; forceRgba: boolean };
+    try {
+      selected = selectKtx2MipLevels(buffer, this.maxTextureDimension);
+    } catch (error) {
+      onError?.(error);
+      return;
+    }
+    if (!selected.forceRgba) {
+      super.parse(selected.buffer, onLoad, onError);
+      return;
+    }
+    if (!this.rgbaLoader) {
+      this.rgbaLoader = new KTX2Loader(this.manager).setTranscoderPath(this.transcoderPath).setWorkerLimit(1);
+      // A non-block-aligned cropped base is not a legal BC texture. Decode the
+      // same authored mip pixels to RGBA instead; block-aligned images above
+      // keep their compressed format.
+      this.rgbaLoader.workerConfig = {
+        astcSupported: false, astcHDRSupported: false, etc1Supported: false,
+        etc2Supported: false, dxtSupported: false, bptcSupported: false, pvrtcSupported: false,
+      };
+    }
+    this.rgbaLoader.parse(selected.buffer, onLoad, onError);
+  }
+
   override load(
     url: string,
     onLoad: (texture: CompressedTexture) => void,
@@ -121,12 +223,21 @@ class SharedKTX2Loader extends KTX2Loader {
     // the Loader contract and never bound to a material.
     const placeholder = new CompressedTexture([], 0, 0, RGBA_S3TC_DXT1_Format);
     void onProgress;
+    const maxDimension = this.maxTextureDimension;
+    // The decoded levels depend on the cap, so a renderer with a different
+    // limit must not share a source cropped for another.
     sharedTextures
-      .acquire(url, () => new Promise<CompressedTexture>((resolve, reject) => {
-        super.load(url, resolve, undefined, reject);
+      .acquire(`${url}|mip-limit=${maxDimension}`, () => new Promise<CompressedTexture>((resolve, reject) => {
+        super.load(url, (texture) => resolve(limitCompressedTextureMipmaps(texture, maxDimension)), undefined, reject);
       }))
       .then(onLoad, (error: unknown) => onError?.(error));
     return placeholder;
+  }
+
+  override dispose(): void {
+    super.dispose();
+    this.rgbaLoader?.dispose();
+    this.rgbaLoader = null;
   }
 }
 
@@ -143,6 +254,9 @@ let sharedKtx2Path = '';
  * - KTX2 is always wired once a renderer is known: cells carry no other
  *   image encoding. The transcoder path is the embedder's, else `/basis/`
  *   at the origin root, independent of the current application route.
+ * - Compressed textures are decoded at the largest authored mip the
+ *   renderer's `MAX_TEXTURE_SIZE` can hold, so a software GL (SwiftShader) or
+ *   a small GPU never receives a `texStorage2D` it must reject.
  */
 export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = ''): GLTFLoader {
   if (!sharedLoader) {
@@ -153,9 +267,12 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '')
   }
   if (renderer) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
-    if (!sharedKtx2 || sharedKtx2Path !== path) {
+    // The context's MAX_TEXTURE_SIZE; a stub renderer that reports none is unlimited.
+    const maxTextureDimension = renderer.capabilities.maxTextureSize > 0 ? renderer.capabilities.maxTextureSize : Infinity;
+    if (!sharedKtx2 || sharedKtx2Path !== path || sharedKtx2.maxTextureDimension !== maxTextureDimension) {
       sharedKtx2?.dispose();
       sharedKtx2 = new SharedKTX2Loader().setTranscoderPath(path).detectSupport(renderer) as SharedKTX2Loader;
+      sharedKtx2.maxTextureDimension = maxTextureDimension;
       sharedKtx2Path = path;
       sharedLoader.setKTX2Loader(sharedKtx2);
     }

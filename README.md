@@ -39,6 +39,13 @@ on this computer, and Cloud Storage transfers are explicit. Credentials use the
 operating-system vault when available; otherwise the app reports session-only
 storage rather than writing plaintext credentials.
 
+Current desktop CI previews target **SimCloud staging**, with its separate
+accounts and storage, while the restored production deployment remains unchanged.
+The configured server is shown in **Settings → SimCloud**. A manual desktop
+workflow can select the production origin only after that service is qualified.
+Source packagers select the origin with `SIMFORGE_DESKTOP_CLOUD_ORIGIN`; runtime
+`SIMFORGE_CLOUD_ORIGIN` overrides remain available for isolated development.
+
 Richmond Field Station downloads without an account. After its verified map
 profiles are installed, local authoring, rendering, and playback work without
 Cloud access. Other published maps require a current SimCloud connection, even

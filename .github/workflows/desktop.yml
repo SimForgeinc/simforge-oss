@@ -27,6 +27,12 @@ name: SimForge Studio desktop
 
 on:
   workflow_dispatch:
+    inputs:
+      cloud_origin:
+        description: "Cloud service for this installer; preview qualification stays on staging"
+        type: choice
+        options: ["https://staging.simforge.ai", "https://simforge.ai"]
+        default: "https://staging.simforge.ai"
   push:
     branches: ["ci/unified-desktop/**"]
 
@@ -75,6 +81,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Verify signed-payload integrity rules
+        run: node --test desktop/stage-manifest.test.mjs
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.triple }},wasm32-unknown-unknown
@@ -144,6 +152,8 @@ jobs:
           node scripts/native-runtime/package-runtime.mjs --target ${{ matrix.triple }} --no-gpu-interop
         working-directory: .
       - name: Stage the desktop artifact
+        env:
+          SIMFORGE_DESKTOP_CLOUD_ORIGIN: ${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}
         run: node desktop/stage.mjs
 
       - name: Decide code signing from the secrets actually present
@@ -186,14 +196,22 @@ jobs:
         # mac.notarize stays false in the config; it is switched on here only with credentials.
         run: pnpm exec electron-builder --config desktop/electron-builder.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true ${{ steps.signing.outputs.notarized == 'true' && '-c.mac.notarize=true' || '' }}
 
-      - name: Verify the package (exact asar contents, complete native payload for this platform)
+      - name: Verify the package (only this leg's target, exact asar contents, complete native payload, pinned encoders modulo signature)
         run: node desktop/verify-package.mjs
 
-      - name: Verify macOS signature and notarization ticket
-        if: runner.os == 'macOS' && steps.signing.outputs.signed == 'true'
+      - name: Verify macOS signatures (ad-hoc or Developer ID) and notarization ticket
+        if: runner.os == 'macOS'
+        # Every Mach-O in the bundle, the pinned encoders and the native
+        # runtime included, was (re)signed by electron-builder; verify-package
+        # proved the encoders' code is still the pinned release, codesign
+        # proves the signatures over it are intact, so each executable launches.
         run: |
           for app in dist/desktop/out/mac*/"SimForge Studio.app"; do
             codesign --verify --deep --strict --verbose=2 "$app"
+            for tool in "$app"/Contents/Resources/studio/tools/ffmpeg "$app"/Contents/Resources/studio/tools/ffprobe; do
+              codesign --verify --strict --verbose=2 "$tool"
+              codesign --display --verbose=2 "$tool" 2>&1 | sed -En '/^(Identifier=|CodeDirectory |Signature=|Authority=)/p'
+            done
             if [ "${{ steps.signing.outputs.notarized }}" = true ]; then
               spctl --assess --type execute --verbose=2 "$app"
               xcrun stapler validate "$app"
