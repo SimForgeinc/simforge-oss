@@ -14,8 +14,8 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const PINNED_DIGEST = '18a0289bcce82ad0742b5d5d47cce5dc905397cd015fac22c509662afdf6d058';
-const PINNED_SIZE_BYTES = 7912;
+const PINNED_DIGEST = '6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192';
+const PINNED_SIZE_BYTES = 12607;
 const DEFAULT_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 const CLOSURE_SCHEMA = 'simforge.actor-assets-closure/v1';
 

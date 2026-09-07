@@ -6,6 +6,7 @@ import { readLocalObject } from "@/app/lib/s3/s3-object";
 import {
   checksumBoundPutRequiredHeaders,
   getPresignedGetUrl,
+  getMapArtifactDownloadUrl,
   getPresignedPutUrl,
   headS3Object,
 } from "@/app/lib/s3/s3-presign";
@@ -248,7 +249,7 @@ export async function localNativeClaimPayload(source: LocalNativeRenderSource): 
       relativePath: "map.xodr",
       sha256: source.xodr_sha256,
       sizeBytes: Number(source.xodr_size),
-      download: { url: await getPresignedGetUrl(source.xodr_key, source.xodr_bucket), headers: {} },
+      download: { url: await getMapArtifactDownloadUrl(source.map_version_id, source.xodr_key, source.xodr_bucket, source.xodr_sha256, Number(source.xodr_size)), headers: {} },
     },
     {
       inputId: source.catalog_artifact_id,

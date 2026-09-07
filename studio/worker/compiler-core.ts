@@ -24,7 +24,7 @@ export type CompilerClaim = {
   map: {
     id: string; sourceMapId: string; runtimeMapName: string; coordinateSystemId: string; coordinateSystemSha256: string;
     assetCatalogVersionId: string; assetCatalogManifestSha256: string; sumoNetworkSha256: string | null;
-    artifacts: Array<{ id: string; kind: MapArtifactKind; mediaType: string; sha256: string; sizeBytes: number; downloadUrl: string }>;
+    artifacts: Array<{ id: string; kind: MapArtifactKind; mediaType: string; sha256: string; sizeBytes: number; downloadUrl: string; downloadHeaders?: Record<string, string> }>;
   };
   ambient: ExecutionAmbientProvenance;
 };
@@ -32,9 +32,9 @@ export type CompileResult = ExecutionPackage & { artifacts: CompilerArtifact[] }
 
 type LoadedMapClosure = { bundle: MapBundle; xodr: string; artifactDigests: Readonly<Record<string, string>> };
 
-async function download(url: string, expectedSize: number, expectedSha256: string, signal: AbortSignal): Promise<Uint8Array> {
+async function download(url: string, expectedSize: number, expectedSha256: string, signal: AbortSignal, headers?: Record<string, string>): Promise<Uint8Array> {
   if (expectedSize > MAX_ARTIFACT_BYTES) throw new Error("map_artifact_too_large");
-  const response = await fetch(url, { redirect: "error", signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) });
+  const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) });
   if (!response.ok || !response.body) throw new Error(`map_artifact_download_failed:${response.status}`);
   const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let total = 0;
   for (;;) {
@@ -54,7 +54,7 @@ function decodeJson<T>(bytes: Uint8Array): T {
 }
 
 async function loadMapClosure(claim: CompilerClaim, signal: AbortSignal): Promise<LoadedMapClosure> {
-  const entries = await Promise.all(claim.map.artifacts.map(async (item) => [item.kind, await download(item.downloadUrl, item.sizeBytes, item.sha256, signal)] as const));
+  const entries = await Promise.all(claim.map.artifacts.map(async (item) => [item.kind, await download(item.downloadUrl, item.sizeBytes, item.sha256, signal, item.downloadHeaders)] as const));
   const byKind = new Map(entries);
   const required = (kind: MapArtifactKind) => { const value = byKind.get(kind); if (!value) throw new Error(`map_closure_missing:${kind}`); return value; };
   const xodr = Buffer.from(required("map-xodr")).toString("utf8");

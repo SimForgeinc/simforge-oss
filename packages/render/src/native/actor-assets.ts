@@ -28,8 +28,8 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  * The public immutable actor closure: sha256 and byte size of the closure
  * document `actor-assets/closures/<digest>.json` as served by the origin.
  */
-export const PINNED_ACTOR_ASSETS_DIGEST = '18a0289bcce82ad0742b5d5d47cce5dc905397cd015fac22c509662afdf6d058';
-export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 7912;
+export const PINNED_ACTOR_ASSETS_DIGEST = '6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192';
+export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 12607;
 export const DEFAULT_ACTOR_ASSETS_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 
 /**

@@ -63,7 +63,7 @@ export class CpuJobsClient {
       signal,
       true,
     );
-    return response === null ? null : parseClaim(response);
+    return response === null ? null : parseClaim(response, this.baseUrl, this.token);
   }
 
   async heartbeat(
@@ -368,12 +368,12 @@ export async function downloadInputs(
 
 async function openInputSource(input: RemoteInput, signal: AbortSignal): Promise<Readable> {
   if (input.download.url.startsWith("file:")) return createReadStream(fileURLToPath(input.download.url));
-  const response = await fetch(workerObjectUrl(input.download.url), { headers: input.download.headers, signal });
+  const response = await fetch(workerObjectUrl(input.download.url), { headers: input.download.headers, redirect: "error", signal });
   if (!response.ok || !response.body) throw new Error(`input ${input.inputId} download returned ${response.status}`);
   return Readable.fromWeb(response.body as NodeReadableStream);
 }
 
-function parseClaim(value: JsonObject): CpuJobClaim {
+function parseClaim(value: JsonObject, baseUrl: URL, token: string): CpuJobClaim {
   if (value.contract !== "uniscenario.cpu-job-claim/v1" || value.jobFamily !== JOB_FAMILY) {
     throw new Error("CPU claim is not an openscenario_render v1 claim.");
   }
@@ -409,7 +409,7 @@ function parseClaim(value: JsonObject): CpuJobClaim {
         executionPackageControlSha256,
         attemptNumber: numberField(payload, "attemptNumber"),
         mapVersionId: stringField(payload, "mapVersionId"),
-        inputs: rawInputs.map(parseRemoteInput),
+        inputs: rawInputs.map((input) => parseRemoteInput(input, baseUrl, token)),
         map: { members: map.members.map(parseMapMember) },
       },
     };
@@ -424,7 +424,7 @@ function parseClaim(value: JsonObject): CpuJobClaim {
       engine: "browser",
       intent,
       intentSha256,
-      inputs: rawInputs.map(parseRemoteInput),
+      inputs: rawInputs.map((input) => parseRemoteInput(input, baseUrl, token)),
       recording: object(payload.recording),
     },
   };
@@ -440,7 +440,7 @@ function parseMapMember(value: unknown): NativeMapMember {
   return { inputId: stringField(row, "inputId"), relativePath: stringField(row, "relativePath"), sha256, sizeBytes };
 }
 
-function parseRemoteInput(value: unknown): RemoteInput {
+function parseRemoteInput(value: unknown, baseUrl: URL, token: string): RemoteInput {
   const row = object(value);
   const download = row.download === undefined
     ? { url: stringField(row, "downloadUrl"), headers: objectOrEmpty(row.headers) }
@@ -450,14 +450,16 @@ function parseRemoteInput(value: unknown): RemoteInput {
   if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0) {
     throw new Error("CPU render input has invalid immutable metadata.");
   }
+  const url = new URL(stringField(download, "url"), baseUrl);
+  const headers = stringRecord(download.headers);
   return {
     inputId: stringField(row, "inputId"),
     ...(typeof row.relativePath === "string" ? { relativePath: row.relativePath } : {}),
     sha256,
     sizeBytes,
     download: {
-      url: stringField(download, "url"),
-      headers: stringRecord(download.headers),
+      url: url.href,
+      headers: url.origin === baseUrl.origin ? { ...headers, authorization: `Bearer ${token}` } : headers,
     },
   };
 }

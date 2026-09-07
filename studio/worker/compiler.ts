@@ -33,7 +33,15 @@ class CompilerClient {
   async claim(signal: AbortSignal): Promise<CompilerClaim | null> {
     const value = await this.post("/api/simforge/internal/exports/claim", { workerId: this.workerId, leaseSeconds: LEASE_SECONDS }, signal, true);
     if (!value) return null;
-    return parseClaim(value);
+    const claim = parseClaim(value);
+    for (const artifact of claim.map.artifacts) {
+      const url = new URL(artifact.downloadUrl, this.baseUrl);
+      artifact.downloadUrl = url.href;
+      if (url.origin === this.baseUrl.origin) {
+        artifact.downloadHeaders = { authorization: `Bearer ${this.token}` };
+      }
+    }
+    return claim;
   }
 
   async heartbeat(claim: CompilerClaim, signal: AbortSignal): Promise<void> {

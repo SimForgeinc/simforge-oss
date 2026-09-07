@@ -5,6 +5,7 @@ import { LOCAL_ARTIFACTS_DIR } from "../db/config";
 import { readLocalObjectMetadata, writeLocalObject } from "./s3-object";
 import { S3_BUCKET } from "./s3-config";
 import { signLocalObjectUrl } from "./local-object-auth";
+import { getRegisteredMap, MAP_CACHE_BUCKET } from "../cloud/map-registry";
 
 export const MEDIA_URL_TTL_SECONDS = 3600;
 export const PRESIGN_TTL_SECONDS = MEDIA_URL_TTL_SECONDS;
@@ -40,6 +41,27 @@ export async function getPresignedGetUrl(
   const url = objectUrl(bucket, key);
   if (responseContentDisposition) url.searchParams.set("response-content-disposition", responseContentDisposition);
   return signLocalObjectUrl(url, "GET", expiresIn);
+}
+
+/** Cached map artifacts keep their map-scoped authorization on every worker read. */
+export async function getMapArtifactDownloadUrl(
+  mapVersionId: string,
+  key: string,
+  bucket: string,
+  sha256: string,
+  byteLength: number,
+): Promise<string> {
+  if (bucket !== MAP_CACHE_BUCKET) return getPresignedGetUrl(key, bucket);
+  const map = await getRegisteredMap(mapVersionId);
+  if (map) {
+    for (const [relativePath, member] of map.browser) {
+      if (member.bucket === bucket && member.key === key
+        && member.sha256 === sha256 && member.byteLength === byteLength) {
+        return `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${relativePath.split("/").map(encodeURIComponent).join("/")}`;
+      }
+    }
+  }
+  throw new Error("map_artifact_member_missing");
 }
 
 export async function getPresignedPutUrl(

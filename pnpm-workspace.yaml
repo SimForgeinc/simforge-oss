@@ -10,3 +10,5 @@ allowBuilds:
   sharp: true
   wasm-pack: true
   electron-winstaller: false
+patchedDependencies:
+  '@electron/osx-sign@1.3.3': patches/@electron__osx-sign@1.3.3.patch

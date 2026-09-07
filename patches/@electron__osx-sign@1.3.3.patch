@@ -1,0 +1,86 @@
+diff --git a/dist/cjs/util.js b/dist/cjs/util.js
+index 77e64b56872bc65bcb0f60ecfbec84eb3da02c6f..e98d27c52dcb5eae1e4e7b4735a9c9887d96a3e5 100644
+--- a/dist/cjs/util.js
++++ b/dist/cjs/util.js
+@@ -151,17 +151,20 @@ async function walkAsync(dirPath) {
+     (0, exports.debugLog)('Walking... ' + dirPath);
+     async function _walkAsync(dirPath) {
+         const children = await fs.readdir(dirPath);
+-        return await Promise.all(children.map(async (child) => {
++        const results = [];
++        // Visit the physical bundle once; pnpm links may form dependency cycles.
++        // Serial inspection bounds open files independently of the bundle size.
++        for (const child of children) {
+             const filePath = path.resolve(dirPath, child);
+-            const stat = await fs.stat(filePath);
++            const stat = await fs.lstat(filePath);
+             if (stat.isFile()) {
+                 switch (path.extname(filePath)) {
+                     case '.cstemp': // Temporary file generated from past codesign
+                         (0, exports.debugLog)('Removing... ' + filePath);
+                         await fs.remove(filePath);
+-                        return null;
++                        break;
+                     default:
+-                        return await getFilePathIfBinary(filePath);
++                        results.push(await getFilePathIfBinary(filePath));
+                 }
+             }
+             else if (stat.isDirectory() && !stat.isSymbolicLink()) {
+@@ -171,10 +174,10 @@ async function walkAsync(dirPath) {
+                     case '.framework': // Framework
+                         walkResult.push(filePath);
+                 }
+-                return walkResult;
++                results.push(walkResult);
+             }
+-            return null;
+-        }));
++        }
++        return results;
+     }
+     const allPaths = await _walkAsync(dirPath);
+     return compactFlattenedList(allPaths);
+diff --git a/dist/esm/util.js b/dist/esm/util.js
+index d3f66d54b1a88e7410d78affe17de87302db02a3..a7066bde3419f9b0fefb2aa1e165ac318f007c2e 100644
+--- a/dist/esm/util.js
++++ b/dist/esm/util.js
+@@ -115,17 +115,20 @@ export async function walkAsync(dirPath) {
+     debugLog('Walking... ' + dirPath);
+     async function _walkAsync(dirPath) {
+         const children = await fs.readdir(dirPath);
+-        return await Promise.all(children.map(async (child) => {
++        const results = [];
++        // Visit the physical bundle once; pnpm links may form dependency cycles.
++        // Serial inspection bounds open files independently of the bundle size.
++        for (const child of children) {
+             const filePath = path.resolve(dirPath, child);
+-            const stat = await fs.stat(filePath);
++            const stat = await fs.lstat(filePath);
+             if (stat.isFile()) {
+                 switch (path.extname(filePath)) {
+                     case '.cstemp': // Temporary file generated from past codesign
+                         debugLog('Removing... ' + filePath);
+                         await fs.remove(filePath);
+-                        return null;
++                        break;
+                     default:
+-                        return await getFilePathIfBinary(filePath);
++                        results.push(await getFilePathIfBinary(filePath));
+                 }
+             }
+             else if (stat.isDirectory() && !stat.isSymbolicLink()) {
+@@ -135,10 +138,10 @@ export async function walkAsync(dirPath) {
+                     case '.framework': // Framework
+                         walkResult.push(filePath);
+                 }
+-                return walkResult;
++                results.push(walkResult);
+             }
+-            return null;
+-        }));
++        }
++        return results;
+     }
+     const allPaths = await _walkAsync(dirPath);
+     return compactFlattenedList(allPaths);

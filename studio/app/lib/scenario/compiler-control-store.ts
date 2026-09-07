@@ -6,7 +6,7 @@ import {
 import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
 import { queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
-import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
+import { getMapArtifactDownloadUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
 import { sha256, scenarioId } from "./core";
 import {
   claimFirstEligibleScenarioJob,
@@ -102,6 +102,7 @@ function validateCompilerArtifactClosure(rows: CompilerArtifactRow[], declaredAr
 }
 
 function artifactBucket() { return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts"; }
+
 
 async function insertCompilerEvent(
   tx: JobTransaction,
@@ -222,7 +223,6 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
        FROM simforge.exports e
        JOIN simforge.revisions r ON r.id = e.revision_id AND r.workspace_id = e.workspace_id
        JOIN simforge.map_versions mv ON mv.id = r.map_version_id
-       JOIN public.map_assets ma ON ma.id = mv.source_map_asset_id
        JOIN simforge.asset_catalog_versions acv
          ON acv.id = mv.asset_catalog_version_id
         AND (acv.workspace_id IS NULL OR acv.workspace_id = mv.workspace_id)
@@ -235,10 +235,6 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
         AND mv.signals_artifact_id IS NOT NULL
         AND acv.contract_version = 'uniscenario.asset-catalog/v1'
         AND NULLIF(BTRIM(mv.source_map_asset_id), '') IS NOT NULL
-        AND COALESCE(
-          NULLIF(BTRIM(ma.ue5_carla_map_name), ''),
-          NULLIF(BTRIM(ma.carla_map_name), '')
-        ) IS NOT NULL
         AND e.ambient_mode IN ('disabled', 'native', 'sumo')
         AND e.ambient_config_sha256 IS NOT NULL AND e.ambient_result_sha256 IS NOT NULL
         AND e.materialized_traffic_sha256 = e.ambient_result_sha256
@@ -263,10 +259,7 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
       `SELECT e.id AS export_id, e.compiler_version, e.workspace_id, r.id AS revision_id,
          r.content_sha256, r.canonical_content::text AS canonical_content,
          r.map_version_id, mv.source_map_asset_id AS map_id,
-         COALESCE(
-           NULLIF(BTRIM(ma.ue5_carla_map_name), ''),
-           NULLIF(BTRIM(ma.carla_map_name), '')
-         ) AS runtime_map_name,
+         mv.source_map_asset_id AS runtime_map_name,
          mv.coordinate_system_id,
          mv.coordinate_system_sha256, mv.asset_catalog_version_id,
          acv.manifest_sha256 AS asset_catalog_manifest_sha256, mv.sumo_network_sha256,
@@ -279,7 +272,6 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
        FROM simforge.exports e
        JOIN simforge.revisions r ON r.id = e.revision_id AND r.workspace_id = e.workspace_id
        JOIN simforge.map_versions mv ON mv.id = r.map_version_id
-       JOIN public.map_assets ma ON ma.id = mv.source_map_asset_id
        JOIN simforge.asset_catalog_versions acv
          ON acv.id = mv.asset_catalog_version_id
         AND (acv.workspace_id IS NULL OR acv.workspace_id = mv.workspace_id)
@@ -291,10 +283,6 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
          AND mv.derived_topology_artifact_id IS NOT NULL AND mv.locations_artifact_id IS NOT NULL
          AND mv.signals_artifact_id IS NOT NULL AND acv.contract_version = 'uniscenario.asset-catalog/v1'
          AND NULLIF(BTRIM(mv.source_map_asset_id), '') IS NOT NULL
-         AND COALESCE(
-           NULLIF(BTRIM(ma.ue5_carla_map_name), ''),
-           NULLIF(BTRIM(ma.carla_map_name), '')
-         ) IS NOT NULL
          AND e.ambient_mode IN ('disabled', 'native', 'sumo')
          AND e.ambient_config_sha256 IS NOT NULL AND e.ambient_result_sha256 IS NOT NULL
          AND e.materialized_traffic_sha256 = e.ambient_result_sha256
@@ -416,7 +404,7 @@ export async function claimCompilerExport(input: { workerId: string; leaseSecond
           mediaType: artifact.media_type,
           sha256: artifact.sha256,
           sizeBytes: Number(artifact.byte_length),
-          downloadUrl: await getPresignedGetUrl(artifact.storage_key, artifact.storage_bucket),
+          downloadUrl: await getMapArtifactDownloadUrl(claimed.map_version_id, artifact.storage_key, artifact.storage_bucket, artifact.sha256, Number(artifact.byte_length)),
         })),
       ),
     },
