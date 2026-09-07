@@ -86,7 +86,7 @@ renderer code is modified by this module.
 | NVIDIA Kaolin for the installed torch/CUDA | splat rendering | pinned, not yet provisioned |
 | CUDA PyTorch | both | present (torch 2.11.0+cu128, CUDA 12.8, device available) |
 | numpy + Pillow | `replay_measure.py` | present |
-| pinned ffmpeg/ffprobe b6.1.1 | frame extraction from encoded video | shipped by the desktop (`studio/desktop/tools.lock.json`); resolved at runtime |
+| ffmpeg/ffprobe built from pinned source | frame extraction from encoded video | shipped by the desktop (`studio/desktop/encoders.lock.json`); resolved at runtime |
 | `nvidia-ncore` | the NCore v4 reconstruction path (f-theta rigs) | optional; absence is an explicit capability restriction, never a silent remap |
 | A NuRec `.usdz` scene package | any import/render of a real scene | not in-repo; gated, non-redistributable |
 
@@ -187,9 +187,12 @@ non-redistributable.
 
 ## Frame extraction
 
-Encoded calibrated video is extracted with the digest-pinned `ffmpeg`/`ffprobe` b6.1.1 the
-desktop already stages (`studio/desktop/tools.lock.json` → `studio/tools/`), spawned as
-separate programs and never linked. Resolution order: explicit paths, then
+Encoded calibrated video is extracted with the `ffmpeg`/`ffprobe` the desktop stage builds
+from Git-pinned source (`studio/desktop/encoders.lock.json` → `studio/tools/`), spawned as
+separate programs and never linked. That build keeps FFmpeg's internal decoders (H.264, HEVC,
+VP9, MJPEG, ProRes, AV1) but is `--disable-network`, so an input is always a local file — a URL
+is refused up front rather than failing later as a protocol error that reads like a corrupt
+clip. Resolution order: explicit paths, then
 `SIMFORGE_FFMPEG`/`SIMFORGE_FFPROBE`, then the staged desktop runtime manifest, then `PATH`
 (recorded as an unpinned build in provenance).
 

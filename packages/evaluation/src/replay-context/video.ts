@@ -3,9 +3,13 @@
  *
  * A user's calibrated clip usually arrives as encoded video, not as a directory of PNGs, and
  * refusing it would make the reconstruction path unusable for the input it exists to serve.
- * So this module extracts frames with the encoder the desktop already ships — the
- * digest-pinned ffmpeg/ffprobe b6.1.1 in `studio/desktop/tools.lock.json`, staged to
- * `studio/tools/{ffmpeg,ffprobe}` — spawned as separate programs, never linked.
+ * So this module extracts frames with the encoder the desktop already ships — the ffmpeg and
+ * ffprobe the desktop stage builds from Git-pinned source (`studio/desktop/encoders.lock.json`),
+ * staged to `studio/tools/{ffmpeg,ffprobe}` — spawned as separate programs, never linked.
+ *
+ * That build is deliberately `--disable-network`, so an input path is always a local file. We
+ * check for a URL up front and say so, rather than letting ffmpeg fail with a protocol error
+ * that reads like a corrupt clip.
  *
  * ## Timestamp integrity is the whole point
  *
@@ -35,8 +39,8 @@ import { deferred } from './deferred.js';
 import { RefusalError } from './refusal.js';
 import type { CalibratedCamera } from './schema.js';
 
-/** Encoder revision the desktop pins; recorded in extraction provenance. */
-export const PINNED_ENCODER = 'ffmpeg-static b6.1.1 (studio/desktop/tools.lock.json)';
+/** Encoder the desktop pins; recorded in extraction provenance. */
+export const PINNED_ENCODER = 'the encoder the desktop stage builds from pinned source (studio/desktop/encoders.lock.json)';
 
 /**
  * Largest allowed disagreement between a container timestamp and the manifest's declared
@@ -212,6 +216,18 @@ export async function extractVideoFrames(
   outputDir: string,
   tools: EncoderTools,
 ): Promise<ExtractionResult> {
+  // The bundled encoder is built --disable-network on purpose: a clip is bytes we already hold,
+  // and a decoder that can be pointed at a URL is a fetch primitive inside a worker.
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(videoPath)) {
+    throw new RefusalError({
+      code: 'unsupported_input',
+      message:
+        `camera ${camera.sensorId}: frame extraction takes a local file, not a URL (${videoPath}). `
+        + 'The bundled encoder is built without network protocols by design.',
+      missing: [{ path: 'videos[].path', requirement: 'a path to a file inside the clip directory' }],
+      alternatives: [],
+    });
+  }
   const declared = cameraTimestamps(camera);
   const containerPts = await probeFrameTimestamps(tools, videoPath);
 

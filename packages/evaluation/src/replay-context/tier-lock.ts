@@ -49,14 +49,20 @@ export const TORCH = {
 
 export const ENCODER = {
   component: 'ffmpeg/ffprobe',
-  pin: 'ffmpeg-static b6.1.1',
+  /** Built from Git-pinned source by the desktop stage; not a prebuilt download. */
+  pin: 'FFmpeg n7.1.5 + libx264, built from pinned source',
   /** Reused from the desktop's own lock rather than re-pinned here, so both hosts decode identically. */
-  source: 'studio/desktop/tools.lock.json',
+  source: 'studio/desktop/encoders.lock.json',
   resolvedAtRuntimeBy: 'SIMFORGE_FFMPEG / SIMFORGE_FFPROBE, the staged desktop runtime manifest, or PATH',
+  /**
+   * Built `--disable-autodetect` and `--disable-network`: internal decoders (H.264, HEVC, VP9,
+   * MJPEG, ProRes, AV1) are available for clip extraction, but the binary cannot be pointed at
+   * a URL. Extraction therefore only ever takes a local file.
+   */
+  buildClosure: '--disable-autodetect, --disable-network; internal decoders at defaults',
   licenseObligation:
     'GPL applies to these executables only; they are separate programs the host spawns, never linked. '
-    + 'Redistributing them inside a worker image pushed to a third-party registry is a corresponding-source '
-    + 'obligation and is a recorded review gate, not an assertion.',
+    + 'The obligation is discharged by shipping the complete corresponding source as a release asset.',
 } as const;
 
 export const NCORE = {
