@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
+import { packWorkspacePackage, reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
 
 test("traced roots use original workspace resolution rather than copied junction targets", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "simforge-stage-dependencies-"));
@@ -87,4 +87,25 @@ test("a dependency cycle reuses an already staged package", () => {
   assert.equal(repeatedA.fresh, false);
   assert.equal(tree.resolve("b", a.scopes), "b@1");
   assert.equal(tree.resolve("a", b.scopes), "a@1");
+});
+
+test("published packages stage across temporary and workspace volumes without native tar path arguments", async (t) => {
+  const repoRoot = await mkdtemp(join(tmpdir(), "simforge-package-source-"));
+  const stageRoot = await mkdtemp(join(process.cwd(), ".simforge-package-stage-"));
+  t.after(() => Promise.all([repoRoot, stageRoot].map((directory) => rm(directory, { recursive: true, force: true }))));
+  const packageDir = join(repoRoot, "packages", "fixture");
+  await mkdir(join(packageDir, "dist"), { recursive: true });
+  await mkdir(join(packageDir, "src"));
+  await writeFile(join(packageDir, "package.json"), JSON.stringify({
+    name: "@simforge-test/staged-fixture", version: "1.0.0", files: ["dist"],
+  }));
+  await writeFile(join(packageDir, "dist", "runtime.txt"), "published runtime");
+  await writeFile(join(packageDir, "src", "private.txt"), "workspace source");
+  await packWorkspacePackage({ packageDir, repoRoot, stageRoot });
+  const target = join(stageRoot, "packages", "fixture");
+  assert.equal(await readFile(join(target, "dist", "runtime.txt"), "utf8"), "published runtime");
+  await assert.rejects(readFile(join(target, "src", "private.txt")), { code: "ENOENT" });
+  assert.equal(await readFile(join(packageDir, "src", "private.txt"), "utf8"), "workspace source");
+  assert.deepEqual((await readdir(target)).sort(), ["dist", "package.json"]);
+  assert.deepEqual(await readdir(join(stageRoot, "packages")), ["fixture"]);
 });

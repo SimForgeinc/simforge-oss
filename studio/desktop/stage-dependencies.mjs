@@ -1,6 +1,11 @@
-import { lstat, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { lstat, mkdir, mkdtemp, readdir, readFile, rename, rm } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative } from "node:path";
+import { promisify } from "node:util";
+import { childEnv } from "../../scripts/native-runtime/target-layout.mjs";
 import { resolvePackageDir } from "./stage-manifest.mjs";
+
+const executeFile = promisify(execFile);
 
 /**
  * The trace selects package names, not source junctions. Next copies Windows
@@ -63,4 +68,42 @@ export function reserveDependencyScope(name, key, scopes, placed, reserved) {
     reserved.set(scopes[nearer], names);
   }
   return index;
+}
+
+/**
+ * Stage the published package, not workspace sources or development dependencies.
+ * All tar paths are relative: GNU tar on Windows does not accept native drive
+ * paths consistently. Extraction and the final rename stay on the target volume.
+ * @param {{packageDir: string; repoRoot: string; stageRoot: string}} options
+ * @returns {Promise<{metadata: Record<string, any>; target: string}>}
+ */
+export async function packWorkspacePackage({ packageDir, repoRoot, stageRoot }) {
+  const packageRelative = relative(repoRoot, packageDir);
+  if (packageRelative.startsWith("..") || isAbsolute(packageRelative)) throw new Error(`${packageDir} is outside the repository`);
+  const metadata = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
+  const target = join(stageRoot, packageRelative);
+  await mkdir(dirname(target), { recursive: true });
+  const packed = await mkdtemp(join(dirname(target), ".simforge-package-"));
+  try {
+    await executeFile("pnpm", ["pack", "--pack-destination", packed], {
+      cwd: packageDir,
+      env: childEnv(process.env, { npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" }),
+      maxBuffer: 4 * 1024 * 1024,
+      shell: process.platform === "win32",
+    });
+    const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
+    if (tarballs.length !== 1) throw new Error(`${metadata.name} did not produce exactly one package archive`);
+    const unpacked = join(packed, "unpacked");
+    await mkdir(unpacked);
+    await executeFile("tar", ["-xzf", `../${tarballs[0]}`, "--strip-components=1"], {
+      cwd: unpacked,
+      env: childEnv(),
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    await rm(target, { recursive: true, force: true });
+    await rename(unpacked, target);
+  } finally {
+    await rm(packed, { recursive: true, force: true });
+  }
+  return { metadata, target };
 }

@@ -48,17 +48,16 @@
 
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readdir, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { extractRuntimeArchive, verifyRuntimeStage } from "../../scripts/native-runtime/runtime-archive.mjs";
 import { targetLayout } from "../../scripts/native-runtime/target-layout.mjs";
 import { fetchTools, matchesPin } from "./fetch-tools.mjs";
 import { bundleNode, stageApp } from "./stage-app.mjs";
-import { reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
+import { packWorkspacePackage, reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
 import { resolvePackageDir, STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
@@ -265,40 +264,6 @@ async function stageMirror(source) {
   return target;
 }
 
-/**
- * Stage a workspace package as `pnpm pack` publishes it, at its repository
- * path: workspace `src/` and development dependencies never become an
- * accidental desktop runtime, and the packed tree carries the same files and
- * export conditions a published consumer receives.
- * @param {string} packageDir real path of the workspace package
- * @returns {Promise<{ metadata: Record<string, any>; target: string }>}
- */
-async function packWorkspacePackage(packageDir) {
-  const packageRelative = relative(repoRoot, packageDir);
-  if (packageRelative.startsWith("..") || isAbsolute(packageRelative)) fail(`${packageDir} is outside the repository`);
-  const metadata = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
-  const packed = await mkdtemp(join(tmpdir(), "simforge-desktop-package-"));
-  const target = join(stageRoot, packageRelative);
-  try {
-    await promisify(execFile)("pnpm", ["pack", "--pack-destination", packed], {
-      cwd: packageDir,
-      env: { ...process.env, npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" },
-      maxBuffer: 4 * 1024 * 1024,
-      shell: process.platform === "win32",
-    });
-    const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
-    if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
-    await rm(target, { recursive: true, force: true });
-    await mkdir(target, { recursive: true });
-    await promisify(execFile)("tar", ["-xzf", tarballs[0], "--strip-components=1", "-C", target], {
-      cwd: packed,
-      maxBuffer: 4 * 1024 * 1024,
-    });
-  } finally {
-    await rm(packed, { recursive: true, force: true });
-  }
-  return { metadata, target };
-}
 
 /**
  * Runtime dependency links of a workspace package; an uninstalled required
@@ -359,7 +324,7 @@ async function stagePackageClosure(packageDir, seen) {
     await stageMirror(packageDir);
     links = await storeDependencyLinks(packageDir);
   } else {
-    const { metadata } = await packWorkspacePackage(packageDir);
+    const { metadata } = await packWorkspacePackage({ packageDir, repoRoot, stageRoot });
     links = await workspaceDependencyLinks(packageDir, metadata);
   }
   for (const [, linkPath] of links) {
@@ -417,7 +382,7 @@ async function drainPlacements() {
     if (key.startsWith(join("node_modules", ".pnpm") + sep)) {
       links = await storeDependencyLinks(source);
     } else {
-      const { metadata, target } = await packWorkspacePackage(source);
+      const { metadata, target } = await packWorkspacePackage({ packageDir: source, repoRoot, stageRoot });
       copySource = target;
       links = await workspaceDependencyLinks(source, metadata);
     }
