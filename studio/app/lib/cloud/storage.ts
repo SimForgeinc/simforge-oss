@@ -283,7 +283,8 @@ async function materializeImportedArtifact(
   const temporaryPath = await downloadVerified(remote.downloadUrl, remote, signal);
   try {
     const bucket = simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts";
-    const key = `${context.workspaceId}/cloud-imports/${remote.kind}/sha256/${remote.sha256.slice(0, 2)}/${remote.sha256}`;
+    const artifactId = scenarioId("usart");
+    const key = `${context.workspaceId}/cloud-imports/${artifactId}`;
     const producerJobId = await createLocalArtifactProducer({
       workspaceId: context.workspaceId,
       requestedByUserId: context.userId,
@@ -319,7 +320,7 @@ async function materializeImportedArtifact(
            THEN EXCLUDED.provenance ELSE simforge.artifacts.provenance END
        RETURNING id, artifact_state, storage_bucket, storage_key`,
       {
-        id: scenarioId("usart"),
+        id: artifactId,
         workspace_id: context.workspaceId,
         kind: remote.kind,
         media_type: remote.mediaType,
