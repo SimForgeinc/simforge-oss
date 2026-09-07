@@ -1,0 +1,27 @@
+{
+  "schema": "simforge.eval-clip/v1",
+  "clipId": "fixture-video-only",
+  "source": {
+    "kind": "synthetic-fixture",
+    "sceneId": "fixture-video-only",
+    "origin": "authored refusal fixture: frames with no calibration and no ego history",
+    "license": "Apache-2.0 (authored in this repository; contains no third-party or dataset bytes)",
+    "redistributable": true,
+    "inputs": [],
+    "importer": {
+      "name": "simforge.replay-context.fixture",
+      "version": "1"
+    }
+  },
+  "videos": [
+    {
+      "cameraId": 1,
+      "sensorId": "camera_front_wide_120fov",
+      "path": "frames/camera_front_wide_120fov/0000000000.png",
+      "kind": "image-sequence",
+      "sha256": "6da8aefc584ea4885f5e2f7a669dc9c0479593cb3efc365f65c90c840ad8ade9",
+      "width": 1,
+      "height": 1
+    }
+  ]
+}
