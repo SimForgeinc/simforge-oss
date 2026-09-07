@@ -48,8 +48,8 @@ export function TrajectoryPlot({
   item: OpenLoopItem;
   className?: string;
 }) {
-  const samples = item.points ?? [];
-  const reference = item.reference?.points ?? null;
+  const samples = item.points;
+  const reference = item.reference.points.length > 0 ? item.reference.points : null;
   const polylines = reference ? [...samples, reference] : samples;
 
   if (polylines.length === 0) {
@@ -165,7 +165,7 @@ export function TrajectoryPlot({
               className="inline-block h-0.5 w-5 bg-foreground"
               style={{ backgroundImage: "repeating-linear-gradient(90deg,currentColor 0 6px,transparent 6px 10px)" }}
             />
-            reference ({item.reference?.kind})
+            reference ({item.reference.kind})
           </span>
         ) : (
           <span>no reference future — prediction only, not scored</span>
