@@ -782,11 +782,11 @@ export async function reserveRenderArtifactV2(input: {
     `INSERT INTO simforge.artifact_uploads (
        id, workspace_id, revision_id, render_job_id, render_attempt_id,
        artifact_kind, artifact_role, artifact_actor_id, artifact_sensor_id, artifact_modality,
-       media_type, expected_sha256, expected_size_bytes,
+       media_type, expected_sha256, expected_size_bytes, bound_at,
        storage_bucket, storage_key, expires_at
      ) SELECT :id, j.workspace_id, j.revision_id, j.id, :attempt_id,
               :artifact_kind, :artifact_role, :actor_id, :sensor_id, :modality,
-              :media_type, :sha256, :size_bytes,
+              :media_type, :sha256, :size_bytes, NOW(),
               :bucket, :key, NOW() + INTERVAL '15 minutes'
          FROM simforge.render_jobs j
         WHERE j.id = :job_id AND j.cancel_requested_at IS NULL

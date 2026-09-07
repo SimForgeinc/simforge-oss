@@ -2403,10 +2403,10 @@ export async function bindArtifactUpload(
       storage_bucket: string;
       storage_key: string;
       expected_sha256: string | null;
-      expected_byte_length: number | null;
+      expected_size_bytes: number | null;
     }>(
       `SELECT u.id, u.artifact_kind, u.media_type, u.storage_bucket, u.storage_key,
-         u.expected_sha256, u.expected_byte_length
+         u.expected_sha256, u.expected_size_bytes
        FROM simforge.artifact_uploads u
        JOIN simforge.render_jobs j ON j.id = u.render_job_id
        WHERE u.id = :upload_id AND u.workspace_id = :workspace_id
@@ -2426,13 +2426,13 @@ export async function bindArtifactUpload(
     }
     if (
       row.expected_sha256 &&
-      (row.expected_sha256 !== input.sha256 || Number(row.expected_byte_length) !== input.sizeBytes)
+      (row.expected_sha256 !== input.sha256 || Number(row.expected_size_bytes) !== input.sizeBytes)
     ) {
       throw new Error("artifact_binding_conflict");
     }
     await tx.execute(
       `UPDATE simforge.artifact_uploads
-       SET expected_sha256 = :sha256, expected_byte_length = :size_bytes,
+       SET expected_sha256 = :sha256, expected_size_bytes = :size_bytes,
          bound_at = COALESCE(bound_at, NOW())
        WHERE id = :upload_id`,
       {
@@ -2658,7 +2658,7 @@ async function verifyCompletionArtifacts(
       storage_bucket: string;
       storage_key: string;
       expected_sha256: string | null;
-      expected_byte_length: number | null;
+      expected_size_bytes: number | null;
       canonical_id?: string | null;
       canonical_artifact_state?: string | null;
       canonical_media_type?: string | null;
@@ -2671,7 +2671,7 @@ async function verifyCompletionArtifacts(
       canonical_verification_sha256?: string | null;
     }>(
       `SELECT u.id, u.artifact_kind, u.media_type, u.storage_bucket, u.storage_key,
-         u.expected_sha256, u.expected_byte_length,
+         u.expected_sha256, u.expected_size_bytes,
          c.id AS canonical_id, c.artifact_state AS canonical_artifact_state,
          c.media_type AS canonical_media_type, c.storage_bucket AS canonical_storage_bucket,
          c.storage_key AS canonical_storage_key, c.sha256 AS canonical_sha256,
@@ -2697,7 +2697,7 @@ async function verifyCompletionArtifacts(
     }
     if (
       reservation.expected_sha256 !== artifact.sha256 ||
-      Number(reservation.expected_byte_length) !== artifact.sizeBytes
+      Number(reservation.expected_size_bytes) !== artifact.sizeBytes
     )
       throw new Error("artifact_binding_mismatch");
     const head = await headS3Object(reservation.storage_key, reservation.storage_bucket);

@@ -92,12 +92,24 @@ const ReadyFileSchema = z.object({
 });
 
 /**
- * The service's `--socket` endpoint: a Unix socket under the workspace, or on
+ * The service's `--socket` endpoint: a Unix socket under a short private directory, or on
  * Windows the private named pipe the service creates for this job.
  */
-function serviceEndpoint(workspace: string, jobId: string): string {
-  if (process.platform !== 'win32') return path.join(workspace, 'native-render.sock');
+function serviceEndpoint(socketDirectory: string, jobId: string): string {
+  if (process.platform !== 'win32') return path.join(socketDirectory, 'rpc.sock');
   return `\\\\.\\pipe\\simforge-render-${jobId.replace(/[^A-Za-z0-9._-]/g, '-')}-${process.pid}`;
+}
+
+async function serviceFailureDetails(logPath: string): Promise<string> {
+  const log = await fs.open(logPath, 'r');
+  try {
+    const { size } = await log.stat();
+    const bytes = Buffer.alloc(Math.min(size, 8_192));
+    const result = await log.read(bytes, 0, bytes.length, Math.max(0, size - bytes.length));
+    return bytes.subarray(0, result.bytesRead).toString('utf8').trim();
+  } finally {
+    await log.close();
+  }
 }
 
 /**
@@ -105,11 +117,11 @@ function serviceEndpoint(workspace: string, jobId: string): string {
  * OS) while watching the child so a crash during startup surfaces as its
  * exit code, never as a timeout.
  */
-async function waitForReady(readyFile: string, child: ChildProcess, timeoutMs: number, signal: AbortSignal): Promise<z.infer<typeof ReadyFileSchema>> {
+async function waitForReady(readyFile: string, child: ChildProcess, timeoutMs: number, signal: AbortSignal, logPath: string): Promise<z.infer<typeof ReadyFileSchema>> {
   const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
     if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error('native render aborted');
-    if (child.exitCode !== null) throw new Error(`native render service exited during startup with code ${child.exitCode}`);
+    if (child.exitCode !== null) throw new Error(`native render service exited during startup with code ${child.exitCode}\n${await serviceFailureDetails(logPath)}`);
     try {
       const parsed = ReadyFileSchema.safeParse(JSON.parse(await fs.readFile(readyFile, 'utf8')));
       if (parsed.success) return parsed.data;
@@ -118,7 +130,7 @@ async function waitForReady(readyFile: string, child: ChildProcess, timeoutMs: n
     }
     await delay(50);
   }
-  throw new Error(`native render service did not become ready within ${timeoutMs} ms`);
+  throw new Error(`native render service did not become ready within ${timeoutMs} ms\n${await serviceFailureDetails(logPath)}`);
 }
 
 /**
@@ -290,14 +302,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const traceDigest = await hashFile(tracePath);
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
-      const endpoint = serviceEndpoint(context.workspace, context.jobId);
       const shmPath = path.join(context.workspace, 'native-render.shm');
       const readyFile = path.join(context.workspace, 'native-render-ready.json');
       const serviceLogPath = path.join(context.workspace, 'native-render-service.log');
       await Promise.all([
         fs.rm(readyFile, { force: true }),
         fs.rm(shmPath, { force: true }),
-        ...(process.platform === 'win32' ? [] : [fs.rm(endpoint, { force: true })]),
       ]);
       // The scenario's environment as the renderer's physical lighting and
       // the Lookdev Lab's cinematic look: same weather presets, same solar
@@ -318,6 +328,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         vehicleModels: actorAssets.directory,
         pedestrianModels: actorAssets.directory,
       });
+      // Unix sockaddr paths are limited to 104 bytes on macOS and 108 on Linux.
+      // A user-selected data directory can exceed either limit; mkdtemp is private (0700).
+      const socketDirectory = process.platform === 'win32'
+        ? null
+        : await fs.mkdtemp(path.join(Buffer.byteLength(tmpdir()) < 70 ? tmpdir() : '/tmp', 'sf-render-'));
+      const endpoint = serviceEndpoint(socketDirectory ?? context.workspace, context.jobId);
       const serviceLog = await fs.open(serviceLogPath, 'w', 0o644);
       const service = spawn(binary, [
         '--scene', scenePath, '--socket', endpoint, '--shm', shmPath,
@@ -337,7 +353,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         timestamp: new Date().toISOString(),
       });
       try {
-        const ready = await waitForReady(readyFile, service, options.startupTimeoutMs ?? 300_000, context.signal);
+        const ready = await waitForReady(readyFile, service, options.startupTimeoutMs ?? 300_000, context.signal, serviceLogPath);
         if (ready.protocol !== NATIVE_SERVICE_PROTOCOL) {
           throw new Error(`native render service protocol ${ready.protocol}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
         }
@@ -396,7 +412,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         await Promise.all([
           fs.rm(readyFile, { force: true }),
           fs.rm(shmPath, { force: true }),
-          ...(process.platform === 'win32' ? [] : [fs.rm(endpoint, { force: true })]),
+          ...(socketDirectory ? [fs.rm(socketDirectory, { recursive: true, force: true })] : []),
         ]);
       }
 

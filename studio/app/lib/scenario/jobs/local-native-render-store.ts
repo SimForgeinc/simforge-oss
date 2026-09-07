@@ -511,11 +511,11 @@ export async function reserveLocalNativeArtifact(
     `INSERT INTO simforge.artifact_uploads (
        id, workspace_id, revision_id, render_job_id, render_attempt_id,
        artifact_kind, artifact_role, artifact_actor_id, artifact_sensor_id, artifact_modality,
-       media_type, expected_sha256, expected_size_bytes,
+       media_type, expected_sha256, expected_size_bytes, bound_at,
        storage_bucket, storage_key, expires_at
      ) SELECT :id, job.workspace_id, job.revision_id, job.id, NULL,
               :artifact_kind, :artifact_role, :actor_id, :sensor_id, :modality,
-              :media_type, :sha256, :size_bytes,
+              :media_type, :sha256, :size_bytes, NOW(),
               :bucket, :key, NOW() + INTERVAL '15 minutes'
          FROM simforge.render_jobs job
         WHERE job.id = :job_id AND job.cancel_requested_at IS NULL AND job.job_state = 'running'

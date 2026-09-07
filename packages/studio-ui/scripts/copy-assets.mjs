@@ -2,8 +2,9 @@
 // component so the emitted import `./ScenarioEditorShell.module.css` resolves.
 import { copyFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const src = join(root, "src");
 const dist = join(root, "dist");
 
