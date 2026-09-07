@@ -1,8 +1,25 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, type ReadStream } from "node:fs";
+import { createReadStream } from "node:fs";
 import { copyFile, link, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
+import { PassThrough, type Readable } from "node:stream";
 import { LOCAL_ARTIFACTS_DIR, LOCAL_ARTIFACT_BUCKET } from "../db/config";
+import { MAP_CACHE_BUCKET, MAP_CACHE_KEY_PREFIX } from "../cloud/map-registry";
+import { resolveCachedMapAsset } from "../map-cache/service";
+
+/**
+ * Blob rows of downloaded maps name the local service's content-addressed map
+ * cache rather than the object store; reads resolve them through the cache.
+ */
+async function mapCacheObject(key: string): Promise<{ path: string; sizeBytes: number; sha256: string }> {
+  const sha256 = key.startsWith(MAP_CACHE_KEY_PREFIX) ? key.slice(MAP_CACHE_KEY_PREFIX.length) : "";
+  if (!/^[a-f0-9]{64}$/.test(sha256)) throw new Error("invalid_object_key");
+  const cached = await resolveCachedMapAsset(sha256);
+  if (!cached) {
+    throw Object.assign(new Error(`map cache object ${sha256} is not present`), { code: "ENOENT" });
+  }
+  return { ...cached, sha256 };
+}
 
 export type LocalObjectMetadata = {
   contentType: string;
@@ -87,6 +104,10 @@ export async function registerLocalFile(
 }
 
 export async function readLocalObjectMetadata(bucket: string, key: string): Promise<LocalObjectMetadata> {
+  if (bucket === MAP_CACHE_BUCKET) {
+    const cached = await mapCacheObject(key);
+    return { contentType: "application/octet-stream", checksumSha256Hex: cached.sha256, sizeBytes: cached.sizeBytes };
+  }
   const filePath = localObjectPath(bucket, key);
   const fileStat = await stat(filePath);
   try {
@@ -104,11 +125,18 @@ export async function readLocalObjectMetadata(bucket: string, key: string): Prom
 }
 
 export async function readLocalObject(bucket: string, key: string): Promise<Uint8Array> {
+  if (bucket === MAP_CACHE_BUCKET) return readFile((await mapCacheObject(key)).path);
   return readFile(localObjectPath(bucket, key));
 }
 
-export function streamLocalObject(bucket: string, key: string): ReadStream {
-  return createReadStream(localObjectPath(bucket, key));
+export function streamLocalObject(bucket: string, key: string): Readable {
+  if (bucket !== MAP_CACHE_BUCKET) return createReadStream(localObjectPath(bucket, key));
+  const output = new PassThrough();
+  mapCacheObject(key).then(
+    (cached) => createReadStream(cached.path).on("error", (error) => output.destroy(error)).pipe(output),
+    (error: Error) => output.destroy(error),
+  );
+  return output;
 }
 
 export { LOCAL_ARTIFACT_BUCKET };

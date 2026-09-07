@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { EnrichmentJob, EnrichmentJobType } from "@simforge-oss/studio-shared";
+import { enqueueLocalMapFinalize } from "@/app/lib/maps/finalize/local-map-finalize";
 
 export interface EnqueueEnrichmentJobInput {
   mapAssetId: string;
@@ -10,12 +11,28 @@ export interface EnqueueEnrichmentJobInput {
 }
 
 export interface EnqueueEnrichmentJobResult {
-  job: EnrichmentJob | { id: string; job_type: EnrichmentJobType; status: "pending" };
+  job: EnrichmentJob;
   reused: boolean;
 }
 
+export const THIRD_PARTY_ENRICHMENT_UNAVAILABLE_MESSAGE =
+  "Third-party (Overture) map enrichment runs on SimCloud's managed workers and is not available in local Studio.";
+
+/**
+ * Start a map enrichment job.
+ *
+ * `local_finalize` runs Studio's own post-ingest pipeline in-process.
+ * `third_party_enrichment` needs the managed Overture provider; it is refused
+ * rather than recorded as a job that could never complete.
+ */
 export async function enqueueEnrichmentJob(
-  _input: EnqueueEnrichmentJobInput,
+  input: EnqueueEnrichmentJobInput,
 ): Promise<EnqueueEnrichmentJobResult> {
-  throw new Error("Map enrichment workers are unavailable in the local cloud app.");
+  if (input.jobType === "local_finalize") {
+    return enqueueLocalMapFinalize({
+      mapAssetId: input.mapAssetId,
+      requestedBy: input.requestedBy ?? null,
+    });
+  }
+  throw new Error(THIRD_PARTY_ENRICHMENT_UNAVAILABLE_MESSAGE);
 }

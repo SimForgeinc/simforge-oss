@@ -89,6 +89,12 @@ export type PlanUploadedMapClosureInput = {
   derivativeReleaseId: string;
   manifest: unknown;
   members: UploadedMapClosureMemberInput[];
+  /**
+   * Keep an upstream immutable identity (a SimCloud map version downloaded
+   * into the local catalog) instead of deriving a local one, so documents
+   * exchanged with the server name the same map.
+   */
+  mapVersionId?: string;
 };
 
 function sha256(value: string) {
@@ -211,7 +217,11 @@ export function planUploadedMapClosure(input: PlanUploadedMapClosureInput): Uplo
     if (!paths.has(reference)) throw new Error(`browser_bundle_reference_missing:${reference}`);
   }
 
-  const mapVersionId = `usmap_${sha256(`${input.workspaceId}\0${input.sourceMapId}\0${input.derivativeReleaseId}`).slice(0, 32)}`;
+  if (input.mapVersionId !== undefined && !/^[A-Za-z0-9_-]{8,128}$/.test(input.mapVersionId)) {
+    throw new Error("browser_bundle_invalid_map_version_id");
+  }
+  const mapVersionId = input.mapVersionId
+    ?? `usmap_${sha256(`${input.workspaceId}\0${input.sourceMapId}\0${input.derivativeReleaseId}`).slice(0, 32)}`;
   const members = sortedInputs.map((member): UploadedMapClosureMember => {
     const memberRole = role(member.relativePath);
     const required = !/(?:^|\/)(?:colliders?|static-collider)(?:\/|\.|$)/i.test(member.relativePath);

@@ -1,12 +1,16 @@
-//! `libsimforge_render`: the native render service as an in-process C ABI.
+//! `simforge_render` (`libsimforge_render.so` / `libsimforge_render.dylib` /
+//! `simforge_render.dll`): the native render service as an in-process C ABI.
 //!
 //! Same resident scene, same V5 request/response contract as the socket
 //! service (`service::proto`), driven by JSON documents instead of
-//! msgpack frames, so a Python host (`simforge_native.embedded`) talks to
-//! the renderer on its own thread without a socket hop. Device streams hand
-//! their exported descriptors over directly ([`simforge_render_take_export`])
-//! for `ImportedStream.from_handles`; host frames still go through the shm
-//! ring the handle was created with, which the host maps read-only.
+//! msgpack frames, so a host talks to the renderer on its own thread
+//! without a socket hop. Host frames go through the shm ring the handle was
+//! created with (a regular file on every OS), which the host maps
+//! read-only. Device streams hand their exported descriptors over directly
+//! ([`simforge_render_take_export`]) for `ImportedStream.from_handles`;
+//! that path exists only in Linux `gpu-interop` builds
+//! ([`simforge_render_gpu_interop`] reports it) and returns nothing
+//! elsewhere.
 //!
 //! Threading: every function on one handle must be called from a single
 //! thread (the Bevy `App` is not `Send`); the handle owns that thread's

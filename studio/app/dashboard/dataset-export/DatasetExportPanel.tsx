@@ -181,11 +181,22 @@ function parseExportJob(value: unknown): ExportJob | null {
   };
 }
 
-function parseExportJobsResponse(value: unknown): ExportJob[] {
+function parseExportJobsResponse(value: unknown): {
+  jobs: ExportJob[];
+  recipes: DatasetExportRecipeId[] | null;
+} {
   const record = asRecord(value);
-  if (!record) return [];
+  if (!record) return { jobs: [], recipes: null };
   const jobs = Array.isArray(record.jobs) ? record.jobs : [];
-  return jobs.map(parseExportJob).filter((job): job is ExportJob => Boolean(job));
+  const recipes = Array.isArray(record.recipes)
+    ? record.recipes.filter((recipe): recipe is DatasetExportRecipeId =>
+        EXPORT_RECIPE_OPTIONS.some((option) => option.id === recipe),
+      )
+    : null;
+  return {
+    jobs: jobs.map(parseExportJob).filter((job): job is ExportJob => Boolean(job)),
+    recipes,
+  };
 }
 
 function parseExportDownloadResponse(value: unknown): ExportDownloadResponse {
@@ -207,6 +218,10 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] =
     useState<DatasetExportRecipeId>("review_bundle");
+  // Recipes this installation can actually run; null until the first list
+  // response arrives. The shared recipe table is the superset every SimForge
+  // deployment understands, the server says which ones it materializes here.
+  const [availableRecipes, setAvailableRecipes] = useState<DatasetExportRecipeId[] | null>(null);
   const [queueing, setQueueing] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -214,11 +229,19 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   const [polling, setPolling] = useState(true);
   const [refreshGeneration, setRefreshGeneration] = useState(0);
 
+  const recipeOptions = useMemo(
+    () =>
+      availableRecipes
+        ? EXPORT_RECIPE_OPTIONS.filter((recipe) => availableRecipes.includes(recipe.id))
+        : EXPORT_RECIPE_OPTIONS,
+    [availableRecipes],
+  );
   const selected = useMemo(
     () =>
-      EXPORT_RECIPE_OPTIONS.find((recipe) => recipe.id === selectedRecipe) ??
+      recipeOptions.find((recipe) => recipe.id === selectedRecipe) ??
+      recipeOptions[0] ??
       DEFAULT_EXPORT_RECIPE_OPTION,
-    [selectedRecipe],
+    [recipeOptions, selectedRecipe],
   );
   const latestJob = jobs[0] ?? null;
   const latestReady = latestJob ? canDownloadExport(latestJob) : false;
@@ -242,9 +265,10 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
       const json = await readResponseBody(res);
       if (!res.ok) throw new Error(responseError(json, `status ${res.status}`));
       if (signal.aborted) return;
-      const nextJobs = parseExportJobsResponse(json);
-      setJobs(nextJobs);
-      setPolling(hasLiveExportJobs(nextJobs));
+      const parsed = parseExportJobsResponse(json);
+      setJobs(parsed.jobs);
+      if (parsed.recipes) setAvailableRecipes(parsed.recipes);
+      setPolling(hasLiveExportJobs(parsed.jobs));
       setState("ready");
       setError(null);
     } catch (loadError) {
@@ -414,8 +438,8 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="border-b border-border/60 lg:border-b-0 lg:border-r">
           <div className="grid gap-0 md:grid-cols-3">
-            {EXPORT_RECIPE_OPTIONS.map((recipe) => {
-              const active = recipe.id === selectedRecipe;
+            {recipeOptions.map((recipe) => {
+              const active = recipe.id === selected.id;
               return (
                 <button
                   key={recipe.id}

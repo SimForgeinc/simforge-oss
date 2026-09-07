@@ -26,6 +26,7 @@ use crate::error::{Result, RunnerError};
 use crate::fsatomic::{ensure_dir, read_json, remove_dir_if_present, remove_file_if_present};
 use crate::lockfile::{FileLock, LockAttempt, LockOwner};
 use crate::manifest::{InputSource, JobManifest};
+use crate::platform;
 use crate::resources::{ResourceUsage, WorkerCapacity};
 use crate::runtime::VerifiedRuntime;
 use crate::state::{list_job_dirs, Failure, JobDir, JobEvent, JobState, JobStatus};
@@ -33,21 +34,20 @@ use crate::state::{list_job_dirs, Failure, JobDir, JobEvent, JobState, JobStatus
 pub const ROOT_ENV: &str = "SIMFORGE_NATIVE_RUNTIME_STATE_ROOT";
 const ATTACH_POLL: Duration = Duration::from_millis(200);
 
-/// Default worker state: `${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime`.
+/// Default worker state when `SIMFORGE_NATIVE_RUNTIME_STATE_ROOT` is unset:
+/// `${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime` on Linux,
+/// `~/Library/Application Support/simforge/native-runtime-state` on macOS,
+/// `%LOCALAPPDATA%\simforge\native-runtime-state` on Windows.
 pub fn default_root() -> Result<PathBuf> {
     if let Some(root) = std::env::var_os(ROOT_ENV).filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(root));
     }
-    let state_home = match std::env::var_os("XDG_STATE_HOME").filter(|value| !value.is_empty()) {
-        Some(dir) => PathBuf::from(dir),
-        None => {
-            let home = std::env::var_os("HOME").filter(|value| !value.is_empty()).ok_or_else(|| RunnerError::Usage {
-                reason: format!("cannot locate the worker root: set --root, {ROOT_ENV}, XDG_STATE_HOME or HOME"),
-            })?;
-            PathBuf::from(home).join(".local").join("state")
-        }
-    };
-    Ok(state_home.join("simforge").join("native-runtime"))
+    platform::default_state_root().ok_or_else(|| RunnerError::Usage {
+        reason: format!(
+            "cannot locate the worker root: set --root, {ROOT_ENV} or {}",
+            platform::STATE_ROOT_ENV_HINT
+        ),
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -222,8 +222,9 @@ impl Worker {
     }
 
     /// Requests cancellation. Queued and interrupted jobs are canceled
-    /// immediately; an owned attempt gets a `cancel.request` plus SIGTERM
-    /// and records the outcome itself at its next safe boundary.
+    /// immediately; an owned attempt gets a `cancel.request` plus a
+    /// termination request to its owner and records the outcome itself at its
+    /// next safe boundary.
     pub fn cancel(&self, job_id: &str, reason: &str) -> Result<StatusReport> {
         let dir = self.job_dir(job_id)?;
         let mut state = dir.load_state()?;
@@ -243,11 +244,10 @@ impl Worker {
                     None,
                     serde_json::json!({ "reason": reason, "ownerPid": owner.pid }),
                 )?;
-                // SAFETY: kill with SIGTERM on a pid we just observed holding
-                // the lock; a stale pid at worst signals nothing.
-                unsafe {
-                    libc::kill(owner.pid as libc::pid_t, libc::SIGTERM);
-                }
+                // The request file is the durable path; the OS request only
+                // shortens the owner's reaction time, so a pid that is no
+                // longer a runner (or already gone) is not an error here.
+                let _ = platform::request_termination(owner.pid);
             }
             _ => {
                 state.cancel = Some(request.clone());
@@ -305,7 +305,7 @@ impl Worker {
                     .and_then(|meta| meta.modified())
                     .map(|modified| modified < cutoff)
                     .unwrap_or(false);
-                if stale && std::fs::remove_file(entry.path()).is_ok() {
+                if stale && platform::remove_file_force(&entry.path()).is_ok() {
                     report.removed_temp_files += 1;
                 }
             }
@@ -612,7 +612,7 @@ impl Worker {
             serde_json::json!({ "resumed": resume.is_some() }),
         )?;
 
-        install_signal_handlers();
+        install_signal_handlers()?;
         let cancel = CancelToken::new(&dir.path, manifest.resources.wall_clock_seconds);
         let attempt = state.attempt;
         let workspace = dir.workspace_dir();

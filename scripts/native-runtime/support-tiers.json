@@ -1,39 +1,41 @@
 {
-  "schema": "simforge.native-runtime-support-tiers/v1",
+  "schema": "simforge.native-runtime-support-tiers/v2",
+  "notes": [
+    "Each tier declares platform-independent requirements plus per-OS requirements; write-runtime-manifest.mjs adds the build's os/arch and emits the tier only when the bundle carries a component for it.",
+    "qualifiedTargets records the Rust targets on which the tier was qualified and with what evidence. A build for any other target ships the tier as capability, marked unqualified with an explicit blocker; source portability is not execution evidence.",
+    "Provider tiers exist only in bundles built with --providers; the CPU/compiler/Bevy baseline needs no Python, CUDA or research environment."
+  ],
   "tiers": [
     {
       "tier": "cpu-reference",
       "description": "Deterministic CPU reference execution: simforge.compile/v1, simforge.simulate/v1, simforge.episode-batch/v1 in the runner binary. No GPU, driver or Python requirement.",
-      "requires": {
-        "os": "linux",
-        "arch": "x86_64"
-      },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "installed-v5-a/report.json; candidate-abi2-conformance-v1/contract-migration-conformance.json; reference-abi2-sealed-v1/input-contract-reseal.json",
-        "observed": [
-          "Installed compile, simulate, evaluate and content-addressed output verification passed; detached execution, owner crash, checkpoint resume and safe cancellation passed.",
-          "ABI 2 matched all 62 frozen discrete and numeric execution cases after an explicit input-contract reseal. Historical input hashes differ because the retired master yield field was removed; the strict same-input comparison is not claimed.",
-          "Qualification covers deterministic simulated execution, not real-world validity of a map or physical model."
-        ]
+      "requires": {},
+      "requiresByOs": {},
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "installed-v5-a/report.json; candidate-abi2-conformance-v1/contract-migration-conformance.json; reference-abi2-sealed-v1/input-contract-reseal.json",
+          "observed": [
+            "Installed compile, simulate, evaluate and content-addressed output verification passed; detached execution, owner crash, checkpoint resume and safe cancellation passed.",
+            "ABI 2 matched all 62 frozen discrete and numeric execution cases after an explicit input-contract reseal. Historical input hashes differ because the retired master yield field was removed; the strict same-input comparison is not claimed.",
+            "Qualification covers deterministic simulated execution, not real-world validity of a map or physical model."
+          ]
+        }
       }
     },
     {
       "tier": "python-provider",
-      "description": "Python providers installed into <install-root>/venv from the bundled wheels by install-runtime.sh; required by every provider workload. Writable job state is separate.",
+      "description": "Python providers installed into <install-root>/venv from the bundled wheels by install-runtime.mjs; required by every provider workload. Writable job state is separate.",
       "requires": {
-        "os": "linux",
-        "arch": "x86_64",
         "python": ">=3.10"
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "installed-v5-a/report.json",
-        "observed": [
-          "Fresh installed runtime imported every bundled provider module and completed a MuJoCo CPU provider job through the installed runner with verified artifacts."
-        ]
+      "requiresByOs": {},
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "installed-v5-a/report.json",
+          "observed": [
+            "Fresh installed runtime imported every bundled provider module and completed a MuJoCo CPU provider job through the installed runner with verified artifacts."
+          ]
+        }
       }
     },
     {
@@ -43,74 +45,83 @@
         "python": ">=3.10",
         "mujoco": ">=3.2"
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "articulated-warp-installed-v6.json",
-        "observed": [
-          "Delivery-robot curb/ramp workload passed analytic free-fall, force balance, rolling, torque threshold, curb recovery, timestep convergence, same-build replay and snapshot continuation gates.",
-          "These analytic and identity gates do not establish real-world tyre/terrain validity or generic vehicle-scale suspension validity."
-        ]
+      "requiresByOs": {},
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "articulated-warp-installed-v6.json",
+          "observed": [
+            "Delivery-robot curb/ramp workload passed analytic free-fall, force balance, rolling, torque threshold, curb recovery, timestep convergence, same-build replay and snapshot continuation gates.",
+            "These analytic and identity gates do not establish real-world tyre/terrain validity or generic vehicle-scale suspension validity."
+          ]
+        }
       }
     },
     {
       "tier": "articulated-mujoco-warp",
-      "description": "simforge.articulated-mujoco/v1 with backend mujoco-warp: CUDA GPU with a driver supporting warp-lang; CPU/Warp parity is measured, not presumed.",
+      "description": "simforge.articulated-mujoco/v1 with backend mujoco-warp: CUDA GPU with a driver supporting warp-lang; CPU/Warp parity is measured, not presumed. Optional provider pack (simforge-oss-physics[warp]); no CUDA on macOS.",
       "requires": {
         "python": ">=3.10",
         "cuda": ">=12",
         "warp-lang": ">=1.17",
         "mujoco-warp": "pinned by simforge-oss-physics[warp]"
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "articulated-warp-installed-v6.json",
-        "observed": [
-          "Installed MuJoCo/Warp workload passed cross-world identity and contact-capacity rejection gates on a CUDA device.",
-          "CPU/Warp divergence was measured, not asserted to be bitwise parity."
-        ]
+      "requiresByOs": {
+        "darwin": { "cuda": "unavailable on macOS; tier cannot be installed" }
+      },
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "articulated-warp-installed-v6.json",
+          "observed": [
+            "Installed MuJoCo/Warp workload passed cross-world identity and contact-capacity rejection gates on a CUDA device.",
+            "CPU/Warp divergence was measured, not asserted to be bitwise parity."
+          ]
+        }
       }
     },
     {
       "tier": "roadway-gpu-batch",
-      "description": "simforge.gpu-batch-rollout/v1 (roadway-dynamic-gpu-v1): Warp/CUDA device batches with binary64 arithmetic; cross-backend conformance is measured by qualification.",
+      "description": "simforge.gpu-batch-rollout/v1 (roadway-dynamic-gpu-v1): Warp/CUDA device batches with binary64 arithmetic; cross-backend conformance is measured by qualification. Optional provider pack; no CUDA on macOS.",
       "requires": {
         "python": ">=3.10",
         "cuda": ">=12",
         "warp-lang": ">=1.17",
         "torch": ">=2.0 (optional, tensor leases)"
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "roadway-gpu/conformance.json; roadway-gpu/throughput-large.json",
-        "observed": [
-          "Declared roadway GPU profile passed discrete/numeric conformance, cross-world identity and replay checks.",
-          "The two-actor synthetic straight-road workload matched final state at 1024 and 4096 worlds; measured median GPU/CPU throughput ratios were 1.5178 and 5.6928 respectively. These are not whole-product throughput claims."
-        ]
+      "requiresByOs": {
+        "darwin": { "cuda": "unavailable on macOS; tier cannot be installed" }
+      },
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "roadway-gpu/conformance.json; roadway-gpu/throughput-large.json",
+          "observed": [
+            "Declared roadway GPU profile passed discrete/numeric conformance, cross-world identity and replay checks.",
+            "The two-actor synthetic straight-road workload matched final state at 1024 and 4096 worlds; measured median GPU/CPU throughput ratios were 1.5178 and 5.6928 respectively. These are not whole-product throughput claims."
+          ]
+        }
       }
     },
     {
       "tier": "bevy-sensor-render",
-      "description": "simforge.render-bundle/v1: resident Bevy renderer (native-render-service + libsimforge_render.so, Bevy 0.19.1 / wgpu 29) on a Vulkan-capable GPU; gpu-interop device path requires CUDA and a matching physical device, otherwise the declared host-copy path is used.",
-      "requires": {
-        "vulkan": ">=1.2",
-        "gpu": "Vulkan-capable; CUDA >=12 for gpu-interop"
+      "description": "simforge.render-bundle/v1 and local scenario renders: resident Bevy renderer (native-render-service + the simforge_render shared library, Bevy 0.19.1 / wgpu 29) through the host-frame transport. The Linux gpu-interop device path additionally requires CUDA and a matching physical device; elsewhere only the declared host-copy path exists.",
+      "requires": {},
+      "requiresByOs": {
+        "linux": { "vulkan": ">=1.2", "gpu": "Vulkan-capable; CUDA >=12 for the optional gpu-interop device path" },
+        "windows": { "graphics": "Vulkan >=1.2 or DirectX 12 through wgpu", "gpu": "Vulkan- or DX12-capable; no CUDA device path" },
+        "darwin": { "graphics": "Metal through wgpu", "gpu": "Metal-capable; no CUDA device path" }
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "articulated-sensors-host-v6/report.json; articulated-sensors-device-v6/report.json",
-        "observed": [
-          "Inspected visible RGB and depth captures passed on the resident renderer through both declared host-copy and CUDA device-tensor transports.",
-          "State and sensor continuation after checkpoint restore were exact in both exercised transports; sky assets were present and digest-verified."
-        ]
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "articulated-sensors-host-v6/report.json; articulated-sensors-device-v6/report.json",
+          "observed": [
+            "Inspected visible RGB and depth captures passed on the resident renderer through both declared host-copy and CUDA device-tensor transports.",
+            "State and sensor continuation after checkpoint restore were exact in both exercised transports; sky assets were present and digest-verified."
+          ]
+        }
       }
     },
     {
       "tier": "nurec-splat-render",
-      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <install-root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed.",
+      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <install-root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed. Optional provider pack; no CUDA on macOS.",
       "requires": {
         "cuda": ">=12",
         "torch": "CUDA build",
@@ -118,14 +129,17 @@
         "kaolin": "matching torch/CUDA",
         "assets": "pinned .usdz packages, scenes root, catalog roots, hood dir"
       },
-      "qualification": {
-        "status": "qualified",
-        "blockers": [],
-        "evidence": "nurec-tensor-v5/report.json",
-        "observed": [
-          "Pinned source-observation rendering passed visible RGB/depth/ID, repeated-pixel identity, host-pack identity, bounded tensor-slot exhaustion and retained-view lifetime checks.",
-          "Qualification is for the source-observation tensor adapter on the exercised CUDA host. It does not qualify a native physical counterfactual, whole-scene fidelity, measured twin export or calibration."
-        ]
+      "requiresByOs": {
+        "darwin": { "cuda": "unavailable on macOS; tier cannot be installed" }
+      },
+      "qualifiedTargets": {
+        "x86_64-unknown-linux-gnu": {
+          "evidence": "nurec-tensor-v5/report.json",
+          "observed": [
+            "Pinned source-observation rendering passed visible RGB/depth/ID, repeated-pixel identity, host-pack identity, bounded tensor-slot exhaustion and retained-view lifetime checks.",
+            "Qualification is for the source-observation tensor adapter on the exercised CUDA host. It does not qualify a native physical counterfactual, whole-scene fidelity, measured twin export or calibration."
+          ]
+        }
       }
     }
   ],

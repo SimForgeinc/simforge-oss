@@ -8,7 +8,6 @@
 //! read-only file whose digest was verified on the way in.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -16,6 +15,7 @@ use serde::Serialize;
 use crate::error::{Result, RunnerError};
 use crate::fsatomic::{ensure_dir, fsync_dir};
 use crate::hash::{hash_file, is_sha256_hex, verify_file, ContentDigest};
+use crate::platform;
 
 #[derive(Debug, Clone)]
 pub struct ContentStore {
@@ -119,12 +119,11 @@ impl ContentStore {
                     actual_size: copied.size_bytes,
                 });
             }
-            fs::set_permissions(&temp, fs::Permissions::from_mode(0o444))
-                .map_err(|source| RunnerError::io(&temp, source))?;
-            fs::File::open(&temp)
-                .and_then(|file| file.sync_all())
-                .map_err(|source| RunnerError::io(&temp, source))?;
-            match fs::hard_link(&temp, &target) {
+            // Flush before sealing: the flush needs a writable handle on
+            // Windows, and the sealed blob is never written again.
+            platform::sync_file(&temp).map_err(|source| RunnerError::io(&temp, source))?;
+            platform::set_read_only(&temp).map_err(|source| RunnerError::io(&temp, source))?;
+            match platform::publish_file_exclusive(&temp, &target) {
                 Ok(()) => {}
                 // A concurrent ingest of the same bytes won; identical content.
                 Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => {}
@@ -132,7 +131,7 @@ impl ContentStore {
             }
             fsync_dir(&self.blobs)
         })();
-        let _ = fs::remove_file(&temp);
+        let _ = platform::remove_file_force(&temp);
         result?;
         Ok((digest, false))
     }
@@ -153,11 +152,10 @@ impl ContentStore {
         if let Some(parent) = target.parent() {
             ensure_dir(parent)?;
         }
-        let _ = fs::remove_file(target);
+        let _ = platform::remove_file_force(target);
         if fs::hard_link(&blob, target).is_err() {
             fs::copy(&blob, target).map_err(|source| RunnerError::io(target, source))?;
-            fs::set_permissions(target, fs::Permissions::from_mode(0o444))
-                .map_err(|source| RunnerError::io(target, source))?;
+            platform::set_read_only(target).map_err(|source| RunnerError::io(target, source))?;
         }
         let len = fs::metadata(target)
             .map_err(|source| RunnerError::io(target, source))?

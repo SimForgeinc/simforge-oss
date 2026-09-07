@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
   ],
   cacheComponents: true,
   partialPrefetching: true,
-  serverExternalPackages: ["@electric-sql/pglite", "@simforge-oss/native-runtime", "@simforge-oss/render"],
+  serverExternalPackages: ["@electric-sql/pglite", "@napi-rs/keyring", "@simforge-oss/native-runtime", "@simforge-oss/render"],
   turbopack: {
     rules: {
       "basis_transcoder.wasm": { type: "asset" },

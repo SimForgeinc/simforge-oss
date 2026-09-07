@@ -10,26 +10,30 @@
 //!               {"event":"done","artifacts":[{"relativePath","sha256","sizeBytes"},...]}
 //!               {"event":"canceled"}
 //! stderr:       {"event":"error","code","message"}
-//! exit:         0 done | 1 bad params | 2 backend/capacity failure | 130 canceled after SIGTERM
+//! exit:         0 done | 1 bad params | 2 backend/capacity failure | 130 canceled after a stop request
 //! <python> -m <module> capabilities [flags...]              -> JSON report
 //! ```
 //!
 //! The runner never trusts the child's artifact claims: every listed file is
 //! re-hashed here and again at publication. Checkpoints announced by the
 //! child are copied into the runner's atomic checkpoint store and handed
-//! back with `--resume` on continuation. Cancellation is SIGTERM at the
-//! child's decision boundary; a child that ignores it is killed and the
-//! attempt fails (not canceled).
+//! back with `--resume` on continuation. Cancellation is a stop request at the
+//! child's decision boundary — SIGTERM on Unix, `CTRL_BREAK_EVENT` to the
+//! child's own process group on Windows (`signal.SIGBREAK` in Python); see
+//! [`platform::request_child_termination`]. A child that ignores it is killed
+//! and the attempt fails (not canceled).
 //!
-//! Provider Python resolves to `$SIMFORGE_PROVIDER_PYTHON`, else
-//! the activated environment's physical `<install root>/venvs/<generation>/bin/python`.
-//! A missing installed environment is an explicit spawn error, never a fallback
-//! to an unrelated global Python installation.
+//! Provider Python resolves to `$SIMFORGE_PROVIDER_PYTHON`, else the
+//! activated environment's physical `<install root>/venv/{bin/python |
+//! Scripts/python.exe}` (the link is resolved so imports stay pinned to that
+//! generation even if another install activates later). A missing installed
+//! environment is an explicit spawn error, never a fallback to an unrelated
+//! global Python installation.
 
 use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::{Duration, Instant};
 
@@ -38,6 +42,7 @@ use serde::Deserialize;
 use crate::engine::{ExecutionContext, ExecutionOutcome, ProducedArtifact};
 use crate::error::{Result, RunnerError};
 use crate::hash::{hash_file, ContentDigest};
+use crate::platform;
 
 pub const PYTHON_ENV: &str = "SIMFORGE_PROVIDER_PYTHON";
 pub const CHECKPOINT_FILE: &str = "provider.checkpoint.json";
@@ -95,11 +100,11 @@ fn python_in(install_root: &Path) -> PathBuf {
         return PathBuf::from(explicit);
     }
     let activated = install_root.join("venv");
-    // Resolve the environment directory, not the Python executable symlink:
+    // Resolve the environment directory, not the Python executable link:
     // resolving the latter would bypass pyvenv.cfg and select system Python.
     // Pin imports to this generation even if another install activates later.
     let generation = activated.canonicalize().unwrap_or(activated);
-    generation.join("bin").join("python")
+    platform::venv_python(&generation)
 }
 
 /// Provider interpreter from installed assets, independent of writable job state.
@@ -189,6 +194,7 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
     command
         .env(INSTALL_ROOT_ENV, &installed)
         .env(crate::job::ROOT_ENV, job.root);
+    platform::prepare_terminable_child(&mut command);
     for (key, value) in job.env {
         command.env(key, value);
     }
@@ -266,14 +272,27 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
             {
                 status = Some(exit);
             } else if term_sent_at.is_none() && ctx.cancel.is_canceled() {
-                signal_term(&child);
+                if let Err(error) = platform::request_child_termination(&child) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(provider_error(
+                        module,
+                        format!(
+                            "could not deliver {} to the child: {error}; killed",
+                            platform::TERMINATION_REQUEST
+                        ),
+                    ));
+                }
                 term_sent_at = Some(Instant::now());
             } else if term_sent_at.is_some_and(|sent| sent.elapsed() > TERM_GRACE) {
                 let _ = child.kill();
                 let _ = child.wait();
                 return Err(provider_error(
                     module,
-                    format!("child ignored SIGTERM for {TERM_GRACE:?}; killed"),
+                    format!(
+                        "child ignored {} for {TERM_GRACE:?}; killed",
+                        platform::TERMINATION_REQUEST
+                    ),
                 ));
             }
         }
@@ -283,8 +302,11 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
     let status = match status {
         Some(status) => status,
         None => {
-            if term_sent_at.is_none() && ctx.cancel.is_canceled() {
-                signal_term(&child);
+            if term_sent_at.is_none()
+                && ctx.cancel.is_canceled()
+                && platform::request_child_termination(&child).is_err()
+            {
+                let _ = child.kill();
             }
             child
                 .wait()
@@ -364,12 +386,4 @@ pub fn run(job: &ProviderJob<'_>, ctx: &mut ExecutionContext<'_>) -> Result<Exec
         artifacts: produced,
         summary,
     })
-}
-
-fn signal_term(child: &Child) {
-    // SAFETY: SIGTERM to a child we spawned; the protocol makes it checkpoint
-    // and exit 130.
-    unsafe {
-        libc::kill(child.id() as libc::pid_t, libc::SIGTERM);
-    }
 }

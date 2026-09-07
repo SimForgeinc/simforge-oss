@@ -11,7 +11,9 @@
 //! - `sky-bench`, `parity-check`: measurement tools.
 //!
 //! The `gpu-interop` feature adds `gpu_interop`, the exportable
-//! Vulkan/CUDA output path; it is off by default.
+//! Vulkan/CUDA output path; it is off by default and Linux-only. OS edges
+//! of the baseline renderer (qualified wgpu backends, asset paths) live in
+//! [`platform`].
 
 pub mod actor_lights;
 pub mod atmosphere;
@@ -21,6 +23,12 @@ pub mod cloud_noise;
 pub mod clouds;
 pub mod facade_windows;
 pub mod fixture;
+#[cfg(all(feature = "gpu-interop", not(target_os = "linux")))]
+compile_error!(
+    "render-core: the `gpu-interop` feature is the Linux NVIDIA Vulkan->CUDA opaque-fd bridge \
+     (VK_KHR_external_memory_fd / SCM_RIGHTS); it has no implementation on this target. \
+     Build without it: the baseline host-copy path is the portable renderer."
+);
 #[cfg(feature = "gpu-interop")]
 pub mod gpu_interop;
 pub mod motion_vector;
@@ -34,6 +42,7 @@ pub mod lighting;
 pub mod night;
 pub mod sky_pass;
 pub mod road_detail;
+pub mod platform;
 pub mod post_grain;
 pub mod profiles;
 pub mod sky_texture;

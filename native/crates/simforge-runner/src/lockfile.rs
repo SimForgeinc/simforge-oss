@@ -1,17 +1,19 @@
-//! Process-ownership locks. A lock is an `flock(LOCK_EX | LOCK_NB)` on a file
-//! whose content names the owner. The kernel releases the lock when the owner
-//! process dies for any reason, so liveness is determined by the lock itself,
-//! never by parsing a pid that may have been reused.
+//! Process-ownership locks. A lock is an exclusive, non-blocking kernel lock
+//! ([`platform::try_lock_exclusive`]: `flock` on Unix, a byte-range
+//! `LockFileEx` on Windows) on a file whose content names the owner. The
+//! kernel releases the lock when the owner process dies for any reason, so
+//! liveness is determined by the lock itself, never by parsing a pid that may
+//! have been reused.
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::clock::now_rfc3339;
 use crate::error::{Result, RunnerError};
+use crate::platform;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,16 +35,6 @@ pub enum LockAttempt {
     Held(Option<LockOwner>),
 }
 
-fn flock(file: &File, operation: libc::c_int) -> std::io::Result<()> {
-    // SAFETY: `file` is an open descriptor for the duration of the call.
-    let status = unsafe { libc::flock(file.as_raw_fd(), operation) };
-    if status == 0 {
-        Ok(())
-    } else {
-        Err(std::io::Error::last_os_error())
-    }
-}
-
 impl FileLock {
     /// Tries to take the lock without blocking. On success the owner record is
     /// written; on contention the current owner record (if readable) is
@@ -55,12 +47,8 @@ impl FileLock {
             .truncate(false)
             .open(path)
             .map_err(|source| RunnerError::io(path, source))?;
-        match flock(&file, libc::LOCK_EX | libc::LOCK_NB) {
-            Ok(()) => {}
-            Err(source) if source.raw_os_error() == Some(libc::EWOULDBLOCK) => {
-                return Ok(LockAttempt::Held(read_owner(&mut file)));
-            }
-            Err(source) => return Err(RunnerError::io(path, source)),
+        if !platform::try_lock_exclusive(&file).map_err(|source| RunnerError::io(path, source))? {
+            return Ok(LockAttempt::Held(read_owner(&mut file)));
         }
         let owner = LockOwner {
             pid: std::process::id(),
@@ -93,20 +81,15 @@ impl FileLock {
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(source) => return Err(RunnerError::io(path, source)),
         };
-        match flock(&file, libc::LOCK_EX | libc::LOCK_NB) {
-            Ok(()) => {
-                let _ = flock(&file, libc::LOCK_UN);
-                Ok(None)
-            }
-            Err(source) if source.raw_os_error() == Some(libc::EWOULDBLOCK) => {
-                Ok(Some(read_owner(&mut file).unwrap_or(LockOwner {
-                    pid: 0,
-                    started_at: String::new(),
-                    purpose: "unreadable owner record".into(),
-                })))
-            }
-            Err(source) => Err(RunnerError::io(path, source)),
+        if platform::try_lock_exclusive(&file).map_err(|source| RunnerError::io(path, source))? {
+            let _ = platform::unlock(&file);
+            return Ok(None);
         }
+        Ok(Some(read_owner(&mut file).unwrap_or(LockOwner {
+            pid: 0,
+            started_at: String::new(),
+            purpose: "unreadable owner record".into(),
+        })))
     }
 
     pub fn path(&self) -> &Path {
@@ -119,7 +102,7 @@ impl Drop for FileLock {
         // Clearing the record before unlocking keeps `holder` from reporting a
         // dead owner between unlock and the next acquisition.
         let _ = self.file.set_len(0);
-        let _ = flock(&self.file, libc::LOCK_UN);
+        let _ = platform::unlock(&self.file);
     }
 }
 

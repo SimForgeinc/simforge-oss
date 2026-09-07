@@ -57,10 +57,17 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "uniscenario_render_intent_idempotency_conflict") {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
+    if (error instanceof Error && error.message.startsWith("native_map_")) {
+      // The map's native closure is not registered on this host yet: the
+      // intent cannot bind immutable member digests, so the semantic profile
+      // must be prepared before a local Bevy render can be submitted.
+      return NextResponse.json({ error: "native_map_not_prepared", detail: error.message }, { status: 409 });
+    }
     if (error instanceof Error && (
       error.name === "ZodError"
       || error.message.startsWith("pronto_")
       || error.message.startsWith("carla_")
+      || error.message.startsWith("native_")
       || error.message.startsWith("render_sensor_")
     )) {
       return NextResponse.json({ error: "render_intent_invalid" }, { status: 422 });

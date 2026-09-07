@@ -11,9 +11,9 @@ import {
   LOCAL_WORKSPACE_ID,
 } from "../app/lib/auth/session";
 import { queryRows, withTransaction } from "../app/lib/db/data-api";
-import { LOCAL_ARTIFACT_BUCKET, LOCAL_CLOUD_ROOT } from "../app/lib/db/config";
+import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import {
-  publishDevAssetMap,
+  publishRegistryInstallation,
   resolveRegistryMapInstallation,
   type DevAssetMap,
   type RegistryMapInstallation,
@@ -22,15 +22,18 @@ import { registerLocalFile, writeLocalObject } from "../app/lib/s3/s3-object";
 import { CATALOG } from "@simforge-oss/asset-catalog";
 import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { migrate } from "./migrate";
-import { ensureStarterMapAssets, STARTER_MAP } from "./starter-map";
 
+/**
+ * Registry releases installed on this machine are a development input: the
+ * installed product obtains the real public RFS (and, signed in, other
+ * published maps) from SimCloud on demand through the map install routes.
+ */
 const dataHome = process.env.XDG_DATA_HOME?.trim() || resolve(homedir(), ".local/share");
 const mapsCacheRoot =
   process.env.SIMFORGE_MAPS_CACHE_ROOT?.trim() || resolve(dataHome, "simforge/maps");
 const semanticProfilesRoot = resolve(mapsCacheRoot, "dev-assets");
 const webProfilesRoot = resolve(mapsCacheRoot, "map-bundles");
 const nativeProfilesRoot = resolve(mapsCacheRoot, ".corpus");
-const starterAssetsRoot = resolve(LOCAL_CLOUD_ROOT, "starter-map-assets");
 const catalogSourceSha256 = sha256(JSON.stringify(CATALOG));
 const catalogBody = Buffer.from(JSON.stringify({
   contractVersion: "uniscenario.asset-catalog/v1",
@@ -67,7 +70,7 @@ function mapLabel(name: string): string {
 /**
  * Every map with any installed profile is a candidate; the release contract in
  * resolveRegistryMapInstallation decides whether it is complete, so a partial
- * installation is reported instead of silently falling back to Starter Road.
+ * installation is reported instead of silently published.
  */
 async function discoverRegistryMaps(): Promise<Array<{
   map: DevAssetMap;
@@ -277,31 +280,17 @@ async function seedSumoRuntime(assetsRoot: string): Promise<void> {
 
 export async function seed(): Promise<void> {
   const installedMaps = await discoverRegistryMaps();
-  if (installedMaps.length === 0) {
-    await ensureStarterMapAssets(starterAssetsRoot);
-    console.log(
-      `no complete installed registry maps were found at ${mapsCacheRoot}; generated the bundled Starter Road`,
-    );
-  }
   await migrate();
   await seedIdentity();
   await seedPublicationBinding();
-  await seedSumoRuntime(
-    installedMaps.length > 0 ? semanticProfilesRoot : starterAssetsRoot,
-  );
+  await seedSumoRuntime(semanticProfilesRoot);
   let skipped = 0;
-  const publications = installedMaps.length > 0
-    ? installedMaps
-    : [{ map: STARTER_MAP, assetsRoot: starterAssetsRoot }];
-  for (const publication of publications) {
+  for (const publication of installedMaps) {
     try {
-      const result = await publishDevAssetMap({
+      const result = await publishRegistryInstallation({
         map: publication.map,
-        ...("installation" in publication
-          ? { installation: publication.installation }
-          : { assetsRoot: publication.assetsRoot }),
+        installation: publication.installation,
         assetCatalogVersionId: catalogVersionId,
-        activeReleaseId: editorReleaseId,
       });
       console.log(
         `published ${publication.map[0]}: ${result.objectCount} browser members, `
@@ -316,12 +305,13 @@ export async function seed(): Promise<void> {
     }
   }
   if (skipped > 0) {
-    console.warn(`${skipped}/${publications.length} installed maps skipped`);
+    console.warn(`${skipped}/${installedMaps.length} installed maps skipped`);
   }
   const maps = await queryRows<{ id: string; label: string }>(
     "SELECT id, label FROM simforge.map_versions WHERE retired_at IS NULL ORDER BY label",
   );
-  console.log(`seed complete: ${maps.length} map_versions`);
+  console.log(`seed complete: ${maps.length} registered map_versions`
+    + (maps.length === 0 ? "; public maps are installed from SimCloud on first use" : ""));
   for (const map of maps) console.log(`  ${map.id} ${map.label}`);
 }
 

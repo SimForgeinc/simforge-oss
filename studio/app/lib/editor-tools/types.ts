@@ -145,6 +145,13 @@ export type EditorToolUiAction =
       type: "add_actor";
       label: string;
       input: AddActorToolInput;
+      /**
+       * Placement in the editor's scene frame (metres, y-up, heading CCW
+       * about +Y from +X), sampled from the runtime lane centerline at the
+       * requested road fraction. Null when the bundle has no centerline for
+       * that road, in which case the editor cannot place the actor.
+       */
+      scenePose: { x: number; y: number; z: number; headingRad: number } | null;
       autoApply?: boolean;
     }
   | {

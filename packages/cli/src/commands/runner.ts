@@ -9,19 +9,20 @@
  * structured error, and the exit code passes through.
  *
  * Discovery order: `$SIMFORGE_RUNNER_BIN`, then the installed native runtime
- * root (`${SIMFORGE_NATIVE_RUNTIME_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime}/bin/simforge-runner`),
- * then `simforge-runner` on `PATH`. The binary ships in the native runtime
- * tarball, not in an npm package, so a missing binary is an installation error.
+ * root (`${SIMFORGE_NATIVE_RUNTIME_ROOT:-<OS data dir>}/bin/simforge-runner[.exe]`,
+ * see `nativeRuntimeRoot`), then `simforge-runner[.exe]` on `PATH`. The binary
+ * ships in the native runtime archive, not in an npm package, so a missing
+ * binary is an installation error.
  */
 
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { nativeRuntimeRoot } from '@simforge-oss/native-runtime';
+import { nativeExecutableName, nativeRuntimeRoot } from '@simforge-oss/native-runtime';
 
 import { CliError, EXIT } from '../errors.js';
 
-export const RUNNER_BINARY = 'simforge-runner';
+export const RUNNER_BINARY = nativeExecutableName('simforge-runner');
 
 /** Command groups forwarded verbatim to the runner. */
 export const RUNNER_GROUPS = ['job', 'worker', 'cas', 'runtime'] as const;
@@ -50,7 +51,7 @@ export function resolveRunnerBinary(env: NodeJS.ProcessEnv = process.env): strin
   throw new CliError('runner_not_installed', `${RUNNER_BINARY} was not found`, {
     detail: {
       searched: candidates,
-      hint: 'install the SimForge native runtime tarball (scripts/native-runtime/install-runtime.sh) or set SIMFORGE_RUNNER_BIN',
+      hint: 'install the SimForge native runtime archive (node scripts/native-runtime/install-runtime.mjs <archive>) or set SIMFORGE_RUNNER_BIN',
     },
     exitCode: EXIT.commandError,
   });
@@ -82,7 +83,7 @@ export function runRunner(options: RunnerOptions): Promise<number> {
       if (error.code === 'ENOENT') {
         reject(
           new CliError('runner_not_installed', `${binary} could not be executed`, {
-            detail: { searched: runnerCandidates(), hint: 'install the SimForge native runtime tarball or set SIMFORGE_RUNNER_BIN' },
+            detail: { searched: runnerCandidates(), hint: 'install the SimForge native runtime archive (node scripts/native-runtime/install-runtime.mjs <archive>) or set SIMFORGE_RUNNER_BIN' },
             exitCode: EXIT.commandError,
           }),
         );

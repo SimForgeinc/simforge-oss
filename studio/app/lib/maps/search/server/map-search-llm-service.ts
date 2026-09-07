@@ -53,7 +53,7 @@ import {
 // shape comes from `StructuredSearchInputSchema` (Zod) defined in this
 // file. Both must stay in sync.
 import { StructuredSearchInput } from "@/app/lib/maps/search/relation-ast";
-import { anthropicConfigured } from "@/app/lib/llm/langchain-support";
+import { assistantAvailability, AssistantUnavailableError } from "@/app/lib/llm/langchain-support";
 import {
   SEARCH_MAP_DEFAULT_LIMIT,
   SEARCH_MAP_HARD_LIMIT,
@@ -242,13 +242,6 @@ export interface SearchMapLocationsLlmArgs {
   inspectLocationGeometry?: (input: InspectLocationGeometryToolInput) => Promise<GeometryReport>;
 }
 
-export class LlmSearchUnavailableError extends Error {
-  constructor() {
-    super("Anthropic API is not configured for this environment");
-    this.name = "LlmSearchUnavailableError";
-  }
-}
-
 /**
  * Compact projection of a corpus document used as the LLM's catalog. We strip
  * fields the model doesn't need (geometry, raw search text, internal rank)
@@ -384,9 +377,9 @@ function emptyTurn(
 /**
  * Run a conversational turn against the LLM-ranked candidate-location chat.
  *
- * Throws `LlmSearchUnavailableError` when the Anthropic API key isn't
- * configured. Callers should translate this to a 503 so the UI can fall
- * back to keyword search instead of failing opaquely.
+ * Throws `AssistantUnavailableError` when no AI model is configured; its
+ * message names the fix. Callers translate this to a 503 so the UI can
+ * show it and fall back to keyword search instead of failing opaquely.
  *
  * `injectedRunner` and `injectedSearchMap` are test seams — production
  * callers omit them. The default runner runs the full LangChain bind-tools
@@ -402,8 +395,11 @@ export async function searchMapLocationsLlm(
   injectedSearchMap?: SearchMapToolFn,
 ): Promise<LlmSearchResult> {
   const runner = injectedRunner ?? defaultLlmChatRunner;
-  if (!injectedRunner && !anthropicConfigured()) {
-    throw new LlmSearchUnavailableError();
+  if (!injectedRunner) {
+    const availability = await assistantAvailability();
+    if (!availability.available) {
+      throw new AssistantUnavailableError(availability.reason ?? "No AI model is configured.");
+    }
   }
 
   if (args.messages.length === 0) {

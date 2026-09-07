@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { extname, posix, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
-import sharp from "sharp";
 import { z } from "zod";
 
 import { parseRoadwayConsistencyReport } from "@simforge-oss/maps/ingest";
@@ -12,7 +11,7 @@ import { execute } from "@/app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { upsertMapAsset } from "@/app/lib/db/map-asset-store";
 import { extractCoordinateRefFromXodr } from "@/app/lib/maps/metadata/xodr";
-import { registerLocalFile, writeLocalObject, type LocalObjectMetadata } from "@/app/lib/s3/s3-object";
+import { registerLocalFile } from "@/app/lib/s3/s3-object";
 import {
   planNativeMapAssetSet,
   planUploadedMapClosure,
@@ -20,7 +19,6 @@ import {
   type UploadedMapClosureMemberInput,
 } from "./closure";
 import { publishUploadedMapVersion, type PublishedMapIntel } from "./publication";
-import { publishedMapReleaseId } from "./release-id";
 import { nativeMasterResources } from "../native-master-resources";
 
 export type DevAssetMap = readonly [slug: string, label: string, locality: string];
@@ -62,20 +60,10 @@ export type RegistryMapInstallation = {
   nativeReceipt: MapInstallationReceipt;
 };
 
-type GeoJson = { features?: Array<{ geometry?: { coordinates?: unknown } }> };
 type Manifest = {
   scene?: { totalTriangles?: number };
 };
-/** `derived/map-intel-build-receipt.json`, written by the Starter Road generator. */
-const BuildReceiptSchema = z.object({
-  contractVersion: z.string().min(1),
-  builder: z.object({ package: z.string().min(1), version: z.string().min(1) }),
-  mapId: z.string().min(1),
-  catalogRevision: z.string().min(1),
-  sourceHashes: z.record(z.string(), Sha256Schema),
-  outputs: z.record(z.string(), z.unknown()),
-});
-/** `derived/locations.json.gz`: the map-intel catalog every release and the Starter carry. */
+/** `derived/locations.json.gz`: the map-intel catalog every release carries. */
 const LocationsSchema = z.object({
   catalogRevision: z.string().min(1),
   sourceHashes: z.record(z.string(), Sha256Schema),
@@ -96,9 +84,12 @@ const SourceCapabilitiesSchema = z.object({
   thumbnail: z.object({ path: SafeMemberPathSchema, recipe: z.string().min(1).optional() }),
 });
 
-type StoredMember = UploadedMapClosureMemberInput & {
-  metadata: LocalObjectMetadata;
-  sourcePath?: string;
+/**
+ * One closure member whose verified bytes are readable at `sourcePath` and
+ * registered at `bucket`/`key` for the blob rows.
+ */
+export type StoredMember = UploadedMapClosureMemberInput & {
+  sourcePath: string;
 };
 
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
@@ -123,7 +114,7 @@ const SOURCE_HASH_MEMBERS: Readonly<Record<string, string>> = {
   "map-geojson": "map.geojson.gz",
 };
 
-function mediaType(path: string): string {
+export function mapMemberMediaType(path: string): string {
   if (path.endsWith(".geojson.gz") || path.endsWith(".json.gz") || path.endsWith(".xml.gz")) {
     return "application/gzip";
   }
@@ -144,78 +135,6 @@ function mediaType(path: string): string {
   }
 }
 
-async function stableFiles(root: string, directory = ""): Promise<string[]> {
-  const entries = await readdir(resolve(root, directory), { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (entry.name.startsWith(".")) continue;
-    const relativePath = directory ? posix.join(directory, entry.name) : entry.name;
-    if (entry.isDirectory()) files.push(...await stableFiles(root, relativePath));
-    else if (entry.isFile()) files.push(relativePath);
-  }
-  return files;
-}
-
-function coordinatePairs(value: unknown, output: Array<[number, number]>, limit = Number.POSITIVE_INFINITY): void {
-  if (output.length >= limit || !Array.isArray(value)) return;
-  if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number") {
-    if (Number.isFinite(value[0]) && Number.isFinite(value[1])) output.push([value[0], value[1]]);
-    return;
-  }
-  for (const child of value) coordinatePairs(child, output, limit);
-}
-
-function geoBounds(geojson: GeoJson): { minX: number; minY: number; maxX: number; maxY: number } {
-  const points: Array<[number, number]> = [];
-  for (const feature of geojson.features ?? []) coordinatePairs(feature.geometry?.coordinates, points);
-  if (points.length === 0) throw new Error("road-network GeoJSON contains no coordinates");
-  return points.reduce(
-    (bounds, [x, y]) => ({
-      minX: Math.min(bounds.minX, x), minY: Math.min(bounds.minY, y),
-      maxX: Math.max(bounds.maxX, x), maxY: Math.max(bounds.maxY, y),
-    }),
-    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-  );
-}
-
-async function renderRoadThumbnail(label: string, geojson: GeoJson): Promise<Buffer> {
-  const width = 640;
-  const height = 360;
-  const margin = 24;
-  const bounds = geoBounds(geojson);
-  const spanX = Math.max(bounds.maxX - bounds.minX, Number.EPSILON);
-  const spanY = Math.max(bounds.maxY - bounds.minY, Number.EPSILON);
-  const scale = Math.min((width - margin * 2) / spanX, (height - margin * 2) / spanY);
-  const offsetX = (width - spanX * scale) / 2;
-  const offsetY = (height - spanY * scale) / 2;
-
-  const paths: string[] = [];
-  let renderedPoints = 0;
-  for (const feature of geojson.features ?? []) {
-    if (renderedPoints >= 24_000) break;
-    const points: Array<[number, number]> = [];
-    coordinatePairs(feature.geometry?.coordinates, points, 500);
-    if (points.length < 2) continue;
-    const d = points.map(([x, y], index) => {
-      const px = offsetX + (x - bounds.minX) * scale;
-      const py = height - (offsetY + (y - bounds.minY) * scale);
-      return `${index === 0 ? "M" : "L"}${px.toFixed(1)} ${py.toFixed(1)}`;
-    }).join(" ");
-    paths.push(`<path d="${d}"/>`);
-    renderedPoints += points.length;
-  }
-  const safeLabel = label.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;",
-  })[character]!);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#17212b"/><stop offset="1" stop-color="#071014"/></linearGradient></defs>
-    <rect width="100%" height="100%" fill="url(#bg)"/>
-    <g fill="none" stroke="#43d7b5" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${paths.join("")}</g>
-    <rect x="18" y="306" width="${Math.min(360, 34 + safeLabel.length * 10)}" height="36" rx="8" fill="#071014" fill-opacity=".82"/>
-    <text x="32" y="330" fill="#f4f7f8" font-family="sans-serif" font-size="18" font-weight="600">${safeLabel}</text>
-  </svg>`;
-  return sharp(Buffer.from(svg)).webp({ quality: 88 }).toBuffer();
-}
 function assertNativeMasterClosure(master: unknown, paths: ReadonlySet<string>): void {
   if (!master || typeof master !== "object" || Array.isArray(master)) {
     throw new Error("native master.gltf is not a JSON object");
@@ -364,7 +283,7 @@ async function storeSourceMember(
     LOCAL_ARTIFACT_BUCKET,
     key,
     sourcePath,
-    mediaType(relativePath),
+    mapMemberMediaType(relativePath),
   );
   if (
     expected &&
@@ -376,198 +295,118 @@ async function storeSourceMember(
     relativePath,
     sha256: metadata.checksumSha256Hex,
     byteLength: metadata.sizeBytes,
-    mediaType: mediaType(relativePath),
+    mediaType: mapMemberMediaType(relativePath),
     bucket: LOCAL_ARTIFACT_BUCKET,
     key,
-    metadata,
     sourcePath,
   };
 }
+
+/** The immutable release identity a closure publication is bound to. */
+export type MapClosureRelease = {
+  /** Registry version label such as `v3`. */
+  version: string;
+  releaseDigest: string;
+  canonicalDigest: string;
+  webDigest?: string;
+};
+
+export type PublishMapClosureInput = {
+  map: DevAssetMap;
+  release: MapClosureRelease;
+  /** Complete browser closure; every member readable at `sourcePath`. */
+  browserMembers: StoredMember[];
+  /** Complete native closure (master.gltf and its resources), when publishing the native set. */
+  nativeMembers?: StoredMember[];
+  assetCatalogVersionId: string;
+  /** Use this immutable identity instead of deriving one; downloaded maps keep their upstream id. */
+  mapVersionId?: string;
+  provenance: Record<string, unknown>;
+  mapSource: { tool: string; tool_version: string; vendor: string };
+  tags: string[];
+};
 
 /**
- * Generated starter members live at content-addressed keys, like every
- * generated member: republishing a regenerated Starter Road must never rewrite
- * the bytes an earlier starter version's blob rows still resolve to.
+ * Publish one complete immutable map closure into the local catalog: source
+ * map row, upload draft, artifacts, browser asset set and (optionally) the
+ * native asset set. Digests come from the members themselves; the map-intel
+ * catalog and roadway audit the closure carries are bound to those digests
+ * exactly as SimCloud binds them, so a map registered here and the same map
+ * on the server describe identical bytes.
  */
-async function storeStarterMember(mapRoot: string, relativePath: string): Promise<StoredMember> {
-  const sourcePath = resolve(mapRoot, relativePath);
-  const digest = sha256(await readFile(sourcePath));
-  const key = `map-closure/${digest}`;
-  const metadata = await registerLocalFile(LOCAL_ARTIFACT_BUCKET, key, sourcePath, mediaType(relativePath));
-  return {
-    relativePath,
-    sha256: digest,
-    byteLength: metadata.sizeBytes,
-    mediaType: mediaType(relativePath),
-    bucket: LOCAL_ARTIFACT_BUCKET,
-    key,
-    metadata,
-    sourcePath,
-  };
-}
-
-async function storeGeneratedMember(relativePath: string, bytes: Buffer): Promise<StoredMember> {
-  const digest = sha256(bytes);
-  const key = `map-closure/${digest}`;
-  const metadata = await writeLocalObject(LOCAL_ARTIFACT_BUCKET, key, bytes, mediaType(relativePath));
-  return {
-    relativePath,
-    sha256: digest,
-    byteLength: bytes.byteLength,
-    mediaType: mediaType(relativePath),
-    bucket: LOCAL_ARTIFACT_BUCKET,
-    key,
-    metadata,
-  };
-}
-
-export async function publishDevAssetMap({
+export async function publishMapClosure({
   map,
-  assetsRoot,
-  installation,
+  release,
+  browserMembers,
+  nativeMembers,
   assetCatalogVersionId,
-  activeReleaseId,
-}: {
-  map: DevAssetMap;
-  assetsRoot?: string;
-  installation?: RegistryMapInstallation;
-  assetCatalogVersionId: string;
-  activeReleaseId: string;
-}) {
+  mapVersionId,
+  provenance,
+  mapSource,
+  tags,
+}: PublishMapClosureInput) {
   const [slug, label, locality] = map;
-  if ((assetsRoot === undefined) === (installation === undefined)) {
-    throw new Error("exactly one of assetsRoot or installation is required");
-  }
-  const semanticRoot = installation?.semanticRoot ?? resolve(assetsRoot!, slug);
-  const browserRoot = installation?.webRoot ?? semanticRoot;
-
-  // An installed web profile is self-contained (web closure plus canonical
-  // semantic members), so it alone is the browser closure; every member is
-  // digest-checked against its receipt as it is stored. The Starter Road is
-  // generated in place and stored content-addressed.
-  const members: StoredMember[] = [];
-  if (installation) {
-    for (const [relativePath, expected] of Object.entries(installation.webReceipt.members)
-      .sort(([left], [right]) => left.localeCompare(right))) {
-      members.push(await storeSourceMember(browserRoot, slug, relativePath, "", expected));
-    }
-    members.push(await storeSourceMember(browserRoot, slug, ".map-release.json"));
-  } else {
-    for (const relativePath of await stableFiles(semanticRoot)) {
-      members.push(await storeStarterMember(semanticRoot, relativePath));
-    }
-  }
-  const byPath = new Map(members.map((member) => [member.relativePath, member]));
+  const byPath = new Map(browserMembers.map((member) => [member.relativePath, member]));
   const requireMember = (path: string) => {
     const member = byPath.get(path);
     if (!member) throw new Error(`${slug} publication input missing ${path}`);
     return member;
   };
 
-  // Starter Road alone may need generated derivatives. Registry installations
-  // must carry the source pipeline's immutable reports unchanged.
-  const sumoManifestPath = "derived/sumo/sumo-network-manifest.json";
-  const sourceSumoMember = byPath.get(sumoManifestPath);
-  if (!installation && sourceSumoMember?.sourcePath) {
-    const sourceSumoManifest = JSON.parse(
-      await readFile(sourceSumoMember.sourcePath, "utf8"),
-    ) as Record<string, unknown>;
-    const sumoManifestMember = await storeGeneratedMember(
-      sumoManifestPath,
-      Buffer.from(`${JSON.stringify({ ...sourceSumoManifest, sourceMapId: slug })}\n`),
-    );
-    const sumoManifestIndex = members.findIndex(
-      (member) => member.relativePath === sumoManifestPath,
-    );
-    members[sumoManifestIndex] = sumoManifestMember;
-    byPath.set(sumoManifestPath, sumoManifestMember);
-  }
-
   const xodrMember = requireMember("map.xodr");
-  const xodrBytes = await readFile(xodrMember.sourcePath!);
+  const xodrBytes = await readFile(xodrMember.sourcePath);
   const xodrText = xodrBytes.toString("utf8");
-  const manifestBytes = await readFile(requireMember("3d/manifest.json").sourcePath!);
+  const manifestBytes = await readFile(requireMember("3d/manifest.json").sourcePath);
   const manifest = JSON.parse(manifestBytes.toString("utf8")) as Manifest;
   const topologyMember = requireMember("topology-index.json.gz");
-  const topology = jsonFromGzip<MapTopologyIndex>(await readFile(topologyMember.sourcePath!));
+  const topology = jsonFromGzip<MapTopologyIndex>(await readFile(topologyMember.sourcePath));
   // The roadway audit is published exactly as its producer wrote it, bound to
   // this map and to the XODR and topology bytes in the closure. A failed verdict
   // is published as failed.
   const roadwayMember = requireMember("derived/roadway-consistency.json.gz");
-  const roadwayReport = parseRoadwayConsistencyReport(await readFile(roadwayMember.sourcePath!), {
+  const roadwayReport = parseRoadwayConsistencyReport(await readFile(roadwayMember.sourcePath), {
     mapId: slug,
     sourceDigests: { xodrSha256: xodrMember.sha256, topologySha256: topologyMember.sha256 },
   });
 
-  const roadGeoJsonCompressed = await readFile(requireMember("map.geojson.gz").sourcePath!);
-  const roadGeoJsonBytes = gunzipSync(roadGeoJsonCompressed);
-  const roadGeoJson = JSON.parse(roadGeoJsonBytes.toString("utf8")) as GeoJson;
-  const geojsonKey = `maps/${slug}/map.geojson`;
-  const geojsonMetadata = await writeLocalObject(
-    LOCAL_ARTIFACT_BUCKET, geojsonKey, roadGeoJsonBytes, "application/geo+json",
-  );
-
-  let thumbnailMetadata: LocalObjectMetadata;
-  let thumbnailKey: string;
-  let thumbnailRecipe: string;
-  let geography: z.infer<typeof GeographySchema> | undefined;
-  if (installation) {
-    const capabilities = SourceCapabilitiesSchema.parse(jsonFromGzip<unknown>(
-      await readFile(requireMember("derived/source-capabilities.json.gz").sourcePath!),
-    ));
-    const thumbnail = requireMember(capabilities.thumbnail.path);
-    thumbnailMetadata = thumbnail.metadata;
-    thumbnailKey = thumbnail.key;
-    thumbnailRecipe = capabilities.thumbnail.recipe ?? "registry-source-thumbnail";
-    geography = capabilities.geography;
-  } else {
-    const thumbnailBytes = await renderRoadThumbnail(label, roadGeoJson);
-    thumbnailKey = `maps/${slug}/thumbnail.webp`;
-    thumbnailMetadata = await writeLocalObject(
-      LOCAL_ARTIFACT_BUCKET, thumbnailKey, thumbnailBytes, "image/webp",
-    );
-    thumbnailRecipe = "uniscenario.road-network-thumbnail/v1";
-  }
+  // Geography and the preview come from the release's own capability record
+  // when it carries one; SimCloud-published closures always carry the preview
+  // at `derived/thumbnail.webp`.
+  const capabilitiesMember = byPath.get("derived/source-capabilities.json.gz");
+  const capabilities = capabilitiesMember
+    ? SourceCapabilitiesSchema.parse(jsonFromGzip<unknown>(await readFile(capabilitiesMember.sourcePath)))
+    : null;
+  const thumbnailPath = capabilities?.thumbnail.path ?? "derived/thumbnail.webp";
+  const thumbnail = byPath.get(thumbnailPath);
+  if (!thumbnail) throw new Error(`${slug} closure carries no preview at ${thumbnailPath}`);
+  const thumbnailRecipe = capabilities?.thumbnail.recipe ?? "registry-source-thumbnail";
+  const geography = capabilities?.geography;
 
   const sourceMapId = slug;
-  const releaseDigest = installation?.webReceipt.releaseDigest;
-  const draftId = `usmapdraft_${sha256(
-    releaseDigest ? `registry:${slug}:${releaseDigest}` : `dev-assets:${slug}`,
-  ).slice(0, 32)}`;
+  const draftId = `usmapdraft_${sha256(`registry:${slug}:${release.releaseDigest}`).slice(0, 32)}`;
   await upsertMapAsset({
     map_asset_id: sourceMapId,
     name: label,
-    carla_map_name: installation ? null : slug.replaceAll("-", "_"),
-    ue5_carla_map_name: installation ? null : slug.replaceAll("-", "_"),
-    description: `${label} ${installation ? "installed registry" : "local development"} map`,
+    carla_map_name: null,
+    ue5_carla_map_name: null,
+    description: `${label} installed registry map`,
     crs: "OpenDRIVE",
     bbox: geography?.bounds ?? { min_lat: 0, min_lng: 0, max_lat: 0, max_lng: 0 },
     center: geography?.center ?? { lat: 0, lng: 0 },
     created_at: new Date(0).toISOString(),
-    tags: installation ? ["local", "registry"] : ["local", "seeded"],
+    tags,
     map_coordinate_ref: extractCoordinateRefFromXodr(xodrText),
-    map_source: installation
-      ? {
-        tool: "SimForge map registry",
-        tool_version: installation.webReceipt.version,
-        vendor: `release-sha256:${releaseDigest}`,
-      }
-      : { tool: "SimForge dev-assets publication" },
+    map_source: mapSource,
     place_context: { city: locality, geocoder: "manual" },
     artifacts: [
       {
-        artifact_type: "xodr", uri: `s3://${LOCAL_ARTIFACT_BUCKET}/${requireMember("map.xodr").key}`,
-        sha256: requireMember("map.xodr").sha256, size_bytes: xodrBytes.byteLength,
+        artifact_type: "xodr", uri: `s3://${xodrMember.bucket}/${xodrMember.key}`,
+        sha256: xodrMember.sha256, size_bytes: xodrBytes.byteLength,
         created_at: new Date(0).toISOString(),
       },
       {
-        artifact_type: "geojson", uri: `s3://${LOCAL_ARTIFACT_BUCKET}/${geojsonKey}`,
-        sha256: geojsonMetadata.checksumSha256Hex, size_bytes: geojsonMetadata.sizeBytes,
-        created_at: new Date(0).toISOString(),
-      },
-      {
-        artifact_type: "thumbnail", uri: `s3://${LOCAL_ARTIFACT_BUCKET}/${thumbnailKey}`,
-        sha256: thumbnailMetadata.checksumSha256Hex, size_bytes: thumbnailMetadata.sizeBytes,
+        artifact_type: "thumbnail", uri: `s3://${thumbnail.bucket}/${thumbnail.key}`,
+        sha256: thumbnail.sha256, size_bytes: thumbnail.byteLength,
         created_at: new Date(0).toISOString(),
       },
     ],
@@ -578,7 +417,7 @@ export async function publishDevAssetMap({
        source_map_id, xodr_sha256, xodr_byte_length, thumbnail_sha256,
        thumbnail_byte_length, layers, preflight, draft_state
      ) VALUES (
-       :id, :workspace_id, :user_id, :label, :locality, :carla_map_name,
+       :id, :workspace_id, :user_id, :label, :locality, NULL,
        :source_map_id, :xodr_sha256, :xodr_byte_length, :thumbnail_sha256,
        :thumbnail_byte_length, CAST(:layers AS jsonb), CAST(:preflight AS jsonb), 'publishing'
      ) ON CONFLICT (id) DO NOTHING`,
@@ -588,54 +427,33 @@ export async function publishDevAssetMap({
       user_id: LOCAL_USER_ID,
       label,
       locality,
-      carla_map_name: installation ? null : slug.replaceAll("-", "_"),
       source_map_id: sourceMapId,
-      xodr_sha256: requireMember("map.xodr").sha256,
+      xodr_sha256: xodrMember.sha256,
       xodr_byte_length: xodrBytes.byteLength,
-      thumbnail_sha256: thumbnailMetadata.checksumSha256Hex,
-      thumbnail_byte_length: thumbnailMetadata.sizeBytes,
+      thumbnail_sha256: thumbnail.sha256,
+      thumbnail_byte_length: thumbnail.byteLength,
       layers: [],
       preflight: {
-        source: installation ? "map-registry" : "dev-assets",
+        source: "map-registry",
         fullPublishedClosure: true,
-        ...(releaseDigest ? { registryReleaseDigest: releaseDigest } : {}),
+        registryReleaseDigest: release.releaseDigest,
       },
     },
   );
 
-  const derivativeReleaseId = releaseDigest ?? publishedMapReleaseId({
-    activeReleaseId,
-    members,
-  });
   const plan = planUploadedMapClosure({
     workspaceId: LOCAL_WORKSPACE_ID,
     sourceMapId,
-    derivativeReleaseId,
+    derivativeReleaseId: release.releaseDigest,
     manifest,
-    members,
+    members: browserMembers,
+    ...(mapVersionId ? { mapVersionId } : {}),
   });
   let nativePlan;
-  if (installation) {
-    const nativeMembers: StoredMember[] = [];
-    for (const [relativePath, expected] of Object.entries(installation.nativeReceipt.members)
-      .sort(([left], [right]) => left.localeCompare(right))) {
-      nativeMembers.push(await storeSourceMember(
-        installation.nativeRoot,
-        slug,
-        relativePath,
-        "native/",
-        expected,
-      ));
-    }
-    nativeMembers.push(await storeSourceMember(
-      installation.nativeRoot,
-      slug,
-      ".map-release.json",
-      "native/",
-    ));
+  if (nativeMembers) {
     const nativePaths = new Set(nativeMembers.map((member) => member.relativePath));
     const masterMember = nativeMembers.find((member) => member.relativePath === "master.gltf");
-    if (!masterMember?.sourcePath) throw new Error(`${slug} native installation has no master.gltf`);
+    if (!masterMember) throw new Error(`${slug} native closure has no master.gltf`);
     assertNativeMasterClosure(
       JSON.parse(await readFile(masterMember.sourcePath, "utf8")),
       nativePaths,
@@ -643,60 +461,38 @@ export async function publishDevAssetMap({
     nativePlan = planNativeMapAssetSet({
       workspaceId: LOCAL_WORKSPACE_ID,
       mapVersionId: plan.mapVersionId,
-      registryReleaseDigest: installation.nativeReceipt.releaseDigest,
-      canonicalDigest: installation.nativeReceipt.canonicalDigest,
+      registryReleaseDigest: release.releaseDigest,
+      canonicalDigest: release.canonicalDigest,
       members: nativeMembers,
     });
   }
-  if (installation && !nativePlan) throw new Error("registry native asset set was not planned");
 
   const locations = LocationsSchema.parse(jsonFromGzip<unknown>(
-    await readFile(requireMember("derived/locations.json.gz").sourcePath!),
+    await readFile(requireMember("derived/locations.json.gz").sourcePath),
   ));
-  const memberSha256 = (path: string) => requireMember(path).sha256;
-  const counts = {
+  assertSourceHashesBound(slug, locations.sourceHashes, (path) => requireMember(path).sha256);
+  // Same projection SimCloud records for a registry import: the release is
+  // the receipt, and map-intel identity comes from the catalog it shipped.
+  const mapIntel: PublishedMapIntel = {
+    contractVersion: "simforge.map-release.v1",
+    builder: { package: "@simforge-oss/map-registry", version: "1" },
+    mapId: slug,
+    catalogRevision: locations.catalogRevision,
+    sourceHashes: locations.sourceHashes,
+    outputs: {},
+    receiptSha256: release.releaseDigest,
     locationCount: locations.locations.length,
     laneCount: Object.keys(topology.lanes).length,
     junctionCount: Object.keys(topology.junctions).length,
+    roadwayConsistency: {
+      format: roadwayReport.format,
+      validatorVersion: roadwayReport.validatorVersion,
+      verdict: roadwayReport.verdict,
+      stats: roadwayReport.stats,
+      artifactSha256: roadwayMember.sha256,
+      sourceDigests: roadwayReport.sourceDigests,
+    },
   };
-  const roadwayConsistency: PublishedMapIntel["roadwayConsistency"] = {
-    format: roadwayReport.format,
-    validatorVersion: roadwayReport.validatorVersion,
-    verdict: roadwayReport.verdict,
-    stats: roadwayReport.stats,
-    artifactSha256: roadwayMember.sha256,
-    sourceDigests: roadwayReport.sourceDigests,
-  };
-  let mapIntel: PublishedMapIntel;
-  if (installation) {
-    // Same projection SimCloud records for a registry import: the release is
-    // the receipt, and map-intel identity comes from the catalog it shipped.
-    assertSourceHashesBound(slug, locations.sourceHashes, memberSha256);
-    mapIntel = {
-      contractVersion: "simforge.map-release.v1",
-      builder: { package: "@simforge-oss/map-registry", version: "1" },
-      mapId: slug,
-      catalogRevision: locations.catalogRevision,
-      sourceHashes: locations.sourceHashes,
-      outputs: {},
-      receiptSha256: installation.webReceipt.releaseDigest,
-      ...counts,
-      roadwayConsistency,
-    };
-  } else {
-    const receiptBytes = await readFile(requireMember("derived/map-intel-build-receipt.json").sourcePath!);
-    const receipt = BuildReceiptSchema.parse(JSON.parse(receiptBytes.toString("utf8")));
-    if (receipt.mapId !== slug || receipt.catalogRevision !== locations.catalogRevision) {
-      throw new Error(`${slug} map-intel build receipt does not describe its locations catalog`);
-    }
-    assertSourceHashesBound(slug, receipt.sourceHashes, memberSha256);
-    mapIntel = {
-      ...receipt,
-      receiptSha256: sha256(receiptBytes),
-      ...counts,
-      roadwayConsistency,
-    };
-  }
   const result = await publishUploadedMapVersion({
     draftId,
     plan,
@@ -704,43 +500,31 @@ export async function publishDevAssetMap({
     sourceMapId,
     sourceMapAssetId: sourceMapId,
     assetCatalogVersionId,
-    derivativeReleaseId,
+    derivativeReleaseId: release.releaseDigest,
     label,
     locality,
-    carlaMapName: installation ? null : slug.replaceAll("-", "_"),
-    provenance: installation
-      ? {
-        kind: "map-registry-installation",
-        name: slug,
-        version: installation.webReceipt.version,
-        releaseDigest: installation.webReceipt.releaseDigest,
-        canonicalDigest: installation.webReceipt.canonicalDigest,
-        ...(installation.webReceipt.webDigest
-          ? { webDigest: installation.webReceipt.webDigest }
-          : {}),
-        semanticRoot,
-        browserRoot,
-        nativeRoot: installation.nativeRoot,
-      }
-      : { kind: "dev-assets-publication", source: semanticRoot },
+    carlaMapName: null,
+    provenance: {
+      ...provenance,
+      version: release.version,
+      releaseDigest: release.releaseDigest,
+      canonicalDigest: release.canonicalDigest,
+      ...(release.webDigest ? { webDigest: release.webDigest } : {}),
+    },
     thumbnail: {
-      bucket: LOCAL_ARTIFACT_BUCKET,
-      key: thumbnailKey,
-      sha256: thumbnailMetadata.checksumSha256Hex,
-      byteLength: thumbnailMetadata.sizeBytes,
+      bucket: thumbnail.bucket,
+      key: thumbnail.key,
+      sha256: thumbnail.sha256,
+      byteLength: thumbnail.byteLength,
       mediaType: "image/webp",
       recipe: thumbnailRecipe,
-      sourceBucket: LOCAL_ARTIFACT_BUCKET,
-      sourceKey: installation ? thumbnailKey : geojsonKey,
+      sourceBucket: thumbnail.bucket,
+      sourceKey: thumbnail.key,
     },
     mapIntel,
     triangleCount: manifest.scene?.totalTriangles ?? 0,
-    ...(installation
-      ? {
-        registryReleaseDigest: installation.webReceipt.releaseDigest,
-        nativePlan,
-      }
-      : {}),
+    registryReleaseDigest: release.releaseDigest,
+    ...(nativePlan ? { nativePlan } : {}),
   });
   await execute(
     `UPDATE simforge.map_upload_drafts
@@ -751,6 +535,62 @@ export async function publishDevAssetMap({
   return {
     ...result,
     sumoNetworkSha256: plan.sumoNetworkSha256,
-    thumbnailBytes: thumbnailMetadata.sizeBytes,
+    thumbnailBytes: thumbnail.byteLength,
   };
+}
+
+/**
+ * Publish a registry release installed on this machine (a development input:
+ * the three verified profile directories of one release). An installed web
+ * profile is self-contained, so it alone is the browser closure; every member
+ * is digest-checked against its receipt as it is stored.
+ */
+export async function publishRegistryInstallation({
+  map,
+  installation,
+  assetCatalogVersionId,
+}: {
+  map: DevAssetMap;
+  installation: RegistryMapInstallation;
+  assetCatalogVersionId: string;
+}) {
+  const [slug] = map;
+  const browserMembers: StoredMember[] = [];
+  for (const [relativePath, expected] of Object.entries(installation.webReceipt.members)
+    .sort(([left], [right]) => left.localeCompare(right))) {
+    browserMembers.push(await storeSourceMember(installation.webRoot, slug, relativePath, "", expected));
+  }
+  browserMembers.push(await storeSourceMember(installation.webRoot, slug, ".map-release.json"));
+  const nativeMembers: StoredMember[] = [];
+  for (const [relativePath, expected] of Object.entries(installation.nativeReceipt.members)
+    .sort(([left], [right]) => left.localeCompare(right))) {
+    nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, relativePath, "native/", expected));
+  }
+  nativeMembers.push(await storeSourceMember(installation.nativeRoot, slug, ".map-release.json", "native/"));
+  const receipt = installation.webReceipt;
+  return publishMapClosure({
+    map,
+    release: {
+      version: receipt.version,
+      releaseDigest: receipt.releaseDigest,
+      canonicalDigest: receipt.canonicalDigest,
+      ...(receipt.webDigest ? { webDigest: receipt.webDigest } : {}),
+    },
+    browserMembers,
+    nativeMembers,
+    assetCatalogVersionId,
+    provenance: {
+      kind: "map-registry-installation",
+      name: slug,
+      semanticRoot: installation.semanticRoot,
+      browserRoot: installation.webRoot,
+      nativeRoot: installation.nativeRoot,
+    },
+    mapSource: {
+      tool: "SimForge map registry",
+      tool_version: receipt.version,
+      vendor: `release-sha256:${receipt.releaseDigest}`,
+    },
+    tags: ["local", "registry"],
+  });
 }

@@ -1,6 +1,9 @@
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import { NextResponse } from "next/server";
 import { normalizeAssetKey } from "@/app/lib/assets/asset-url-service";
+import { assertMapUsable } from "@/app/lib/cloud/access";
+import { primeCloudSession } from "@/app/lib/cloud/connection";
+import { getRegisteredMap, MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
 import { getScenarioMapBrowserAssets } from "@/app/lib/scenario/document-store";
 import {
   requireScenarioContext,
@@ -50,19 +53,26 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  await primeCloudSession();
   const assets = await getScenarioMapBrowserAssets(auth.context, requests);
-  const signed = await Promise.all(assets.map(async (asset) => {
-    const url = await getPresignedGetUrl(
-      asset.key,
-      asset.bucket,
-      SIGNED_URL_TTL_SECONDS,
-    );
-    return {
-      mapVersionId: asset.mapVersionId,
-      relativePath: asset.relativePath,
-      url,
-    };
-  }));
+  const signed = [];
+  for (const asset of assets) {
+    const registered = await getRegisteredMap(asset.mapVersionId);
+    if (!registered) continue;
+    try {
+      assertMapUsable(registered);
+    } catch {
+      // Account maps without an active session are simply not deliverable now.
+      continue;
+    }
+    // Cache-resident members are delivered by the first-party route itself, which
+    // streams the verified object; installed members keep the object-store URL.
+    const url = asset.bucket === MAP_CACHE_BUCKET
+      ? `/api/simforge/maps/${encodeURIComponent(asset.mapVersionId)}/browser-assets/${
+        asset.relativePath.split("/").map(encodeURIComponent).join("/")}`
+      : await getPresignedGetUrl(asset.key, asset.bucket, SIGNED_URL_TTL_SECONDS);
+    signed.push({ mapVersionId: asset.mapVersionId, relativePath: asset.relativePath, url });
+  }
   return NextResponse.json(
     { assets: signed },
     { headers: SCENARIO_PRIVATE_CACHE_HEADERS },

@@ -1,11 +1,13 @@
 import { spawn, type ChildProcess, type ChildProcessByStdio } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync } from 'node:fs';
 import { promises as fs } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Readable, Writable } from 'node:stream';
+
+import { z } from 'zod';
 
 import {
   ENGINE_CAPABILITIES_V1_SCHEMA,
@@ -15,17 +17,18 @@ import {
   type RenderArtifactManifest,
   type RenderEngineAdapter,
   type RenderExecutionContext,
+  type RenderInputFile,
 } from '../index.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
-import { nativeRuntimeRoot } from '@simforge-oss/native-runtime';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
 import { createNativeCameraSchedule } from './camera-schedule.js';
 import { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
+import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
-import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers } from './map-closure.js';
+import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers, type NativeMapClosure } from './map-closure.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.61';
@@ -44,6 +47,9 @@ export interface NativeRenderEngineOptions {
    * meter alone, which is what the pre-rev23 platform did.
    */
   readonly autoMeter?: boolean;
+  /** Where the pinned actor closure's blobs come from; defaults to the installed closure (`resolveActorAssets`). */
+  readonly actorAssetsBaseUrl?: string;
+  readonly actorAssetsCacheDir?: string;
 }
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
@@ -74,26 +80,70 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
 
 export function resolveBinary(options: NativeRenderEngineOptions): string {
   if (options.binary) return options.binary;
-  if (process.env.SIMFORGE_NATIVE_RENDER_BINARY) return process.env.SIMFORGE_NATIVE_RENDER_BINARY;
-  const installed = path.join(nativeRuntimeRoot(), 'bin', 'native-render-service');
-  return existsSync(installed) ? installed : 'native-render-service';
+  const service = resolveNativeRenderService();
+  return service.state === 'available' ? service.path : service.searched[service.searched.length - 1]!;
 }
 
+const ReadyFileSchema = z.object({
+  protocol: z.number().int(),
+  pid: z.number().int(),
+  endpoint: z.string().min(1),
+  shm: z.object({ path: z.string().min(1), size_bytes: z.number().int(), meta_bytes: z.number().int() }),
+});
 
-async function waitForSocket(socketPath: string, child: ChildProcess, timeoutMs: number, signal: AbortSignal): Promise<void> {
+/**
+ * The service's `--socket` endpoint: a Unix socket under the workspace, or on
+ * Windows the private named pipe the service creates for this job.
+ */
+function serviceEndpoint(workspace: string, jobId: string): string {
+  if (process.platform !== 'win32') return path.join(workspace, 'native-render.sock');
+  return `\\\\.\\pipe\\simforge-render-${jobId.replace(/[^A-Za-z0-9._-]/g, '-')}-${process.pid}`;
+}
+
+/**
+ * Waits for the service's atomically written ready file (portable on every
+ * OS) while watching the child so a crash during startup surfaces as its
+ * exit code, never as a timeout.
+ */
+async function waitForReady(readyFile: string, child: ChildProcess, timeoutMs: number, signal: AbortSignal): Promise<z.infer<typeof ReadyFileSchema>> {
   const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
     if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error('native render aborted');
     if (child.exitCode !== null) throw new Error(`native render service exited during startup with code ${child.exitCode}`);
     try {
-      const stat = await fs.stat(socketPath);
-      if (stat.isSocket()) return;
+      const parsed = ReadyFileSchema.safeParse(JSON.parse(await fs.readFile(readyFile, 'utf8')));
+      if (parsed.success) return parsed.data;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     await delay(50);
   }
-  throw new Error(`native render service did not create ${socketPath} within ${timeoutMs} ms`);
+  throw new Error(`native render service did not become ready within ${timeoutMs} ms`);
+}
+
+/**
+ * Uses the closure members in place when they already lie at their
+ * closure-relative paths under one directory (the ensured local map); only
+ * a scattered closure (per-attempt downloads) is linked into the workspace.
+ */
+async function materializeMapRoot(workspace: string, closure: NativeMapClosure<RenderInputFile>): Promise<string> {
+  const master = closure.members.get(NATIVE_MAP_MASTER_PATH)!;
+  const sharedRoot = path.dirname(master.path);
+  const inPlace = [...closure.members].every(([member, input]) => path.resolve(sharedRoot, member) === path.resolve(input.path));
+  if (inPlace) return sharedRoot;
+  const mapRoot = path.join(workspace, 'map');
+  await fs.rm(mapRoot, { recursive: true, force: true });
+  for (const [member, input] of closure.members) {
+    const destination = path.join(mapRoot, member);
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    try {
+      await fs.link(input.path, destination);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
+      await fs.copyFile(input.path, destination);
+    }
+  }
+  return mapRoot;
 }
 
 function terminate(child: ChildProcess): void {
@@ -153,7 +203,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
     ? { ...CAPABILITIES, engineVersion: options.engineVersion }
     : CAPABILITIES;
   const binary = resolveBinary(options);
-  const ffmpeg = options.ffmpegBinary ?? process.env.SIMFORGE_FFMPEG_BINARY ?? 'ffmpeg';
+  const encoder = resolveEncoder();
+  const ffmpeg = options.ffmpegBinary ?? (encoder.state === 'available' ? encoder.path : 'ffmpeg');
 
   return {
     capabilities,
@@ -173,18 +224,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const xoscInput = context.inputs.get('scenario.xosc');
       if (!xoscInput) throw new Error('native render requires scenario.xosc');
       const closure = collectNativeMapMembers(context.inputs.values());
-      const mapRoot = path.join(context.workspace, 'map');
-      await fs.rm(mapRoot, { recursive: true, force: true });
-      for (const [member, input] of closure.members) {
-        const destination = path.join(mapRoot, member);
-        await fs.mkdir(path.dirname(destination), { recursive: true });
-        try {
-          await fs.link(input.path, destination);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
-          await fs.copyFile(input.path, destination);
-        }
-      }
+      const mapRoot = await materializeMapRoot(context.workspace, closure);
       const masterPath = path.join(mapRoot, NATIVE_MAP_MASTER_PATH);
       const document = JSON.parse(await fs.readFile(masterPath, 'utf8')) as {
         buffers?: Array<{ uri?: string }>;
@@ -216,9 +256,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (!closureAsset || closureAsset.sha256 !== closureInput.sha256 || closureAsset.sizeBytes !== closureInput.sizeBytes) {
         throw new Error(`${NATIVE_ACTOR_ASSETS_INPUT_ID} input does not match the intent's declared actor closure`);
       }
+      const actorSource = resolveActorAssets();
+      if (!options.actorAssetsBaseUrl && actorSource.state === 'missing') {
+        throw new Error(`the pinned actor closure ${actorSource.digest} is not installed (looked in ${actorSource.searched.join(', ')})`);
+      }
       const actorAssets = await ensureActorAssets({
         closure: closureInput,
         destination: path.join(context.workspace, 'actor-assets'),
+        baseUrl: options.actorAssetsBaseUrl ?? (actorSource.state === 'available' ? actorSource.blobBaseUrl : undefined),
+        // A packaged closure directory already holds `blobs/sha256/<xx>/<sha>`: verify it in place, never copy it.
+        cacheDir: options.actorAssetsCacheDir
+          ?? (actorSource.state === 'available' && actorSource.source.kind === 'directory'
+            ? actorSource.source.root
+            : process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR ?? path.join(tmpdir(), 'simforge-actor-assets')),
       });
 
       const xosc = await fs.readFile(xoscInput.path);
@@ -240,10 +290,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const traceDigest = await hashFile(tracePath);
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
-      const socketPath = path.join(context.workspace, 'native-render.sock');
+      const endpoint = serviceEndpoint(context.workspace, context.jobId);
       const shmPath = path.join(context.workspace, 'native-render.shm');
+      const readyFile = path.join(context.workspace, 'native-render-ready.json');
       const serviceLogPath = path.join(context.workspace, 'native-render-service.log');
-      await Promise.all([fs.rm(socketPath, { force: true }), fs.rm(shmPath, { force: true })]);
+      await Promise.all([
+        fs.rm(readyFile, { force: true }),
+        fs.rm(shmPath, { force: true }),
+        ...(process.platform === 'win32' ? [] : [fs.rm(endpoint, { force: true })]),
+      ]);
       // The scenario's environment as the renderer's physical lighting and
       // the Lookdev Lab's cinematic look: same weather presets, same solar
       // model, same profile. The service meters the sky through each
@@ -265,9 +320,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       });
       const serviceLog = await fs.open(serviceLogPath, 'w', 0o644);
       const service = spawn(binary, [
-        '--scene', scenePath, '--socket', socketPath, '--shm', shmPath,
-        '--shm-size-mb', String(options.shmSizeMb ?? 512),
-      ], { stdio: ['ignore', 'ignore', serviceLog.fd] });
+        '--scene', scenePath, '--socket', endpoint, '--shm', shmPath,
+        '--shm-size-mb', String(options.shmSizeMb ?? 512), '--ready-file', readyFile,
+      ], { stdio: ['ignore', 'ignore', serviceLog.fd], windowsHide: true });
       const abort = (): void => terminate(service);
       context.signal.addEventListener('abort', abort, { once: true });
 
@@ -277,9 +332,16 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       let serverMs = 0;
       const frameIdentities: NativeFrameIdentity[] = [];
       let encodingComplete = false;
+      const progressBase = () => ({
+        schema: 'simforge.render-progress/v1' as const, jobId: context.jobId, attempt: context.attempt, sequence: 0,
+        timestamp: new Date().toISOString(),
+      });
       try {
-        await waitForSocket(socketPath, service, options.startupTimeoutMs ?? 300_000, context.signal);
-        client = await NativeServiceClient.connect(socketPath);
+        const ready = await waitForReady(readyFile, service, options.startupTimeoutMs ?? 300_000, context.signal);
+        if (ready.protocol !== NATIVE_SERVICE_PROTOCOL) {
+          throw new Error(`native render service protocol ${ready.protocol}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
+        }
+        client = await NativeServiceClient.connect(ready.endpoint, { signal: context.signal });
         await client.rpc({ op: 'load_scene_state', states: lowering.states });
         const cameras = cameraSchedule;
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
@@ -309,8 +371,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
             encoder.frames += 1;
           }
+          const total = lowering.states.length;
+          // Every ~1% (at least each second-ish tick group) and the last tick: enough for a live bar, not a flood.
+          if (tick + 1 === total || (tick + 1) % Math.max(1, Math.floor(total / 100)) === 0) {
+            await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'rendering', completed: tick + 1, total, unit: 'frames' });
+          }
         }
+        await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 0, total: 1, unit: 'items' });
         await Promise.all([...encoders.values()].map(finishEncoder));
+        await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 1, total: 1, unit: 'items' });
         encodingComplete = true;
       } finally {
         if (!encodingComplete) {
@@ -324,7 +393,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         terminate(service);
         if (service.exitCode === null) await once(service, 'exit').catch(() => undefined);
         await serviceLog.close();
-        await Promise.all([fs.rm(socketPath, { force: true }), fs.rm(shmPath, { force: true })]);
+        await Promise.all([
+          fs.rm(readyFile, { force: true }),
+          fs.rm(shmPath, { force: true }),
+          ...(process.platform === 'win32' ? [] : [fs.rm(endpoint, { force: true })]),
+        ]);
       }
 
       const videoRecords = [];

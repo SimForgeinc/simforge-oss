@@ -41,6 +41,8 @@ import {
   type ScenarioWorldTarget,
 } from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldHost";
 import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
+import { LocalMapPreparationPanel } from "@/app/components/LocalMapPreparationPanel";
+import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
 import { getCardStats } from "./map-card-data";
 import { MapGallerySumoTraffic } from "./MapGallerySumoTraffic";
 
@@ -60,7 +62,7 @@ const Map2DOverlay = dynamic(
 );
 
 type GalleryEntry = {
-  map: ScenarioMapDescriptorDto;
+  map: LocalMapDescriptor;
   asset: MapAsset | null;
 };
 
@@ -181,7 +183,7 @@ export function MapGalleryPageClient({
   maps,
 }: {
   assets: MapAsset[];
-  maps: ScenarioMapDescriptorDto[];
+  maps: LocalMapDescriptor[];
 }) {
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -232,10 +234,12 @@ export function MapGalleryPageClient({
     if (entries.length < 2) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      const adjacent = new Set([
-        entries[(selectedIndex - 1 + entries.length) % entries.length]?.map.browserManifestUrl,
-        entries[(selectedIndex + 1) % entries.length]?.map.browserManifestUrl,
-      ]);
+      const adjacent = new Set(
+        [
+          entries[(selectedIndex - 1 + entries.length) % entries.length],
+          entries[(selectedIndex + 1) % entries.length],
+        ].map((candidate) => (candidate?.map.locked ? null : candidate?.map.browserManifestUrl)),
+      );
       for (const manifestUrl of adjacent) {
         if (!manifestUrl) continue;
         void fetch(manifestUrl, { cache: "force-cache", signal: controller.signal }).catch(() => undefined);
@@ -305,11 +309,20 @@ export function MapGalleryPageClient({
       <AddMapTopBarAction />
       <main className="relative h-full min-h-[32rem] overflow-hidden bg-[#07100d] text-white">
         <div className="absolute inset-0">
-          <MapGalleryWorldPreview
-            map={entry.map}
-            onSumoStatusChange={setSumoStatus}
-            sumoEnabled={sumoEnabled}
-          />
+          {entry.map.locked ? (
+            // A locked map's browser assets are not authorized; a viewer here
+            // would only surface fetch failures. The overlay explains and offers Connect.
+            <div
+              className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,224,68,0.08),transparent_60%)]"
+              data-testid="map-gallery-locked-backdrop"
+            />
+          ) : (
+            <MapGalleryWorldPreview
+              map={entry.map}
+              onSumoStatusChange={setSumoStatus}
+              sumoEnabled={sumoEnabled}
+            />
+          )}
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
@@ -415,6 +428,7 @@ export function MapGalleryPageClient({
                   </Link>
                 ) : null}
               </div>
+              <LocalMapPreparationPanel className="mt-4" map={entry.map} />
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/20 pt-4 sm:mt-7 sm:pt-5">
@@ -449,7 +463,8 @@ export function MapGalleryPageClient({
                 type="button"
                 size="lg"
                 onClick={createScenario}
-                disabled={creating}
+                disabled={creating || entry.map.locked}
+                title={entry.map.locked ? "Connect to SimCloud to author on this map." : undefined}
                 className="h-11 rounded-none bg-[#E8E044] px-4 text-sm font-semibold text-black shadow-xl hover:bg-[#f0e84e] sm:px-5"
               >
                 {creating ? <Loader2 className="size-4 animate-spin" /> : null}

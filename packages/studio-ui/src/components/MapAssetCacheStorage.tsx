@@ -94,6 +94,7 @@ export function MapAssetCacheStorage({
   };
 
   const filesystem = status?.backend === "filesystem";
+  const unavailable = status?.backend === "filesystem" ? status.unavailable : null;
   const location = !status
     ? "Reading…"
     : status.backend === "filesystem"
@@ -165,7 +166,7 @@ export function MapAssetCacheStorage({
           {allowClear ? (
             <Button
               className="h-8 rounded-full border-white/15 bg-transparent px-3 text-[11px] text-white/75 hover:bg-white/5 hover:text-white"
-              disabled={busy !== null || !status}
+              disabled={busy !== null || !status || unavailable !== null}
               onClick={() => setConfirmClear(true)}
               type="button"
               variant="outline"
@@ -206,6 +207,17 @@ export function MapAssetCacheStorage({
             </Button>
           </div>
         </div>
+      ) : null}
+
+      {unavailable ? (
+        <p
+          className="mt-3 ml-7 border border-[#E8E044]/40 bg-[#E8E044]/10 p-2 text-xs text-[#E8E044]"
+          role="status"
+          data-testid="map-asset-cache-unavailable"
+        >
+          The map cache location is unavailable ({unavailable}). Maps are not downloaded to another disk;
+          reconnect the drive or choose another location.
+        </p>
       ) : null}
 
       {error ? (

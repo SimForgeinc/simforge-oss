@@ -14,6 +14,7 @@ use crate::clock::now_rfc3339;
 use crate::error::{Result, RunnerError};
 use crate::fsatomic::{ensure_dir, read_json};
 use crate::lockfile::{FileLock, LockAttempt};
+use crate::platform;
 
 pub const WORKER_CAPACITY_SCHEMA: &str = "simforge.worker-capacity/v1";
 pub const MAX_GPUS_PER_JOB: usize = 16;
@@ -277,25 +278,10 @@ impl WorkerCapacity {
 }
 
 fn probe_memory_bytes() -> u64 {
-    // SAFETY: sysconf has no preconditions; negative results mean "unknown".
-    let pages = unsafe { libc::sysconf(libc::_SC_PHYS_PAGES) };
-    let page_size = unsafe { libc::sysconf(libc::_SC_PAGE_SIZE) };
-    if pages <= 0 || page_size <= 0 {
-        return 0;
-    }
-    (pages as u64).saturating_mul(page_size as u64)
+    platform::physical_memory_bytes()
 }
 
 fn probe_free_bytes(dir: &Path) -> u64 {
     let _ = ensure_dir(dir);
-    let Ok(c_path) = std::ffi::CString::new(dir.as_os_str().as_encoded_bytes()) else {
-        return 0;
-    };
-    // SAFETY: `stats` is a plain C struct fully written by statvfs on success.
-    let mut stats: libc::statvfs = unsafe { std::mem::zeroed() };
-    let status = unsafe { libc::statvfs(c_path.as_ptr(), &mut stats) };
-    if status != 0 {
-        return 0;
-    }
-    (stats.f_bavail as u64).saturating_mul(stats.f_frsize as u64)
+    platform::free_bytes(dir)
 }

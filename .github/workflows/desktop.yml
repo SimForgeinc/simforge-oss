@@ -1,28 +1,28 @@
-name: SimCloud desktop
+name: SimForge Studio desktop
 
-# Builds the SimCloud-connected desktop installers on native runners:
-# Windows x64 NSIS, macOS arm64 + x64 DMG/ZIP, and a Linux AppImage qualifier.
-# Manual dispatch only: nothing here runs on push, publishes, or deploys.
-# Artifacts are uploaded to the workflow run; releasing them is a separate,
-# separately authorized step.
+# Builds the SimForge Studio installers on native runners: Windows x64 NSIS,
+# macOS arm64 and x64 DMG/ZIP, Linux x64 AppImage/deb. Each leg builds the
+# whole native payload for its own target (N-API addon, simforge-runner, the
+# Bevy render service and FFI library, sky plates), fetches the pinned
+# encoders and actor closure, stages and packages; nothing is cross-built or
+# inferred from another platform. Manual dispatch only: nothing here runs on
+# push, publishes, or deploys. Artifacts are uploaded to the workflow run;
+# releasing them is a separate, separately authorized step.
 #
 # Signing is real or absent. Windows artifacts are signed only when
 # WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD hold a code-signing certificate; macOS
 # artifacts are signed only when MAC_CSC_LINK / MAC_CSC_KEY_PASSWORD hold a
 # Developer ID Application identity, and notarized only when APPLE_ID,
-# APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are present as well. Without
-# those secrets the build disables identity auto-discovery, produces unsigned
-# artifacts, and names them so. With them, forceCodeSigning makes an unsigned
-# result a build failure instead of a quiet fallback.
+# APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are present as well. None of
+# these secrets exist in the repository today, so every leg produces unsigned
+# artifacts and names them so; the unsigned macOS app is ad-hoc signed
+# (identity "-", no certificate, no Gatekeeper trust) because electron-builder
+# 26 has no ad-hoc fallback and an unsigned bundle is killed at launch on
+# Apple silicon. With the secrets, forceCodeSigning makes an unsigned result
+# a build failure instead of a quiet fallback.
 
 on:
   workflow_dispatch:
-    inputs:
-      origin:
-        description: SimCloud origin baked into the shell (https://…)
-        required: true
-        default: https://simforge.ai
-        type: string
 
 permissions:
   contents: read
@@ -41,12 +41,19 @@ jobs:
           - name: windows-x64
             os: windows-2022
             targets: --win --x64
-          - name: macos-arm64-x64
+            triple: x86_64-pc-windows-msvc
+          - name: macos-arm64
             os: macos-14
-            targets: --mac --arm64 --x64
+            targets: --mac --arm64
+            triple: aarch64-apple-darwin
+          - name: macos-x64
+            os: macos-13
+            targets: --mac --x64
+            triple: x86_64-apple-darwin
           - name: linux-x64
             os: ubuntu-24.04
             targets: --linux --x64
+            triple: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -61,11 +68,29 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Install the Studio workspace (shell, esbuild, electron, electron-builder)
-        run: pnpm install --frozen-lockfile --filter @simforge-oss/studio
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
         working-directory: .
-      - name: Stage the SimCloud shell
-        run: node desktop/stage-cloud.mjs --origin="${{ inputs.origin }}"
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - name: Build workspace packages and the N-API addon
+        run: |
+          pnpm -r --filter './packages/**' build
+          pnpm --filter @simforge-oss/native-runtime build:node
+        working-directory: .
+      - name: Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)
+        run: node scripts/native-runtime/package-runtime.mjs --target ${{ matrix.triple }}
+        working-directory: .
+      - name: Fetch the pinned encoders
+        run: node desktop/fetch-tools.mjs
+      - name: Stage the desktop artifact
+        run: node desktop/stage.mjs
 
       - name: Decide code signing from the secrets actually present
         id: signing
@@ -87,14 +112,14 @@ jobs:
         if: steps.signing.outputs.signed != 'true'
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never
+        run: pnpm exec electron-builder --config desktop/electron-builder.yml ${{ matrix.targets }} --publish never ${{ runner.os == 'macOS' && '-c.mac.identity=-' || '' }}
 
       - name: Package and sign (Windows)
         if: steps.signing.outputs.signed == 'true' && runner.os == 'Windows'
         env:
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true
+        run: pnpm exec electron-builder --config desktop/electron-builder.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true
 
       - name: Package, sign and notarize (macOS)
         if: steps.signing.outputs.signed == 'true' && runner.os == 'macOS'
@@ -104,15 +129,16 @@ jobs:
           APPLE_ID: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ steps.signing.outputs.notarized == 'true' && secrets.APPLE_TEAM_ID || '' }}
-        run: pnpm exec electron-builder --config desktop/electron-builder.cloud.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true -c.mac.notarize=${{ steps.signing.outputs.notarized }}
+        # mac.notarize stays false in the config; it is switched on here only with credentials.
+        run: pnpm exec electron-builder --config desktop/electron-builder.yml ${{ matrix.targets }} --publish never -c.forceCodeSigning=true ${{ steps.signing.outputs.notarized == 'true' && '-c.mac.notarize=true' || '' }}
 
-      - name: Verify the package is the slim shell (no local runtime, exact asar contents)
-        run: node desktop/verify-cloud-package.mjs --origin="${{ inputs.origin }}"
+      - name: Verify the package (exact asar contents, complete native payload for this platform)
+        run: node desktop/verify-package.mjs
 
       - name: Verify macOS signature and notarization ticket
         if: runner.os == 'macOS' && steps.signing.outputs.signed == 'true'
         run: |
-          for app in dist/desktop-cloud/out/mac*/SimCloud.app; do
+          for app in dist/desktop/out/mac*/"SimForge Studio.app"; do
             codesign --verify --deep --strict --verbose=2 "$app"
             if [ "${{ steps.signing.outputs.notarized }}" = true ]; then
               spctl --assess --type execute --verbose=2 "$app"
@@ -124,7 +150,7 @@ jobs:
         if: runner.os == 'Windows' && steps.signing.outputs.signed == 'true'
         shell: pwsh
         run: |
-          Get-ChildItem dist/desktop-cloud/out/*.exe | ForEach-Object {
+          Get-ChildItem dist/desktop/out/*.exe | ForEach-Object {
             $sig = Get-AuthenticodeSignature $_.FullName
             if ($sig.Status -ne 'Valid') { throw "$($_.Name): signature status $($sig.Status)" }
             Write-Host "$($_.Name): signed by $($sig.SignerCertificate.Subject)"
@@ -132,12 +158,13 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: simcloud-${{ matrix.name }}-${{ steps.signing.outputs.signed == 'true' && (steps.signing.outputs.notarized == 'true' && 'signed-notarized' || 'signed') || 'unsigned' }}
+          name: simforge-studio-${{ matrix.name }}-${{ steps.signing.outputs.signed == 'true' && (steps.signing.outputs.notarized == 'true' && 'signed-notarized' || 'signed') || 'unsigned' }}
           if-no-files-found: error
           retention-days: 14
           path: |
-            studio/dist/desktop-cloud/out/*.exe
-            studio/dist/desktop-cloud/out/*.dmg
-            studio/dist/desktop-cloud/out/*.zip
-            studio/dist/desktop-cloud/out/*.AppImage
-            studio/dist/desktop-cloud/out/*.blockmap
+            studio/dist/desktop/out/*.exe
+            studio/dist/desktop/out/*.dmg
+            studio/dist/desktop/out/*.zip
+            studio/dist/desktop/out/*.AppImage
+            studio/dist/desktop/out/*.deb
+            studio/dist/desktop/out/*.blockmap

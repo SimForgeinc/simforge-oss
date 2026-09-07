@@ -1,12 +1,22 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
+import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
 import { readLocalObjectMetadata, streamLocalObject, writeLocalObject } from "@/app/lib/s3/s3-object";
 import { writeMultipartPart } from "@/app/lib/s3/s3-presign";
+import { verifyLocalObjectRequest } from "@/app/lib/s3/local-object-auth";
 
 type RouteContext = { params: Promise<{ bucket: string; key: string[] }> };
 
+/** Map cache content is delivered only through the access-gated map routes; a digest is not a capability. */
+function refusesMapCache(bucket: string): Response | null {
+  return bucket === MAP_CACHE_BUCKET ? Response.json({ error: "object_not_found" }, { status: 404 }) : null;
+}
+
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
+  if (!(await verifyLocalObjectRequest(request))) return Response.json({ error: "object_access_denied" }, { status: 403 });
   const { bucket, key } = await context.params;
+  const refused = refusesMapCache(bucket);
+  if (refused) return refused;
   const objectKey = key.join("/");
   try {
     const metadata = await readLocalObjectMetadata(bucket, objectKey);
@@ -15,6 +25,9 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
       "content-length": String(metadata.sizeBytes),
       etag: `"${metadata.checksumSha256Hex}"`,
       "x-content-sha256": metadata.checksumSha256Hex,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "sandbox",
     });
     if (metadata.contentEncoding) headers.set("content-encoding", metadata.contentEncoding);
     const disposition = new URL(request.url).searchParams.get("response-content-disposition");
@@ -26,8 +39,11 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   }
 }
 
-export async function HEAD(_request: Request, context: RouteContext): Promise<Response> {
+export async function HEAD(request: Request, context: RouteContext): Promise<Response> {
+  if (!(await verifyLocalObjectRequest(request))) return new Response(null, { status: 403 });
   const { bucket, key } = await context.params;
+  const refused = refusesMapCache(bucket);
+  if (refused) return refused;
   try {
     const metadata = await readLocalObjectMetadata(bucket, key.join("/"));
     return new Response(null, {
@@ -36,6 +52,8 @@ export async function HEAD(_request: Request, context: RouteContext): Promise<Re
         "content-length": String(metadata.sizeBytes),
         etag: `"${metadata.checksumSha256Hex}"`,
         "x-content-sha256": metadata.checksumSha256Hex,
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (error) {
@@ -45,7 +63,10 @@ export async function HEAD(_request: Request, context: RouteContext): Promise<Re
 }
 
 export async function PUT(request: Request, context: RouteContext): Promise<Response> {
+  if (!(await verifyLocalObjectRequest(request))) return Response.json({ error: "object_access_denied" }, { status: 403 });
   const { bucket, key } = await context.params;
+  const refused = refusesMapCache(bucket);
+  if (refused) return refused;
   const url = new URL(request.url);
   const bytes = new Uint8Array(await request.arrayBuffer());
   const declaredLength = request.headers.get("content-length");

@@ -286,6 +286,10 @@ fn runtime_document(
     runtime: &VerifiedRuntime,
     engines: &EngineRegistry,
 ) -> Result<serde_json::Value> {
+    // Reported, not required: the CPU baseline ships no provider environment,
+    // so a consumer learns whether provider workloads can spawn at all.
+    let provider_python = crate::provider::python()?;
+    let provider_python_installed = provider_python.is_file();
     Ok(serde_json::json!({
         "schema": runtime::RUNTIME_MANIFEST_SCHEMA,
         "runtimeId": runtime.runtime_id,
@@ -299,7 +303,8 @@ fn runtime_document(
         "engines": engines.capabilities(),
         "supportTiers": runtime.manifest.support_tiers,
         "components": installed_components(runtime),
-        "providerPython": crate::provider::python()?,
+        "providerPython": provider_python,
+        "providerPythonInstalled": provider_python_installed,
         "environment": { ROOT_ENV: std::env::var(ROOT_ENV).ok(), RUNTIME_MANIFEST_ENV: std::env::var(RUNTIME_MANIFEST_ENV).ok() },
     }))
 }

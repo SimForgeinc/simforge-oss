@@ -10,7 +10,12 @@ type LocalArtifactOperation =
   | "openscenario_import"
   | "materialize_traffic"
   | "browser_simulation_preview"
-  | "browser_threejs_recording";
+  | "browser_threejs_recording"
+  | "simcloud_artifact_import";
+
+/** SQL list of every single-artifact `postprocess_kind` this store admits and finalizes. */
+const LOCAL_ARTIFACT_OPERATIONS_SQL =
+  "'openscenario_import', 'materialize_traffic', 'browser_simulation_preview', 'simcloud_artifact_import'";
 
 type LocalArtifactProducerInput = {
   workspaceId: string;
@@ -239,9 +244,7 @@ export async function finalizeLocalArtifactProducer(
            ON job.id = artifact.producer_job_id AND job.workspace_id = artifact.workspace_id
         WHERE artifact.id = :artifact_id AND artifact.workspace_id = :workspace_id
           AND artifact.producer_job_family = 'artifact_postprocess'
-          AND job.postprocess_kind IN (
-            'openscenario_import', 'materialize_traffic', 'browser_simulation_preview'
-          )
+          AND job.postprocess_kind IN (${LOCAL_ARTIFACT_OPERATIONS_SQL})
         LIMIT 1`,
       { artifact_id: input.artifactId, workspace_id: input.workspaceId },
     );
@@ -263,9 +266,7 @@ export async function finalizeLocalArtifactProducer(
         WHERE artifact.id = :artifact_id AND artifact.workspace_id = :workspace_id
           AND job.id = :producer_job_id
           AND artifact.producer_job_family = 'artifact_postprocess'
-          AND job.postprocess_kind IN (
-            'openscenario_import', 'materialize_traffic', 'browser_simulation_preview'
-          )
+          AND job.postprocess_kind IN (${LOCAL_ARTIFACT_OPERATIONS_SQL})
         FOR UPDATE OF job, artifact`,
       {
         artifact_id: input.artifactId,
@@ -299,9 +300,7 @@ export async function finalizeLocalArtifactProducer(
           AND job.id = :producer_job_id AND job.id = artifact.producer_job_id
           AND job.workspace_id = artifact.workspace_id
           AND artifact.producer_job_family = 'artifact_postprocess'
-          AND job.postprocess_kind IN (
-            'openscenario_import', 'materialize_traffic', 'browser_simulation_preview'
-          )
+          AND job.postprocess_kind IN (${LOCAL_ARTIFACT_OPERATIONS_SQL})
           AND job.state NOT IN ('succeeded', 'failed', 'cancelled')
           AND job.cancel_requested_at IS NULL
           AND (

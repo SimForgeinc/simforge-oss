@@ -24,7 +24,6 @@ use crate::scene_state::{ActorDesc, ActorTickKind, SceneState};
 use crate::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
 use anyhow::{bail, Result};
 use bevy::app::{AppExit, ScheduleRunnerPlugin};
-use bevy::asset::AssetPlugin;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::RenderTarget;
 use bevy::core_pipeline::tonemapping::Tonemapping;
@@ -383,7 +382,7 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
             }
         }
     }
-    std::env::set_var("BEVY_ASSET_ROOT", "/");
+    std::env::set_var("BEVY_ASSET_ROOT", crate::platform::ASSET_ROOT);
     std::fs::create_dir_all(&args.out_dir)?;
 
     let playback = Playback {
@@ -402,10 +401,7 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
     app.insert_resource(ClearColor(clear))
         .add_plugins((
             DefaultPlugins
-                .set(AssetPlugin {
-                    file_path: "/".into(),
-                    ..default()
-                })
+                .set(crate::platform::asset_plugin())
                 .set(WindowPlugin {
                     primary_window: None,
                     exit_condition: ExitCondition::DontExit,
@@ -413,10 +409,7 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                 })
                 // Playback is a finite headless process. Compile synchronously so no
                 // pipeline task can outlive the wgpu device during process teardown.
-                .set(bevy::render::RenderPlugin {
-                    synchronous_pipeline_compilation: true,
-                    ..default()
-                })
+                .set(crate::platform::render_plugin(true))
                 .disable::<bevy::winit::WinitPlugin>()
                 .disable::<bevy::audio::AudioPlugin>()
                 .set(LogPlugin {
@@ -634,7 +627,8 @@ fn startup_setup(
     }
 
     for (i, g) in pb.args.glbs.iter().enumerate() {
-        let path = g.trim_start_matches('/').to_owned();
+        let path = crate::platform::asset_path(Path::new(g))
+            .unwrap_or_else(|err| panic!("playback tile {err:#}"));
         let handle: Handle<Gltf> = server.load(path);
         commands.spawn(TileLoad { handle, index: i });
     }
@@ -729,11 +723,8 @@ fn startup_setup(
 
     // Kick off the vehicles-carla GLB loads resolved in run().
     for (catalog_id, entry) in std::mem::take(&mut models.pending) {
-        let asset_path = entry
-            .glb_path
-            .to_string_lossy()
-            .trim_start_matches('/')
-            .to_owned();
+        let asset_path = crate::platform::asset_path(&entry.glb_path)
+            .unwrap_or_else(|err| panic!("vehicle model {err:#}"));
         let handle: Handle<Gltf> = server.load(asset_path.clone());
         models
             .loading

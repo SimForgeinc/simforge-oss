@@ -1,21 +1,18 @@
 import { connection } from "next/server";
-import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
+import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
 import { requireScenarioContext, scenarioJsonWithEtag } from "@/app/lib/scenario/http";
 
+/**
+ * The map catalog this installation can use: locally registered maps plus what
+ * the configured Cloud publishes to it (anonymously only the real RFS; with an
+ * active account session every published map). Every URL is a same-origin
+ * first-party route on this service, so the body is revalidated, not stored.
+ */
 export async function GET(request: Request) {
   await connection();
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
-  // Published map metadata is shared across every authenticated workspace. Browser assets and
-  // previews use stable authenticated routes; those routes perform short-lived signing only after
-  // their own authorization check.
-  //
-  // Revalidated rather than `no-store` (§2.5): every URL on the descriptor —
-  // `browserManifestUrl`, `topologyArtifactUrl`, `derivedTopologyUrl`,
-  // `signalsArtifactUrl` — is a same-origin path under `browserAssetRootUrl`,
-  // not a presigned URL, so nothing here expires out from under a cached copy.
-  // The editor reads this on every boot and the body rarely changes.
   return await scenarioJsonWithEtag(request, {
-    maps: await listScenarioMapDescriptors(auth.context),
+    maps: await listLocalMapCatalog(request.signal),
   });
 }

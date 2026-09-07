@@ -25,11 +25,7 @@ import {
   defaultActorSpeedKph,
   defaultBlueprints,
 } from "@/app/lib/scenario-editor/actor-utils";
-import {
-  anthropicConfigured,
-  createChatModel,
-  traceableFunction,
-} from "./langchain-support";
+import { createChatModel } from "./langchain-support";
 
 export type AssistantMessageParam = {
   role: "user" | "assistant";
@@ -67,10 +63,6 @@ const SYSTEM_PROMPT =
 
 const EDITOR_ASSISTANT_RECURSION_LIMIT = 500;
 
-type AgentInvokeResult = {
-  messages?: unknown[];
-};
-
 export type EditorAssistantInvokeOptions = {
   disableTools?: boolean;
   bundle?: BridgedMapBundle | null;
@@ -84,23 +76,6 @@ export type EditorAssistantStreamHandlers = {
   }) => void | Promise<void>;
   onToolEnd?: (trace: EditorAssistantToolTrace) => void | Promise<void>;
 };
-
-function contentToText(content: unknown): string {
-  if (typeof content === "string") return content.trim();
-  if (Array.isArray(content)) {
-    return content
-      .map((item) => {
-        if (typeof item === "string") return item.trim();
-        if (item && typeof item === "object" && "text" in item) {
-          return String((item as { text?: unknown }).text ?? "").trim();
-        }
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n");
-  }
-  return "";
-}
 
 function contentToDeltaText(content: unknown): string {
   if (typeof content === "string") return content;
@@ -116,15 +91,6 @@ function contentToDeltaText(content: unknown): string {
       .join("");
   }
   return "";
-}
-
-function extractAssistantText(result: AgentInvokeResult): string {
-  const messages = Array.isArray(result.messages) ? result.messages : [];
-  const lastAssistant = [...messages]
-    .reverse()
-    .find((message) => message instanceof AIMessage) as AIMessage | undefined;
-  if (!lastAssistant) return "";
-  return contentToText(lastAssistant.content);
 }
 
 function buildSystemPrompt(context: EditorAssistantContext) {
@@ -549,129 +515,60 @@ function buildAssistantTools(
   ];
 }
 
-export const invokeEditorAssistant = traceableFunction(
-  async (
-    messages: AssistantMessageParam[],
-    context: EditorAssistantContext,
-    options: EditorAssistantInvokeOptions = {},
-  ) => {
-    const bundle =
-      options.disableTools
-        ? null
-        : (options.bundle ??
-            (await getBridgedMapBundleByAssetId(context.mapAssetId)));
-    const traces: EditorAssistantToolTrace[] = [];
-    const agent = createAgent({
-      model: createChatModel(),
-      tools: bundle
-        ? buildAssistantTools(
-            {
-              mapAssetId: context.mapAssetId,
-              bundle,
-              selectedRoadIds: context.selectedRoadIds,
-              selectedLocation: context.selectedLocation,
-              actors: context.actors,
-              actorDrafts: context.actorDrafts,
-              scenarioId: context.scenarioId,
-              mapName: context.mapName,
-              durationSeconds: context.durationSeconds,
-              fixedDeltaSeconds: context.fixedDeltaSeconds,
-              datasetId: context.datasetId,
-              scenarios: context.scenarios,
-            },
-            traces,
-          )
-        : [],
-    });
+export async function streamEditorAssistant(
+  messages: AssistantMessageParam[],
+  context: EditorAssistantContext,
+  handlers: EditorAssistantStreamHandlers,
+  options: EditorAssistantInvokeOptions = {},
+) {
+  const bundle =
+    options.disableTools
+      ? null
+      : (options.bundle ??
+          (await getBridgedMapBundleByAssetId(context.mapAssetId)));
+  const traces: EditorAssistantToolTrace[] = [];
+  const agent = createAgent({
+    model: await createChatModel(),
+    tools: bundle
+      ? buildAssistantTools(
+          {
+            mapAssetId: context.mapAssetId,
+            bundle,
+            selectedRoadIds: context.selectedRoadIds,
+            selectedLocation: context.selectedLocation,
+            actors: context.actors,
+            actorDrafts: context.actorDrafts,
+            scenarioId: context.scenarioId,
+            mapName: context.mapName,
+            durationSeconds: context.durationSeconds,
+            fixedDeltaSeconds: context.fixedDeltaSeconds,
+            datasetId: context.datasetId,
+            scenarios: context.scenarios,
+          },
+          traces,
+          handlers,
+        )
+      : [],
+  });
 
-    const result = (await agent.invoke({
+  const eventStream = agent.streamEvents(
+    {
       messages: buildHistory(messages, context),
-    }, {
+    },
+    {
+      version: "v2",
       recursionLimit: EDITOR_ASSISTANT_RECURSION_LIMIT,
-    })) as AgentInvokeResult;
-
-    return {
-      text: extractAssistantText(result),
-      raw: result,
-      toolTraces: traces,
-    };
-  },
-  {
-    name: "web_editor_assistant",
-    metadata: {
-      source: "apps/web",
-      feature: "dataset_assistant_stream",
     },
-  },
-);
+  );
 
-export const streamEditorAssistant = traceableFunction(
-  async (
-    messages: AssistantMessageParam[],
-    context: EditorAssistantContext,
-    handlers: EditorAssistantStreamHandlers,
-    options: EditorAssistantInvokeOptions = {},
-  ) => {
-    const bundle =
-      options.disableTools
-        ? null
-        : (options.bundle ??
-            (await getBridgedMapBundleByAssetId(context.mapAssetId)));
-    const traces: EditorAssistantToolTrace[] = [];
-    const agent = createAgent({
-      model: createChatModel(),
-      tools: bundle
-        ? buildAssistantTools(
-            {
-              mapAssetId: context.mapAssetId,
-              bundle,
-              selectedRoadIds: context.selectedRoadIds,
-              selectedLocation: context.selectedLocation,
-              actors: context.actors,
-              actorDrafts: context.actorDrafts,
-              scenarioId: context.scenarioId,
-              mapName: context.mapName,
-              durationSeconds: context.durationSeconds,
-              fixedDeltaSeconds: context.fixedDeltaSeconds,
-              datasetId: context.datasetId,
-              scenarios: context.scenarios,
-            },
-            traces,
-            handlers,
-          )
-        : [],
-    });
+  for await (const event of eventStream) {
+    if (event.event !== "on_chat_model_stream") continue;
+    const chunk = (event.data as { chunk?: { content?: unknown } } | undefined)?.chunk;
+    const text = contentToDeltaText(chunk?.content);
+    if (text) await handlers.onTextDelta?.(text);
+  }
 
-    const eventStream = agent.streamEvents(
-      {
-        messages: buildHistory(messages, context),
-      },
-      {
-        version: "v2",
-        recursionLimit: EDITOR_ASSISTANT_RECURSION_LIMIT,
-      },
-    );
-
-    for await (const event of eventStream) {
-      if (event.event !== "on_chat_model_stream") continue;
-      const chunk = (event.data as { chunk?: { content?: unknown } } | undefined)?.chunk;
-      const text = contentToDeltaText(chunk?.content);
-      if (text) await handlers.onTextDelta?.(text);
-    }
-
-    return {
-      toolTraces: traces,
-    };
-  },
-  {
-    name: "web_editor_assistant_stream",
-    metadata: {
-      source: "apps/web",
-      feature: "dataset_assistant_stream",
-    },
-  },
-);
-
-export function editorAssistantAvailable() {
-  return anthropicConfigured();
+  return {
+    toolTraces: traces,
+  };
 }

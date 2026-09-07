@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
@@ -324,9 +325,11 @@ export function AiSearchPanel({
 
         {search.unavailable ? (
           <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-            AI chat isn&apos;t configured for this environment. Switch to
-            <span className="mx-1 font-mono">Search</span>
-            mode to keep working.
+            {search.unavailable}{" "}
+            <Link href="/dashboard/settings/ai-providers" className="underline underline-offset-2">
+              Open AI provider settings
+            </Link>
+            . Keyword <span className="font-mono">Search</span> keeps working without a model.
           </div>
         ) : null}
 
@@ -355,7 +358,7 @@ export function AiSearchPanel({
                 : "Refine, narrow, or ask a follow-up…"
             }
             rows={2}
-            disabled={search.unavailable}
+            disabled={search.unavailable !== null}
             className="flex-1 resize-none rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             aria-label="Send a message to the AI search assistant"
           />
@@ -363,7 +366,7 @@ export function AiSearchPanel({
             type="button"
             size="sm"
             onClick={() => send(draft)}
-            disabled={search.isLoading || draft.trim().length < 2 || search.unavailable}
+            disabled={search.isLoading || draft.trim().length < 2 || search.unavailable !== null}
             className="h-9 gap-1"
             aria-label="Send message"
           >

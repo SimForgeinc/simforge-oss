@@ -5,11 +5,15 @@ export {
   probeNativeRuntime,
 } from "./native-runtime";
 export {
+  LOCAL_HOST_SESSION_COOKIE,
   LOCAL_HOST_STATE_FILE,
+  LOCAL_HOST_TOKEN_ENV,
+  localHostSessionToken,
   localHostStateDir,
   readLocalHostState,
   writeLocalHostState,
   removeLocalHostState,
+  secretsEqual,
   waitForLocalHostReady,
   type LocalHostState,
 } from "./local-host-state";

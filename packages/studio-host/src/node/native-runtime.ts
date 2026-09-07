@@ -2,16 +2,16 @@ import { execFile } from "node:child_process";
 import { access, constants } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
-import { nativeRuntimeRoot } from "@simforge-oss/native-runtime";
+import { nativeExecutableName, nativeRuntimeRoot } from "@simforge-oss/native-runtime";
 import { NATIVE_RUNTIME_MANIFEST_SCHEMA, type NativeRuntimeCapability, type NativeRuntimeManifest } from "../capabilities";
 
 const execFileAsync = promisify(execFile);
 
-export const NATIVE_RUNNER_BINARY = "simforge-runner";
+export const NATIVE_RUNNER_BINARY = nativeExecutableName("simforge-runner");
 
 /**
  * Discovery order fixed by the runner: `SIMFORGE_RUNNER_BIN`, then the runtime
- * root's `bin/`, then every `PATH` entry.
+ * root's `bin/`, then every `PATH` entry (`simforge-runner.exe` on Windows).
  */
 export function nativeRunnerCandidates(env: NodeJS.ProcessEnv = process.env): string[] {
   const candidates: string[] = [];
@@ -89,6 +89,8 @@ export async function probeNativeRuntime(env: NodeJS.ProcessEnv = process.env): 
       env,
       timeout: 10_000,
       maxBuffer: 1024 * 1024,
+      // A console runner spawned from a GUI host must not open a window.
+      windowsHide: true,
     });
     const runtime = parseManifest(stdout);
     if (!runtime) {

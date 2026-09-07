@@ -1,6 +1,7 @@
 import type { RenderingPreference } from "../../../components/rendering-preference";
 import type { ScenarioMapOption } from "../../../scenario/list/document-map-groups";
 import {
+  beginMapAssetCacheIndexBatch,
   ensureMapAsset,
   flushMapAssetCacheIndex,
   hasCachedMapAsset,
@@ -22,6 +23,15 @@ const MAX_CACHE_LOOKUP_CONCURRENCY = 24;
 const MAX_ASSET_DOWNLOAD_ATTEMPTS = 2;
 /** A broken response or Cache Storage write must not hold bulk preparation open forever. */
 export const PROFILE_MAP_ASSET_ATTEMPT_TIMEOUT_MS = 90_000;
+/**
+ * Below this sustained rate an attempt is treated as stalled. The base timeout
+ * alone would abort every multi-hundred-megabyte member on an ordinary link
+ * and, on the desktop, restart it from its resumable prefix twice before
+ * giving up.
+ */
+const MIN_ASSET_TRANSFER_BYTES_PER_SECOND = 128 * 1024;
+const SUMO_RUNTIME_MAP_VERSION_ID = "sumo-runtime";
+const SUMO_NETWORK_PATH = "/browser-assets/derived/sumo/";
 
 export type ProfileMapAsset = {
   url: string;
@@ -37,6 +47,8 @@ export type ProfileMapPlanMap = {
   mapVersionId: string;
   closureSha256: string;
   assets: ProfileMapAsset[];
+  /** Members that were not present when this plan was calculated (ungrouped). */
+  pendingMembers: ProfileMapAsset[];
   totalBytes: number;
   remainingAssets: number;
   remainingBytes: number;
@@ -48,9 +60,12 @@ export type ProfileMapPlan = {
   profile: RenderingPreference;
   mapCount: number;
   maps: ProfileMapPlanMap[];
+  /** SUMO runtime files, present only when a planned closure carries a SUMO network. */
+  runtimeAssets: ProfileMapAsset[];
+  pendingRuntimeAssets: ProfileMapAsset[];
   assets: ProfileMapAsset[];
   /** Unique content blobs that were not already present when this plan was calculated. */
-  pendingAssets?: ProfileMapAsset[];
+  pendingAssets: ProfileMapAsset[];
   totalBytes: number;
   remainingBytes: number;
   remainingAssets: number;
@@ -135,7 +150,7 @@ function batchDownloadRequest(asset: ProfileMapAsset) {
 }
 
 async function resolveBatchDownloadUrls(
-  assets: ProfileMapAsset[],
+  assets: readonly ProfileMapAsset[],
   signal: AbortSignal,
 ): Promise<Map<string, string>> {
   const requested = assets.flatMap((asset) => {
@@ -180,8 +195,14 @@ async function resolveBatchDownloadUrls(
   }
 }
 
+function attemptTimeoutMs(bytes: number | null) {
+  return PROFILE_MAP_ASSET_ATTEMPT_TIMEOUT_MS
+    + Math.ceil(((bytes ?? 0) / MIN_ASSET_TRANSFER_BYTES_PER_SECOND) * 1000);
+}
+
 async function withAssetAttemptDeadline<T>(
   signal: AbortSignal,
+  timeoutMs: number,
   worker: (attemptSignal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
@@ -194,7 +215,7 @@ async function withAssetAttemptDeadline<T>(
     timeoutId = setTimeout(() => {
       controller.abort(timeoutError);
       reject(timeoutError);
-    }, PROFILE_MAP_ASSET_ATTEMPT_TIMEOUT_MS);
+    }, timeoutMs);
   });
   const abortFromParent = () => {
     const abortError = new DOMException("Aborted", "AbortError");
@@ -210,18 +231,30 @@ async function withAssetAttemptDeadline<T>(
   }
 }
 
+function contentKey(asset: ProfileMapAsset) {
+  return asset.sha256 ? `sha256:${asset.sha256}` : `url:${asset.url}`;
+}
+
+/** One entry per distinct content; every other path to the same bytes becomes an alias. */
 function groupByContent(assets: readonly ProfileMapAsset[]): ProfileMapAsset[] {
   const grouped = new Map<string, ProfileMapAsset>();
   for (const asset of assets) {
-    const key = asset.sha256 ? `sha256:${asset.sha256}` : `url:${asset.url}`;
+    const key = contentKey(asset);
     const existing = grouped.get(key);
     if (!existing) {
-      grouped.set(key, { ...asset, aliases: [] });
-    } else if (asset.url !== existing.url && !existing.aliases?.includes(asset.url)) {
-      existing.aliases?.push(asset.url);
+      grouped.set(key, { ...asset, aliases: [...(asset.aliases ?? [])] });
+      continue;
+    }
+    const aliases = existing.aliases!;
+    for (const alias of [asset.url, ...(asset.aliases ?? [])]) {
+      if (alias !== existing.url && !aliases.includes(alias)) aliases.push(alias);
     }
   }
   return [...grouped.values()];
+}
+
+function sumBytes(assets: readonly ProfileMapAsset[]) {
+  return assets.reduce((total, asset) => total + (asset.bytes ?? 0), 0);
 }
 
 async function runtimeAssets(signal: AbortSignal): Promise<ProfileMapAsset[]> {
@@ -246,7 +279,7 @@ async function runtimeAssets(signal: AbortSignal): Promise<ProfileMapAsset[]> {
         if (!Number.isSafeInteger(bytes) || bytes <= 0) {
           throw new Error(`SUMO runtime cache asset has no verified size: ${url}`);
         }
-        return { url, bytes, mapVersionId: "sumo-runtime" };
+        return { url, bytes, mapVersionId: SUMO_RUNTIME_MAP_VERSION_ID };
       }),
   );
 }
@@ -257,6 +290,52 @@ function inventoryAssetUrl(mapVersionId: string, relativePath: string) {
     .map((part) => encodeURIComponent(part))
     .join("/");
   return `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets/${encodedPath}`;
+}
+
+function needsSumoRuntime(maps: readonly ProfileMapPlanMap[]) {
+  return maps.some((map) => map.assets.some((asset) => asset.url.includes(SUMO_NETWORK_PATH)));
+}
+
+/** Aggregate totals over a set of planned maps; the runtime joins only when a closure needs it. */
+function assemblePlan(
+  base: Pick<ProfileMapPlan, "releaseKey" | "profile" | "runtimeAssets" | "pendingRuntimeAssets">,
+  maps: ProfileMapPlanMap[],
+): ProfileMapPlan {
+  const runtimes = needsSumoRuntime(maps) ? base.runtimeAssets : [];
+  const pendingRuntimes = needsSumoRuntime(maps) ? base.pendingRuntimeAssets : [];
+  const assets = groupByContent([...maps.flatMap((map) => map.assets), ...runtimes]);
+  const pendingAssets = groupByContent([
+    ...maps.flatMap((map) => map.pendingMembers),
+    ...pendingRuntimes,
+  ]);
+  return {
+    releaseKey: base.releaseKey,
+    profile: base.profile,
+    mapCount: maps.length,
+    maps,
+    runtimeAssets: base.runtimeAssets,
+    pendingRuntimeAssets: base.pendingRuntimeAssets,
+    assets,
+    pendingAssets,
+    totalBytes: sumBytes(assets),
+    remainingBytes: sumBytes(pendingAssets),
+    remainingAssets: pendingAssets.length,
+    unknownSizeAssets: assets.filter((asset) => asset.bytes === null).length,
+    fullyCachedMapVersionIds: maps.filter((map) => map.fullyCached).map((map) => map.mapVersionId),
+  };
+}
+
+/**
+ * Narrow a plan to a subset of its maps without touching the network or the
+ * cache: the per-map presence data gathered by `createProfileMapPlan` is
+ * regrouped, so a selection change in the preparation UI is a pure
+ * computation instead of a fresh inventory fetch plus one lookup per member.
+ */
+export function selectProfileMapPlan(
+  plan: ProfileMapPlan,
+  mapVersionIds: ReadonlySet<string>,
+): ProfileMapPlan {
+  return assemblePlan(plan, plan.maps.filter((map) => mapVersionIds.has(map.mapVersionId)));
 }
 
 /**
@@ -300,62 +379,54 @@ export async function createProfileMapPlan(
       mapVersionId: map.mapVersionId,
       closureSha256: closure.closureSha256,
       assets,
-      totalBytes: groupByContent(assets).reduce((total, asset) => total + (asset.bytes ?? 0), 0),
+      pendingMembers: [],
+      totalBytes: sumBytes(groupByContent(assets)),
       remainingAssets: 0,
       remainingBytes: 0,
       fullyCached: false,
     });
   }
 
-  const memberCached = await mapWithConcurrency(
-    memberAssets,
-    MAX_CACHE_LOOKUP_CONCURRENCY,
-    (asset) => hasCachedMapAsset(asset.url, asset.sha256),
-  );
-  let memberIndex = 0;
-  for (const map of planMaps) {
-    const pendingMembers = map.assets.filter(() => !memberCached[memberIndex++]);
-    const uniquePending = groupByContent(pendingMembers);
-    map.remainingAssets = uniquePending.length;
-    map.remainingBytes = uniquePending.reduce((total, asset) => total + (asset.bytes ?? 0), 0);
-    map.fullyCached = map.remainingAssets === 0;
-    if (map.fullyCached) {
-      await writeCacheReceipt(
-        mapCacheReceiptKey(map.mapVersionId, map.closureSha256),
-        map.assets.length,
-        map.totalBytes,
-      );
-    }
-  }
-
   // The SUMO runtime is only worth the bytes when a selected closure carries a
   // SUMO network for it to run; browser-only maps never load it.
-  const runtimes = memberAssets.some((asset) => asset.url.includes("/browser-assets/derived/sumo/"))
-    ? await runtimeAssets(signal)
-    : [];
-  const runtimeCached = await mapWithConcurrency(
-    runtimes,
-    MAX_CACHE_LOOKUP_CONCURRENCY,
-    (asset) => hasCachedMapAsset(asset.url, asset.sha256),
-  );
-  const pendingMembers = memberAssets.filter((_asset, index) => !memberCached[index]);
-  const pendingRuntimes = runtimes.filter((_asset, index) => !runtimeCached[index]);
-  const assets = groupByContent([...memberAssets, ...runtimes]);
-  const pendingAssets = groupByContent([...pendingMembers, ...pendingRuntimes]);
+  const runtimes = needsSumoRuntime(planMaps) ? await runtimeAssets(signal) : [];
 
-  return {
-    releaseKey: inventory.releaseKey,
-    profile,
-    mapCount: planMaps.length,
-    maps: planMaps,
-    assets,
-    pendingAssets,
-    totalBytes: assets.reduce((total, asset) => total + (asset.bytes ?? 0), 0),
-    remainingBytes: pendingAssets.reduce((total, asset) => total + (asset.bytes ?? 0), 0),
-    remainingAssets: pendingAssets.length,
-    unknownSizeAssets: assets.filter((asset) => asset.bytes === null).length,
-    fullyCachedMapVersionIds: planMaps.filter((map) => map.fullyCached).map((map) => map.mapVersionId),
-  };
+  beginMapAssetCacheIndexBatch();
+  try {
+    const memberCached = await mapWithConcurrency(
+      memberAssets,
+      MAX_CACHE_LOOKUP_CONCURRENCY,
+      (asset) => hasCachedMapAsset(asset.url, asset.sha256),
+    );
+    let memberIndex = 0;
+    for (const map of planMaps) {
+      map.pendingMembers = map.assets.filter(() => !memberCached[memberIndex++]);
+      const uniquePending = groupByContent(map.pendingMembers);
+      map.remainingAssets = uniquePending.length;
+      map.remainingBytes = sumBytes(uniquePending);
+      map.fullyCached = map.remainingAssets === 0;
+      if (map.fullyCached) {
+        await writeCacheReceipt(
+          mapCacheReceiptKey(map.mapVersionId, map.closureSha256),
+          map.assets.length,
+          map.totalBytes,
+        );
+      }
+    }
+    const runtimeCached = await mapWithConcurrency(
+      runtimes,
+      MAX_CACHE_LOOKUP_CONCURRENCY,
+      (asset) => hasCachedMapAsset(asset.url, asset.sha256),
+    );
+    return assemblePlan({
+      releaseKey: inventory.releaseKey,
+      profile,
+      runtimeAssets: runtimes,
+      pendingRuntimeAssets: runtimes.filter((_asset, index) => !runtimeCached[index]),
+    }, planMaps);
+  } finally {
+    flushMapAssetCacheIndex();
+  }
 }
 
 export async function cacheProfileMapPlan(
@@ -379,7 +450,9 @@ export async function cacheProfileMapPlan(
   let completedBytes = 0;
   let failedAssets = 0;
   let failureReason: string | null = null;
-  const assetsToCache = plan.pendingAssets ?? plan.assets;
+  const assetsToCache = plan.pendingAssets;
+  /** Content made resident by this run, including every alias path. */
+  const stored = new Set<string>();
   const report = (mapVersionId: string | null) => onProgress({
     completedAssets,
     totalAssets: assetsToCache.length,
@@ -387,63 +460,78 @@ export async function cacheProfileMapPlan(
     totalBytes: plan.remainingBytes,
     currentMapVersionId: mapVersionId,
   });
+  // Signed delivery URLs are resolved per batch, lazily, by whichever worker
+  // reaches the batch first: the pool never drains between batches and a URL
+  // is at most one batch old when it is used.
+  const downloadUrlBatches = new Map<number, Promise<Map<string, string>>>();
+  const downloadUrlsFor = (index: number) => {
+    const batch = Math.floor(index / DOWNLOAD_URL_BATCH_SIZE);
+    let pending = downloadUrlBatches.get(batch);
+    if (!pending) {
+      const start = batch * DOWNLOAD_URL_BATCH_SIZE;
+      pending = resolveBatchDownloadUrls(
+        assetsToCache.slice(start, start + DOWNLOAD_URL_BATCH_SIZE),
+        signal,
+      );
+      downloadUrlBatches.set(batch, pending);
+    }
+    return pending;
+  };
   report(null);
+  beginMapAssetCacheIndexBatch();
   try {
-    for (let offset = 0; offset < assetsToCache.length; offset += DOWNLOAD_URL_BATCH_SIZE) {
-      const batch = assetsToCache.slice(offset, offset + DOWNLOAD_URL_BATCH_SIZE);
-      const downloadUrls = await resolveBatchDownloadUrls(batch, signal);
-      await mapWithConcurrency(batch, profileMapDownloadConcurrency(), async (asset) => {
-        if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-        let stored = false;
-        for (let attempt = 0; attempt < MAX_ASSET_DOWNLOAD_ATTEMPTS && !stored; attempt += 1) {
-          try {
+    await mapWithConcurrency(assetsToCache, profileMapDownloadConcurrency(), async (asset, index) => {
+      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+      const downloadUrls = await downloadUrlsFor(index);
+      const { sha256 } = asset;
+      for (let attempt = 0; attempt < MAX_ASSET_DOWNLOAD_ATTEMPTS; attempt += 1) {
+        try {
+          await withAssetAttemptDeadline(signal, attemptTimeoutMs(asset.bytes), async (attemptSignal) => {
             // Ensure-only: the asset becomes resident in the cache backend
-            // without its bytes being read back into this renderer.
-            await withAssetAttemptDeadline(signal, (attemptSignal) => ensureMapAsset(asset.url, {
-              sha256: asset.sha256,
-              networkUrl: downloadUrls.get(asset.url),
+            // without its bytes being read back into this renderer. A retry
+            // goes through the canonical route, which never expires.
+            await ensureMapAsset(asset.url, {
+              sha256,
+              networkUrl: attempt === 0 ? downloadUrls.get(asset.url) : undefined,
               sizeBytes: asset.bytes ?? undefined,
               signal: attemptSignal,
               deferIndexWrite: true,
-            }));
-            stored = true;
-          } catch (reason) {
-            if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-            if (attempt + 1 === MAX_ASSET_DOWNLOAD_ATTEMPTS) {
-              failedAssets += 1;
-              failureReason = reason instanceof Error ? reason.message : String(reason);
+            });
+            // Content is deduplicated; teach every alias path its identity so
+            // the offline runtime answers by URL alone. Aliases carry no
+            // digest-less identity, so they need one to be registered at all.
+            if (sha256) {
+              await Promise.all((asset.aliases ?? []).map((alias) =>
+                ensureMapAsset(alias, { sha256, signal: attemptSignal, deferIndexWrite: true })
+              ));
             }
-          }
-        }
-        if (stored) {
-          // Content is deduplicated; teach every alias path its identity so
-          // the offline runtime answers by URL alone.
-          if (asset.sha256) {
-            const sha256 = asset.sha256;
-            await Promise.all((asset.aliases ?? []).map((alias) =>
-              ensureMapAsset(alias, { sha256, signal, deferIndexWrite: true })
-            ));
-          }
+          });
+          stored.add(contentKey(asset));
           completedAssets++;
           completedBytes += asset.bytes ?? 0;
           report(asset.mapVersionId);
+          return;
+        } catch (reason) {
+          if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+          if (attempt + 1 === MAX_ASSET_DOWNLOAD_ATTEMPTS) {
+            failedAssets += 1;
+            failureReason = reason instanceof Error ? reason.message : String(reason);
+          }
         }
-      });
-    }
-  } finally {
-    flushMapAssetCacheIndex();
-  }
+      }
+    });
 
-  const completedMapVersionIds: string[] = [];
-  for (const map of plan.maps) {
-    const complete = (
-      await mapWithConcurrency(
-        map.assets,
-        MAX_CACHE_LOOKUP_CONCURRENCY,
-        (asset) => hasCachedMapAsset(asset.url, asset.sha256),
-      )
-    ).every(Boolean);
-    if (complete) {
+    // A closure is complete when every member that was absent at planning
+    // time has been verified and published by this run; members present at
+    // planning time were verified by the lookup that excluded them. Receipts
+    // are written only for closures that became complete here.
+    const completedMapVersionIds: string[] = [];
+    for (const map of plan.maps) {
+      if (map.fullyCached) {
+        completedMapVersionIds.push(map.mapVersionId);
+        continue;
+      }
+      if (!map.pendingMembers.every((member) => stored.has(contentKey(member)))) continue;
       await writeCacheReceipt(
         mapCacheReceiptKey(map.mapVersionId, map.closureSha256),
         map.assets.length,
@@ -451,8 +539,9 @@ export async function cacheProfileMapPlan(
       );
       completedMapVersionIds.push(map.mapVersionId);
     }
+    report(null);
+    return { failedAssets, failureReason, completedMapVersionIds };
+  } finally {
+    flushMapAssetCacheIndex();
   }
-  flushMapAssetCacheIndex();
-  report(null);
-  return { failedAssets, failureReason, completedMapVersionIds };
 }

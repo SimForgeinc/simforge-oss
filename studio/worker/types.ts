@@ -3,6 +3,7 @@ import type {
   RenderInputFile,
   RenderProgressRecord,
 } from "@simforge-oss/render";
+import type { RenderIntentV1 } from "@simforge-oss/scenario";
 
 export type LocalRenderEngine = "browser" | "native";
 
@@ -18,6 +19,41 @@ export type RemoteInput = {
   };
 };
 
+export type BrowserRenderClaimPayload = {
+  readonly mode: "browser_render";
+  readonly engine: "browser";
+  readonly intent: Record<string, unknown>;
+  readonly intentSha256: string;
+  readonly inputs: readonly RemoteInput[];
+  /** CreateBrowserRecordingSchema payload resolved from the immutable revision before execution. */
+  readonly recording: Record<string, unknown>;
+};
+
+export type NativeMapMember = {
+  readonly inputId: string;
+  readonly relativePath: string;
+  readonly sha256: string;
+  readonly sizeBytes: number;
+};
+
+/**
+ * A local native (Bevy) render claim. Small immutable inputs are fetched
+ * per attempt; the map's native closure is served from the host's ensured
+ * local map directory, declared here member by member so the worker can
+ * refuse a directory whose bytes are not the intent's.
+ */
+export type NativeRenderClaimPayload = {
+  readonly mode: "native_render";
+  readonly engine: "native";
+  readonly intent: Record<string, unknown>;
+  readonly intentSha256: string;
+  readonly executionPackageControlSha256: string;
+  readonly attemptNumber: number;
+  readonly mapVersionId: string;
+  readonly inputs: readonly RemoteInput[];
+  readonly map: { readonly members: readonly NativeMapMember[] };
+};
+
 export type CpuJobClaim = {
   readonly contract: "uniscenario.cpu-job-claim/v1";
   readonly jobFamily: "openscenario_render";
@@ -25,18 +61,33 @@ export type CpuJobClaim = {
   readonly attemptId: string;
   readonly fenceToken: string;
   readonly leaseExpiresAt: string;
-  readonly payload: {
-    readonly mode: "browser_render";
-    readonly engine: LocalRenderEngine;
-    readonly intent: Record<string, unknown>;
-    readonly intentSha256: string;
-    readonly inputs: readonly RemoteInput[];
-    /** CreateBrowserRecordingSchema payload resolved from the immutable revision before execution. */
-    readonly recording: Record<string, unknown>;
-  };
+  readonly payload: BrowserRenderClaimPayload | NativeRenderClaimPayload;
 };
 
 export type CpuFence = Pick<CpuJobClaim, "jobFamily" | "attemptId" | "fenceToken">;
+
+export type NativeMapPreparation =
+  | { readonly state: "preparing"; readonly startedAt: string }
+  | { readonly state: "ready"; readonly directory: string; readonly mapVersionId: string; readonly startedAt: string; readonly readyAt: string }
+  | { readonly state: "failed"; readonly code: string; readonly message: string; readonly startedAt: string };
+
+export type NativeArtifactIdentity =
+  | { readonly role: "video" | "frames" | "sensorArchive"; readonly actorId: string; readonly sensorId: string; readonly modality: string }
+  | { readonly role: "manifest" | "trace" | "annotations" | "diagnostics"; readonly actorId: null; readonly sensorId: null; readonly modality: null };
+
+export type NativeArtifactReservation = {
+  readonly artifactId: string;
+  readonly upload: { readonly url: string; readonly method: "PUT"; readonly headers: Readonly<Record<string, string>> };
+};
+
+export type NativeCompletionArtifact = {
+  readonly artifactId: string;
+  readonly identity: NativeArtifactIdentity;
+  readonly path: string;
+  readonly sha256: string;
+  readonly sizeBytes: number;
+  readonly mediaType: string;
+};
 
 export type RecordingSensorIdentity = {
   readonly actorId: string;
@@ -84,10 +135,21 @@ export type RenderExecutionRequest = {
   readonly engine: LocalRenderEngine;
   readonly intent: Record<string, unknown>;
   readonly intentSha256?: string;
+  /** Control lineage the native engine binds into its trace, manifest and diagnostics. */
+  readonly executionPackageControlSha256?: string;
   readonly inputs: ReadonlyMap<string, RenderInputFile>;
   readonly workspace: string;
   readonly signal: AbortSignal;
   readonly reportProgress?: (record: RenderProgressRecord) => Promise<void>;
+};
+
+/** The engine run every lane shares: digest-checked inputs, a verified manifest, stage timings. */
+export type EngineExecution = {
+  readonly intentSha256: string;
+  readonly intent: RenderIntentV1;
+  readonly runtimeManifest: RenderArtifactManifest;
+  readonly frameCount: number;
+  readonly stageTimingsMs: Record<string, number>;
 };
 
 export type RenderExecutionResult = {

@@ -2,26 +2,53 @@ import { homedir, hostname } from "node:os";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { chromium } from "playwright-core";
 import { simforgeEnv } from "../lib/simforge-env";
 
 import type { RenderProgressRecord } from "@simforge-oss/render";
+import { probeLocalBrowserRender, probeLocalNativeRender } from "@simforge-oss/render/native";
 
 import { runCompilerLoop } from "./compiler.js";
 import { executeRender } from "./executor.js";
 import { CpuJobsClient, downloadInputs } from "./http-client.js";
-import type { CpuJobClaim } from "./types.js";
+import { NativeMapFailure, runNativeClaim } from "./native-render.js";
+import type { CpuJobClaim, LocalRenderEngine } from "./types.js";
 
 export type LocalWorkerHandle = {
   readonly done: Promise<void>;
   stop(reason?: unknown): void;
 };
 
+/**
+ * Which render engines this worker offers, decided from the same on-disk
+ * probe the host reports in its capabilities. A missing dependency removes
+ * the engine from the claim scope; the host then reports it not ready and
+ * never leases such a job into a certain failure.
+ */
+export function offeredEngines(): { engines: LocalRenderEngine[]; reasons: Record<LocalRenderEngine, readonly string[]> } {
+  const native = probeLocalNativeRender();
+  const browser = probeLocalBrowserRender(process.env, chromium.executablePath());
+  const engines: LocalRenderEngine[] = [];
+  if (browser.ready) engines.push("browser");
+  if (native.ready) engines.push("native");
+  return { engines, reasons: { browser: browser.reasons, native: native.reasons } };
+}
+
 export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
   const controller = new AbortController();
-  const token = simforgeEnv("RENDER_WORKER_TOKEN")?.trim() || "simforge-local-worker";
+  const token = simforgeEnv("RENDER_WORKER_TOKEN")?.trim()
+    || simforgeEnv("LOCAL_HOST_TOKEN")?.trim()
+    || "simforge-local-worker";
   const workerId = simforgeEnv("RENDER_WORKER_ID")?.trim()
     || `local-${hostname().replace(/[^A-Za-z0-9._:-]/g, "-")}-${process.pid}`;
-  const client = new CpuJobsClient(new URL(baseUrl), token, workerId);
+  const offered = offeredEngines();
+  process.stdout.write(`${JSON.stringify({
+    component: "simforge-local-render-worker",
+    event: "worker.engines",
+    engines: offered.engines,
+    unavailable: Object.fromEntries(Object.entries(offered.reasons).filter(([, reasons]) => reasons.length > 0)),
+  })}\n`);
+  const client = new CpuJobsClient(new URL(baseUrl), token, workerId, offered.engines);
   const done = Promise.all([
     runClaimLoop(client, controller.signal),
     runCompilerLoop(baseUrl, token, controller.signal),
@@ -68,8 +95,39 @@ async function runClaim(client: CpuJobsClient, claim: CpuJobClaim, workerSignal:
   const signal = AbortSignal.any([workerSignal, job.signal]);
   let progress = 0;
   const heartbeat = runHeartbeat(client, claim, () => progress, job, workerSignal);
+  const reportProgress = async (record: RenderProgressRecord) => {
+    progress = progressOf(record, progress);
+    if (record.event === "stage.progress") {
+      await client.event(claim, "stage.progress", {
+        stage: record.stage,
+        completed: record.completed,
+        total: record.total,
+        unit: record.unit,
+      }, signal);
+    }
+  };
   try {
     await client.event(claim, "job.started", { engine: claim.payload.engine }, signal);
+    if (claim.payload.mode === "native_render") {
+      const outcome = await runNativeClaim(
+        client,
+        { ...claim, payload: claim.payload },
+        workspace,
+        signal,
+        reportProgress,
+      );
+      job.abort(new Error("render complete"));
+      await heartbeat;
+      process.stdout.write(`${JSON.stringify({
+        component: "simforge-local-render-worker",
+        event: "job.completed",
+        jobId: claim.jobId,
+        engine: "native",
+        frameCount: outcome.frameCount,
+        artifactCount: outcome.artifactCount,
+      })}\n`);
+      return;
+    }
     const inputs = await downloadInputs(claim.payload.inputs, join(workspace, "inputs"), signal);
     const result = await executeRender({
       jobId: claim.jobId,
@@ -80,17 +138,7 @@ async function runClaim(client: CpuJobsClient, claim: CpuJobClaim, workerSignal:
       inputs,
       workspace,
       signal,
-      reportProgress: async (record: RenderProgressRecord) => {
-        progress = progressOf(record, progress);
-        if (record.event === "stage.progress") {
-          await client.event(claim, "stage.progress", {
-            stage: record.stage,
-            completed: record.completed,
-            total: record.total,
-            unit: record.unit,
-          }, signal);
-        }
-      },
+      reportProgress,
     });
     progress = 0.95;
     const recording = await client.reserve(claim, result.artifacts, signal);
@@ -123,6 +171,7 @@ async function runClaim(client: CpuJobsClient, claim: CpuJobClaim, workerSignal:
       component: "simforge-local-render-worker",
       event: "job.completed",
       jobId: claim.jobId,
+      engine: "browser",
       frameCount: result.frameCount,
       durationSeconds: result.durationSeconds,
     })}\n`);
@@ -172,8 +221,9 @@ function progressOf(record: RenderProgressRecord, previous: number): number {
 }
 
 function failureCode(error: unknown): string {
+  if (error instanceof NativeMapFailure) return error.code;
   const message = error instanceof Error ? error.message : String(error);
-  if (/digest|integrity|invalid|missing|undeclared/i.test(message)) return "render_invalid_input";
+  if (/digest|integrity|invalid|missing|undeclared|mismatch/i.test(message)) return "render_invalid_input";
   if (/cancel/i.test(message)) return "render_cancelled";
   return "render_execution_failed";
 }

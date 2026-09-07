@@ -44,7 +44,7 @@ fn road_detail_material_pipelines_compile() {
         eprintln!("skipped: SF_NO_GPU set (no GPU adapter on this host)");
         return;
     }
-    std::env::set_var("BEVY_ASSET_ROOT", "/");
+    std::env::set_var("BEVY_ASSET_ROOT", render_core::platform::ASSET_ROOT);
 
     let mut app = App::new();
     app.add_plugins((

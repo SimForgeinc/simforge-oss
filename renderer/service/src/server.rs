@@ -28,8 +28,7 @@ use render_core::profiles::RenderProfileConfig;
 use render_core::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
 use sensors::bvh::{Hit, Raycast, RaycastScene, Tri};
 use std::collections::HashMap;
-use std::io::Write;
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 /// Scene description for prewarm (subset of the batch job schema).
@@ -345,52 +344,89 @@ fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], tar
     }
 }
 
-/// Serve one unix socket until killed or `close`. A new connection replaces
-/// the old one (env-server serveSocket convention).
-pub fn serve(mut state: ServiceState, socket_path: &Path) -> Result<()> {
-    let _ = std::fs::remove_file(socket_path);
-    let listener = UnixListener::bind(socket_path)
-        .with_context(|| format!("bind {}", socket_path.display()))?;
+/// Readiness record written to `--ready-file` once the endpoint is bound:
+/// everything a host needs to connect and map the ring without probing
+/// the endpoint itself (a stat/connect poll is not portable to named
+/// pipes). Written atomically (temp file + rename).
+#[derive(Debug, serde::Serialize)]
+pub struct ReadyRecord<'a> {
+    pub protocol: u32,
+    pub pid: u32,
+    /// The `--socket` value as given: a Unix socket path or a Windows
+    /// named-pipe endpoint (see [`crate::endpoint`]).
+    pub endpoint: &'a str,
+    pub shm: ShmInfo,
+}
+
+fn write_ready_file(path: &Path, record: &ReadyRecord<'_>) -> Result<()> {
+    let body = serde_json::to_vec_pretty(record)?;
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, body).with_context(|| format!("write {}", tmp.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("publish {}", path.display()))?;
+    Ok(())
+}
+
+/// Serve one local endpoint until killed or `close`. A new connection
+/// replaces the old one (env-server serveSocket convention). `ready_file`,
+/// when given, receives a [`ReadyRecord`] as soon as the endpoint accepts
+/// connections.
+pub fn serve(mut state: ServiceState, endpoint: &str, ready_file: Option<&Path>) -> Result<()> {
+    let mut listener = crate::endpoint::Listener::bind(endpoint)?;
     eprintln!(
         "native-render-service listening on {} (profile {:?})",
-        socket_path.display(),
+        crate::endpoint::describe(listener.endpoint()),
         state.profile
     );
+    if let Some(path) = ready_file {
+        let (size_bytes, meta_bytes, _) = state.shm.path_size_meta();
+        write_ready_file(
+            path,
+            &ReadyRecord {
+                protocol: NATIVE_SERVICE_PROTOCOL_VERSION,
+                pid: std::process::id(),
+                endpoint: listener.endpoint(),
+                shm: ShmInfo { path: state.shm_path.clone(), size_bytes, meta_bytes },
+            },
+        )?;
+    }
 
     loop {
-        let (stream, _) = listener.accept()?;
-        match handle_connection(&mut state, stream) {
+        let connection = listener.accept()?;
+        match handle_connection(&mut state, connection) {
             Ok(CloseConnection::ClientClose) | Ok(CloseConnection::Eof) => {}
             Err(error) => eprintln!("connection error: {error:#}"),
         }
     }
 }
 
-
 enum CloseConnection {
     ClientClose,
     Eof,
 }
 
-fn handle_connection(state: &mut ServiceState, stream: UnixStream) -> Result<CloseConnection> {
+fn handle_connection(
+    state: &mut ServiceState,
+    mut connection: crate::endpoint::Connection,
+) -> Result<CloseConnection> {
     let mut reader = FrameReader::new();
     let mut buf = [0u8; 65536];
-    let mut writer = stream.try_clone()?;
     loop {
-        let n = std::io::Read::read(&mut &stream, &mut buf)?;
+        let n = connection.read(&mut buf)?;
         if n == 0 {
             return Ok(CloseConnection::Eof);
         }
         for payload in reader.push(&buf[..n]).map_err(anyhow::Error::msg)? {
             let request = decode_request(&payload).map_err(anyhow::Error::msg)?;
             let response = dispatch(state, request);
-            writer.write_all(&encode_frame(&response)?)?;
+            connection.write_all(&encode_frame(&response)?)?;
             // Descriptor transfer rides the same socket right behind its
             // acknowledgement: this thread is the only writer, so the
             // `SFGX` frame and its SCM_RIGHTS cannot interleave.
             #[cfg(feature = "gpu-interop")]
             if let Some(exported) = state.take_export() {
-                exported.send_over_unix(&stream).context("send device stream handles")?;
+                exported
+                    .send_over_unix(connection.unix_stream())
+                    .context("send device stream handles")?;
             }
             if matches!(response.body, ResponseBody::Close { .. }) {
                 return Ok(CloseConnection::ClientClose);
@@ -1203,9 +1239,14 @@ fn capture_bundle(
     }
 }
 
+/// Device-stream ops are rejected outright on builds without the Linux-only
+/// `gpu-interop` feature; host frames through the ring are the portable path.
 #[cfg(not(feature = "gpu-interop"))]
-const NO_DEVICE_INTEROP: &str =
-    "this native-render-service was built without the `gpu-interop` feature; device streams are unavailable";
+const NO_DEVICE_INTEROP: &str = if cfg!(target_os = "linux") {
+    "this native-render-service was built without the `gpu-interop` feature; device streams are unavailable (host frames via the shm ring remain available)"
+} else {
+    "device streams (Vulkan/CUDA opaque-fd export) are a Linux-only capability; this OS build serves host frames via the shm ring only"
+};
 
 #[cfg(feature = "gpu-interop")]
 fn open_device_stream_op(

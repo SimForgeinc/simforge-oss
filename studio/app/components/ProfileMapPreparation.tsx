@@ -1,10 +1,13 @@
 "use client";
 
 import { studioHost } from "@/app/lib/host";
+import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import {
   Check,
+  Cloud,
   Database,
   Download,
+  ExternalLink,
   LoaderCircle,
   RotateCcw,
 } from "lucide-react";
@@ -103,6 +106,9 @@ export function ProfileMapPreparation({
   });
   const operation = useRef<AbortController | null>(null);
   const downloadStartedAt = useRef(0);
+  const cloud = useStudioCloudStatus();
+  const cloudState = cloud.status?.state ?? null;
+  const seenCloudState = useRef(cloudState);
 
   const calculate = (
     downloadAfterPlanning = false,
@@ -167,6 +173,18 @@ export function ProfileMapPreparation({
     // Recalculate when the profile or selected bootstrap map changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, redownload]);
+
+  // Connecting or disconnecting changes which published maps this computer may
+  // prepare. Re-plan against the current authorization, but never interrupt a
+  // transfer that is already running.
+  useEffect(() => {
+    const previous = seenCloudState.current;
+    seenCloudState.current = cloudState;
+    if (previous === null || cloudState === null || previous === cloudState) return;
+    if (cloudState === "connecting" || phase === "downloading") return;
+    calculate(false, selectedMapIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudState]);
 
   const percent = useMemo(() => {
     if (phase === "complete") return 100;
@@ -328,6 +346,42 @@ export function ProfileMapPreparation({
               ))}
             </div>
           </fieldset>
+        ) : null}
+
+        {phase !== "downloading" && cloudState !== null && cloudState !== "connected" ? (
+          <div
+            className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
+            data-testid="profile-map-preparation-account-notice"
+            data-cloud-state={cloudState}
+          >
+            <Cloud className="size-4 shrink-0 text-[#E8E044]" aria-hidden="true" />
+            <p className="min-w-0 flex-1 text-xs leading-5 text-white/55">
+              {cloudState === "connecting"
+                ? "Waiting for SimCloud approval in your browser. More maps appear here once it completes."
+                : cloudState === "expired"
+                  ? "Your SimCloud session expired, so only Richmond Field Station can be prepared until you connect again."
+                  : "Richmond Field Station is available without an account. Connect to SimCloud to prepare other published maps on this computer."}
+            </p>
+            {cloudState === "connecting" ? (
+              <LoaderCircle className="size-4 animate-spin text-white/45" aria-hidden="true" />
+            ) : (
+              <Button
+                className="h-8 gap-1.5 rounded-full border-[#E8E044]/30 bg-[#E8E044]/10 px-3 text-[11px] text-[#E8E044] hover:bg-[#E8E044]/20"
+                disabled={cloud.loading}
+                onClick={() => void cloud.connect()}
+                type="button"
+                variant="outline"
+              >
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+                {cloudState === "expired" || cloudState === "error" ? "Connect again" : "Connect to SimCloud"}
+              </Button>
+            )}
+          </div>
+        ) : null}
+        {cloud.error ? (
+          <p className="mt-2 text-xs text-amber-300/90" role="alert">
+            {cloud.error}
+          </p>
         ) : null}
 
         <div className="mt-8 h-1 overflow-hidden rounded-full bg-white/10">

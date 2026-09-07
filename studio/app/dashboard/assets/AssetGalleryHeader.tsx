@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, Map as MapIcon, Upload } from "lucide-react";
+import { Boxes, Map as MapIcon, Sparkles, Upload } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { AssetGallerySegmented } from "./AssetGallerySegmented";
@@ -22,10 +22,12 @@ const SECTION_DESCRIPTION = {
 export function AssetGalleryHeader({
   section,
   onSectionChange,
+  onGenerate,
   onUpload,
 }: {
   section: GallerySection;
   onSectionChange: (section: GallerySection) => void;
+  onGenerate: () => void;
   onUpload: () => void;
 }) {
   // Padding outside the centred column, matching `AssetsTabs` above it — the
@@ -39,10 +41,18 @@ export function AssetGalleryHeader({
           title="Assets"
           description={SECTION_DESCRIPTION[section]}
           actions={
-            <Button type="button" variant="outline" onClick={onUpload}>
-              <Upload aria-hidden="true" />
-              {section === "maps" ? "Import map" : "Import model"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {section === "models" ? (
+                <Button type="button" onClick={onGenerate}>
+                  <Sparkles aria-hidden="true" />
+                  Generate model
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" onClick={onUpload}>
+                <Upload aria-hidden="true" />
+                {section === "maps" ? "Import map" : "Import model"}
+              </Button>
+            </div>
           }
         />
         <AssetGallerySegmented

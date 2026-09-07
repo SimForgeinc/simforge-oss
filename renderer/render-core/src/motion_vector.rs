@@ -15,11 +15,12 @@ use bevy::render::render_resource::{
 };
 
 
-/// Absolute path of the on-disk shader copy (committed under the crate's
-/// assets dir; BEVY_ASSET_ROOT="/" so paths are filesystem-relative).
+/// Asset path of the on-disk shader copy (committed under the crate's
+/// assets dir; the playback tool runs from a source checkout, see
+/// `platform::asset_path` for the root convention).
 pub fn shader_asset_path() -> String {
-    let manifest = env!("CARGO_MANIFEST_DIR").trim_start_matches('/');
-    format!("{manifest}/assets/shaders/motion_vector.wgsl")
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/shaders/motion_vector.wgsl");
+    crate::platform::asset_path(&path).expect("CARGO_MANIFEST_DIR is absolute")
 }
 
 #[derive(Asset, TypePath, Debug, Clone, Default, AsBindGroup)]

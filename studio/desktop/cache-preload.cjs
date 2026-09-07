@@ -2,9 +2,10 @@
 //
 // Exposes exactly `window.simforgeDesktop = { version: 1, mapCache }` where
 // every mapCache method forwards to a `simforge:map-cache:*` IPC handler in
-// desktop/map-cache.mjs and resolves with its value. No fs paths, Node
-// objects or IPC handles cross into the page; asset bytes never travel here,
-// they stream through simforge-cache:// capability URLs.
+// desktop/map-cache.mjs, which relays it to the local service's protected
+// /api/simforge/map-cache/** endpoints. No fs paths, Node objects or IPC
+// handles cross into the page; asset bytes never travel here, they stream
+// through same-origin /api/simforge/map-cache/stream/... capability URLs.
 //
 // Runs with sandbox=true, so only `require("electron")` is available.
 

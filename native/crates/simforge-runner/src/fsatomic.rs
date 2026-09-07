@@ -1,8 +1,10 @@
 //! Crash-safe filesystem primitives. Every persisted runner document is
 //! written to a sibling temporary file, fsynced, renamed over the target and
-//! the directory is fsynced, so a reader never observes a torn document.
+//! the directory is flushed, so a reader never observes a torn document. The
+//! rename/link/flush calls come from [`platform`] (POSIX rename + directory
+//! fsync on Unix; `MoveFileExW` write-through + directory flush on Windows).
 
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -10,6 +12,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::{Result, RunnerError};
+use crate::platform;
 
 fn temp_sibling(target: &Path) -> PathBuf {
     let name = target
@@ -27,10 +30,7 @@ fn temp_sibling(target: &Path) -> PathBuf {
 }
 
 pub fn fsync_dir(dir: &Path) -> Result<()> {
-    let handle = File::open(dir).map_err(|source| RunnerError::io(dir, source))?;
-    handle
-        .sync_all()
-        .map_err(|source| RunnerError::io(dir, source))
+    platform::sync_dir(dir).map_err(|source| RunnerError::io(dir, source))
 }
 
 /// Atomically replaces `target` with `bytes`.
@@ -49,16 +49,19 @@ pub fn write_atomic(target: &Path, bytes: &[u8]) -> Result<()> {
             .map_err(|source| RunnerError::io(&temp, source))?;
         file.sync_all()
             .map_err(|source| RunnerError::io(&temp, source))?;
-        fs::rename(&temp, target).map_err(|source| RunnerError::io(target, source))?;
+        platform::rename_file_replace(&temp, target)
+            .map_err(|source| RunnerError::io(target, source))?;
         fsync_dir(parent)
     })();
     if result.is_err() {
-        let _ = fs::remove_file(&temp);
+        let _ = platform::remove_file_force(&temp);
     }
     result
 }
 
 /// Atomically creates `target`; fails with `AlreadyExists` if it is present.
+/// Two racing creators cannot both win: the publication primitive refuses an
+/// existing target (`link(2)` on Unix, a non-replacing move on Windows).
 pub fn create_exclusive(target: &Path, bytes: &[u8]) -> Result<()> {
     let parent = target.parent().ok_or_else(|| RunnerError::Usage {
         reason: format!("{} has no parent", target.display()),
@@ -74,11 +77,11 @@ pub fn create_exclusive(target: &Path, bytes: &[u8]) -> Result<()> {
             .map_err(|source| RunnerError::io(&temp, source))?;
         file.sync_all()
             .map_err(|source| RunnerError::io(&temp, source))?;
-        // `link` refuses to overwrite: two racing creators cannot both win.
-        fs::hard_link(&temp, target).map_err(|source| RunnerError::io(target, source))?;
+        platform::publish_file_exclusive(&temp, target)
+            .map_err(|source| RunnerError::io(target, source))?;
         fsync_dir(parent)
     })();
-    let _ = fs::remove_file(&temp);
+    let _ = platform::remove_file_force(&temp);
     result
 }
 
@@ -130,7 +133,7 @@ pub fn publish_dir(staging: &Path, target: &Path) -> Result<()> {
         ));
     }
     fsync_tree(staging)?;
-    fs::rename(staging, target).map_err(|source| RunnerError::io(target, source))?;
+    platform::rename_dir(staging, target).map_err(|source| RunnerError::io(target, source))?;
     fsync_dir(parent)
 }
 
@@ -146,9 +149,7 @@ pub fn fsync_tree(root: &Path) -> Result<()> {
         if kind.is_dir() {
             fsync_tree(&path)?;
         } else if kind.is_file() {
-            File::open(&path)
-                .and_then(|file| file.sync_all())
-                .map_err(|source| RunnerError::io(&path, source))?;
+            platform::sync_file(&path).map_err(|source| RunnerError::io(&path, source))?;
         }
     }
     fsync_dir(root)
@@ -166,8 +167,9 @@ pub fn remove_dir_if_present(path: &Path) -> Result<()> {
     }
 }
 
+/// Removes a file whether or not it is read-only; absent is not an error.
 pub fn remove_file_if_present(path: &Path) -> Result<()> {
-    match fs::remove_file(path) {
+    match platform::remove_file_force(path) {
         Ok(()) => Ok(()),
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(source) => Err(RunnerError::io(path, source)),

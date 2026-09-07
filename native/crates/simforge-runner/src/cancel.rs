@@ -1,12 +1,12 @@
 //! Cooperative cancellation. Engines poll the token at safe boundaries (tick,
 //! episode, checkpoint); the token trips on a `cancel.request` document in
-//! the job directory, on SIGTERM/SIGINT delivered to the owning process, or
-//! when the attempt's wall-clock budget elapses.
+//! the job directory, on a termination request delivered to the owning
+//! process (SIGTERM/SIGINT on Unix; the runner's named event or a console
+//! control event on Windows, see [`platform`]), or when the attempt's
+//! wall-clock budget elapses.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Once;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -14,33 +14,17 @@ use serde::{Deserialize, Serialize};
 use crate::clock::now_rfc3339;
 use crate::error::{Result, RunnerError};
 use crate::fsatomic::{read_json, write_json_atomic};
+use crate::platform;
 
 pub const CANCEL_REQUEST_FILE: &str = "cancel.request";
 const FILE_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
-static SIGNALED: AtomicBool = AtomicBool::new(false);
-static INSTALL: Once = Once::new();
-
-extern "C" fn on_signal(_signal: libc::c_int) {
-    SIGNALED.store(true, Ordering::SeqCst);
-}
-
-/// Installs SIGTERM/SIGINT handlers that set a flag; SIGHUP is ignored so a
-/// detached job survives its launching terminal or UI going away.
-pub fn install_signal_handlers() {
-    INSTALL.call_once(|| {
-        // SAFETY: sigaction with a plain async-signal-safe handler that only
-        // stores to an atomic.
-        unsafe {
-            let mut action: libc::sigaction = std::mem::zeroed();
-            action.sa_sigaction = on_signal as extern "C" fn(libc::c_int) as usize;
-            libc::sigemptyset(&mut action.sa_mask);
-            action.sa_flags = libc::SA_RESTART;
-            libc::sigaction(libc::SIGTERM, &action, std::ptr::null_mut());
-            libc::sigaction(libc::SIGINT, &action, std::ptr::null_mut());
-            libc::signal(libc::SIGHUP, libc::SIG_IGN);
-        }
-    });
+/// Installs the OS termination-request handlers for this process so a
+/// `cancel` from another process trips every token at its next poll.
+pub fn install_signal_handlers() -> Result<()> {
+    platform::install_termination_handlers().map_err(|source| RunnerError::Supervisor {
+        reason: format!("cannot receive termination requests: {source}"),
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,7 +88,7 @@ impl CancelReason {
     pub fn message(&self) -> String {
         match self {
             CancelReason::Requested { reason, .. } => reason.clone(),
-            CancelReason::Signal => "owning process received SIGTERM/SIGINT".into(),
+            CancelReason::Signal => "owning process received a termination request".into(),
             CancelReason::WallClockExceeded { budget_seconds } => {
                 format!("wall clock budget of {budget_seconds}s exceeded")
             }
@@ -130,7 +114,7 @@ impl CancelToken {
         if let Some(reason) = self.tripped.borrow().as_ref() {
             return Some(reason.clone());
         }
-        if SIGNALED.load(Ordering::SeqCst) {
+        if platform::termination_requested() {
             return self.trip(CancelReason::Signal);
         }
         if let Some(deadline) = self.deadline {

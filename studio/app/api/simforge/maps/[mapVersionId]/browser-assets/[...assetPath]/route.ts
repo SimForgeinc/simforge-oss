@@ -1,85 +1,19 @@
-import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
-import { type NextRequest, NextResponse } from "next/server";
-import {
-  AssetUrlServiceError,
-  normalizeAssetKey,
-} from "@/app/lib/assets/asset-url-service";
-import {
-  getScenarioMapBrowserAsset,
-  type ScenarioMapBrowserAsset,
-} from "@/app/lib/scenario/document-store";
+import { serveLocalMapAsset } from "@/app/lib/cloud/asset-response";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
-import { simforgeEnv } from "@/lib/simforge-env";
-import { browserAssetRedirectCacheControl, objectRedirect } from "@/app/lib/s3/local-object-redirect";
 
-type Context = {
-  params: Promise<{ mapVersionId: string; assetPath: string[] }>;
-};
-
-const DEFAULT_MAX_ASSET_BYTES = 512 * 1024 * 1024;
-const SIGNED_URL_TTL_SECONDS = 60 * 60;
-function maxAssetBytes() {
-  const value = Number(simforgeEnv("BROWSER_ASSET_MAX_BYTES") ?? DEFAULT_MAX_ASSET_BYTES);
-  return Number.isSafeInteger(value) && value > 0 ? value : DEFAULT_MAX_ASSET_BYTES;
-}
-
-function upstreamStatus(error: unknown) {
-  const value = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-  if (value?.name === "NoSuchKey" || value?.name === "NotFound" || value?.$metadata?.httpStatusCode === 404) return 404;
-  if (value?.name === "InvalidRange" || value?.$metadata?.httpStatusCode === 416) return 416;
-  return 502;
-}
-
-type ResolvedAsset =
-  | { kind: "response"; response: NextResponse }
-  | { kind: "asset"; asset: ScenarioMapBrowserAsset };
-
-async function resolveAsset(route: Context): Promise<ResolvedAsset> {
+/**
+ * One exact member of a published immutable browser asset set, resolved from
+ * verified registry metadata and gated on the map's access (anonymous: the
+ * real RFS and owner-installed maps; account maps need the active session).
+ */
+export async function GET(request: Request) {
   const auth = await requireScenarioContext();
-  if (auth.response) return { kind: "response", response: auth.response };
-  const { mapVersionId, assetPath } = await route.params;
-  const relativePath = normalizeAssetKey(assetPath.join("/"));
-  const asset = await getScenarioMapBrowserAsset(auth.context, mapVersionId, relativePath);
-  if (!asset) {
-    return { kind: "response", response: NextResponse.json({ error: "map_browser_assets_not_found" }, { status: 404 }) };
-  }
-  normalizeAssetKey(asset.key);
-  return { kind: "asset", asset };
+  if (auth.response) return auth.response;
+  return serveLocalMapAsset(request, false);
 }
 
-async function redirectAsset(route: Context): Promise<NextResponse> {
-  try {
-    const asset = await resolveAsset(route);
-    if (asset.kind === "response") return asset.response;
-    if (asset.asset.byteLength > maxAssetBytes()) {
-      return NextResponse.json({ error: "map_browser_asset_too_large" }, { status: 413 });
-    }
-    const url = await getPresignedGetUrl(
-      asset.asset.key,
-      asset.asset.bucket,
-      SIGNED_URL_TTL_SECONDS,
-    );
-    const response = objectRedirect(url, 307);
-    response.headers.set("Cache-Control", browserAssetRedirectCacheControl());
-    return response;
-  } catch (error) {
-    if (error instanceof AssetUrlServiceError) {
-      return NextResponse.json({ error: error.code }, { status: error.status });
-    }
-    const status = upstreamStatus(error);
-    return NextResponse.json({
-      error: status === 404 ? "map_browser_asset_not_found"
-        : status === 416 ? "asset_range_invalid"
-          : "map_browser_asset_unavailable",
-    }, { status });
-  }
-}
-
-/** Resolve the registered immutable object, then let the browser fetch it directly from S3. */
-export async function GET(_request: NextRequest, route: Context) {
-  return redirectAsset(route);
-}
-
-export async function HEAD(_request: NextRequest, route: Context) {
-  return redirectAsset(route);
+export async function HEAD(request: Request) {
+  const auth = await requireScenarioContext();
+  if (auth.response) return auth.response;
+  return serveLocalMapAsset(request, true);
 }

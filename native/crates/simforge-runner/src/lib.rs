@@ -10,7 +10,8 @@
 //! - crash-safe persisted lifecycle with an append-only event log
 //!   ([`state`], [`fsatomic`]);
 //! - process ownership through kernel locks, detachment and reconciliation
-//!   ([`lockfile`], [`supervise`], [`job`]);
+//!   ([`lockfile`], [`supervise`], [`job`]) over one portable OS layer
+//!   ([`platform`]: Linux/macOS and Windows implementations);
 //! - cooperative cancellation ([`cancel`]) and atomically published
 //!   continuation checkpoints ([`checkpoint`]);
 //! - artifact contract verification before any job is reported complete
@@ -32,6 +33,7 @@ pub mod hash;
 pub mod job;
 pub mod lockfile;
 pub mod manifest;
+pub mod platform;
 pub mod provider;
 pub mod resources;
 pub mod runtime;

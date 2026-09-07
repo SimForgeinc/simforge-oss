@@ -4,6 +4,7 @@ import {
   cacheProfileMapPlan,
   createProfileMapPlan,
   profileMapDownloadConcurrency,
+  selectProfileMapPlan,
 } from "../../../src/lib/scenario/editor/profile-map-cache";
 import {
   hasCacheReceipt,
@@ -173,6 +174,68 @@ describe("complete map closure cache planning", () => {
     const plan = await createProfileMapPlan([map], "high", new AbortController().signal);
     expect(plan.assets.map((asset) => asset.mapVersionId)).toEqual(["map-1", "map-1", "map-1"]);
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/sumo-runtime/"))).toBe(false);
+  });
+
+  it("retries an expired signed delivery URL through the canonical route", async () => {
+    const controller = new AbortController();
+    const plan = await createProfileMapPlan([map], "high", controller.signal);
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith("https://download.test/")) return new Response(null, { status: 403 });
+      if (url.includes("/browser-assets/")) {
+        const payload = url.endsWith("manifest.json") ? "a"
+          : url.endsWith("fine.glb") ? "b"
+            : url.endsWith("lazy-far-tile.glb") ? "c"
+              : "d";
+        return new Response(payload, { status: 200, headers: { "content-length": "1" } });
+      }
+      return original(input, init);
+    });
+
+    const result = await cacheProfileMapPlan(plan, controller.signal, vi.fn());
+
+    expect(result).toEqual({ failedAssets: 0, failureReason: null, completedMapVersionIds: ["map-1"] });
+    const canonicalFetches = vi.mocked(fetch).mock.calls
+      .filter(([url]) => String(url).includes("/browser-assets/"));
+    expect(canonicalFetches).toHaveLength(4);
+    expect(canonicalFetches.every(([, init]) => init?.credentials === "same-origin")).toBe(true);
+  });
+
+  it("narrows a library plan to a selection without another inventory or cache lookup", async () => {
+    const second: ScenarioMapOption = {
+      ...map,
+      mapVersionId: "map-2",
+      browserAssetRootUrl: ROOT.replace("map-1", "map-2"),
+      browserManifestUrl: `${ROOT.replace("map-1", "map-2")}3d/manifest.json`,
+    };
+    vi.mocked(fetch).mockImplementationOnce(async () => new Response(JSON.stringify({
+      releaseKey: "release-a",
+      maps: [
+        { mapVersionId: "map-1", closureSha256: CLOSURE_SHA, assets: inventoryAssets },
+        {
+          mapVersionId: "map-2",
+          closureSha256: CLOSURE_SHA,
+          assets: [{ relativePath: "3d/manifest.json", sha256: SHA_A, byteLength: 1 }],
+        },
+      ],
+    }), { status: 200 }));
+    const library = await createProfileMapPlan([map, second], "high", new AbortController().signal);
+    const fetches = vi.mocked(fetch).mock.calls.length;
+
+    const subset = selectProfileMapPlan(library, new Set(["map-2"]));
+
+    expect(vi.mocked(fetch).mock.calls).toHaveLength(fetches);
+    expect(subset.maps.map((entry) => entry.mapVersionId)).toEqual(["map-2"]);
+    // map-2 has no SUMO network, so the runtime leaves the subset with it.
+    expect(subset.remainingAssets).toBe(1);
+    expect(subset.pendingAssets[0]?.url).toBe("/api/simforge/maps/map-2/browser-assets/3d/manifest.json");
+    // The full library still deduplicates the shared manifest across both maps.
+    expect(library.remainingAssets).toBe(7);
+    expect(library.pendingAssets.find((asset) => asset.sha256 === SHA_A)?.aliases).toEqual([
+      "/api/simforge/maps/map-1/browser-assets/3d/manifest-copy.json",
+      "/api/simforge/maps/map-2/browser-assets/3d/manifest.json",
+    ]);
   });
 
   it("uses twelve parallel downloads on capable connections", () => {

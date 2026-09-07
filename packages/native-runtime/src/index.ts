@@ -30,10 +30,30 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = join(HERE, '..');
 const BINARY_NAME = 'simforge-native-runtime';
 
-/** Installed runtime root shared by the CLI, Studio hosts and native renderer. */
-export function nativeRuntimeRoot(env: NodeJS.ProcessEnv = process.env): string {
-  return env.SIMFORGE_NATIVE_RUNTIME_ROOT?.trim()
-    || join(env.XDG_DATA_HOME?.trim() || join(homedir(), '.local', 'share'), 'simforge', 'native-runtime');
+/**
+ * Installed runtime root shared by the CLI, Studio hosts and native renderer:
+ * `SIMFORGE_NATIVE_RUNTIME_ROOT`, else the OS data directory
+ * (`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` on Linux,
+ * `~/Library/Application Support/simforge/native-runtime` on macOS,
+ * `%LOCALAPPDATA%\simforge\native-runtime` on Windows). Mirrors
+ * `defaultRuntimeRoot()` in scripts/native-runtime/target-layout.mjs, which
+ * the installer uses; keep the two in step.
+ */
+export function nativeRuntimeRoot(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string {
+  const explicit = env.SIMFORGE_NATIVE_RUNTIME_ROOT?.trim();
+  if (explicit) return explicit;
+  if (platform === 'win32') {
+    return join(env.LOCALAPPDATA?.trim() || join(homedir(), 'AppData', 'Local'), 'simforge', 'native-runtime');
+  }
+  if (platform === 'darwin') {
+    return join(homedir(), 'Library', 'Application Support', 'simforge', 'native-runtime');
+  }
+  return join(env.XDG_DATA_HOME?.trim() || join(homedir(), '.local', 'share'), 'simforge', 'native-runtime');
+}
+
+/** `<name>` or `<name>.exe`: the OS-correct file name of a runtime executable. */
+export function nativeExecutableName(stem: string, platform: NodeJS.Platform = process.platform): string {
+  return platform === 'win32' ? `${stem}.exe` : stem;
 }
 
 /** Platform suffix `@napi-rs/cli --platform` uses in the addon file name (`linux-x64-gnu`, `darwin-arm64`, `win32-x64-msvc`). */

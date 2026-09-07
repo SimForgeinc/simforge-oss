@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { LOCAL_ARTIFACTS_DIR } from "../db/config";
 import { readLocalObjectMetadata, writeLocalObject } from "./s3-object";
 import { S3_BUCKET } from "./s3-config";
+import { signLocalObjectUrl } from "./local-object-auth";
 
 export const MEDIA_URL_TTL_SECONDS = 3600;
 export const PRESIGN_TTL_SECONDS = MEDIA_URL_TTL_SECONDS;
@@ -33,25 +34,25 @@ function objectUrl(bucket: string, key: string): URL {
 export async function getPresignedGetUrl(
   key: string,
   bucket = S3_BUCKET,
-  _expiresIn = MEDIA_URL_TTL_SECONDS,
+  expiresIn = MEDIA_URL_TTL_SECONDS,
   responseContentDisposition?: string,
 ): Promise<string> {
   const url = objectUrl(bucket, key);
   if (responseContentDisposition) url.searchParams.set("response-content-disposition", responseContentDisposition);
-  return url.toString();
+  return signLocalObjectUrl(url, "GET", expiresIn);
 }
 
 export async function getPresignedPutUrl(
   key: string,
   contentType: string,
   bucket = S3_BUCKET,
-  _expiresIn = UPLOAD_TTL_SECONDS,
+  expiresIn = UPLOAD_TTL_SECONDS,
   checksumSha256Hex?: string | null,
 ): Promise<string> {
   const url = objectUrl(bucket, key);
   url.searchParams.set("content-type", contentType);
   if (checksumSha256Hex) url.searchParams.set("sha256", checksumSha256Hex.toLowerCase());
-  return url.toString();
+  return signLocalObjectUrl(url, "PUT", expiresIn);
 }
 
 export async function headS3Object(key: string, bucket = S3_BUCKET) {
@@ -94,12 +95,12 @@ export async function getPresignedMultipartPartUrl(
   uploadId: string,
   partNumber: number,
   bucket = S3_BUCKET,
-  _expiresIn = UPLOAD_TTL_SECONDS,
+  expiresIn = UPLOAD_TTL_SECONDS,
 ) {
   const url = objectUrl(bucket, key);
   url.searchParams.set("uploadId", uploadId);
   url.searchParams.set("partNumber", String(partNumber));
-  return url.toString();
+  return signLocalObjectUrl(url, "PUT", expiresIn);
 }
 
 export async function completeS3MultipartUpload(

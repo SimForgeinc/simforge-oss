@@ -1083,7 +1083,12 @@ export function ScenarioEditorSurface({
         onConfigureCustomRoute={configureCustomRoute}
         showActorMotionControls={experience === "advanced"}
       />
-      <AssistantChatSlot controller={controller} document={editorDocument} />
+      <AssistantChatSlot
+        controller={controller}
+        document={editorDocument}
+        documentId={record?.id ?? null}
+        datasetId={datasetId}
+      />
       <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />
       <HifiPreviewSlot

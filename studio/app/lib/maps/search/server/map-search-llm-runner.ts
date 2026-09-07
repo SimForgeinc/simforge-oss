@@ -207,7 +207,7 @@ export async function defaultLlmChatRunner(args: {
   proposeScenarioDraft?: LlmRunnerProposeScenarioDraftFn;
   inspectLocationGeometry?: LlmRunnerInspectLocationGeometryFn;
 }): Promise<LlmChatRunnerResult> {
-  const model = createChatModel();
+  const model = await createChatModel();
 
   const searchMapTool = tool(
     async (input: SearchMapToolInput) => {

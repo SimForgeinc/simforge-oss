@@ -1,9 +1,11 @@
 import {
   Boxes,
   CarFront,
+  CloudUpload,
   Database,
   FlaskConical,
   Map,
+  MonitorCog,
   PackageCheck,
   Settings,
 } from "lucide-react";
@@ -53,7 +55,6 @@ export const DASHBOARD_APPS: NavItem[] = [
     description: "Package datasets for download",
     icon: PackageCheck,
     match: (p) => p.startsWith("/dashboard/dataset-export"),
-    disabled: true,
   },
   {
     href: "/dashboard/drive",
@@ -64,16 +65,32 @@ export const DASHBOARD_APPS: NavItem[] = [
   },
 ];
 
-export const DASHBOARD_NAV: NavItem[] = [
-  ...DASHBOARD_APPS,
+/** Utility surfaces reachable from the app switcher footer; not product apps. */
+export const DASHBOARD_UTILITIES: NavItem[] = [
   {
-    href: "/dashboard/workspace/settings",
+    href: "/dashboard/cloud-storage",
+    label: "Cloud Storage",
+    description: "Import and publish projects with a SimCloud account",
+    icon: CloudUpload,
+    match: (p) => p.startsWith("/dashboard/cloud-storage"),
+  },
+  {
+    href: "/dashboard/render-settings",
+    label: "Render Settings",
+    description: "Rendering profile and map preparation",
+    icon: MonitorCog,
+    match: (p) => p.startsWith("/dashboard/render-settings"),
+  },
+  {
+    href: "/dashboard/settings",
     label: "Settings",
-    description: "Workspace settings and configuration",
+    description: "This computer, SimCloud account and storage",
     icon: Settings,
-    match: (p) => p.startsWith("/dashboard/workspace/settings"),
+    match: (p) => p.startsWith("/dashboard/settings"),
   },
 ];
+
+export const DASHBOARD_NAV: NavItem[] = [...DASHBOARD_APPS, ...DASHBOARD_UTILITIES];
 
 export function activeNavItem(pathname: string): NavItem | null {
   return DASHBOARD_NAV.find((item) => item.match(pathname)) ?? null;

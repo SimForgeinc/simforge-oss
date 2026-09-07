@@ -23,4 +23,21 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 sha2 = { workspace = true }
 flate2 = { workspace = true }
+
+# OS primitives behind `src/platform/`: one implementation per family, no
+# cfg-disabled no-ops. Unix keeps libc (flock, setsid, kill, sigaction,
+# statvfs); Windows uses the Win32 equivalents (LockFileEx, process groups,
+# named events / CTRL_BREAK, MoveFileExW write-through, GlobalMemoryStatusEx).
+[target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Console",
+  "Win32_System_IO",
+  "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+] }

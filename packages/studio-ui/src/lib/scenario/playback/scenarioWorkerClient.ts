@@ -4,12 +4,22 @@ import type { ScenarioTemplateV2 } from '@simforge-oss/scenario';
 import { contentHash, type AmbientTrafficProfile, type EvaluateFilters, type IntentRubricInput } from '@simforge-oss/engine';
 import type { MapEntry } from '../maps';
 import { parsePlaybackPair, type PlaybackBundle } from '@simforge-oss/playback';
-import type { AmbientRobustnessSummary, ScenarioWorkerRequest, ScenarioWorkerResponse } from './scenario-worker';
+import type {
+  AmbientRobustnessSummary,
+  ScenarioWorkerAssetRequest,
+  ScenarioWorkerAssetResponse,
+  ScenarioWorkerEngineIdentity,
+  ScenarioWorkerEngineRequest,
+  ScenarioWorkerOutbound,
+  ScenarioWorkerRequest,
+  ScenarioWorkerResponse,
+} from './scenario-worker';
 import type { ScenarioWorkerStartRequest } from './scenario-worker';
 import { RevisionGate } from '@simforge-oss/playback';
 import { primeGalleryEntriesForDocument } from '../../asset-gallery/editor-bridge';
 import { primeCarlaObjectsForDocument } from '../carla-objects';
 import { listExternalCatalogEntries } from '@simforge-oss/asset-catalog';
+import { resolveMapAssetUrl } from '../../maps/frontend/map-asset-cache';
 
 export interface LivePlaybackCounters {
   readonly startupMs: number | null;
@@ -41,6 +51,29 @@ export class ScenarioWorkerClient {
   private activeCompile: number | null = null;
   private activeLive: number | null = null;
   private runtimeByInput = new Map<string, string>();
+  private engine: Promise<ScenarioWorkerEngineIdentity> | null = null;
+
+  /**
+   * Identity of the native engine this client executes with. Resolved once per
+   * worker; a persisted preview is admitted only when it was produced by it.
+   */
+  engineIdentity(): Promise<ScenarioWorkerEngineIdentity> {
+    if (this.engine) return this.engine;
+    const worker = this.ensureWorker();
+    const id = ++this.sequence;
+    const identity = new Promise<ScenarioWorkerEngineIdentity>((resolve, reject) => {
+      this.pending.set(id, { revision: '', reject, onMessage: (message) => {
+        this.pending.delete(id);
+        if (!message.ok) reject(new Error(message.error));
+        else if (message.kind === 'engine') resolve(message.engine);
+        else reject(new Error('Simulation worker answered an engine identity request with a different message'));
+      } });
+      worker.postMessage({ kind: 'engine', id } satisfies ScenarioWorkerEngineRequest);
+    });
+    identity.catch(() => { if (this.engine === identity) this.engine = null; });
+    this.engine = identity;
+    return identity;
+  }
 
   async prepare(
     template: ScenarioTemplateV2,
@@ -138,18 +171,7 @@ export class ScenarioWorkerClient {
         ambientTraffic,
         ...(baseInstance ? { baseInstance } : {}),
         operation: options.materializeOnly ? 'materialize' : 'prepare',
-        map: {
-          runtimeAssetId: map.mapVersionId,
-          mapVersionId: map.mapVersionId,
-          sourceMapId: map.sourceMapId,
-          browserClosureSha256: map.browserClosureSha256,
-          manifest: map.manifest,
-          topology: map.topology,
-          derivedTopology: map.derivedTopology,
-          locations: map.locations,
-          xodr: map.xodr,
-          signals: map.signals,
-        },
+        map: workerMap(map),
       } satisfies ScenarioWorkerRequest);
     });
   }
@@ -218,6 +240,7 @@ export class ScenarioWorkerClient {
     this.cancel();
     this.worker?.terminate();
     this.worker = null;
+    this.engine = null;
     this.runtimeByInput.clear();
   }
 
@@ -247,7 +270,11 @@ export class ScenarioWorkerClient {
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
     const worker = new Worker(new URL('./scenario-worker.js', import.meta.url), { type: 'module' });
-    worker.onmessage = (event: MessageEvent<ScenarioWorkerResponse>) => {
+    worker.onmessage = (event: MessageEvent<ScenarioWorkerOutbound>) => {
+      if ('resolveId' in event.data) {
+        serveAssetResolution(worker, event.data);
+        return;
+      }
       this.pending.get(event.data.id)?.onMessage(event.data);
     };
     worker.onerror = (event) => {
@@ -255,10 +282,28 @@ export class ScenarioWorkerClient {
       for (const id of [...this.pending.keys()]) this.rejectRequest(id, error);
       this.worker?.terminate();
       this.worker = null;
+      this.engine = null;
     };
     this.worker = worker;
     return worker;
   }
+}
+
+/**
+ * Answer a worker's map-asset lookup from the page's cache backend. A failure
+ * (integrity, authorization, network) is returned as the worker's fetch error
+ * rather than a silent network fallback, so a desktop install never quietly
+ * bypasses its verified disk store.
+ */
+function serveAssetResolution(worker: Worker, request: ScenarioWorkerAssetRequest): void {
+  void resolveMapAssetUrl(request.url, { sha256: request.sha256 }).then(
+    (url) => worker.postMessage({ kind: 'asset', resolveId: request.resolveId, url } satisfies ScenarioWorkerAssetResponse),
+    (reason: unknown) => worker.postMessage({
+      kind: 'asset',
+      resolveId: request.resolveId,
+      error: reason instanceof Error ? reason.message : String(reason),
+    } satisfies ScenarioWorkerAssetResponse),
+  );
 }
 
 function deepFreeze<T>(value: T): T {
@@ -299,7 +344,11 @@ export function evaluateAuthoredAmbientRobustness(
   const id = Date.now() + Math.floor(Math.random() * 10_000);
   const revision = contentHash({ template, filters, intentRubric: intentRubric ?? null });
   return new Promise((resolve, reject) => {
-    worker.onmessage = (event: MessageEvent<ScenarioWorkerResponse>) => {
+    worker.onmessage = (event: MessageEvent<ScenarioWorkerOutbound>) => {
+      if ('resolveId' in event.data) {
+        serveAssetResolution(worker, event.data);
+        return;
+      }
       if (event.data.id !== id || event.data.revision !== revision) return;
       worker.terminate();
       if (!event.data.ok) { reject(new Error(event.data.error)); return; }
@@ -337,5 +386,12 @@ function workerMap(map: MapEntry): ScenarioWorkerRequest['map'] {
     locations: map.locations,
     xodr: map.xodr,
     signals: map.signals,
+    digests: {
+      topology: map.artifacts.topologySha256,
+      derivedTopology: map.artifacts.derivedTopologySha256,
+      locations: map.artifacts.locationsSha256,
+      xodr: map.artifacts.xodrSha256,
+      signals: map.artifacts.signalsSha256,
+    },
   };
 }

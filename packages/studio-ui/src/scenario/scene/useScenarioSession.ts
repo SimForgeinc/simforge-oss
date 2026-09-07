@@ -173,10 +173,13 @@ export function useScenarioSession({
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
   const [evidenceRequest, setEvidenceRequest] = useState<ScenarioEvidenceRequest | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
-  const previewSaveRef = useRef<AbortController | null>(null);
+  /** The one in-flight or completed upload of the current trace, by content identity and saved version. */
+  const previewSaveRef = useRef<{ key: string; abort: AbortController } | null>(null);
   const fetchGenerationRef = useRef(0);
   const prepareFenceRef = useRef(new ScenarioSessionResultFence());
   const preparedKeyRef = useRef<string | null>(null);
+  /** Simulation identity the worker is compiling right now, so a save landing mid-compile keeps that run. */
+  const compilingKeyRef = useRef<string | null>(null);
   const pickedIdleMapRef = useRef(false);
   const evidenceCacheRef = useRef<{ key: string; evidence: ScenarioRevisionEvidence } | null>(null);
   const bundleContentIdentityRef = useRef(new WeakMap<PlaybackBundle, string>());
@@ -209,6 +212,7 @@ export function useScenarioSession({
       workerRef.current?.cancel();
       prepareFenceRef.current.invalidate();
       preparedKeyRef.current = null;
+      compilingKeyRef.current = null;
       persistedDocumentIdentityRef.current = null;
       setDocument(null);
       setBundle(null);
@@ -225,6 +229,7 @@ export function useScenarioSession({
     workerRef.current?.cancel();
     prepareFenceRef.current.invalidate();
     preparedKeyRef.current = null;
+    compilingKeyRef.current = null;
     persistedDocumentIdentityRef.current = null;
     setBundle(null);
     setMessage("Preparing scenario preview…");
@@ -251,11 +256,16 @@ export function useScenarioSession({
     const nextMap = maps.find((candidate) => candidate.mapVersionId === document.mapVersionId) ?? null;
     setMap(nextMap);
     if (!nextMap || !mapSupportsScenarioPreview(nextMap)) {
+      workerRef.current?.cancel();
+      prepareFenceRef.current.invalidate();
       preparedKeyRef.current = null;
+      compilingKeyRef.current = null;
       setBundle(null);
       setMessage("Preview unavailable for this map.");
       return;
     }
+    // Everything that determines the trace: authored content and the immutable
+    // map. Mode and draft version only decide whether a saved copy may be used.
     const simulationKey = contentHash({
       documentId: document.id,
       content: document.content,
@@ -266,15 +276,54 @@ export function useScenarioSession({
     const prepareKey = `${listPresentationActive ? "saved" : "editor"}:${simulationKey}:${document.draftVersion}`;
     if (preparedKeyRef.current === prepareKey) return;
     preparedKeyRef.current = prepareKey;
-    const generation = prepareFenceRef.current.begin(prepareKey);
+    const worker = () => {
+      const client = workerRef.current ?? new ScenarioWorkerClient();
+      workerRef.current = client;
+      return client;
+    };
+    const previewRuntime = async () => ({
+      engine: await worker().engineIdentity(),
+      mapClosureSha256: nextMap.browserClosureSha256,
+    });
+    // Persist a trace only as the preview of content the server holds at that
+    // exact version, once per (content, version). A trace of unsaved edits is
+    // never uploaded under the last saved version; the autosave that lands
+    // later re-enters this effect and publishes the same in-memory trace.
+    const publishPreview = (nextBundle: PlaybackBundle) => {
+      const persisted = persistedDocumentIdentityRef.current;
+      if (persisted?.id !== document.id || persisted.contentIdentity !== sourceContentIdentity) return;
+      const key = `${sourceContentIdentity}:${persisted.draftVersion}`;
+      if (previewSaveRef.current?.key === key) return;
+      previewSaveRef.current?.abort.abort();
+      const abort = new AbortController();
+      previewSaveRef.current = { key, abort };
+      const target = { id: persisted.id, draftVersion: persisted.draftVersion };
+      void previewRuntime()
+        .then((runtime) => encodeSimulationPreview(nextBundle, target.draftVersion, runtime))
+        .then(({ bytes, sha256 }) => studioHost.projects.saveSimulationPreview(target, bytes, sha256, abort.signal))
+        .catch(() => { if (previewSaveRef.current?.key === key) previewSaveRef.current = null; });
+    };
+    // The exact trace for this content is already on screen: a mode change,
+    // a title edit or an autosave echo must not drop it, re-parse it or rebuild
+    // the playback controller and its per-actor presentation tables.
+    if (bundle && bundleContentIdentityRef.current.get(bundle) === sourceContentIdentity) {
+      setMessage(null);
+      publishPreview(bundle);
+      return;
+    }
+    // The worker is already computing this exact content (typically the autosave
+    // landed mid-compile). Its continuation reads the persisted identity when it
+    // resolves, so nothing is cancelled or requested twice.
+    if (compilingKeyRef.current === simulationKey) return;
+    const generation = prepareFenceRef.current.begin(simulationKey);
     const compileScenarioPreview = () => {
-      const worker = workerRef.current ?? new ScenarioWorkerClient();
-      workerRef.current = worker;
-      worker.cancel();
+      const client = worker();
+      client.cancel();
+      compilingKeyRef.current = simulationKey;
       const provider = ambientTrafficProviderFromExtensions(document.content.extensions);
       setBundle(null);
       setMessage("Preparing scenario preview…");
-      void worker.prepare(
+      void client.prepare(
         document.content as ScenarioTemplateV2,
         playbackMapEntry(nextMap),
         previewAmbientTrafficProfile(
@@ -285,107 +334,81 @@ export function useScenarioSession({
         undefined,
         { backgroundPreview: true },
       ).then((nextBundle) => {
-        if (!prepareFenceRef.current.accepts(generation, prepareKey) || documentId !== document.id) return;
+        if (compilingKeyRef.current === simulationKey) compilingKeyRef.current = null;
+        if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
         bundleContentIdentityRef.current.set(nextBundle, sourceContentIdentity);
         setBundle(nextBundle);
         setMessage(null);
-        previewSaveRef.current?.abort();
-        const saveAbort = new AbortController(); previewSaveRef.current = saveAbort;
-        void encodeSimulationPreview(nextBundle, document.draftVersion)
-          .then(({ bytes, sha256 }) => studioHost.projects.saveSimulationPreview(document, bytes, sha256, saveAbort.signal))
-          .catch(() => undefined);
+        publishPreview(nextBundle);
       }).catch((reason) => {
-        if (!prepareFenceRef.current.accepts(generation, prepareKey)
+        if (compilingKeyRef.current === simulationKey) compilingKeyRef.current = null;
+        if (!prepareFenceRef.current.accepts(generation, simulationKey)
             || (reason as { name?: string } | null)?.name === "AbortError") return;
         setMessage(reason instanceof Error
           ? `Preview unavailable: ${reason.message}`
           : "Preview unavailable for this scenario.");
       });
     };
-    if (listPresentationActive) {
-      workerRef.current?.cancel();
-      // Leaving the editor already has the exact trace in memory. Keep it on
-      // screen while its immutable upload finishes instead of introducing a
-      // download race or a blank frame. A fresh list visit always takes the
-      // persisted path below.
-      if (bundle) { setMessage(null); return; }
-      setBundle(null);
-      // Prefer the persisted trace for an instant selection preview. Older
-      // scenarios may not have one yet, so compile it on demand rather than
-      // leaving the selected row highlighted over an empty world.
-      setMessage("Preparing scenario preview…");
-      const abort = new AbortController();
-      void studioHost.projects.getSimulationPreview(document.id, abort.signal).then(async (descriptor) => {
-        if (!prepareFenceRef.current.accepts(generation, prepareKey)) return;
-        if (!descriptor) { compileScenarioPreview(); return; }
-        const saved = await downloadSimulationPreview(descriptor, abort.signal);
-        if (!prepareFenceRef.current.accepts(generation, prepareKey)) return;
-        bundleContentIdentityRef.current.set(saved, sourceContentIdentity);
-        setBundle(saved); setMessage(null);
-      }).catch((reason) => {
-        if (!prepareFenceRef.current.accepts(generation, prepareKey) || (reason as { name?: string } | null)?.name === "AbortError") return;
-        compileScenarioPreview();
-      });
-      return () => abort.abort();
-    }
-    if (bundle && bundleContentIdentityRef.current.get(bundle) === sourceContentIdentity) {
-      setMessage(null);
-      return;
-    }
-
     setBundle(null);
     setMessage("Preparing scenario preview…");
+    // A saved simulation stands in for compilation only when the server holds
+    // exactly this content at this version and the copy was produced by this
+    // engine build on this map closure; anything else recompiles.
     const persisted = persistedDocumentIdentityRef.current;
-    const canReuseSavedPreview = persisted?.id === document.id
-      && persisted.draftVersion === document.draftVersion
-      && persisted.contentIdentity === sourceContentIdentity;
-    if (!canReuseSavedPreview) {
+    if (persisted?.id !== document.id
+        || persisted.draftVersion !== document.draftVersion
+        || persisted.contentIdentity !== sourceContentIdentity) {
       compileScenarioPreview();
       return;
     }
-
     const abort = new AbortController();
-    void studioHost.projects.getSimulationPreview(document.id, abort.signal).then(async (descriptor) => {
-      if (!prepareFenceRef.current.accepts(generation, prepareKey)) return;
+    void Promise.all([
+      studioHost.projects.getSimulationPreview(document.id, abort.signal),
+      previewRuntime(),
+    ]).then(async ([descriptor, runtime]) => {
+      if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
       if (!descriptor || descriptor.draftVersion !== document.draftVersion) {
         compileScenarioPreview();
         return;
       }
-      const saved = await downloadSimulationPreview(descriptor, abort.signal);
-      if (!prepareFenceRef.current.accepts(generation, prepareKey)) return;
+      const saved = await downloadSimulationPreview(descriptor, runtime, abort.signal);
+      if (!prepareFenceRef.current.accepts(generation, simulationKey)) return;
       bundleContentIdentityRef.current.set(saved, sourceContentIdentity);
+      previewSaveRef.current = { key: `${sourceContentIdentity}:${document.draftVersion}`, abort: new AbortController() };
       setBundle(saved);
       setMessage(null);
     }).catch((reason) => {
-      if (!prepareFenceRef.current.accepts(generation, prepareKey)
+      if (!prepareFenceRef.current.accepts(generation, simulationKey)
           || (reason as { name?: string } | null)?.name === "AbortError") return;
       compileScenarioPreview();
     });
     return () => abort.abort();
   }, [bundle, document, documentId, listPresentationActive, maps, studioHost]);
 
-  useEffect(() => () => { previewSaveRef.current?.abort(); workerRef.current?.dispose(); }, []);
+  useEffect(() => () => { previewSaveRef.current?.abort.abort(); workerRef.current?.dispose(); }, []);
 
   useEffect(() => {
     if (!bundle) setSumoStatus(DISABLED_SUMO_STATUS);
   }, [bundle]);
 
+  const documentRef = useRef(document);
+  documentRef.current = document;
+  const sumoPreloadActive = !listPresentationActive && document !== null && previewExecutionTrafficProvider(
+    ambientTrafficProviderFromExtensions(document.content.extensions),
+    document.content.mapSignalPlans.length > 0,
+  ) === "sumo";
   useEffect(() => {
-    if (listPresentationActive || !document || !map) return;
-    const requestedProvider = ambientTrafficProviderFromExtensions(document.content.extensions);
-    const provider = previewExecutionTrafficProvider(
-      requestedProvider,
-      document.content.mapSignalPlans.length > 0,
-    );
-    if (provider !== "sumo") return;
-    if (!mapSupportsScenarioPreview(map)) return;
+    const current = documentRef.current;
+    if (!sumoPreloadActive || !current || !map || !mapSupportsScenarioPreview(map)) return;
     const abort = new AbortController();
     // Start immutable SUMO downloads and XML indexing alongside scenario
     // compilation. The viewport-owned runtime consumes the completed cache
-    // once its renderer and height sampler are ready.
+    // once its renderer and height sampler are ready. The cache is keyed by
+    // map alone, so only the map or the execution provider restarts this;
+    // an edit must not abort a multi-megabyte runtime download mid-flight.
     void loadSumoAssets(
       playbackMapEntry(map),
-      ambientTrafficProfileFromExtensions(document.content.extensions),
+      ambientTrafficProfileFromExtensions(current.content.extensions),
       fetch,
       [],
       false,
@@ -397,10 +420,11 @@ export function useScenarioSession({
       }
     });
     return () => abort.abort();
-  }, [document, listPresentationActive, map]);
+  }, [map, sumoPreloadActive]);
 
+  const bundleReady = bundle !== null;
   useEffect(() => {
-    if (!maps?.length || (documentId && !bundle)) return;
+    if (!maps?.length || (documentId && !bundleReady)) return;
     const abort = new AbortController();
     const preload = () => {
       void preloadMapManifests(maps, { signal: abort.signal });
@@ -412,7 +436,7 @@ export function useScenarioSession({
       if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
       abort.abort();
     };
-  }, [bundle, documentId, maps]);
+  }, [bundleReady, documentId, maps]);
 
   const sampleHeight = useMemo(
     () => viewer && loadedMapVersionId === map?.mapVersionId
@@ -480,16 +504,20 @@ export function useScenarioSession({
   const updateDocument = useCallback((nextDocument: ScenarioDocumentDto) => {
     if (nextDocument.id !== documentId) return;
     const canonical = withCanonicalEditorTimeline(nextDocument);
+    const contentIdentity = contentHash(canonical.content);
     if (document && canonical.draftVersion > document.draftVersion) {
       persistedDocumentIdentityRef.current = {
         id: canonical.id,
         draftVersion: canonical.draftVersion,
-        contentIdentity: contentHash(canonical.content),
+        contentIdentity,
       };
     }
-    // Never expose a completed trace from the previous revision alongside new
-    // authoring state. The preparation effect replaces it after the worker run.
-    setBundle(null);
+    // A completed trace belongs to exactly one content identity. A content
+    // change drops it so the previous revision's trace is never shown beside
+    // new authoring state; a title edit or the autosave echo keeps it.
+    setBundle((current) => (
+      current && bundleContentIdentityRef.current.get(current) === contentIdentity ? current : null
+    ));
     setDocument(canonical);
   }, [document, documentId]);
 

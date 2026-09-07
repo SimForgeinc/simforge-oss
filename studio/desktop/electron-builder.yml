@@ -1,21 +1,34 @@
-# SimForge Studio desktop packaging, local mode (fully bundled runtime). Run
-# from studio/ after `node desktop/stage.mjs`:
-#   pnpm desktop:dist        (stage + this config, Linux targets)
-# The SimCloud-connected package is desktop/electron-builder.cloud.yml.
+# SimForge Studio desktop packaging: one application, fully local, with the
+# native payload for the build host's target. Run from studio/ after
+# `node desktop/stage.mjs` (which stages for the current platform/arch):
+#   pnpm desktop:dist                                   this platform's targets, never published
+#   electron-builder --config desktop/electron-builder.yml --win --x64 --publish never
+#   electron-builder --config desktop/electron-builder.yml --mac --arm64 --publish never   (or --x64)
+#   electron-builder --config desktop/electron-builder.yml --linux --x64 --publish never
+# A macOS or Windows artifact needs the stage produced on that platform
+# (addon, sharp, runtime archive, Electron): desktop/after-pack.mjs refuses a
+# stage whose manifest names another platform. .github/workflows/desktop.yml
+# runs each matrix leg on its native runner.
 #
 # Two-package layout: the Electron application is the dependency-free
 # directory the stage writes (dist/desktop/app), and the whole local host is
-# shipped as resources/studio from dist/desktop/resources. Native pieces in
-# that stage are built for the build host only, which is why only the host
-# platform's targets are declared here: a macOS or Windows artifact needs the
-# stage produced on that platform (addon, sharp, Electron) before its target
-# block earns a place in this file.
+# copied to resources/studio by afterPack from dist/desktop/resources.
+#
+# Code signing is real or absent, never pretended: electron-builder signs
+# Windows builds when CSC_LINK / CSC_KEY_PASSWORD carry a certificate and
+# macOS builds when a Developer ID identity is available; the workflow sets
+# forceCodeSigning and mac.notarize only when it actually supplies those
+# secrets, and labels artifacts unsigned otherwise. User data (database,
+# artifacts, map cache, native job state) lives outside the install directory
+# and outside anything the installers remove (see resolveDataRoot in
+# desktop/main.mjs), so installs, updates and uninstalls never touch it.
 appId: ai.simforge.studio
 productName: SimForge Studio
+copyright: Copyright © SimForge
 directories:
   app: dist/desktop/app
   output: dist/desktop/out
-  buildResources: desktop
+  buildResources: desktop/build
 npmRebuild: false
 nodeGypRebuild: false
 asar: true
@@ -24,9 +37,51 @@ files:
   - cache-preload.cjs
   - starting.html
   - host-exited.html
+  - icon.png
   - package.json
   - "!node_modules/**/*"
 afterPack: desktop/after-pack.mjs
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # Native binaries are MSVC builds; the VC++ runtime ships with Windows 10/11 updates
+  # and with Electron itself, nothing to install separately.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  shortcutName: SimForge Studio
+  artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: desktop/build/entitlements.mac.plist
+  entitlementsInherit: desktop/build/entitlements.mac.plist
+  # Enabled by the workflow (-c.mac.notarize=true) only with Apple credentials.
+  notarize: false
+  minimumSystemVersion: "12.0"
+  # The local host, runner and render service are separate Mach-O executables
+  # in Resources; hardened-runtime signing must cover them (deep signing does).
+dmg:
+  writeUpdateInfo: false
+
 linux:
   target:
     - dir
@@ -35,3 +90,6 @@ linux:
   category: Development
   maintainer: SimForge <oss@simforge.ai>
   executableName: simforge-studio
+  desktop:
+    entry:
+      StartupWMClass: simforge-studio

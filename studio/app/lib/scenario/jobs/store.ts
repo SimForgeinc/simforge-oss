@@ -2,6 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows } from "@/app/lib/db/data-api";
 import type { ScenarioJobFamily } from "./contracts";
 import { settlePipelineJob, withScenarioJobTransaction } from "./lifecycle-lock";
+import { releaseLocalNativeMap } from "./local-native-render-store";
 
 type JobRow = {
   id: string;
@@ -284,6 +285,22 @@ export async function cancelOperationalJobWithResult(
           { workspace_id: context.workspaceId, job_id: jobId },
         );
         activeAttemptId = activeAttempt?.id ?? null;
+        // A render executed on the local CPU lane (browser capture or local
+        // native Bevy) holds its lease in cpu_job_attempts; close it here so
+        // the reaper never requeues a job the user already cancelled.
+        const localAttempt = await tx.queryOne<{ id: string }>(
+          `UPDATE simforge.cpu_job_attempts
+              SET attempt_state = 'cancelled', completed_at = COALESCE(completed_at, NOW()),
+                  failure_code = 'cancelled', failure_detail = CAST(:detail AS jsonb)
+            WHERE workspace_id = :workspace_id AND job_family = 'openscenario_render'
+              AND job_id = :job_id AND attempt_state = 'active'
+            RETURNING id`,
+          { workspace_id: context.workspaceId, job_id: jobId, detail },
+        );
+        if (localAttempt) {
+          activeAttemptId ??= localAttempt.id;
+          releaseLocalNativeMap(localAttempt.id);
+        }
         await tx.execute(
           `UPDATE simforge.artifact_uploads SET upload_state = 'cancelled'
             WHERE workspace_id = :workspace_id AND render_job_id = :job_id

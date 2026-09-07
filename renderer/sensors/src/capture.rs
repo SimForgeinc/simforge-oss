@@ -194,7 +194,7 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
     if args.glbs.iter().any(|g| !Path::new(g).is_absolute()) {
         bail!("glb paths must be absolute");
     }
-    std::env::set_var("BEVY_ASSET_ROOT", "/");
+    std::env::set_var("BEVY_ASSET_ROOT", render_core::platform::ASSET_ROOT);
     let rig_text = std::fs::read_to_string(&args.rig_program)
         .with_context(|| format!("read {}", args.rig_program))?;
     let rig: RigSpec = crate::rig::parse_pronto_rig(&rig_text, args.width, args.height)?;
@@ -225,14 +225,11 @@ pub fn run_capture(args: CaptureArgs) -> Result<()> {
     app.insert_resource(ClearColor(Color::srgb(0.53, 0.74, 0.92)))
         .add_plugins((
             DefaultPlugins
-                .set(bevy::asset::AssetPlugin { file_path: "/".into(), ..default() })
+                .set(render_core::platform::asset_plugin())
                 .set(WindowPlugin { primary_window: None, exit_condition: ExitCondition::DontExit, ..default() })
                 // The process exits immediately after one fixed-step capture. Keep pipeline
                 // compilation synchronous so no task can outlive the wgpu device during teardown.
-                .set(bevy::render::RenderPlugin {
-                    synchronous_pipeline_compilation: true,
-                    ..default()
-                })
+                .set(render_core::platform::render_plugin(true))
                 .disable::<bevy::winit::WinitPlugin>()
                 .disable::<bevy::audio::AudioPlugin>()
                 .set(LogPlugin {
@@ -342,7 +339,8 @@ fn startup_setup(mut commands: Commands, args: Res<CaptureArgs>, server: Res<Ass
         Transform::IDENTITY.looking_to(sun_direction(60.0, 190.0), Vec3::Y),
     ));
     for g in &args.glbs {
-        let path = g.trim_start_matches('/').to_owned();
+        let path = render_core::platform::asset_path(Path::new(g))
+            .unwrap_or_else(|err| panic!("capture tile {err:#}"));
         let handle: Handle<Gltf> = server.load(path);
         commands.spawn(TileLoad(handle));
     }

@@ -1,41 +1,31 @@
-// SimForge desktop shell (Electron).
+// SimForge Studio desktop shell (Electron).
 //
 // This is packaging, not a second UI: it hosts the same Next.js Studio the
-// browser serves, in one of two explicit modes.
+// browser serves. There is exactly one mode. The shell starts (or attaches
+// to) the bundled local Studio host and loads it from loopback; the host owns
+// the database, artifacts, the on-disk map cache and native job state under
+// one per-user data root. SimCloud is a connection the local product makes
+// (Settings › SimCloud, sign-in in the system browser), never a remote site
+// this window navigates to.
 //
-//   local   The fully bundled runtime: starts or attaches to the local Studio
-//           host (desktop/local-host.mjs) and loads it from loopback. Native
-//           pieces are platform-qualified by the stage manifest.
-//   cloud   SimCloud connected: loads the configured HTTPS SimCloud origin, the
-//           full hosted product, in an isolated persistent session so sign-in
-//           survives restarts. No host, no native runtime, nothing Linux-only.
-//
-// Both modes give the page the filesystem map cache through the preload bridge
-// (desktop/cache-preload.cjs) and the `simforge-cache://` streaming protocol
-// installed by desktop/map-cache.mjs, so the multi-gigabyte map corpus lives
-// on disk instead of in browser storage. Renderers stay sandboxed with context
-// isolation and no Node; only the shell-trusted origin can use the bridge.
-//
-// The mode is fixed at stage time (desktop/stage.mjs, desktop/stage-cloud.mjs
-// bake SIMFORGE_DESKTOP_MODE / SIMFORGE_DESKTOP_BUILT_ORIGIN into this
-// bundle); from a workspace, `pnpm desktop` is local and
-// `SIMFORGE_DESKTOP_MODE=cloud SIMCLOUD_ORIGIN=… pnpm desktop` is cloud.
-// SIMCLOUD_ORIGIN overrides the built origin at runtime; only HTTPS, or HTTP on
-// loopback for local qualification, is accepted.
+// Security posture: renderers are sandboxed with context isolation and no
+// Node; the only bridge is the narrow map-cache preload
+// (desktop/cache-preload.cjs). The local service accepts requests only with
+// the per-start control token (native processes: this shell, the worker) or
+// the trusted-local session cookie this shell sets on its own session
+// (HttpOnly, SameSite=Strict, an HMAC of the token, never the token). Every
+// navigation or window.open outside the loopback origin goes to the system
+// browser — that is how the SimCloud authorization page opens.
 
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron";
-
-const CLOUD = process.env.SIMFORGE_DESKTOP_MODE === "cloud";
-// Dead in the cloud bundle: the stage defines SIMFORGE_DESKTOP_MODE, so the
-// local host (and @simforge-oss/studio-host) is never bundled into it.
-const localHostModule = process.env.SIMFORGE_DESKTOP_MODE === "cloud" ? null : await import("./local-host.mjs");
-
-const PRODUCT = CLOUD
-  ? { name: "SimCloud", appId: "ai.simforge.simcloud", dataDir: "SimCloud", landing: "/dashboard" }
-  : { name: "SimForge Studio", appId: "ai.simforge.studio", dataDir: "SimForge Studio", landing: "/dashboard/scenario" };
+import { access } from "node:fs/promises";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { installDesktopMapCache } from "./map-cache.mjs";
+import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
+import { createLocalHost } from "./local-host.mjs";
+import { PRODUCT } from "./stage-manifest.mjs";
 
 /** Static pages and the preload ship beside this file (asar when packaged). */
 const pagesDir = app.isPackaged ? app.getAppPath() : dirname(fileURLToPath(import.meta.url));
@@ -47,53 +37,37 @@ const RENDERER_PERMISSIONS = new Set(["fullscreen", "pointerLock", "clipboard-sa
 let window = null;
 /** @type {{ dispose(): Promise<void> } | null} */
 let mapCache = null;
-/** The origin whose pages may use the bridge; fixed once the mode resolves it. */
+/** The loopback origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
-const localHost = localHostModule?.createLocalHost({
-  port: Number(process.env.PORT ?? "5199"),
-  onExit: (code) => {
-    if (window && !window.isDestroyed()) {
-      void window.loadFile(join(pagesDir, "host-exited.html"), { query: { code: String(code ?? "unknown") } });
-    }
-  },
-}) ?? null;
 
 /**
- * The SimCloud origin this build connects to. HTTPS only; plain HTTP is
- * accepted solely on loopback so Main can qualify the packaged app against a
- * locally served product.
+ * The one per-user data root of this installation: database, artifacts,
+ * map cache, native job state. Per-user, non-roaming, never purged by the OS
+ * as a cache, and outside the install directory so installers and updates
+ * never touch it. Windows keeps it in %LOCALAPPDATA% (the NSIS uninstaller
+ * only clears %APPDATA%, and only with deleteAppDataOnUninstall); Linux uses
+ * XDG data, not the ~/.config profile; macOS uses Application Support (Caches
+ * would be purgeable).
+ *
+ * `SIMFORGE_CLOUD_ROOT` overrides it (isolated qualification, developers). A
+ * workspace shell (`pnpm desktop`) keeps the CLI default so `pnpm dev`,
+ * `pnpm host:stop` and the shell agree on one host record. An installed app
+ * whose OS location holds no database yet adopts an existing `~/.simforge/cloud`
+ * from earlier builds rather than presenting an empty Studio.
  */
-function resolveCloudOrigin() {
-  const configured = process.env.SIMCLOUD_ORIGIN ?? process.env.SIMFORGE_DESKTOP_BUILT_ORIGIN;
-  if (!configured) throw new Error("No SimCloud origin is configured: set SIMCLOUD_ORIGIN (https://…).");
-  /** @type {URL} */
-  let url;
-  try {
-    url = new URL(configured);
-  } catch {
-    throw new Error(`SimCloud origin is not a URL: ${configured}`);
-  }
-  const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "[::1]";
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
-    throw new Error(`SimCloud origin must be https:// (http:// only on loopback): ${configured}`);
-  }
-  return url.origin;
-}
-
-/**
- * Where downloaded maps live unless the user picks another folder: per-user,
- * non-roaming, never purged by the OS as a cache, and outside the install
- * directory so installers and updates never touch it.
- */
-function defaultMapCacheRoot() {
-  switch (process.platform) {
-    case "win32":
-      return join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), PRODUCT.dataDir, "map-cache");
-    case "darwin":
-      return join(homedir(), "Library", "Application Support", PRODUCT.dataDir, "map-cache");
-    default:
-      return join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), PRODUCT.dataDir.toLowerCase().replace(/ /g, "-"), "map-cache");
-  }
+async function resolveDataRoot() {
+  const explicit = process.env.SIMFORGE_CLOUD_ROOT?.trim();
+  const legacy = join(homedir(), ".simforge", "cloud");
+  if (explicit) return explicit;
+  if (!app.isPackaged) return legacy;
+  const osRoot = process.platform === "win32"
+    ? join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), PRODUCT.dataDir)
+    : process.platform === "darwin"
+      ? join(homedir(), "Library", "Application Support", PRODUCT.dataDir)
+      : join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), PRODUCT.packageName);
+  const exists = (path) => access(path).then(() => true, () => false);
+  if (!(await exists(join(osRoot, "db"))) && (await exists(join(legacy, "db")))) return legacy;
+  return osRoot;
 }
 
 /** @param {string} target */
@@ -114,7 +88,6 @@ function openExternal(target) {
 function webPreferences() {
   return {
     preload: preloadPath,
-    partition: CLOUD ? "persist:simcloud" : undefined,
     sandbox: true,
     contextIsolation: true,
     nodeIntegration: false,
@@ -158,22 +131,14 @@ function createWindow() {
     minHeight: 640,
     title: PRODUCT.name,
     backgroundColor: "#0b0e14",
+    ...(process.platform === "linux" ? { icon: join(pagesDir, "icon.png") } : {}),
     webPreferences: webPreferences(),
   });
   guardContents(window.webContents);
   window.webContents.session.setPermissionRequestHandler((_contents, permission, callback, details) => {
     callback(RENDERER_PERMISSIONS.has(permission) && isTrusted(details.requestingUrl));
   });
-  if (CLOUD) {
-    window.webContents.on("did-fail-load", (_event, code, description, target, isMainFrame) => {
-      // -3 is ERR_ABORTED: a navigation superseded by another, not a failure.
-      if (!isMainFrame || code === -3 || !window || window.isDestroyed()) return;
-      void window.loadFile(join(pagesDir, "unreachable.html"), {
-        query: { origin: trustedOrigin, url: target, error: `${description} (${code})` },
-      });
-    });
-  }
-  window.loadFile(join(pagesDir, "starting.html"), { query: { product: PRODUCT.name, mode: CLOUD ? "cloud" : "local" } });
+  window.loadFile(join(pagesDir, "starting.html"));
   window.on("closed", () => {
     window = null;
   });
@@ -181,9 +146,9 @@ function createWindow() {
 }
 
 /**
- * The native folder picker the cache installer calls for
- * `mapCache.chooseDirectory()`; the switch itself (after active transfers
- * settle, leaving the old folder intact) is the installer's.
+ * The native folder picker the cache bridge calls for
+ * `mapCache.chooseDirectory()`; only this process hands the chosen path to the
+ * protected local service, the renderer never names a path.
  * @returns {Promise<string | null>}
  */
 async function chooseDirectory() {
@@ -198,15 +163,21 @@ async function chooseDirectory() {
 
 /**
  * Menu-driven cache controls go through the very bridge the page uses, in the
- * trusted page: no second IPC surface, and the installer's sender checks and
- * scoping apply unchanged.
+ * trusted page: no second IPC surface, and the bridge's sender checks and
+ * scoping apply unchanged. The bridge's rejection is carried back explicitly:
+ * executeJavaScript replaces a thrown error with a generic message.
  * @param {"status" | "clear" | "chooseDirectory"} method
  */
 async function bridgeCall(method) {
   if (!window || window.isDestroyed() || !isTrusted(window.webContents.getURL())) {
     throw new Error(`${PRODUCT.name} is not open yet; the map cache is available once the app has loaded.`);
   }
-  return window.webContents.executeJavaScript(`window.simforgeDesktop.mapCache.${method}()`, true);
+  const result = await window.webContents.executeJavaScript(
+    `window.simforgeDesktop.mapCache.${method}().then((value) => ({ value }), (error) => ({ error: String(error?.message ?? error) }))`,
+    true,
+  );
+  if ("error" in result) throw new Error(result.error);
+  return result.value;
 }
 
 function formatBytes(bytes) {
@@ -215,10 +186,11 @@ function formatBytes(bytes) {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-/** @param {{ directory: string; usedBytes: number; availableBytes: number | null; assetCount: number; activeDownloads: number }} status */
+/** @param {{ directory: string; usedBytes: number; availableBytes: number | null; assetCount: number; activeDownloads: number; unavailable: string | null }} status */
 function describeStatus(status) {
   return [
     `Folder: ${status.directory}`,
+    ...(status.unavailable ? [`Location unavailable: ${status.unavailable}`] : []),
     `Stored: ${formatBytes(status.usedBytes)} in ${status.assetCount} assets`,
     `Free on disk: ${status.availableBytes === null ? "unknown" : formatBytes(status.availableBytes)}`,
     `Active downloads: ${status.activeDownloads}`,
@@ -228,7 +200,7 @@ function describeStatus(status) {
 /** @param {() => Promise<void>} action */
 function menuAction(action) {
   return () => action().catch((error) => {
-    dialog.showErrorBox("Map cache", error instanceof Error ? error.message : String(error));
+    dialog.showErrorBox(PRODUCT.name, error instanceof Error ? error.message : String(error));
   });
 }
 
@@ -266,7 +238,7 @@ const cacheMenu = {
           type: "warning",
           title: "Clear map cache",
           message: `Delete ${formatBytes(status.usedBytes)} of downloaded maps?`,
-          detail: `${status.assetCount} assets in ${status.directory} will be removed and downloaded again when needed.`,
+          detail: `${status.assetCount} assets in ${status.directory} will be removed and downloaded again when needed. Projects, jobs and their artifacts are kept.`,
           buttons: ["Clear cache", "Keep"],
           defaultId: 1,
           cancelId: 1,
@@ -277,52 +249,62 @@ const cacheMenu = {
   ],
 };
 
-function installMenu() {
-  const helpItems = CLOUD
-    ? [
-      { label: "Reconnect", click: () => { if (trustedOrigin) void window?.loadURL(`${trustedOrigin}${PRODUCT.landing}`); } },
-      { label: `Open ${PRODUCT.name} in browser`, click: () => openExternal(trustedOrigin) },
-    ]
-    : [
-      { label: "Open data folder", click: () => void shell.openPath(localHost.dataDir) },
-      { label: "Host capabilities", click: () => openExternal(`${trustedOrigin}/api/simforge/host/capabilities`) },
-    ];
+/** @param {ReturnType<typeof createLocalHost>} localHost */
+function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { role: "appMenu" },
+    // The application menu is a macOS concept; elsewhere its roles are inert.
+    ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
     { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
     cacheMenu,
     { role: "windowMenu" },
-    { role: "help", submenu: helpItems },
+    {
+      role: "help",
+      submenu: [
+        { label: "Open data folder", click: () => void shell.openPath(localHost.dataRoot) },
+        {
+          label: "Local host…",
+          click: menuAction(async () => {
+            const response = await fetch(`${trustedOrigin}/api/simforge/host/capabilities`, { headers: await localHost.authorization() });
+            if (!response.ok) throw new Error(`The local host answered ${response.status}.`);
+            const capabilities = await response.json();
+            const runtime = capabilities.execution?.nativeRuntime;
+            await dialog.showMessageBox({
+              type: "info",
+              title: "Local host",
+              message: `${capabilities.host?.label ?? PRODUCT.name} ${capabilities.host?.version ?? ""}`.trim(),
+              detail: [
+                `Origin: ${trustedOrigin} (${localHost.owned() ? "started by this app" : "attached"})`,
+                `Data: ${localHost.dataRoot}`,
+                `Native runtime: ${runtime?.state === "available" ? `${runtime.runtime.version} (${runtime.runtime.target})` : `unavailable — ${runtime?.reason ?? "unknown"}`}`,
+              ].join("\n"),
+            });
+          }),
+        },
+      ],
+    },
   ]));
 }
 
-/** Resolve the trusted origin for this mode; local mode starts or attaches to the host first. */
-async function resolveOrigin() {
-  if (CLOUD) return resolveCloudOrigin();
-  const host = await localHost.start();
-  return new URL(host.baseUrl).origin;
-}
-
-async function shutdown() {
+/** @param {ReturnType<typeof createLocalHost>} localHost */
+async function shutdown(localHost) {
   const cache = mapCache;
   mapCache = null;
   await cache?.dispose();
-  await localHost?.stop();
+  await localHost.stop();
 }
 
-// Scheme privileges must be registered before the app is ready; the cache
-// installer registers the handler itself on the window's session.
-protocol.registerSchemesAsPrivileged([{
-  scheme: "simforge-cache",
-  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
-}]);
+// One application identity everywhere: profile directory, notifications,
+// single-instance lock, taskbar grouping.
+app.setName(PRODUCT.name);
 if (process.platform === "win32") app.setAppUserModelId(PRODUCT.appId);
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  /** @type {ReturnType<typeof createLocalHost> | null} */
+  let localHost = null;
   app.on("second-instance", () => {
     if (window) {
       if (window.isMinimized()) window.restore();
@@ -333,22 +315,43 @@ if (!app.requestSingleInstanceLock()) {
     contents.on("will-attach-webview", (event) => event.preventDefault());
   });
   app.whenReady().then(async () => {
-    installMenu();
     const win = createWindow();
     try {
-      trustedOrigin = await resolveOrigin();
+      const dataRoot = await resolveDataRoot();
+      localHost = createLocalHost({
+        port: Number(process.env.PORT ?? "5199"),
+        dataRoot,
+        env: {},
+        onExit: (code) => {
+          if (window && !window.isDestroyed()) {
+            void window.loadFile(join(pagesDir, "host-exited.html"), { query: { code: String(code ?? "unknown") } });
+          }
+        },
+      });
+      installMenu(localHost);
+      const host = await localHost.start();
+      trustedOrigin = new URL(host.baseUrl).origin;
+      if (win.isDestroyed()) return;
+      // The trusted-local session for this window's origin only: HttpOnly, so
+      // page script never sees it; Strict, so no cross-site page can ride it.
+      await win.webContents.session.cookies.set({
+        url: trustedOrigin,
+        name: LOCAL_HOST_SESSION_COOKIE,
+        value: localHost.sessionToken(),
+        httpOnly: true,
+        sameSite: "strict",
+        secure: false,
+      });
       mapCache = await installDesktopMapCache({
-        session: win.webContents.session,
         ipcMain,
         window: win,
         trustedOrigin,
-        defaultCacheRoot: defaultMapCacheRoot(),
+        hostBaseUrl: host.baseUrl,
+        hostAuthorization: localHost.authorization,
         chooseDirectory,
       });
       if (win.isDestroyed()) return;
-      // Cloud: an unreachable origin is shown by did-fail-load (unreachable.html)
-      // and retried from the menu; only the local host failing is fatal.
-      await (CLOUD ? win.loadURL(`${trustedOrigin}${PRODUCT.landing}`).catch(() => undefined) : win.loadURL(`${trustedOrigin}${PRODUCT.landing}`));
+      await win.loadURL(`${trustedOrigin}${PRODUCT.landing}`);
     } catch (error) {
       dialog.showErrorBox(`${PRODUCT.name} could not start`, error instanceof Error ? error.message : String(error));
       app.quit();
@@ -359,9 +362,9 @@ if (!app.requestSingleInstanceLock()) {
   });
   let quitting = false;
   app.on("before-quit", (event) => {
-    if (quitting || (!mapCache && !localHost?.owned())) return;
+    if (quitting || !localHost || (!mapCache && !localHost.owned())) return;
     event.preventDefault();
     quitting = true;
-    void shutdown().finally(() => app.quit());
+    void shutdown(localHost).finally(() => app.quit());
   });
 }

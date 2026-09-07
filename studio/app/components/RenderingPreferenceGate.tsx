@@ -13,7 +13,8 @@ import { SCENARIO_AUTHORING_QUALITY_IDS } from "@/app/lib/scenario/contracts";
 installMapAssetFetchGateway();
 
 const RENDER_SETTINGS_PATH = "/dashboard/render-settings";
-const driveStandalone = Boolean(process.env.NEXT_PUBLIC_DRIVE_STANDALONE);
+/** Pages that mount no map viewer and must stay reachable before a rendering profile exists. */
+const SETUP_FREE_PATHS = [RENDER_SETTINGS_PATH, "/dashboard/settings", "/dashboard/cloud-storage"];
 
 /**
  * Keeps first-run setup out of the pages it configures. Render settings used to
@@ -22,11 +23,11 @@ const driveStandalone = Boolean(process.env.NEXT_PUBLIC_DRIVE_STANDALONE);
 export function RenderingPreferenceGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isSettingsPage = pathname === RENDER_SETTINGS_PATH;
-  const [ready, setReady] = useState(driveStandalone || isSettingsPage);
+  const isSettingsPage = SETUP_FREE_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const [ready, setReady] = useState(isSettingsPage);
 
   useEffect(() => {
-    if (driveStandalone || isSettingsPage) {
+    if (isSettingsPage) {
       setReady(true);
       return;
     }

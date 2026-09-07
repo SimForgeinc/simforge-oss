@@ -29,6 +29,22 @@ import {
   type JobTransaction,
 } from "./lifecycle-lock";
 import { simforgeEnv } from "@/lib/simforge-env";
+import {
+  LOCAL_NATIVE_RENDER_JOB_FILTER,
+  cancelLocalNativeReservations,
+  claimLocalNativeRenderSource,
+  completeLocalNativeRender,
+  localNativeClaimPayload,
+  localNativeRenderCandidateLeg,
+  localNativeRenderOffered,
+  noteLocalWorkerPresence,
+  projectLocalRenderProgress,
+  recordLocalNativeSuccess,
+  releaseLocalNativeMap,
+  type LocalNativeCompletionArtifact,
+  type LocalNativeRenderSource,
+} from "./local-native-render-store";
+import type { LocalRenderEngine } from "./contracts";
 /** Stored media type of worker-produced playback artifacts; artifact metadata binds to it. */
 const PLAYBACK_MEDIA_TYPE = "application/vnd.uniscenarios.playback+json";
 
@@ -41,7 +57,11 @@ type Candidate = {
   revision_id: string;
   priority: number;
   created_at: string;
+  job_mode: string | null;
 };
+
+/** Render jobs the CPU lane owns: browser captures and local native (Bevy) renders. */
+const LOCAL_RENDER_LANE_FILTER = `(job.job_mode = 'browser_render' OR (${LOCAL_NATIVE_RENDER_JOB_FILTER}))`;
 
 type ValidationSource = Candidate & {
   validator_kind: string;
@@ -364,11 +384,12 @@ async function browserClaimPayload(source: BrowserRenderSource) {
   };
 }
 
+/** Appends a job event and returns its ordinal (the job-scoped sequence the progress snapshot carries). */
 async function insertCpuEvent(
   tx: JobTransaction,
   input: { workspaceId: string; jobFamily: ScenarioJobFamily; jobId: string; attemptId?: string | null; type: string; payload?: Record<string, unknown> },
-) {
-  await tx.execute(
+): Promise<number> {
+  const inserted = await tx.queryOne<{ event_ordinal: number | string }>(
     `INSERT INTO simforge.operational_job_events (
          id, workspace_id, job_family, job_id, attempt_id, event_ordinal, event_type, event_payload
        ) VALUES (
@@ -377,7 +398,7 @@ async function insertCpuEvent(
             FROM simforge.operational_job_events
            WHERE job_family = :job_family AND job_id = :job_id),
          :event_type, CAST(:event_payload AS jsonb)
-       )`,
+       ) RETURNING event_ordinal`,
     {
       id: scenarioId("usje"),
       workspace_id: input.workspaceId,
@@ -388,9 +409,17 @@ async function insertCpuEvent(
       event_payload: input.payload ?? {},
     },
   );
+  return Number(inserted?.event_ordinal ?? 0);
 }
 
-async function expireCpuAttempts() {
+/**
+ * Reconciles CPU-lane jobs whose lease expired: a worker that died with the
+ * GUI (or was never restarted) leaves an active attempt behind, and this is
+ * what turns that into the truthful `queued` (retry) / `failed` / `cancelled`
+ * projection. Runs before every claim and on the host's periodic sweep, so
+ * a job is never shown as running with nobody executing it.
+ */
+export async function expireCpuAttempts() {
   const candidates = await queryRows<{ job_family: CpuAttemptFamily; job_id: string }>(
     `SELECT 'openscenario_validate'::text AS job_family, job.id AS job_id
        FROM simforge.validation_runs job
@@ -426,6 +455,17 @@ async function expireCpuAttempts() {
                          WHERE attempt.job_family = 'openscenario_render' AND attempt.job_id = job.id
                            AND attempt.attempt_state = 'active')
         )
+      UNION ALL
+     -- Local native renders are reconciled only through their own expired CPU
+     -- lease: a native full_render leased by the fleet lane has no CPU attempt
+     -- and is that lane's to reap.
+     SELECT 'openscenario_render'::text, job.id
+       FROM simforge.render_jobs job
+      WHERE job.job_state IN ('leased', 'running')
+        AND ${LOCAL_NATIVE_RENDER_JOB_FILTER}
+        AND EXISTS (SELECT 1 FROM simforge.cpu_job_attempts attempt
+                     WHERE attempt.job_family = 'openscenario_render' AND attempt.job_id = job.id
+                       AND attempt.attempt_state = 'active' AND attempt.expires_at <= NOW())
       ORDER BY job_id LIMIT 100`,
   );
   for (const candidate of candidates) {
@@ -438,7 +478,7 @@ async function expireCpuAttempts() {
       const modeFilter = family === "artifact_postprocess"
         ? "AND job.job_mode IN ('cosmos_augment', 'vlm_annotate')"
         : family === "openscenario_render"
-          ? "AND job.job_mode = 'browser_render'"
+          ? `AND ${LOCAL_RENDER_LANE_FILTER}`
           : "";
       const expiredAttempt = await tx.queryOne<{ id: string }>(
         `UPDATE simforge.cpu_job_attempts attempt
@@ -482,6 +522,10 @@ async function expireCpuAttempts() {
         { job_id: candidate.job_id, job_family: family },
       );
       if (!terminalized) return;
+      if (expiredAttempt && family === "openscenario_render") {
+        await cancelLocalNativeReservations(tx, terminalized.id, expiredAttempt.id);
+        releaseLocalNativeMap(expiredAttempt.id);
+      }
       await insertCpuEvent(tx, {
         workspaceId: terminalized.workspace_id,
         jobFamily: family,
@@ -514,13 +558,15 @@ async function claimValidationOrPostprocess(input: {
   workerId: string;
   leaseSeconds: number;
   families: readonly ScenarioCpuJobFamily[];
+  engines: readonly LocalRenderEngine[];
 }) {
   await expireCpuAttempts();
   const legs: string[] = [];
   if (input.families.includes("openscenario_validate")) {
     legs.push(
       `SELECT 'openscenario_validate'::text AS job_family, v.id AS job_id,
-              v.workspace_id, v.revision_id, v.priority::int, v.created_at::text
+              v.workspace_id, v.revision_id, v.priority::int, v.created_at::text,
+              NULL::text AS job_mode
          FROM simforge.validation_runs v
         WHERE v.validation_state = 'queued' AND v.cancel_requested_at IS NULL
           AND v.attempt_count < v.max_attempts
@@ -535,22 +581,27 @@ async function claimValidationOrPostprocess(input: {
           )`,
     );
   }
-  if (input.families.includes("openscenario_render")) {
+  if (input.families.includes("openscenario_render") && input.engines.includes("browser")) {
     legs.push(
       `SELECT 'openscenario_render'::text AS job_family, j.id AS job_id,
-              j.workspace_id, j.revision_id, j.priority::int, j.created_at::text
+              j.workspace_id, j.revision_id, j.priority::int, j.created_at::text,
+              j.job_mode::text AS job_mode
          FROM simforge.render_jobs j
         WHERE j.job_state = 'queued' AND j.cancel_requested_at IS NULL
           AND j.attempt_count < j.max_attempts
           AND j.job_mode = 'browser_render'`,
     );
   }
+  if (input.families.includes("openscenario_render") && localNativeRenderOffered(input.engines)) {
+    legs.push(localNativeRenderCandidateLeg());
+  }
   if (input.families.includes("artifact_postprocess")) {
     // Every leg carries its own aliases: any leg can be first (or alone) depending on the
     // requested families, and the outer ORDER BY needs job_id by name.
     legs.push(
       `SELECT 'artifact_postprocess'::text AS job_family, j.id AS job_id,
-              j.workspace_id, j.revision_id, j.priority::int, j.created_at::text
+              j.workspace_id, j.revision_id, j.priority::int, j.created_at::text,
+              j.job_mode::text AS job_mode
          FROM simforge.render_jobs j
         WHERE j.job_state = 'queued' AND j.cancel_requested_at IS NULL
           AND j.attempt_count < j.max_attempts
@@ -579,8 +630,14 @@ async function claimValidationOrPostprocess(input: {
     );
     if (!expiry) throw new Error("Unable to compute CPU job lease expiry.");
 
-    let source: ValidationSource | PostprocessSource | BrowserRenderSource | null = null;
-    if (candidate.job_family === "openscenario_render") {
+    let source: ValidationSource | PostprocessSource | BrowserRenderSource | LocalNativeRenderSource | null = null;
+    let lane: "browser" | "native" | null = null;
+    if (candidate.job_family === "openscenario_render" && candidate.job_mode === "full_render") {
+      source = await claimLocalNativeRenderSource(tx, candidate.job_id);
+      lane = "native";
+      if (!source) return null;
+    } else if (candidate.job_family === "openscenario_render") {
+      lane = "browser";
       source = await tx.queryOne<BrowserRenderSource>(
         `SELECT 'openscenario_render'::text AS job_family, j.id AS job_id, j.workspace_id,
                 j.revision_id, j.priority::int, j.created_at::text,
@@ -730,7 +787,7 @@ async function claimValidationOrPostprocess(input: {
       type: "leased",
       payload: { workerId: input.workerId },
     });
-    return { source, expiresAt: expiry.expires_at, attemptId, fenceToken };
+    return { source, lane, expiresAt: expiry.expires_at, attemptId, fenceToken };
     },
   );
   if (!claimed) return null;
@@ -743,6 +800,12 @@ async function claimValidationOrPostprocess(input: {
     leaseExpiresAt: claimed.expiresAt,
   };
   if (claimed.source.job_family === "openscenario_render") {
+    if (claimed.lane === "native") {
+      return {
+        ...common,
+        payload: await localNativeClaimPayload(claimed.source as LocalNativeRenderSource),
+      };
+    }
     const source = claimed.source as BrowserRenderSource;
     return {
       ...common,
@@ -807,8 +870,11 @@ export async function claimCpuJob(input: {
   workerId: string;
   leaseSeconds: number;
   families?: readonly ScenarioCpuJobFamily[];
+  engines?: readonly LocalRenderEngine[];
 }) {
   const families = input.families ?? ["openscenario_compile", "openscenario_validate", "artifact_postprocess"];
+  const engines = input.engines ?? ["browser"];
+  noteLocalWorkerPresence(input.workerId, engines);
   // Compilation is the prerequisite for validation and render, so it is intentionally drained first.
   if (families.includes("openscenario_compile")) {
     const compile = await claimCompilerExport(input);
@@ -824,7 +890,7 @@ export async function claimCpuJob(input: {
       };
     }
   }
-  return claimValidationOrPostprocess({ ...input, families });
+  return claimValidationOrPostprocess({ ...input, families, engines });
 }
 
 async function activeCpuAttempt(jobId: string, attemptId: string, fenceToken: string) {
@@ -850,7 +916,7 @@ async function activeCpuAttempt(jobId: string, attemptId: string, fenceToken: st
           OR (attempt.job_family = 'openscenario_render' AND EXISTS (
             SELECT 1 FROM simforge.render_jobs job
              WHERE job.id = attempt.job_id AND job.job_state = 'running'
-               AND job.job_mode = 'browser_render'
+               AND ${LOCAL_RENDER_LANE_FILTER}
                AND job.cancel_requested_at IS NULL
           ))
         )
@@ -907,7 +973,7 @@ export async function heartbeatCpuJob(
            )) OR (:job_family = 'openscenario_render' AND EXISTS (
              SELECT 1 FROM simforge.render_jobs job
               WHERE job.id = :job_id AND job.cancel_requested_at IS NULL
-                AND job.job_state = 'running' AND job.job_mode = 'browser_render'
+                AND job.job_state = 'running' AND ${LOCAL_RENDER_LANE_FILTER}
            ))
          )
        RETURNING workspace_id, to_char(expires_at AT TIME ZONE 'UTC',
@@ -1090,6 +1156,7 @@ export async function completeCpuJob(
     };
     postprocess?: { provenance: Record<string, unknown> };
     browserRender?: { recordingJobId: string };
+    nativeRender?: { intentSha256: string; artifacts: LocalNativeCompletionArtifact[] };
   },
 ) {
   if (input.jobFamily === "openscenario_compile") {
@@ -1137,6 +1204,15 @@ export async function completeCpuJob(
       }
     }
   }
+  const nativeCompletion = input.jobFamily === "openscenario_render" && input.nativeRender
+    ? await completeLocalNativeRender(jobId, {
+        attemptId: input.attemptId,
+        fenceToken: input.fenceToken,
+        intentSha256: input.nativeRender.intentSha256,
+        artifacts: input.nativeRender.artifacts,
+      })
+    : null;
+  if (input.nativeRender && !nativeCompletion) return null;
   const result = await withScenarioJobTransaction(jobId, async (tx) => {
     const locked = await tx.queryOne<{ workspace_id: string }>(
       `SELECT workspace_id FROM simforge.cpu_job_attempts
@@ -1187,6 +1263,16 @@ export async function completeCpuJob(
           job_id: jobId,
         },
       );
+    } else if (input.jobFamily === "openscenario_render" && input.nativeRender) {
+      // A local native render's evidence was verified against object storage
+      // and the engine's own documents before this transaction; the fenced
+      // write registers its outputs and succeeds the job with that evidence.
+      await recordLocalNativeSuccess(tx, jobId, {
+        attemptId: input.attemptId,
+        intentSha256: input.nativeRender.intentSha256,
+        artifacts: input.nativeRender.artifacts,
+      }, nativeCompletion!);
+      releaseLocalNativeMap(input.attemptId);
     } else if (input.jobFamily === "openscenario_render") {
       // A browser render's evidence is its origin recording. Success requires, in one
       // transaction: a succeeded browser recording of the same workspace + revision whose
@@ -1339,6 +1425,10 @@ export async function failCpuJob(
            failure_code = 'cancelled' WHERE id = :attempt_id`,
         { attempt_id: input.attemptId },
       );
+      if (input.jobFamily === "openscenario_render") {
+        await cancelLocalNativeReservations(tx, jobId, input.attemptId);
+        releaseLocalNativeMap(input.attemptId);
+      }
       if (input.jobFamily === "openscenario_validate") {
         await tx.execute(
           `UPDATE simforge.validation_runs SET validation_state = 'cancelled', completed_at = NOW(),
@@ -1414,6 +1504,10 @@ export async function failCpuJob(
         retry: current.retry,
       },
     );
+    if (input.jobFamily === "openscenario_render") {
+      await cancelLocalNativeReservations(tx, jobId, input.attemptId);
+      releaseLocalNativeMap(input.attemptId);
+    }
     await insertCpuEvent(tx, {
       workspaceId: attempt.workspace_id,
       jobFamily: input.jobFamily,
@@ -1479,7 +1573,7 @@ export async function recordCpuJobEvent(
                 )) OR (:job_family = 'openscenario_render' AND EXISTS (
                   SELECT 1 FROM simforge.render_jobs job
                    WHERE job.id = attempt.job_id AND job.job_state = 'running'
-                     AND job.job_mode = 'browser_render'
+                     AND ${LOCAL_RENDER_LANE_FILTER}
                      AND job.cancel_requested_at IS NULL
                 ))
               )`,
@@ -1491,7 +1585,7 @@ export async function recordCpuJobEvent(
           },
         );
     if (!owner) return null;
-    await insertCpuEvent(tx, {
+    const ordinal = await insertCpuEvent(tx, {
       workspaceId: owner.workspace_id,
       jobFamily: input.jobFamily,
       jobId,
@@ -1499,6 +1593,20 @@ export async function recordCpuJobEvent(
       type: input.type,
       payload: input.payload,
     });
+    if (input.jobFamily === "openscenario_render") {
+      const attempt = await tx.queryOne<{ attempt_number: number }>(
+        `SELECT attempt_number FROM simforge.cpu_job_attempts WHERE id = :attempt_id`,
+        { attempt_id: input.attemptId },
+      );
+      await projectLocalRenderProgress(tx, {
+        workspaceId: owner.workspace_id,
+        jobId,
+        attemptNumber: Number(attempt?.attempt_number ?? 1),
+        sequence: ordinal,
+        type: input.type,
+        payload: input.payload,
+      });
+    }
     return { recorded: true };
   });
 }

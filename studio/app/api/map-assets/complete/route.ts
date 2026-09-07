@@ -217,16 +217,8 @@ export async function POST(request: NextRequest) {
     }
     lap("geojson-gzip");
 
-    // Candidate-location extraction and the first search-index build used to
-    // run synchronously here. They added ~19s to the request and pushed
-    // `/complete` past Amplify's SSR response budget on the deployed env
-    // (502/504, map created but no UI confirmation). Both now run inside the
-    // async `third_party_enrichment` Lambda, which calls the internal
-    // `candidate-locations/extract` then `search-index/rebuild` endpoints —
-    // the same off-request pattern enrichment already used. The detail page
-    // polls `/enrichment/status` and shows a "Finalizing" state until the
-    // job is terminal. See AGENTS workflow_ids: frontend-release,
-    // lambda-map-enrichment.
+    // Candidate-location extraction and the first search-index build run in
+    // the local finalize job started below, off the request path.
 
     // Upload signal overlay GeoJSON to S3 (non-critical)
     let signalFeatureCount = 0;
@@ -251,24 +243,21 @@ export async function POST(request: NextRequest) {
     }
     lap("lane-polygon-overlay");
 
-    // Enqueue the post-ingest `third_party_enrichment` job unconditionally.
-    // The Lambda now owns the full off-request finalize sequence: it calls
-    // the internal `candidate-locations/extract` endpoint (detector pipeline),
-    // pulls Overture themes (POIs, buildings, road names) for the bbox,
-    // persists a snapshot + merged tags, then calls `search-index/rebuild`.
-    // Non-blocking: the 200 response carries `enrichment_job_id` on success
-    // or `enrichment_job_error` on failure (never both). The detail page
-    // keys its "Finalizing" state off `enrichment_job_id`.
+    // Start the local finalize job: detector candidate extraction and the
+    // first search-index build run in-process after this response so the
+    // request stays short. The 200 carries `enrichment_job_id` on success or
+    // `enrichment_job_error` on failure (never both); the detail page polls
+    // `/enrichment/status` for the job's outcome.
     let enrichmentJobId: string | null = null;
     let enrichmentJobError: string | null = null;
     try {
       const { job } = await enqueueEnrichmentJob({
         mapAssetId,
-        jobType: "third_party_enrichment",
+        jobType: "local_finalize",
       });
       enrichmentJobId = job.id;
     } catch (e) {
-      console.warn("Auto-enqueue of post-ingest enrichment job failed:", e);
+      console.warn("Post-ingest map finalize could not be started:", e);
       enrichmentJobError = e instanceof Error ? e.message : String(e);
     }
     lap("enqueue-enrichment");
@@ -281,14 +270,14 @@ export async function POST(request: NextRequest) {
       map_stats: bundle.map_stats,
       warnings: bundle.warnings,
       ingest_tags: bundle.ingest_tags,
-      // Candidate extraction + search-index now run in the async enrichment
-      // Lambda; these counts are populated there, not in the create response.
+      // Candidate extraction + search-index run in the local finalize job;
+      // these counts land on that job's result, not in the create response.
       candidate_location_count: null,
       signal_feature_count: signalFeatureCount,
       lane_polygon_feature_count: lanePolygonFeatureCount,
       search_index_object_count: null,
       enrichment_job_id: enrichmentJobId,
-      enrichment_job_type: enrichmentJobId ? "third_party_enrichment" : null,
+      enrichment_job_type: enrichmentJobId ? "local_finalize" : null,
       enrichment_job_error: enrichmentJobError,
     });
   } catch (e) {

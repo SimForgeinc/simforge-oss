@@ -1,11 +1,12 @@
 //! Detached execution. `job start --detach` re-executes this binary as
-//! `job run <jobId>` in a new session (`setsid`) with stdio redirected to the
-//! job's log directory. The child is therefore immune to the launching UI or
-//! terminal exiting, and its liveness is visible to everyone through the
-//! owner lock, not through the parent.
+//! `job run <jobId>` detached from the launcher ([`platform::detach_command`]:
+//! a new session via `setsid` on Unix, a new process group without a console
+//! window on Windows) with stdio redirected to the job's log directory. The
+//! child is therefore immune to the launching UI or terminal exiting, and its
+//! liveness is visible to everyone through the owner lock, not through the
+//! parent.
 
 use std::fs::OpenOptions;
-use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -14,6 +15,7 @@ use serde::Serialize;
 
 use crate::error::{Result, RunnerError};
 use crate::fsatomic::ensure_dir;
+use crate::platform;
 use crate::runtime::{VerifiedRuntime, RUNTIME_MANIFEST_ENV};
 use crate::state::{JobDir, JobStatus};
 
@@ -66,16 +68,7 @@ pub fn spawn_detached(
     if restart {
         command.arg("--restart");
     }
-    // SAFETY: setsid is async-signal-safe and only detaches the child from
-    // the parent's session/controlling terminal.
-    unsafe {
-        command.pre_exec(|| {
-            if libc::setsid() == -1 {
-                return Err(std::io::Error::last_os_error());
-            }
-            Ok(())
-        });
-    }
+    platform::detach_command(&mut command);
     let mut child = command.spawn().map_err(|source| RunnerError::Supervisor {
         reason: format!("spawn {}: {source}", executable.display()),
     })?;

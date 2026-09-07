@@ -60,8 +60,6 @@ import type { ParkedCarsSettings } from "../../../lib/scenario/parking/extension
 import type { ParkingStallsStatus } from "../../../lib/scenario/parking/useParkedCars";
 import { usePanelEdgeResize } from "../usePanelEdgeResize";
 
-const driveStandalone = Boolean(process.env.NEXT_PUBLIC_DRIVE_STANDALONE);
-
 /** Everything the parked-cars tool needs, supplied by the editor surface. */
 export interface ParkedCarsRailState {
   readonly settings: ParkedCarsSettings;
@@ -219,7 +217,6 @@ export function ActorLibraryRail({
   }, []);
 
   useEffect(() => {
-    if (driveStandalone) return;
     let active = true;
     void loadCarlaCompatibility()
       .then((table) => {
@@ -234,7 +231,6 @@ export function ActorLibraryRail({
   }, []);
 
   useEffect(() => {
-    if (driveStandalone) return;
     let active = true;
     void registerCarlaObjects()
       .then((objects) => {

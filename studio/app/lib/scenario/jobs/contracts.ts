@@ -4,6 +4,7 @@ import {
   CompilerOutputKindSchema,
   CompilerDigestSchema,
 } from "../compiler-contracts";
+import { RenderArtifactIdentitySchema } from "../render-wire-contracts";
 
 /** The only product-facing operational job vocabulary. */
 export const SCENARIO_JOB_FAMILIES = [
@@ -32,6 +33,10 @@ export const SCENARIO_DEFAULT_CPU_CLAIM_FAMILIES = [
 ] as const;
 const MAX_CPU_JOB_ARTIFACTS = 64;
 
+/** Render engines a local worker can offer; the host only leases jobs of engines the worker declared. */
+export const LOCAL_RENDER_ENGINES = ["browser", "native"] as const;
+export type LocalRenderEngine = (typeof LOCAL_RENDER_ENGINES)[number];
+
 export const ClaimCpuJobSchema = z.strictObject({
   workerId: z.string().trim().min(1).max(200),
   leaseSeconds: z.number().int().min(30).max(1_800).default(900),
@@ -40,6 +45,7 @@ export const ClaimCpuJobSchema = z.strictObject({
     .min(1)
     .max(SCENARIO_CPU_JOB_FAMILIES.length)
     .default([...SCENARIO_DEFAULT_CPU_CLAIM_FAMILIES]),
+  engines: z.array(z.enum(LOCAL_RENDER_ENGINES)).max(LOCAL_RENDER_ENGINES.length).default(["browser"]),
 });
 
 export const CpuJobFenceSchema = CompilerFenceSchema.extend({
@@ -85,7 +91,28 @@ export const CompleteCpuJobSchema = CpuJobFenceSchema.extend({
   browserRender: z.strictObject({
     recordingJobId: z.string().trim().min(1),
   }).optional(),
+  nativeRender: z.strictObject({
+    intentSha256: CompilerDigestSchema,
+    artifacts: z.array(z.strictObject({
+      artifactId: z.string().trim().min(1),
+      identity: RenderArtifactIdentitySchema,
+      sha256: CompilerDigestSchema,
+      sizeBytes: z.number().int().positive().max(8 * 1024 * 1024 * 1024),
+      mediaType: z.string().trim().min(1).max(200),
+    })).min(1).max(MAX_CPU_JOB_ARTIFACTS),
+  }).optional(),
 });
+
+/** A local native render reserves one identity-bound upload at a time (`.../cpu-jobs/:jobId/artifacts`). */
+export const ReserveLocalNativeArtifactSchema = CpuJobFenceSchema.extend({
+  identity: RenderArtifactIdentitySchema,
+  sha256: CompilerDigestSchema,
+  sizeBytes: z.number().int().positive().max(8 * 1024 * 1024 * 1024),
+  mediaType: z.string().trim().min(1).max(200),
+});
+
+/** Map preparation is polled with the fence alone (`.../cpu-jobs/:jobId/map`). */
+export const PrepareLocalNativeMapSchema = CpuJobFenceSchema;
 
 export const FailCpuJobSchema = CpuJobFenceSchema.extend({
   code: z.string().trim().min(1).max(100),

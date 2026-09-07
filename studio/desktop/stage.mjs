@@ -1,56 +1,68 @@
 #!/usr/bin/env node
-// Stages the SimForge Studio desktop artifact.
+// Stages the SimForge Studio desktop artifact for the build host's target.
 //
 //   node desktop/stage.mjs [--skip-next-build]
 //
 // Produces, under studio/dist/desktop:
 //   app/        the Electron application: a dependency-free package.json, the
-//               bundled shell (main.mjs, local mode), the cache preload and
-//               static pages; packed into the asar by electron-builder
+//               bundled shell (main.mjs), the cache preload, the static pages
+//               and the icon; packed into the asar by electron-builder
 //               (see desktop/stage-app.mjs).
-//   resources/  the self-contained local host, shipped as extraResources
-//               `studio/`. Its root mirrors the repository layout so the
-//               bundled host finds staged assets where the workspace keeps
-//               them:
+//   resources/  the self-contained local host, copied to <resources>/studio
+//               by desktop/after-pack.mjs. Its root mirrors the repository
+//               layout so the bundled host finds staged assets where the
+//               workspace keeps them:
 //                 studio/server.js, studio/.next, studio/public   Next standalone output
 //                 studio/host/{host,host-main,worker}.mjs         bundled supervisor and worker
 //                 studio/migrations                               SQL migrations
+//                 studio/tools/{ffmpeg,ffprobe}[.exe]             pinned encoders (desktop/tools.lock.json)
+//                 studio/actor-assets                             pinned actor-appearance closure
 //                 studio/node_modules, node_modules/.pnpm         traced runtime closure
 //                 packages/…                                      assets read by path
-//                 native/simforge-native-runtime.<platform>.node  N-API addon
+//                 packages/native-runtime/native/*.node           N-API addon for this target
 //                 runtime/                                        verified native runtime archive
+//                                                                 (runner, Bevy render service, FFI library, sky plates)
 //                 stage-manifest.json                             desktop/stage-manifest.mjs
 //
 // Nothing in the stage points outside it: every symlink is verified to
 // resolve inside the stage, so an artifact never depends on the checkout or
-// on a global pnpm/tsx/Node. The interpreter at runtime is Electron in Node
-// mode. Native pieces are staged for the build host only; the manifest
-// records that platform and the shell refuses to run elsewhere.
+// on a global pnpm/tsx/Node/Python. The interpreter at runtime is Electron in
+// Node mode. Native pieces are staged for the build host's target only (the
+// N-API addon, sharp, the runtime archive are all target-specific and are not
+// cross-built here); the manifest records that target and the shell refuses
+// to run elsewhere. Windows, macOS and Linux artifacts are therefore staged
+// on their own platform (see .github/workflows/desktop.yml).
 //
 // Prerequisites (checked, never silently skipped):
-//   pnpm install                                   workspace with esbuild/electron installed
-//   pnpm --filter @simforge-oss/native-runtime build:node   addon for this platform
-//   pnpm --filter @simforge-oss/render build       browser render harness (dist/harness.html)
-//   scripts/native-runtime/package-runtime.sh     runner, renderer, Python wheels and sky assets
+//   pnpm install                                            workspace with esbuild/electron installed
+//   pnpm --filter @simforge-oss/native-runtime build:node   addon for this target
+//   pnpm --filter @simforge-oss/render build                browser render harness (dist/harness.html)
+//   node scripts/native-runtime/package-runtime.mjs --target <triple>  runtime archive for this target (baseline: no --providers)
+//   node desktop/fetch-tools.mjs                            (run here when missing) pinned ffmpeg/ffprobe
+//   node packages/render/scripts/fetch-actor-closure.mjs    (run here) pinned actor closure
 //   packages/*/dist for packages Next resolves through `exports` (pnpm -r build)
 
 import { execFile, spawn } from "node:child_process";
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { extractRuntimeArchive, verifyRuntimeStage } from "../../scripts/native-runtime/runtime-archive.mjs";
+import { targetLayout } from "../../scripts/native-runtime/target-layout.mjs";
+import { fetchTools, matchesPin } from "./fetch-tools.mjs";
 import { bundleNode, stageApp } from "./stage-app.mjs";
-import { STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA } from "./stage-manifest.mjs";
+import { STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor } from "./stage-manifest.mjs";
 
 const require = createRequire(import.meta.url);
 const desktopDir = dirname(fileURLToPath(import.meta.url));
 const studioRoot = resolve(desktopDir, "..");
 const repoRoot = resolve(studioRoot, "..");
-const distRoot = join(studioRoot, "dist", "desktop");
-const appDir = join(distRoot, "app");
-const stageRoot = join(distRoot, "resources");
+const distRoot = join(studioRoot, "dist");
+const appDir = join(distRoot, "desktop", "app");
+const stageRoot = join(distRoot, "desktop", "resources");
 const stageStudio = join(stageRoot, "studio");
 
 /**
@@ -66,6 +78,15 @@ const NEVER_BUNDLED = ["pg-native", "next", "tsx"];
 const NATIVE_ADDON_DIR = join(repoRoot, "packages", "native-runtime", "native");
 const RENDER_DIST = join(repoRoot, "packages", "render", "dist");
 
+/**
+ * pnpm links packages with symlinks on POSIX and with junctions (absolute
+ * targets) on Windows. The stage keeps POSIX links verbatim, sealed by
+ * `verifySealed`; on Windows it dereferences them, so the artifact holds
+ * plain copies and no link can point outside it.
+ */
+const PRESERVE_LINKS = process.platform !== "win32";
+
+const target = targetFor();
 const skipNextBuild = process.argv.includes("--skip-next-build");
 
 /** @param {string} message */
@@ -82,6 +103,11 @@ async function exists(path) {
   } catch {
     return false;
   }
+}
+
+/** @param {string} path */
+async function sha256(path) {
+  return createHash("sha256").update(await readFile(path)).digest("hex");
 }
 
 /**
@@ -108,46 +134,102 @@ async function nativeAddon() {
 }
 
 /**
- * Reuse the verified headless distribution, not paths into Cargo build trees.
- * @returns {Promise<{ root: string; archive: string; sha256: string }>}
+ * The verified native runtime distribution for this target: runner, Bevy
+ * render service, FFI library, sky plates. Extracted flat into `runtime/`,
+ * every manifest component re-verified by digest. Baseline archives carry no
+ * Python providers and none is installed here; the CPU/Bevy path needs none.
+ * @returns {Promise<{ root: string; archive: string; sha256: string; manifest: Record<string, any>; runner: string; renderService: string; renderLibrary: string }>}
  */
 async function stageNativeRuntime() {
-  if (process.platform !== "linux" || process.arch !== "x64") {
-    fail("the native runtime distribution currently supports Linux x86_64 only");
-  }
+  const layout = targetLayout(target.triple);
   const archiveDir = join(repoRoot, "dist", "native-runtime");
   let archive = process.env.SIMFORGE_NATIVE_RUNTIME_ARCHIVE;
   if (!archive) {
     const names = (await readdir(archiveDir).catch(() => []))
-      .filter((name) => name.startsWith("simforge-native-runtime-") && name.endsWith(".tar.gz"));
+      .filter((name) => name.startsWith("simforge-native-runtime-") && name.endsWith(`-${target.triple}.tar.gz`));
     if (names.length !== 1) {
-      fail("build one native runtime archive with scripts/native-runtime/package-runtime.sh, or set SIMFORGE_NATIVE_RUNTIME_ARCHIVE");
+      fail(`expected one ${archiveDir}/simforge-native-runtime-*-${target.triple}.tar.gz (found ${names.length}); build it with node scripts/native-runtime/package-runtime.mjs --target ${target.triple}, or set SIMFORGE_NATIVE_RUNTIME_ARCHIVE`);
     }
     archive = join(archiveDir, names[0]);
   }
   archive = resolve(archive);
-  const expected = (await readFile(`${archive}.sha256`, "utf8")).trim().split(/\s+/)[0];
-  const { stdout } = await promisify(execFile)("sha256sum", [archive], { encoding: "utf8" });
-  if (!/^[a-f0-9]{64}$/.test(expected) || stdout.split(/\s+/)[0] !== expected) {
+  const expected = (await readFile(`${archive}.sha256`, "utf8").catch(() => "")).trim().split(/\s+/)[0];
+  if (!/^[a-f0-9]{64}$/.test(expected) || (await sha256(archive)) !== expected) {
     fail(`native runtime archive digest mismatch: ${archive}`);
   }
   const root = join(stageRoot, "runtime");
   await mkdir(root, { recursive: true });
-  await run("tar", ["-xzf", archive, "-C", root]);
-  await promisify(execFile)("sha256sum", ["--check", "--status", "SHA256SUMS"], { cwd: root });
+  await extractRuntimeArchive(archive, root);
+  await verifyRuntimeStage(root);
   const manifest = JSON.parse(await readFile(join(root, "bin", "runtime-manifest.json"), "utf8"));
-  if (manifest.schema !== "simforge.native-runtime/v1" || manifest.target !== "x86_64-unknown-linux-gnu") {
-    fail(`native runtime archive is not the supported Linux x86_64 GNU distribution: ${archive}`);
+  if (manifest.schema !== "simforge.native-runtime/v1" || manifest.target !== target.triple) {
+    fail(`native runtime archive is not the ${target.triple} distribution: ${archive} (${manifest.target})`);
   }
-  for (const entry of ["bin/simforge-runner", "bin/native-render-service", "lib/libsimforge_render.so", "share/sky/SOURCES.json"]) {
-    if (!(await exists(join(root, entry)))) fail(`native runtime archive lacks ${entry}`);
+  const runner = join("bin", manifest.binary.name);
+  if (manifest.binary.name !== layout.runnerName) fail(`runtime manifest names the runner ${manifest.binary.name}, expected ${layout.runnerName}`);
+  const renderService = join("bin", layout.renderServiceName);
+  const renderLibrary = join("lib", layout.renderLibName);
+  if (renderLibrary.replace(/\\/g, "/") !== target.renderLibrary) {
+    fail(`renderer library name disagreement: scripts/native-runtime says ${renderLibrary}, desktop/stage-manifest.mjs says ${target.renderLibrary}`);
   }
-  return { root: "runtime", archive, sha256: expected };
+  /** @type {Array<{ kind: string; install: string; sha256: string; sizeBytes: number }>} */
+  const components = Array.isArray(manifest.components) ? manifest.components : [];
+  for (const entry of [runner, renderService, renderLibrary, join("share", "sky", "SOURCES.json")]) {
+    const listed = entry === runner || components.some((component) => component.install === entry.replace(/\\/g, "/"));
+    if (!listed) fail(`runtime manifest lists no component ${entry}; baseline local Bevy needs it`);
+    const info = await stat(join(root, entry)).catch(() => null);
+    if (!info?.isFile()) fail(`native runtime archive lacks ${entry}`);
+  }
+  for (const component of components) {
+    const path = join(root, component.install);
+    const info = await stat(path).catch(() => null);
+    if (!info?.isFile() || info.size !== component.sizeBytes || (await sha256(path)) !== component.sha256) {
+      fail(`runtime component ${component.install} does not match its manifest digest`);
+    }
+  }
+  return {
+    root: "runtime",
+    archive,
+    sha256: expected,
+    manifest,
+    runner: join("runtime", runner),
+    renderService: join("runtime", renderService),
+    renderLibrary: join("runtime", renderLibrary),
+  };
+}
+
+/**
+ * The pinned encoders, fetched if the digests are not already on disk and
+ * re-verified as they are copied into the stage.
+ */
+async function stageTools() {
+  const layout = await fetchTools(distRoot, target);
+  const toolsDir = join(stageStudio, "tools");
+  await mkdir(toolsDir, { recursive: true });
+  const staged = {};
+  for (const name of ["ffmpeg", "ffprobe"]) {
+    const source = layout[name];
+    const file = `${name}${target.exe}`;
+    await cp(source, join(toolsDir, file));
+    if (!(await matchesPin(join(toolsDir, file), layout.pins[name]))) fail(`staged ${file} does not match desktop/tools.lock.json`);
+    staged[name] = join("studio", "tools", file);
+  }
+  await cp(layout.license, join(toolsDir, "LICENSE"));
+  return { ...staged, version: layout.version, license: layout.licenseId };
+}
+
+/** The pinned actor-appearance closure native renders resolve offline. */
+async function stageActorAssets() {
+  const out = join(stageStudio, "actor-assets");
+  await run(process.execPath, [join(repoRoot, "packages", "render", "scripts", "fetch-actor-closure.mjs"), "--out", out]);
+  const closures = await readdir(join(out, "closures")).catch(() => []);
+  if (closures.length === 0) fail(`${out}/closures is empty; the actor closure fetch produced nothing`);
+  return join("studio", "actor-assets");
 }
 
 /**
  * Copy `source` (a path under the repository) to the same relative path in
- * the stage, preserving symlinks verbatim.
+ * the stage, preserving symlinks verbatim on POSIX.
  * @param {string} source
  * @param {(source: string) => boolean} [filter]
  */
@@ -157,6 +239,10 @@ async function stageMirror(source, filter) {
   const target = join(stageRoot, rel);
   await mkdir(dirname(target), { recursive: true });
   if ((await lstat(source)).isSymbolicLink()) {
+    if (!PRESERVE_LINKS) {
+      if (!(await exists(target))) await cp(await realpath(source), target, { recursive: true, dereference: true, filter });
+      return target;
+    }
     const link = await readlink(source);
     const existing = await lstat(target).catch((error) => {
       if (error.code === "ENOENT") return null;
@@ -171,7 +257,7 @@ async function stageMirror(source, filter) {
     }
     return target;
   }
-  await cp(source, target, { recursive: true, verbatimSymlinks: true, force: false, errorOnExist: false, filter });
+  await cp(source, target, { recursive: true, verbatimSymlinks: PRESERVE_LINKS, dereference: !PRESERVE_LINKS, force: false, errorOnExist: false, filter });
   return target;
 }
 
@@ -199,6 +285,7 @@ async function stagePackageClosure(packageDir, seen) {
         cwd: packageDir,
         env: { ...process.env, npm_config_ignore_scripts: "true", pnpm_config_ignore_scripts: "true" },
         maxBuffer: 4 * 1024 * 1024,
+        shell: process.platform === "win32",
       });
       const tarballs = (await readdir(packed)).filter((file) => file.endsWith(".tgz"));
       if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
@@ -280,6 +367,7 @@ async function verifySealed() {
     }
   }
   if (dangling.length > 0) fail(`unresolved dependency links: ${dangling.join("; ")}`);
+  if (!PRESERVE_LINKS && symlinks > 0) fail(`${symlinks} symlinks remain in a dereferenced (Windows) stage`);
   return symlinks;
 }
 
@@ -307,7 +395,7 @@ if (!(await exists(join(standalone, "studio", "server.js")))) {
   fail(`${standalone}/studio/server.js missing; build with SIMFORGE_DESKTOP_BUILD=1 (drop --skip-next-build)`);
 }
 await mkdir(stageRoot, { recursive: true });
-await cp(standalone, stageRoot, { recursive: true, verbatimSymlinks: true });
+await cp(standalone, stageRoot, { recursive: true, verbatimSymlinks: PRESERVE_LINKS, dereference: !PRESERVE_LINKS });
 await cp(join(studioRoot, ".next", "static"), join(stageStudio, ".next", "static"), { recursive: true });
 await cp(join(studioRoot, "public"), join(stageStudio, "public"), {
   recursive: true,
@@ -343,7 +431,7 @@ for (const name of RUNTIME_ASSET_PACKAGES) {
 }
 
 // 4. Workspace assets the bundles read by path, resolved through the packed
-//    packages exactly as at runtime.
+//    packages exactly as at runtime; then the native payload for this target.
 await ensureStudioLink("@simforge-oss/openscenario");
 const nativeAddonRel = join("packages", "native-runtime", "native", addonName);
 for (const [label, rel] of [
@@ -353,6 +441,8 @@ for (const [label, rel] of [
   if (!(await exists(join(stageRoot, rel)))) fail(`${label} missing from the published package: ${rel}`);
 }
 const nativeRuntime = await stageNativeRuntime();
+const tools = await stageTools();
+const actorAssetsRoot = await stageActorAssets();
 
 // 5. Seal and describe.
 if (await exists(join(stageStudio, ".next", "cache"))) fail("standalone output carried .next/cache");
@@ -360,15 +450,28 @@ const symlinks = await verifySealed();
 const gitRevision = await promisify(execFile)("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" })
   .then(({ stdout }) => stdout.trim())
   .catch(() => null);
+const posix = (/** @type {string} */ path) => path.split(sep).join("/");
 const manifest = {
   schema: STAGE_MANIFEST_SCHEMA,
   platform: process.platform,
   arch: process.arch,
+  target: target.triple,
   electron: electronVersion,
   studioVersion: studioPackage.version,
   gitRevision,
-  nativeAddon: nativeAddonRel,
+  nativeAddon: posix(nativeAddonRel),
   nativeRuntimeRoot: nativeRuntime.root,
+  nativeRuntime: {
+    version: nativeRuntime.manifest.version,
+    revision: nativeRuntime.manifest.revision,
+    archiveSha256: nativeRuntime.sha256,
+    supportTiers: (nativeRuntime.manifest.supportTiers ?? []).map((tier) => tier.tier),
+  },
+  nativeRunner: posix(nativeRuntime.runner),
+  nativeRenderService: posix(nativeRuntime.renderService),
+  nativeRenderLibrary: posix(nativeRuntime.renderLibrary),
+  tools: { ffmpeg: posix(tools.ffmpeg), ffprobe: posix(tools.ffprobe), version: tools.version, license: tools.license },
+  actorAssetsRoot: posix(actorAssetsRoot),
   browserHarness: "packages/render/dist/harness.html",
   server: "studio/server.js",
   hostEntry: "studio/host/host.mjs",
@@ -377,7 +480,7 @@ const manifest = {
 await writeFile(join(stageRoot, STAGE_MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
 
 // 6. The Electron application directory (two-package layout: no runtime dependencies here).
-const application = await stageApp({ appDir, mode: "local", version: studioPackage.version, license: studioPackage.license });
+const application = await stageApp({ appDir, version: studioPackage.version, license: studioPackage.license });
 
 process.stdout.write(`${JSON.stringify({
   component: "simforge-desktop-stage",
@@ -387,6 +490,5 @@ process.stdout.write(`${JSON.stringify({
   resources: stageRoot,
   symlinks,
   nativeRuntimeArchive: nativeRuntime.archive,
-  nativeRuntimeSha256: nativeRuntime.sha256,
   ...manifest,
 })}\n`);

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { Laptop, X } from "lucide-react";
 import type { RefObject } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
+import { CloudConnectionChip } from "@/app/components/cloud/CloudConnectionCard";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
-import { DASHBOARD_APPS } from "@/app/lib/dashboard-nav";
+import { DASHBOARD_APPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 export function AppSwitcherOverlay({
@@ -175,6 +176,50 @@ export function AppSwitcherOverlay({
               })}
             </div>
 
+            <div data-testid="app-switcher-footer">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,1.2fr)]">
+                <div className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5">
+                  <Laptop className="size-4 shrink-0 text-[#E8E044]" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.16em] text-white/30">
+                      Workspace
+                    </p>
+                    <p className="truncate text-xs font-semibold text-white/80">This computer</p>
+                    <p className="truncate text-[10px] text-white/35">Projects, jobs and renders stay local</p>
+                  </div>
+                </div>
+
+                <CloudConnectionChip onNavigate={close} />
+
+                <nav
+                  aria-label="App utilities"
+                  className="grid gap-1 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1"
+                  style={{ gridTemplateColumns: `repeat(${DASHBOARD_UTILITIES.length}, minmax(0, 1fr))` }}
+                >
+                  {DASHBOARD_UTILITIES.map((item) => {
+                    const active = item.match(pathname);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex min-h-12 items-center justify-center gap-2 rounded-lg px-2 text-center text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E8E044]",
+                          active
+                            ? "bg-[#E8E044]/10 text-[#E8E044]"
+                            : "text-white/45 hover:bg-white/[0.05] hover:text-white",
+                        )}
+                        href={item.href}
+                        key={item.href}
+                        onClick={close}
+                      >
+                        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            </div>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

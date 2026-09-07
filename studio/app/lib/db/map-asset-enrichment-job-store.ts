@@ -127,6 +127,40 @@ export async function markEnrichmentJobFailed(
   );
 }
 
+/** Transition a pending job to running; the local pipeline owns the attempt. */
+export async function markEnrichmentJobRunning(jobId: string): Promise<void> {
+  await execute(
+    `
+      UPDATE map_asset_enrichment_jobs
+      SET status = 'running',
+          started_at = COALESCE(started_at, NOW()),
+          attempt_count = attempt_count + 1
+      WHERE id = :id
+        AND status = 'pending'
+    `,
+    { id: jobId },
+  );
+}
+
+/** Close a running job with its result payload. */
+export async function markEnrichmentJobSucceeded(
+  jobId: string,
+  result: Record<string, unknown>,
+): Promise<void> {
+  await execute(
+    `
+      UPDATE map_asset_enrichment_jobs
+      SET status = 'succeeded',
+          completed_at = NOW(),
+          error_message = NULL,
+          result_json = CAST(:result AS jsonb)
+      WHERE id = :id
+        AND status IN ('pending','running')
+    `,
+    { id: jobId, result },
+  );
+}
+
 /**
  * Store the SQS MessageId returned by SendMessageCommand. Purely for
  * operational debugging — DLQ inspection can cross-reference this column to

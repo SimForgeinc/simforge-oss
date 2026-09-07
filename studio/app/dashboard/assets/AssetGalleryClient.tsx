@@ -12,6 +12,7 @@ import { AssetDetailDrawer } from "./AssetDetailDrawer";
 import { AssetGalleryGrid, AssetGalleryGridSkeleton } from "./AssetGalleryGrid";
 import { AssetGalleryHeader, type GallerySection } from "./AssetGalleryHeader";
 import { AssetGalleryToolbar } from "./AssetGalleryToolbar";
+import { AssetGenerateDialog } from "./AssetGenerateDialog";
 import { AssetUploadDialog, type AssetUploadKind } from "./AssetUploadDialog";
 import { MapList } from "./MapList";
 import {
@@ -38,6 +39,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
   const [selected, setSelected] = useState<GalleryAssetSummary | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadKind, setUploadKind] = useState<AssetUploadKind>("model");
+  const [generateOpen, setGenerateOpen] = useState(false);
   // Bumped on publish so the Maps section refetches the catalog it just added to.
   const [mapReloadToken, setMapReloadToken] = useState(0);
   const [reloading, setReloading] = useState(false);
@@ -133,6 +135,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
       <AssetGalleryHeader
         section={section}
         onSectionChange={setSection}
+        onGenerate={() => setGenerateOpen(true)}
         onUpload={() => {
           setUploadKind(section === "maps" ? "map" : "model");
           setUploadOpen(true);
@@ -199,18 +202,23 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
                 <EmptyState
                   icon={<Boxes className="size-7" />}
                   title="The library is empty"
-                  description="Import a GLB model to add it to the local library."
+                  description="Generate a model from reference photos, or import a GLB you already have."
                   action={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setUploadKind("model");
-                        setUploadOpen(true);
-                      }}
-                    >
-                      Import a model
-                    </Button>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <Button type="button" onClick={() => setGenerateOpen(true)}>
+                        Generate a model
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setUploadKind("model");
+                          setUploadOpen(true);
+                        }}
+                      >
+                        Import a model
+                      </Button>
+                    </div>
                   }
                   className="rounded-lg border border-dashed border-border"
                 />
@@ -241,6 +249,19 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
           setMapReloadToken((token) => token + 1);
         }}
       />
+      {/* Mounted only while open: the dialog owns an image picker, a poll loop
+          and an in-flight generation, none of which should exist on a page the
+          visitor is only browsing. */}
+      {generateOpen ? (
+        <AssetGenerateDialog
+          open
+          onClose={() => setGenerateOpen(false)}
+          onPublished={(asset) => {
+            publish(asset);
+            setGenerateOpen(false);
+          }}
+        />
+      ) : null}
       <AssetDetailDrawer
         asset={selected}
         onClose={() => setSelected(null)}

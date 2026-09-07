@@ -64,6 +64,14 @@ export interface ScenarioWorkerMap {
   locations: string;
   xodr: string;
   signals: string;
+  /** Published digests of the served bytes, so the page cache admits each file under its exact identity. */
+  digests?: {
+    readonly topology: string;
+    readonly derivedTopology: string;
+    readonly locations: string;
+    readonly xodr: string;
+    readonly signals: string;
+  };
 }
 
 export interface ScenarioWorkerRequest {
@@ -112,7 +120,27 @@ export interface ScenarioWorkerTransportRequest {
   readonly time?: number;
   readonly externalCatalog?: readonly ExternalCatalogEntry[];
 }
-export type ScenarioWorkerMessage = ScenarioWorkerRequest | ScenarioWorkerStartRequest | ScenarioWorkerCancelRequest | ScenarioWorkerTransportRequest;
+/** Identity of the loaded native engine, without compiling anything. */
+export interface ScenarioWorkerEngineRequest {
+  readonly kind: 'engine';
+  readonly id: number;
+  readonly externalCatalog?: readonly ExternalCatalogEntry[];
+}
+/** Main-thread answer to a {@link ScenarioWorkerAssetRequest}. */
+export interface ScenarioWorkerAssetResponse {
+  readonly kind: 'asset';
+  readonly resolveId: number;
+  readonly url?: string;
+  readonly error?: string;
+  readonly externalCatalog?: readonly ExternalCatalogEntry[];
+}
+export type ScenarioWorkerMessage = ScenarioWorkerRequest | ScenarioWorkerStartRequest | ScenarioWorkerCancelRequest | ScenarioWorkerTransportRequest | ScenarioWorkerEngineRequest | ScenarioWorkerAssetResponse;
+
+/** The engine build that executes every browser trace; persisted previews are admitted only against it. */
+export interface ScenarioWorkerEngineIdentity {
+  readonly engineVersion: string;
+  readonly abiVersion: number;
+}
 
 export interface AmbientRobustnessSummary {
   readonly version: 1;
@@ -147,7 +175,22 @@ export type ScenarioWorkerResponse =
   | { id: number; revision: string; ok: true; kind: 'prepare'; runtimeKey: string; cache: 'cold' | 'warm'; timing?: { totalMs: number; compileCache: 'hit' | 'miss' }; instance: unknown; trace: SimTrace; siteId: string; ambientTraffic: AmbientTrafficProvenance; openScenario?: OpenScenarioSnapshot; mapCollisions: StaticColliderDiagnostics }
   | { id: number; revision: string; ok: true; kind: 'robustness'; report: AmbientRobustnessSummary }
   | { id: number; revision: string; ok: true; kind: 'ready' | 'progress' | 'complete'; trace: SimTrace; recordedUntil: number }
+  | { id: number; revision: string; ok: true; kind: 'engine'; engine: ScenarioWorkerEngineIdentity }
   | { id: number; revision: string; ok: false; error: string };
+
+/**
+ * Worker-to-page request to resolve one immutable map asset URL through the
+ * page's map-asset cache. A worker's own `fetch` sees neither the browser
+ * gateway nor the desktop filesystem bridge, so without this every map runtime
+ * load would go to the network even when the verified bytes are already local.
+ */
+export interface ScenarioWorkerAssetRequest {
+  readonly kind: 'resolve-asset';
+  readonly resolveId: number;
+  readonly url: string;
+  readonly sha256?: string;
+}
+export type ScenarioWorkerOutbound = ScenarioWorkerResponse | ScenarioWorkerAssetRequest;
 
 /**
  * One loaded map: the native bundle (lane graph, derived index, signal
@@ -164,6 +207,13 @@ interface MapRuntime {
   readonly mapCollisions: StaticColliderDiagnostics;
 }
 
+// Map runtimes and compiled worlds are keyed by immutable content, so a hit is
+// exact. Both are bounded: an editing session produces one compiled world per
+// edit (each holding a complete trace) and a dataset browse touches many maps
+// (each holding decoded topology, XODR text and the native bundle). The bounds
+// keep A/B/A map switches and undo/redo warm without growing with session length.
+const MAP_RUNTIME_LIMIT = 3;
+const COMPILED_WORLD_LIMIT = 8;
 const runtimesByAsset = new Map<string, Promise<MapRuntime>>();
 const runtimesByKey = new Map<string, MapRuntime>();
 const compiledWorlds = new Map<string, Promise<ScenarioWorkerResponse>>();
@@ -182,12 +232,38 @@ let transport: {
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 
+const pendingAssets = new Map<number, { resolve: (url: string) => void; reject: (reason: Error) => void }>();
+let assetSequence = 0;
+
+/** Ask the page where the verified bytes of one immutable asset live. */
+function resolveAssetUrl(url: string, sha256?: string): Promise<string> {
+  const resolveId = ++assetSequence;
+  return new Promise<string>((resolve, reject) => {
+    pendingAssets.set(resolveId, { resolve, reject });
+    scope.postMessage({ kind: 'resolve-asset', resolveId, url, ...(sha256 ? { sha256 } : {}) } satisfies ScenarioWorkerAssetRequest);
+  });
+}
+
+/** `fetch` whose URL is first resolved by the page to wherever its verified bytes live. */
+const cachedFetch: typeof fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  return fetch(await resolveAssetUrl(url), init);
+};
+
 scope.onmessage = (event: MessageEvent<ScenarioWorkerMessage>): void => {
   const request = event.data;
   // The worker holds its own module instance of the prop catalog, so gallery
   // entries registered on the main thread are invisible here. Without this the
   // materializer reports the id as unknown and substitutes a default model.
   for (const entry of request.externalCatalog ?? []) registerExternalCatalogEntry(entry);
+  if (request.kind === 'asset') {
+    const pending = pendingAssets.get(request.resolveId);
+    pendingAssets.delete(request.resolveId);
+    if (!pending) return;
+    if (request.url) pending.resolve(request.url);
+    else pending.reject(new Error(request.error ?? 'Map asset could not be resolved'));
+    return;
+  }
   if (request.kind === 'cancel') {
     liveGeneration += 1;
     transport?.wake?.();
@@ -214,6 +290,13 @@ scope.onmessage = (event: MessageEvent<ScenarioWorkerMessage>): void => {
     void runLive(request, token).catch((reason: unknown) => postFailure(request.id, request.revision, reason));
     return;
   }
+  if (request.kind === 'engine') {
+    void loadEngine().then(
+      (engine) => scope.postMessage({ id: request.id, revision: '', ok: true, kind: 'engine', engine: engine.version() } satisfies ScenarioWorkerResponse),
+      (reason: unknown) => postFailure(request.id, '', reason),
+    );
+    return;
+  }
   postPrepareProgress(request, 'map-assets');
   void prepare(request).then(
     (response) => scope.postMessage(response),
@@ -235,6 +318,9 @@ async function prepare(request: ScenarioWorkerRequest): Promise<ScenarioWorkerRe
   });
   const cached = compiledWorlds.get(key);
   if (cached) {
+    // Re-insert so the most recently used world is evicted last.
+    compiledWorlds.delete(key);
+    compiledWorlds.set(key, cached);
     const response = await cached;
     return response.ok && response.kind === 'prepare'
       ? { ...response, id: request.id, revision, cache: 'warm', timing: { totalMs: performance.now() - started, compileCache: 'hit' } }
@@ -242,6 +328,7 @@ async function prepare(request: ScenarioWorkerRequest): Promise<ScenarioWorkerRe
   }
   const pending = prepareUncached(request);
   compiledWorlds.set(key, pending);
+  while (compiledWorlds.size > COMPILED_WORLD_LIMIT) compiledWorlds.delete(compiledWorlds.keys().next().value!);
   try {
     const response = await pending;
     return response.ok && response.kind === 'prepare'
@@ -450,20 +537,24 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
   }
   const assetDigest = mapAssetDigest(map);
   const existing = runtimesByAsset.get(assetDigest);
-  if (existing) return existing;
+  if (existing) {
+    runtimesByAsset.delete(assetDigest);
+    runtimesByAsset.set(assetDigest, existing);
+    return existing;
+  }
   const pending = (async (): Promise<MapRuntime> => {
     const [topology, derived, locations, xodr, signals] = await Promise.all([
-      fetchBytes(map.topology),
-      fetchJson(map.derivedTopology),
-      fetchJson(map.locations),
-      fetchText(map.xodr),
-      fetchJson(map.signals),
+      fetchBytes(map.topology, map.digests?.topology),
+      fetchJson(map.derivedTopology, map.digests?.derivedTopology),
+      fetchJson(map.locations, map.digests?.locations),
+      fetchText(map.xodr, map.digests?.xodr),
+      fetchJson(map.signals, map.digests?.signals),
     ]);
     // A rendered map is part of the simulated world, not decorative scenery.
     // Fail closed when its immutable collider derivative is unavailable so an
     // editor preview can never present cars passing through visible structures.
     postPrepareProgress(request, 'map-collisions');
-    const staticCollision = requireReadyStaticColliderBundle(await loadStaticMapColliders(map.manifest));
+    const staticCollision = requireReadyStaticColliderBundle(await loadStaticMapColliders(map.manifest, cachedFetch));
     // The native bundle derives the signal catalog, map speed limits and the
     // matcher index exactly as the installed-map loader does, and its lane
     // graph carries the verified colliders into every simulation built on it.
@@ -493,7 +584,13 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
   })();
   runtimesByAsset.set(assetDigest, pending);
   try {
-    return await pending;
+    const runtime = await pending;
+    while (runtimesByAsset.size > MAP_RUNTIME_LIMIT) {
+      const [evictedDigest, evicted] = runtimesByAsset.entries().next().value!;
+      runtimesByAsset.delete(evictedDigest);
+      void evicted.then((stale) => runtimesByKey.delete(stale.key), () => undefined);
+    }
+    return runtime;
   } catch (error) {
     runtimesByAsset.delete(assetDigest);
     throw error;
@@ -844,8 +941,8 @@ function ambientInstance(
   };
 }
 
-async function fetchBytes(url: string): Promise<Uint8Array> {
-  const response = await fetch(url);
+async function fetchBytes(url: string, sha256?: string): Promise<Uint8Array> {
+  const response = await fetch(await resolveAssetUrl(url, sha256));
   if (!response.ok) throw new Error(`Could not load ${url}: HTTP ${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return bytes;
@@ -854,10 +951,10 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function fetchJson(url: string): Promise<any> {
-  return JSON.parse(new TextDecoder().decode(await fetchBytes(url)));
+async function fetchJson(url: string, sha256?: string): Promise<any> {
+  return JSON.parse(new TextDecoder().decode(await fetchBytes(url, sha256)));
 }
 
-async function fetchText(url: string): Promise<string> {
-  return new TextDecoder().decode(await fetchBytes(url));
+async function fetchText(url: string, sha256?: string): Promise<string> {
+  return new TextDecoder().decode(await fetchBytes(url, sha256));
 }

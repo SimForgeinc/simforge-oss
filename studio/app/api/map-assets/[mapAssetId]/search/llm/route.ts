@@ -4,10 +4,10 @@ import { getAppContext } from "@/app/lib/db/app-context";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
 import {
   searchMapLocationsLlm,
-  LlmSearchUnavailableError,
   type InspectLocationGeometryToolInput,
   type ProposeScenarioDraftToolFn,
 } from "@/app/lib/maps/search/server/map-search-llm-service";
+import { AssistantUnavailableError } from "@/app/lib/llm/langchain-support";
 import {
   inspectLocationGeometry,
   type GeometryReport,
@@ -155,13 +155,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof LlmSearchUnavailableError) {
+    if (err instanceof AssistantUnavailableError) {
       return NextResponse.json(
-        {
-          error: "AI search is not configured for this environment",
-          code: "llm_unavailable",
-        },
-        { status: 503 },
+        { error: "llm_unavailable", code: "llm_unavailable", message: err.message },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
     console.error("[map-search-llm] failed:", err);

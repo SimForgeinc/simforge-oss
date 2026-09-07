@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 
 import { createRenderEngine as createBrowserRenderEngine } from "@simforge-oss/render/web";
 import { canonicalize, type RenderIntentV1 } from "@simforge-oss/scenario";
@@ -10,16 +10,28 @@ import {
   assertEngineSupportsIntent,
   createFixedSchedules,
   hashFile,
-  loadBuiltinRenderEngine,
+  type RenderEngineAdapter,
 } from "@simforge-oss/render";
 
 import type {
+  EngineExecution,
   RecordingArtifact,
   RenderExecutionRequest,
   RenderExecutionResult,
 } from "./types.js";
 
-export async function executeRender(request: RenderExecutionRequest): Promise<RenderExecutionResult> {
+/**
+ * The run every lane shares: proves the claim's inputs are exactly the
+ * intent's immutable declarations (digest and size, nothing missing, nothing
+ * extra), executes the engine, and proves every artifact the engine reported
+ * is the file on disk. Lane-specific packaging (the browser recording, the
+ * native identity-bound uploads) builds on the returned manifest.
+ */
+export async function executeEngine(
+  request: RenderExecutionRequest,
+  engine: RenderEngineAdapter,
+  options: { readonly executionIntent?: (intent: RenderIntentV1) => RenderIntentV1; readonly capabilityIntent?: (intent: RenderIntentV1, executionIntent: RenderIntentV1) => RenderIntentV1 } = {},
+): Promise<EngineExecution> {
   const wireIntent = request.intent as unknown as RenderIntentV1 & { engine?: unknown; schedule?: unknown };
   const { engine: _engine, schedule: _schedule, ...portableIntent } = wireIntent;
   const intent = portableIntent as RenderIntentV1;
@@ -46,52 +58,61 @@ export async function executeRender(request: RenderExecutionRequest): Promise<Re
   }
 
   await mkdir(request.workspace, { recursive: true, mode: 0o700 });
-  const engine = request.engine === "browser"
-    ? createBrowserRenderEngine(browserEngineOptions(request.engine))
-    : await loadBuiltinRenderEngine(request.engine, browserEngineOptions(request.engine));
-  try {
-    const executionIntent = request.engine === "browser"
-      ? browserExecutionIntent(intent)
-      : intent;
-    assertEngineSupportsIntent(
-      engine.capabilities,
-      request.engine === "browser"
-        ? { ...intent, renderSpec: executionIntent.renderSpec }
-        : intent,
-    );
-    const schedules = createFixedSchedules(intent);
-    const stageTimingsMs: Record<string, number> = {};
-    const engineStarted = performance.now();
-    const runtimeManifest = RenderArtifactManifestSchema.parse(await engine.execute({
-      jobId: request.jobId,
-      attempt: request.attempt,
-      intent: executionIntent,
-      intentSha256,
-      schedules,
-      inputs: request.inputs,
-      workspace: request.workspace,
-      signal: request.signal,
-      reportProgress: request.reportProgress ?? (async () => undefined),
-    }));
-    stageTimingsMs.engineExecute = performance.now() - engineStarted;
-    if (runtimeManifest.intentSha256 !== intentSha256) {
-      throw new Error("render engine returned a manifest for a different intent");
+  const executionIntent = options.executionIntent ? options.executionIntent(intent) : intent;
+  assertEngineSupportsIntent(
+    engine.capabilities,
+    options.capabilityIntent ? options.capabilityIntent(intent, executionIntent) : intent,
+  );
+  const schedules = createFixedSchedules(intent);
+  const stageTimingsMs: Record<string, number> = {};
+  const engineStarted = performance.now();
+  const runtimeManifest = RenderArtifactManifestSchema.parse(await engine.execute({
+    jobId: request.jobId,
+    attempt: request.attempt,
+    intent: executionIntent,
+    intentSha256,
+    executionPackageControlSha256: request.executionPackageControlSha256 ?? "",
+    schedules,
+    inputs: request.inputs,
+    workspace: request.workspace,
+    signal: request.signal,
+    reportProgress: request.reportProgress ?? (async () => undefined),
+  }));
+  stageTimingsMs.engineExecute = performance.now() - engineStarted;
+  if (runtimeManifest.intentSha256 !== intentSha256) {
+    throw new Error("render engine returned a manifest for a different intent");
+  }
+  const verifyStarted = performance.now();
+  for (const artifact of runtimeManifest.artifacts) {
+    const path = safeArtifactPath(request.workspace, artifact.relativePath);
+    const actual = await hashFile(path);
+    if (actual.sha256 !== artifact.sha256 || actual.sizeBytes !== artifact.sizeBytes) {
+      throw new Error(`render artifact integrity mismatch: ${artifact.relativePath}`);
     }
-    const verifyStarted = performance.now();
-    for (const artifact of runtimeManifest.artifacts) {
-      const path = safeArtifactPath(request.workspace, artifact.relativePath);
-      const actual = await hashFile(path);
-      if (actual.sha256 !== artifact.sha256 || actual.sizeBytes !== artifact.sizeBytes) {
-        throw new Error(`render artifact integrity mismatch: ${artifact.relativePath}`);
-      }
-    }
-    stageTimingsMs.artifactVerify = performance.now() - verifyStarted;
-    if (runtimeManifest.artifacts.length === 0) throw new Error("render engine produced no artifacts");
+  }
+  stageTimingsMs.artifactVerify = performance.now() - verifyStarted;
+  if (runtimeManifest.artifacts.length === 0) throw new Error("render engine produced no artifacts");
+  const frameCount = runtimeManifest.artifacts.reduce(
+    (maximum, artifact) => Math.max(maximum, artifact.frameCount ?? 0),
+    schedules[0]?.frameCount ?? 0,
+  );
+  return { intentSha256, intent, runtimeManifest, frameCount, stageTimingsMs };
+}
 
-    const frameCount = runtimeManifest.artifacts.reduce(
-      (maximum, artifact) => Math.max(maximum, artifact.frameCount ?? 0),
-      schedules[0]?.frameCount ?? 0,
-    );
+/**
+ * The browser capture lane: runs the Three.js engine and packages its
+ * outputs as a browser recording (review MP4, sensor streams, recording
+ * manifest). Native renders take `executeEngine` directly (`native-render.ts`).
+ */
+export async function executeRender(request: RenderExecutionRequest): Promise<RenderExecutionResult> {
+  if (request.engine !== "browser") throw new Error(`executeRender packages browser recordings; ${request.engine} has its own lane`);
+  const engine = createBrowserRenderEngine(browserEngineOptions(request.engine));
+  try {
+    const execution = await executeEngine(request, engine, {
+      executionIntent: browserExecutionIntent,
+      capabilityIntent: (intent, executionIntent) => ({ ...intent, renderSpec: executionIntent.renderSpec }),
+    });
+    const { intent, intentSha256, runtimeManifest, frameCount, stageTimingsMs } = execution;
     const artifacts: RecordingArtifact[] = [];
     const omittedArtifacts: Array<{
       role: string;
@@ -237,7 +258,7 @@ async function encodeBrowserMp4(
   const preset = qualityPreset(intent.renderSpec.video?.quality);
   const crf = Number(qualityCrf(intent.renderSpec.video?.quality));
   await runProcess(
-    "ffmpeg",
+    process.env.SIMFORGE_FFMPEG_BINARY?.trim() || "ffmpeg",
     [
       "-hide_banner",
       "-loglevel", "error",
@@ -271,7 +292,7 @@ function qualityPreset(quality: "draft" | "standard" | "high" | "lossless" | und
 
 async function probeDuration(path: string, signal: AbortSignal): Promise<number> {
   const output = await runProcess(
-    "ffprobe",
+    process.env.SIMFORGE_FFPROBE_BINARY?.trim() || "ffprobe",
     ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path],
     signal,
   );
@@ -312,15 +333,16 @@ function rgbFrameRate(intent: RenderIntentV1): number | undefined {
 function browserEngineOptions(engine: RenderExecutionRequest["engine"]): Readonly<Record<string, unknown>> {
   if (engine !== "browser") return {};
   return {
-    chromiumExecutablePath: process.env.CHROMIUM_EXECUTABLE_PATH ?? "/usr/bin/google-chrome",
+    ...(process.env.CHROMIUM_EXECUTABLE_PATH ? { chromiumExecutablePath: process.env.CHROMIUM_EXECUTABLE_PATH } : {}),
     headless: true,
   };
 }
 
-function safeArtifactPath(workspace: string, relativePath: string): string {
+/** Resolves an artifact the engine reported to its file inside the workspace, refusing escapes. */
+export function safeArtifactPath(workspace: string, relativePath: string): string {
   const root = resolve(workspace);
   const path = resolve(root, relativePath);
-  if (path !== root && !path.startsWith(`${root}/`)) throw new Error(`artifact escapes workspace: ${relativePath}`);
+  if (path !== root && !path.startsWith(`${root}${sep}`)) throw new Error(`artifact escapes workspace: ${relativePath}`);
   return path;
 }
 

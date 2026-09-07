@@ -4,6 +4,7 @@ import {
   getLocationCatalog,
 } from "@/app/lib/editor-tools/location-search";
 import { runManageSelectedRoads } from "@/app/lib/editor-tools/selected-road-tool";
+import { worldAnchorAtFraction } from "@/app/lib/scenario-editor/batch-scenario-generator/routing-geometry";
 import type {
   AddActorToolInput,
   EditorToolContext,
@@ -163,6 +164,28 @@ function validateSelectedRoad(
   return { ok: true as const };
 }
 
+/**
+ * Scene-frame pose for a road fraction, from the runtime lane centerline.
+ * Frame rule matches the collision-draft lowering: runtime `(x, y, z, yaw°)`
+ * with y north becomes scene `(x, z, -y)` with heading in radians. A driving
+ * lane on the road is preferred; any centerline-bearing lane is accepted.
+ */
+function scenePoseForRoadFraction(
+  context: EditorToolContext,
+  roadId: string,
+  fraction: number,
+): { x: number; y: number; z: number; headingRad: number } | null {
+  const segments = (context.bundle.runtime?.road_segments ?? []).filter(
+    (segment) => String(segment.road_id) === roadId && (segment.centerline?.length ?? 0) >= 2,
+  );
+  const segment =
+    segments.find((candidate) => (candidate.lane_type ?? "driving") === "driving") ?? segments[0];
+  if (!segment) return null;
+  const anchor = worldAnchorAtFraction(segment, fraction);
+  if (!anchor) return null;
+  return { x: anchor.x, y: anchor.z, z: -anchor.y, headingRad: (anchor.yaw * Math.PI) / 180 };
+}
+
 function buildAddActorResult(
   toolId: EditorToolId,
   input: AddActorToolInput,
@@ -198,6 +221,7 @@ function buildAddActorResult(
         type: "add_actor",
         label: `Add ${actorLabel}`,
         input: actorInput,
+        scenePose: scenePoseForRoadFraction(context, actorInput.roadId, actorInput.fraction),
         autoApply: true,
       },
     ],

@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { lock } from "proper-lockfile";
 import {
+  LOCAL_HOST_TOKEN_ENV,
   localHostStateDir,
   readLocalHostState,
   removeLocalHostState,
@@ -164,16 +165,24 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     const current = await readLocalHostState();
     if (current && current.pid !== process.pid && processAlive(current.pid)) return 3;
     // Claim ownership before PGlite is opened, including migration and seeding.
+    const controlToken = randomBytes(24).toString("base64url");
     const statePath = await writeLocalHostState({
       schema: "simforge.local-host-state/v1",
       pid: process.pid,
       port,
       baseUrl,
-      controlToken: randomBytes(24).toString("base64url"),
+      controlToken,
       startedAt: new Date().toISOString(),
       withWorker,
     });
     published = true;
+    // The per-start secret every owned process presents to the local service
+    // (studio/proxy.ts). The CPU worker's own bearer is the same secret, so
+    // the public default worker token never authorizes anything here.
+    const accessEnv = {
+      [LOCAL_HOST_TOKEN_ENV]: controlToken,
+      SIMFORGE_RENDER_WORKER_TOKEN: simforgeEnv("RENDER_WORKER_TOKEN")?.trim() || controlToken,
+    };
     try {
       await migrate();
       await seed();
@@ -183,11 +192,12 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     }
     if (ownershipError) throw ownershipError;
 
-    const server = spawnHostCommand(plan.server, { ...runtimeEnv, PORT: String(port), HOSTNAME: hostname });
+    const server = spawnHostCommand(plan.server, { ...runtimeEnv, ...accessEnv, PORT: String(port), HOSTNAME: hostname });
     children.push(server);
     if (withWorker) {
       children.push(spawnHostCommand(plan.worker, {
         ...runtimeEnv,
+        ...accessEnv,
         SIMFORGE_API_BASE_URL: simforgeEnv("API_BASE_URL") ?? `http://127.0.0.1:${port}`,
       }));
     }
@@ -198,6 +208,7 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     }
 
     void waitForLocalHostReady(baseUrl, {
+      headers: { authorization: `Bearer ${controlToken}` },
       isAlive: () => !stopping && server.exitCode === null && server.signalCode === null,
     }).then((ready) => {
       process.stdout.write(`${JSON.stringify({
@@ -206,6 +217,8 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
         baseUrl,
         statePath,
         withWorker,
+        // Browsers need a trusted-local session; `pnpm host:open` establishes one.
+        open: ready ? "pnpm host:open" : undefined,
       })}\n`);
     });
     const { promise, resolve: resolveExit, reject: rejectExit } = Promise.withResolvers<number>();

@@ -1030,12 +1030,22 @@ type MapDescriptorRow = {
  */
 async function readActiveEditorAssetReleaseCacheKey() {
   const row = await queryOne<{ release_cache_key: string | null }>(
-    `SELECT STRING_AGG(
-       CONCAT_WS(':', workspace_id, id, manifest_sha256),
-       ',' ORDER BY workspace_id, id
-     ) AS release_cache_key
-     FROM simforge.editor_asset_releases
-     WHERE release_state = 'active'`,
+    `SELECT CONCAT_WS(':',
+       (SELECT COALESCE(STRING_AGG(
+         CONCAT_WS(':', workspace_id, id, manifest_sha256), ',' ORDER BY workspace_id, id
+       ), 'no-active-editor-asset-release')
+        FROM simforge.editor_asset_releases WHERE release_state = 'active'),
+       (SELECT MD5(COALESCE(STRING_AGG(
+         CONCAT_WS(':', mv.id, mv.source_map_asset_id, mv.created_at,
+           mv.label, mv.locality, mv.topology_artifact_url, mv.xodr_artifact_id,
+           mv.xodr_sha256, mv.coordinate_system_id, mv.coordinate_system_sha256,
+           mv.sumo_network_sha256, mv.browser_asset_set_id, bs.asset_set_state,
+           bs.closure_sha256), ',' ORDER BY mv.id
+       ), ''))
+        FROM simforge.map_versions mv
+        LEFT JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+        WHERE mv.retired_at IS NULL)
+     ) AS release_cache_key`,
     {},
   );
   return row?.release_cache_key ?? "no-active-editor-asset-release";

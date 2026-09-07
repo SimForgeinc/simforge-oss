@@ -11,8 +11,8 @@ import type { MapSearchResult } from "@/app/lib/maps/search/map-search";
  *     assistant turn may carry a candidates[] payload that the panel renders
  *     as inline cards beneath the bubble.
  *   - `isLoading` is true while a turn is in flight.
- *   - `unavailable` is true once the server responds with 503 (no
- *     ANTHROPIC_API_KEY configured); the panel should explain the fallback.
+ *   - `unavailable` carries the server's reason once it responds with 503
+ *     (no configured AI model); the panel shows it and how to fix it.
  *
  * Submitting calls `sendMessage(text)`, which appends the user turn locally
  * and POSTs the full transcript to the server. The server returns a single
@@ -152,8 +152,8 @@ export interface UseMapSearchLlmResult {
   isLoading: boolean;
   /** Plain-text error message for display. */
   error: string | null;
-  /** True when the server reports the LLM is not configured (503). */
-  unavailable: boolean;
+  /** Server-reported reason when no AI model is configured (503); null otherwise. */
+  unavailable: string | null;
   /** Last server-side considered/total counts; null until the first reply. */
   lastTurnStats: {
     consideredDocuments: number;
@@ -174,7 +174,7 @@ export function useMapSearchLlm(mapAssetId: string): UseMapSearchLlmResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const [lastTurnStats, setLastTurnStats] = useState<
     UseMapSearchLlmResult["lastTurnStats"]
   >(null);
@@ -192,7 +192,7 @@ export function useMapSearchLlm(mapAssetId: string): UseMapSearchLlmResult {
     setMessages([]);
     setIsLoading(false);
     setError(null);
-    setUnavailable(false);
+    setUnavailable(null);
     setLastTurnStats(null);
   }, []);
 
@@ -215,7 +215,7 @@ export function useMapSearchLlm(mapAssetId: string): UseMapSearchLlmResult {
 
       setIsLoading(true);
       setError(null);
-      setUnavailable(false);
+      setUnavailable(null);
 
       const payload = {
         messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -229,7 +229,8 @@ export function useMapSearchLlm(mapAssetId: string): UseMapSearchLlmResult {
       })
         .then(async (res) => {
           if (res.status === 503) {
-            setUnavailable(true);
+            const body = (await res.json().catch(() => null)) as { message?: string } | null;
+            setUnavailable(body?.message ?? "AI chat is not configured.");
             setIsLoading(false);
             return;
           }
@@ -291,7 +292,7 @@ export function useMapSearchLlm(mapAssetId: string): UseMapSearchLlmResult {
     setMessages([]);
     setIsLoading(false);
     setError(null);
-    setUnavailable(false);
+    setUnavailable(null);
     setLastTurnStats(null);
   }, [mapAssetId]);
 

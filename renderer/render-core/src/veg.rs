@@ -113,10 +113,11 @@ fn sidecar_path(glb: &str) -> PathBuf {
 }
 
 /// Start loading every veg GLB; mirrors the tile-load pattern of the binary.
-pub fn spawn_veg(commands: &mut Commands, server: &AssetServer, veg_glbs: &[String]) {
-    for g in veg_glbs {
-        let path = g.trim_start_matches('/').to_owned();
-        let handle: Handle<Gltf> = server.load(&path);
+/// `veg_glbs` pairs each asset path (see `platform::asset_path`) with the
+/// filesystem path its `.instances.json` sidecar is derived from.
+pub fn spawn_veg(commands: &mut Commands, server: &AssetServer, veg_glbs: &[(String, &str)]) {
+    for (path, g) in veg_glbs {
+        let handle: Handle<Gltf> = server.load(path);
         commands.spawn(VegLoad(handle, sidecar_path(g)));
     }
 }

@@ -13,9 +13,9 @@ through opaquely.
 
 | What | Where |
 |---|---|
-| Install root | `$SIMFORGE_NATIVE_RUNTIME_ROOT`, else `${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` |
-| Binary | `$SIMFORGE_RUNNER_BIN`, else `<install-root>/bin/simforge-runner`, else `PATH` |
-| Writable worker root | `--root`, `$SIMFORGE_NATIVE_RUNTIME_STATE_ROOT`, else `${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime` |
+| Install root | `$SIMFORGE_NATIVE_RUNTIME_ROOT`, else the OS data directory (see defaults below) |
+| Binary | `$SIMFORGE_RUNNER_BIN`, else `<install-root>/bin/simforge-runner[.exe]`, else `PATH` |
+| Writable worker root | `--root`, `$SIMFORGE_NATIVE_RUNTIME_STATE_ROOT`, else the OS state directory (see defaults below) |
 | Runtime manifest | `$SIMFORGE_RUNTIME_MANIFEST`, else `runtime-manifest.json` beside the binary |
 
 The runtime manifest (`simforge.native-runtime/v1`) pins the binary's sha256,
@@ -30,35 +30,83 @@ Runtime inspection does not open or create worker state. Local Studio assigns
 its worker state to `<SIMFORGE_CLOUD_ROOT>/native-runtime` unless explicitly
 overridden; packaged assets may remain on a read-only AppImage mount.
 
-Installed assets and writable worker state are separate:
+Installed assets and writable worker state are separate. Names follow the
+target (`.exe`, `libsimforge_render.so` / `libsimforge_render.dylib` /
+`simforge_render.dll`, venv `bin/python` / `Scripts\python.exe`):
 
 ```
-<install-root>/bin/simforge-runner  bin/native-render-service  bin/runtime-manifest.json
-<install-root>/lib/libsimforge_render.so
-<install-root>/wheels/*.whl          simforge-oss-gym, -physics, -gpu, -native-renderer, -splat
-<install-root>/share/sky/            SOURCES.json + NASA-derived .skytex plates for the Bevy renderer
-<install-root>/venv                  symlink -> venvs/<generation>, the active provider interpreter
-<install-root>/venvs/<generation>/   provider venvs built in place from wheels/ by install-runtime.sh (immutable, never pruned)
+<install-root>/runtimes/<version>-<revision12>-<runnerSha12>/   one immutable installed runtime
+    bin/simforge-runner[.exe]  bin/native-render-service[.exe]  bin/runtime-manifest.json
+    lib/<render library>       share/licenses/  share/sky/ (SOURCES.json + NASA-derived plates)
+    wheels/*.whl  venv/        provider bundles only (--providers): wheels + venv built in place
+<install-root>/bin lib share wheels venv   links (junctions on Windows) into the active generation
 <state-root>/cas/  <state-root>/jobs/  <state-root>/worker/
 ```
 
-Build/package/install: `scripts/native-runtime/build-runner.sh` (runner,
-`native-render-service` + `libsimforge_render.so` with `gpu-interop`, provider
-wheels via maturin/`python -m build`), `package-runtime.sh` (one tar.gz with
-`SHA256SUMS`, every manifest component byte-checked), `install-runtime.sh`
-(checksum verification, fresh `venvs/<generation>` built at its final path
-from the staged bundled wheels, then isolated Python import checks for every
-provider before publishing `bin/lib/wheels/share` and atomically switching the
-`venv` symlink, then `runtime show`). `write-runtime-manifest.mjs` produces the manifest and
-`support-tiers.json` declares the tiers and the provider wheel → module map.
-A supported fresh install therefore needs no source tree or `PYTHONPATH`;
-GPU/driver/external-asset prerequisites per tier are reported by each
-provider's `capabilities`, never assumed. Each tier carries a
+Default roots: install `${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime`
+(Linux), `~/Library/Application Support/simforge/native-runtime` (macOS),
+`%LOCALAPPDATA%\simforge\native-runtime` (Windows); state
+`${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime` (Linux),
+`…/Application Support/simforge/native-runtime-state` (macOS),
+`%LOCALAPPDATA%\simforge\native-runtime-state` (Windows).
+
+Build/package/install are Node scripts under `scripts/native-runtime/` and
+need only cargo, git and node on the target host (no bash, tar or sha256sum):
+
+```
+node scripts/native-runtime/package-runtime.mjs --target <triple> [--providers] [--no-sky|--sky <dir>] [--offline]
+node scripts/native-runtime/install-runtime.mjs dist/native-runtime/simforge-native-runtime-<version>-<triple>.tar.gz [--root <dir>] [--python <interp>] [--extras a,b]
+```
+
+`build-runner.mjs` builds the runner and (unless `--no-sky`) the render
+service + library — `--features gpu-interop` only for Linux targets, where the
+opaque-fd Vulkan→CUDA bridge exists — and, only with `--providers`, the
+provider wheels; the CPU/compiler/Bevy baseline needs no Python, CUDA or
+research environment. It writes the manifest with
+`write-runtime-manifest.mjs`, which emits only the tiers the bundle carries
+and resolves each tier's qualification for that exact target from
+`support-tiers.json` (`qualifiedTargets`); any other target ships the tier
+`unqualified` with an explicit blocker, because source portability is not
+execution evidence. The built runner's `runtime show` self-check runs only
+when the target is the build host; a cross-built binary is never executed on
+the build machine. `package-runtime.mjs` stages exactly the manifest closure,
+writes `SHA256SUMS` and packs a gzip'd ustar archive with Node's zlib
+(`runtime-archive.mjs`; the desktop stage imports the same reader/verifier).
+`install-runtime.mjs` verifies the archive, refuses a foreign-target bundle,
+creates the generation (identical re-installs reuse it; a different bundle
+under the same name is an error; old generations are never pruned because
+jobs may be pinned to them), builds the provider venv at its final path with
+isolated import checks when wheels are present, repoints the root links
+(rename(2) on POSIX; remove+recreate junction on Windows) and runs
+`runtime show`. A supported fresh install therefore needs no source tree or
+`PYTHONPATH`; GPU/driver/external-asset prerequisites per tier are reported
+by each provider's `capabilities`, never assumed. Each tier carries a
 `qualification` block (`qualified` | `unqualified` + blockers + separately
-retained `observed` evidence); every tier ships unqualified until Main
-promotes it after the named gates pass on the installed bundle (for
+retained `observed` evidence); a tier is promoted for a target only after
+Main's named gates pass on the installed bundle there (for
 `bevy-sensor-render`: inspected non-blank, scene-dependent renders and a
 complete resource closure — a green build or byte parity is not enough).
+
+### OS primitives
+
+`native/crates/simforge-runner/src/platform/` holds one implementation per
+OS family with identical semantics (nothing is cfg-disabled to a no-op):
+
+| Need | Unix (Linux, macOS) | Windows |
+|------|---------------------|---------|
+| owner lock | `flock(LOCK_EX\|LOCK_NB)` | `LockFileEx` on one byte far past the owner record (record stays readable) |
+| `job start --detach` | `setsid()` | `CREATE_NEW_PROCESS_GROUP \| CREATE_NO_WINDOW` |
+| `job cancel` → owner | `kill(SIGTERM)` | `SetEvent` on `Local\SimForgeRunner.Terminate.<pid>` |
+| owner → provider child | `kill(SIGTERM)` | `GenerateConsoleCtrlEvent(CTRL_BREAK)` to the child's own group (`signal.SIGBREAK`) |
+| receive stop | `sigaction`; `SIGHUP` ignored | console ctrl handler + named-event waiter |
+| durable rename / publish | `rename`/`link` + dir fsync | `MoveFileExW(WRITE_THROUGH)` + directory flush |
+| read-only blob | `chmod 0444` | `FILE_ATTRIBUTE_READONLY` |
+| capacity probes | `sysconf`, `statvfs` | `GlobalMemoryStatusEx`, `GetDiskFreeSpaceExW` |
+
+The `cancel.request` file remains the durable cancellation path on every OS;
+the OS request only shortens the owner's reaction time. Hosts spawning the
+runner on Windows should pass `windowsHide: true` so a detached job gets a
+hidden console rather than a window.
 
 ## CLI contract
 

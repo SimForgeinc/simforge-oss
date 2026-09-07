@@ -1,6 +1,7 @@
 import { once } from 'node:events';
 import { promises as fs } from 'node:fs';
 import net from 'node:net';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { decode, encode } from '@msgpack/msgpack';
 
@@ -65,9 +66,28 @@ export class NativeServiceClient {
     socket.on('close', () => this.#fail(new Error('native render service socket closed')));
   }
 
-  static async connect(socketPath: string): Promise<NativeServiceClient> {
-    const socket = net.createConnection(socketPath);
-    await once(socket, 'connect');
+  /**
+   * Connects to the service endpoint (`--socket`: Unix socket path or, on
+   * Windows, a `\\.\pipe\` name). A refused/missing endpoint right after the
+   * ready signal is retried briefly; anything else is the caller's error.
+   */
+  static async connect(endpoint: string, options: { readonly signal?: AbortSignal; readonly attempts?: number } = {}): Promise<NativeServiceClient> {
+    const attempts = options.attempts ?? 40;
+    let socket: net.Socket | undefined;
+    for (let attempt = 1; ; attempt += 1) {
+      if (options.signal?.aborted) throw options.signal.reason instanceof Error ? options.signal.reason : new Error('native render aborted');
+      const candidate = net.createConnection(endpoint);
+      try {
+        await once(candidate, 'connect', { signal: options.signal });
+        socket = candidate;
+        break;
+      } catch (error) {
+        candidate.destroy();
+        const code = (error as NodeJS.ErrnoException).code;
+        if (attempt >= attempts || (code !== 'ECONNREFUSED' && code !== 'ENOENT' && code !== 'EAGAIN')) throw error;
+        await delay(50);
+      }
+    }
     const client = new NativeServiceClient(socket);
     const hello = await client.rpc({ op: 'hello' });
     if (hello.protocol !== NATIVE_SERVICE_PROTOCOL || !hello.shm?.path) {

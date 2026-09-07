@@ -1,11 +1,14 @@
 /**
- * Renderer-facing contract of the installed desktop map cache.
+ * Renderer-facing contract of the desktop map cache.
  *
- * The Electron preload exposes `window.simforgeDesktop` through
- * `contextBridge`; every method is a narrow, promise-returning IPC call.
- * Control and metadata travel over IPC, asset payloads never do: `ensure`
- * returns an unguessable `simforge-cache://` capability URL whose `fetch`
- * streams the verified on-disk bytes (byte ranges included).
+ * The map bytes live in the LOCAL SERVICE's content-addressed store
+ * (studio/app/lib/map-cache), not in the Electron process. The preload exposes
+ * `window.simforgeDesktop` through `contextBridge`; every method is a narrow,
+ * promise-returning IPC call that the shell forwards to the protected
+ * `/api/simforge/map-cache/**` endpoints. Control and metadata travel over
+ * IPC, asset payloads never do: `ensure` returns an unguessable same-origin
+ * `/api/simforge/map-cache/stream/...` capability URL whose `fetch` streams
+ * the verified on-disk bytes (byte ranges included).
  */
 
 export const DESKTOP_BRIDGE_VERSION = 1 as const;
@@ -13,18 +16,21 @@ export const DESKTOP_BRIDGE_VERSION = 1 as const;
 /** `ipcMain.handle` channel prefix shared by preload and main process. */
 export const DESKTOP_MAP_CACHE_IPC_PREFIX = "simforge:map-cache:" as const;
 
-/** Custom scheme that streams verified cache content into the renderer. */
-export const DESKTOP_MAP_CACHE_PROTOCOL = "simforge-cache" as const;
-
 export type DesktopMapCacheStatus = {
   backend: "filesystem";
-  /** Absolute cache root currently in use. */
+  /** Absolute cache root in use, or the chosen root that is currently unavailable. */
   directory: string;
   usedBytes: number;
   /** Free bytes on the volume holding `directory`; null when unknown. */
   availableBytes: number | null;
   assetCount: number;
   activeDownloads: number;
+  /**
+   * Why the chosen cache location cannot be used right now (unplugged drive,
+   * revoked permission); null when the cache is working. The service refuses
+   * downloads instead of silently falling back to the system disk.
+   */
+  unavailable: string | null;
 };
 
 export type DesktopMapCacheHasRequest = {
@@ -35,18 +41,16 @@ export type DesktopMapCacheHasRequest = {
 export type DesktopMapCacheEnsureRequest = {
   /** Subscriber handle for `cancel`; deduplicated peers keep their transfer. */
   requestId: string;
-  /** Canonical authenticated same-origin map URL. */
+  /** Canonical map asset URL on this host; the service resolves the upstream source itself. */
   url: string;
-  /** Optional server-provided signed delivery URL for the same bytes. */
-  downloadUrl?: string;
-  /** Expected content digest; the service rejects mismatching bytes. */
+  /** Expected content digest of the STORED bytes; the service rejects mismatching bytes. */
   sha256?: string;
-  /** Declared byte length; enforced when supplied. */
+  /** Declared byte length of the stored bytes; enforced when supplied. */
   sizeBytes?: number;
 };
 
 export type DesktopMapCacheEnsureResult = {
-  /** Window-scoped `simforge-cache://` capability URL; never a file path. */
+  /** Same-origin `/api/simforge/map-cache/stream/...` capability URL; never a file path. */
   url: string;
   sha256: string;
   sizeBytes: number;

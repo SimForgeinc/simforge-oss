@@ -1746,7 +1746,7 @@ impl SceneApp {
         // Star/Moon plates are part of the resident scene's look at every
         // hour; an engine without them would silently render a starless sky.
         let sky_assets = crate::sky_pass::SkyAssetPaths::resolve()?;
-        std::env::set_var("BEVY_ASSET_ROOT", "/");
+        std::env::set_var("BEVY_ASSET_ROOT", crate::platform::ASSET_ROOT);
         let (tx, rx) = crossbeam_channel::unbounded::<SentPass>();
         #[cfg(feature = "gpu-interop")]
         let (device_tx, device_rx) = crossbeam_channel::unbounded::<SentDevice>();
@@ -1765,7 +1765,7 @@ impl SceneApp {
         // transmittance as a daylight-blue wash. The cubemap path draws a
         // Skybox over the clear anyway.
         // Exportable Vulkan memory/semaphores must be negotiated at device
-        // creation; `gpu_interop` owns that configuration.
+        // creation; `gpu_interop` owns that configuration (Linux only).
         #[cfg(feature = "gpu-interop")]
         app.insert_resource(crate::gpu_interop::raw_vulkan_init_settings());
         app.insert_resource(ClearColor(Color::BLACK))
@@ -1775,10 +1775,11 @@ impl SceneApp {
             .init_resource::<HostLayerUnion>()
             .add_plugins((
                 DefaultPlugins
-                    .set(bevy::asset::AssetPlugin {
-                        file_path: "/".into(),
-                        ..default()
-                    })
+                    .set(crate::platform::asset_plugin())
+                    // Device creation on the backend this OS is qualified
+                    // for (Vulkan / Metal / DX12); the resident engine keeps
+                    // asynchronous pipeline compilation.
+                    .set(crate::platform::render_plugin(false))
                     .set(WindowPlugin {
                         primary_window: None,
                         exit_condition: ExitCondition::DontExit,
@@ -2845,15 +2846,13 @@ impl SceneApp {
 
     /// Queue GLB tiles for loading. Call before [`Self::wait_until_ready`].
     pub fn load_tiles(&mut self, glbs: &[String]) -> Result<()> {
-        for g in glbs {
-            if !std::path::Path::new(g).is_absolute() {
-                bail!("glb paths must be absolute: {g}");
-            }
-        }
+        let paths = glbs
+            .iter()
+            .map(|g| crate::platform::asset_path(std::path::Path::new(g)).map_err(|e| anyhow::anyhow!("glb {e}")))
+            .collect::<Result<Vec<String>>>()?;
         self.scene_revision += 1;
         let server = self.app.world().resource::<AssetServer>().clone();
-        for g in glbs {
-            let path: String = g.trim_start_matches('/').to_owned();
+        for path in paths {
             let handle: Handle<Gltf> = server.load(path);
             self.app.world_mut().spawn(TileLoad(handle));
         }
@@ -2864,14 +2863,17 @@ impl SceneApp {
     /// Keeping this separate from static tiles avoids accidentally drawing the
     /// uninstanced prototype roots.
     pub fn load_vegetation(&mut self, glbs: &[String]) -> Result<()> {
-        for g in glbs {
-            if !std::path::Path::new(g).is_absolute() {
-                bail!("vegetation glb paths must be absolute: {g}");
-            }
-        }
+        let paths = glbs
+            .iter()
+            .map(|g| {
+                crate::platform::asset_path(std::path::Path::new(g))
+                    .map(|path| (path, g.as_str()))
+                    .map_err(|e| anyhow::anyhow!("vegetation glb {e}"))
+            })
+            .collect::<Result<Vec<_>>>()?;
         let server = self.app.world().resource::<AssetServer>().clone();
         let mut commands = self.app.world_mut().commands();
-        crate::veg::spawn_veg(&mut commands, &server, glbs);
+        crate::veg::spawn_veg(&mut commands, &server, &paths);
         Ok(())
     }
 
@@ -3285,7 +3287,7 @@ impl SceneApp {
         let handle = if let Some(handle) = self.actor_asset_cache.get(&cache_key) {
             handle.clone()
         } else {
-            let asset_path = cache_key.trim_start_matches('/').to_string();
+            let asset_path = crate::platform::asset_path(glb_path)?;
             let server = self.app.world().resource::<AssetServer>().clone();
             let handle: Handle<Gltf> = server.load(asset_path);
             self.actor_asset_cache.insert(cache_key, handle.clone());

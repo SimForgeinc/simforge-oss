@@ -27,7 +27,7 @@ use anyhow::{bail, Context, Result};
 use memmap2::MmapMut;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{fence, Ordering};
 
 /// Reserved meta bytes at the start of the ring.
@@ -42,6 +42,20 @@ pub const META_BUNDLE_SEQ: usize = 16;
 pub const META_BUNDLE_OFFSET: usize = 24;
 pub const META_BUNDLE_LEN: usize = 32;
 pub const META_BUNDLE_TICK: usize = 40;
+
+/// Default location of a ring file named `name` when the host passes no
+/// `--shm`: Linux tmpfs (`/dev/shm`) when mounted, otherwise the OS temp
+/// directory. The ring is a regular file on every OS; Windows and macOS
+/// map it from the temp directory, which is what their hosts read back.
+pub fn default_ring_path(name: &str) -> PathBuf {
+    if cfg!(target_os = "linux") {
+        let tmpfs = Path::new("/dev/shm");
+        if tmpfs.is_dir() {
+            return tmpfs.join(name);
+        }
+    }
+    std::env::temp_dir().join(name)
+}
 
 pub struct ShmRing {
     map: MmapMut,
@@ -219,7 +233,9 @@ impl ShmRing {
         if capacity_bytes < META_BYTES as usize + 1024 {
             bail!("shm capacity too small");
         }
-        // /dev/shm is tmpfs; plain files elsewhere also work for local demos.
+        // A regular file mapped read/write; consumers map or read the same
+        // file. Created with the platform's default share mode, so a host
+        // may open it for reading while the service holds the mapping.
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)

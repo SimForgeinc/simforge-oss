@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import { fileURLToPath } from "node:url";
 import { simforgeEnv } from "../lib/simforge-env";
 
 import type { RenderInputFile } from "@simforge-oss/render";
@@ -12,6 +13,12 @@ import type { RenderInputFile } from "@simforge-oss/render";
 import type {
   CpuFence,
   CpuJobClaim,
+  LocalRenderEngine,
+  NativeArtifactIdentity,
+  NativeArtifactReservation,
+  NativeCompletionArtifact,
+  NativeMapMember,
+  NativeMapPreparation,
   RecordingArtifact,
   RemoteInput,
 } from "./types.js";
@@ -40,7 +47,10 @@ export class CpuJobsClient {
     private readonly baseUrl: URL,
     private readonly token: string,
     workerId = `local-render-${process.pid}`,
+    private readonly engines: readonly LocalRenderEngine[] = ["browser"],
     private readonly requestTimeoutMs = 30_000,
+    /** Multi-gigabyte native videos stream to the local object store; the control-plane timeout is far too short for them. */
+    private readonly uploadTimeoutMs = 60 * 60_000,
   ) {
     if (!token) throw new Error("SIMFORGE_RENDER_WORKER_TOKEN is required.");
     this.workerId = workerId;
@@ -49,7 +59,7 @@ export class CpuJobsClient {
   async claim(signal: AbortSignal, leaseSeconds = 300): Promise<CpuJobClaim | null> {
     const response = await this.request(
       "/api/simforge/internal/cpu-jobs/claim",
-      { workerId: this.workerId, leaseSeconds, families: [JOB_FAMILY] },
+      { workerId: this.workerId, leaseSeconds, families: [JOB_FAMILY], engines: this.engines },
       signal,
       true,
     );
@@ -91,6 +101,7 @@ export class CpuJobsClient {
     artifacts: readonly RecordingArtifact[],
     signal: AbortSignal,
   ): Promise<ReservedRecording> {
+    if (claim.payload.mode !== "browser_render") throw new Error("recordings are reserved for browser renders only");
     const body = object(await this.request(
       "/api/simforge/recordings",
       {
@@ -128,7 +139,7 @@ export class CpuJobsClient {
       headers: reservation.headers,
       body: createReadStream(artifact.path),
       duplex: "half",
-      signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),
     } as unknown as RequestInit & { duplex: "half" });
     if (!response.ok) {
       throw new Error(`artifact PUT returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
@@ -206,6 +217,82 @@ export class CpuJobsClient {
     );
   }
 
+  // ── Local native (Bevy) lane ──────────────────────────────────────────────
+
+  /** Starts or polls the host's materialization of the job's semantic map. */
+  async prepareMap(claim: CpuJobClaim, signal: AbortSignal): Promise<NativeMapPreparation> {
+    const body = object(await this.request(
+      `/api/simforge/internal/cpu-jobs/${encodeURIComponent(claim.jobId)}/map`,
+      fence(claim),
+      signal,
+    ));
+    const state = stringField(body, "state");
+    const startedAt = stringField(body, "startedAt");
+    if (state === "preparing") return { state, startedAt };
+    if (state === "ready") {
+      return { state, startedAt, directory: stringField(body, "directory"), mapVersionId: stringField(body, "mapVersionId"), readyAt: stringField(body, "readyAt") };
+    }
+    if (state === "failed") return { state, startedAt, code: stringField(body, "code"), message: stringField(body, "message") };
+    throw new Error(`map preparation returned an unknown state ${state}`);
+  }
+
+  /** Reserves one identity-bound upload; the host refuses identities outside the native closure. */
+  async reserveNativeArtifact(
+    claim: CpuJobClaim,
+    artifact: { identity: NativeArtifactIdentity; sha256: string; sizeBytes: number; mediaType: string },
+    signal: AbortSignal,
+  ): Promise<NativeArtifactReservation> {
+    const body = object(await this.request(
+      `/api/simforge/internal/cpu-jobs/${encodeURIComponent(claim.jobId)}/artifacts`,
+      { ...fence(claim), ...artifact },
+      signal,
+    ));
+    const upload = object(body.upload);
+    return {
+      artifactId: stringField(body, "artifactId"),
+      upload: { url: stringField(upload, "url"), method: "PUT", headers: stringRecord(upload.headers) },
+    };
+  }
+
+  async uploadNativeArtifact(reservation: NativeArtifactReservation, path: string, signal: AbortSignal): Promise<void> {
+    const response = await fetch(workerObjectUrl(reservation.upload.url), {
+      method: reservation.upload.method,
+      headers: reservation.upload.headers,
+      body: createReadStream(path),
+      duplex: "half",
+      signal: AbortSignal.any([signal, AbortSignal.timeout(this.uploadTimeoutMs)]),
+    } as unknown as RequestInit & { duplex: "half" });
+    if (!response.ok) {
+      throw new Error(`artifact PUT returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
+    }
+  }
+
+  /** Completes with the engine's identity-bound artifacts; the host verifies bytes and evidence before succeeding. */
+  async completeNative(
+    claim: CpuJobClaim,
+    intentSha256: string,
+    artifacts: readonly NativeCompletionArtifact[],
+    signal: AbortSignal,
+  ): Promise<void> {
+    await this.request(
+      `/api/simforge/internal/cpu-jobs/${encodeURIComponent(claim.jobId)}/complete`,
+      {
+        ...fence(claim),
+        artifacts: artifacts.map((artifact) => ({
+          id: artifact.artifactId,
+          kind: artifact.identity.role,
+          sha256: artifact.sha256,
+          sizeBytes: artifact.sizeBytes,
+        })),
+        nativeRender: {
+          intentSha256,
+          artifacts: artifacts.map(({ artifactId, identity, sha256, sizeBytes, mediaType }) => ({ artifactId, identity, sha256, sizeBytes, mediaType })),
+        },
+      },
+      signal,
+    );
+  }
+
   private async request(
     path: string,
     payload: unknown,
@@ -230,6 +317,11 @@ export class CpuJobsClient {
   }
 }
 
+/**
+ * Materializes claim inputs under `directory`, hashing every byte against the
+ * claim's declaration. `file:` sources (the packaged actor closure) are copied
+ * rather than fetched; everything else is a checksum-bound HTTP download.
+ */
 export async function downloadInputs(
   inputs: readonly RemoteInput[],
   directory: string,
@@ -247,18 +339,12 @@ export async function downloadInputs(
     const path = input.relativePath
       ? resolve(root, input.relativePath)
       : join(root, `${String(index).padStart(3, "0")}-${safeName}`);
-    if (path === root || !path.startsWith(`${root}/`) || paths.has(path)) {
+    if (path === root || !path.startsWith(`${root}${sep}`) || paths.has(path)) {
       throw new Error(`invalid or duplicate render input relativePath for ${input.inputId}`);
     }
     paths.add(path);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-    const response = await fetch(workerObjectUrl(input.download.url), {
-      headers: input.download.headers,
-      signal,
-    });
-    if (!response.ok || !response.body) {
-      throw new Error(`input ${input.inputId} download returned ${response.status}`);
-    }
+    const source = await openInputSource(input, signal);
     const hash = createHash("sha256");
     let sizeBytes = 0;
     const verify = new Transform({
@@ -268,12 +354,7 @@ export async function downloadInputs(
         callback(null, chunk);
       },
     });
-    await pipeline(
-      Readable.fromWeb(response.body as NodeReadableStream),
-      verify,
-      createWriteStream(path, { flags: "wx", mode: 0o600 }),
-      { signal },
-    );
+    await pipeline(source, verify, createWriteStream(path, { flags: "wx", mode: 0o600 }), { signal });
     const sha256 = hash.digest("hex");
     if (sha256 !== input.sha256 || sizeBytes !== input.sizeBytes) {
       throw new Error(
@@ -285,37 +366,78 @@ export async function downloadInputs(
   return materialized;
 }
 
+async function openInputSource(input: RemoteInput, signal: AbortSignal): Promise<Readable> {
+  if (input.download.url.startsWith("file:")) return createReadStream(fileURLToPath(input.download.url));
+  const response = await fetch(workerObjectUrl(input.download.url), { headers: input.download.headers, signal });
+  if (!response.ok || !response.body) throw new Error(`input ${input.inputId} download returned ${response.status}`);
+  return Readable.fromWeb(response.body as NodeReadableStream);
+}
+
 function parseClaim(value: JsonObject): CpuJobClaim {
   if (value.contract !== "uniscenario.cpu-job-claim/v1" || value.jobFamily !== JOB_FAMILY) {
     throw new Error("CPU claim is not an openscenario_render v1 claim.");
   }
   const payload = object(value.payload);
-  if (payload.mode !== "browser_render") throw new Error("CPU render claim mode is not browser_render.");
-  const engine = payload.engine ?? "browser";
-  if (engine !== "browser" && engine !== "native") throw new Error("CPU render claim has an unsupported engine.");
   const rawInputs = payload.inputs;
   if (!Array.isArray(rawInputs) || rawInputs.length === 0) {
-    throw new Error("browser_render claim is missing checksum-bound input downloads.");
+    throw new Error("render claim is missing checksum-bound input downloads.");
   }
   const intent = object(payload.intent);
   const intentSha256 = stringField(payload, "intentSha256");
   if (!/^[a-f0-9]{64}$/.test(intentSha256)) throw new Error("CPU render claim has an invalid intentSha256.");
-  return {
-    contract: "uniscenario.cpu-job-claim/v1",
+  const common = {
+    contract: "uniscenario.cpu-job-claim/v1" as const,
     jobFamily: JOB_FAMILY,
     jobId: stringField(value, "jobId"),
     attemptId: stringField(value, "attemptId"),
     fenceToken: stringField(value, "fenceToken"),
     leaseExpiresAt: stringField(value, "leaseExpiresAt"),
+  };
+  if (payload.mode === "native_render") {
+    if (payload.engine !== "native") throw new Error("native render claim names a different engine.");
+    const map = object(payload.map);
+    if (!Array.isArray(map.members) || map.members.length === 0) throw new Error("native render claim declares no map members.");
+    const executionPackageControlSha256 = stringField(payload, "executionPackageControlSha256");
+    if (!/^[a-f0-9]{64}$/.test(executionPackageControlSha256)) throw new Error("native render claim has an invalid control digest.");
+    return {
+      ...common,
+      payload: {
+        mode: "native_render",
+        engine: "native",
+        intent,
+        intentSha256,
+        executionPackageControlSha256,
+        attemptNumber: numberField(payload, "attemptNumber"),
+        mapVersionId: stringField(payload, "mapVersionId"),
+        inputs: rawInputs.map(parseRemoteInput),
+        map: { members: map.members.map(parseMapMember) },
+      },
+    };
+  }
+  if (payload.mode !== "browser_render") throw new Error("CPU render claim mode is not supported.");
+  const engine = payload.engine ?? "browser";
+  if (engine !== "browser") throw new Error("browser render claim names a different engine.");
+  return {
+    ...common,
     payload: {
       mode: "browser_render",
-      engine,
+      engine: "browser",
       intent,
       intentSha256,
       inputs: rawInputs.map(parseRemoteInput),
       recording: object(payload.recording),
     },
   };
+}
+
+function parseMapMember(value: unknown): NativeMapMember {
+  const row = object(value);
+  const sha256 = stringField(row, "sha256");
+  const sizeBytes = numberField(row, "sizeBytes");
+  if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0) {
+    throw new Error("native map member has invalid immutable metadata.");
+  }
+  return { inputId: stringField(row, "inputId"), relativePath: stringField(row, "relativePath"), sha256, sizeBytes };
 }
 
 function parseRemoteInput(value: unknown): RemoteInput {

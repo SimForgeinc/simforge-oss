@@ -10,6 +10,42 @@ interface UseMapAssetOperationsInput {
   onRefreshMapAssets: () => void;
 }
 
+const FINALIZE_POLL_INTERVAL_MS = 2000;
+const FINALIZE_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+type FinalizeOutcome = {
+  status: "succeeded" | "failed" | "timeout" | "unknown";
+  error?: string | null;
+  result?: { candidate_location_count?: unknown; search_index_object_count?: unknown } | null;
+};
+
+/** Poll `/enrichment/status` until the given job leaves pending/running. */
+async function waitForFinalizeJob(mapAssetId: string, jobId: string): Promise<FinalizeOutcome> {
+  const deadline = Date.now() + FINALIZE_POLL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const tick = Promise.withResolvers<void>();
+    setTimeout(tick.resolve, FINALIZE_POLL_INTERVAL_MS);
+    await tick.promise;
+    const res = await fetch(`/api/map-assets/${mapAssetId}/enrichment/status`, { cache: "no-store" });
+    if (!res.ok) continue;
+    const body = (await res.json().catch(() => null)) as {
+      jobs?: Array<{
+        id: string;
+        status: string;
+        error_message?: string | null;
+        result_json?: FinalizeOutcome["result"];
+      }>;
+    } | null;
+    const job = body?.jobs?.find((entry) => entry.id === jobId);
+    if (!job) return { status: "unknown" };
+    if (job.status === "succeeded") return { status: "succeeded", result: job.result_json ?? null };
+    if (job.status === "failed" || job.status === "timeout") {
+      return { status: job.status, error: job.error_message ?? null };
+    }
+  }
+  return { status: "timeout", error: "Map finalize is still running; refresh the page later." };
+}
+
 export function useMapAssetOperations({
   currentAsset,
   onEnrichmentSucceeded,
@@ -36,6 +72,8 @@ export function useMapAssetOperations({
         error?: string;
         detail?: string;
         missing?: string[];
+        enrichment_job_id?: string | null;
+        enrichment_job_error?: string | null;
       };
       if (!res.ok) {
         const msg =
@@ -50,6 +88,31 @@ export function useMapAssetOperations({
       }
 
       toast.success(`Metadata populated for ${targetId}`);
+      onRefreshMapAssets();
+      if (body.enrichment_job_error) {
+        setPopulateErr(body.enrichment_job_error);
+        toast.error(body.enrichment_job_error);
+        return;
+      }
+      if (body.enrichment_job_id) {
+        // Candidate extraction and the search-index rebuild continue in the
+        // finalize job; keep the button busy until it settles so the detail
+        // page refreshes once the new sidecar exists.
+        const outcome = await waitForFinalizeJob(targetId, body.enrichment_job_id);
+        if (outcome.status === "succeeded") {
+          const candidates = outcome.result?.candidate_location_count;
+          const objects = outcome.result?.search_index_object_count;
+          toast.success(
+            typeof candidates === "number" && typeof objects === "number"
+              ? `Map finalized — ${candidates} candidate locations, ${objects} search objects.`
+              : "Map finalized.",
+          );
+        } else if (outcome.status !== "unknown") {
+          const msg = outcome.error ?? `Map finalize ${outcome.status}.`;
+          setPopulateErr(msg);
+          toast.error(msg);
+        }
+      }
       onEnrichmentSucceeded();
       onRefreshMapAssets();
     } catch {

@@ -27,3 +27,10 @@ export type {
   NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
 export { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
+export {
+  NATIVE_RENDER_SERVICE_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalNativeRender,
+  resolveActorAssets, resolveEncoder, resolveNativeRenderService, resolveProbe,
+} from './local-runtime.js';
+export type {
+  LocalActorAssets, LocalActorAssetsSource, LocalExecutable, LocalExecutableSource, LocalNativeRenderProbe,
+} from './local-runtime.js';

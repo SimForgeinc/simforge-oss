@@ -89,8 +89,12 @@ simforge cas ingest <path> | cas verify <sha256>
 
 The `job`, `worker`, `cas` and `runtime` groups are forwarded verbatim (plus
 `--pretty`/`--root`) to the native runner binary, located through
-`$SIMFORGE_RUNNER_BIN`, then
-`${SIMFORGE_NATIVE_RUNTIME_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime}/bin/simforge-runner`,
+`$SIMFORGE_RUNNER_BIN`, then `<install root>/bin/simforge-runner[.exe]` where
+the install root is `$SIMFORGE_NATIVE_RUNTIME_ROOT` or the OS data directory
+(`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` on Linux,
+`~/Library/Application Support/simforge/native-runtime` on macOS,
+`%LOCALAPPDATA%\simforge\native-runtime` on Windows; installed by
+`node scripts/native-runtime/install-runtime.mjs <archive>`),
 then `PATH`. The runner's stdout/stderr/exit-code contract is identical to this
 one. A durable compile-and-simulate is one `simforge.compile/v1` job (template
 input, `params.mapId/site/drawIndex/seed`) followed by one `simforge.simulate/v1`

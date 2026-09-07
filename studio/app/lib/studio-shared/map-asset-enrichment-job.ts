@@ -1,7 +1,13 @@
 import { z } from "zod";
 
-/** Local enrichment operation supported by Studio. */
-export const EnrichmentJobTypeSchema = z.enum(["third_party_enrichment"]);
+/**
+ * Enrichment operations Studio records per map asset.
+ *
+ * `local_finalize` is the post-ingest pipeline Studio runs itself: detector
+ * candidate extraction plus the `search_index.json` rebuild. Third-party
+ * (Overture) enrichment needs the managed provider and is never queued locally.
+ */
+export const EnrichmentJobTypeSchema = z.enum(["third_party_enrichment", "local_finalize"]);
 export type EnrichmentJobType = z.infer<typeof EnrichmentJobTypeSchema>;
 
 export const EnrichmentJobStatusSchema = z.enum([

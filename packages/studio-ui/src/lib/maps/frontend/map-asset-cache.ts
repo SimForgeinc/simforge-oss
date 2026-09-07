@@ -11,10 +11,11 @@ import {
  *
  * Two backends, chosen once per page from the environment and never mixed:
  *
- * - `filesystem` — the installed desktop app. Bytes live on disk behind the
- *   preload bridge; the renderer only ever sees metadata over IPC and streams
- *   verified content through `simforge-cache://` capability URLs. A bridge
- *   failure is surfaced, never papered over with browser storage.
+ * - `filesystem` — the installed desktop app. Bytes live on disk in the local
+ *   service's store behind the preload bridge; the renderer only ever sees
+ *   metadata over IPC and streams verified content through same-origin
+ *   `/api/simforge/map-cache/stream/...` capability URLs. A bridge failure is
+ *   surfaced, never papered over with browser storage.
  * - `browser` — ordinary web mode. Bytes live in Cache Storage under their
  *   content hash with a small localStorage index for URL aliases and receipts.
  */
@@ -39,7 +40,7 @@ export type MapAssetCacheStatus =
 
 export type MapAssetEnsureOptions = {
   sha256?: string;
-  /** Optional signed delivery URL carrying the same bytes as `url`. */
+  /** Browser backend only: optional signed delivery URL carrying the same bytes as `url`. The desktop service resolves its own source. */
   networkUrl?: string;
   sizeBytes?: number;
   signal?: AbortSignal;
@@ -54,7 +55,7 @@ export type MapAssetEnsureResult = {
 
 type CacheIndex = {
   urls: Record<string, string>;
-  content: Record<string, { bytes: number; lastUsed: number }>;
+  content: Record<string, { bytes: number }>;
   receipts: Record<string, { completedAt: number; assets: number; bytes: number }>;
 };
 
@@ -96,11 +97,43 @@ function writeIndex(index: CacheIndex, defer = false) {
   persistIndex(index);
 }
 
-/** Browser backend only; the filesystem backend persists every write itself. */
+/**
+ * Browser backend only: hold the index in memory across a burst of lookups
+ * and stores so a plan over thousands of members does not parse and rewrite
+ * the whole localStorage record per member. `flushMapAssetCacheIndex` ends
+ * the batch; the filesystem backend persists every write itself.
+ */
+export function beginMapAssetCacheIndexBatch() {
+  if (pendingBulkIndex || desktopMapCacheBridge()) return;
+  pendingBulkIndex = readIndex();
+}
+
 export function flushMapAssetCacheIndex() {
   if (!pendingBulkIndex) return;
   persistIndex(pendingBulkIndex);
   pendingBulkIndex = null;
+}
+
+/** Record a URL → content binding; writes only when the index actually changes. */
+function remember(
+  index: CacheIndex,
+  canonicalUrl: string,
+  sha256: string,
+  bytes: number | null,
+  defer: boolean,
+) {
+  const known = index.content[sha256];
+  if (index.urls[canonicalUrl] === sha256 && known) return;
+  index.urls[canonicalUrl] = sha256;
+  // The storing fetch records the true length first; later hits never
+  // overwrite it with a header-derived guess.
+  if (!known) index.content[sha256] = { bytes: bytes ?? 0 };
+  writeIndex(index, defer);
+}
+
+function declaredLength(response: Response) {
+  const size = Number(response.headers.get("content-length"));
+  return Number.isSafeInteger(size) && size > 0 ? size : null;
 }
 
 function absoluteUrl(url: string) {
@@ -130,8 +163,8 @@ function networkFetch(input: RequestInfo | URL, init?: RequestInit) {
   return (nativeFetch ?? window.fetch)(input, init);
 }
 
-function responseFromBytes(bytes: ArrayBuffer, source: Response) {
-  return new Response(bytes, {
+function responseFromBytes(body: ArrayBuffer, source: Response) {
+  return new Response(body, {
     status: source.status,
     statusText: source.statusText,
     headers: source.headers,
@@ -216,7 +249,6 @@ async function desktopEnsure(
     return await bridge.ensure({
       requestId,
       url: canonicalUrl,
-      downloadUrl: options.networkUrl,
       sha256: options.sha256,
       sizeBytes: options.sizeBytes,
     });
@@ -235,14 +267,33 @@ async function desktopFetch(
   const headers = new Headers();
   const range = requestedRange(init);
   if (range) headers.set("range", range);
-  // The capability URL is window-scoped and unauthenticated by design; the
-  // protocol handler streams verified bytes (206 for ranges) straight from disk.
+  // The capability URL is same-origin on the local host: the local session
+  // cookie authorizes it and the service re-checks map access on every read.
+  // The file IS the cache, so Chromium's HTTP cache must not copy it.
   return networkFetch(ensured.url, {
     method: "GET",
     headers,
     signal: init.signal,
-    credentials: "omit",
+    credentials: "same-origin",
+    cache: "no-store",
   });
+}
+
+/**
+ * The URL a context without this module's fetch gateway (a worker) should
+ * fetch for a map asset. On the filesystem backend a cacheable asset is made
+ * resident first and its same-origin capability URL is returned, so worker
+ * loads stream from disk like main-thread ones; anything else, and the browser
+ * backend, keeps the canonical URL.
+ */
+export async function resolveMapAssetUrl(
+  url: string,
+  options: Pick<MapAssetEnsureOptions, "sha256" | "signal"> = {},
+): Promise<string> {
+  const canonicalUrl = absoluteUrl(url);
+  const bridge = desktopMapCacheBridge();
+  if (!bridge || !isCacheableMapUrl(new URL(canonicalUrl), options.sha256)) return canonicalUrl;
+  return (await desktopEnsure(bridge, canonicalUrl, options)).url;
 }
 
 export async function hasCachedMapAsset(url: string, expectedSha256?: string) {
@@ -259,13 +310,7 @@ export async function hasCachedMapAsset(url: string, expectedSha256?: string) {
   if (!cached) return false;
   // A hit by content identity also teaches the index this path, so an alias of
   // an already-cached member answers by URL alone later (offline runtime).
-  index.urls[canonicalUrl] = sha256;
-  const previous = index.content[sha256];
-  index.content[sha256] = {
-    bytes: previous?.bytes ?? Number(cached.headers.get("content-length") ?? 0),
-    lastUsed: Date.now(),
-  };
-  writeIndex(index, Boolean(pendingBulkIndex));
+  remember(index, canonicalUrl, sha256, declaredLength(cached), Boolean(pendingBulkIndex));
   return true;
 }
 
@@ -302,12 +347,12 @@ export async function ensureMapAsset(
     options.networkUrl,
     options.deferIndexWrite,
   );
+  // The clone `fetchMapAsset` hands back is one branch of a tee; per the
+  // Streams spec its cancel() settles only once the sibling branch is done,
+  // so it is released without being awaited.
+  response.body?.cancel().catch(() => undefined);
   if (!response.ok) throw new Error(`${response.status} ${canonicalUrl}`);
-  // `fetchMapAsset` already hashed and stored the body; the clone it returns
-  // is not needed here.
-  await response.body?.cancel().catch(() => undefined);
-  const size = Number(response.headers.get("content-length"));
-  return { cacheHit: false, sizeBytes: Number.isSafeInteger(size) && size > 0 ? size : options.sizeBytes ?? null };
+  return { cacheHit: false, sizeBytes: declaredLength(response) ?? options.sizeBytes ?? null };
 }
 
 /** Fetch, verify and persist one immutable map asset under its content hash. */
@@ -333,32 +378,13 @@ export async function fetchMapAsset(
   if (knownSha && SHA256.test(knownSha)) {
     const cached = await cache.match(contentRequest(knownSha));
     if (cached) {
+      // Content-addressed: the bytes were verified against this digest when
+      // stored, so a warm hit streams without a second full read and rehash.
+      remember(index, canonicalUrl, knownSha, declaredLength(cached), deferIndexWrite);
       const range = requestedRange(init);
-      if (range) {
-        const bytes = await cached.arrayBuffer();
-        const partial = rangeResponse(bytes, range, cached);
-        if (partial) return partial;
-      }
-      if (expectedSha256) {
-        const bytes = await cached.arrayBuffer();
-        if (await digest(bytes) !== expectedSha256) {
-          await cache.delete(contentRequest(knownSha));
-        } else {
-          index.urls[canonicalUrl] = knownSha;
-          index.content[knownSha] = { bytes: bytes.byteLength, lastUsed: Date.now() };
-          writeIndex(index, deferIndexWrite);
-          return responseFromBytes(bytes, cached);
-        }
-      } else {
-        index.urls[canonicalUrl] = knownSha;
-        const previous = index.content[knownSha];
-        index.content[knownSha] = {
-          bytes: previous?.bytes ?? Number(cached.headers.get("content-length") ?? 0),
-          lastUsed: Date.now(),
-        };
-        writeIndex(index, deferIndexWrite);
-        return cached;
-      }
+      if (!range) return cached;
+      const bytes = await cached.arrayBuffer();
+      return rangeResponse(bytes, range, cached) ?? responseFromBytes(bytes, cached);
     }
   }
 
@@ -367,14 +393,7 @@ export async function fetchMapAsset(
   if (existing) {
     const response = (await existing).clone();
     if (response.ok && knownSha && SHA256.test(knownSha)) {
-      const next = readIndex();
-      next.urls[canonicalUrl] = knownSha;
-      const previous = next.content[knownSha];
-      next.content[knownSha] = {
-        bytes: previous?.bytes ?? Number(response.headers.get("content-length") ?? 0),
-        lastUsed: Date.now(),
-      };
-      writeIndex(next, deferIndexWrite);
+      remember(readIndex(), canonicalUrl, knownSha, declaredLength(response), deferIndexWrite);
     }
     return response;
   }
@@ -384,13 +403,12 @@ export async function fetchMapAsset(
     if (expectedSha256 && actualSha !== expectedSha256) {
       throw new Error(`Asset integrity check failed for ${canonicalUrl}`);
     }
-    const stored = responseFromBytes(bytes.slice(0), response);
-    await cache.put(contentRequest(actualSha), stored);
-    const next = readIndex();
-    next.urls[canonicalUrl] = actualSha;
-    next.content[actualSha] = { bytes: bytes.byteLength, lastUsed: Date.now() };
-    writeIndex(next, deferIndexWrite);
-    return responseFromBytes(bytes, response);
+    // One Response is built from the bytes; its clone shares the body for the
+    // cache write instead of copying the buffer a second time.
+    const stored = responseFromBytes(bytes, response);
+    await cache.put(contentRequest(actualSha), stored.clone());
+    remember(readIndex(), canonicalUrl, actualSha, bytes.byteLength, deferIndexWrite);
+    return stored;
   };
   const pending = (async () => {
     const transferUrl = networkUrl ?? url;
@@ -518,10 +536,9 @@ export async function writeCacheReceipt(key: string, assets: number, bytes: numb
     await bridge.writeReceipt(key, receipt);
     return;
   }
-  flushMapAssetCacheIndex();
   const index = readIndex();
   index.receipts[key] = receipt;
-  writeIndex(index);
+  writeIndex(index, Boolean(pendingBulkIndex));
 }
 
 export async function hasCacheReceipt(key: string) {

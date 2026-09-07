@@ -76,6 +76,40 @@ export type RenderWorkerCapability = {
   reason: string | null;
 };
 
+/** One executable or immutable asset a local render engine depends on, as found (or not) on this machine. */
+export type LocalRenderDependency = {
+  state: "available" | "missing";
+  /** Resolved absolute path when available. */
+  path: string | null;
+  /** Where it was found: explicit environment, runtime manifest/root, PATH, or a launcher-managed install. */
+  source: "env" | "runtime-manifest" | "runtime-root" | "path" | "playwright" | null;
+};
+
+/**
+ * The local machine's ability to run the native (Bevy) render engine itself,
+ * reported only by hosts that execute renders on the machine they run on.
+ * `ready` requires every dependency present AND the local worker attached;
+ * `reasons` names what is missing. Absent on hosts whose render lanes are
+ * managed capacity.
+ */
+export type LocalRenderCapability = {
+  engine: "native";
+  ready: boolean;
+  runtimeRoot: string;
+  renderService: LocalRenderDependency;
+  encoder: LocalRenderDependency;
+  actorAssets: LocalRenderDependency & { digest: string };
+  worker: {
+    /** A local worker has polled this host within its liveness window. */
+    attached: boolean;
+    workerId: string | null;
+    lastSeenAt: string | null;
+    /** Engines that worker offered on its last poll. */
+    engines: ScenarioRendererEngine[];
+  };
+  reasons: string[];
+};
+
 export type StudioHostCapabilities = {
   schema: typeof STUDIO_HOST_CAPABILITIES_SCHEMA;
   host: { kind: StudioHostKind; label: string; version: string | null };
@@ -91,10 +125,16 @@ export type StudioHostCapabilities = {
      */
     renderWorkers: Partial<Record<ScenarioRendererEngine, RenderWorkerCapability>>;
     nativeRuntime: NativeRuntimeCapability;
+    /** Present only on hosts that render on this machine; see {@link LocalRenderCapability}. */
+    localRender?: LocalRenderCapability;
   };
   jobs: {
     families: readonly ScenarioJobFamily[];
-    /** Jobs are leased with heartbeats and survive the UI process. */
+    /**
+     * Leased jobs keep executing when the UI window closes. True only when the host process
+     * outlives the UI (a detached service); false when the shell stops the host it started.
+     * Persisted jobs are requeued either way, but that is retry, not uninterrupted execution.
+     */
     survivesUiClose: boolean;
   };
 };

@@ -23,7 +23,7 @@ Protocol (agreed with the native runner owner; mirrors
 - stdout JSON lines ``progress``, ``checkpoint``, ``done`` (with artifacts) or
   ``canceled``; stderr JSON line ``error``.
 - exit 0 done, 1 bad params/resume, 2 renderer failure, 130 after SIGTERM
-  (current tick finished, checkpoint written).
+  (SIGBREAK on Windows; current tick finished, checkpoint written).
 """
 from __future__ import annotations
 
@@ -182,6 +182,11 @@ class JobRunner:
         (out_dir / "frames").mkdir(parents=True, exist_ok=True)
         (out_dir / "checkpoint").mkdir(parents=True, exist_ok=True)
         signal.signal(signal.SIGTERM, self._on_sigterm)
+        # Windows: the runner cancels with CTRL_BREAK_EVENT on the provider's
+        # process group, which Python delivers as SIGBREAK; SIGTERM never
+        # arrives from the OS there.
+        if hasattr(signal, "SIGBREAK"):
+            signal.signal(signal.SIGBREAK, self._on_sigterm)
 
     def _on_sigterm(self, *_sig: Any) -> None:
         self.cancel = True
