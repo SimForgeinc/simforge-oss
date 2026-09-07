@@ -93,7 +93,7 @@ export const OpenloopParamsSchema = z.object({
   schema: z.literal(OPENLOOP_PARAMS_SCHEMA).default(OPENLOOP_PARAMS_SCHEMA),
   /** One job carries N items so a cold start amortises. */
   items: z.array(OpenloopInputSchema).min(1).max(1_000),
-  sampling: OpenloopSamplingSchema.default({}),
+  sampling: OpenloopSamplingSchema.default({ numTrajSamples: 1, topP: 0.98, temperature: 0.6, diffusionSteps: null, navText: null }),
   /** `auto` scores when the input carries a reference future; `none` never scores. */
   reference: z.enum(['auto', 'none']).default('auto'),
   /** `act` = trajectory prediction, `text` = VQA/meta-actions/auto-labelling. */
@@ -102,7 +102,7 @@ export const OpenloopParamsSchema = z.object({
   prompt: z.string().max(8_000).nullable().default(null),
   horizonsS: z.array(z.number().positive()).default([...OPENLOOP_HORIZONS_S]),
   seed: z.number().int().nonnegative().default(0),
-  ood: OpenloopOodSchema.default({}),
+  ood: OpenloopOodSchema.default({ exploratory: false, assumedStationaryEgo: false, assumedIntrinsics: null }),
 });
 export type OpenloopParams = z.infer<typeof OpenloopParamsSchema>;
 

@@ -58,7 +58,7 @@ export const ComputeJobInputSchema = z.object({
       maxItems: z.number().int().positive().default(64),
       maxSimSeconds: z.number().positive().default(60),
     })
-    .default({}),
+    .default({ maxItems: 64, maxSimSeconds: 60 }),
   /** How to reach the already-running model engine in this worker. */
   endpoint: z
     .object({
