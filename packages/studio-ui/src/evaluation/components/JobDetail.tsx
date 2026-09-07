@@ -19,7 +19,7 @@ import { cn } from "../../lib/utils";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import type { HorizonMetrics, OpenLoopItem, TrajectoryProjection } from "../contracts";
-import { canProjectToImage } from "../contracts";
+import { horizonMetrics, overlayProjection } from "../contracts";
 import type { EvaluationGateway } from "../gateway";
 import { formatBytes, formatCents, formatSeconds, jobStatusPresentation } from "../presentation";
 import { useJobResult } from "../useJobResult";
@@ -72,8 +72,14 @@ function ItemCard({
   frameUrls: string[];
   projection: TrajectoryProjection | null;
 }) {
-  const referenceKind = item.reference?.kind ?? "none";
+  const referenceKind = item.reference.kind;
   const recordedHuman = RECORDED_HUMAN_REFERENCE_KINDS.includes(referenceKind);
+  // `metrics` is a free-form record on the wire: which buckets exist depends on
+  // the run, so each is read and shape-checked rather than assumed.
+  const minADE = horizonMetrics(item.metrics, "minADE_k");
+  const minFDE = horizonMetrics(item.metrics, "minFDE_k");
+  // One entry per sampled trajectory; nulls are samples that produced none.
+  const reasoning = item.reasoning.filter((entry): entry is string => Boolean(entry));
 
   return (
     <Card data-testid={`result-item-${item.itemId}`}>
@@ -117,7 +123,7 @@ function ItemCard({
           </div>
         ) : null}
 
-        {item.status === "ok" && (item.points?.length ?? 0) > 0 ? (
+        {item.status === "ok" && item.points.length > 0 ? (
           <div className="grid gap-6 lg:grid-cols-2">
             <TrajectoryPlot item={item} />
             {projection && (videoUrl || frameUrls.length > 0) ? (
@@ -143,13 +149,13 @@ function ItemCard({
           </div>
         ) : null}
 
-        {item.metrics?.minADE_k || item.metrics?.minFDE_k ? (
+        {minADE || minFDE ? (
           <div className="flex flex-wrap gap-8">
-            {item.metrics.minADE_k ? (
-              <HorizonTable label={`minADE (k=${item.points?.length ?? 1})`} metrics={item.metrics.minADE_k} />
+            {minADE ? (
+              <HorizonTable label={`minADE (k=${item.points.length})`} metrics={minADE} />
             ) : null}
-            {item.metrics.minFDE_k ? (
-              <HorizonTable label={`minFDE (k=${item.points?.length ?? 1})`} metrics={item.metrics.minFDE_k} />
+            {minFDE ? (
+              <HorizonTable label={`minFDE (k=${item.points.length})`} metrics={minFDE} />
             ) : null}
           </div>
         ) : null}
@@ -166,14 +172,21 @@ function ItemCard({
           {item.horizonS ? ` · ${item.horizonS}s horizon` : ""}
         </p>
 
-        {item.reasoning ? (
+        {reasoning.length > 0 ? (
           <details className="text-sm">
             <summary className="cursor-pointer text-xs uppercase tracking-wide text-muted-foreground">
-              Model reasoning
+              Model reasoning ({reasoning.length === 1 ? "1 sample" : `${reasoning.length} samples`})
             </summary>
-            <p className="mt-2 whitespace-pre-wrap leading-6 text-muted-foreground">
-              {item.reasoning}
-            </p>
+            <ol className="mt-2 space-y-2">
+              {reasoning.map((entry, index) => (
+                <li key={index} className="whitespace-pre-wrap leading-6 text-muted-foreground">
+                  {reasoning.length > 1 ? (
+                    <span className="mr-2 text-xs text-muted-foreground/70">#{index + 1}</span>
+                  ) : null}
+                  {entry}
+                </li>
+              ))}
+            </ol>
           </details>
         ) : null}
       </CardContent>
@@ -215,10 +228,9 @@ export function JobDetail({
   }
 
   const presentation = jobStatusPresentation(job.status);
-  const projection = canProjectToImage(trajectories) ? trajectories.projection : null;
   const aggregate = openLoop?.aggregate;
-  const provenanceModel = manifest?.provenance.model ?? openLoop?.model ?? null;
-  const provenanceInput = manifest?.provenance.input ?? openLoop?.input ?? null;
+  const provenanceModel = manifest?.provenance.model ?? null;
+  const provenanceInput = manifest?.provenance.input ?? null;
 
   return (
     <div className={cn("space-y-6", className)} data-testid="job-detail">
@@ -314,18 +326,30 @@ export function JobDetail({
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Aggregate</h2>
           <div className="flex flex-wrap gap-8">
-            {aggregate.minADE ? <HorizonTable label="minADE" metrics={aggregate.minADE} /> : null}
-            {aggregate.minFDE ? <HorizonTable label="minFDE" metrics={aggregate.minFDE} /> : null}
+            {Object.keys(aggregate.minADE).length > 0 ? (
+              <HorizonTable label="minADE" metrics={aggregate.minADE} />
+            ) : null}
+            {Object.keys(aggregate.minFDE).length > 0 ? (
+              <HorizonTable label="minFDE" metrics={aggregate.minFDE} />
+            ) : null}
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Items</p>
               <p className="mt-1 text-sm text-foreground">
-                {aggregate.scoredItems ?? 0} scored
-                {aggregate.refusedItems ? ` · ${aggregate.refusedItems} refused` : ""}
-                {aggregate.failedItems ? ` · ${aggregate.failedItems} failed` : ""}
+                {aggregate.okItems} of {aggregate.itemCount} returned a prediction
+                {aggregate.refusedItems > 0 ? ` · ${aggregate.refusedItems} refused` : ""}
+                {aggregate.failedItems > 0 ? ` · ${aggregate.failedItems} failed` : ""}
               </p>
+              {Object.keys(aggregate.scoredItems).length > 0 ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  scored per horizon:{" "}
+                  {Object.entries(aggregate.scoredItems)
+                    .map(([horizon, count]) => `${horizon}s: ${count}`)
+                    .join(", ")}
+                </p>
+              ) : null}
             </div>
           </div>
-          {(aggregate.refusedItems ?? 0) > 0 ? (
+          {aggregate.refusedItems > 0 ? (
             <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
               <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
               Refused items are excluded from the aggregate. They are listed below with the fields
@@ -378,7 +402,7 @@ export function JobDetail({
                 item={item}
                 videoUrl={videoUrl}
                 frameUrls={frameUrls}
-                projection={projection}
+                projection={overlayProjection(item, trajectories)}
               />
             ))}
           </div>

@@ -266,31 +266,48 @@ export type OpenLoopReference = NonNullable<OpenloopItem["reference"]>;
 /**
  * Camera calibration for drawing an image-space overlay.
  *
- * Absent calibration means an image-space overlay would be an invented claim,
- * so the UI falls back to the metric bird's-eye plot. See
- * {@link TrajectoryProjection} consumers in `components/FrameOverlay`.
+ * The producer carries this per item, and it is null whenever the input had no
+ * real calibration — which is exactly when an image-space overlay would assert
+ * a correspondence nobody measured. The UI then falls back to the metric
+ * bird's-eye plot. See `components/FrameOverlay`.
  */
-export type TrajectoryProjection = {
-  cameraId: number;
-  K: number[][];
-  distortion: { model: string; coeffs: number[] } | null;
-  extrinsicsRigFromCamera: number[][];
-  imageSize: [number, number];
-  timestampsUs: number[];
-};
+export type TrajectoryProjection = NonNullable<OpenloopItem["projection"]>;
 
+/**
+ * The optional `trajectories.json` artifact.
+ *
+ * Per-item geometry already travels in `openloop.json`, so this document is
+ * only consulted for a run that shipped one; `item.projection` remains the
+ * authority for whether an overlay may be drawn.
+ */
 export type TrajectoriesDocument = {
-  frame?: string;
-  convention?: string;
-  dtS?: number;
-  horizonS?: number;
   items?: OpenLoopItem[];
-  projection: TrajectoryProjection | null;
+  projection?: TrajectoryProjection | null;
 };
 
 export type FramesManifest = {
   frames: { cameraId: number; index: number; tUs: number; path: string }[];
 };
+
+/**
+ * Read one metric bucket out of an item's free-form `metrics` record.
+ *
+ * The producer types `metrics` as `Record<string, unknown>` because which
+ * buckets exist depends on the run, so the shape has to be checked here rather
+ * than asserted. Non-numeric entries are dropped instead of rendered as NaN.
+ */
+export function horizonMetrics(
+  metrics: Record<string, unknown> | null | undefined,
+  bucket: string,
+): HorizonMetrics | null {
+  const value = metrics?.[bucket];
+  if (!isRecord(value)) return null;
+  const result: Record<string, number> = {};
+  for (const [horizon, metric] of Object.entries(value)) {
+    if (typeof metric === "number" && Number.isFinite(metric)) result[horizon] = metric;
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Boundary readers                                                           */
@@ -360,22 +377,26 @@ export function readOpenLoopResult(value: unknown): ContractReadResult<OpenLoopR
 }
 
 /**
- * The single question the overlay code asks before drawing on video frames.
+ * The projection an overlay may legitimately be drawn with, or null.
+ *
  * Named because "we may draw in image space" is a claim about honesty, not a
- * null check: without calibration the overlay would assert a correspondence
- * that was never measured.
+ * null check: without real calibration the overlay would assert a
+ * correspondence nobody measured. The item's own projection wins; a
+ * run-level `trajectories.json` is only a fallback for a producer that put it
+ * there instead.
  */
-export function canProjectToImage(
-  document: TrajectoriesDocument | null,
-): document is TrajectoriesDocument & { projection: TrajectoryProjection } {
-  const projection = document?.projection;
-  if (!projection) return false;
-  return (
-    Array.isArray(projection.K) &&
+export function overlayProjection(
+  item: Pick<OpenLoopItem, "projection">,
+  document?: TrajectoriesDocument | null,
+): TrajectoryProjection | null {
+  const projection = item.projection ?? document?.projection ?? null;
+  if (!projection) return null;
+  return Array.isArray(projection.K) &&
     projection.K.length === 3 &&
     Array.isArray(projection.extrinsicsRigFromCamera) &&
     projection.extrinsicsRigFromCamera.length === 4 &&
     Array.isArray(projection.imageSize) &&
     projection.imageSize.length === 2
-  );
+    ? projection
+    : null;
 }

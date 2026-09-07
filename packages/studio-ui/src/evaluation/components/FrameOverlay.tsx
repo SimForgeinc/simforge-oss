@@ -46,10 +46,10 @@ export function FrameOverlay({
         .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
         .join(" ");
     };
-    const samples = (item.points ?? [])
+    const samples = item.points
       .map(toPath)
       .filter((path): path is string => path !== null);
-    const referencePoints = item.reference?.points ?? null;
+    const referencePoints = item.reference.points.length > 0 ? item.reference.points : null;
     return { samples, reference: referencePoints ? toPath(referencePoints) : null };
   }, [projector, item]);
 
