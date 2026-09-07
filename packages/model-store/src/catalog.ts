@@ -394,18 +394,24 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       status: 'supported',
       minVramGiB: 12,
       note:
-        'bitsandbytes NF4 + double quantization, bf16 compute. Measured on a ' +
-        '16 GiB RTX 5080: 8.71 GiB peak at 2 cameras, 10.10 GiB at 7. ' +
+        'bitsandbytes NF4 + double quantization, bf16 compute. The 12 GiB ' +
+        'figure comes from a PRIOR runtime (RTX 5080 16 GiB, driver 595.84, ' +
+        'torch 2.8.0+cu128): 8.71 GiB peak at 2 cameras, 10.10 GiB at 7, one ' +
+        'sample. It is camera-count and sample-count dependent and has not been ' +
+        're-measured on the pinned release runtime, so a 16 GiB host is ' +
+        'qualified for the measured profiles, not for every profile. ' +
         'Quantization changes behaviour, not only numerics: an NF4 score is ' +
         'never comparable to a BF16 baseline without the quant label.',
     },
     {
       quant: 'fp8',
-      status: 'supported',
-      minVramGiB: 16,
+      status: 'qualification-pending',
+      minVramGiB: null,
       note:
-        'torchao Float8WeightOnly (e4m3). Observed to exhaust a 16 GiB device ' +
-        'at 4 cameras; use NF4 below 24 GiB.',
+        'torchao Float8WeightOnly (e4m3). NOT qualified: the only measured ' +
+        'evidence on a 16 GiB device is an out-of-memory failure at 4 cameras, ' +
+        'so no 16 GiB envelope may be claimed. A release-runtime measurement ' +
+        'per camera count and sample count is required before this mode is offered.',
     },
   ],
   platforms: ['linux-x64'],

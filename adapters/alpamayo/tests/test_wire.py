@@ -156,10 +156,32 @@ def test_absent_rotations_default_to_identity_and_are_recorded():
     assert np.allclose(rot, np.eye(3))
 
 
+def test_absent_time_base_makes_a_run_inference_only():
+    """An unknown history cadence must not silently pass as scored."""
+    absent = validate_history_times(None)
+    assert absent["ego_history_t_s"] == "absent"
+    assert absent["scorable"] is False
+    assert "cannot be scored" in absent["time_base_warning"]
+    # A documented source rate is an acceptable substitute, and is recorded
+    # as declared rather than measured.
+    declared = validate_history_times(None, 10.0)
+    assert declared["scorable"] is True
+    assert declared["ego_history_t_s"] == "declared-10hz"
+    assert declared["time_base"] == "declared"
+    assert declared["time_base_warning"] is None
+    # A declared rate that is not the trained window is reported, not applied.
+    off_rate = validate_history_times(None, 5.0)
+    assert off_rate["scorable"] is True
+    assert "not resampled" in off_rate["time_base_warning"]
+    with pytest.raises(ObservationError):
+        validate_history_times(None, 0.0)
+
+
 def test_time_base_is_validated_and_never_resampled():
-    assert validate_history_times(None)["ego_history_t_s"] == "assumed-10hz"
     ten_hz = [-(NUM_HISTORY_STEPS - 1 - i) * 0.1 for i in range(NUM_HISTORY_STEPS)]
-    assert validate_history_times(ten_hz)["time_base_warning"] is None
+    supplied = validate_history_times(ten_hz)
+    assert supplied["time_base_warning"] is None
+    assert supplied["scorable"] is True and supplied["time_base"] == "measured"
     five_hz = [-(NUM_HISTORY_STEPS - 1 - i) * 0.2 for i in range(NUM_HISTORY_STEPS)]
     warned = validate_history_times(five_hz)
     # A wrong clock is reported, not corrected: the model consumes a fixed

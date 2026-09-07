@@ -287,17 +287,28 @@ ALPAMAYO_1_5 = Family(
             status="supported",
             min_vram_gib=12.0,
             note=(
-                "bitsandbytes NF4 + double quant, bf16 compute. Measured on a "
-                "16 GiB RTX 5080: 8.71 GiB peak at 2 cameras, 10.10 GiB at 7. "
+                "bitsandbytes NF4 + double quant, bf16 compute. The 12 GiB "
+                "figure comes from a PRIOR runtime (RTX 5080 16 GiB, driver "
+                "595.84, torch 2.8.0+cu128): 8.71 GiB peak at 2 cameras, "
+                "10.10 GiB at 7, 1 sample. It is camera-count and "
+                "sample-count dependent and has NOT been re-measured on the "
+                "pinned release runtime; a 16 GiB host is qualified for the "
+                "profiles that were measured, not for every profile. "
                 "Quantization changes behaviour, not only numerics: never "
                 "compare an NF4 score against a BF16 baseline without the label."
             ),
         ),
         QuantOffer(
             quant="fp8",
-            status="supported",
-            min_vram_gib=16.0,
-            note="torchao Float8WeightOnly (e4m3); OOMs at 4 cameras on 16 GiB.",
+            status="qualification-pending",
+            min_vram_gib=None,
+            note=(
+                "torchao Float8WeightOnly (e4m3). NOT qualified: the only "
+                "measured evidence on a 16 GiB device is an OUT-OF-MEMORY "
+                "failure at 4 cameras, so no 16 GiB envelope may be claimed. "
+                "A release-runtime measurement per camera count and sample "
+                "count is required before this mode is offered."
+            ),
         ),
     ),
     weights_bytes=22_157_194_524,

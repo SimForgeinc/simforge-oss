@@ -158,6 +158,9 @@ def _aggregate(items: list[dict[str, Any]]) -> dict[str, Any]:
         "scoredItems": len(scored),
         "refusedItems": sum(1 for item in items if item["status"] == "refused"),
         "failedItems": sum(1 for item in items if item["status"] == "error"),
+        "unscoredUnknownTimeBase": sum(
+            1 for item in items if item.get("unscored_reason") == "ego_history_time_base_unknown"
+        ),
         "okItems": sum(1 for item in items if item["status"] == "ok"),
         "minADE": {},
         "minFDE": {},
@@ -305,16 +308,29 @@ def run_manifest(
             future = reference.get("futureXyz") or reference.get("future_xyz")
             ref_kind = reference.get("kind") or ("none" if not future else "dataset")
             record["reference"] = {"kind": ref_kind}
-            metrics = (
-                _ade_fde(result.get("trajectories") or [], future) if future else None
-            )
+            time_base = result.get("time_base") or {}
+            scorable_time_base = bool(time_base.get("scorable"))
+            metrics = None
+            if future and not scorable_time_base:
+                # A metric computed against a history whose real cadence is
+                # unknown is not a measurement. The prediction is kept and
+                # reported; it is simply not scored, and the reason is
+                # machine-readable rather than prose.
+                record["reference"]["note"] = (
+                    "not scored: the ego-history time base is unknown. "
+                    + str(time_base.get("time_base_warning") or "")
+                ).strip()
+                record["unscored_reason"] = "ego_history_time_base_unknown"
+            elif future:
+                metrics = _ade_fde(result.get("trajectories") or [], future)
+                if metrics is None:
+                    record["reference"]["note"] = (
+                        "reference too short for any reported horizon; not scored"
+                    )
             # No reference means prediction, not a score. The absence is
             # recorded rather than filled with a default.
             record["metrics"] = metrics
-            if future and metrics is None:
-                record["reference"]["note"] = (
-                    "reference too short for any reported horizon; not scored"
-                )
+            record["timeBase"] = time_base
         else:
             error = response.get("error") or {}
             code = error.get("code")

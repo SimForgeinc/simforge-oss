@@ -146,15 +146,61 @@ def validate_camera_set(
             )
 
 
-def validate_history_times(t_s: Any) -> dict[str, Any]:
-    """Validate an optional ``ego_history_t_s`` and describe the time base.
+def validate_history_times(
+    t_s: Any, declared_rate_hz: float | None = None
+) -> dict[str, Any]:
+    """Validate the ego-history time base and say whether it can be SCORED.
 
-    Returns a provenance record. Upstream inference does not consume the
-    timestamps, so this is validation plus provenance and never a silent
-    resampling: a clock that is not 10 Hz is reported, not corrected.
+    Upstream inference does not consume the timestamps, so this is validation
+    plus provenance and never a silent resampling: a clock that is not 10 Hz
+    is reported, not corrected.
+
+    The `scorable` flag is the load-bearing part. An absent time base used to
+    be recorded as ``assumed-10hz`` and allowed to proceed, which meant a
+    metric could be computed against a history whose real cadence nobody
+    knew. That is now refused for scoring:
+
+    * ``ego_history_t_s`` supplied      -> scorable
+    * ``ego_history_rate_hz`` declared  -> scorable, recorded as declared
+      (for a dataset whose rate is documented, e.g. PhysicalAI-AV at 10 Hz)
+    * neither                           -> NOT scorable; the run is
+      inference-only, and a caller that asked for a metric gets a typed
+      ``missing_fields`` refusal naming ``obs.ego_history_t_s``.
     """
     if t_s is None:
-        return {"ego_history_t_s": "assumed-10hz", "time_base_warning": None}
+        if declared_rate_hz is None:
+            return {
+                "ego_history_t_s": "absent",
+                "time_base": "unknown",
+                "scorable": False,
+                "time_base_warning": (
+                    "no ego-history timestamps and no declared sample rate; the "
+                    "history cadence is unknown, so this input is inference-only "
+                    "and cannot be scored. Supply obs.ego_history_t_s, or "
+                    "obs.ego_history_rate_hz when the source's rate is documented."
+                ),
+            }
+        rate = float(declared_rate_hz)
+        if not 0.0 < rate <= 1000.0:
+            raise ObservationError(
+                "input_error",
+                f"ego_history_rate_hz must be a positive rate, got {rate!r}",
+                fields=["obs.ego_history_rate_hz"],
+            )
+        warning = None
+        if abs(rate - NOMINAL_HZ) > 1e-6:
+            warning = (
+                f"declared history rate {rate:g} Hz differs from the "
+                f"{NOMINAL_HZ:g} Hz window the model was trained on; the input "
+                "is not resampled"
+            )
+        return {
+            "ego_history_t_s": f"declared-{rate:g}hz",
+            "time_base": "declared",
+            "declared_rate_hz": rate,
+            "scorable": True,
+            "time_base_warning": warning,
+        }
     times = np.asarray(t_s, dtype=np.float64)
     if times.shape != (NUM_HISTORY_STEPS,):
         raise ObservationError(
@@ -186,7 +232,9 @@ def validate_history_times(t_s: Any) -> dict[str, Any]:
         )
     return {
         "ego_history_t_s": "supplied",
+        "time_base": "measured",
         "history_dt_max_error_s": worst,
+        "scorable": True,
         "time_base_warning": warning,
     }
 
@@ -300,7 +348,9 @@ def decode_observation(
                 fields=["obs.ego_history_rot"],
             )
 
-    time_base = validate_history_times(obs.get("ego_history_t_s"))
+    time_base = validate_history_times(
+        obs.get("ego_history_t_s"), obs.get("ego_history_rate_hz")
+    )
 
     return {
         "frames": frames,

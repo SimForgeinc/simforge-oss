@@ -63,7 +63,13 @@ scripts/setup.sh --family alpamayo-1.5 --weights  # + ~22 GB of weights
 
 `nvidia/Cosmos-Reason2-8B` (Alpamayo 1.5's config/tokenizer sidecar) is
 `gated: auto`, so it needs `hf auth login` for the development path or a
-token in the OS credential vault for the product path. It is the **only**
+token in the OS credential vault for the product path. In a container image
+those few files are materialized at build time through a **BuildKit secret
+mount** (`RUN --mount=type=secret,id=hf_token`) and never a build-arg or
+`ENV`, because a build-arg is preserved in the image history and would hand
+the token to anyone able to pull the image; the runtime then reads them from
+a read-only `SIMFORGE_ALPAMAYO_SIDECAR_DIR` with `HF_HUB_OFFLINE=1`, so no
+token is present at run time. It is the **only**
 gated dependency across the three families: Alpamayo 1 uses ungated Qwen
 sidecars and Alpamayo 2 Super is self-contained.
 
