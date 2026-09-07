@@ -36,6 +36,7 @@ turn an infrastructure gap into a fake scientific result.
 from __future__ import annotations
 
 import json
+import os
 import struct
 from collections import deque
 from pathlib import Path
@@ -194,13 +195,11 @@ class DirectoryFrameSource:
 class BevyFrameSource:
     """Cameras rendered by the resident Bevy renderer for the live episode."""
 
-    def __init__(self, rig: Mapping[str, Any], env: Any) -> None:
+    def __init__(self, rig: Mapping[str, Any], env: Any, rig_dir: Path | None = None) -> None:
         cameras = list(rig.get("cameras") or ())
         if not cameras:
             raise FrameSourceError("frame_source_unavailable", "bevy rig document declares no cameras")
-        scene = rig.get("scene")
-        if scene is None:
-            raise FrameSourceError("frame_source_unavailable", "bevy rig document has no `scene`")
+        scene = self._resolve_scene(rig.get("scene"), rig_dir)
         provider = self._resolve_provider(rig.get("sceneState"), env)
         try:
             from .bevy_sensors import BevySensorRig
@@ -211,6 +210,37 @@ class BevyFrameSource:
             ) from error
         self._rig = BevySensorRig(scene, cameras, provider, passes=tuple(rig.get("passes") or ("rgb",)), device=False)
         self._sensor_ids = tuple(str(camera["sensorId"]) for camera in cameras)
+
+    @staticmethod
+    def _resolve_scene(scene: Any, rig_dir: Path | None) -> Any:
+        """The render scene document, or a path to it.
+
+        A rig may embed the scene inline or name a file. A relative path is
+        resolved against ``SIMFORGE_SCENE_ROOT`` when set (the directory a
+        cloud worker downloaded the tenant-scoped, digest-verified map bundle
+        into), else against the rig document's own directory. That indirection
+        is what lets one rig document ship in a worker image while the map
+        bundle it renders arrives per job.
+        """
+        if scene is None:
+            raise FrameSourceError(
+                "frame_source_unavailable",
+                "bevy rig document has no `scene`; the renderer needs the map/tile scene and never synthesizes one",
+            )
+        if not isinstance(scene, str):
+            return scene
+        candidate = Path(scene).expanduser()
+        if not candidate.is_absolute():
+            root = os.environ.get("SIMFORGE_SCENE_ROOT")
+            base = Path(root).expanduser() if root else (rig_dir or Path.cwd())
+            candidate = base / candidate
+        if not candidate.exists():
+            raise FrameSourceError(
+                "frame_source_unavailable",
+                f"rig scene {candidate} does not exist (set SIMFORGE_SCENE_ROOT to the delivered map bundle)",
+                {"scene": str(candidate)},
+            )
+        return str(candidate)
 
     @staticmethod
     def _resolve_provider(binding: Mapping[str, Any] | None, env: Any) -> Any:
@@ -298,7 +328,7 @@ def make_frame_source(spec: str | None, env: Any = None, *, sensor_ids: Sequence
         rig_path = Path(target).expanduser()
         if not rig_path.is_file():
             raise FrameSourceError("frame_source_unavailable", f"bevy rig document {rig_path} does not exist")
-        return BevyFrameSource(json.loads(rig_path.read_text()), env)
+        return BevyFrameSource(json.loads(rig_path.read_text()), env, rig_path.parent)
     raise FrameSourceError("frame_source_unavailable", f"unknown frame source scheme {scheme!r} (expected dir|bevy)")
 
 
