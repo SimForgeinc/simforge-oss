@@ -154,6 +154,27 @@ interface ManifestParts {
   readonly error: { code: ErrorCode; message: string; fields?: readonly string[] } | null;
 }
 
+/**
+ * Classify a refused or failed episode for the control plane.
+ *
+ * A malformed or missing bundle is the CUSTOMER's input, not a capability of
+ * this worker: `input_error` so the attempt is terminal and the reservation is
+ * released against the right cause. A scene whose gates did not pass, a camera
+ * set the family rejects, an absent frame source or a wrong model revision are
+ * capability refusals — also terminal, but not the submitter's data being
+ * broken. Anything else is `internal` and may be retried.
+ */
+function episodeErrorClass(error: { code: string; message: string }): { code: ErrorCode; message: string } {
+  const code: ErrorCode = /replay_context_invalid|replay_context_missing|input_error|invalid/.test(error.code)
+    ? 'input_error'
+    : /camera|capability|frame_source|frame_missing|frame_window|frame_geometry|frame_decode|ego_history|replay_context|revision|unsupported/.test(
+          error.code,
+        )
+      ? 'capability_error'
+      : 'internal';
+  return { code, message: error.message };
+}
+
 function stringOrNull(source: Record<string, unknown> | null, key: string): string | null {
   const value = source?.[key];
   return typeof value === 'string' ? value : null;
@@ -372,19 +393,7 @@ async function main(): Promise<number> {
         outcome.summary['replay_context'] && typeof outcome.summary['replay_context'] === 'object'
           ? (outcome.summary['replay_context'] as Record<string, unknown>)
           : null,
-      error: outcome.error
-        ? {
-            // A refused model episode (camera set, unqualified scene, no
-            // frames, wrong revision) is terminal, not worth a retry.
-            code: /camera|capability|frame_source|frame_missing|replay_context|revision|unsupported/.test(
-              outcome.error.code,
-            )
-              ? 'capability_error'
-              : 'internal',
-            message: outcome.error.message,
-            fields: [outcome.error.code],
-          }
-        : null,
+      error: outcome.error ? { ...episodeErrorClass(outcome.error), fields: [outcome.error.code] } : null,
     });
     if (outcome.status === 'cancelled') return 130;
     return outcome.status === 'failed' ? 2 : 0;
