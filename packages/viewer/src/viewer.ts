@@ -3,8 +3,10 @@ import {
   Box3,
   Color,
   DirectionalLight,
+  Frustum,
   Group,
   MathUtils,
+  Matrix4,
   Mesh,
   Object3D,
   PCFSoftShadowMap,
@@ -274,6 +276,8 @@ export class CityViewer {
   private readonly options: Required<CityViewerOptions>;
   private readonly frameStats = new FrameStats(150);
   private readonly downloadTracker = new AssetDownloadTracker();
+  private readonly cityFrustum = new Frustum();
+  private readonly cityViewProjection = new Matrix4();
   private textureLoadAbort = new AbortController();
   private effectiveTextureMaxDimension = Infinity;
   private textureBudgetRecovery: Promise<void> | null = null;
@@ -1087,6 +1091,7 @@ export class CityViewer {
   }
 
   private createCityLayer(manifest: CityManifest): void {
+    this.updateCityFrustum();
     const defs: StreamTileDef[] = manifest.tiles.map((tile) => ({
       id: tile.id,
       box: boxOf(tile.bounds.min, tile.bounds.max),
@@ -1101,7 +1106,7 @@ export class CityViewer {
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
       pinCoarsest: true,
-      want: () => !this.roadsOnlyFidelity,
+      want: (def) => !this.roadsOnlyFidelity && this.cityFrustum.intersectsBox(def.box),
       build: async (def, lod, signal) => {
         const gltf = await this.parseAsset(lod.file, signal, lod.fileSize);
         const root = gltf.scene;
@@ -1328,7 +1333,14 @@ export class CityViewer {
   /** Optional per-frame hook (used by the benchmark and by integrations). */
   onFrame: ((dt: number) => void) | null = null;
 
+  private updateCityFrustum(): void {
+    this.camera.updateMatrixWorld();
+    this.cityViewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this.cityFrustum.setFromProjectionMatrix(this.cityViewProjection);
+  }
+
   private updateStreaming(cameraPos: Vector3): void {
+    this.updateCityFrustum();
     const height = this.renderer.domElement.height || 1;
     const sseScale = height / (2 * Math.tan(MathUtils.degToRad(this.camera.fov) / 2));
     this.roadLayer?.update(cameraPos, sseScale, this.options.maxScreenSpaceError);

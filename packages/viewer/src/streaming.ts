@@ -102,9 +102,8 @@ export interface TileStreamLayerOptions {
   /** Shared byte ledger; keeps in-flight decodes from blowing past the budget. */
   memory: MemoryGovernor;
   /**
-   * Load the coarsest LOD of every tile before anything finer is fetched, and
-   * never evict it. Used for the city so the full map is on screen in the first
-   * seconds and no tile can ever disappear.
+   * Load wanted tiles' coarsest LODs before finer detail. Keep those fallbacks
+   * resident while wanted; offscreen fallbacks may be evicted under pressure.
    */
   pinCoarsest: boolean;
   /** Infrastructure such as the single road/ground asset must load even when its conservative estimate exceeds the quality budget. */
@@ -192,7 +191,7 @@ export class TileStreamLayer {
     return this.generation;
   }
 
-  /** True once every tile has its coarsest LOD on screen. */
+  /** True once every wanted tile has its coarsest LOD on screen. */
   get ready(): boolean {
     return this.bootstrapped;
   }
@@ -282,7 +281,7 @@ export class TileStreamLayer {
           }
         }
         if (this.opts.maxDesiredIndex) desired = Math.min(desired, this.opts.maxDesiredIndex(entry.def));
-        if (!this.bootstrapped) desired = 0;
+        if (!this.bootstrapped || (this.opts.pinCoarsest && !entry.resident.has(0))) desired = 0;
       }
       if (desired !== entry.desired
         || (Number.isFinite(previousDistance) && Math.abs(distance - previousDistance) > Math.max(10, previousDistance * 0.2))) {
@@ -552,7 +551,7 @@ export class TileStreamLayer {
   evictionCandidates(out: EvictionCandidate[]): void {
     for (const entry of this.entries.values()) {
       for (const [index, asset] of entry.resident) {
-        if (index === 0 && this.opts.pinCoarsest) continue; // never evicted
+        if (index === 0 && this.opts.pinCoarsest && entry.desired >= 0) continue;
         // Evicting the exact asset this stationary view still wants creates an
         // endless fetch -> upload -> eviction loop. Refuse the new admission
         // instead; a camera/quality change will make it eligible later.
