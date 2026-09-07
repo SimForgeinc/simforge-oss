@@ -67,20 +67,28 @@ def main() -> None:
     parser.add_argument("--socket", default="/tmp/simforge-alpamayo.sock")
     parser.add_argument("--iters", type=int, default=12)
     parser.add_argument("--samples", type=int, default=1)
-    parser.add_argument("--profiles", type=int, nargs="+", default=[2, 7])
+    parser.add_argument("--profiles", type=int, nargs="+", default=None,
+                        help="synthetic camera counts; default: the family's own set")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
     client = AlpamayoClient(args.socket)
     hello = client.hello()
-    print("server:", hello.get("quant"), hello.get("gpu"))
+    print("server:", hello.get("family"), hello.get("quant"), hello.get("gpu"))
+    if hello.get("quant_status") not in (None, "supported"):
+        # A benchmark of an unmeasured mode is how a guess becomes a number.
+        print(f"NOTE: quant {hello.get('quant')} is "
+              f"{hello.get('quant_status')} for {hello.get('family')}; this run "
+              f"is what establishes its envelope, not a confirmation of one.")
+    cameras = (hello.get("capabilities") or {}).get("cameras") or {}
+    profiles = args.profiles or [len(cameras.get("default") or [2])]
 
     rest = client.health()["vram"]
     print("VRAM at rest:", json.dumps(rest))
 
     # one warmup per profile so cudnn autotune/allocator noise stays out of stats
     results = {"quant": hello.get("quant"), "vram_at_rest": rest, "profiles": []}
-    for cams in args.profiles:
+    for cams in profiles:
         print(f"profile {cams}-cam: warmup...", flush=True)
         client.warmup(cams=cams)
         results["profiles"].append(bench_profile(client, cams, args.iters, args.samples))

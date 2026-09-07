@@ -1,0 +1,188 @@
+{
+  "schema": "simforge.desktop-bundled-components/v1",
+  "note": "What a SimForge Studio installer redistributes besides SimForge's own Apache-2.0 code, and what each item obliges us to do before that installer may be offered publicly. Every claim here is bound to bytes: `evidence[].sha256` values are the digests of files the build actually fetches (studio/desktop/tools.lock.json) or of the upstream metadata the claim is read from, and scripts/release/audit-bundled-licenses.mjs refuses to certify an installer whose lock no longer matches these pins. Obligation status is a recorded review outcome, never an assumption: `satisfied` means the artifact named in `evidence` exists, `unsatisfied` means the obligation is real and unmet, `undetermined` means nobody has established the answer. Anything other than `satisfied` blocks public redistribution of the affected targets.",
+  "reviewedAt": "2026-09-07",
+  "components": [
+    {
+      "id": "simforge-studio",
+      "role": "The application, the compiler, the local host, the native runtime and the Bevy renderer.",
+      "license": "Apache-2.0",
+      "origin": "https://github.com/SimForgeinc/simforge-oss",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "license-text",
+          "requirement": "Ship LICENSE and NOTICE with the distribution and state modifications.",
+          "status": "satisfied",
+          "evidence": "Repository LICENSE; the release page carries the source revision the installers were built from."
+        }
+      ]
+    },
+    {
+      "id": "electron",
+      "role": "Application runtime (Chromium + Node) the installer embeds.",
+      "license": "MIT AND BSD-3-Clause AND LGPL-2.1-or-later (Chromium's bundled components)",
+      "origin": "https://github.com/electron/electron",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "license-text",
+          "requirement": "Electron's LICENSES.chromium.html and LICENSE must remain in the packaged application.",
+          "status": "satisfied",
+          "evidence": "electron-builder copies Electron's own license files into the package; desktop/verify-package.mjs asserts the Electron payload is the one staged."
+        }
+      ]
+    },
+    {
+      "id": "ffmpeg-encoders",
+      "role": "ffmpeg and ffprobe, spawned as separate programs by the host to encode render output and to decode user-provided clips. Built for each target by studio/desktop/build-encoders.mjs from the sources pinned in studio/desktop/encoders.lock.json.",
+      "license": "GPL-3.0-or-later",
+      "origin": "studio/desktop/encoders.lock.json",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "builtFromSource": {
+        "why": "Until 2026-09-07 the four packages carried three different third-party prebuilt static builds with three different licences, and the macOS arm64 one was configured --enable-nonfree, which FFmpeg states may not be redistributed at all. No upstream builder publishes corresponding source for those binaries either. Building from pinned source replaces four inherited provenances with one we control.",
+        "sources": [
+          {
+            "id": "ffmpeg",
+            "repository": "https://github.com/FFmpeg/FFmpeg.git",
+            "commit": "3a0867c2bfda4a4d4309ca1a8cbdc6175e67f587",
+            "tag": "n7.1.5"
+          },
+          {
+            "id": "x264",
+            "repository": "https://github.com/mirror/x264.git",
+            "commit": "31e19f92f00c7003fa115047ce50978bc98c3a0d",
+            "branch": "stable"
+          }
+        ],
+        "closure": "--disable-autodetect, so the only external library linked is libx264; FFmpeg's internal codecs stay at their defaults so user clips in H.264/HEVC/VP9/MJPEG/ProRes/AV1 can be decoded. --disable-network means a bundled encoder cannot be pointed at a URL.",
+        "licenceOutcome": "libx264 is GPL-2.0-or-later and FFmpeg is configured --enable-version3, so both executables are GPL-3.0-or-later on every platform. Identical outcome per target, unlike the prebuilt binaries.",
+        "verification": "Each build records the binary digests, the source commits and the corresponding-source archive digest in dist/desktop-tools/<target>/tools-manifest.json; readToolPins refuses a manifest whose source commits are not the ones the lock pins, and stage/after-pack/verify-package compare the staged, packaged and signed bytes against those digests."
+      },
+      "obligations": [
+        {
+          "kind": "redistribution-permission",
+          "requirement": "Do not redistribute an ffmpeg configured --enable-nonfree.",
+          "status": "satisfied",
+          "evidence": "The bundled encoders are built by studio/desktop/build-encoders.mjs from the pinned sources with the configure lines in studio/desktop/encoders.lock.json; --enable-nonfree is not among them and --disable-autodetect prevents a host library from adding one. No third-party prebuilt encoder is shipped."
+        },
+        {
+          "kind": "license-text",
+          "requirement": "The applicable licence text must accompany the binaries inside every package.",
+          "status": "satisfied",
+          "evidence": "build-encoders.mjs writes dist/desktop-tools/<target>/LICENSE from the sources' own COPYING.GPLv3 and libx264 COPYING, naming both commits; stage.mjs copies it to the package's tools directory."
+        },
+        {
+          "kind": "corresponding-source",
+          "requirement": "GPL-3.0 section 6 requires the complete corresponding source of these executables to accompany the distribution: both projects at the exact commits, plus the scripts controlling compilation and installation.",
+          "status": "satisfied-by-accompaniment",
+          "evidence": "Each build writes corresponding-source/simforge-studio-encoders-<target>-corresponding-source.tar.gz containing git archives of both pinned commits, build-encoders.mjs, encoders.lock.json and a BUILD.md with the exact configure lines and toolchain versions. Publication attaches one archive per platform to the release and records its digest, and scripts/release/publish-desktop-release.mjs refuses to publish publicly without them, so no written offer is relied on.",
+          "requiresReleaseAsset": true
+        }
+      ]
+    },
+    {
+      "id": "nasa-sky-plates",
+      "role": "Sky background plates converted at build time by renderer/tools/prepare_sky_assets.py.",
+      "license": "Public domain (NASA media usage guidelines; attribution requested, not required)",
+      "origin": "renderer/render-core/assets/sky/SOURCES.json",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "attribution",
+          "requirement": "Credit the source imagery.",
+          "status": "satisfied",
+          "evidence": "SOURCES.json pins every source URL, download digest and generated-product digest, and the workflow verifies both before packaging; THIRD_PARTY_NOTICES reproduces the credit."
+        }
+      ]
+    },
+    {
+      "id": "actor-appearance-closure",
+      "role": "92 glTF actor-appearance models plus their catalog, fetched by packages/render/scripts/fetch-actor-closure.mjs and staged into every package so native renders resolve actors offline.",
+      "license": "Mixed; determined per member from the pinned catalog",
+      "origin": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192.json",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "provenance": {
+        "closureDigest": "6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192",
+        "closureBytes": 12607,
+        "catalogDigest": "971c6a56f61e4633871ec9410d34118eab7df76893dcda5908d857320e5dac20",
+        "note": "The closure document itself records only digests and sizes; the per-model attribution lives in its catalog-models.json member, which is what these counts were read from.",
+        "classes": [
+          {
+            "source": "asset-catalog-procedural",
+            "models": 34,
+            "attribution": "SimForge procedural catalog model (@simforge-oss/asset-catalog 0.1.0-rc.61), built by buildProp() with catalog default params",
+            "terms": "SimForge's own output, Apache-2.0 with the rest of the product"
+          },
+          {
+            "source": "meshy-refined",
+            "models": 55,
+            "attribution": "Generated with Meshy for SimForge",
+            "terms": "Meshy ToS 3.2 (2026-03-07): free plan grants CC BY 4.0 with credit to Meshy; paid plan grants full ownership with no attribution. Either way redistribution is permitted; we credit under CC BY 4.0 to satisfy the stricter branch.",
+            "attributionApplied": "Model created with Meshy - CC BY 4.0 License"
+          },
+          {
+            "source": "carla-0.10.0-ue5",
+            "models": 1,
+            "attribution": "\"CARLA pedestrian 0020\" pedestrian model (c) CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+            "terms": "CC-BY-4.0: redistribution permitted with credit, license notice and a statement of modification."
+          }
+        ]
+      },
+      "obligations": [
+        {
+          "kind": "attribution",
+          "requirement": "Reproduce each member's attribution, and for the CC BY 4.0 model its credit, license identification and the fact that it was converted.",
+          "status": "satisfied",
+          "evidence": "The pinned catalog (sha256 971c6a56...) carries a per-model attribution string for all 90 catalog entries; THIRD_PARTY_NOTICES reproduces the three provenance classes and the CC BY 4.0 credit verbatim."
+        },
+        {
+          "kind": "redistribution-terms",
+          "targets": [
+            "windows-x64",
+            "linux-x64",
+            "macos-arm64",
+            "macos-x64"
+          ],
+          "requirement": "Establish the right to redistribute the 55 Meshy-generated models inside a publicly downloadable installer, and satisfy whatever that right requires.",
+          "status": "satisfied",
+          "evidence": "Meshy Terms of Service (https://www.meshy.ai/terms-of-use, Last Updated 2026-03-07) section 3.2: free-plan customers acknowledge Meshy owns the output and are granted a licence \"under the Creative Commons Attribution 4.0 International License (CC BY 4.0). This means Free Customer can share and adapt the assets for any purpose, even commercially, as long as Free Customer provides appropriate credit to Provider\"; paid-plan customers retain ownership with no attribution requirement. Redistribution is therefore permitted under either plan, and the two branches differ only in whether credit is required. THIRD_PARTY_NOTICES credits Meshy under CC BY 4.0 unconditionally, which satisfies the stricter branch, so the plan question does not gate publication.",
+          "remediation": [
+            "Optional: record the plan from the Meshy account billing history to drop the CC BY 4.0 credit requirement for these 55 models."
+          ],
+          "residualProvenanceGap": "Which Meshy plan the closure was generated under is not recorded in this repository. tools/meshy/generate.mjs drives Meshy's Text-to-3D API with a MESHY_API_KEY from the secrets manager, and the API is a subscription feature, which suggests a paid plan, but that is an inference. It is answerable only from the Meshy account's billing history, and it is not blocking: attributing under CC BY 4.0 is valid in both cases."
+        }
+      ]
+    }
+  ],
+  "neverShipped": [
+    "Private map bundles: only richmond-field-station is public, and public/map-bundles is excluded from the stage.",
+    "Model weights, NuRec/splat assets and Python inference environments: resolved into user data after install, never installer payload and never a release asset.",
+    "Cloud credentials, QA fixtures and user datasets."
+  ]
+}

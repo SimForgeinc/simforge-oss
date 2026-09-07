@@ -15,7 +15,11 @@ keep private copies of portable implementations.
    publishable workspace package without a registry entry, or an internal
    dependency on an unregistered package, fails manifest generation.
 3. A release tag is exactly `v<stackVersion>` and identifies one immutable Git
-   tree. Published versions are never overwritten or reused.
+   tree. Published versions are never overwritten or reused. This namespace
+   belongs to the stack alone: the desktop application publishes installer
+   sets under `studio-<label>` tags (see
+   [desktop-release.md](desktop-release.md)), because a `v*` tag triggers the
+   stack publication workflow and an installer release must not.
 4. Internal dependencies in packed artifacts are pinned to that stack version;
    no `workspace:` specifier survives publication.
 5. Export maps and packed files are verified before publication. Browser-safe
@@ -53,6 +57,55 @@ identity, publishes, and attaches provenance.
 The Cloud intake follows [simcloud-sync.md](simcloud-sync.md): its stack lock,
 vendored artifacts, import rewrites, package-manager lockfile, and divergence
 audit expectations change atomically.
+
+## Packaged content that a bundler does not emit
+
+`files` lists what is published, but a package only ships what its `build`
+actually writes. `packages/evaluation` carries a Python measurement tool
+(`src/replay-context/python/replay_measure.py`) that tsup does not copy, so
+its `build` script copies it into `dist/replay-context/python/` and the
+default resolution — next to the built module — works from a packed tarball
+with no change to `files: ["dist"]`. `SIMFORGE_REPLAY_MEASURE` remains a
+documented override for a worker image that ships the tool elsewhere; it is
+not required, and it is not the primary mechanism.
+
+The general rule for any package in the stack: if a published entry point
+resolves a non-JS file at runtime, the `build` script must place that file
+inside the published directory. `release:verify-artifacts` checks export
+targets exist, which catches a missing entry point but not a missing data
+file, so this is a contract to keep rather than a check to rely on.
+
+## Source-bound vendored artifacts precede registry publication
+
+SimForge Cloud consumes published artifacts, and it may consume them before
+npm and PyPI carry them. Vendored tarballs are built from the exact
+integrated OSS commit, digest-verified, and recorded with the full stack
+manifest and source revision, which is the same provenance a registry
+release carries — so the portal and the desktop app ship source-bound
+without waiting for a public registry release. This is the existing vendor
+source-distribution path, not a shim: `scripts/sync-simforge-oss-stack.mjs`
+packs the same package contracts, `verify-simforge-oss-vendor.mjs` proves
+the vendored bytes against the lock, and a hand-edited vendor tree is never
+acceptable.
+
+Registry publication keeps its own, separate checks: the `v<stackVersion>`
+tag, the portable/export-map/packed-content verification in `publish.yml`,
+and provenance. Those are not bypassed or relaxed because a vendored
+prerelease exists, and a **stable** desktop release still requires the
+registry publication to have succeeded (see `stable-gates.mjs`
+`stack-identity-published`). Failing portable tests are repaired, never
+skipped.
+
+## Desktop releases
+
+SimForge Studio installers are a separate publication of the same tree, with
+their own tags (`studio-<label>`), their own record (`RELEASE.json`,
+`simforge.desktop-release/v2`) and their own gates. A desktop preview does
+not wait for npm publication; a **stable** desktop release does, because its
+`stable-gates.mjs` `stack-identity-published` gate requires the
+`v<stackVersion>` tag to exist and the registry to carry it, and the Cloud
+vendor lock to name the same revision the installers were built from. That is
+the only coupling between the two publications.
 
 ## Rollback
 

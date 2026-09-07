@@ -2,7 +2,7 @@ import { access, constants, cp, realpath } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { matchesPin, toolPins } from "./fetch-tools.mjs";
+import { readToolPins, matchesPin } from "./build-encoders.mjs";
 import { assertStagePlatform, readStageManifest, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
 
 /** @type {{ Arch: Record<number, string> }} */
@@ -18,7 +18,8 @@ const { Arch } = createRequire(import.meta.url)("electron-builder");
  * manifest names is present and executable, that every native binding,
  * executable and library in the package was built for this target (a Linux
  * closure never ships as a Windows or macOS payload), and that the pinned
- * encoders are still byte-identical to desktop/tools.lock.json. This hook runs
+ * encoders are still byte-identical to the ones desktop/build-encoders.mjs
+ * built from the sources desktop/encoders.lock.json pins. This hook runs
  * before electron-builder signs, so that last check is the pre-signature link
  * of the encoders' integrity chain; desktop/verify-package.mjs holds the
  * post-signature link.
@@ -48,10 +49,13 @@ export default async function afterPack(context) {
       throw new Error(`Packaged native executable is missing or not executable: ${rel}`);
     });
   }
-  const pins = toolPins(targetFor(manifest.platform, manifest.arch).key);
+  const stagedTarget = targetFor(manifest.platform, manifest.arch);
+  const pins = await readToolPins(fileURLToPath(new URL("../dist/", import.meta.url)), stagedTarget);
   for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
     if (!(await matchesPin(join(target, manifest.tools[name]), pins[name]))) {
-      throw new Error(`Packaged ${manifest.tools[name]} does not match desktop/tools.lock.json before signing`);
+      throw new Error(
+        `Packaged ${manifest.tools[name]} is not the encoder built for ${stagedTarget.key} from the pinned sources (checked before signing)`,
+      );
     }
   }
   for (const rel of [manifest.nativeAddon, manifest.nativeRenderLibrary, join(manifest.actorAssetsRoot, "closures"), manifest.browserHarness]) {

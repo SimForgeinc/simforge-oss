@@ -100,15 +100,29 @@ export const CreateModelEndpointSchema = z.object({
 });
 export type CreateModelEndpointInput = z.infer<typeof CreateModelEndpointSchema>;
 
-/** Openloop input: inline items or a JSON manifest file `{"items": [...]}`. */
-export const OpenloopParamsSchema = z.object({
-  input: z.union([
-    z.object({ items: z.array(z.unknown()).min(1).max(10_000) }),
-    z.object({ manifestPath: z.string().min(1) }),
-  ]),
-  request: z.record(z.unknown()).default({}),
-});
-export type OpenloopParams = z.infer<typeof OpenloopParamsSchema>;
+/**
+ * Run parameters are the SHARED evaluation contracts, not registry-local
+ * shapes: `openloop` runs carry `simforge.openloop-params/v2` and
+ * `policy_episode` runs carry `simforge.policy-episode-params/v1`, exactly as
+ * the cloud job does. Importing them (rather than restating them) is what
+ * keeps a desktop run and a cloud run of the same input identical.
+ *
+ * The `@simforge-oss/evaluation/params` subpath is dependency-free apart from
+ * zod, so this module stays safe for the browser bundle.
+ */
+export {
+  OpenloopParamsSchema,
+  PolicyEpisodeParamsSchema as PolicyEpisodeRunParamsSchema,
+  OPENLOOP_PARAMS_SCHEMA,
+  POLICY_EPISODE_PARAMS_SCHEMA,
+  EPISODE_MODES,
+  INPUT_KINDS,
+  REFUSAL_CODES,
+  type OpenloopParams,
+  type PolicyEpisodeParams as PolicyEpisodeRunParams,
+  type EpisodeMode,
+  type InputKind,
+} from "@simforge-oss/evaluation/params";
 
 export const CreateModelRunSchema = z.object({
   modelVersionId: z.string().min(1),
@@ -118,14 +132,38 @@ export const CreateModelRunSchema = z.object({
   seed: z.number().int().nonnegative().default(0),
   maxAttempts: z.number().int().min(1).max(20).default(3),
 }).superRefine((value, ctx) => {
-  if (value.kind !== "openloop") return;
-  const parsed = OpenloopParamsSchema.safeParse(value.params);
-  if (!parsed.success) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["params"],
-      message: `openloop params invalid: ${parsed.error.issues.map((issue) => issue.message).join("; ")}`,
-    });
+  // Reject an unrunnable run at submission instead of burning attempts on it.
+  if (value.kind === "openloop") {
+    const parsed = OpenloopParamsSchema.safeParse(value.params);
+    if (!parsed.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["params"],
+        message: `openloop params invalid: ${parsed.error.issues
+          .map((issue) => `${issue.path.join(".")} ${issue.message}`)
+          .join("; ")}`,
+      });
+    }
+    return;
+  }
+  if (value.kind === "policy_episode") {
+    const parsed = PolicyEpisodeRunParamsSchema.safeParse(value.params);
+    if (!parsed.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["params"],
+        message: `policy_episode params invalid: ${parsed.error.issues
+          .map((issue) => `${issue.path.join(".")} ${issue.message}`)
+          .join("; ")}`,
+      });
+    }
+    if (parsed.success && !parsed.data.spec) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["params", "spec"],
+        message: "a host episode needs a local `spec` path (roles exist only for cloud jobs)",
+      });
+    }
   }
 });
 export type CreateModelRunInput = z.infer<typeof CreateModelRunSchema>;

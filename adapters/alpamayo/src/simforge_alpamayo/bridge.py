@@ -26,9 +26,9 @@ from typing import Any
 
 import numpy as np
 
-#: Upstream Alpamayo 1.5 camera-index convention (NVlabs/alpamayo1.5
-#: load_physical_aiavdataset.py). MIRROR of ``ALPAMAYO_CAMERA_INDEX`` in
-#: packages/scenario/src/schema/v2/sensor-rigs.ts — keep byte-identical.
+#: Upstream Alpamayo camera-index convention, identical in all three upstream
+#: packages (``CAMERA_NAMES_TO_INDICES``). MIRROR of ``ALPAMAYO_CAMERA_INDEX``
+#: in packages/scenario/src/schema/v2/sensor-rigs.ts — keep byte-identical.
 ALPAMAYO_CAMERA_INDEX: dict[str, int] = {
     "camera_cross_left_120fov": 0,
     "camera_front_wide_120fov": 1,
@@ -39,8 +39,10 @@ ALPAMAYO_CAMERA_INDEX: dict[str, int] = {
     "camera_front_tele_30fov": 6,
 }
 
-#: Sensor ids per authored rig preset, camera-index ascending (mirrors the
-#: `alpamayo-2cam` / `alpamayo-4cam` presets in packages/scenario).
+#: Sensor ids per authored rig preset, camera-index ascending. MIRROR of the
+#: `alpamayo-*` presets in packages/scenario/src/schema/v2/sensor-rigs.ts.
+#: The 6-camera sets are the Alpamayo 2 Super task profiles: the driving
+#: profile drops rear-tele (4), the VQA profile drops front-tele (6).
 RIG_PROFILES: dict[str, tuple[str, ...]] = {
     "alpamayo-2cam": ("camera_front_wide_120fov", "camera_front_tele_30fov"),
     "alpamayo-4cam": (
@@ -49,9 +51,32 @@ RIG_PROFILES: dict[str, tuple[str, ...]] = {
         "camera_cross_right_120fov",
         "camera_front_tele_30fov",
     ),
+    "alpamayo-6cam": (
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_rear_left_70fov",
+        "camera_rear_right_70fov",
+        "camera_front_tele_30fov",
+    ),
+    "alpamayo-6cam-vqa": (
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_rear_left_70fov",
+        "camera_rear_tele_30fov",
+        "camera_rear_right_70fov",
+    ),
 }
 
-# Local mirrors of obs.py constants (obs.py imports torch; this module must not).
+#: Model camera-index tuples per preset, ascending. Derived, not typed twice.
+RIG_CAMERA_IDS: dict[str, tuple[int, ...]] = {
+    profile: tuple(sorted(ALPAMAYO_CAMERA_INDEX[sensor] for sensor in sensors))
+    for profile, sensors in RIG_PROFILES.items()
+}
+
+# Local mirrors of obs.py constants, so this module stays numpy-only and can
+# be imported by a policy runner that has no inference environment.
 NUM_FRAMES_PER_CAMERA = 4
 NUM_HISTORY_STEPS = 16
 
@@ -65,6 +90,19 @@ def profile_camera_map(profile: str) -> dict[str, int]:
             f"unknown rig profile {profile!r} (have {sorted(RIG_PROFILES)})"
         ) from None
     return {sensor_id: ALPAMAYO_CAMERA_INDEX[sensor_id] for sensor_id in sensors}
+
+
+def profile_for_camera_ids(camera_ids: tuple[int, ...] | list[int]) -> str | None:
+    """Rig-preset id matching a model camera-index set, or ``None``.
+
+    Returns ``None`` rather than a nearest match: an unnamed camera set is
+    recorded as unnamed in provenance, never relabelled as a preset it is not.
+    """
+    wanted = tuple(sorted(int(value) for value in camera_ids))
+    for profile, ids in RIG_CAMERA_IDS.items():
+        if ids == wanted:
+            return profile
+    return None
 
 
 def rgba_view_to_rgb_bytes(
@@ -255,3 +293,77 @@ def ego_history_from_positions(
     ego[:, 1] = sin_h * delta[:, 0] + cos_h * delta[:, 1]
     ego[:, 2] = delta[:, 2]
     return [[float(v) for v in row] for row in ego]
+
+
+def ego_history_rot_from_headings(
+    headings_rad: Any, steps: int = NUM_HISTORY_STEPS
+) -> list[list[list[float]]]:
+    """Per-step ego rotations expressed in the t0 rig frame.
+
+    ``headings_rad`` is a sequence of world yaw angles, oldest -> newest, in
+    the same world frame as the positions passed to
+    :func:`ego_history_from_positions`. The newest heading defines the t0
+    frame, so the last matrix is the identity by construction.
+
+    This is the AlpaSim ``build_ego_history`` convention: x forward, y left,
+    z up (FLU), rotations 3x3 row-major about +z, relative to t0. Histories
+    shorter than ``steps`` are padded by replicating the OLDEST heading,
+    matching the position padding — the cold-start approximation, applied
+    consistently rather than mixing a padded position with a fresh rotation.
+    """
+    headings = np.asarray(headings_rad, dtype=np.float64).reshape(-1)
+    if headings.size < 1:
+        raise ValueError("headings_rad must contain at least one heading")
+    if headings.size < steps:
+        headings = np.concatenate(
+            [np.repeat(headings[:1], steps - headings.size), headings]
+        )
+    headings = headings[-steps:]
+    relative = headings - headings[-1]
+    cos_h = np.cos(relative)
+    sin_h = np.sin(relative)
+    matrices = np.zeros((steps, 3, 3), dtype=np.float64)
+    matrices[:, 0, 0] = cos_h
+    matrices[:, 0, 1] = -sin_h
+    matrices[:, 1, 0] = sin_h
+    matrices[:, 1, 1] = cos_h
+    matrices[:, 2, 2] = 1.0
+    return [[[float(v) for v in row] for row in mat] for mat in matrices]
+
+
+def bundle_to_observation(
+    bundle: Any,
+    camera_map: Mapping[str, int] | str,
+    ego_history_xyz: Any,
+    ego_history_rot: Any | None = None,
+    nav_text: str | None = None,
+    size: tuple[int, int] | None = None,
+    pass_: str = "rgb",
+    ego_history_t_s: Any | None = None,
+) -> dict[str, Any]:
+    """One-shot bundle -> wire observation, for single-frame callers.
+
+    ``camera_map`` is either a ``{sensor id: camera index}`` mapping or a rig
+    preset id.
+
+    COLD-START APPROXIMATION, stated rather than hidden: a single bundle
+    carries one tick, so the 4-frame history window is filled by replicating
+    that frame. The model then sees a stationary-looking image history while
+    the ego history says the vehicle moved. Use
+    :class:`BundleObservationBridge` across ticks for a real temporal window;
+    this helper is for open-loop single-observation inference where only one
+    tick exists. The returned observation carries
+    ``frame_history: "replicated-single-tick"`` so provenance records it.
+    """
+    mapping = (
+        profile_camera_map(camera_map) if isinstance(camera_map, str) else camera_map
+    )
+    bridge = BundleObservationBridge(mapping, size=size)
+    bridge.push_bundle(bundle, pass_=pass_)
+    obs = bridge.observation(
+        ego_history_xyz, ego_history_rot=ego_history_rot, nav_text=nav_text
+    )
+    obs["frame_history"] = "replicated-single-tick"
+    if ego_history_t_s is not None:
+        obs["ego_history_t_s"] = [float(value) for value in ego_history_t_s]
+    return obs

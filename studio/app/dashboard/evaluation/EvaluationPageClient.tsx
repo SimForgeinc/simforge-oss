@@ -22,8 +22,15 @@ import {
   TableHeader,
   TableRow,
 } from "@simforge-oss/studio-ui/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@simforge-oss/studio-ui/components/ui/tabs";
 import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import type { ModelVersionRecord } from "@/app/lib/models/contracts";
+import { CloudRunsClient } from "./CloudRunsClient";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "./shared";
 
 function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
@@ -178,29 +185,42 @@ export function EvaluationPageClient() {
     <div className="flex h-full flex-col overflow-y-auto">
       <PageHeader
         title="Evaluation"
-        description="Closed-loop eval campaigns, episode playback, and model promotion gates."
+        description="Open-loop runs on this machine or in the cloud, closed-loop campaigns, episode playback and promotion gates."
       />
-      <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
-        {campaigns.kind === "loading" ? <PanelMessage>Loading campaigns…</PanelMessage> : null}
-        {campaigns.kind === "error" ? (
-          <PanelMessage>Failed to load campaigns: {campaigns.message}</PanelMessage>
-        ) : null}
-        {campaigns.kind === "ready" && campaigns.data.campaigns.length === 0 ? (
-          <EmptyState
-            icon={<FlaskConical className="h-8 w-8" />}
-            title="No eval campaigns yet"
-            description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
-          />
-        ) : null}
-        {campaigns.kind === "ready"
-          ? campaigns.data.campaigns.map((campaign) => (
-              <CampaignCard key={campaign.campaignId} campaign={campaign} />
-            ))
-          : null}
-        {versions.kind === "ready" ? (
-          <ModelVersionsCard versions={versions.data.versions} />
-        ) : null}
-      </div>
+      <Tabs defaultValue="runs" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mx-5 mt-5 self-start sm:mx-6">
+          <TabsTrigger value="runs">Runs</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="runs" className="px-5 py-5 sm:px-6">
+          <CloudRunsClient />
+        </TabsContent>
+
+        <TabsContent value="campaigns">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
+            {campaigns.kind === "loading" ? <PanelMessage>Loading campaigns…</PanelMessage> : null}
+            {campaigns.kind === "error" ? (
+              <PanelMessage>Failed to load campaigns: {campaigns.message}</PanelMessage>
+            ) : null}
+            {campaigns.kind === "ready" && campaigns.data.campaigns.length === 0 ? (
+              <EmptyState
+                icon={<FlaskConical className="h-8 w-8" />}
+                title="No eval campaigns yet"
+                description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
+              />
+            ) : null}
+            {campaigns.kind === "ready"
+              ? campaigns.data.campaigns.map((campaign) => (
+                  <CampaignCard key={campaign.campaignId} campaign={campaign} />
+                ))
+              : null}
+            {versions.kind === "ready" ? (
+              <ModelVersionsCard versions={versions.data.versions} />
+            ) : null}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

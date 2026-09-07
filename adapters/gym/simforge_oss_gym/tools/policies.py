@@ -93,10 +93,14 @@ class ScriptedTrajectoryPolicy:
         self.replan_every = replan_every
         self.decision_hz = decision_hz
         self._held: dict[str, Any] | None = None
+        #: Whether the most recent decision issued a new plan (ZOH resend = False).
+        self.last_replanned = False
 
     def act(self, step: int, state_vector: np.ndarray | None) -> PolicyDecision:
         if step % self.replan_every != 0 and self._held is not None:
+            self.last_replanned = False
             return PolicyDecision(self._held)
+        self.last_replanned = True
         t0 = step / self.decision_hz
         w = 2.0 * math.pi / self.period
         y0 = self.amplitude * (math.cos(w * t0) - 1.0)

@@ -113,7 +113,12 @@ function runInput(seed: number) {
     modelVersionId: versionId,
     endpointId,
     kind: "openloop",
-    params: { input: { items: [{ prompt: "fixture" }] } },
+    // simforge.openloop-params/v2; this fixture never executes the run (the
+    // ledger row is completed directly), so the bundle path is nominal.
+    params: {
+      items: [{ kind: "user-clip", ref: "fixtures/eval-clip", cameraProfile: "alpamayo-4cam" }],
+      reference: "auto",
+    },
     seed,
   });
 }

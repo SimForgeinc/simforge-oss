@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "simforge-alpamayo"
+version = "0.2.0"
+description = "SimForge Alpamayo 1 / 1.5 / 2 Super inference services: policy endpoint, HTTP facade, open-loop batch runner and hardware preflight."
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+
+# Deliberately minimal. torch, transformers and the upstream inference
+# package come from the family's own environment (`uv sync --locked` against
+# the pinned upstream uv.lock), because the three families pin incompatible
+# dependency sets and must never be resolved together. Installing this
+# package with `--no-deps` into a prepared family venv is the supported path.
+dependencies = [
+  "msgpack>=1.0",
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# Quantized local execution. Alpamayo 2 Super has no quantized recipe and
+# does not need these.
+quant = [
+  "bitsandbytes==0.49.2",
+  "torchao==0.12.0",
+]
+# Encoded (jpeg/png) frames on the wire and rig conformance rendering.
+images = ["pillow>=10.0"]
+
+[project.scripts]
+simforge-alpamayo-server = "simforge_alpamayo.server:main"
+simforge-alpamayo-client = "simforge_alpamayo.client:main"
+simforge-alpamayo-batch = "simforge_alpamayo.batch:main"
+simforge-alpamayo-preflight = "simforge_alpamayo.preflight:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/simforge_alpamayo"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

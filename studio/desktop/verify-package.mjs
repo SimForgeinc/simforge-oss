@@ -16,22 +16,25 @@
 // and library built for this target. This is what an installer ships; nothing
 // is inferred from a build succeeding.
 //
-// Encoder integrity chain. desktop/tools.lock.json is the root: it pins the
-// upstream ffmpeg/ffprobe release bytes by sha256 and size. fetch-tools.mjs
-// keeps only bytes matching the lock, stage.mjs re-checks them when it copies
-// them into the stage, and after-pack.mjs re-checks them in the package right
-// before electron-builder signs. Signing then legitimately rewrites macOS
+// Encoder integrity chain. desktop/encoders.lock.json is the root: it pins
+// the ffmpeg and libx264 sources by Git commit and the configure lines that
+// turn them into the two executables. desktop/build-encoders.mjs builds them
+// and records their digests, their source commits and their
+// corresponding-source archive in dist/desktop-tools/<target>/
+// tools-manifest.json; readToolPins refuses a manifest whose source commits
+// are not the ones the lock pins, so a build from other sources cannot be
+// inherited. stage.mjs re-checks the digests when it copies them into the
+// stage, and after-pack.mjs re-checks them in the package right before
+// electron-builder signs. Signing then legitimately rewrites macOS
 // executables in place (@electron/osx-sign signs every Mach-O in the bundle,
 // ad-hoc or with a Developer ID, hardened runtime and entitlements), so the
-// packaged bytes can no longer equal the lock's. Here the packaged tool must
-// either still be the pinned bytes, or be a Mach-O whose image with the code
-// signature removed (stage-manifest.mjs unsignedMachO) equals that of the
-// pinned bytes, which this script reads from dist/desktop-tools (fetched by
-// the lock if absent) and proves against the lock again before deriving
-// anything from them. Nothing recorded in the stage or the package is
-// trusted for this: rewriting a manifest cannot make other code pass, and a
-// signed tool passes only if all it differs in is its signature. On macOS this
-// verifier also invokes codesign on the manifest-resolved encoder paths.
+// packaged bytes can no longer equal the built ones. Here the packaged tool
+// must either still be those bytes, or be a Mach-O whose image with the code
+// signature removed (stage-manifest.mjs unsignedMachO) equals the built
+// one's. Nothing recorded in the stage or the package is trusted for this:
+// rewriting a manifest cannot make other code pass, and a signed tool passes
+// only if all it differs in is its signature. On macOS this verifier also
+// invokes codesign on the manifest-resolved encoder paths.
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -39,7 +42,7 @@ import { createRequire } from "node:module";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchTools, toolPins } from "./fetch-tools.mjs";
+import { readToolPins, toolsLayout } from "./build-encoders.mjs";
 import { APP_FILES } from "./stage-app.mjs";
 import { readStageManifest, targetFor, unsignedMachO, verifyNativeClosure } from "./stage-manifest.mjs";
 
@@ -89,33 +92,32 @@ function sha256(bytes) {
 }
 
 /**
- * The pinned upstream bytes for `expected`, proven against the lock here, and
- * their unsigned Mach-O digests when the target is macOS (null otherwise).
- * Read once; the package's tools are compared against these, never against
- * anything the package carries.
+ * The encoders built for `expected` from the pinned sources, re-proven
+ * against the digests their build recorded, plus their unsigned Mach-O
+ * digests when the target is macOS (null otherwise). Read once; the
+ * package's tools are compared against these, never against anything the
+ * package carries.
  * @returns {Promise<Record<"ffmpeg" | "ffprobe", { sha256: string; sizeBytes: number; unsigned: string | null }>>}
  */
-async function pinnedReference() {
-  const pins = toolPins(expected.key);
-  const layout = expectedPlatform === "darwin" ? await fetchTools(distRoot, expected) : null;
+async function builtReference() {
+  const pins = await readToolPins(distRoot, expected);
+  const layout = toolsLayout(distRoot, expected);
   const reference = {};
   for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
-    if (layout === null) {
-      reference[name] = { ...pins[name], unsigned: null };
-      continue;
-    }
-    const bytes = await readFile(layout[name]);
+    const bytes = await readFile(layout[name]).catch(() => {
+      throw new Error(`${layout[name]} is missing; run "node desktop/build-encoders.mjs --target ${expected.key}" before verifying`);
+    });
     if (bytes.length !== pins[name].sizeBytes || sha256(bytes) !== pins[name].sha256) {
-      throw new Error(`${layout[name]} does not match desktop/tools.lock.json; the reference for ${expected.key} is not the pinned upstream release`);
+      throw new Error(`${layout[name]} does not match ${layout.manifest}; the reference for ${expected.key} is not the encoder that build produced`);
     }
     reference[name] = { ...pins[name], unsigned: expectedPlatform === "darwin" ? unsignedMachO(bytes).sha256 : null };
   }
   return reference;
 }
-const reference = archives.length > 0 ? await pinnedReference() : null;
+const reference = archives.length > 0 ? await builtReference() : null;
 
 /**
- * Why the packaged tool is not the pinned one, or null when it is: the pinned
+ * Why the packaged tool is not the built one, or null when it is: those
  * bytes themselves, or (macOS) a Mach-O differing from them only in its code
  * signature.
  * @param {string} path
@@ -126,15 +128,15 @@ async function toolMismatch(path, pin) {
   if (!info?.isFile()) return "is missing";
   const bytes = await readFile(path);
   if (bytes.length === pin.sizeBytes && sha256(bytes) === pin.sha256) return null;
-  if (pin.unsigned === null) return "does not match desktop/tools.lock.json";
+  if (pin.unsigned === null) return "is not the encoder built from the pinned sources";
   let image;
   try {
     image = unsignedMachO(bytes);
   } catch (error) {
-    return `does not match desktop/tools.lock.json and ${error instanceof Error ? error.message : String(error)}`;
+    return `is not the encoder built from the pinned sources and ${error instanceof Error ? error.message : String(error)}`;
   }
-  if (!image.signed) return "differs from the pinned tool without a code signature";
-  if (image.sha256 !== pin.unsigned) return "is not the pinned tool: its image differs from desktop/tools.lock.json beyond the code signature";
+  if (!image.signed) return "differs from the built encoder without a code signature";
+  if (image.sha256 !== pin.unsigned) return "is not the built encoder: its image differs beyond the code signature";
   return null;
 }
 

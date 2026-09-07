@@ -15,7 +15,7 @@
 //                 studio/server.js, studio/.next, studio/public   Next standalone output
 //                 studio/host/{host,host-main,worker}.mjs         bundled supervisor and worker
 //                 studio/migrations                               SQL migrations
-//                 studio/tools/{ffmpeg,ffprobe}[.exe]             pinned encoders (desktop/tools.lock.json)
+//                 studio/tools/{ffmpeg,ffprobe}[.exe]             encoders built from pinned source (desktop/encoders.lock.json)
 //                 studio/actor-assets                             pinned actor-appearance closure
 //                 studio/node_modules, node_modules/.pnpm         traced runtime closure (POSIX: pnpm links;
 //                                                                 Windows: plain copies under studio/node_modules)
@@ -42,7 +42,7 @@
 //   pnpm --filter @simforge-oss/native-runtime build:node   addon for this target
 //   pnpm --filter @simforge-oss/render build                browser render harness (dist/harness.html)
 //   node scripts/native-runtime/package-runtime.mjs --target <triple>  runtime archive for this target (baseline: no --providers)
-//   node desktop/fetch-tools.mjs                            (run here when missing) pinned ffmpeg/ffprobe
+//   node desktop/build-encoders.mjs                          (required first) ffmpeg/ffprobe built from pinned source
 //   node packages/render/scripts/fetch-actor-closure.mjs    (run here) pinned actor closure
 //   packages/*/dist for packages Next resolves through `exports` (pnpm -r build)
 
@@ -55,7 +55,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { extractRuntimeArchive, verifyRuntimeStage } from "../../scripts/native-runtime/runtime-archive.mjs";
 import { targetLayout } from "../../scripts/native-runtime/target-layout.mjs";
-import { fetchTools, matchesPin } from "./fetch-tools.mjs";
+import { matchesPin, readToolPins, toolsLayout } from "./build-encoders.mjs";
 import { bundleNode, stageApp } from "./stage-app.mjs";
 import { packWorkspacePackage, reserveDependencyScope, tracedDependencySources } from "./stage-dependencies.mjs";
 import { resolvePackageDir, STAGE_MANIFEST_FILE, STAGE_MANIFEST_SCHEMA, targetFor, verifyNativeClosure } from "./stage-manifest.mjs";
@@ -207,23 +207,37 @@ async function stageNativeRuntime() {
 }
 
 /**
- * The pinned encoders, fetched if the digests are not already on disk and
- * re-verified as they are copied into the stage.
+ * The encoders built from the pinned sources, verified against the digests
+ * their build recorded as they are copied into the stage, together with the
+ * license text and the corresponding-source archive the package must be able
+ * to point at. The archive itself is not staged into the app (it is a release
+ * asset, not runtime payload); its identity is recorded so a package can be
+ * traced to the exact source it was built from.
  */
 async function stageTools() {
-  const layout = await fetchTools(distRoot, target);
+  const layout = toolsLayout(distRoot, target);
+  const pins = await readToolPins(distRoot, target);
   const toolsDir = join(stageStudio, "tools");
   await mkdir(toolsDir, { recursive: true });
   const staged = {};
   for (const name of ["ffmpeg", "ffprobe"]) {
-    const source = layout[name];
     const file = `${name}${target.exe}`;
-    await cp(source, join(toolsDir, file));
-    if (!(await matchesPin(join(toolsDir, file), layout.pins[name]))) fail(`staged ${file} does not match desktop/tools.lock.json`);
+    if (!(await matchesPin(layout[name], pins[name]))) {
+      fail(`${layout[name]} does not match ${layout.manifest}; rebuild with "node desktop/build-encoders.mjs --target ${target.key}"`);
+    }
+    await cp(layout[name], join(toolsDir, file));
+    if (!(await matchesPin(join(toolsDir, file), pins[name]))) fail(`staged ${file} does not match ${layout.manifest}`);
     staged[name] = join("studio", "tools", file);
   }
   await cp(layout.license, join(toolsDir, "LICENSE"));
-  return { ...staged, version: layout.version, license: layout.licenseId };
+  return {
+    ...staged,
+    version: layout.version,
+    license: layout.licenseId,
+    digests: { ffmpeg: pins.ffmpeg.sha256, ffprobe: pins.ffprobe.sha256 },
+    sources: pins.manifest.sources.map((/** @type {any} */ entry) => ({ id: entry.id, commit: entry.commit })),
+    correspondingSource: pins.manifest.correspondingSource,
+  };
 }
 
 /** The pinned actor-appearance closure native renders resolve offline. */
@@ -608,7 +622,21 @@ const manifest = {
   nativeRunner: posix(nativeRuntime.runner),
   nativeRenderService: posix(nativeRuntime.renderService),
   nativeRenderLibrary: posix(nativeRuntime.renderLibrary),
-  tools: { ffmpeg: posix(tools.ffmpeg), ffprobe: posix(tools.ffprobe), version: tools.version, license: tools.license },
+  tools: {
+    ffmpeg: posix(tools.ffmpeg),
+    ffprobe: posix(tools.ffprobe),
+    version: tools.version,
+    license: tools.license,
+    // The digests of the exact bytes staged here, so anything that resolves
+    // and spawns these executables can verify them first: a swapped staged
+    // binary is then a refusal, and extraction provenance becomes a
+    // statement about specific bytes rather than about a path.
+    digests: tools.digests,
+    // Which sources these executables were built from, so a package can be
+    // traced to the corresponding source published with its release.
+    sources: tools.sources,
+    correspondingSource: tools.correspondingSource,
+  },
   nativeBindings,
   actorAssetsRoot: posix(actorAssetsRoot),
   browserHarness: "packages/render/dist/harness.html",

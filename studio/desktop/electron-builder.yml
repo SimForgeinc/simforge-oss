@@ -13,7 +13,8 @@
 # desktop/after-pack.mjs refuses a stage whose manifest names another
 # platform or architecture than the one being packaged. Because afterPack
 # runs before signing, the stage's pinned encoders are proven byte-identical
-# to desktop/tools.lock.json there; desktop/verify-package.mjs proves the
+# to the encoders desktop/build-encoders.mjs built from the sources pinned in
+# desktop/encoders.lock.json there; desktop/verify-package.mjs proves the
 # signed package afterwards. .github/workflows/desktop.yml runs each matrix
 # leg on its native runner with its own `--<arch>`.
 #
@@ -48,7 +49,12 @@ files:
   - package.json
   - "!node_modules/**/*"
 afterPack: desktop/after-pack.mjs
-artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+# Asset names carry no spaces: GitHub rewrites a space in a release asset
+# name to a dot, which breaks SHA256SUMS line matching and predictable
+# download URLs. The product name in the UI keeps its space (productName
+# above); only the file names are hyphenated, and they are hyphenated here at
+# source rather than renamed after the fact.
+artifactName: "SimForge-Studio-${version}-${os}-${arch}.${ext}"
 
 win:
   target:
@@ -62,7 +68,7 @@ nsis:
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   shortcutName: SimForge Studio
-  artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
+  artifactName: "SimForge-Studio-Setup-${version}-${arch}.${ext}"
 
 mac:
   target:

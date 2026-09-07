@@ -9,7 +9,7 @@ through the model server, recording per-stage latency and VRAM.
 Both servers must already be running, e.g.:
   native-render-service --socket /tmp/sf-camerarig-render.sock \
       --shm /dev/shm/sf-camerarig-ring --scene <yale scene.json>
-  scripts/run_server.sh --quant nf4 --socket /tmp/simforge-alpamayo.sock
+  scripts/run_server.sh --family alpamayo-1.5 --quant nf4 --socket /tmp/simforge-alpamayo.sock
 
 Usage:
   python scripts/rig_conformance.py --render-socket ... --shm ... \
@@ -108,7 +108,8 @@ def main() -> None:
     parser.add_argument("--shm", required=True)
     parser.add_argument("--model-socket", required=True)
     parser.add_argument("--profile", default="alpamayo-2cam",
-                        choices=["alpamayo-2cam", "alpamayo-4cam"])
+                        choices=["alpamayo-2cam", "alpamayo-4cam",
+                                 "alpamayo-6cam", "alpamayo-6cam-vqa"])
     parser.add_argument("--acts", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--speed-mps", type=float, default=8.0)

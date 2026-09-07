@@ -10,8 +10,9 @@ name: SimForge Studio desktop
 # desktop/stage.mjs, desktop/after-pack.mjs and desktop/verify-package.mjs
 # each refuse a payload holding native code or per-target packages of any
 # other platform. Runs only on manual dispatch or explicitly named desktop CI
-# candidate branches. Artifacts are uploaded to the workflow run; this workflow
-# never publishes a release or deploys a service.
+# candidate branches. Artifacts are uploaded to the workflow run; the release
+# job below can create a maintainers-only draft, and nothing here ever makes
+# a release public or deploys a service.
 #
 # Signing is real or absent. Windows artifacts are signed only when
 # WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD hold a code-signing certificate; macOS
@@ -24,6 +25,16 @@ name: SimForge Studio desktop
 # 26 has no ad-hoc fallback and an unsigned bundle is killed at launch on
 # Apple silicon. With the secrets, forceCodeSigning makes an unsigned result
 # a build failure instead of a quiet fallback.
+#
+# Verified 2026-09-07: this repository has 0 Actions secrets and 0
+# organization secrets available to it, and its only environments are `npm`
+# and `pypi`. Every artifact this workflow can currently produce is
+# unsigned/ad-hoc, and the artifact names say so. When the seven signing
+# secrets are provisioned into a reviewed `desktop-release` environment, add
+# `environment: desktop-release` to the package job so the job can read them;
+# no other change is needed, because the signing decision below is made from
+# the secrets actually present and scripts/release/publish-desktop-release.mjs
+# reads the resulting signing state back out of the artifact names.
 
 on:
   workflow_dispatch:
@@ -33,6 +44,20 @@ on:
         type: choice
         options: ["https://staging.simforge.ai", "https://simforge.ai"]
         default: "https://staging.simforge.ai"
+      distribution_label:
+        description: "Distribution label this build is published as (e.g. 0.1.1); leave empty for an unlabelled candidate"
+        type: string
+        required: false
+      channel:
+        description: "Release channel the label belongs to"
+        type: choice
+        options: ["preview", "stable"]
+        default: "preview"
+      publish:
+        description: "Create a maintainers-only draft release from this run's artifacts; making a release public is a separate, deliberate local step"
+        type: choice
+        options: ["none", "draft"]
+        default: "none"
   push:
     branches: ["ci/unified-desktop/**"]
 
@@ -95,10 +120,28 @@ jobs:
       - name: Install sky conversion build dependencies
         run: python -m pip install --disable-pip-version-check numpy==2.3.3 pillow==11.3.0
         working-directory: .
-      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service)
+      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service, nasm for libx264)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config nasm
         working-directory: .
+      - name: macOS build dependencies (nasm for libx264)
+        if: runner.os == 'macOS'
+        run: brew list nasm >/dev/null 2>&1 || brew install nasm
+        working-directory: .
+      - name: Windows build environment for the encoder sources (MSYS2 MINGW64)
+        # FFmpeg's and x264's configure are POSIX shell scripts and need a real
+        # MSYS2 environment; MINGW64 produces native Windows executables with
+        # no MSYS runtime dependency. desktop/build-encoders.mjs runs its build
+        # commands through this bash.
+        if: runner.os == 'Windows'
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            make nasm git diffutils pkgconf
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-pkgconf
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
@@ -107,9 +150,18 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
+      - name: Build the bundled encoders from the pinned sources
+        # ffmpeg/ffprobe are built here from the Git commits pinned in
+        # desktop/encoders.lock.json, together with the corresponding-source
+        # archive the release must publish. No third-party prebuilt binary
+        # enters the package, so the licence outcome is the same on every
+        # platform and the GPL obligation is discharged by accompaniment.
+        env:
+          SIMFORGE_MSYS2_BASH: ${{ runner.os == 'Windows' && format('{0}\usr\bin\bash.exe', steps.msys2.outputs.msys2-location) || '' }}
+        run: node studio/desktop/build-encoders.mjs --jobs=${{ runner.os == 'macOS' && 3 || 4 }}
+        working-directory: .
       - name: "Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)"
         run: |
-          node studio/desktop/fetch-tools.mjs
           python - <<'PY'
           import hashlib, json, os, platform, subprocess, sys, urllib.request
           from pathlib import Path
@@ -154,6 +206,11 @@ jobs:
       - name: Stage the desktop artifact
         env:
           SIMFORGE_DESKTOP_CLOUD_ORIGIN: ${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}
+          # Empty means an unlabelled candidate: the shell then reports that
+          # it cannot be compared with published releases instead of claiming
+          # to be one of them.
+          SIMFORGE_DESKTOP_DISTRIBUTION_LABEL: ${{ inputs.distribution_label }}
+          SIMFORGE_DESKTOP_DISTRIBUTION_CHANNEL: ${{ inputs.channel || 'preview' }}
         run: node desktop/stage.mjs
 
       - name: Decide code signing from the secrets actually present
@@ -222,6 +279,18 @@ jobs:
             Write-Host "$($_.Name): signed by $($sig.SignerCertificate.Subject)"
           }
 
+      - name: Record the digests of the bytes this leg produced
+        # Written where the bytes were made, before they travel: the release
+        # job verifies every artifact against these, so a truncated download
+        # or a swapped file cannot become a release asset.
+        run: |
+          cd dist/desktop/out
+          shopt -s nullglob
+          files=(*.exe *.dmg *.zip *.AppImage *.deb)
+          [ ${#files[@]} -gt 0 ] || { echo "no installers to record"; exit 1; }
+          sha256sum "${files[@]}" > SHA256SUMS
+          cat SHA256SUMS
+
       - uses: actions/upload-artifact@v4
         with:
           name: simforge-studio-${{ matrix.name }}-${{ steps.signing.outputs.signed == 'true' && (steps.signing.outputs.notarized == 'true' && 'signed-notarized' || 'signed') || 'unsigned' }}
@@ -234,3 +303,57 @@ jobs:
             studio/dist/desktop/out/*.AppImage
             studio/dist/desktop/out/*.deb
             studio/dist/desktop/out/*.blockmap
+            studio/dist/desktop/out/SHA256SUMS
+            studio/dist/desktop-tools/*/tools-manifest.json
+            studio/dist/desktop-tools/*/corresponding-source/*.tar.gz
+
+  # Assembles this run's four installer sets into a maintainers-only draft
+  # GitHub release. It never makes a release publicly readable: publication
+  # requires a cleared third-party audit and, for stable, the gates in
+  # scripts/release/stable-gates.mjs, so the flip is a deliberate local
+  # command by the release owner (scripts/release/publish-desktop-release.mjs
+  # --publish release --confirm), not a CI side effect.
+  release:
+    name: Draft release
+    needs: package
+    if: inputs.publish == 'draft'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Refuse an unlabelled publication
+        if: inputs.distribution_label == ''
+        run: |
+          echo "publish=draft requires distribution_label: a release must be named, and the label is baked into the binaries at stage time." >&2
+          exit 1
+      - name: Prepare and create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/release/publish-desktop-release.mjs \
+            --label "${{ inputs.distribution_label }}" \
+            --channel "${{ inputs.channel }}" \
+            --publish draft --confirm \
+            --from-run "${{ github.run_id }}" \
+            --sums-from-installers \
+            --signing-from-artifacts \
+            --source-revision "${{ github.sha }}" \
+            --source-branch "${{ github.ref_name }}" \
+            --cloud-origin "${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}" \
+            --ci-run "${{ github.run_id }}" \
+            --out "artifacts/release/studio-${{ inputs.distribution_label }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simforge-studio-release-${{ inputs.distribution_label }}
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            artifacts/release/studio-${{ inputs.distribution_label }}/*.json
+            artifacts/release/studio-${{ inputs.distribution_label }}/*.md
+            artifacts/release/studio-${{ inputs.distribution_label }}/SHA256SUMS

@@ -5,7 +5,7 @@
   "suite": [
     {
       "scenarioId": "synthetic-dynamic",
-      "spec": "../../../adapters/policy-runner/fixtures/synthetic-episode-dynamic.json",
+      "spec": "../../../adapters/gym/tests/fixtures/synthetic-episode-dynamic.json",
       "session": 0,
       "steps": 40
     },
@@ -28,14 +28,16 @@
       "policyId": "scripted",
       "runnerPolicy": "scripted",
       "policySeed": 0,
-      "deadlineMs": 50,
+      "mode": "offline-simtime",
       "fallback": "zero-control"
     },
     {
-      "policyId": "torch-mlp",
+      "policyId": "torch-mlp-realtime",
       "runnerPolicy": "torch",
       "policySeed": 7,
+      "mode": "realtime",
       "deadlineMs": 50,
+      "forceMissAt": [9],
       "fallback": "zero-control"
     }
   ]
