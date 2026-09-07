@@ -48,6 +48,11 @@ this limit with their quality preset's memory budget. It can change atomically
 through `setAuthoringFidelity`; textures are cached separately by URL and mip
 limit. Map changes renew the decoder's cancellation signal so an aborted prior
 map cannot cancel the next map's texture requests.
+If required coarse tiles cannot fit, the viewer estimates the full-map footprint
+from resident tiles and lowers the mip ceiling in power-of-two steps, never
+below 128 pixels. Geometry remains required. The effective limit is reported in
+`loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
+Each new map starts from the user's selected preset ceiling.
 
 ## Frozen wire identifiers
 
