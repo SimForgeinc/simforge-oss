@@ -54,6 +54,10 @@ export interface EncoderTools {
   readonly ffprobe: string;
   /** Where they came from, for provenance. */
   readonly origin: string;
+  /** FFmpeg release the staged build reports, when the manifest names one. */
+  readonly version?: string;
+  /** Pinned upstream source commits, passed through verbatim from the stage manifest. */
+  readonly sources?: unknown;
 }
 
 interface CommandResult {
@@ -87,9 +91,24 @@ async function isExecutable(candidate: string): Promise<boolean> {
   }
 }
 
-/** Runtime manifest the desktop stage step writes, naming the staged tool paths. */
+/** Name the desktop stage writes its runtime manifest under, at the stage root. */
+export const STAGE_MANIFEST_FILE = 'stage-manifest.json';
+
+/**
+ * The part of the desktop stage manifest this module reads.
+ *
+ * `ffmpeg`/`ffprobe` are posix paths relative to the manifest's own directory (the stage root
+ * validates them as strings, so they cannot silently become objects). `sources` carries the
+ * pinned upstream commits the binaries were built from; it is passed through to provenance
+ * verbatim rather than parsed, so a change in its shape cannot break extraction.
+ */
 interface StagedManifest {
-  readonly tools?: { readonly ffmpeg?: string; readonly ffprobe?: string; readonly version?: string };
+  readonly tools?: {
+    readonly ffmpeg?: string;
+    readonly ffprobe?: string;
+    readonly version?: string;
+    readonly sources?: unknown;
+  };
 }
 
 async function fromStagedManifest(manifestPath: string): Promise<EncoderTools | undefined> {
@@ -99,16 +118,21 @@ async function fromStagedManifest(manifestPath: string): Promise<EncoderTools | 
   } catch {
     return undefined;
   }
-  const { ffmpeg, ffprobe } = parsed.tools ?? {};
-  if (ffmpeg === undefined || ffprobe === undefined) return undefined;
+  const { ffmpeg, ffprobe, version, sources } = parsed.tools ?? {};
+  if (typeof ffmpeg !== 'string' || typeof ffprobe !== 'string') return undefined;
   const root = path.dirname(manifestPath);
   const resolvedFfmpeg = path.resolve(root, ffmpeg);
   const resolvedFfprobe = path.resolve(root, ffprobe);
   if (!(await isExecutable(resolvedFfmpeg)) || !(await isExecutable(resolvedFfprobe))) return undefined;
+  // Provenance names the build, and the pinned source commits when the stage recorded them, so a
+  // measurement can be traced to the exact encoder that produced its frames.
+  const built = sources === undefined ? '' : ` from ${JSON.stringify(sources)}`;
   return {
     ffmpeg: resolvedFfmpeg,
     ffprobe: resolvedFfprobe,
-    origin: `staged desktop runtime manifest ${manifestPath} (${parsed.tools?.version ?? PINNED_ENCODER})`,
+    origin: `staged desktop manifest ${manifestPath}: ffmpeg ${version ?? 'unversioned'}${built}`,
+    ...(version === undefined ? {} : { version }),
+    ...(sources === undefined ? {} : { sources }),
   };
 }
 
