@@ -20,7 +20,7 @@ import type { InstancedMesh, Material, Texture } from 'three';
 import { CameraRig, type CameraMode } from './camera-controls';
 import type { CameraView } from './camera-controls';
 import type { CameraControlPreferences } from './camera-drag';
-import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose } from './camera-envelope';
+import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose, initialEditorFocus } from './camera-envelope';
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 import {
@@ -568,7 +568,7 @@ export class CityViewer {
     this.sceneBox = boundsToBox3(manifest.scene.bounds);
     const center = this.sceneBox.getCenter(new Vector3());
     const size = this.sceneBox.getSize(new Vector3());
-    this.frameCamera(center, size);
+    this.frameCamera(initialEditorFocus(center, manifest.tiles), size);
 
     const sunDir = manifest.shadowLightmap?.sunDirection ?? [-0.5, -0.6, -0.6];
     const sunTravel = new Vector3(sunDir[0] ?? -0.5, sunDir[1] ?? -0.6, sunDir[2] ?? -0.6);
@@ -722,7 +722,7 @@ export class CityViewer {
       });
       this.localEnvelopeBounds = tile ? boundsToBox3(tile.bounds) : this.sceneBox.clone();
     }
-    this.localGroundY = this.cameraGroundIndex?.sample(x, z) ?? this.sceneBox.min.y;
+    this.localGroundY = this.cameraGroundIndex?.sample(x, z) ?? this.localEnvelopeBounds?.min.y ?? this.sceneBox.min.y;
     this.localBuildingMax = Math.max(this.localGroundY, this.localEnvelopeBounds?.max.y ?? this.sceneBox.max.y);
     const localHeight = Math.max(0, this.localBuildingMax - this.localGroundY);
     this.localHeadroom = Math.max(6, Math.min(20, localHeight * 0.15));
@@ -775,7 +775,7 @@ export class CityViewer {
 
   resetCamera(): void {
     if (!this.manifest || this.sceneBox.isEmpty()) return;
-    this.frameCamera(this.sceneBox.getCenter(new Vector3()), this.sceneBox.getSize(new Vector3()));
+    this.frameCamera(initialEditorFocus(this.sceneBox.getCenter(new Vector3()), this.manifest.tiles), this.sceneBox.getSize(new Vector3()));
   }
 
   /** Frame a neighborhood and leave a persistent ground marker at its center. */
