@@ -55,6 +55,7 @@ export type ArtifactRole = (typeof ARTIFACT_ROLES)[number];
 
 /** Why a run stopped short of its configured budget. */
 export const TRUNCATIONS = ['envelope_exceeded', 'terminated', 'truncated', 'cancelled', 'deadline_budget'] as const;
+export type Truncation = (typeof TRUNCATIONS)[number];
 
 export const ERROR_CODES = [
   'input_error',
@@ -90,6 +91,7 @@ export const ModelProvenanceSchema = z.object({
   /** Honest scope of a seed guarantee; never "deterministic" unqualified. */
   determinismScope: z.enum(['same-host-same-device', 'unproven']).default('unproven'),
 });
+export type ModelProvenance = z.infer<typeof ModelProvenanceSchema>;
 
 export const InputProvenanceSchema = z.object({
   kind: z.string(),
@@ -98,6 +100,7 @@ export const InputProvenanceSchema = z.object({
   ood: z.array(z.string()).default([]),
   replayContext: z.record(z.string(), z.unknown()).nullable().default(null),
 });
+export type InputProvenance = z.infer<typeof InputProvenanceSchema>;
 
 export const ResultManifestSchema = z.object({
   schema: z.literal(RESULT_MANIFEST_SCHEMA).default(RESULT_MANIFEST_SCHEMA),
