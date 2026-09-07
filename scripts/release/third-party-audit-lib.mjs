@@ -4,16 +4,20 @@
 // third-party component, the license that actually applies and the
 // obligations that follow. This module makes that record load-bearing:
 //
-//   1. It binds the ledger to bytes. Every per-target license determination
-//      names the digests of the exact binaries it was made from, and those
-//      digests must equal the pins in studio/desktop/tools.lock.json. Repin
-//      the lock and the determination stops applying, so the audit fails
-//      until someone re-establishes it — a new encoder build cannot inherit
-//      the previous one's clearance.
+//   1. It binds the ledger to the sources the product actually builds. The
+//      encoder determination names the Git commits it was made from, and
+//      those must equal the ones studio/desktop/encoders.lock.json pins.
+//      Repin the lock and the determination stops applying, so the audit
+//      fails until someone re-establishes it — a new encoder build cannot
+//      inherit the previous one's clearance.
 //   2. It turns obligations into a per-platform verdict. A platform is
 //      `cleared` only when every obligation touching it is `satisfied`;
 //      `unsatisfied` and `undetermined` both block, because "nobody checked"
-//      is not permission.
+//      is not permission. `satisfied-by-accompaniment` is the GPL
+//      corresponding-source case: it clears only when the release actually
+//      carries the archive for that platform, which the caller proves by
+//      passing `correspondingSource`. A promise to ship source later is not
+//      accompaniment.
 //   3. It produces the notices text the release page and the download page
 //      must carry, generated from the same record rather than written by
 //      hand beside it.
@@ -28,7 +32,7 @@ import { join } from "node:path";
 export const AUDIT_SCHEMA = "simforge.desktop-license-audit/v1";
 export const COMPONENTS_SCHEMA = "simforge.desktop-bundled-components/v1";
 
-/** Release platform identity per studio/desktop/tools.lock.json target key. */
+/** Release platform identity per studio/desktop target key. */
 export const LOCK_TARGET_PLATFORM = Object.freeze({
   "linux-x64": "linux-x64",
   "win32-x64": "windows-x64",
@@ -36,8 +40,10 @@ export const LOCK_TARGET_PLATFORM = Object.freeze({
   "darwin-x64": "macos-x64",
 });
 
-/** Obligation statuses that permit public redistribution. */
+/** Obligation statuses that permit public redistribution unconditionally. */
 const CLEARED = new Set(["satisfied", "not-applicable"]);
+/** Statuses that clear only when the release carries the named asset. */
+const CLEARED_BY_ASSET = new Set(["satisfied-by-accompaniment"]);
 
 /** @param {string} text */
 function digest(text) {
@@ -46,7 +52,7 @@ function digest(text) {
 
 /**
  * @param {string} repoRoot
- * @returns {Promise<{ components: any; componentsDigest: string; toolsLock: any }>}
+ * @returns {Promise<{ components: any; componentsDigest: string; encodersLock: any }>}
  */
 export async function loadLedger(repoRoot) {
   const componentsPath = join(repoRoot, "scripts/release/bundled-components.json");
@@ -55,52 +61,48 @@ export async function loadLedger(repoRoot) {
   if (components.schema !== COMPONENTS_SCHEMA) {
     throw new Error(`${componentsPath}: expected schema ${COMPONENTS_SCHEMA}`);
   }
-  const toolsLock = JSON.parse(await readFile(join(repoRoot, "studio/desktop/tools.lock.json"), "utf8"));
-  return { components, componentsDigest: digest(raw), toolsLock };
+  const encodersLock = JSON.parse(await readFile(join(repoRoot, "studio/desktop/encoders.lock.json"), "utf8"));
+  return { components, componentsDigest: digest(raw), encodersLock };
 }
 
 /**
- * Every per-target encoder determination must describe the binaries the lock
- * pins. Returns the drift found, empty when the ledger is current.
+ * The encoder determination must name the sources the build will actually
+ * use. Returns the drift found, empty when the ledger is current.
  * @param {any} components
- * @param {any} toolsLock
- * @returns {{ platform: string; tool: string; ledger: string; lock: string }[]}
+ * @param {any} encodersLock
+ * @returns {{ source: string; ledger: string; lock: string }[]}
  */
-export function pinDrift(components, toolsLock) {
+export function sourceDrift(components, encodersLock) {
   const encoder = components.components.find((/** @type {any} */ entry) => entry.id === "ffmpeg-encoders");
   if (!encoder) throw new Error("bundled-components.json: no ffmpeg-encoders component");
-  /** @type {{ platform: string; tool: string; ledger: string; lock: string }[]} */
+  const determined = new Map(
+    (encoder.builtFromSource?.sources ?? []).map((/** @type {any} */ entry) => [entry.id, entry.commit]),
+  );
+  /** @type {{ source: string; ledger: string; lock: string }[]} */
   const drift = [];
-  for (const [lockKey, platform] of Object.entries(LOCK_TARGET_PLATFORM)) {
-    const locked = toolsLock.ffmpeg?.targets?.[lockKey];
-    const determined = encoder.perTarget?.[platform];
-    if (!locked) {
-      drift.push({ platform, tool: "*", ledger: "determined", lock: "absent from tools.lock.json" });
-      continue;
+  for (const pinned of encodersLock.sources ?? []) {
+    const ledgerCommit = determined.get(pinned.id);
+    if (ledgerCommit !== pinned.commit) {
+      drift.push({ source: pinned.id, ledger: ledgerCommit ?? "no determination", lock: pinned.commit });
     }
-    if (!determined) {
-      drift.push({ platform, tool: "*", ledger: "no determination", lock: "pinned in tools.lock.json" });
-      continue;
-    }
-    for (const tool of ["ffmpeg", "ffprobe"]) {
-      const ledgerPin = determined.binaryPins?.[tool];
-      const lockPin = locked[tool]?.sha256;
-      if (ledgerPin !== lockPin) {
-        drift.push({ platform, tool, ledger: ledgerPin ?? "missing", lock: lockPin ?? "missing" });
-      }
+  }
+  for (const [id] of determined) {
+    if (!(encodersLock.sources ?? []).some((/** @type {any} */ entry) => entry.id === id)) {
+      drift.push({ source: id, ledger: "determined", lock: "absent from encoders.lock.json" });
     }
   }
   return drift;
 }
 
 /**
- * @param {{ repoRoot: string; platforms?: string[]; now?: string }} options
+ * @param {{ repoRoot: string; platforms?: string[]; correspondingSource?: string[]; now?: string }} options
  * @returns {Promise<any>} a simforge.desktop-license-audit/v1 receipt
  */
-export async function auditBundledComponents({ repoRoot, platforms, now = new Date().toISOString() }) {
-  const { components, componentsDigest, toolsLock } = await loadLedger(repoRoot);
+export async function auditBundledComponents({ repoRoot, platforms, correspondingSource = [], now = new Date().toISOString() }) {
+  const { components, componentsDigest, encodersLock } = await loadLedger(repoRoot);
   const audited = platforms ?? Object.values(LOCK_TARGET_PLATFORM);
-  const drift = pinDrift(components, toolsLock);
+  const drift = sourceDrift(components, encodersLock);
+  const accompanied = new Set(correspondingSource);
 
   /** @type {any[]} */
   const obligations = [];
@@ -125,10 +127,18 @@ export async function auditBundledComponents({ repoRoot, platforms, now = new Da
   const perPlatform = {};
   for (const platform of audited) {
     const blocking = obligations
-      .filter((entry) => entry.platforms.includes(platform) && !CLEARED.has(entry.status))
-      .map((entry) => `${entry.component}: ${entry.kind} (${entry.status})`);
-    const driftHere = drift.filter((entry) => entry.platform === platform)
-      .map((entry) => `ffmpeg-encoders: ledger pin for ${entry.tool} does not match tools.lock.json`);
+      .filter((entry) => {
+        if (!entry.platforms.includes(platform)) return false;
+        if (CLEARED.has(entry.status)) return false;
+        // Accompaniment is proven, not promised: the archive for this
+        // platform must be part of the publication.
+        if (CLEARED_BY_ASSET.has(entry.status)) return !accompanied.has(platform);
+        return true;
+      })
+      .map((entry) => (CLEARED_BY_ASSET.has(entry.status)
+        ? `${entry.component}: ${entry.kind} requires the corresponding-source archive for ${platform} in the publication`
+        : `${entry.component}: ${entry.kind} (${entry.status})`));
+    const driftHere = drift.map((entry) => `ffmpeg-encoders: ledger names ${entry.source} ${entry.ledger}, encoders.lock.json pins ${entry.lock}`);
     const blockedBy = [...blocking, ...driftHere];
     perPlatform[platform] = { redistribution: blockedBy.length === 0 ? "cleared" : "blocked", blockedBy };
   }
@@ -138,10 +148,15 @@ export async function auditBundledComponents({ repoRoot, platforms, now = new Da
     schema: AUDIT_SCHEMA,
     auditedAt: now,
     ledger: { file: "scripts/release/bundled-components.json", sha256: componentsDigest, reviewedAt: components.reviewedAt },
-    toolsLock: { file: "studio/desktop/tools.lock.json", distributionTag: toolsLock.ffmpeg?.source ?? null },
+    encoders: {
+      file: "studio/desktop/encoders.lock.json",
+      license: encodersLock.license?.id ?? null,
+      sources: (encodersLock.sources ?? []).map((/** @type {any} */ entry) => ({ id: entry.id, commit: entry.commit })),
+      correspondingSourceProvided: [...accompanied].sort(),
+    },
     platforms: perPlatform,
     obligations,
-    pinDrift: drift,
+    sourceDrift: drift,
     publicRedistribution: blocked.length === 0 ? "cleared" : "blocked",
     blockedPlatforms: blocked.map(([platform]) => platform),
     neverShipped: components.neverShipped ?? [],

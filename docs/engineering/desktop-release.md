@@ -94,7 +94,8 @@ node scripts/release/audit-bundled-licenses.mjs --out artifacts/release/audit
 ```
 
 Each per-target determination names the digests of the binaries it was made
-from and must match `studio/desktop/tools.lock.json`. Repinning an encoder
+from and must match what `studio/desktop/build-encoders.mjs` built from the
+sources `studio/desktop/encoders.lock.json` pins. Repinning an encoder
 invalidates the determination, so a new upstream build cannot inherit the
 previous one's clearance. `undetermined` blocks exactly like `unsatisfied`:
 nobody-checked is not permission.

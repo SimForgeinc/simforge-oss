@@ -53,6 +53,7 @@ import {
   collectInstallers,
   collectSumsFiles,
   embeddedVersionOf,
+  assetUrl,
   formatSums,
   parseSums,
   releasePageUrl,
@@ -60,7 +61,8 @@ import {
   signingFromArtifactDirs,
   sumsFromReleaseRecord,
 } from "./desktop-release-lib.mjs";
-import { auditBundledComponents, blockingReasons, loadLedger, renderThirdPartyNotices } from "./third-party-audit-lib.mjs";
+import { LOCK_TARGET_PLATFORM, auditBundledComponents, blockingReasons, loadLedger, renderThirdPartyNotices } from "./third-party-audit-lib.mjs";
+import { readdir } from "node:fs/promises";
 import { evaluateStableGates } from "./stable-gates.mjs";
 
 const run = promisify(execFile);
@@ -116,6 +118,26 @@ async function revisionHasUpdateCheck(revision) {
 }
 
 /** @param {string} revision */
+/**
+ * Were these installers built from a revision that builds its own encoders?
+ *
+ * This matters more than it looks. The license ledger describes the encoders
+ * desktop/build-encoders.mjs produces from pinned sources. Artifacts built
+ * before that existed carry third-party prebuilt binaries instead — including
+ * a macOS arm64 ffmpeg configured --enable-nonfree, which may not be
+ * redistributed at all. Publishing such a set would attach an audit that
+ * describes bytes the package does not contain, so it is refused outright.
+ * @param {string} revision
+ */
+async function revisionBuildsItsOwnEncoders(revision) {
+  try {
+    await git(["cat-file", "-e", `${revision}:studio/desktop/build-encoders.mjs`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function revisionReachableFromMain(revision) {
   for (const ref of ["origin/main", "main"]) {
     try {
@@ -177,6 +199,28 @@ async function verifyUploadedAssets(tag, expected) {
 }
 
 /**
+ * The GPL corresponding-source archives found beside a set of installers,
+ * one per platform. Their names carry the target they belong to, which is
+ * what build-encoders.mjs writes them as.
+ * @param {string} dir
+ * @returns {Promise<{ platform: string; path: string; assetName: string }[]>}
+ */
+async function collectCorrespondingSource(dir) {
+  /** @type {{ platform: string; path: string; assetName: string }[]} */
+  const found = [];
+  const entries = await readdir(dir, { withFileTypes: true, recursive: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const match = /^simforge-studio-encoders-([a-z0-9-]+)-corresponding-source\.tar\.gz$/.exec(entry.name);
+    if (!match) continue;
+    const platform = LOCK_TARGET_PLATFORM[match[1]];
+    if (!platform) continue;
+    found.push({ platform, path: join(entry.parentPath ?? dir, entry.name), assetName: entry.name });
+  }
+  return found;
+}
+
+/**
  * The installers a CI run produced, downloaded into `dir`. `gh run download`
  * writes one subdirectory per artifact, which is exactly the shape
  * collectInstallers walks.
@@ -228,12 +272,25 @@ async function main() {
   }
   const platforms = [...new Set(assets.map((asset) => asset.platform))].sort();
 
-  // 2. What the third-party payload obliges us to do.
-  const audit = await auditBundledComponents({ repoRoot, platforms });
+  // 2. The GPL corresponding source that must accompany the binaries. CI
+  //    uploads one archive per packaging leg beside the installers; a local
+  //    set can point at a directory instead. Publishing without them is
+  //    refused below, because GPL-3.0 section 6 accompaniment is a shipped
+  //    archive, not an intention.
+  const correspondingSource = await collectCorrespondingSource(
+    typeof args["corresponding-source"] === "string" ? resolve(args["corresponding-source"]) : installersDir,
+  );
+
+  // 3. What the third-party payload obliges us to do.
+  const audit = await auditBundledComponents({
+    repoRoot,
+    platforms,
+    correspondingSource: correspondingSource.map((entry) => entry.platform),
+  });
   const { components } = await loadLedger(repoRoot);
   const blocked = blockingReasons(audit, platforms);
 
-  // 3. The embedded version, read from the artifacts rather than asserted.
+  // 4. The embedded version, read from the artifacts rather than asserted.
   const embeddedVersion = embeddedVersionOf(assets);
 
   // Signing is read from the labels CI gave the artifacts whenever the
@@ -295,6 +352,24 @@ async function main() {
       }
     }
   }
+  const sourceBuiltEncoders = await revisionBuildsItsOwnEncoders(sourceRevision);
+  if (!sourceBuiltEncoders) {
+    refusals.push(
+      `${sourceRevision} predates studio/desktop/build-encoders.mjs, so these installers bundle third-party prebuilt encoders ` +
+        "(the macOS arm64 one is an --enable-nonfree ffmpeg that may not be redistributed) and the license audit does not describe them: " +
+        "rebuild the installer set from a revision that builds its own encoders",
+    );
+  }
+
+  // Bytes nobody may redistribute are not uploaded at all — not even to a
+  // draft, which lives in the public repository and can be published with one
+  // click. This is separate from the paperwork obligations below.
+  const prohibited = audit.obligations
+    .filter((entry) => entry.kind === "redistribution-permission" && !["satisfied", "not-applicable"].includes(entry.status))
+    .flatMap((entry) => entry.platforms.map((platform) => `${platform}: ${entry.component} may not be redistributed (${entry.status})`));
+  if (prohibited.length > 0) {
+    refusals.push(...prohibited);
+  }
   if (publish === "release" && blocked.length > 0) {
     refusals.push(...blocked.map((reason) => `unresolved third-party obligation — ${reason}`));
   }
@@ -310,6 +385,9 @@ async function main() {
 
   // 5. The documents that travel with the bytes.
   const notices = renderThirdPartyNotices({ receipt: audit, components, release: { tag, sourceRevision } });
+  record.notices.correspondingSource = correspondingSource.length > 0
+    ? correspondingSource.map((entry) => ({ platform: entry.platform, url: assetUrl(tag, entry.assetName) }))
+    : null;
   const notes = renderReleaseNotes({ release: record, audit });
   const sums = formatSums(record.assets);
   const downloads = buildDownloadsManifest({
@@ -339,16 +417,25 @@ async function main() {
     platforms,
     assets: record.assets.length,
     licenseAudit: audit.publicRedistribution,
+    correspondingSource: correspondingSource.map((entry) => entry.platform),
     blockedPlatforms: audit.blockedPlatforms,
     publication: record.publication,
     refusals,
     updateCheckInBuild: await revisionHasUpdateCheck(sourceRevision),
+    sourceBuiltEncoders,
     sourceReachableFromMain: await revisionReachableFromMain(sourceRevision),
     out: outDir,
   };
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
 
   if (publish === "none") return 0;
+  if (prohibited.length > 0 || !sourceBuiltEncoders) {
+    process.stderr.write(
+      `refusing to upload ${tag} anywhere, including as a draft:\n  ${[...prohibited, ...(sourceBuiltEncoders ? [] : refusals.slice(0, 1))].join("\n  ")}\n` +
+        "Rebuild the affected leg with redistributable components before publishing.\n",
+    );
+    return 2;
+  }
   if (refusals.length > 0 && publish === "release") {
     process.stderr.write(
       `refusing to publish ${tag} publicly:\n  ${refusals.join("\n  ")}\n` +
@@ -381,6 +468,7 @@ async function main() {
 
   const uploads = [
     ...assets.map((asset) => join(installersDir, asset.sourcePath)),
+    ...correspondingSource.map((entry) => entry.path),
     join(outDir, SUMS_FILE),
     join(outDir, RELEASE_FILE),
     join(outDir, NOTICES_FILE),

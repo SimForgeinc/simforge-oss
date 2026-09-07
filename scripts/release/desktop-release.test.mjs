@@ -28,7 +28,7 @@ import {
   formatSums,
   parseSums,
 } from "./desktop-release-lib.mjs";
-import { auditBundledComponents, blockingReasons, loadLedger, pinDrift } from "./third-party-audit-lib.mjs";
+import { auditBundledComponents, blockingReasons, loadLedger, sourceDrift } from "./third-party-audit-lib.mjs";
 import { evaluateStableGates } from "./stable-gates.mjs";
 import { checkForUpdates, describeUpdate, eligibleReleases, manifestReleases } from "../../studio/desktop/update-check.mjs";
 
@@ -183,29 +183,32 @@ test("the download page only advertises a release anonymous users can fetch", ()
   assert.equal(carried.channels.stable, "studio-0.1.1");
 });
 
-test("the license audit blocks the platforms whose obligations are open", async () => {
-  const receipt = await auditBundledComponents({ repoRoot });
-  assert.equal(receipt.publicRedistribution, "blocked");
-  // The macOS arm64 encoders are an --enable-nonfree build: not a paperwork
-  // gap, a prohibition on these bytes.
-  const armReasons = blockingReasons(receipt, ["macos-arm64"]);
+test("the license audit blocks a publication that does not carry the GPL corresponding source", async () => {
+  const withoutSource = await auditBundledComponents({ repoRoot });
+  assert.equal(withoutSource.publicRedistribution, "blocked");
   assert.ok(
-    armReasons.some((reason) => reason.includes("redistribution-permission")),
-    `expected a redistribution-permission block, got ${JSON.stringify(armReasons)}`,
+    blockingReasons(withoutSource, ["linux-x64"]).some((reason) => reason.includes("corresponding-source")),
+    "GPL accompaniment must be proven by the archive being in the publication, not by the ledger claiming it",
   );
-  assert.deepEqual(receipt.pinDrift, [], "the ledger must describe the binaries tools.lock.json pins");
-  assert.equal(blockingReasons(receipt, ["not-a-platform"]).length, 1, "an unaudited platform is blocked, not cleared");
+
+  const withSource = await auditBundledComponents({
+    repoRoot,
+    correspondingSource: ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"],
+  });
+  assert.equal(withSource.publicRedistribution, "cleared", JSON.stringify(withSource.platforms, null, 2));
+  assert.deepEqual(withSource.sourceDrift, [], "the ledger must name the sources encoders.lock.json pins");
+  assert.equal(blockingReasons(withSource, ["not-a-platform"]).length, 1, "an unaudited platform is blocked, not cleared");
 });
 
-test("repinning the encoders invalidates the license determination", async () => {
-  const { components, toolsLock } = await loadLedger(repoRoot);
-  const repinned = structuredClone(toolsLock);
-  repinned.ffmpeg.targets["linux-x64"].ffmpeg.sha256 = "f".repeat(64);
-  const drift = pinDrift(components, repinned);
+test("repinning the encoder sources invalidates the license determination", async () => {
+  const { components, encodersLock } = await loadLedger(repoRoot);
+  const repinned = structuredClone(encodersLock);
+  repinned.sources[0].commit = "f".repeat(40);
+  const drift = sourceDrift(components, repinned);
   assert.deepEqual(
-    drift.map((entry) => `${entry.platform}/${entry.tool}`),
-    ["linux-x64/ffmpeg"],
-    "a new encoder build must not inherit the previous one's clearance",
+    drift.map((entry) => entry.source),
+    ["ffmpeg"],
+    "a build from other sources must not inherit the previous determination",
   );
 });
 

@@ -1,0 +1,68 @@
+{
+  "schema": "simforge.desktop-encoders-lock/v1",
+  "note": "The encoders SimForge Studio ships are built from these exact sources by desktop/build-encoders.mjs. They are not third-party prebuilt binaries: the previous approach pinned somebody else's static builds by digest, which left three different upstream builds with three different licenses across four platforms and one build configured --enable-nonfree, which may not be redistributed at all. Building from pinned source gives one license outcome on every platform, a corresponding-source archive we can actually ship, and a closure we chose rather than inherited. Sources are pinned by Git commit: a commit id is a content hash of the whole tree, so it cannot drift the way a regenerated archive's digest can.",
+  "license": {
+    "id": "GPL-3.0-or-later",
+    "why": "The product encodes H.264 (studio/worker/executor.ts and packages/render/src/native/engine.ts both invoke -c:v libx264), so the build links libx264, which is GPL-2.0-or-later. Combined with FFmpeg's --enable-version3 that makes the executables GPL-3.0-or-later. The obligation this creates is discharged, not asserted: every build writes a corresponding-source archive holding the complete source of both projects at the pinned commits plus the script and configure lines that produced the binaries, and publication attaches it to the release.",
+    "correspondingSource": "GPL-3.0 section 6: the complete corresponding source accompanies the distribution, so no written offer is relied on."
+  },
+  "sources": [
+    {
+      "id": "ffmpeg",
+      "repository": "https://github.com/FFmpeg/FFmpeg.git",
+      "upstream": "https://git.ffmpeg.org/ffmpeg.git",
+      "commit": "3a0867c2bfda4a4d4309ca1a8cbdc6175e67f587",
+      "describes": "release/7.1 at tag n7.1.5",
+      "tag": "n7.1.5",
+      "license": "LGPL-2.1-or-later, GPL-2.0-or-later for the parts enabled by --enable-gpl; --enable-version3 upgrades to (L)GPL-3.0",
+      "licenseFiles": ["COPYING.GPLv3", "COPYING.LGPLv2.1", "COPYING.GPLv2", "COPYING.LGPLv3", "LICENSE.md"]
+    },
+    {
+      "id": "x264",
+      "repository": "https://github.com/mirror/x264.git",
+      "upstream": "https://code.videolan.org/videolan/x264.git",
+      "commit": "31e19f92f00c7003fa115047ce50978bc98c3a0d",
+      "describes": "stable branch",
+      "license": "GPL-2.0-or-later",
+      "licenseFiles": ["COPYING"]
+    }
+  ],
+  "build": {
+    "x264": {
+      "configure": [
+        "--enable-static",
+        "--enable-pic",
+        "--disable-cli",
+        "--disable-opencl"
+      ]
+    },
+    "ffmpeg": {
+      "configure": [
+        "--disable-autodetect",
+        "--disable-shared",
+        "--enable-static",
+        "--enable-gpl",
+        "--enable-version3",
+        "--enable-libx264",
+        "--disable-network",
+        "--disable-doc",
+        "--disable-debug",
+        "--disable-ffplay",
+        "--enable-ffmpeg",
+        "--enable-ffprobe"
+      ],
+      "note": "--disable-autodetect is the point of this list: no external library enters the binary because it happened to be installed on the build host, so the closure is exactly FFmpeg plus libx264 on every platform, the license outcome is identical everywhere and the corresponding source is complete with two projects. FFmpeg's own internal codecs, demuxers, muxers and filters stay at their defaults on purpose: the product must decode whatever calibrated clip a user uploads (H.264, HEVC, VP8/VP9, MJPEG, ProRes, AV1) and a hand-written allowlist would turn an unlisted input into a mystery extraction failure. --disable-network is kept because a bundled encoder should not be pointable at a URL; file and pipe protocols remain."
+    },
+    "toolchain": {
+      "linux-x64": { "shell": "bash", "requires": ["gcc", "make", "nasm", "git"], "install": "sudo apt-get install -y build-essential nasm git" },
+      "darwin-arm64": { "shell": "bash", "requires": ["clang", "make", "nasm", "git"], "install": "brew install nasm" },
+      "darwin-x64": { "shell": "bash", "requires": ["clang", "make", "nasm", "git"], "install": "brew install nasm" },
+      "win32-x64": {
+        "shell": "msys2 (mingw64)",
+        "requires": ["mingw-w64-x86_64-gcc", "make", "nasm", "git", "diffutils", "pkg-config"],
+        "install": "msys2/setup-msys2@v2 with msystem MINGW64 and pacman -S --needed mingw-w64-x86_64-gcc make nasm git diffutils pkgconf",
+        "note": "FFmpeg's configure needs a POSIX shell; the MSYS2 MINGW64 environment produces native Windows executables with no MSYS runtime dependency."
+      }
+    }
+  }
+}

@@ -120,10 +120,28 @@ jobs:
       - name: Install sky conversion build dependencies
         run: python -m pip install --disable-pip-version-check numpy==2.3.3 pillow==11.3.0
         working-directory: .
-      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service)
+      - name: Linux build dependencies (Vulkan/X11/ALSA headers for the render service, nasm for libx264)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config nasm
         working-directory: .
+      - name: macOS build dependencies (nasm for libx264)
+        if: runner.os == 'macOS'
+        run: brew list nasm >/dev/null 2>&1 || brew install nasm
+        working-directory: .
+      - name: Windows build environment for the encoder sources (MSYS2 MINGW64)
+        # FFmpeg's and x264's configure are POSIX shell scripts and need a real
+        # MSYS2 environment; MINGW64 produces native Windows executables with
+        # no MSYS runtime dependency. desktop/build-encoders.mjs runs its build
+        # commands through this bash.
+        if: runner.os == 'Windows'
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            make nasm git diffutils pkgconf
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-pkgconf
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
@@ -132,9 +150,18 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
+      - name: Build the bundled encoders from the pinned sources
+        # ffmpeg/ffprobe are built here from the Git commits pinned in
+        # desktop/encoders.lock.json, together with the corresponding-source
+        # archive the release must publish. No third-party prebuilt binary
+        # enters the package, so the licence outcome is the same on every
+        # platform and the GPL obligation is discharged by accompaniment.
+        env:
+          SIMFORGE_MSYS2_BASH: ${{ runner.os == 'Windows' && format('{0}\usr\bin\bash.exe', steps.msys2.outputs.msys2-location) || '' }}
+        run: node studio/desktop/build-encoders.mjs --jobs=${{ runner.os == 'macOS' && 3 || 4 }}
+        working-directory: .
       - name: "Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)"
         run: |
-          node studio/desktop/fetch-tools.mjs
           python - <<'PY'
           import hashlib, json, os, platform, subprocess, sys, urllib.request
           from pathlib import Path
@@ -277,6 +304,8 @@ jobs:
             studio/dist/desktop/out/*.deb
             studio/dist/desktop/out/*.blockmap
             studio/dist/desktop/out/SHA256SUMS
+            studio/dist/desktop-tools/*/tools-manifest.json
+            studio/dist/desktop-tools/*/corresponding-source/*.tar.gz
 
   # Assembles this run's four installer sets into a maintainers-only draft
   # GitHub release. It never makes a release publicly readable: publication

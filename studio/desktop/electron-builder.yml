@@ -13,7 +13,8 @@
 # desktop/after-pack.mjs refuses a stage whose manifest names another
 # platform or architecture than the one being packaged. Because afterPack
 # runs before signing, the stage's pinned encoders are proven byte-identical
-# to desktop/tools.lock.json there; desktop/verify-package.mjs proves the
+# to the encoders desktop/build-encoders.mjs built from the sources pinned in
+# desktop/encoders.lock.json there; desktop/verify-package.mjs proves the
 # signed package afterwards. .github/workflows/desktop.yml runs each matrix
 # leg on its native runner with its own `--<arch>`.
 #

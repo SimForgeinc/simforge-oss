@@ -39,7 +39,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = parseArgs(process.argv.slice(2));
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const platforms = typeof args.platforms === "string" ? args.platforms.split(",").map((entry) => entry.trim()) : undefined;
-  const receipt = await auditBundledComponents({ repoRoot, platforms });
+  // Platforms whose corresponding-source archive is part of the publication.
+  // Without it the GPL accompaniment obligation is unmet, so the audit blocks.
+  const correspondingSource = typeof args["corresponding-source"] === "string"
+    ? args["corresponding-source"].split(",").map((entry) => entry.trim())
+    : [];
+  const receipt = await auditBundledComponents({ repoRoot, platforms, correspondingSource });
   const { components } = await loadLedger(repoRoot);
   const notices = renderThirdPartyNotices({ receipt, components });
 
@@ -56,8 +61,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       process.stdout.write(`${state.redistribution === "cleared" ? "CLEARED" : "BLOCKED"}  ${platform}\n`);
       for (const reason of state.blockedBy) process.stdout.write(`         ${reason}\n`);
     }
-    for (const drift of receipt.pinDrift) {
-      process.stdout.write(`DRIFT    ${drift.platform} ${drift.tool}: ledger ${drift.ledger} vs lock ${drift.lock}\n`);
+    for (const drift of receipt.sourceDrift) {
+      process.stdout.write(`DRIFT    ${drift.source}: ledger ${drift.ledger} vs lock ${drift.lock}\n`);
     }
     process.stdout.write(`\npublic redistribution: ${receipt.publicRedistribution}\n`);
   }

@@ -13,7 +13,7 @@
     "host:open": "tsx scripts/open-local-host.ts",
     "desktop": "electron .",
     "desktop:stage": "node desktop/stage.mjs",
-    "desktop:tools": "node desktop/fetch-tools.mjs",
+    "desktop:encoders": "node desktop/build-encoders.mjs",
     "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --publish never",
     "desktop:verify": "node desktop/verify-package.mjs",
     "migrate": "tsx scripts/migrate.ts",
