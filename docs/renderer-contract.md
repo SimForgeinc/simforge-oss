@@ -54,6 +54,12 @@ below 128 pixels. Geometry remains required. The effective limit is reported in
 `loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
 Each new map starts from the user's selected preset ceiling.
 
+`resolveAssetUrls` optionally resolves a GLTF's external image URLs together
+before texture loading. This lets authenticated embedders batch authorization
+instead of serializing one database-backed request per image. Eight bounded
+texture requests feed four transcoder workers; encoded unused mip levels are
+removed before transcoding.
+
 ## Frozen wire identifiers
 
 `scene-state.v1` and `uniscenario.static-semantics/v1` are referenced
