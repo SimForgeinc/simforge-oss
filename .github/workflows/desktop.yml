@@ -99,7 +99,7 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
-      - name: Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)
+      - name: "Build the native runtime archive for ${{ matrix.triple }} (baseline: no Python providers)"
         run: |
           node studio/desktop/fetch-tools.mjs
           python - <<'PY'
