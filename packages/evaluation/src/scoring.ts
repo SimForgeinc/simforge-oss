@@ -1,7 +1,7 @@
 /**
  * SimForge-native closed-loop scoring over policy_step episode traces.
  *
- * Consumes the rich JSONL trace written by `adapters/policy-runner`
+ * Consumes the rich JSONL trace written by the gym episode runner
  * (one `reset` record, one record per decision carrying the decoded ego
  * state vector `sv`, the perception object list `objs` and the reward
  * breakdown `terms`, then a `summary` line) and produces a
@@ -71,7 +71,7 @@ export interface ParsedTrace {
   readonly summary: Record<string, unknown> | null;
 }
 
-/** Parse a policy-runner trace (JSONL). Unknown keys pass through untouched. */
+/** Parse an episode-runner trace (JSONL). Unknown keys pass through untouched. */
 export function parseTraceJsonl(text: string): ParsedTrace {
   let reset: TraceResetRecord | null = null;
   let summary: Record<string, unknown> | null = null;

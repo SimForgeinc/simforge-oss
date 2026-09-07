@@ -54,11 +54,28 @@ const campaign = await resolveCampaign(flags.config);
 switch (command) {
   case 'run': {
     const results = await runCampaign(campaign, (line) => process.stderr.write(`${line}\n`));
-    const completed = results.filter((r) => r.status === 'complete').length;
-    const skipped = results.length - completed;
+    const completed = results.filter((result) => result.status === 'complete').length;
+    const skipped = results.filter((result) => result.status === 'skipped').length;
+    const failed = results.filter((result) => result.status === 'failed');
+    const scored = results.filter((result) => result.scored).length;
     process.stdout.write(
-      `${JSON.stringify({ campaignId: campaign.config.campaignId, episodes: results.length, completed, skipped })}\n`,
+      `${JSON.stringify({
+        campaignId: campaign.config.campaignId,
+        episodes: results.length,
+        completed,
+        skipped,
+        scored,
+        failed: failed.length,
+        failures: failed.map((result) => ({
+          episodeId: result.episodeId,
+          runnerStatus: result.runnerStatus,
+          error: result.error,
+        })),
+      })}\n`,
     );
+    // A campaign with a failed episode is not a passing campaign; the ledger
+    // and the retained evidence say which, and the exit code says that it did.
+    if (failed.length > 0) process.exit(1);
     break;
   }
   case 'rerun': {

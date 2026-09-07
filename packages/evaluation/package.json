@@ -15,6 +15,18 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./params": {
+        "types": "./dist/protocol/params.d.ts",
+        "default": "./dist/protocol/params.js"
+      },
+      "./protocol": {
+        "types": "./dist/protocol/index.d.ts",
+        "default": "./dist/protocol/index.js"
+      },
+      "./replay-context": {
+        "types": "./dist/replay-context/index.d.ts",
+        "default": "./dist/replay-context/index.js"
       }
     }
   },
@@ -24,20 +36,36 @@
   "bin": {
     "simforge-evaluation-build-suite": "./dist/build-suite-cli.js",
     "simforge-evaluation-server": "./dist/eval-server.js",
-    "simforge-eval-campaign": "./dist/campaign-cli.js"
+    "simforge-eval-campaign": "./dist/campaign-cli.js",
+    "simforge-eval-worker": "./dist/worker-cli.js"
   },
   "exports": {
     ".": {
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./params": {
+      "development": "./src/protocol/params.ts",
+      "types": "./dist/protocol/params.d.ts",
+      "default": "./dist/protocol/params.js"
+    },
+    "./protocol": {
+      "development": "./src/protocol/index.ts",
+      "types": "./dist/protocol/index.d.ts",
+      "default": "./dist/protocol/index.js"
+    },
+    "./replay-context": {
+      "development": "./src/replay-context/index.ts",
+      "types": "./dist/replay-context/index.d.ts",
+      "default": "./dist/replay-context/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist",
+    "build": "tsup src/index.ts src/protocol/index.ts src/protocol/params.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/worker-cli.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

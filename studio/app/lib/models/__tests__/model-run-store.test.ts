@@ -59,7 +59,7 @@ function openloopRunInput(overrides: Record<string, unknown> = {}) {
     modelVersionId: versionId,
     endpointId,
     kind: "openloop",
-    params: { input: { items: [{ prompt: "a" }] } },
+    params: { items: [{ kind: "user-clip", ref: "/tmp/clip-a" }] },
     seed: 7,
     ...overrides,
   });
@@ -76,7 +76,7 @@ test("submit-time validation rejects invalid payloads", () => {
     modelVersionId: "mv_x",
     endpointId: "mep_x",
     kind: "openloop",
-    params: { input: {} },
+    params: { items: [] },
   });
   assert.equal(badParams.success, false);
 });

@@ -225,7 +225,7 @@ test("promotion gate: queued run refused, succeeded run promotes", async () => {
       modelVersionId: versionId,
       endpointId,
       kind: "openloop",
-      params: { input: { items: [{ prompt: "fixture" }] } },
+      params: { items: [{ kind: "user-clip", ref: "fixtures/eval-clip" }] },
       seed,
     });
 

@@ -71,9 +71,39 @@ runner.reset("seed-a")
 decision = runner.act_trajectory(points, elapsed_ms=measured_ms)   # (K, 5) ego-frame plan
 ```
 
-`simforge-oss-policy-runner --spec ... --policy trajectory --seed 42 --out
-trace.jsonl` runs seeded reference policies with deadline accounting and writes
-a digest-chained JSONL trace.
+`simforge-oss-policy-runner` (`python -m simforge_oss_gym.tools.policy_runner`)
+runs one seeded episode and writes a digest-chained JSONL trace plus a summary
+document. It is the episode boundary the evaluation campaign and the cloud
+eval worker both spawn.
+
+```sh
+# reference policy, offline simulation time (default): the engine pauses at
+# every inference barrier, so no deadline exists and slow hardware costs wall
+# time rather than validity
+simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode-dynamic.json \
+    --policy trajectory --seed 42 --steps 40 --out trace.jsonl
+
+# latency-aware real time: explicit deadline, measured latency, fallback on a
+# miss (--force-miss-at exercises the fallback deterministically)
+simforge-oss-policy-runner --spec ... --policy torch --mode realtime \
+    --deadline-ms 50 --fallback zero-control --force-miss-at 9 --out trace.jsonl
+
+# a real model in the loop over the policy-endpoint socket, with REAL camera
+# frames (dir:<path> from a renderer, or bevy:<rig.json>); a warm-up phase
+# supplies 16 real ego poses and 4 real frames per camera before the model acts
+simforge-oss-policy-runner --spec scenario.episodes.json --policy endpoint \
+    --endpoint-socket /tmp/simforge-alpamayo.sock --camera-profile alpamayo-4cam \
+    --frame-source dir:/tmp/frames --replan-hz 0.5 --warmup-policy scripted \
+    --steps 300 --out trace.jsonl
+
+# a reconstructed scene: the measured validity envelope is enforced every
+# decision and the episode stops at a breach (term_reason envelope_exceeded)
+simforge-oss-policy-runner --spec ... --replay-context /path/to/bundle --out trace.jsonl
+```
+
+Camera observations are never synthesized: without a frame source, or with an
+incomplete camera window or ego history, the runner refuses with a typed error
+instead of padding the observation.
 
 ## Native module
 
