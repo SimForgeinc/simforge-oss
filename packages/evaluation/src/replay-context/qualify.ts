@@ -21,9 +21,11 @@ import path from 'node:path';
 import { allGatesPassed, type GateThresholds } from './gates.js';
 import { qualifyRenders, type QualifyOptions as RenderQualifyOptions, type QualifyResult as RenderQualifyResult } from './render.js';
 import { stockReplayGate, type PoseSample } from './envelope.js';
+import { formatFieldPath } from './refusal.js';
 import {
   GATE_REPORT_PATH,
   REPLAY_CONTEXT_FILENAME,
+  REPLAY_CONTEXT_SCHEMA,
   ReplayContextSchema,
   STOCK_REPLAY_VERDICT_PATH,
   type GateId,
@@ -31,17 +33,73 @@ import {
   type ReplayContext,
 } from './schema.js';
 
-/** Read a bundle from its directory (or from the bundle file itself). */
-export async function loadReplayContext(target: string): Promise<ReplayContext> {
+/**
+ * Why a bundle could not be loaded.
+ *
+ * The two cases are settled differently by the compute control plane — a bundle that is not
+ * there and a bundle that is malformed are both the customer's input, but only one of them is
+ * worth telling them which field to fix — so they are distinct codes rather than one error.
+ */
+export type ReplayContextLoadFailure = {
+  readonly ok: false;
+  readonly code: 'replay_context_missing' | 'replay_context_invalid';
+  readonly message: string;
+  /** Dotted field paths, so a portal message can name what to fix rather than saying "invalid". */
+  readonly fields: readonly string[];
+};
+
+export type ReplayContextLoadResult =
+  | { readonly ok: true; readonly bundle: ReplayContext }
+  | ReplayContextLoadFailure;
+
+/**
+ * Read a bundle, reporting failure as a value.
+ *
+ * Preferred over {@link loadReplayContext} wherever the bundle is customer data: the caller
+ * gets the offending field paths and can settle the attempt against the right cause, instead
+ * of flattening a schema error into a string that says nothing actionable.
+ */
+export async function tryLoadReplayContext(target: string): Promise<ReplayContextLoadResult> {
   const file = target.endsWith('.json') ? target : path.join(target, REPLAY_CONTEXT_FILENAME);
-  const parsed = ReplayContextSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
-  if (!parsed.success) {
-    throw new Error(
-      `${file} is not a valid simforge.replay-context/v1 document: `
-      + parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
-    );
+  let raw: unknown;
+  try {
+    raw = JSON.parse(await readFile(file, 'utf8'));
+  } catch (error) {
+    const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
+    return {
+      ok: false,
+      // Unparseable JSON is a malformed document, not an absent one; only a genuinely absent
+      // file is reported as missing, because the two lead to different user instructions.
+      code: missing ? 'replay_context_missing' : 'replay_context_invalid',
+      message: missing
+        ? `${file} does not exist; a replay-context bundle is a directory containing ${REPLAY_CONTEXT_FILENAME}`
+        : `${file} could not be read as JSON: ${(error as Error).message}`,
+      fields: [],
+    };
   }
-  return parsed.data;
+  const parsed = ReplayContextSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: 'replay_context_invalid',
+      message: `${file} is not a valid ${REPLAY_CONTEXT_SCHEMA} document`,
+      fields: parsed.error.issues.map((issue) => formatFieldPath(issue.path) || '<document root>'),
+    };
+  }
+  return { ok: true, bundle: parsed.data };
+}
+
+/**
+ * Read a bundle, throwing on failure.
+ *
+ * Kept for callers where an unreadable bundle is a programming or configuration error rather
+ * than customer input. The thrown message carries the same field detail.
+ */
+export async function loadReplayContext(target: string): Promise<ReplayContext> {
+  const result = await tryLoadReplayContext(target);
+  if (result.ok) return result.bundle;
+  const detail = result.fields.length === 0 ? '' : `: ${result.fields.join(', ')}`;
+  throw new Error(`${result.message}${detail}`);
 }
 
 /**
