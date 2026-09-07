@@ -1,6 +1,6 @@
 import { CompressedTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RGBA_S3TC_DXT1_Format, Group } from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createDefaultContainer, read as readKtx2, write as writeKtx2 } from 'ktx-parse';
+import { createDefaultContainer, read as readKtx2, write as writeKtx2, VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
 
 import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, resourceDirectory, selectKtx2MipLevels, sharedTextures, textureDimensionForBudget } from './gltf';
 
@@ -96,11 +96,42 @@ describe('compressed texture mip budgets', () => {
       uncompressedByteLength: size * size * 4,
     }));
     const encoded = writeKtx2(container);
-    const selected = readKtx2(new Uint8Array(selectKtx2MipLevels(encoded.buffer as ArrayBuffer, 2)));
+    const selected = readKtx2(new Uint8Array(selectKtx2MipLevels(encoded.buffer as ArrayBuffer, 2).buffer));
     expect([selected.pixelWidth, selected.pixelHeight, selected.levelCount]).toEqual([2, 2, 2]);
     expect(selected.levels.map(level => [...level.levelData])).toEqual([
       [...new Uint8Array(16).fill(2)], [...new Uint8Array(4).fill(1)],
     ]);
+  });
+
+  it('decodes cropped non-block-aligned Basis mips as RGBA without resampling', () => {
+    const container = createDefaultContainer();
+    container.pixelWidth = 600;
+    container.pixelHeight = 1000;
+    container.levelCount = 4;
+    container.levels = [0, 1, 2, 3].map(level => ({
+      levelData: new Uint8Array(16).fill(level), uncompressedByteLength: 16,
+    }));
+    const selected = selectKtx2MipLevels(writeKtx2(container).buffer as ArrayBuffer, 128);
+    const decoded = readKtx2(new Uint8Array(selected.buffer));
+    expect(selected.forceRgba).toBe(true);
+    expect([decoded.pixelWidth, decoded.pixelHeight]).toEqual([75, 125]);
+    expect([...decoded.levels[0]!.levelData]).toEqual([...new Uint8Array(16).fill(3)]);
+  });
+
+  it('retains a legal BC base when the source is already GPU-compressed', () => {
+    const container = createDefaultContainer();
+    container.vkFormat = VK_FORMAT_BC7_UNORM_BLOCK;
+    container.pixelWidth = 600;
+    container.pixelHeight = 1000;
+    container.levelCount = 4;
+    container.levels = [0, 1, 2, 3].map(level => ({
+      levelData: new Uint8Array(16).fill(level), uncompressedByteLength: 16,
+    }));
+    const selected = selectKtx2MipLevels(writeKtx2(container).buffer as ArrayBuffer, 128);
+    const decoded = readKtx2(new Uint8Array(selected.buffer));
+    expect(selected.forceRgba).toBe(false);
+    expect([decoded.pixelWidth, decoded.pixelHeight]).toEqual([300, 500]);
+    expect([...decoded.levels[0]!.levelData]).toEqual([...new Uint8Array(16).fill(1)]);
   });
 
   it('keeps the authored lower mip chain and charges only its actual compressed footprint', () => {
