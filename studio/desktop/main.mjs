@@ -26,6 +26,8 @@ import { installDesktopMapCache } from "./map-cache.mjs";
 import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
 import { createLocalHost } from "./local-host.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
+import { readDistributionIdentity } from "./release-identity.mjs";
+import { checkForUpdates, describeUpdate } from "./update-check.mjs";
 
 /** Static pages and the preload ship beside this file (asar when packaged). */
 const pagesDir = app.isPackaged ? app.getAppPath() : dirname(fileURLToPath(import.meta.url));
@@ -249,6 +251,47 @@ const cacheMenu = {
   ],
 };
 
+/**
+ * What this packaged build says about itself: the Cloud service it connects
+ * to and the distribution it was published as. Absent when the shell runs
+ * unpackaged (`electron desktop/main.mjs`), where there is no app.asar and
+ * no publication.
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+async function packagedMetadata() {
+  if (!app.isPackaged) return null;
+  return JSON.parse(await readFile(join(pagesDir, "package.json"), "utf8"));
+}
+
+/**
+ * Help › Check for Updates…. A user action, in the main process, that reads
+ * the public release list and shows what it found; it downloads and installs
+ * nothing (see desktop/update-check.mjs).
+ */
+const updateMenuItem = {
+  label: "Check for Updates…",
+  click: menuAction(async () => {
+    const metadata = await packagedMetadata();
+    const result = await checkForUpdates({
+      identity: readDistributionIdentity(metadata?.simforgeDistribution),
+      cloudOrigin: typeof metadata?.simforgeCloudOrigin === "string" ? metadata.simforgeCloudOrigin : null,
+      userAgent: `${PRODUCT.packageName}/${app.getVersion()} (+https://github.com/SimForgeinc/simforge-oss)`,
+    });
+    const { message, detail, url } = describeUpdate(result);
+    const buttons = url ? ["Open release page", "Close"] : ["Close"];
+    const { response } = await dialog.showMessageBox({
+      type: result.state === "update-available" ? "info" : "none",
+      title: "SimForge Studio updates",
+      message,
+      detail,
+      buttons,
+      defaultId: url ? 1 : 0,
+      cancelId: buttons.length - 1,
+    });
+    if (url && response === 0) openExternal(url);
+  }),
+};
+
 /** @param {ReturnType<typeof createLocalHost>} localHost */
 function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -262,6 +305,8 @@ function installMenu(localHost) {
     {
       role: "help",
       submenu: [
+        updateMenuItem,
+        { type: "separator" },
         { label: "Open data folder", click: () => void shell.openPath(localHost.dataRoot) },
         {
           label: "Local host…",

@@ -33,6 +33,20 @@ on:
         type: choice
         options: ["https://staging.simforge.ai", "https://simforge.ai"]
         default: "https://staging.simforge.ai"
+      distribution_label:
+        description: "Distribution label this build is published as (e.g. 0.1.1); leave empty for an unlabelled candidate"
+        type: string
+        required: false
+      channel:
+        description: "Release channel the label belongs to"
+        type: choice
+        options: ["preview", "stable"]
+        default: "preview"
+      publish:
+        description: "Create a maintainers-only draft release from this run's artifacts; making a release public is a separate, deliberate local step"
+        type: choice
+        options: ["none", "draft"]
+        default: "none"
   push:
     branches: ["ci/unified-desktop/**"]
 
@@ -154,6 +168,11 @@ jobs:
       - name: Stage the desktop artifact
         env:
           SIMFORGE_DESKTOP_CLOUD_ORIGIN: ${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}
+          # Empty means an unlabelled candidate: the shell then reports that
+          # it cannot be compared with published releases instead of claiming
+          # to be one of them.
+          SIMFORGE_DESKTOP_DISTRIBUTION_LABEL: ${{ inputs.distribution_label }}
+          SIMFORGE_DESKTOP_DISTRIBUTION_CHANNEL: ${{ inputs.channel || 'preview' }}
         run: node desktop/stage.mjs
 
       - name: Decide code signing from the secrets actually present
@@ -222,6 +241,18 @@ jobs:
             Write-Host "$($_.Name): signed by $($sig.SignerCertificate.Subject)"
           }
 
+      - name: Record the digests of the bytes this leg produced
+        # Written where the bytes were made, before they travel: the release
+        # job verifies every artifact against these, so a truncated download
+        # or a swapped file cannot become a release asset.
+        run: |
+          cd dist/desktop/out
+          shopt -s nullglob
+          files=(*.exe *.dmg *.zip *.AppImage *.deb)
+          [ ${#files[@]} -gt 0 ] || { echo "no installers to record"; exit 1; }
+          sha256sum "${files[@]}" > SHA256SUMS
+          cat SHA256SUMS
+
       - uses: actions/upload-artifact@v4
         with:
           name: simforge-studio-${{ matrix.name }}-${{ steps.signing.outputs.signed == 'true' && (steps.signing.outputs.notarized == 'true' && 'signed-notarized' || 'signed') || 'unsigned' }}
@@ -234,3 +265,55 @@ jobs:
             studio/dist/desktop/out/*.AppImage
             studio/dist/desktop/out/*.deb
             studio/dist/desktop/out/*.blockmap
+            studio/dist/desktop/out/SHA256SUMS
+
+  # Assembles this run's four installer sets into a maintainers-only draft
+  # GitHub release. It never makes a release publicly readable: publication
+  # requires a cleared third-party audit and, for stable, the gates in
+  # scripts/release/stable-gates.mjs, so the flip is a deliberate local
+  # command by the release owner (scripts/release/publish-desktop-release.mjs
+  # --publish release --confirm), not a CI side effect.
+  release:
+    name: Draft release
+    needs: package
+    if: inputs.publish == 'draft'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Refuse an unlabelled publication
+        if: inputs.distribution_label == ''
+        run: |
+          echo "publish=draft requires distribution_label: a release must be named, and the label is baked into the binaries at stage time." >&2
+          exit 1
+      - name: Prepare and create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/release/publish-desktop-release.mjs \
+            --label "${{ inputs.distribution_label }}" \
+            --channel "${{ inputs.channel }}" \
+            --publish draft --confirm \
+            --from-run "${{ github.run_id }}" \
+            --sums-from-installers \
+            --signing-from-artifacts \
+            --source-revision "${{ github.sha }}" \
+            --source-branch "${{ github.ref_name }}" \
+            --cloud-origin "${{ inputs.cloud_origin || 'https://staging.simforge.ai' }}" \
+            --ci-run "${{ github.run_id }}" \
+            --out "artifacts/release/studio-${{ inputs.distribution_label }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simforge-studio-release-${{ inputs.distribution_label }}
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            artifacts/release/studio-${{ inputs.distribution_label }}/*.json
+            artifacts/release/studio-${{ inputs.distribution_label }}/*.md
+            artifacts/release/studio-${{ inputs.distribution_label }}/SHA256SUMS

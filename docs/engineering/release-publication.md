@@ -15,7 +15,11 @@ keep private copies of portable implementations.
    publishable workspace package without a registry entry, or an internal
    dependency on an unregistered package, fails manifest generation.
 3. A release tag is exactly `v<stackVersion>` and identifies one immutable Git
-   tree. Published versions are never overwritten or reused.
+   tree. Published versions are never overwritten or reused. This namespace
+   belongs to the stack alone: the desktop application publishes installer
+   sets under `studio-<label>` tags (see
+   [desktop-release.md](desktop-release.md)), because a `v*` tag triggers the
+   stack publication workflow and an installer release must not.
 4. Internal dependencies in packed artifacts are pinned to that stack version;
    no `workspace:` specifier survives publication.
 5. Export maps and packed files are verified before publication. Browser-safe
@@ -53,6 +57,17 @@ identity, publishes, and attaches provenance.
 The Cloud intake follows [simcloud-sync.md](simcloud-sync.md): its stack lock,
 vendored artifacts, import rewrites, package-manager lockfile, and divergence
 audit expectations change atomically.
+
+## Desktop releases
+
+SimForge Studio installers are a separate publication of the same tree, with
+their own tags (`studio-<label>`), their own record (`RELEASE.json`,
+`simforge.desktop-release/v2`) and their own gates. A desktop preview does
+not wait for npm publication; a **stable** desktop release does, because its
+`stable-gates.mjs` `stack-identity-published` gate requires the
+`v<stackVersion>` tag to exist and the registry to carry it, and the Cloud
+vendor lock to name the same revision the installers were built from. That is
+the only coupling between the two publications.
 
 ## Rollback
 

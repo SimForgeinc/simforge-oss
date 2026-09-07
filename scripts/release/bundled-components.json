@@ -1,0 +1,312 @@
+{
+  "schema": "simforge.desktop-bundled-components/v1",
+  "note": "What a SimForge Studio installer redistributes besides SimForge's own Apache-2.0 code, and what each item obliges us to do before that installer may be offered publicly. Every claim here is bound to bytes: `evidence[].sha256` values are the digests of files the build actually fetches (studio/desktop/tools.lock.json) or of the upstream metadata the claim is read from, and scripts/release/audit-bundled-licenses.mjs refuses to certify an installer whose lock no longer matches these pins. Obligation status is a recorded review outcome, never an assumption: `satisfied` means the artifact named in `evidence` exists, `unsatisfied` means the obligation is real and unmet, `undetermined` means nobody has established the answer. Anything other than `satisfied` blocks public redistribution of the affected targets.",
+  "reviewedAt": "2026-09-07",
+  "components": [
+    {
+      "id": "simforge-studio",
+      "role": "The application, the compiler, the local host, the native runtime and the Bevy renderer.",
+      "license": "Apache-2.0",
+      "origin": "https://github.com/SimForgeinc/simforge-oss",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "license-text",
+          "requirement": "Ship LICENSE and NOTICE with the distribution and state modifications.",
+          "status": "satisfied",
+          "evidence": "Repository LICENSE; the release page carries the source revision the installers were built from."
+        }
+      ]
+    },
+    {
+      "id": "electron",
+      "role": "Application runtime (Chromium + Node) the installer embeds.",
+      "license": "MIT AND BSD-3-Clause AND LGPL-2.1-or-later (Chromium's bundled components)",
+      "origin": "https://github.com/electron/electron",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "license-text",
+          "requirement": "Electron's LICENSES.chromium.html and LICENSE must remain in the packaged application.",
+          "status": "satisfied",
+          "evidence": "electron-builder copies Electron's own license files into the package; desktop/verify-package.mjs asserts the Electron payload is the one staged."
+        }
+      ]
+    },
+    {
+      "id": "ffmpeg-encoders",
+      "role": "ffmpeg and ffprobe, spawned as separate programs by the host to encode and inspect render output. Pinned by studio/desktop/tools.lock.json and fetched by studio/desktop/fetch-tools.mjs.",
+      "distributionVehicle": {
+        "repository": "https://github.com/eugeneware/ffmpeg-static",
+        "tag": "b6.1.1",
+        "note": "This repository redistributes third-party static builds; its tag is not an ffmpeg version. The four targets carry three different upstream builds with three different ffmpeg versions and three different license outcomes, so licensing is determined per target, never once for `b6.1.1`."
+      },
+      "perTarget": {
+        "linux-x64": {
+          "builder": "johnvansickle.com static builds",
+          "upstreamVersion": "7.0.2",
+          "declaredLicense": "GPL-3.0-only",
+          "declaredBy": "The pinned linux-x64.README states: \"This static build is licensed under the GNU General Public License version 3.\"",
+          "copyleftComponents": [
+            "libx264",
+            "libx265",
+            "libxvid",
+            "libvidstab",
+            "libfrei0r",
+            "libzvbi",
+            "librubberband",
+            "libpostproc"
+          ],
+          "binaryPins": {
+            "ffmpeg": "e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99",
+            "ffprobe": "4f231a1960d83e403d08f7971e271707bec278a9ae18e21b8b5b03186668450d"
+          },
+          "evidence": [
+            {
+              "what": "GPLv3 license text shipped beside the binaries",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.LICENSE",
+              "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+            },
+            {
+              "what": "Build report naming the upstream version, the GPLv3 statement and the linked libraries",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.README",
+              "sha256": "72f4b1b06d419d22ace6e7cc75f06826f90737345aa0b1736158929f4aacc537",
+              "sizeBytes": 2235
+            }
+          ],
+          "redistribution": "conditional"
+        },
+        "windows-x64": {
+          "builder": "gyan.dev (www.gyan.dev) essentials build",
+          "upstreamVersion": "6.1.1",
+          "declaredLicense": "GPL-3.0-only",
+          "declaredBy": "The pinned win32-x64.LICENSE is the GNU GPL version 3 text; the build report identifies it as \"6.1.1-essentials_build-www.gyan.dev\" and lists libx264/libx265 among its encoders, which requires --enable-gpl.",
+          "copyleftComponents": [
+            "libx264",
+            "libx265"
+          ],
+          "binaryPins": {
+            "ffmpeg": "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00",
+            "ffprobe": "3a7e2dc003dc2cd1472827e4c7c4f056ae1ae0ae7c5bbc580c99b49827351ba4"
+          },
+          "evidence": [
+            {
+              "what": "GPLv3 license text shipped beside the binaries",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/win32-x64.LICENSE",
+              "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+            },
+            {
+              "what": "Build report identifying the gyan.dev essentials build and its encoder set",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/win32-x64.README",
+              "sha256": "a636a7183c58006351acbaf35303c0ed85c6e1320fd4e80de453ba6157de6311",
+              "sizeBytes": 39494
+            }
+          ],
+          "redistribution": "conditional"
+        },
+        "macos-x64": {
+          "builder": "evermeet.cx (extra-version \"tessus\")",
+          "upstreamVersion": "8.0",
+          "declaredLicense": "GPL-3.0-or-later",
+          "declaredBy": "The configure line compiled into the pinned binary contains --enable-gpl --enable-version3 and does NOT contain --enable-nonfree; it links libx264, libx265, libxvid, librubberband and libpostproc. The bundled *.LICENSE asset is FFmpeg's generic LICENSE.md, which describes the licensing options rather than the one this build selected, so the configure line in the binary is the authority.",
+          "copyleftComponents": [
+            "libx264",
+            "libx265",
+            "libxvid",
+            "librubberband",
+            "libpostproc",
+            "libzvbi"
+          ],
+          "binaryPins": {
+            "ffmpeg": "ebdddc936f61e14049a2d4b549a412b8a40deeff6540e58a9f2a2da9e6b18894",
+            "ffprobe": "fa3add0ce901f7241abe0dfc0155d958fc834aca3f8ce61f87cc712ae669c1e0"
+          },
+          "evidence": [
+            {
+              "what": "FFmpeg LICENSE.md shipped beside the binaries (generic, not a determination)",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-x64.LICENSE",
+              "sha256": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af"
+            },
+            {
+              "what": "Build metadata reporting version 8.0 and the external library set",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-x64.README",
+              "sha256": "e88a0325f8e5b75210355e37341824f074d3cd82def2125be54c914b62848a36",
+              "sizeBytes": 6227
+            }
+          ],
+          "redistribution": "conditional"
+        },
+        "macos-arm64": {
+          "builder": "unidentified arm64 build (configure prefix /Volumes/tempdisk/sw, --enable-neon); the pinned README asset is FFmpeg's own README and carries no build report",
+          "upstreamVersion": "undetermined",
+          "declaredLicense": "nonfree (unredistributable)",
+          "declaredBy": "The configure line compiled into the pinned binary contains --enable-gpl --enable-version3 AND --enable-nonfree. FFmpeg's own licensing documentation states that a build configured with --enable-nonfree may not be redistributed. This is a property of these exact bytes, established from the binary, not an inference from the tag.",
+          "copyleftComponents": [
+            "libx264",
+            "libx265",
+            "libvidstab",
+            "libpostproc"
+          ],
+          "binaryPins": {
+            "ffmpeg": "a90e3db6a3fd35f6074b013f948b1aa45b31c6375489d39e572bea3f18336584",
+            "ffprobe": "bb2db6f5d8cef919da12fbf592119a987202a8c060a886f3cab091f9cab90b64"
+          },
+          "evidence": [
+            {
+              "what": "FFmpeg LICENSE.md shipped beside the binaries (generic, not a determination)",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-arm64.LICENSE",
+              "sha256": "cb48bf09a11f5fb576cddb0431c8f5ed0a60157a9ec942adffc13907cbe083f2"
+            },
+            {
+              "what": "Pinned README asset; FFmpeg's own README, carrying no build report for these bytes",
+              "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/darwin-arm64.README",
+              "sha256": "05ba4b92c96605434b1aaae3eedf5a2c280c9607bf78ffca9a5b536d9af2dc6a",
+              "sizeBytes": 1810
+            }
+          ],
+          "redistribution": "prohibited"
+        }
+      },
+      "obligations": [
+        {
+          "kind": "redistribution-permission",
+          "targets": [
+            "macos-arm64"
+          ],
+          "requirement": "Do not redistribute an ffmpeg build configured with --enable-nonfree. Replacing the macOS arm64 encoders with a redistributable build changes the packaged bytes, so it produces a new installer; it cannot be applied to an already-built artifact.",
+          "status": "unsatisfied",
+          "evidence": null,
+          "remediation": [
+            "Repin macos-arm64 to a build without --enable-nonfree (an evermeet.cx arm64 build, or our own configure) and rebuild that leg.",
+            "Or stop bundling encoders on macOS arm64 and resolve ffmpeg at first use from the user's own installation, reporting a capability error when absent."
+          ]
+        },
+        {
+          "kind": "license-text",
+          "targets": [
+            "windows-x64",
+            "linux-x64",
+            "macos-x64",
+            "macos-arm64"
+          ],
+          "requirement": "The applicable license text must accompany the binaries inside every package.",
+          "status": "satisfied",
+          "evidence": "studio/desktop/fetch-tools.mjs fetches the pinned per-target LICENSE asset and verifies its digest; studio/desktop/stage.mjs copies it to the package's tools directory as LICENSE. For macOS the shipped file is FFmpeg's generic LICENSE.md, so THIRD_PARTY_NOTICES states the selected license explicitly."
+        },
+        {
+          "kind": "corresponding-source",
+          "targets": [
+            "windows-x64",
+            "linux-x64",
+            "macos-x64"
+          ],
+          "requirement": "GPL-3.0 section 6 requires the complete corresponding source of these executables \u2014 upstream ffmpeg at the exact version, every statically linked library at its exact version, and the scripts controlling compilation and installation \u2014 offered as an accompanying copy or as a written offer valid for three years to any third party. None of the three upstream builders publishes a corresponding-source archive as part of the pinned release, and the ffmpeg-static release carries binaries and license texts only.",
+          "status": "unsatisfied",
+          "evidence": null,
+          "remediation": [
+            "Build the encoders ourselves from pinned sources and publish that source archive as a release asset, which makes the offer trivially satisfiable and removes three unidentified build provenances at the same time.",
+            "Or obtain and host the complete corresponding source for each upstream build and attach a written offer to every release page and installer.",
+            "Or bundle no encoders and resolve ffmpeg from the user's system, which removes the obligation instead of discharging it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nasa-sky-plates",
+      "role": "Sky background plates converted at build time by renderer/tools/prepare_sky_assets.py.",
+      "license": "Public domain (NASA media usage guidelines; attribution requested, not required)",
+      "origin": "renderer/render-core/assets/sky/SOURCES.json",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "obligations": [
+        {
+          "kind": "attribution",
+          "requirement": "Credit the source imagery.",
+          "status": "satisfied",
+          "evidence": "SOURCES.json pins every source URL, download digest and generated-product digest, and the workflow verifies both before packaging; THIRD_PARTY_NOTICES reproduces the credit."
+        }
+      ]
+    },
+    {
+      "id": "actor-appearance-closure",
+      "role": "92 glTF actor-appearance models plus their catalog, fetched by packages/render/scripts/fetch-actor-closure.mjs and staged into every package so native renders resolve actors offline.",
+      "license": "Mixed; determined per member from the pinned catalog",
+      "origin": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192.json",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "provenance": {
+        "closureDigest": "6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192",
+        "closureBytes": 12607,
+        "catalogDigest": "971c6a56f61e4633871ec9410d34118eab7df76893dcda5908d857320e5dac20",
+        "note": "The closure document itself records only digests and sizes; the per-model attribution lives in its catalog-models.json member, which is what these counts were read from.",
+        "classes": [
+          {
+            "source": "asset-catalog-procedural",
+            "models": 34,
+            "attribution": "SimForge procedural catalog model (@simforge-oss/asset-catalog 0.1.0-rc.61), built by buildProp() with catalog default params",
+            "terms": "SimForge's own output, Apache-2.0 with the rest of the product"
+          },
+          {
+            "source": "meshy-refined",
+            "models": 55,
+            "attribution": "Generated with Meshy for SimForge",
+            "terms": "Assets generated through the Meshy service. Whether the plan they were generated under grants redistribution inside a distributed application is a commercial-terms question this repository cannot answer."
+          },
+          {
+            "source": "carla-0.10.0-ue5",
+            "models": 1,
+            "attribution": "\"CARLA pedestrian 0020\" pedestrian model (c) CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+            "terms": "CC-BY-4.0: redistribution permitted with credit, license notice and a statement of modification."
+          }
+        ]
+      },
+      "obligations": [
+        {
+          "kind": "attribution",
+          "requirement": "Reproduce each member's attribution, and for the CC BY 4.0 model its credit, license identification and the fact that it was converted.",
+          "status": "satisfied",
+          "evidence": "The pinned catalog (sha256 971c6a56...) carries a per-model attribution string for all 90 catalog entries; THIRD_PARTY_NOTICES reproduces the three provenance classes and the CC BY 4.0 credit verbatim."
+        },
+        {
+          "kind": "redistribution-terms",
+          "targets": [
+            "windows-x64",
+            "linux-x64",
+            "macos-arm64",
+            "macos-x64"
+          ],
+          "requirement": "Establish that the 55 Meshy-generated models may be redistributed inside a publicly downloadable installer under the plan they were generated with. This is a commercial-terms answer, not a source fact, and it cannot be assumed from the assets being ours to use internally.",
+          "status": "undetermined",
+          "evidence": null,
+          "remediation": [
+            "Record the Meshy plan/terms under which the closure was generated and the redistribution right it grants, then set this obligation to satisfied with that reference.",
+            "Or restrict the staged closure to the 34 procedural models and the CC BY 4.0 model until the terms are recorded."
+          ]
+        }
+      ]
+    }
+  ],
+  "neverShipped": [
+    "Private map bundles: only richmond-field-station is public, and public/map-bundles is excluded from the stage.",
+    "Model weights, NuRec/splat assets and Python inference environments: resolved into user data after install, never installer payload and never a release asset.",
+    "Cloud credentials, QA fixtures and user datasets."
+  ]
+}

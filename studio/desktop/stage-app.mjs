@@ -11,6 +11,7 @@ import { access, cp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRODUCT } from "./stage-manifest.mjs";
+import { CHANNELS, assertLabel, assertLabelMatchesBuild, releaseTag } from "./release-identity.mjs";
 
 const desktopDir = dirname(fileURLToPath(import.meta.url));
 const studioRoot = resolve(desktopDir, "..");
@@ -54,6 +55,27 @@ export async function bundleNode(entryPoints, outdir, external) {
 }
 
 /**
+ * The publication this build is being packaged for, read from the
+ * environment the release workflow sets. Omitted when nothing is set: an
+ * unlabelled build (a local `desktop:stage`, or a candidate packaged before
+ * anyone decided what to call it) must not claim a distribution, and the
+ * shell's update check reports it as uncomparable rather than up to date.
+ * @param {string} embeddedVersion
+ * @returns {{ label: string; tag: string; channel: string; embeddedVersion: string } | undefined}
+ */
+export function distributionIdentity(embeddedVersion) {
+  const label = process.env.SIMFORGE_DESKTOP_DISTRIBUTION_LABEL?.trim();
+  if (!label) return undefined;
+  assertLabel(label);
+  assertLabelMatchesBuild({ label, embeddedVersion });
+  const channel = process.env.SIMFORGE_DESKTOP_DISTRIBUTION_CHANNEL?.trim() || "preview";
+  if (!CHANNELS.includes(channel)) {
+    throw new Error(`SIMFORGE_DESKTOP_DISTRIBUTION_CHANNEL must be one of ${CHANNELS.join(", ")}`);
+  }
+  return { label, tag: releaseTag(label), channel, embeddedVersion };
+}
+
+/**
  * Write the application directory.
  * @param {{ appDir: string; version: string; license?: string }} options
  * @returns {Promise<{ files: string[]; inputs: string[] }>} staged file names and bundled shell inputs
@@ -81,6 +103,7 @@ export async function stageApp({ appDir, version, license }) {
     productName: PRODUCT.name,
     version,
     simforgeCloudOrigin: cloudOrigin.origin,
+    simforgeDistribution: distributionIdentity(version),
     description: "SimForge Studio desktop: the local Studio host, native rendering and the SimCloud connector.",
     homepage: "https://github.com/SimForgeinc/simforge-oss",
     license: license ?? "Apache-2.0",

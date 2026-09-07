@@ -48,7 +48,12 @@ files:
   - package.json
   - "!node_modules/**/*"
 afterPack: desktop/after-pack.mjs
-artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+# Asset names carry no spaces: GitHub rewrites a space in a release asset
+# name to a dot, which breaks SHA256SUMS line matching and predictable
+# download URLs. The product name in the UI keeps its space (productName
+# above); only the file names are hyphenated, and they are hyphenated here at
+# source rather than renamed after the fact.
+artifactName: "SimForge-Studio-${version}-${os}-${arch}.${ext}"
 
 win:
   target:
@@ -62,7 +67,7 @@ nsis:
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   shortcutName: SimForge Studio
-  artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
+  artifactName: "SimForge-Studio-Setup-${version}-${arch}.${ext}"
 
 mac:
   target:
