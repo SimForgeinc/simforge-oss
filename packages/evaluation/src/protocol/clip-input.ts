@@ -3,12 +3,12 @@
  *
  * Every input kind — a user clip, an authorised dataset clip, a rendered
  * SimForge scenario observation, a reconstructed replay-context scene —
- * resolves to ONE on-disk shape, the `simforge.eval-clip/v1` observation
+ * resolves to ONE on-disk shape, the `simforge.eval-observations/v1` observation
  * bundle, and is then evaluated by exactly the same code. There is no second
  * materialisation path and no per-kind special case in the executor.
  *
  * ```
- * <bundle>/clip.json            simforge.eval-clip/v1 manifest
+ * <bundle>/clip.json            simforge.eval-observations/v1 manifest
  * <bundle>/frames/<sensor>/*    the real frames the manifest lists
  * <bundle>/video.mp4            optional source clip (presentation only)
  * ```
@@ -34,11 +34,11 @@ import { z } from 'zod';
 
 import type { InvokeObservation } from './endpoint-client.js';
 
-export const EVAL_CLIP_SCHEMA = 'simforge.eval-clip/v1';
+export const OBSERVATION_BUNDLE_SCHEMA = 'simforge.eval-observations/v1';
 
 /** Frames per camera and ego-history steps the Alpamayo families require. */
 export const FRAMES_PER_CAMERA = 4;
-export const EGO_HISTORY_STEPS = 16;
+export const OBSERVATION_OBSERVATION_EGO_HISTORY_STEPS = 16;
 export const HISTORY_DT_S = 0.1;
 
 const FrameSchema = z.object({
@@ -66,8 +66,8 @@ const EgoPoseSchema = z.object({
   speedMps: z.number().optional(),
 });
 
-export const EvalClipSchema = z.object({
-  schema: z.literal(EVAL_CLIP_SCHEMA),
+export const ObservationBundleSchema = z.object({
+  schema: z.literal(OBSERVATION_BUNDLE_SCHEMA),
   clipId: z.string().min(1),
   t0Us: z.number(),
   source: z.object({ kind: z.string().min(1) }).passthrough(),
@@ -84,11 +84,11 @@ export const EvalClipSchema = z.object({
   video: z.string().min(1).nullable().default(null),
   navText: z.string().nullable().default(null),
 });
-export type EvalClip = z.infer<typeof EvalClipSchema>;
+export type ObservationBundleDoc = z.infer<typeof ObservationBundleSchema>;
 
 export interface ObservationBundle {
   readonly directory: string;
-  readonly clip: EvalClip;
+  readonly clip: ObservationBundleDoc;
   /** sha256 of the manifest bytes — the input digest recorded in provenance. */
   readonly digest: string;
 }
@@ -96,7 +96,7 @@ export interface ObservationBundle {
 export interface MaterializedItem {
   readonly obs: InvokeObservation;
   readonly cameraIds: readonly number[];
-  readonly reference: EvalClip['reference'];
+  readonly reference: ObservationBundleDoc['reference'];
   readonly projection: {
     cameraId: number;
     K: number[][];
@@ -109,14 +109,14 @@ export interface MaterializedItem {
   readonly video: string | null;
 }
 
-export interface Refusal {
+export interface InputRefusal {
   readonly code: 'missing_fields' | 'calibration_invalid' | 'input_error';
   readonly message: string;
   readonly missingFields: readonly string[];
 }
 
 export class ClipInputError extends Error {
-  constructor(readonly refusal: Refusal) {
+  constructor(readonly refusal: InputRefusal) {
     super(refusal.message);
     this.name = 'ClipInputError';
   }
@@ -131,7 +131,7 @@ export async function loadObservationBundle(target: string): Promise<Observation
   } catch {
     throw new ClipInputError({
       code: 'input_error',
-      message: `no ${EVAL_CLIP_SCHEMA} manifest at ${manifestPath}`,
+      message: `no ${OBSERVATION_BUNDLE_SCHEMA} manifest at ${manifestPath}`,
       missingFields: ['clip.json'],
     });
   }
@@ -141,11 +141,11 @@ export async function loadObservationBundle(target: string): Promise<Observation
   } catch (error) {
     throw new ClipInputError({ code: 'input_error', message: `${manifestPath}: ${String(error)}`, missingFields: [] });
   }
-  const parsed = EvalClipSchema.safeParse(document);
+  const parsed = ObservationBundleSchema.safeParse(document);
   if (!parsed.success) {
     throw new ClipInputError({
       code: 'input_error',
-      message: `${manifestPath} is not a valid ${EVAL_CLIP_SCHEMA}: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`,
+      message: `${manifestPath} is not a valid ${OBSERVATION_BUNDLE_SCHEMA}: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`,
       missingFields: parsed.error.issues.map((issue) => issue.path.join('.')),
     });
   }
@@ -164,7 +164,7 @@ export async function loadObservationBundle(target: string): Promise<Observation
  * half a step. The history is never extrapolated or zero-filled: a model fed
  * an invented history returns a number about a world that never existed.
  */
-function egoHistory(clip: EvalClip): { xyz: number[][]; rot: number[][][]; tS: number[] } {
+function egoHistory(clip: ObservationBundleDoc): { xyz: number[][]; rot: number[][][]; tS: number[] } {
   const poses = [...clip.ego.poses].sort((a, b) => a.tUs - b.tUs);
   if (poses.length === 0) {
     throw new ClipInputError({
@@ -175,7 +175,7 @@ function egoHistory(clip: EvalClip): { xyz: number[][]; rot: number[][][]; tS: n
   }
   const toleranceUs = (HISTORY_DT_S * 1e6) / 2;
   const wanted: number[] = [];
-  for (let step = EGO_HISTORY_STEPS - 1; step >= 0; step -= 1) {
+  for (let step = OBSERVATION_EGO_HISTORY_STEPS - 1; step >= 0; step -= 1) {
     wanted.push(clip.t0Us - step * HISTORY_DT_S * 1e6);
   }
   const picked: typeof poses = [];
@@ -201,7 +201,7 @@ function egoHistory(clip: EvalClip): { xyz: number[][]; rot: number[][][]; tS: n
       code: 'missing_fields',
       message:
         `ego history is incomplete: no pose within ${HISTORY_DT_S / 2}s of ${missingInstants.join(', ')} ` +
-        `relative to t0 (need ${EGO_HISTORY_STEPS} poses at ${1 / HISTORY_DT_S} Hz)`,
+        `relative to t0 (need ${OBSERVATION_EGO_HISTORY_STEPS} poses at ${1 / HISTORY_DT_S} Hz)`,
       missingFields: ['ego.poses'],
     });
   }
@@ -265,7 +265,7 @@ export function buildObservation(
     ? clip.cameras.filter((camera) => required.includes(camera.cameraId))
     : clip.cameras;
 
-  const cameras: InvokeObservation['cameras'] = [];
+  const cameras: InvokeObservation['cameras'][number][] = [];
   for (const camera of [...selected].sort((a, b) => a.cameraId - b.cameraId)) {
     const frames = [...camera.frames].sort((a, b) => a.tUs - b.tUs).filter((frame) => frame.tUs <= clip.t0Us);
     if (frames.length < FRAMES_PER_CAMERA) {
@@ -340,7 +340,7 @@ export function buildTextObservation(bundle: ObservationBundle): MaterializedIte
       missingFields: ['cameras'],
     });
   }
-  const cameras: InvokeObservation['cameras'] = [];
+  const cameras: InvokeObservation['cameras'][number][] = [];
   for (const camera of [...clip.cameras].sort((a, b) => a.cameraId - b.cameraId)) {
     const window = [...camera.frames].sort((a, b) => a.tUs - b.tUs).slice(-FRAMES_PER_CAMERA);
     cameras.push({

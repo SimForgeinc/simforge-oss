@@ -7,7 +7,7 @@
  * Two kinds execute:
  *
  * - `openloop` — the shared open-loop core (`@simforge-oss/evaluation`
- *   `executeOpenloop`) materialises each `simforge.eval-clip/v1` observation
+ *   `executeOpenloop`) materialises each `simforge.eval-observations/v1` observation
  *   bundle, invokes the engine's `POST /invoke` facade, and writes
  *   `openloop.json` + `trajectories.json` + `result.json`.
  * - `policy_episode` — the shared episode core (`executeEpisode`) runs one

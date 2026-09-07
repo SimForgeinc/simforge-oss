@@ -18,6 +18,8 @@
 
 import { request as httpRequest } from 'node:http';
 
+import { deferred } from '../replay-context/deferred.js';
+
 export const ENDPOINT_PROTOCOL = 'simforge.policy-endpoint/v2';
 
 export interface EndpointCapabilities {
@@ -154,7 +156,7 @@ async function requestJson(
   if (payload !== undefined) headers['content-type'] = 'application/json';
 
   if (socketPath) {
-    const { promise, resolve, reject } = Promise.withResolvers<{ status: number; text: string }>();
+    const { promise, resolve, reject } = deferred<{ status: number; text: string }>();
     const clientRequest = httpRequest(
       { socketPath, path: `${basePath}${routePath}`, method, headers, timeout: timeoutMs },
       (response) => {
@@ -225,7 +227,14 @@ export async function endpointInvoke(target: EndpointTarget, body: InvokeRequest
       `invoke returned ${status} with non-JSON body: ${text.slice(0, 500)}`,
     );
   }
-  const document = parsed as Partial<InvokeSuccess & InvokeRefusal>;
+  // `Partial<InvokeSuccess & InvokeRefusal>` would intersect `ok: true` with
+  // `ok: false` and narrow to `never`; the wire document is one shape with
+  // optional members until it is discriminated below.
+  const document = parsed as {
+    ok?: boolean;
+    result?: InvokeSuccess['result'];
+    error?: InvokeRefusal['error'];
+  };
   if (document.ok === false && document.error) return { ok: false, error: document.error };
   if (status >= 400) {
     throw new EndpointTransportError('endpoint_invoke_failed', `invoke returned ${status}: ${text.slice(0, 500)}`);

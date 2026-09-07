@@ -33,7 +33,7 @@ function expectKind<T extends { kind: string }, K extends T["kind"]>(
 }
 
 /**
- * Build a `simforge.eval-clip/v1` observation bundle on disk.
+ * Build a `simforge.eval-observations/v1` observation bundle on disk.
  *
  * Frames are real 2x2 raw RGB files (12 bytes) rather than fixtures in git:
  * the executor passes their paths to the engine, so their content is the
@@ -88,7 +88,7 @@ async function writeClipBundle(
     join(directory, "clip.json"),
     `${JSON.stringify(
       {
-        schema: "simforge.eval-clip/v1",
+        schema: "simforge.eval-observations/v1",
         clipId: name,
         t0Us,
         source: { kind: "user-clip" },

@@ -182,7 +182,7 @@ through the same runner and scorer, via the shared cores in
 ```sh
 # closed-loop episode (job.json = simforge.compute-job/v1)
 simforge-eval-worker episode  --job job.json --out out/
-# open-loop batch over simforge.eval-clip/v1 bundles
+# open-loop batch over simforge.eval-observations/v1 bundles
 simforge-eval-worker openloop --job job.json --out out/
 ```
 
