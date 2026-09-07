@@ -267,6 +267,7 @@ export async function executeOpenloop(options: OpenloopRunOptions): Promise<Open
     family: health.family ?? options.fallbackModel?.family ?? null,
     revision: health.revision ?? options.fallbackModel?.revision ?? null,
     quant: health.quant ?? options.fallbackModel?.quant ?? null,
+    quantStatus: health.quant_status ?? null,
     checkpointDigest: health.checkpoint_digest ?? null,
     cameraProfile: health.camera_profile ?? null,
     attn: health.attn ?? null,
@@ -324,9 +325,14 @@ export async function executeOpenloop(options: OpenloopRunOptions): Promise<Open
     await describeArtifact(outDir, 'openloop.json', 'openloop-result', 'application/json'),
     await describeArtifact(outDir, 'trajectories.json', 'trajectories', 'application/json'),
   ];
-  // Scores exist only for a non-exploratory trajectory run with a reference.
+  // Scores exist only for a non-exploratory trajectory run with a real
+  // reference, and a quantization whose envelope is still unqualified may be
+  // reported but never presented as a measured result.
   const scored =
-    !exploratory && params.task === 'act' && Object.values(aggregate.scoredItems).some((count) => count > 0);
+    !exploratory &&
+    params.task === 'act' &&
+    health.quant_status !== 'qualification-pending' &&
+    Object.values(aggregate.scoredItems).some((count) => count > 0);
   const status: ResultStatus = cancelled
     ? 'cancelled'
     : aggregate.okItems === params.items.length

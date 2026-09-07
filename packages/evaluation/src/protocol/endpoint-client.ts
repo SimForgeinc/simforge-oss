@@ -40,6 +40,8 @@ export interface EndpointHealth {
   readonly family?: string;
   readonly revision?: string;
   readonly quant?: string;
+  /** `supported` | `qualification-pending`; a pending quant is never promotable. */
+  readonly quant_status?: string;
   readonly checkpoint_digest?: string;
   readonly camera_profile?: string;
   readonly capabilities?: EndpointCapabilities;
