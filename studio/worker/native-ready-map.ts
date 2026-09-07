@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { posix, resolve, sep } from "node:path";
+import { NATIVE_MAP_RELEASE_RECEIPT, type RegisteredNativeMapMember } from "../app/lib/map-ingest/native-map-source";
 import { nativeMasterResources } from "../app/lib/map-ingest/native-master-resources";
 
 const SHA256 = /^[a-f0-9]{64}$/u;
-const MAP_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 export type NativeReadyPayload = {
   relativePath: string;
@@ -15,12 +15,14 @@ export type NativeReadyPayload = {
 };
 
 export type NativeReadyMap = {
+  /** The immutable map identity a preview's provenance records; today the registry release digest. */
   mapDigest: string;
   releaseDigest: string;
-  corpusDir: string;
+  directory: string;
   masterPath: string;
   payloads: NativeReadyPayload[];
 };
+
 
 /** A failure with a stable API/worker error code. */
 export class HifiPreviewFailure extends Error {
@@ -33,46 +35,17 @@ export class HifiPreviewFailure extends Error {
   }
 }
 
-type InstallationMember = { sha256: string; bytes: number };
-type InstallationReceipt = {
-  schema: "simforge.map-installation.v1";
-  name: string;
-  version: string;
-  releaseDigest: string;
-  canonicalDigest: string;
-  webDigest?: string;
-  profile: "semantic" | "native" | "web";
-  members: Record<string, InstallationMember>;
-};
-
 function safeMemberPath(relativePath: string): boolean {
   return relativePath.length > 0
     && !/[\\:%?#\u0000-\u001f]/u.test(relativePath)
     && relativePath.split("/").every((part) => part.length > 0 && part !== "." && part !== "..");
 }
 
-function isInstallationMember(value: unknown): value is InstallationMember {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    && "sha256" in value && typeof value.sha256 === "string" && SHA256.test(value.sha256)
-    && "bytes" in value && Number.isSafeInteger(value.bytes) && Number(value.bytes) >= 0;
-}
-
-function isReceipt(value: unknown): value is InstallationReceipt {
-  if (!value || typeof value !== "object" || Array.isArray(value)
-    || !("schema" in value) || value.schema !== "simforge.map-installation.v1"
-    || !("name" in value) || typeof value.name !== "string" || value.name.length === 0
-    || !("version" in value) || typeof value.version !== "string" || value.version.length === 0
-    || !("releaseDigest" in value) || typeof value.releaseDigest !== "string" || !SHA256.test(value.releaseDigest)
-    || !("canonicalDigest" in value) || typeof value.canonicalDigest !== "string" || !SHA256.test(value.canonicalDigest)
-    || !("profile" in value) || value.profile !== "native"
-    || !("members" in value) || !value.members || typeof value.members !== "object" || Array.isArray(value.members)) return false;
-  if ("webDigest" in value
-    && value.webDigest !== undefined
-    && (typeof value.webDigest !== "string" || !SHA256.test(value.webDigest))) return false;
-  return Object.entries(value.members).every(([relativePath, member]) =>
-    safeMemberPath(relativePath)
-    && relativePath !== ".map-release.json"
-    && isInstallationMember(member));
+function isDeclaration(value: RegisteredNativeMapMember): boolean {
+  return typeof value.relativePath === "string" && safeMemberPath(value.relativePath)
+    && value.relativePath !== NATIVE_MAP_RELEASE_RECEIPT
+    && typeof value.sha256 === "string" && SHA256.test(value.sha256)
+    && Number.isSafeInteger(value.sizeBytes) && value.sizeBytes >= 0;
 }
 
 async function digestFile(path: string): Promise<string> {
@@ -82,8 +55,7 @@ async function digestFile(path: string): Promise<string> {
 }
 
 /** Validate active runtime resources, not unused archival raster fallbacks. */
-async function validateMasterClosure(corpusDir: string, receipt: InstallationReceipt): Promise<void> {
-  const masterPath = resolve(corpusDir, "master.gltf");
+async function validateMasterClosure(masterPath: string, declared: ReadonlySet<string>): Promise<void> {
   let document: unknown;
   try {
     document = JSON.parse(await readFile(masterPath, "utf8"));
@@ -98,9 +70,17 @@ async function validateMasterClosure(corpusDir: string, receipt: InstallationRec
     || !("version" in document.asset) || document.asset.version !== "2.0") {
     throw new HifiPreviewFailure("native_payload_master_invalid", "native master.gltf is not glTF 2.0");
   }
-  for (const uri of nativeMasterResources(document)) {
+  let resources: string[];
+  try {
+    resources = nativeMasterResources(document);
+  } catch (error) {
+    throw new HifiPreviewFailure("native_payload_master_invalid", "native master.gltf declares invalid resources", {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+  for (const uri of resources) {
     const memberPath = posix.normalize(uri);
-    if (!safeMemberPath(memberPath) || !receipt.members[memberPath]) {
+    if (!safeMemberPath(memberPath) || !declared.has(memberPath)) {
       throw new HifiPreviewFailure(
         "native_payload_resource_missing",
         `master.gltf references undeclared native member: ${uri}`,
@@ -111,63 +91,63 @@ async function validateMasterClosure(corpusDir: string, receipt: InstallationRec
 }
 
 /**
- * Resolve exactly the common-cache native installation for an immutable map
- * version. The receipt and every declared member are checked before a path is
- * handed to the renderer; an old corpus or another registry release can never
- * satisfy this lookup.
+ * Resolve a map version's registered native closure against the directory
+ * `ensureLocalMap(mapVersionId, 'semantic')` materialized for it. The
+ * declarations come from the map's registered native asset set; every
+ * declared member must be present at its relative path with exactly the
+ * registered bytes, and master.gltf may reference only declared members.
+ * Nothing about the directory is trusted on its own: no receipt is read and
+ * no undeclared file is ever handed to the renderer.
  */
 export async function resolveNativeReadyMap(input: {
+  directory: string;
   mapId: string;
   releaseDigest: string;
-  corpusRoot: string;
+  members: readonly RegisteredNativeMapMember[];
 }): Promise<NativeReadyMap> {
-  if (!MAP_NAME.test(input.mapId) || !SHA256.test(input.releaseDigest)) {
+  if (typeof input.mapId !== "string" || input.mapId.length === 0 || !SHA256.test(input.releaseDigest)) {
     throw new HifiPreviewFailure("native_payload_identity_invalid", "native map identity is invalid", {
       mapId: input.mapId,
       releaseDigest: input.releaseDigest,
     });
   }
-  const corpusRoot = resolve(input.corpusRoot);
-  const corpusDir = resolve(corpusRoot, input.mapId);
-  if (!corpusDir.startsWith(`${corpusRoot}${sep}`)) {
-    throw new HifiPreviewFailure("native_payload_identity_invalid", "native map path escapes the corpus root", {
-      mapId: input.mapId,
-    });
+  const identity = { mapId: input.mapId, releaseDigest: input.releaseDigest };
+  const declarations = [...input.members].sort((left, right) =>
+    left.relativePath < right.relativePath ? -1 : left.relativePath > right.relativePath ? 1 : 0);
+  const declared = new Set<string>();
+  for (const member of declarations) {
+    if (!isDeclaration(member) || declared.has(member.relativePath)) {
+      throw new HifiPreviewFailure("native_payload_member_invalid", `native member declaration is unsafe: ${member.relativePath}`, {
+        ...identity,
+        relativePath: member.relativePath,
+      });
+    }
+    declared.add(member.relativePath);
   }
-  const receiptPath = resolve(corpusDir, ".map-release.json");
-  let parsed: unknown;
+  if (!declared.has("master.gltf")) {
+    throw new HifiPreviewFailure("native_payload_master_missing", `native closure declares no master.gltf for ${input.mapId}`, identity);
+  }
+
+  const directory = resolve(input.directory);
   try {
-    parsed = JSON.parse(await readFile(receiptPath, "utf8"));
+    if (!(await stat(directory)).isDirectory()) throw new Error("not a directory");
   } catch (error) {
-    throw new HifiPreviewFailure("native_payload_unavailable", `native installation is unavailable for ${input.mapId}`, {
-      mapId: input.mapId,
-      releaseDigest: input.releaseDigest,
-      corpusDir,
+    throw new HifiPreviewFailure("native_payload_unavailable", `native map directory is unavailable for ${input.mapId}`, {
+      ...identity,
+      directory,
       reason: error instanceof Error ? error.message : String(error),
-    });
-  }
-  if (!isReceipt(parsed)
-    || parsed.name !== input.mapId
-    || parsed.releaseDigest !== input.releaseDigest) {
-    throw new HifiPreviewFailure("native_payload_receipt_mismatch", `native installation does not match ${input.mapId}`, {
-      mapId: input.mapId,
-      releaseDigest: input.releaseDigest,
-      corpusDir,
-    });
-  }
-  if (!parsed.members["master.gltf"]) {
-    throw new HifiPreviewFailure("native_payload_master_missing", `native installation has no master.gltf for ${input.mapId}`, {
-      mapId: input.mapId,
-      releaseDigest: input.releaseDigest,
-      corpusDir,
     });
   }
 
   const payloads: NativeReadyPayload[] = [];
-  for (const [relativePath, expected] of Object.entries(parsed.members).sort(([left], [right]) => left.localeCompare(right))) {
-    const path = resolve(corpusDir, ...relativePath.split("/"));
-    if (!path.startsWith(`${corpusDir}${sep}`)) {
-      throw new HifiPreviewFailure("native_payload_member_invalid", `native member path is unsafe: ${relativePath}`);
+  for (const expected of declarations) {
+    const { relativePath } = expected;
+    const path = resolve(directory, ...relativePath.split("/"));
+    if (!path.startsWith(`${directory}${sep}`)) {
+      throw new HifiPreviewFailure("native_payload_member_invalid", `native member path is unsafe: ${relativePath}`, {
+        ...identity,
+        relativePath,
+      });
     }
     let sizeBytes: number;
     let actualSha256: string;
@@ -178,36 +158,29 @@ export async function resolveNativeReadyMap(input: {
       actualSha256 = await digestFile(path);
     } catch (error) {
       throw new HifiPreviewFailure("native_payload_member_missing", `native member is unavailable: ${relativePath}`, {
-        mapId: input.mapId,
-        releaseDigest: input.releaseDigest,
+        ...identity,
         relativePath,
         reason: error instanceof Error ? error.message : String(error),
       });
     }
-    if (sizeBytes !== expected.bytes || actualSha256 !== expected.sha256) {
-      throw new HifiPreviewFailure("native_payload_member_mismatch", `native member does not match its receipt: ${relativePath}`, {
-        mapId: input.mapId,
-        releaseDigest: input.releaseDigest,
+    if (sizeBytes !== expected.sizeBytes || actualSha256 !== expected.sha256) {
+      throw new HifiPreviewFailure("native_payload_member_mismatch", `native member does not match its registration: ${relativePath}`, {
+        ...identity,
         relativePath,
         expectedSha256: expected.sha256,
         actualSha256,
-        expectedSizeBytes: expected.bytes,
+        expectedSizeBytes: expected.sizeBytes,
         actualSizeBytes: sizeBytes,
       });
     }
-    payloads.push({
-      relativePath,
-      path,
-      sha256: expected.sha256,
-      sizeBytes,
-    });
+    payloads.push({ relativePath, path, sha256: expected.sha256, sizeBytes });
   }
-  await validateMasterClosure(corpusDir, parsed);
   const master = payloads.find((payload) => payload.relativePath === "master.gltf")!;
+  await validateMasterClosure(master.path, declared);
   return {
     mapDigest: input.releaseDigest,
     releaseDigest: input.releaseDigest,
-    corpusDir,
+    directory,
     masterPath: master.path,
     payloads,
   };

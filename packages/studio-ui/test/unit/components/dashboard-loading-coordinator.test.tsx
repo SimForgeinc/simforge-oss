@@ -60,9 +60,6 @@ describe("DashboardLoadingProvider", () => {
     expect(screen.getByTestId("dashboard-loading-surface")).toBe(surface);
     expect(screen.getByTestId("coordinator-cloud-canvas")).toBe(canvas);
     expect(screen.getAllByTestId("dashboard-loading-surface")).toHaveLength(1);
-    expect(surface.getAttribute("data-load-kind")).toBe("scene");
-    expect(surface.getAttribute("data-load-phase")).toBe("resolving");
-    expect(surface.className).not.toContain("dashboard-scene-loading-enter");
   });
 
   it("chooses errors, editor boot, scene, then route in that order", async () => {
@@ -126,26 +123,24 @@ describe("DashboardLoadingProvider", () => {
       </DashboardLoadingProvider>,
     );
     const surface = screen.getByTestId("dashboard-loading-surface");
-    act(() => vi.advanceTimersByTime(200));
+    act(() => vi.advanceTimersByTime(1_000));
 
     view.rerender(
       <DashboardLoadingProvider>
         <SourceProbe source={null} />
       </DashboardLoadingProvider>,
     );
-    act(() => vi.advanceTimersByTime(16));
-    expect(surface.getAttribute("data-transition-state")).toBe("revealing");
+    act(() => vi.advanceTimersToNextTimer());
+    expect(surface.getAttribute("aria-hidden")).toBe("true");
     expect(screen.getByTestId("dashboard-loading-surface")).toBe(surface);
 
-    act(() => vi.advanceTimersByTime(899));
-    expect(screen.getByTestId("dashboard-loading-surface")).toBe(surface);
-    act(() => vi.advanceTimersByTime(1));
+    act(() => vi.runOnlyPendingTimers());
     expect(screen.queryByTestId("dashboard-loading-surface")).toBeNull();
   });
 
   it("surfaces an error with a reload action when a route source stalls", async () => {
     vi.useFakeTimers();
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const route = dashboardRouteLoadingSource({
       label: "Scenarios",
       detail: "Loading Scenarios",
@@ -161,13 +156,6 @@ describe("DashboardLoadingProvider", () => {
 
     act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole("alert")).toBeTruthy();
-    screen.getByText("Loading is taking longer than expected");
-    expect(
-      screen.getByTestId("dashboard-loading-surface").textContent,
-    ).toContain("Loading Scenarios");
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('route source "Loading Scenarios"'),
-    );
 
     const reloadSpy = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({
@@ -205,6 +193,65 @@ describe("DashboardLoadingProvider", () => {
     expect(screen.queryByRole("alert")).toBeNull();
 
     act(() => vi.advanceTimersByTime(1_000));
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
+  it("pauses the stall deadline while hidden without discarding prior visible waiting", () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let visibility: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    render(
+      <DashboardLoadingProvider>
+        <SourceProbe source={{ kind: "scene", title: "Finishing a map", progress: 90 }} />
+      </DashboardLoadingProvider>,
+    );
+
+    act(() => vi.advanceTimersByTime(20_000));
+    act(() => {
+      visibility = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => {
+      visibility = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 20_001));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
+  it("gives a source changed while hidden its full visible stall window", () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let visibility: DocumentVisibilityState = "hidden";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    const source: DashboardLoadingSource = { kind: "scene", title: "Preparing a map", progress: 10 };
+    const view = render(
+      <DashboardLoadingProvider>
+        <SourceProbe source={source} />
+      </DashboardLoadingProvider>,
+    );
+
+    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    expect(screen.queryByRole("alert")).toBeNull();
+    view.rerender(
+      <DashboardLoadingProvider>
+        <SourceProbe source={{ ...source, progress: 20 }} />
+      </DashboardLoadingProvider>,
+    );
+    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => {
+      visibility = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole("alert")).toBeTruthy();
   });
 

@@ -11,6 +11,7 @@ import {
   headS3Object,
 } from "@/app/lib/s3/s3-presign";
 import { ensureLocalMap } from "@/app/lib/cloud/maps";
+import { getRegisteredNativeMapSource } from "@/app/lib/map-ingest/native-map-source";
 import {
   NATIVE_ACTOR_ASSETS_INPUT_ID,
   NativeRenderManifestSchema,
@@ -57,7 +58,7 @@ import type { JobTransaction } from "./lifecycle-lock";
 
 export const LOCAL_NATIVE_RENDER_MODE = "native_render" as const;
 const NATIVE_EVIDENCE_MAX_BYTES = 16 * 1024 * 1024;
-const NATIVE_MAP_RELEASE_RECEIPT = ".map-release.json";
+/** Input-declaration cap of the full-render intent; not a property of the map. */
 const NATIVE_MAP_MAX_MEMBERS = 4093;
 
 function artifactBucket() { return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts"; }
@@ -163,46 +164,20 @@ export async function claimLocalNativeRenderSource(tx: JobTransaction, jobId: st
   return source;
 }
 
-type NativeMapMemberRow = {
-  relative_path: string;
-  sha256: string;
-  byte_length: number | string;
-  object_count: number | string;
-};
-
 /**
  * The map's declared native closure, exactly as the intent bound it. Members
  * are served from the ensured local directory, so no storage location is
  * handed out; the worker verifies every byte against these digests.
  */
 async function declaredNativeMapMembers(mapVersionId: string, workspaceId: string) {
-  const rows = await queryRows<NativeMapMemberRow>(
-    `SELECT m.relative_path, b.sha256, b.byte_length, s.object_count
-       FROM simforge.map_versions mv
-       JOIN simforge.native_map_asset_sets s
-         ON s.id = mv.native_map_asset_set_id
-        AND s.workspace_id = mv.workspace_id
-        AND s.map_version_id = mv.id
-        AND s.asset_set_state = 'available'
-        AND s.contract_version = 'simforge.native-map-asset-set.v1'
-        AND s.registry_release_digest = mv.descriptor->>'registryReleaseDigest'
-       JOIN simforge.native_map_asset_members m ON m.asset_set_id = s.id
-       JOIN simforge.native_map_asset_blobs b
-         ON b.id = m.blob_id AND b.verification_state = 'verified'
-      WHERE mv.id = :map_version_id AND mv.workspace_id = :workspace_id
-      ORDER BY m.relative_path`,
-    { map_version_id: mapVersionId, workspace_id: workspaceId },
-  );
-  const expectedCount = Number(rows[0]?.object_count ?? -1);
-  if (expectedCount < 1 || rows.length !== expectedCount) throw new Error("native_map_asset_set_incomplete");
-  const members = rows.filter((member) => member.relative_path !== NATIVE_MAP_RELEASE_RECEIPT);
-  if (!members.some((member) => member.relative_path === "master.gltf")) throw new Error("native_map_master_unavailable");
-  if (members.length > NATIVE_MAP_MAX_MEMBERS) throw new Error("native_map_asset_set_too_large");
-  return members.map((member) => ({
-    inputId: nativeMapMemberInputId(member.relative_path),
-    relativePath: member.relative_path,
+  const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
+  if (!source) throw new Error("native_map_asset_set_unavailable");
+  if (source.members.length > NATIVE_MAP_MAX_MEMBERS) throw new Error("native_map_asset_set_too_large");
+  return source.members.map((member) => ({
+    inputId: nativeMapMemberInputId(member.relativePath),
+    relativePath: member.relativePath,
     sha256: member.sha256,
-    sizeBytes: Number(member.byte_length),
+    sizeBytes: member.sizeBytes,
   }));
 }
 

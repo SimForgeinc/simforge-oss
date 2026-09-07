@@ -140,7 +140,7 @@ export type HifiPreviewProvenance = {
   submission: { simTick: number; sceneRevision: number; rigRevision: number; generation: number };
   map: {
     tileCount: number;
-    /** Complete receipt-verified native master closure. */
+    /** Complete registered and byte-verified native master closure. */
     payloads: Array<{ path: string; sha256: string; sizeBytes: number }>;
   };
   timings: { prewarmMs: number; renderMs: number; totalMs: number };

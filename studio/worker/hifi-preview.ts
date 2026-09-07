@@ -1,13 +1,12 @@
 /**
  * The `hifi_preview` job family: leases queued `simforge.hifi_preview_requests`
  * and renders exactly ONE frame per request through `native-render-service`
- * (renderer/service — Bevy) on the receipt-validated native master closure of
- * the request's immutable map version:
+ * (renderer/service — Bevy) on the registered, byte-verified native closure
+ * of the request's immutable map version:
  *
- *   lease -> resolve .corpus/<source_map_asset_id> and verify every receipt
- *   member -> spawn native-render-service with master.gltf -> hello /
- *   load_scene_state (single scene-state.v1 tick doc) / render with export_dir
- *   -> wait for the async PNG export -> store the PNG with provenance.
+ *   lease -> materialize the authorized semantic profile -> verify registered
+ *   members and actor assets -> start the shared native service session ->
+ *   load_scene_state / render -> store the exported PNG with provenance.
  *
  * Transport is the service's framed wire: one u32-LE length-prefixed msgpack
  * document per message, requests `{i, op, ...}`, responses echo `i`
@@ -20,18 +19,28 @@
  *   - `runHifiPreviewLoop()` — standalone polling worker
  *     (scripts/hifi-preview-worker.ts) for Postgres deployments.
  */
-import { spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { createConnection, type Socket } from "node:net";
-import { homedir, hostname, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { hostname, tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { decode, encode } from "@msgpack/msgpack";
+import {
+  PINNED_ACTOR_ASSETS_SIZE_BYTES,
+  NativeServiceTimeoutError,
+  actorAssetsClosureUrl,
+  assertActorAppearanceGrounded,
+  ensureActorAssets,
+  resolveActorAssets,
+  resolveNativeRenderService,
+  startNativeRenderService,
+  type NativeActorAppearance,
+  type NativeServiceSession,
+} from "@simforge-oss/render/native";
 
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import { writeLocalObject } from "../app/lib/s3/s3-object";
+import { ensureLocalMap } from "../app/lib/cloud/maps";
+import { getRegisteredNativeMapSource } from "../app/lib/map-ingest/native-map-source";
 import {
   HIFI_PREVIEW_PROVENANCE_SCHEMA,
   RENDERER_CONTRACT_VERSION,
@@ -41,7 +50,6 @@ import {
 import {
   completeHifiPreview,
   failHifiPreview,
-  getMapNativeSource,
   leaseNextHifiPreview,
   type LeasedHifiPreview,
 } from "../app/lib/hifi-preview/store";
@@ -108,155 +116,27 @@ function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return promise;
 }
 
-/* ------------------------------------------------------------------ wire */
 
-/**
- * Minimal client for the native render service's framed msgpack protocol.
- * The service is synchronous and single-client; requests are awaited one at
- * a time, so the reader only ever matches the most recent sequence id.
- */
-class NativeRenderServiceClient {
-  private buffer: Buffer = Buffer.alloc(0);
-  private sequence = 0;
-  private waiter: {
-    id: number;
-    resolve: (value: Record<string, unknown>) => void;
-    reject: (error: Error) => void;
-  } | null = null;
-
-  private constructor(private readonly socket: Socket) {
-    socket.on("data", (chunk: Buffer) => this.onData(chunk));
-    socket.on("error", (error: Error) => this.waiter?.reject(error));
-    socket.on("close", () => this.waiter?.reject(new Error("render service socket closed")));
-  }
-
-  static async connect(socketPath: string, child: ChildProcess, stderrTail: () => string): Promise<NativeRenderServiceClient> {
-    const deadline = Date.now() + CONNECT_TIMEOUT_MS;
-    let lastError = "socket never appeared";
-    while (Date.now() < deadline) {
-      if (child.exitCode !== null) {
-        throw new HifiPreviewFailure(
-          "renderer_exited",
-          `native-render-service exited with code ${child.exitCode} before serving`,
-          { stderr: stderrTail() },
-        );
-      }
-      if (existsSync(socketPath)) {
-        try {
-          const { promise, resolve: connected, reject } = Promise.withResolvers<Socket>();
-          const candidate = createConnection(socketPath);
-          candidate.once("connect", () => connected(candidate));
-          candidate.once("error", reject);
-          const socket = await promise;
-          return new NativeRenderServiceClient(socket);
-        } catch (error) {
-          lastError = error instanceof Error ? error.message : String(error);
-        }
-      }
-      await delay(250);
-    }
-    throw new HifiPreviewFailure("renderer_connect_timeout", `could not connect to ${socketPath}: ${lastError}`, {
-      stderr: stderrTail(),
-    });
-  }
-
-  private onData(chunk: Buffer): void {
-    this.buffer = this.buffer.length === 0 ? chunk : Buffer.concat([this.buffer, chunk]);
-    while (this.buffer.length >= 4) {
-      const length = this.buffer.readUInt32LE(0);
-      if (this.buffer.length < 4 + length) return;
-      const payload = this.buffer.subarray(4, 4 + length);
-      this.buffer = this.buffer.subarray(4 + length);
-      const message = decode(payload) as Record<string, unknown>;
-      if (this.waiter && Number(message.i) === this.waiter.id) {
-        const waiter = this.waiter;
-        this.waiter = null;
-        waiter.resolve(message);
-      }
-    }
-  }
-
-  async request(
-    op: string,
-    fields: Record<string, unknown> = {},
-    timeoutMs = RPC_TIMEOUT_MS,
-  ): Promise<Record<string, unknown>> {
-    const id = ++this.sequence;
-    const payload = encode({ i: id, op, ...fields });
-    const frame = Buffer.alloc(4 + payload.byteLength);
-    frame.writeUInt32LE(payload.byteLength, 0);
-    frame.set(payload, 4);
-    const { promise, resolve: settle, reject } = Promise.withResolvers<Record<string, unknown>>();
-    const timer = setTimeout(
-      () => reject(new HifiPreviewFailure("renderer_rpc_timeout", `${op} timed out after ${timeoutMs}ms`)),
-      timeoutMs,
-    );
-    this.waiter = {
-      id,
-      resolve: (value) => {
-        clearTimeout(timer);
-        settle(value);
-      },
-      reject: (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    };
-    this.socket.write(frame);
-    const response = await promise;
-    if (response.ok === false) {
-      throw new HifiPreviewFailure("renderer_error", String(response.error ?? `op ${op} failed`));
-    }
-    return response;
-  }
-
-  destroy(): void {
-    this.socket.destroy();
-  }
-}
-
-/* -------------------------------------------------------------- binary */
-
-/** Resolve the long-lived render service binary (WSB5). */
-export function resolveServiceBinary(): string | null {
-  const override = process.env.SIMFORGE_NATIVE_RENDER_BINARY?.trim();
-  // Keep resolution runtime-only: this module is also imported by a Next
-  // route, whose bundler treats `new URL("../..", import.meta.url)` as a
-  // module request. Package scripts run from `studio/`; direct invocations
-  // commonly run from the repository root.
-  const candidates = [
-    ...(override ? [override] : []),
-    resolve(process.cwd(), "../renderer/target/release/native-render-service"),
-    resolve(process.cwd(), "../renderer/target/debug/native-render-service"),
-    resolve(process.cwd(), "renderer/target/release/native-render-service"),
-    resolve(process.cwd(), "renderer/target/debug/native-render-service"),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? null;
-}
 
 /* ------------------------------------------------------- map payloads */
 
-function mapsCacheRoot(): string {
-  const configured = process.env.SIMFORGE_MAPS_CACHE_ROOT?.trim();
-  if (configured) return resolve(configured);
-  const dataHome = process.env.XDG_DATA_HOME?.trim() || join(homedir(), ".local", "share");
-  return resolve(dataHome, "simforge", "maps");
-}
 
 /** Resolve the exact registry release pinned by the requested map version. */
 async function resolveMapPayloads(
   workspaceId: string,
   mapVersionId: string,
   requestedMapId: string,
+  signal: AbortSignal,
 ): Promise<NativeReadyMap> {
-  const source = await getMapNativeSource(workspaceId, mapVersionId);
+  const { directory } = await ensureLocalMap(mapVersionId, "semantic", signal);
+  const source = await getRegisteredNativeMapSource(workspaceId, mapVersionId);
   if (!source) {
     throw new HifiPreviewFailure(
       "map_payload_unavailable",
       `map version ${mapVersionId} has no registry-backed native source`,
     );
   }
-  if (requestedMapId !== source.sourceMapAssetId) {
+  if (source.sourceMapAssetId !== null && requestedMapId !== source.sourceMapAssetId) {
     throw new HifiPreviewFailure(
       "map_payload_identity_mismatch",
       `requested map ${requestedMapId} does not match immutable map version ${mapVersionId}`,
@@ -268,9 +148,10 @@ async function resolveMapPayloads(
     );
   }
   return resolveNativeReadyMap({
-    mapId: source.sourceMapAssetId,
+    directory,
+    mapId: requestedMapId,
     releaseDigest: source.registryReleaseDigest,
-    corpusRoot: join(mapsCacheRoot(), ".corpus"),
+    members: source.members,
   });
 }
 
@@ -282,15 +163,15 @@ export async function executeHifiPreview(
 ): Promise<{ artifactBucket: string; artifactKey: string; provenance: HifiPreviewProvenance }> {
   const t0 = Date.now();
   const request: CreateHifiPreviewInput = lease.request;
-  const binary = resolveServiceBinary();
-  if (!binary) {
+  const binary = resolveNativeRenderService();
+  if (binary.state === "missing") {
     throw new HifiPreviewFailure(
       "renderer_unavailable",
-      "native-render-service binary not found (build renderer/service or set SIMFORGE_NATIVE_RENDER_BINARY)",
+      `native-render-service is not installed (looked in ${binary.searched.join(", ")})`,
     );
   }
 
-  const nativeMap = await resolveMapPayloads(lease.workspaceId, request.mapVersionId, request.scene.mapId);
+  const nativeMap = await resolveMapPayloads(lease.workspaceId, request.mapVersionId, request.scene.mapId, signal);
   const worldBounds = await computePayloadWorldBounds([nativeMap.masterPath]);
   const framedCamera = framePayload(
     worldBounds,
@@ -299,56 +180,64 @@ export async function executeHifiPreview(
   );
 
   const workspace = await mkdtemp(join(tmpdir(), "simforge-hifi-"));
-  const socketPath = join(workspace, "render.sock");
-  const shmPath = `/dev/shm/simforge-hifi-${process.pid}-${lease.requestId.slice(-8)}`;
   const exportRoot = join(workspace, "export");
   const sceneSpecPath = join(workspace, "scene.json");
-  await writeFile(sceneSpecPath, JSON.stringify({
-    glbs: [nativeMap.masterPath],
-    profile: request.profile,
-    nearM: Math.min(Math.max(request.camera.intrinsics.near, 0.05), 10),
-    farM: Math.min(Math.max(request.camera.intrinsics.far, 200), 4000),
-    warmupFrames: 10,
-  }));
-
-  const child = spawn(binary, [
-    "--socket", socketPath,
-    "--shm", shmPath,
-    "--shm-size-mb", "128",
-    "--scene", sceneSpecPath,
-  ], { stdio: ["ignore", "ignore", "pipe"] });
-  let stderr = "";
-  child.stderr!.setEncoding("utf8");
-  child.stderr!.on("data", (chunk: string) => {
-    stderr = `${stderr}${chunk}`.slice(-8_192);
-  });
-
-  let client: NativeRenderServiceClient | null = null;
+  let session: NativeServiceSession | undefined;
   try {
-    client = await NativeRenderServiceClient.connect(socketPath, child, () => stderr);
-    const prewarmMs = Date.now() - t0;
-    const hello = await client.request("hello");
-
-    if (request.scene.actors.length > 0) {
-      await client.request("load_scene_state", {
-        states: [{
-          version: request.scene.version,
-          mapId: request.scene.mapId,
-          tick: request.scene.tick,
-          tickHz: request.scene.tickHz,
-          ...(request.scene.timeOfDay !== undefined ? { timeOfDay: request.scene.timeOfDay } : {}),
-          groundY: request.scene.groundY,
-          actors: request.scene.actors.map((actor) => ({
-            id: actor.id,
-            kind: actor.kind,
-            catalogId: actor.catalogId,
-            actorClass: actor.actorClass,
-            transform: { position: actor.transform.position, rotation: actor.transform.rotation },
-            velocity: actor.velocity,
-          })),
-        }],
-      });
+    const appearances: NativeActorAppearance[] = [];
+    for (const actor of request.scene.actors) {
+      if (actor.kind !== "despawn") {
+        appearances.push({ actorId: actor.id, catalogId: actor.catalogId, authored: true });
+      }
     }
+    let actorDirectory: string | undefined;
+    if (appearances.length > 0) {
+      const actorSource = resolveActorAssets();
+      if (actorSource.state === "missing") {
+        throw new HifiPreviewFailure(
+          "actor_assets_unavailable",
+          `the pinned actor closure ${actorSource.digest} is not installed`,
+          { searched: actorSource.searched },
+        );
+      }
+      const closurePath = actorSource.closurePath ?? join(workspace, "actor-closure.json");
+      if (actorSource.closurePath === null) {
+        const response = await fetch(actorAssetsClosureUrl(actorSource.digest, actorSource.blobBaseUrl), { signal });
+        if (!response.ok) throw new Error(`actor closure download failed: ${response.status}`);
+        await writeFile(closurePath, new Uint8Array(await response.arrayBuffer()));
+      }
+      const actorAssets = await ensureActorAssets({
+        closure: { path: closurePath, sha256: actorSource.digest, sizeBytes: PINNED_ACTOR_ASSETS_SIZE_BYTES },
+        destination: join(workspace, "actor-assets"),
+        baseUrl: actorSource.blobBaseUrl,
+        cacheDir: actorSource.source.kind === "directory"
+          ? actorSource.source.root
+          : process.env.SIMFORGE_ACTOR_ASSETS_CACHE_DIR ?? join(tmpdir(), "simforge-actor-assets"),
+      });
+      assertActorAppearanceGrounded(appearances, [], actorAssets);
+      actorDirectory = actorAssets.directory;
+    }
+    await writeFile(sceneSpecPath, JSON.stringify({
+      glbs: [nativeMap.masterPath],
+      profile: request.profile,
+      nearM: Math.min(Math.max(request.camera.intrinsics.near, 0.05), 10),
+      farM: Math.min(Math.max(request.camera.intrinsics.far, 200), 4000),
+      warmupFrames: 10,
+      vehicleModels: actorDirectory,
+      pedestrianModels: actorDirectory,
+    }));
+    session = await startNativeRenderService({
+      binary: binary.path,
+      workspace,
+      jobId: lease.requestId,
+      scenePath: sceneSpecPath,
+      signal,
+      startupTimeoutMs: CONNECT_TIMEOUT_MS,
+      shmSizeMb: 128,
+    });
+    const { client } = session;
+    const prewarmMs = Date.now() - t0;
+    await client.rpc({ op: "load_scene_state", states: [request.scene] }, RPC_TIMEOUT_MS);
 
     const requestedCamera: RenderCamera = {
       eye: request.camera.pose.position,
@@ -370,12 +259,13 @@ export async function executeHifiPreview(
             eye: camera.eye,
             target: camera.target,
           }],
-          ...(request.scene.actors.length > 0 ? { tick_index: 0 } : {}),
+          tick_index: 0,
         };
-        const response = await client!.request("render", {
+        const response = await client.rpc({
+          op: "render",
           ...fields,
           export_dir: attemptExportDir,
-        });
+        }, RPC_TIMEOUT_MS);
         return {
           response,
           exportDir: attemptExportDir,
@@ -411,11 +301,11 @@ export async function executeHifiPreview(
     }
     if (!pngBytes) {
       throw new HifiPreviewFailure("render_export_timeout", `PNG export never appeared at ${pngPath}`, {
-        stderr,
+        stderr: await session.readStderr(),
       });
     }
 
-    await client.request("close", {}, 10_000).catch(() => undefined);
+    await session.close();
 
     const frameSha256 = createHash("sha256").update(pngBytes).digest("hex");
     const artifactKey = `hifi-preview/${lease.requestId}/frame.png`;
@@ -424,7 +314,7 @@ export async function executeHifiPreview(
     const provenance: HifiPreviewProvenance = {
       schema: HIFI_PREVIEW_PROVENANCE_SCHEMA,
       renderer: "bevy-native",
-      rendererProtocol: Number(hello.protocol ?? 0),
+      rendererProtocol: session.protocol,
       contractVersion: RENDERER_CONTRACT_VERSION,
       profile: request.profile,
       tick: request.tick,
@@ -458,13 +348,16 @@ export async function executeHifiPreview(
       renderedAt: new Date().toISOString(),
     };
     return { artifactBucket: LOCAL_ARTIFACT_BUCKET, artifactKey, provenance };
+  } catch (error) {
+    if (error instanceof HifiPreviewFailure) throw error;
+    throw new HifiPreviewFailure(
+      signal.aborted ? "aborted" : error instanceof NativeServiceTimeoutError ? "renderer_rpc_timeout" : "renderer_error",
+      error instanceof Error ? error.message : String(error),
+      { stderr: await session?.readStderr() ?? "" },
+    );
   } finally {
-    client?.destroy();
-    child.kill("SIGTERM");
-    const hardKill = setTimeout(() => child.kill("SIGKILL"), 5_000);
-    hardKill.unref();
-    await rm(workspace, { recursive: true, force: true }).catch(() => undefined);
-    await rm(shmPath, { force: true }).catch(() => undefined);
+    await session?.close();
+    await rm(workspace, { recursive: true, force: true });
   }
 }
 
@@ -542,7 +435,7 @@ export type HifiPreviewWorkerOptions = {
 export async function runHifiPreviewLoop(options: HifiPreviewWorkerOptions): Promise<void> {
   const workerId = options.workerId ?? `hifi-preview:${hostname()}:${process.pid}`;
   const idleDelayMs = options.idleDelayMs ?? 1_500;
-  log("worker.started", { workerId, binary: resolveServiceBinary() });
+  log("worker.started", { workerId, binary: resolveNativeRenderService() });
   while (!options.signal.aborted) {
     const lease = await leaseNextHifiPreview({ workerId });
     if (!lease) {

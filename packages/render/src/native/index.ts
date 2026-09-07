@@ -14,9 +14,10 @@ export {
 export type { NativeMapClosure, NativeMapMemberInput } from './map-closure.js';
 export {
   DEFAULT_ACTOR_ASSETS_BASE_URL, NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_ACTOR_ASSETS_RELATIVE_PATH,
-  PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES, actorAssetsClosureUrl, nativeActorAssetsInput,
+  PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES, actorAssetsClosureUrl, assertActorAppearanceGrounded,
+  ensureActorAssets, nativeActorAssetsInput,
 } from './actor-assets.js';
-export type { NativeActorAssetsInput, VerifiedActorAssets } from './actor-assets.js';
+export type { EnsureActorAssetsOptions, NativeActorAssetsInput, VerifiedActorAssets } from './actor-assets.js';
 export { nativeActorCatalogId } from './lowering.js';
 export type { NativeActorAppearance } from './lowering.js';
 export {
@@ -26,7 +27,12 @@ export {
 export type {
   NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
-export { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
+export { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, NativeServiceTimeoutError, stripRgbaPadding } from './service-client.js';
+export type {
+  NativeBundleResponse, NativeFrameIdentity, NativeFrameRecord, NativeServiceConnectOptions, NativeServiceResponse,
+} from './service-client.js';
+export { startNativeRenderService } from './service-process.js';
+export type { NativeServiceOptions, NativeServiceSession } from './service-process.js';
 export {
   NATIVE_RENDER_SERVICE_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalNativeRender,
   resolveActorAssets, resolveEncoder, resolveNativeRenderService, resolveProbe,

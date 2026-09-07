@@ -68,9 +68,8 @@ const EXPORT_CLAIM_TIMEOUT_MS = 120_000;
 
 /**
  * Where SimForge executes the immutable render intent, in preference order: native is the
- * default; the wizard falls through this list when a host does not offer it. Each renderer is a
- * registered GPU worker. The tab only submits and observes the durable job; closing it cannot
- * interrupt execution.
+ * default; the wizard falls through this list when a host does not offer it.
+ * The host reports both execution placement and whether jobs outlive this UI.
  */
 const ENGINE_OPTIONS: {
   id: RenderBackend;
@@ -82,19 +81,19 @@ const ENGINE_OPTIONS: {
     id: "native",
     label: "Native",
     icon: Server,
-    hint: "Bevy retained native renderer on a registered GPU worker.",
+    hint: "Retained Bevy native renderer.",
   },
   {
     id: "carla",
     label: "CARLA",
     icon: Server,
-    hint: "CARLA-native render on a registered GPU worker.",
+    hint: "CARLA-native renderer.",
   },
   {
     id: "browser",
     label: "Browser",
     icon: MonitorPlay,
-    hint: "Optimized Three.js renderer on a registered GPU worker.",
+    hint: "Optimized Three.js renderer.",
   },
   {
     id: "esmini",
@@ -126,8 +125,8 @@ function engineAvailability(
     return { offered: true, badge: "Runtime not installed", reason: nativeRuntime.reason };
   }
   return worker.available
-    ? { offered: true, badge: "Worker ready", reason: null }
-    : { offered: true, badge: "No worker", reason: worker.reason };
+    ? { offered: true, badge: "Ready", reason: null }
+    : { offered: true, badge: "Unavailable", reason: worker.reason };
 }
 
 
@@ -255,6 +254,7 @@ export function RenderConfigPanel({
   const [backend, setBackend] = useState<RenderBackend>("native");
   const hostCapabilitiesState = useStudioHostCapabilities(studioHost);
   const hostCapabilities = hostCapabilitiesState.capabilities;
+  const localExecution = hostCapabilities?.execution.localRender !== undefined;
   const [stepIndex, setStepIndex] = useState(0);
   const sensorOptions = useMemo(
     () => managedSensorOptions(currentContent).filter(
@@ -669,7 +669,9 @@ export function RenderConfigPanel({
         <>
           <RenderWizardBody>
             <StepHeading
-              hint="Renderers run on registered GPU workers. You can close this tab after submission."
+              hint={hostCapabilities
+                ? `${localExecution ? "Renders run on this machine." : "Renders run on the connected service."} ${hostCapabilities.jobs.survivesUiClose ? "You can close this view after submission." : "Keep SimForge open until completion."}`
+                : "Checking renderer availability on the connected host."}
               title="How should this scenario be rendered?"
             />
             <div aria-label="Render engine" className="grid gap-2 sm:grid-cols-3" role="radiogroup">
@@ -707,8 +709,8 @@ export function RenderConfigPanel({
           </RenderWizardBody>
           <RenderWizardFooter
             note={backend === "esmini"
-              ? "Runs on the CPU job fleet — no GPU worker required."
-              : `${clipSeconds}s frozen scenario · registered ${backend} GPU lane`}
+              ? "Runs on the host's CPU — no GPU renderer required."
+              : `${clipSeconds}s frozen scenario · ${localExecution ? "local" : "managed"} ${backend} rendering`}
             onNext={() => setStepIndex(1)}
           />
         </>
@@ -1000,7 +1002,7 @@ export function RenderConfigPanel({
               title={`Ready to render with ${engineOption.label}`}
             />
             <dl className="render-glass border px-3 py-1.5">
-              <ReviewRow label="Engine" value={`${engineOption.label} · registered GPU worker`} />
+              <ReviewRow label="Engine" value={`${engineOption.label} · ${localExecution ? "this machine" : "connected service"}`} />
               <ReviewRow
                 label="Sensors"
                 value={selectedSensors.length > 0

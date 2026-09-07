@@ -16,10 +16,11 @@ import { CircleAlert } from "lucide-react";
 import type { CloudLoadingTelemetry } from "./CloudLoadingSurface";
 import { CloudLoadingSurface } from "./CloudLoadingSurface";
 import { cn } from "../lib/utils";
+import { VisibleClock } from "../lib/visible-clock";
 import { Button } from "./ui/button";
 
 /**
- * Maximum time a byte-identical loading source may report no progress before
+ * Maximum visible time a byte-identical loading source may report no progress before
  * the overlay offers recovery instead of silently covering Studio forever.
  */
 export const DASHBOARD_LOADING_STALL_MS = 45_000;
@@ -138,14 +139,27 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
       setStalled(false);
       return;
     }
-    const timer = window.setTimeout(() => {
+    let timer: number | undefined;
+    const expire = () => {
+      clock.dispose();
       setStalled(true);
       const [kind, title] = stallSignature.split("\u0000");
       console.error(
         `Dashboard loading stalled: ${kind} source "${title}" made no progress for ${Math.round(DASHBOARD_LOADING_STALL_MS / 1000)}s.`,
       );
-    }, DASHBOARD_LOADING_STALL_MS);
-    return () => window.clearTimeout(timer);
+    };
+    const schedule = () => {
+      window.clearTimeout(timer);
+      if (clock.visible) {
+        timer = window.setTimeout(expire, Math.max(0, DASHBOARD_LOADING_STALL_MS - clock.now()));
+      }
+    };
+    const clock = new VisibleClock(schedule);
+    schedule();
+    return () => {
+      window.clearTimeout(timer);
+      clock.dispose();
+    };
   }, [stallSignature]);
 
   useLayoutEffect(() => {

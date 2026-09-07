@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
   // The desktop stage (`desktop/stage.mjs`) serves the traced standalone
   // server from the installed artifact; the browser edition keeps `next start`.
   ...(process.env.SIMFORGE_DESKTOP_BUILD === "1" ? { output: "standalone" as const } : {}),
+  // Local assets require the browser's loopback session. Next's server-side
+  // image fetch cannot authenticate as that browser; serve the encoded assets directly.
+  images: { unoptimized: true },
   // Workspace packages are bundled from source, so file tracing must span the monorepo.
   outputFileTracingRoot: join(__dirname, ".."),
   // Cargo outputs may be external worktree symlinks. Desktop staging copies

@@ -57,6 +57,11 @@ Cloud access. Other published maps require a current SimCloud connection, even
 when their bytes are cached; disconnecting locks those maps without deleting
 local projects or renders.
 
+For a camera recording, author the scenario, attach a dash camera, and select
+**New render → Native**. Keep Studio open until the local job completes.
+**High-fidelity preview** renders the current editor view through the same
+Bevy service, preparing and verifying the map's native profile when needed.
+
 ## Quickstart
 
 Source development requires Node.js 24, pnpm, and the native build tools listed

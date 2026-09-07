@@ -1,4 +1,5 @@
 import type { AssetDownloadStats, CameraView } from "@simforge-oss/viewer";
+import { VisibleClock } from "../../lib/visible-clock";
 
 export const MAP_ZOOM_OUT_MS = 1_400;
 export const MAP_ZOOM_IN_MS = 1_800;
@@ -51,10 +52,6 @@ export function waitForMapModelsFullyLoaded(
   const stableMs = options.stableMs ?? MAP_MODEL_STABLE_MS;
   const timeoutMs = options.timeoutMs ?? MAP_MODEL_LOAD_TIMEOUT_MS;
   const pollMs = options.pollMs ?? 100;
-  const visibilityDocument = typeof document === "undefined" ? null : document;
-  let visible = visibilityDocument?.visibilityState !== "hidden";
-  let lastClockAt = Date.now();
-  let activeTime = 0;
   let lastActivityAt = 0;
   let previousActivityKey: string | null = null;
   let stableSince: number | null = null;
@@ -64,7 +61,7 @@ export function waitForMapModelsFullyLoaded(
   const cancel = () => {
     cancelled = true;
     clearTimeout(timer);
-    visibilityDocument?.removeEventListener("visibilitychange", onVisibilityChange);
+    clock.dispose();
   };
 
   const finish = (callback: () => void) => {
@@ -75,13 +72,7 @@ export function waitForMapModelsFullyLoaded(
 
   const poll = () => {
     if (cancelled) return;
-    const wallTime = Date.now();
-    if (visible) activeTime += Math.max(0, wallTime - lastClockAt);
-    lastClockAt = wallTime;
-    const nextVisible = visibilityDocument?.visibilityState !== "hidden";
-    if (visible !== nextVisible) stableSince = null;
-    visible = nextVisible;
-    const now = activeTime;
+    const now = clock.now();
     let snapshot: MapModelLoadSnapshot;
     try {
       snapshot = readSnapshot();
@@ -106,7 +97,7 @@ export function waitForMapModelsFullyLoaded(
       finish(() => onFailure(new Error(snapshot.streamingError!)));
       return;
     }
-    if (visible) {
+    if (clock.visible) {
       if (mapModelsFullyLoaded(snapshot)) {
         stableSince ??= now;
         if (now - stableSince >= stableMs) {
@@ -132,10 +123,11 @@ export function waitForMapModelsFullyLoaded(
   };
 
   const onVisibilityChange = () => {
+    stableSince = null;
     clearTimeout(timer);
     poll();
   };
-  visibilityDocument?.addEventListener("visibilitychange", onVisibilityChange);
+  const clock = new VisibleClock(onVisibilityChange);
   poll();
   return cancel;
 }

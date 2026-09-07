@@ -290,7 +290,10 @@ async function packWorkspacePackage(packageDir) {
     if (tarballs.length !== 1) fail(`${metadata.name} did not produce exactly one package archive`);
     await rm(target, { recursive: true, force: true });
     await mkdir(target, { recursive: true });
-    await run("tar", ["-xzf", join(packed, tarballs[0]), "--strip-components=1", "-C", target]);
+    await promisify(execFile)("tar", ["-xzf", tarballs[0], "--strip-components=1", "-C", target], {
+      cwd: packed,
+      maxBuffer: 4 * 1024 * 1024,
+    });
   } finally {
     await rm(packed, { recursive: true, force: true });
   }
@@ -543,11 +546,13 @@ if (!skipNextBuild) {
   // Runtime tool discovery must not make NFT trace the build machine's PATH.
   // Next and its workers use process.execPath; only project-local CLI shims
   // belong in this build's dependency closure.
-  const pathKey = Object.keys(process.env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
-  await run(process.execPath, [nextBin, "build", "--webpack"], {
-    SIMFORGE_DESKTOP_BUILD: "1",
-    [pathKey]: [join(studioRoot, "node_modules", ".bin"), join(repoRoot, "node_modules", ".bin")].join(delimiter),
-  });
+  const toolPath = [join(studioRoot, "node_modules", ".bin"), join(repoRoot, "node_modules", ".bin")].join(delimiter);
+  const buildEnv = { SIMFORGE_DESKTOP_BUILD: "1", PATH: toolPath };
+  // Windows may inherit both PATH and Path; Node chooses one lexicographically.
+  for (const name of Object.keys(process.env)) {
+    if (name.toUpperCase() === "PATH") buildEnv[name] = toolPath;
+  }
+  await run(process.execPath, [nextBin, "build", "--webpack"], buildEnv);
 }
 const standalone = join(studioRoot, ".next", "standalone");
 if (!(await exists(join(standalone, "studio", "server.js")))) {

@@ -17,7 +17,7 @@ import {
   type HifiPreviewRecord,
 } from "../../../../lib/hifi-preview/contracts";
 
-/** Catalog physics families -> scene-state actor classes (renderer cuboid interim). */
+/** Catalog physics families mapped to the scene-state actor classes. */
 const SCENE_ACTOR_CLASS: Record<CatalogActorClass, CreateHifiPreviewInput["scene"]["actors"][number]["actorClass"]> = {
   car: "car",
   van: "car",
@@ -43,7 +43,7 @@ const FRIENDLY_ERRORS: Record<string, string> = {
   renderer_connect_timeout: "The native renderer took too long to prewarm the map.",
   map_payload_unavailable: "This map has no published payloads the native renderer can load.",
   native_payload_unavailable:
-    "This map's native-ready corpus is unavailable. Build its sensor corpus before requesting a Bevy frame.",
+    "Prepare this map for local rendering in Maps before requesting a Bevy frame.",
   native_payload_build_unavailable: "Native payload building isn't available on this Studio worker.",
   native_payload_build_invalid: "The native payload build did not match the published map.",
   native_payload_build_failed: "The native payload build failed. Check the Studio worker log for details.",
@@ -200,7 +200,7 @@ export function HifiPreviewSlot({
     setPreview({ phase: "idle" });
   }, []);
 
-  if (!active) return null;
+  if (!active || (state !== null && state.mode !== "idle")) return null;
 
   return (
 

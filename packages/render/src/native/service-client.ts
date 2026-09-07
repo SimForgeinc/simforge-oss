@@ -35,7 +35,12 @@ export interface NativeFrameIdentity {
   readonly generation: number;
 }
 
-interface NativeResponse {
+/**
+ * One service reply. The common envelope is typed; every operation-specific
+ * field (`coverage`, `export`, …) is reachable without a copy or cast, but
+ * only as `unknown` so callers validate what they consume.
+ */
+export interface NativeServiceResponse {
   readonly i: number;
   readonly op: string;
   readonly ok: boolean;
@@ -45,19 +50,45 @@ interface NativeResponse {
   readonly frame?: Partial<NativeFrameIdentity>;
   readonly frames?: readonly NativeFrameRecord[];
   readonly server_ms?: number;
+  readonly [field: string]: unknown;
 }
 
-export interface NativeBundleResponse extends NativeResponse {
+export interface NativeBundleResponse extends NativeServiceResponse {
   readonly frame: NativeFrameIdentity;
   readonly frames: readonly NativeFrameRecord[];
 }
 
+/** An RPC outlived its deadline; the connection it was on is gone. */
+export class NativeServiceTimeoutError extends Error {
+  override readonly name = 'TimeoutError';
+
+  constructor(op: string, timeoutMs: number) {
+    super(`native render service ${op} timed out after ${timeoutMs} ms`);
+  }
+}
+
+export interface NativeServiceConnectOptions {
+  readonly signal?: AbortSignal;
+  readonly attempts?: number;
+  /** Deadline for the `hello` handshake; a wedged service fails here instead of hanging. */
+  readonly helloTimeoutMs?: number;
+}
+
+/** How long `close()` waits for the service to acknowledge before dropping the socket. */
+const CLOSE_TIMEOUT_MS = 5_000;
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void };
+};
+
 export class NativeServiceClient {
   readonly #socket: net.Socket;
-  readonly #pending = new Map<number, { resolve: (value: NativeResponse) => void; reject: (reason?: unknown) => void }>();
+  readonly #pending = new Map<number, { resolve: (value: NativeServiceResponse) => void; reject: (reason?: unknown) => void }>();
   #buffer = Buffer.alloc(0);
   #sequence = 0;
   #shmPath = '';
+  /** Set once the connection is unusable; every later `rpc` rejects with it. */
+  #failure: Error | undefined;
 
   private constructor(socket: net.Socket) {
     this.#socket = socket;
@@ -71,7 +102,7 @@ export class NativeServiceClient {
    * Windows, a `\\.\pipe\` name). A refused/missing endpoint right after the
    * ready signal is retried briefly; anything else is the caller's error.
    */
-  static async connect(endpoint: string, options: { readonly signal?: AbortSignal; readonly attempts?: number } = {}): Promise<NativeServiceClient> {
+  static async connect(endpoint: string, options: NativeServiceConnectOptions = {}): Promise<NativeServiceClient> {
     const attempts = options.attempts ?? 40;
     let socket: net.Socket | undefined;
     for (let attempt = 1; ; attempt += 1) {
@@ -89,7 +120,13 @@ export class NativeServiceClient {
       }
     }
     const client = new NativeServiceClient(socket);
-    const hello = await client.rpc({ op: 'hello' });
+    let hello: NativeServiceResponse;
+    try {
+      hello = await client.rpc({ op: 'hello' }, options.helloTimeoutMs);
+    } catch (error) {
+      client.#fail(error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    }
     if (hello.protocol !== NATIVE_SERVICE_PROTOCOL || !hello.shm?.path) {
       await client.close();
       throw new Error(`native render service protocol ${String(hello.protocol)}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
@@ -114,19 +151,30 @@ export class NativeServiceClient {
     return { ...value, frame: frame as NativeFrameIdentity, frames };
   }
 
-  async rpc(body: Readonly<Record<string, unknown>>): Promise<NativeResponse> {
+  /**
+   * Sends one request. With `timeoutMs`, a late reply is not waited for: the
+   * connection is failed, every in-flight call rejects, and this one rejects
+   * with a `NativeServiceTimeoutError`, so nothing dangles on a wedged service.
+   */
+  async rpc(body: Readonly<Record<string, unknown>>, timeoutMs?: number): Promise<NativeServiceResponse> {
+    if (this.#failure) throw this.#failure;
     const i = ++this.#sequence;
     const payload = Buffer.from(encode({ i, ...body }));
     if (payload.byteLength > MAX_FRAME_BYTES) throw new Error('native service request exceeds 64 MiB');
     const header = Buffer.allocUnsafe(HEADER_BYTES);
     header.writeUInt32LE(payload.byteLength);
-    const promiseConstructor = Promise as PromiseConstructor & {
-      withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void };
-    };
-    const { promise: response, resolve, reject } = promiseConstructor.withResolvers<NativeResponse>();
+    const { promise: response, resolve, reject } = promiseConstructor.withResolvers<NativeServiceResponse>();
     this.#pending.set(i, { resolve, reject });
+    const timer = timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => this.#fail(new NativeServiceTimeoutError(String(body.op), timeoutMs)), timeoutMs);
     this.#socket.write(Buffer.concat([header, payload]));
-    const value = await response;
+    let value: NativeServiceResponse;
+    try {
+      value = await response;
+    } finally {
+      clearTimeout(timer);
+    }
     if (!value.ok) throw new Error(value.error ?? `native service ${value.op} failed`);
     return value;
   }
@@ -146,10 +194,15 @@ export class NativeServiceClient {
     }
   }
 
+  /**
+   * Asks the service to shut down, then drops the socket. Bounded: a service
+   * that never acknowledges does not hold the caller; process teardown owns
+   * the final cleanup either way.
+   */
   async close(): Promise<void> {
-    if (this.#socket.destroyed) return;
-    try { await this.rpc({ op: 'close' }); } catch { /* process teardown owns final cleanup */ }
-    this.#socket.end();
+    if (this.#failure) return;
+    try { await this.rpc({ op: 'close' }, CLOSE_TIMEOUT_MS); } catch { /* the socket is dropped below regardless */ }
+    this.#fail(new Error('native render service client closed'));
   }
 
   #consume(chunk: Buffer): void {
@@ -160,7 +213,7 @@ export class NativeServiceClient {
       if (this.#buffer.byteLength < HEADER_BYTES + length) return;
       const payload = this.#buffer.subarray(HEADER_BYTES, HEADER_BYTES + length);
       this.#buffer = this.#buffer.subarray(HEADER_BYTES + length);
-      const value = decode(payload) as NativeResponse;
+      const value = decode(payload) as NativeServiceResponse;
       const pending = this.#pending.get(value.i);
       if (!pending) return this.#fail(new Error(`native service returned unknown request id ${value.i}`));
       this.#pending.delete(value.i);
@@ -169,6 +222,7 @@ export class NativeServiceClient {
   }
 
   #fail(error: Error): void {
+    if (!this.#failure) this.#failure = error;
     for (const pending of this.#pending.values()) pending.reject(error);
     this.#pending.clear();
     this.#socket.destroy();
