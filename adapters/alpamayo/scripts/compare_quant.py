@@ -31,22 +31,37 @@ GOLDEN_T0_US = 5_100_000
 
 
 def run_variant(quant: str, n: int, cams: int, clip_cam_sets: list[list[int] | None],
-                partial_dir: Path | None) -> dict:
+                partial_dir: Path | None, family: str = "alpamayo-1.5") -> dict:
     import torch
 
-    from simforge_alpamayo.engine import AlpamayoEngine
+    from simforge_alpamayo.engine import load_engine
 
-    engine = AlpamayoEngine(quant=quant)
-    engine.load()
-    print(f"[{quant}] loaded; vram={engine.vram()}", flush=True)
+    # One engine per (family, quant): the three families pin incompatible
+    # dependency sets and can never share a process.
+    engine = load_engine(family, quant=quant)
+    print(f"[{family}/{quant}] loaded; vram={engine.vram()}", flush=True)
 
-    out: dict = {"quant": quant, "trajs": [], "cot": [], "vram_after_load": engine.vram()}
+    out: dict = {
+        "family": family,
+        "quant": quant,
+        "quant_status": engine.quant_status,
+        "revision": engine.spec.weights_revision,
+        "checkpoint_digest": engine.checkpoint_digest,
+        "trajs": [],
+        "cot": [],
+        "vram_after_load": engine.vram(),
+    }
+    default_cams = list(engine.spec.cameras.default)
     for i in range(n):
-        obs = synthetic_observation(num_cameras=cams, seed=7000 + i)
+        obs = synthetic_observation(
+            num_cameras=cams or len(default_cams),
+            camera_ids=None if cams else default_cams,
+            seed=7000 + i,
+        )
         result = engine.act(obs, seed=7000 + i, num_traj_samples=1)
         out["trajs"].append(result["trajectories"][0])  # (64, 3)
         out["cot"].append(result["reasoning"][0])
-        print(f"[{quant}] input {i}: total={result['timings']['total_ms']:.0f}ms", flush=True)
+        print(f"[{family}/{quant}] input {i}: total={result['timings']['total_ms']:.0f}ms", flush=True)
     out["vram_peak"] = engine.vram()
     _save_partial(partial_dir, out)
 
@@ -148,6 +163,8 @@ def divergence(a: dict, b: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--family", default="alpamayo-1.5",
+                        choices=["alpamayo-1", "alpamayo-1.5", "alpamayo-2-super"])
     parser.add_argument("--modes", nargs="+", default=["nf4", "fp8"])
     parser.add_argument("--n", type=int, default=10)
     parser.add_argument("--cams", type=int, default=2)
@@ -166,7 +183,7 @@ def main() -> None:
 
     partial_dir = Path(args.out).parent / "partials" if args.out else None
     variants = [
-        run_variant(q, args.n, args.cams, clip_cam_sets, partial_dir) for q in args.modes
+        run_variant(q, args.n, args.cams, clip_cam_sets, partial_dir, args.family) for q in args.modes
     ]
 
     report: dict = {

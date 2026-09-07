@@ -537,6 +537,27 @@ const ALPAMAYO_CAMERA_TEMPLATES: Readonly<
     mountFromV1(FRONT_TOP_CENTER, { x: 2.08, lateralRight: 0, up: 1.52 }),
     { fov: 30, width: ALPAMAYO_RENDER_WIDTH, height: ALPAMAYO_RENDER_HEIGHT },
   ),
+  // Rear ring: required by the Alpamayo 2 Super task profiles (driving uses
+  // indices [0,1,2,3,5,6], VQA uses [0,1,2,3,4,5]). Mounts and vertical FoV
+  // are authored approximations of the dataset rig on the same terms as the
+  // front cameras above — the wire protocol carries no extrinsics, so pose
+  // error degrades trajectory quality gracefully instead of breaking the
+  // contract. These are NOT the gated per-vehicle calibration.
+  camera_rear_left_70fov: camera(
+    'camera_rear_left_70fov', 'Rear Left 70 FOV',
+    mountFromV1(REAR_TOP_LEFT, { x: -0.6, lateralRight: -0.44, up: 1.44, yawDeg: -125 }),
+    { fov: 70, width: ALPAMAYO_RENDER_WIDTH, height: ALPAMAYO_RENDER_HEIGHT },
+  ),
+  camera_rear_right_70fov: camera(
+    'camera_rear_right_70fov', 'Rear Right 70 FOV',
+    mountFromV1(REAR_TOP_RIGHT, { x: -0.6, lateralRight: 0.44, up: 1.44, yawDeg: 125 }),
+    { fov: 70, width: ALPAMAYO_RENDER_WIDTH, height: ALPAMAYO_RENDER_HEIGHT },
+  ),
+  camera_rear_tele_30fov: camera(
+    'camera_rear_tele_30fov', 'Rear Tele 30 FOV',
+    mountFromV1(REAR_TOP_CENTER, { x: -1.05, lateralRight: 0, up: 1.5, yawDeg: 180 }),
+    { fov: 30, width: ALPAMAYO_RENDER_WIDTH, height: ALPAMAYO_RENDER_HEIGHT },
+  ),
 });
 
 /**
@@ -591,6 +612,50 @@ const ALPAMAYO_4CAM = buildAlpamayoRigPreset(
   + 'the model-native 512x384 render size.',
 );
 
+/**
+ * Alpamayo 2 Super driving profile: indices [0, 1, 2, 3, 5, 6] — the six
+ * cameras upstream `DRIVING_SIX_CAMERA_FOUR_FRAME` consumes for trajectory,
+ * meta-action and auto-labeling tasks. Rear-tele (4) is deliberately absent:
+ * the driving profile drops it, and padding the set would be rejected by the
+ * model server rather than silently accepted.
+ */
+const ALPAMAYO_6CAM = buildAlpamayoRigPreset(
+  'alpamayo-6cam',
+  'Alpamayo 6-Camera (A2 Super driving)',
+  [
+    'camera_cross_left_120fov',
+    'camera_front_wide_120fov',
+    'camera_cross_right_120fov',
+    'camera_rear_left_70fov',
+    'camera_rear_right_70fov',
+    'camera_front_tele_30fov',
+  ],
+  'Alpamayo 2 Super trajectory/meta-action/auto-labeling input rig: camera '
+  + 'indices [0, 1, 2, 3, 5, 6] at the model-native 512x384 render size. '
+  + 'Requires an 80 GiB-class device; local execution is unqualified.',
+);
+
+/**
+ * Alpamayo 2 Super VQA profile: indices [0, 1, 2, 3, 4, 5] — upstream
+ * `VQA_SIX_CAMERA_FOUR_FRAME`. This one drops front-tele (6) and keeps
+ * rear-tele (4), which is why it is a separate preset and not a flag on the
+ * driving rig. VQA output is not a driving evaluation.
+ */
+const ALPAMAYO_6CAM_VQA = buildAlpamayoRigPreset(
+  'alpamayo-6cam-vqa',
+  'Alpamayo 6-Camera (A2 Super VQA)',
+  [
+    'camera_cross_left_120fov',
+    'camera_front_wide_120fov',
+    'camera_cross_right_120fov',
+    'camera_rear_left_70fov',
+    'camera_rear_tele_30fov',
+    'camera_rear_right_70fov',
+  ],
+  'Alpamayo 2 Super VQA/grounding input rig: camera indices '
+  + '[0, 1, 2, 3, 4, 5] at the model-native 512x384 render size.',
+);
+
 export const BUILT_IN_SENSOR_RIGS: readonly SensorRigPreset[] = Object.freeze([
   BASIC_DASH_CAMERA,
   TESLA_HW3,
@@ -600,6 +665,8 @@ export const BUILT_IN_SENSOR_RIGS: readonly SensorRigPreset[] = Object.freeze([
   ALPAMAYO_PAI,
   ALPAMAYO_2CAM,
   ALPAMAYO_4CAM,
+  ALPAMAYO_6CAM,
+  ALPAMAYO_6CAM_VQA,
 ]);
 
 const BUILT_IN_SENSOR_RIGS_BY_ID: Readonly<Record<string, SensorRigPreset>> = {
@@ -611,6 +678,8 @@ const BUILT_IN_SENSOR_RIGS_BY_ID: Readonly<Record<string, SensorRigPreset>> = {
   'alpamayo-pai': ALPAMAYO_PAI,
   'alpamayo-2cam': ALPAMAYO_2CAM,
   'alpamayo-4cam': ALPAMAYO_4CAM,
+  'alpamayo-6cam': ALPAMAYO_6CAM,
+  'alpamayo-6cam-vqa': ALPAMAYO_6CAM_VQA,
 };
 
 export function sensorRigPreset(id: string): SensorRigPreset | undefined {

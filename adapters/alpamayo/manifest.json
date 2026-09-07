@@ -1,35 +1,109 @@
 {
   "name": "@simforge-oss/alpamayo-runtime",
-  "description": "Locally runnable, quantized Alpamayo 1.5 inference service (closed-loop act() over unix-socket MessagePack)",
-  "pins": {
-    "model": {
-      "repo": "nvidia/Alpamayo-1.5-10B",
-      "revision": "7aba8293c09993f2e125c6819df05d7fa3e873ea",
-      "license": "OpenMDW-1.1",
-      "gated": false
+  "description": "Locally runnable Alpamayo 1 / 1.5 / 2 Super inference services: closed-loop act() over unix-socket MessagePack plus an HTTP facade on the same resident engine.",
+  "note": "Pins are declared once in src/simforge_alpamayo/families.py and mirrored, with per-file digests, in packages/model-store/models.lock.json. This file is the human-readable summary; the lock is the integrity contract and packages/model-store/src/catalog.ts is what the product displays.",
+  "families": {
+    "alpamayo-1": {
+      "package": "alpamayo_r1",
+      "weights": {
+        "repo": "nvidia/Alpamayo-R1-10B",
+        "revision": "dd4a24cacefc9a6477a6dfc7354de2443401409d",
+        "license": "OpenMDW-1.1",
+        "gated": false,
+        "bytes": 22157195208
+      },
+      "sidecars": [
+        {
+          "repo": "Qwen/Qwen3-VL-8B-Instruct",
+          "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+          "gated": false,
+          "license": "Apache-2.0",
+          "note": "backbone config/tokenizer (upstream ReasoningVLAConfig default vlm_name_or_path); no weights"
+        },
+        {
+          "repo": "Qwen/Qwen3-VL-2B-Instruct",
+          "revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+          "gated": false,
+          "license": "Apache-2.0",
+          "note": "image processor + chat template, per upstream helper.BASE_PROCESSOR_NAME"
+        }
+      ],
+      "inference_code": {
+        "repo": "https://github.com/NVlabs/alpamayo",
+        "revision": "939f9a28378deb7863282ef4a8ac7ecbdac2c8b8",
+        "license": "Apache-2.0",
+        "vendored_at": "vendor/alpamayo (created by scripts/setup.sh, not committed)",
+        "upstream_status": "limited maintenance per upstream README"
+      },
+      "cameras": { "required": [0, 1, 2, 6], "variable": false },
+      "capabilities": { "trajectory": true, "vqa": false, "nav": false },
+      "quants": { "bf16": "supported (>=24 GiB)", "nf4": "qualification-pending", "fp8": "qualification-pending" }
     },
-    "vlm_config_tokenizer": {
-      "repo": "nvidia/Cosmos-Reason2-8B",
-      "revision": "a9fae2cf89dc64db96b12860417f0eb403013bb9",
-      "gated": "auto (requires any authenticated HF account)",
-      "note": "config.json + tokenizer/processor only; all weights come from the Alpamayo checkpoint"
+    "alpamayo-1.5": {
+      "package": "alpamayo1_5",
+      "weights": {
+        "repo": "nvidia/Alpamayo-1.5-10B",
+        "revision": "7aba8293c09993f2e125c6819df05d7fa3e873ea",
+        "license": "OpenMDW-1.1",
+        "gated": false,
+        "bytes": 22157194524
+      },
+      "sidecars": [
+        {
+          "repo": "nvidia/Cosmos-Reason2-8B",
+          "revision": "a9fae2cf89dc64db96b12860417f0eb403013bb9",
+          "gated": "auto",
+          "license": "NVIDIA Open Model License",
+          "note": "config.json + tokenizer only; all weights come from the Alpamayo checkpoint. This is the ONE gated dependency across the three families and the only reason a user token is ever needed."
+        },
+        {
+          "repo": "Qwen/Qwen3-VL-2B-Instruct",
+          "revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+          "gated": false,
+          "license": "Apache-2.0",
+          "note": "image processor + chat template"
+        }
+      ],
+      "inference_code": {
+        "repo": "https://github.com/NVlabs/alpamayo1.5",
+        "revision": "24179cfa8b2eeaf775e9e21698b23af0f899522d",
+        "license": "Apache-2.0",
+        "vendored_at": "vendor/alpamayo1.5 (created by scripts/setup.sh, not committed)"
+      },
+      "cameras": { "required": null, "variable": true, "default": [0, 1, 2, 6] },
+      "capabilities": { "trajectory": true, "vqa": true, "nav": true },
+      "quants": { "bf16": "supported (>=24 GiB)", "nf4": "supported (measured 8.71-10.10 GiB on 16 GiB)", "fp8": "supported (>=16 GiB)" }
     },
-    "processor": {
-      "repo": "Qwen/Qwen3-VL-2B-Instruct",
-      "revision": "89644892e4d85e24eaac8bacfd4f463576704203",
-      "gated": false,
-      "note": "image processor + chat template, per upstream helper.get_processor"
-    },
-    "inference_code": {
-      "repo": "https://github.com/NVlabs/alpamayo1.5",
-      "revision": "7a8f1c781a826f09be53e1e211f26e947ec18019",
-      "license": "Apache-2.0",
-      "vendored_at": "vendor/alpamayo1.5 (cloned by scripts/setup.sh, not committed)"
+    "alpamayo-2-super": {
+      "package": "alpamayo2_super",
+      "weights": {
+        "repo": "nvidia/Alpamayo2-Super",
+        "revision": "00554695e729a6ff0b6281fd2c81b18d06e33dbe",
+        "license": "OpenMDW-1.1",
+        "gated": false,
+        "bytes": 71641163918
+      },
+      "sidecars": [],
+      "inference_code": {
+        "repo": "https://github.com/NVlabs/alpamayo2",
+        "revision": "beb2977d9a7e9d66837d4a3ad5144ff59de37519",
+        "license": "Apache-2.0",
+        "vendored_at": "vendor/alpamayo2 (created by scripts/setup.sh, not committed)"
+      },
+      "cameras": { "required": [0, 1, 2, 3, 5, 6], "variable": false, "vqa": [0, 1, 2, 3, 4, 5] },
+      "capabilities": { "trajectory": true, "vqa": true, "nav": true, "meta_actions": true, "autolabel": true, "grounding": true },
+      "quants": { "bf16": "supported (80 GiB; NVIDIA tested only H100 80GB)", "nf4": "unsupported (no upstream or measured recipe)" },
+      "local_execution": "qualification-pending — remote/H100-class execution is the only currently supported path"
     }
   },
+  "review_gates": {
+    "card_vs_license": "The Alpamayo 1 and 1.5 model cards say \"ready for non-commercial use; commercial licensing available upon request\" while their LICENSE blob (ec297ac5456384786644013ec196da33b916be97, verified with `git hash-object` against the upstream bytes) is OpenMDW-1.1. The Alpamayo 2 Super card omits that sentence. Which text controls has NOT been decided here; commercial hosting requires a recorded human/legal review. The app shows both texts verbatim and no code asserts a resolution.",
+    "gated_sidecar": "nvidia/Cosmos-Reason2-8B is gated:auto under the NVIDIA Open Model License. Its metadata is public but its file content requires an accepted licence and a token, which is why the lock pins those files by upstream git blob id rather than by a downloaded hash. For a worker image the files are materialized at build time with a BuildKit secret mount (RUN --mount=type=secret), NEVER a build-arg or ENV: a build-arg is recorded in the image history and would leak the token to anyone who can pull the image. The runtime worker then reads them from a read-only path via SIMFORGE_ALPAMAYO_SIDECAR_DIR with HF_HUB_OFFLINE=1, so no token exists at run time at all.",
+    "parity_dataset": "Upstream parity scripts for all three families stream nvidia/PhysicalAI-Autonomous-Vehicles, which is gated:auto under a 12-month non-redistributable licence. Parity runs therefore need a user token with dataset acceptance; we cannot ship golden clips, and only parity OUTPUTS may be cached."
+  },
   "assets": {
-    "hf_home": "~/simforge-assets/hf-cache",
-    "quantized_outputs": "~/simforge-assets/models",
-    "policy": "no large assets in repo or containers; code references by path + pinned revision"
+    "hf_home": "${SIMFORGE_ASSETS_ROOT:-~/simforge-assets}/hf-cache",
+    "installs": "${SIMFORGE_ASSETS_ROOT:-~/simforge-assets}/models/<family>/<revision>/",
+    "policy": "No weights in the repository, in a container image, or in a release asset. Code references them by pinned revision and per-file digest."
   }
 }

@@ -43,6 +43,18 @@ import {
   registryMapsPull,
   registryMapsSourcePush,
 } from './commands/map-registry.js';
+import {
+  modelsCache,
+  modelsCancel,
+  modelsInstall,
+  modelsList,
+  modelsLock,
+  modelsPreflight,
+  modelsPrepare,
+  modelsRuntime,
+  modelsUninstall,
+  modelsVerify,
+} from './commands/models.js';
 import { schemas } from './commands/schemas.js';
 import { simulate } from './commands/simulate.js';
 import { debugScenario } from './commands/debug.js';
@@ -87,6 +99,16 @@ const COMMANDS = [
   { name: 'worker reconcile|capacity', summary: 'native runner worker maintenance and declared capacity' },
   { name: 'cas ingest|verify', summary: 'native runner content store: ingest a file or re-hash a stored blob' },
   { name: 'runtime show', summary: 'verified native runtime identity, engines and support tiers' },
+  { name: 'models list', summary: 'Alpamayo model catalog with per-machine download and execution eligibility' },
+  { name: 'models install', summary: 'resumable digest-verified install of a pinned model into ~/simforge-assets (needs --accept-license)' },
+  { name: 'models prepare', summary: 'build the isolated Python runtime for an installed model from its pinned upstream lockfile' },
+  { name: 'models runtime', summary: 'the prepared runtime for a model: interpreter, pinned code commit and upstream lock' },
+  { name: 'models verify', summary: 're-verify an installed model against the committed lock (--deep re-hashes every shard)' },
+  { name: 'models uninstall', summary: 'remove an installed model, optionally purging its shared Hugging Face cache entries' },
+  { name: 'models cancel', summary: 'stop a running install, keeping partial files unless --discard-partials' },
+  { name: 'models preflight', summary: 'hardware/driver/disk qualification per model and quantization on this machine' },
+  { name: 'models cache', summary: 'report (or with --reclaim, free) unreferenced shared model-cache entries' },
+  { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
 ] as const;
 
@@ -833,7 +855,87 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       });
     }
 
-
+    case 'models': {
+      const args = parseArgs(argv.slice(2), {
+        booleans: [
+          ...GLOBAL_BOOLEANS,
+          'accept-license',
+          'wait',
+          'deep',
+          'purge-shared-cache',
+          'discard-partials',
+          'reserve-renderer',
+          'reclaim',
+          'flash-attn',
+          'force',
+        ],
+        values: ['family', 'quant'],
+      });
+      const pretty = boolFlag(args, 'pretty');
+      // The family is accepted positionally (`models install alpamayo-1`) or
+      // as a flag, because both read naturally and the store validates it.
+      const family = optionalString(args, 'family') ?? args.positionals[0];
+      if (sub === 'list') return modelsList({ pretty });
+      if (sub === 'lock') return modelsLock({ pretty });
+      if (sub === 'preflight') {
+        return modelsPreflight({
+          family,
+          reserveRenderer: boolFlag(args, 'reserve-renderer'),
+          pretty,
+        });
+      }
+      if (sub === 'cache') return modelsCache({ reclaim: boolFlag(args, 'reclaim'), pretty });
+      if (sub === 'install') {
+        return modelsInstall({
+          family,
+          quant: optionalString(args, 'quant'),
+          acceptLicense: boolFlag(args, 'accept-license'),
+          wait: boolFlag(args, 'wait'),
+          pretty,
+        });
+      }
+      if (sub === 'prepare') {
+        return modelsPrepare({
+          family,
+          quant: optionalString(args, 'quant'),
+          flashAttn: boolFlag(args, 'flash-attn'),
+          force: boolFlag(args, 'force'),
+          pretty,
+        });
+      }
+      if (sub === 'runtime') return modelsRuntime({ family, pretty });
+      if (sub === 'verify') return modelsVerify({ family, deep: boolFlag(args, 'deep'), pretty });
+      if (sub === 'uninstall') {
+        return modelsUninstall({
+          family,
+          purgeSharedCache: boolFlag(args, 'purge-shared-cache'),
+          pretty,
+        });
+      }
+      if (sub === 'cancel') {
+        return modelsCancel({
+          family,
+          discardPartials: boolFlag(args, 'discard-partials'),
+          pretty,
+        });
+      }
+      throw new CliError('unknown_command', `simforge models ${sub ?? ''}`.trim(), {
+        detail: {
+          known: [
+            'list',
+            'install',
+            'prepare',
+            'runtime',
+            'verify',
+            'uninstall',
+            'cancel',
+            'preflight',
+            'cache',
+            'lock',
+          ],
+        },
+      });
+    }
     case 'schemas': {
       const args = parseArgs(argv.slice(1), {
         booleans: [...GLOBAL_BOOLEANS, 'content'],

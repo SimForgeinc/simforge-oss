@@ -1,133 +1,234 @@
 # @simforge-oss/alpamayo-runtime
 
-Locally runnable, quantized **Alpamayo 1.5 (10B reasoning VLA)** inference
-service for closed-loop evaluation on a single RTX 5080 (16 GB). Exposes
-`act(observation) -> trajectory + chain-of-causation reasoning` over a
-unix-socket, length-prefixed MessagePack wire (same framing as the simforge
-env-server).
+Locally runnable inference services for **all three Alpamayo generations**,
+behind one wire and one engine interface:
 
-All revisions are pinned in [`manifest.json`](./manifest.json). No weights or
-caches live in the repo: HF caches go to `~/simforge-assets/hf-cache`
-(`HF_HOME`), quantized artifacts (if serialized) to `~/simforge-assets/models`.
+| Family | Checkpoint | Cameras | Extras | Local execution |
+| --- | --- | --- | --- | --- |
+| `alpamayo-1` | `nvidia/Alpamayo-R1-10B` | exactly `[0,1,2,6]` | — | BF16 ≥24 GiB; NF4/FP8 wired but **unmeasured** |
+| `alpamayo-1.5` | `nvidia/Alpamayo-1.5-10B` | variable, default `[0,1,2,6]` | nav conditioning, VQA | BF16 ≥24 GiB, NF4 ≥12 GiB, FP8 ≥16 GiB |
+| `alpamayo-2-super` | `nvidia/Alpamayo2-Super` | exactly `[0,1,2,3,5,6]`, VQA `[0,1,2,3,4,5]` | VQA, meta-actions, auto-labeling, grounding | **not qualified** — 80 GiB class, NVIDIA tested only H100 |
 
-## Quantization recipe
+Every pin — weights revision, upstream code commit, sidecar repos — is
+declared once in [`src/simforge_alpamayo/families.py`](./src/simforge_alpamayo/families.py)
+and mirrored with per-file digests in `packages/model-store/models.lock.json`.
+`tests/test_families.py` fails if the two disagree, so the product can never
+describe one checkpoint while the installer materializes another.
 
-The model is quantized **at load time** from the pinned BF16 checkpoint —
-reproducible from the recipe alone, no serialized artifact required:
+No weights, caches or environments live in this repository. Installs go to
+`${SIMFORGE_ASSETS_ROOT:-~/simforge-assets}/models/<family>/<revision>/` and
+the shared Hugging Face blob cache to `.../hf-cache` (`HF_HOME`).
 
-| Mode | Tooling | What is quantized | Kept BF16 |
-| --- | --- | --- | --- |
-| `nf4` (default) | bitsandbytes 4-bit NF4, double-quant, bf16 compute | every `nn.Linear` in the Cosmos-Reason2-8B VLM **and** the 2.3B action expert | vision tower, `embed_tokens`, `lm_head`, action in/out projections, diffusion head |
-| `fp8` | torchao `Float8WeightOnlyConfig` (e4m3) | same set | same set |
-| `bf16` | none | — | everything (does **not** fit in 16 GB; debug only) |
+## One process, one family, two transports
 
-AWQ was evaluated and rejected: autoawq has no support for the custom
-`alpamayo1_5` architecture (Qwen3-VL backbone + fused diffusion expert +
-non-HF generation path), and would need a calibration set from the gated
-driving dataset. NF4 needs no calibration and keeps the whole model
-GPU-resident. **No CPU offload anywhere.**
+The three upstream packages (`alpamayo_r1`, `alpamayo1_5`, `alpamayo2_super`)
+pin mutually incompatible dependency sets, so **each family gets its own
+virtual environment** and a process serves exactly one `(family, quant)`.
 
-Why the config/tokenizer pin matters: the checkpoint (`nvidia/Alpamayo-1.5-10B`,
-ungated, OpenMDW-1.1) references gated-auto `nvidia/Cosmos-Reason2-8B` for its
-Qwen3-VL config + tokenizer. The engine pins both and verifies at load that the
-tokenizer reproduces the exact trajectory-token ids baked into the checkpoint
-(`traj_token_start_idx=151669`, vocab `155697`).
+Both transports are served by the *same resident engine*, which is the whole
+point: a second process would load another 22–72 GB of weights.
 
-## Setup
+- **unix socket, length-prefixed MessagePack** — closed loop. Raw
+  multi-camera frames are tens of megabytes per step and shared-memory
+  bundles never cross HTTP.
+- **HTTP facade** (`--http`) — open loop. `POST /invoke`, `POST /text`,
+  `GET /healthz`. Exists so the existing `http-json` model-run executor works
+  without learning MessagePack.
+- **In-process batch** (`simforge_alpamayo.batch`) — a cloud worker that
+  wants no HTTP hop at all.
+
+All three funnel through `simforge_alpamayo.invoke.handle_item`, so they
+cannot disagree about validation, refusal codes or provenance.
+
+## Install
+
+The product path, with digest verification, resumable downloads and the
+licence/token flow:
 
 ```bash
-hf auth login            # any HF account (Cosmos-Reason2-8B is gated: auto)
-scripts/setup.sh         # vendor pinned inference code, venv, prefetch ~22 GB
+simforge models list                                  # catalog + what this machine can run
+simforge models preflight --family alpamayo-1.5       # hardware/driver/disk verdict
+simforge models install alpamayo-1.5 --quant nf4 --accept-license --wait
+simforge models verify alpamayo-1.5 --deep            # re-hash every shard
+simforge models uninstall alpamayo-1.5
 ```
+
+The development path (vendored upstream checkout + venv, no digest
+verification):
+
+```bash
+scripts/setup.sh --family alpamayo-1.5            # sidecars only
+scripts/setup.sh --family alpamayo-1.5 --weights  # + ~22 GB of weights
+```
+
+`nvidia/Cosmos-Reason2-8B` (Alpamayo 1.5's config/tokenizer sidecar) is
+`gated: auto`, so it needs `hf auth login` for the development path or a
+token in the OS credential vault for the product path. In a container image
+those few files are materialized at build time through a **BuildKit secret
+mount** (`RUN --mount=type=secret,id=hf_token`) and never a build-arg or
+`ENV`, because a build-arg is preserved in the image history and would hand
+the token to anyone able to pull the image; the runtime then reads them from
+a read-only `SIMFORGE_ALPAMAYO_SIDECAR_DIR` with `HF_HUB_OFFLINE=1`, so no
+token is present at run time. It is the **only**
+gated dependency across the three families: Alpamayo 1 uses ungated Qwen
+sidecars and Alpamayo 2 Super is self-contained.
 
 ## Run
 
 ```bash
-# start server (INT4/NF4), warm it up with a 2-cam synthetic act
-scripts/run_server.sh --quant nf4 --socket /tmp/simforge-alpamayo.sock --warmup-cams 2
+scripts/run_server.sh --family alpamayo-1.5 --quant nf4 \
+    --socket /tmp/simforge-alpamayo.sock --http 127.0.0.1:9310 --warmup-cams 4
 
-# smoke test from another shell
+# smoke test from another shell (synthetic input: proves the wire, not accuracy)
 PYTHONPATH=src vendor/alpamayo1.5/.venv/bin/python -m simforge_alpamayo.client \
-    --socket /tmp/simforge-alpamayo.sock --cams 2 --seed 42
+    --socket /tmp/simforge-alpamayo.sock --seed 42
 ```
 
-Server prints `READY <socket>` on stdout once listening.
+The server prints `READY <socket> {json}` on stdout once the engine is loaded
+and every transport is bound; the JSON tail carries the resolved HTTP port and
+the verified checkpoint digest. Checkpoint identity is asserted **before** the
+weights are read, so a wrong revision fails on a metadata read rather than
+after a multi-minute load.
 
-### Wire protocol
+## Wire protocol (`simforge.policy-endpoint/v2`)
 
-`[uint32 LE length][msgpack]` frames (matches packages/training-env env-server.ts). Ops: `hello`, `health`,
-`warmup {cams}`, `act {obs, seed, params}`, `reset`, `close`, `shutdown`.
-
-`act` request:
+`[uint32 LE length][msgpack]` frames. Ops: `hello`, `health`, `capabilities`,
+`warmup {cams}`, `act {obs, seed, params}`, `text {obs, prompt, task, params}`,
+`reset`, `close`, `shutdown`.
 
 ```jsonc
 {
   "op": "act",
-  "seed": 42,                       // deterministic: seeds VLM sampling + diffusion noise
+  "seed": 42,                       // seeds VLM sampling AND diffusion noise
   "obs": {
     "cameras": [{
-      "camera_id": 1,               // 0..6, upstream camera convention
-      "frames": ["<bytes>", ...],   // 4 frames, oldest->newest (t0 last)
-      "encoding": "raw",            // raw RGB HxWx3 uint8 | jpeg | png
-      "width": 512, "height": 384
+      "camera_id": 1,               // 0..6, upstream CAMERA_NAMES_TO_INDICES
+      "frames": ["<bytes>", ...],   // exactly 4, oldest -> newest (t0 last)
+      "encoding": "raw",            // raw | raw-b64 | jpeg | png
+      "width": 512, "height": 384   // required for raw encodings
+      // or: "frames_paths": ["/abs/path", ...] — absolute only, no URLs
     }],
-    "ego_history_xyz": [[x,y,z], ...],  // 16 steps @10 Hz, ego frame at t0
-    "ego_history_rot": [[[...3x3...]], ...],  // optional, default identity
-    "nav_text": null                // optional navigation instruction
+    "ego_history_xyz": [[x,y,z], ...],       // 16 @10 Hz, ego frame at t0
+    "ego_history_rot": [[[...3x3...]], ...], // optional, default identity
+    "ego_history_t_s": [ ... ],              // optional; validated, never resampled
+    "nav_text": null                         // 1.5/2 only; refused on A1
   },
   "params": {"top_p": 0.98, "temperature": 0.6, "num_traj_samples": 1,
              "max_generation_length": 256, "num_diffusion_steps": null}
 }
 ```
 
-`act` response: `result.trajectories` = `num_traj_samples x 64 x [x,y,z]`
-waypoints (6.4 s @ 10 Hz, ego frame at t0), `result.reasoning` =
-chain-of-causation text per sample, plus timings and VRAM stats.
+`act` response `result`: `trajectories` = `num_traj_samples × 64 × [x,y,z]`
+(6.4 s @10 Hz, FLU ego frame at t0), `trajectory_rot`, `reasoning`
+(chain-of-causation per sample), `timings`, `vram`, `rng_provenance` and
+`model` identity.
 
-Closed-loop integration note: frames arriving from the Bevy shm ring
-(sim_tick, camera_id, digest headers) map 1:1 onto `cameras[].frames` as
-`encoding: "raw"`; the `policy_step` bridge only needs to accumulate 4 ticks
-per camera and forward the ego history.
+### What is refused, and why that matters
 
-## Camera-rig bridge (frame bundles -> observations)
+An observation that does not satisfy the family's real input contract is
+**refused with the exact missing field or required camera set** — never
+padded, cropped, resampled or silently accepted. A refusal is `ok: false` in
+a 200-shaped response, so one bad clip in a 64-item manifest does not fail
+the other 63.
 
-`src/simforge_alpamayo/bridge.py` (torch-free; numpy only, PIL only when
-resizing) converts `render_bundle` shm frame bundles into wire observations:
+| Code | Cause |
+| --- | --- |
+| `camera_set_invalid` | camera set violates the family/task profile (`required_cameras` names the correct set) |
+| `missing_fields` | absent `cameras`, `ego_history_xyz`, `prompt`, or an auto-labeling future (`fields` lists them) |
+| `unsupported_op` | `text` on Alpamayo 1, or `nav_text` on a family without navigation conditioning |
+| `input_error` | wrong history length, non-finite poses, non-monotonic timestamps, byte count vs declared size, mixed frame sizes, relative paths |
 
-- `BundleObservationBridge.for_profile("alpamayo-2cam" | "alpamayo-4cam")`
-  mirrors the authored sensor-rig presets in
-  `packages/scenario/src/schema/v2/sensor-rigs.ts` — preset sensor ids ARE
-  the dataset camera names, mapped to upstream indices via
-  `ALPAMAYO_CAMERA_INDEX` (2-cam = [1, 6], 4-cam = [0, 1, 2, 6]).
+A quantization mode with no measured envelope loads but stamps
+`qualification: "pending"` into every result's `rng_provenance`, so an
+Alpamayo 1 NF4 number can never be read as a measurement that was never made.
+
+## Quantization
+
+Load-time, reproducible from the recipe — no serialized artifact.
+
+| Mode | Tooling | Quantized | Kept BF16 |
+| --- | --- | --- | --- |
+| `bf16` | none | — | everything |
+| `nf4` | bitsandbytes 4-bit NF4, double-quant, bf16 compute | every `nn.Linear` in the VLM backbone **and** the 2.3B action expert | vision tower, `embed_tokens`, `lm_head`, action in/out projections, diffusion head |
+| `fp8` | torchao `Float8WeightOnlyConfig` (e4m3) | same, plus the vision tower | `lm_head`, embeddings, action projections, diffusion head |
+
+Quantization changes **behaviour**, not only numerics: an NF4 score is never
+comparable to a BF16 baseline without its quant label, which is why `quant`
+is part of the recorded model identity.
+
+AWQ was evaluated and rejected: autoawq has no support for these custom
+architectures, and calibration would need the gated driving dataset. Alpamayo
+2 Super has no quantized recipe at all — offering one would be a guess.
+
+## Camera-rig bridge (frame bundles → observations)
+
+`src/simforge_alpamayo/bridge.py` is torch-free (numpy only; PIL only when
+resizing) so a policy runner can import it without an inference environment.
+
+- `BundleObservationBridge.for_profile("alpamayo-2cam" | "alpamayo-4cam" |
+  "alpamayo-6cam" | "alpamayo-6cam-vqa")` mirrors the authored sensor-rig
+  presets in `packages/scenario/src/schema/v2/sensor-rigs.ts`; preset sensor
+  ids ARE the dataset camera names, mapped through `ALPAMAYO_CAMERA_INDEX`.
 - `push_bundle(bundle)` ingests one tick zero-copy up to the single
-  unavoidable RGBA->RGB pack (~0.6 ms/cam/frame at 512x384, measured in
-  `last_convert_s`); `observation(ego_history_xyz)` assembles the rolling
-  4-frame window (cold start replicates the oldest frame) with cameras
-  emitted camera-index ascending.
-- Ego history helpers produce the FLU ego frame at t0 frozen with the
-  trajectory executor (x forward, y left, z up, newest == origin).
+  unavoidable RGBA→RGB pack; `observation(ego_history_xyz)` assembles the
+  rolling 4-frame window with cameras emitted camera-index ascending.
+- `bundle_to_observation(...)` is the one-shot form for single-tick open-loop
+  callers. It replicates the single frame across the history window and says
+  so in `frame_history: "replicated-single-tick"` — the cold-start
+  approximation, labelled rather than hidden.
+- `ego_history_rot_from_headings(...)` produces the AlpaSim
+  `build_ego_history` rotation convention (FLU, relative to t0).
 
-End-to-end conformance (render -> bundle -> bridge -> act -> trajectory) on
-a real map tile: `scripts/rig_conformance.py` (both servers must already be
-running). Unit tests: `python3 -m pytest adapters/alpamayo/tests/test_bridge.py`
-from the repo root, against the recorded ring in `renderer/service/testdata`.
-
-## Benchmarks / quality
+## Preflight and identity
 
 ```bash
-# latency p50/p95 at 2-cam and 7-cam profiles + VRAM (server must be running)
-vendor/alpamayo1.5/.venv/bin/python scripts/bench_latency.py --iters 12 --out out/bench_nf4.json
-
-# INT4-vs-FP8 divergence on 10 identical synthetic inputs (loads one engine at
-# a time), optionally + golden-clip open-loop minADE vs dataset ground truth
-vendor/alpamayo1.5/.venv/bin/python scripts/compare_quant.py --modes nf4 fp8 --n 10 --out out/divergence.json
-vendor/alpamayo1.5/.venv/bin/python scripts/compare_quant.py --modes nf4 --clip --n 0 --out out/openloop_nf4.json
+python -m simforge_alpamayo.preflight --runtime --json          # can this host run it?
+python -m simforge_alpamayo.preflight --family alpamayo-1.5 \
+    --expect-digest <64-hex> [--deep]                            # are these the right bytes?
 ```
 
-Measured results live in the lane report
-(`/home/path/tmp/lanes/alpamayo.md`).
+Identity and qualification are separate questions on purpose: identity needs
+no GPU, qualification needs no weights, and conflating them is how a product
+ends up claiming a model runs on hardware it cannot run on. Exit codes:
+`0` ok, `2` ran and the answer is "not qualified", `3` identity mismatch.
 
-## Licenses
+## Tests and benchmarks
 
-Inference code (vendored): Apache-2.0. Model weights: OpenMDW-1.1.
-This adapter: simforge-internal.
+```bash
+python3 -m pytest adapters/alpamayo/tests/          # 52 tests, no GPU, no network
+```
+
+`tests/test_families.py` pins the three pin sources against each other;
+`tests/test_wire.py` pins the refusal contract; `tests/test_bridge.py` runs
+the bundle→observation path against a ring recorded by the real Rust render
+service.
+
+```bash
+# latency p50/p95 + VRAM (server must be running)
+scripts/bench_latency.py --iters 12 --out out/bench_nf4.json
+# quant divergence on identical inputs; --clip adds golden-clip open-loop minADE
+scripts/compare_quant.py --modes nf4 fp8 --n 10 --out out/divergence.json
+# render -> bundle -> bridge -> act conformance on a real map tile
+scripts/rig_conformance.py
+```
+
+Upstream parity scripts for all three families stream
+`nvidia/PhysicalAI-Autonomous-Vehicles`, which is `gated: auto` under a
+12-month non-redistributable licence. Parity runs therefore need a user token
+with dataset acceptance, we cannot ship golden clips, and only parity
+*outputs* may be cached.
+
+## Licences and open review gates
+
+Vendored inference code: Apache-2.0 (all three upstream repositories). Model
+weights: OpenMDW-1.1 on all three, the identical LICENSE blob
+`ec297ac5456384786644013ec196da33b916be97` (confirmed with `git hash-object`
+against the upstream bytes).
+
+**Unresolved, and not resolvable by this code:** the Alpamayo 1 and 1.5 model
+cards state "ready for non-commercial use; commercial licensing available
+upon request" while their LICENSE blob is OpenMDW-1.1; the Alpamayo 2 Super
+card omits that sentence. Which text controls has **not** been decided here.
+Commercial hosting requires a recorded human/legal review. The application
+shows both texts verbatim, `commercialUseReviewRequired` is surfaced per
+family, and no code asserts a resolution.
