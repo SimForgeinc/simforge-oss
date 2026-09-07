@@ -8,3 +8,5 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+  wasm-pack: true
+  electron-winstaller: false

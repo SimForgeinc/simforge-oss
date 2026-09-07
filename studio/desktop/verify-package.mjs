@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Checks every packaged SimForge Studio application under dist/desktop/out:
 //
-//   node desktop/verify-package.mjs
+//   node desktop/verify-package.mjs [output-directory]
 //
 // For each app.asar electron-builder produced (linux-unpacked, win-unpacked,
 // mac*/SimForge Studio.app), the archive must hold exactly the staged shell
@@ -28,7 +28,7 @@ const builderRequire = createRequire(require.resolve("electron-builder/package.j
 const asar = createRequire(builderRequire.resolve("app-builder-lib/package.json"))("@electron/asar");
 
 const desktopDir = dirname(fileURLToPath(import.meta.url));
-const outDir = resolve(desktopDir, "..", "dist", "desktop", "out");
+const outDir = process.argv[2] ? resolve(process.argv[2]) : resolve(desktopDir, "..", "dist", "desktop", "out");
 const lock = JSON.parse(await readFile(join(desktopDir, "tools.lock.json"), "utf8"));
 
 /** Platform a packaged directory name stands for. */
