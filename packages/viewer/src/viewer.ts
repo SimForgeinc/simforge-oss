@@ -1421,6 +1421,9 @@ export class CityViewer {
     const downloads = this.downloadTracker.snapshot();
     const auxiliaryPending = Number(this.mapLoadActive) + this.presetTransitions
       + this.auxiliaryLoads + snowStreaming.loading + snowStreaming.queued;
+    const streamingError = this.renderer.getContext().isContextLost()
+      ? 'WebGL context was lost; reload the map to recreate its GPU resources'
+      : this.streamingError;
     const stage = downloads.active > 0 ? 'downloading'
       : sum((s) => s.pendingTextureUploads) > 0 ? 'uploading'
       : sum((s) => s.compiling) > 0 ? 'compiling'
@@ -1463,8 +1466,8 @@ export class CityViewer {
       ultraLowFidelity: this.ultraLowFidelity,
       roadsOnlyFidelity: this.roadsOnlyFidelity,
       roadVisible: this.roadReady && this.roadGroup.visible,
-      streamingError: this.streamingError,
-      requiredError: this.streamingError,
+      streamingError,
+      requiredError: streamingError,
       uiTicksPerSecond: this.fps,
       surfaceMaterials: this.surfaceMaterials.report(),
       snowCover: snow,

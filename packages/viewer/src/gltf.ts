@@ -195,12 +195,41 @@ class SharedKTX2Loader extends KTX2Loader {
   private activeDownloads = 0;
   private readonly waiting: (() => void)[] = [];
   private disposeWhenIdle = false;
+  private rgbaLoader: KTX2Loader | null = null;
+
+  private disposeLoaders(): void {
+    super.dispose();
+    this.rgbaLoader?.dispose();
+    this.rgbaLoader = null;
+  }
+
+  private parseAtLimit(buffer: ArrayBuffer, maxDimension: number, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
+    const selected = selectKtx2MipLevels(buffer, maxDimension);
+    if (!selected.forceRgba) {
+      super.parse(selected.buffer, onLoad, onError);
+      return;
+    }
+    if (!this.rgbaLoader) {
+      this.rgbaLoader = new KTX2Loader(this.manager).setTranscoderPath(this.transcoderPath).setWorkerLimit(1);
+      // NPOT cropped bases are not legal BC textures. Decode the same authored
+      // mip pixels to RGBA instead; retain compression for block-aligned images.
+      this.rgbaLoader.workerConfig = {
+        astcSupported: false, astcHDRSupported: false, etc1Supported: false,
+        etc2Supported: false, dxtSupported: false, bptcSupported: false, pvrtcSupported: false,
+      };
+    }
+    this.rgbaLoader.parse(selected.buffer, onLoad, onError);
+  }
+
+  override parse(buffer: ArrayBuffer, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
+    this.parseAtLimit(buffer, this.maxTextureDimension, onLoad, onError);
+  }
 
   override dispose(): void {
     // Terminating a worker mid-transcode leaves its parser promise unresolved.
     // Aborted queued requests drain without starting work; active decodes finish.
     if (this.activeDownloads > 0) this.disposeWhenIdle = true;
-    else super.dispose();
+    else this.disposeLoaders();
   }
 
   private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
@@ -216,8 +245,7 @@ class SharedKTX2Loader extends KTX2Loader {
       if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
       const buffer = await readResponseBufferWithProgress(response, tracker);
       signal?.throwIfAborted();
-      const selected = selectKtx2MipLevels(buffer, maxDimension);
-      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parse(selected, resolve, reject));
+      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parseAtLimit(buffer, maxDimension, resolve, reject));
       if (signal?.aborted) {
         texture.dispose();
         signal.throwIfAborted();
@@ -231,7 +259,7 @@ class SharedKTX2Loader extends KTX2Loader {
       const next = this.waiting.shift();
       if (next) next();
       else this.activeDownloads--;
-      if (this.activeDownloads === 0 && this.disposeWhenIdle) super.dispose();
+      if (this.activeDownloads === 0 && this.disposeWhenIdle) this.disposeLoaders();
     }
     if (!selected.forceRgba) {
       super.parse(selected.buffer, onLoad, onError);
@@ -333,7 +361,7 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
     let tracked = trackedLoaders.get(tracker);
     if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension || tracked.resolver !== resolver || tracked.textureBudgetPerAsset !== textureBudgetPerAsset) {
       tracked?.ktx2.dispose();
-      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(4).detectSupport(renderer) as SharedKTX2Loader;
+      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(3).detectSupport(renderer) as SharedKTX2Loader;
       ktx2.tracker = tracker;
       ktx2.signal = signal;
       ktx2.maxTextureDimension = maxTextureDimension;
