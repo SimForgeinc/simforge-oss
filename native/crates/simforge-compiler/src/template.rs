@@ -1734,7 +1734,8 @@ pub struct SceneTimedPoint {
 }
 
 /// One recorded engine tick of a manual drive, y-up scene frame. `y` is the
-/// renderer's ground projection at `(x, z)`; carried through verbatim.
+/// physics height: the planar engine has none, so it must be 0 (display
+/// ground lift is a renderer concern and is not recorded). Rejected otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ManualDriveSample {
@@ -1825,6 +1826,15 @@ impl ManualDriveRecording {
                         format!("sample {key} must be finite"),
                     ));
                 }
+            }
+            if sample.y != 0.0 {
+                return Some((
+                    format!("samples.{index}.y"),
+                    format!(
+                        "sample y is {}, but the planar engine has no height state: recorded y is the physics height (0); display ground lift is not recorded",
+                        sample.y
+                    ),
+                ));
             }
             if index > 0 && sample.time_s <= samples[index - 1].time_s {
                 return Some((

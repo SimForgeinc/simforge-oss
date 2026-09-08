@@ -11,9 +11,12 @@
  * ## Frame
  *
  * Samples are in the y-up scene frame in metres: `x`/`z` are the ground-plane
- * coordinates every other scene-absolute payload uses, `y` is the renderer's
- * ground elevation at that pose (the native trace has no height channel, so
- * replay drives `x`/`z`; `y` is kept for consumers that already have it).
+ * coordinates every other scene-absolute payload uses, `y` is the physics
+ * height of the body. The native engine is planar, so the truth stream
+ * reports `y = 0` and that is the only value a take may carry: render ground
+ * placement is derived from the map at (x, z), exactly as it was while the
+ * take was recorded, and is not recorded. A nonzero `y` is an unsupported
+ * recorded elevation and is rejected rather than ignored.
  * `headingRad` is the body yaw, CCW about `+Y` from `+X`, frame-invariant with
  * the engine's heading and unnormalised (replay normalises). `speedMps` is the
  * *signed* longitudinal speed along the body heading: negative while
@@ -53,7 +56,7 @@ export const ManualDriveSampleSchema = z.strictObject({
   /** Authoritative simulation time, seconds since clip start. */
   timeS: z.number().finite().min(0),
   x: z.number().finite(),
-  /** Ground elevation at the pose, metres. */
+  /** Physics height, metres; the planar engine records 0. */
   y: z.number().finite(),
   z: z.number().finite(),
   /** Body yaw, radians, CCW about `+Y` from `+X`. */
@@ -126,6 +129,9 @@ export function validateManualDriveRecording(
       if (!Number.isFinite(sample[key])) {
         return reject(`samples.${index}.${key}`, `sample ${key} must be finite`);
       }
+    }
+    if (sample.y !== 0) {
+      return reject(`samples.${index}.y`, `unsupported recorded elevation ${sample.y}: the planar engine has no height state, so recorded y must be 0 (render ground placement stays map-derived)`);
     }
     if (index > 0 && sample.timeS <= samples[index - 1]!.timeS) {
       return reject(`samples.${index}.timeS`, 'sample times must be strictly increasing');

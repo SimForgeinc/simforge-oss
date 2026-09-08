@@ -421,9 +421,8 @@ pub struct TimedPoint {
 /// One engine tick of recorded actor state, y-up scene frame. `heading_rad`
 /// is the body yaw and `speed_mps` is signed along it (negative = reversing),
 /// so the sample reproduces a stationary or reversing body exactly. `y` is
-/// the renderer's ground projection at `(x, z)` as captured; the planar engine
-/// has no height state, so replay reproduces it by driving the same `(x, z)`
-/// through the same ground projection. It is carried, never dropped.
+/// the physics height as captured from the truth stream; the planar engine
+/// has none, so it is always 0 (display ground lift is not physics state).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordedSample {
@@ -2478,6 +2477,14 @@ fn parse_route_spec_from(p: &mut Parser, m: &Map<String, Value>, kind: &str) -> 
                 })
             });
             let samples = samples?;
+            if let Some(i) = samples.iter().position(|s| s.y != 0.0) {
+                p.issue_at(
+                    &[Seg::Key("samples"), Seg::Index(i), Seg::Key("y")],
+                    "custom",
+                    "unsupported recorded elevation: the planar engine has no height state, recorded y must be 0 (render ground placement stays map-derived)",
+                );
+                return None;
+            }
             if let Some(i) =
                 (1..samples.len()).find(|&i| samples[i].time_s <= samples[i - 1].time_s)
             {

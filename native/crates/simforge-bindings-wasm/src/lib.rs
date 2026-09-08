@@ -1073,7 +1073,7 @@ pub struct WasmWorldSnapshot {
     #[wasm_bindgen(js_name = laneRsls)]
     pub lane_rsls: Vec<JsValue>,
     pub present: Uint8Array,
-    /// `(N, 5)` rows `[x, z, headingRad, speedMps, s]`, scene frame.
+    /// `(N, 6)` rows `[x, z, headingRad, speedMps, s, longitudinalSpeedMps]`, scene frame.
     pub pose: Float64Array,
 }
 

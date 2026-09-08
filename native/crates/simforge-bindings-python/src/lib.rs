@@ -1157,7 +1157,7 @@ impl PyWorldSnapshot {
     /// `(N, 5)` rows `[x, z, heading_rad, speed_mps, s]` in the scene frame.
     #[getter]
     fn pose<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        PyArray1::from_slice(py, self.inner.pose()).reshape([self.inner.present().len(), 5])
+        PyArray1::from_slice(py, self.inner.pose()).reshape([self.inner.present().len(), 6])
     }
     fn to_json(&self) -> PyResult<String> {
         self.inner.to_json().py()
