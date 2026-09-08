@@ -144,18 +144,33 @@ def validate_rig(family_required: tuple[int, ...] | None, rig_profile: str) -> d
         ) from exc
 
     rig_ids = tuple(sorted(camera_map.values()))
-    if family_required is not None and rig_ids != tuple(sorted(family_required)):
+    if family_required is None:
+        return camera_map
+
+    required = tuple(sorted(family_required))
+    absent = [camera for camera in required if camera not in rig_ids]
+    if absent:
         raise _refuse(
             "camera_set_invalid",
             f"rig {rig_profile!r} provides camera ids {list(rig_ids)} but the "
-            f"model requires exactly {list(family_required)}. Cameras are "
-            "positional for this model: a rig with the wrong set cannot be "
-            "corrected by reordering or by substituting a nearby view.",
-            expected=list(family_required),
+            f"model requires {list(required)}; missing {absent}. Cameras are "
+            "positional for this model: a missing view cannot be corrected "
+            "by reordering or by substituting a nearby camera.",
+            expected=list(required),
             got=list(rig_ids),
+            missing=absent,
             rigProfile=rig_profile,
         )
-    return camera_map
+
+    # A SUPERSET is legitimate and is the common case for a shared render: a
+    # six-camera capture serves a four-camera model by feeding the four it
+    # requires. The unused cameras are dropped, not averaged or substituted,
+    # and the subset actually consumed is what capture identity records - so
+    # the same render consumed as four cameras is a different capture from
+    # the same render consumed as six.
+    return {
+        sensor: camera for sensor, camera in camera_map.items() if camera in required
+    }
 
 
 def _stream_digest(frames: list[bytes]) -> str:
@@ -246,6 +261,8 @@ def convert_render_to_clip(
     reports the run as having incomplete identity.
     """
     camera_map = validate_rig(family_required, rig_profile)
+    full_map = profile_camera_map(rig_profile)
+    dropped = sorted(set(full_map.values()) - set(camera_map.values()))
 
     missing = sorted(set(camera_map) - set(streams))
     if missing:
@@ -258,7 +275,7 @@ def convert_render_to_clip(
             fields=[f"streams.{sensor}" for sensor in missing],
         )
 
-    for sensor, frames in streams.items():
+    for sensor, frames in ((s, streams[s]) for s in camera_map):
         if len(frames) != NUM_FRAMES_PER_CAMERA:
             raise _refuse(
                 "input_error",
@@ -269,8 +286,11 @@ def convert_render_to_clip(
                 got=len(frames),
             )
 
+    # Only the consumed cameras are checked and hashed: an unused camera in
+    # a shared render is not part of this clip.
+    consumed = {sensor: streams[sensor] for sensor in camera_map}
     digests, duplicate_groups = assert_distinct_streams(
-        streams, allow_identical=allow_identical_streams
+        consumed, allow_identical=allow_identical_streams
     )
 
     exact, jitter = render_fps_is_compatible(render_fps)
@@ -361,6 +381,9 @@ def convert_render_to_clip(
             "captureVersion": capture_profile_version,
             "cameraMap": camera_map,
             "cameraIds": sorted(camera_map.values()),
+            # Rendered but not fed to this model. Recorded because the
+            # subset consumed is part of capture identity.
+            "renderedNotConsumed": dropped,
         },
         "model": {
             "requirementVersion": model_requirement_version,

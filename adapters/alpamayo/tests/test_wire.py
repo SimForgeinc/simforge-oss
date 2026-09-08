@@ -592,3 +592,81 @@ def test_missing_identity_is_recorded_as_incomplete_never_invented():
     assert converted.provenance["rig"]["captureVersion"] is None
     assert converted.provenance["identityComplete"] is False
     assert "second implementation" in converted.provenance["identityNote"]
+
+
+def test_a_six_camera_render_serves_a_four_camera_model_by_subset():
+    """A shared render is the common case: one six-camera capture feeds A2
+    with all six and A1/A1.5 with the four they require. The unused cameras
+    are dropped, never averaged or substituted, and which subset was
+    consumed is recorded because it is part of capture identity."""
+    import numpy as np
+
+    from simforge_alpamayo.obs import decode_observation
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    rng = np.random.default_rng(0)
+    six = [
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_rear_left_70fov",
+        "camera_rear_right_70fov",
+        "camera_front_tele_30fov",
+    ]
+    streams = {
+        name: [
+            (rng.integers(0, 250, (384, 512, 3), dtype=np.uint8) + index)
+            .astype(np.uint8)
+            .tobytes()
+            for _ in range(4)
+        ]
+        for index, name in enumerate(six)
+    }
+    base = dict(
+        streams=streams,
+        rig_profile="alpamayo-6cam",
+        width=512,
+        height=384,
+        render_fps=30.0,
+        t0_index=200,
+        ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+        ego_heading_rad=0.0,
+        total_frames=600,
+    )
+
+    everything = convert_render_to_clip(**base, family_required=(0, 1, 2, 3, 5, 6))
+    assert everything.provenance["rig"]["cameraIds"] == [0, 1, 2, 3, 5, 6]
+    assert everything.provenance["rig"]["renderedNotConsumed"] == []
+    assert decode_observation(
+        everything.observation, required_cameras=(0, 1, 2, 3, 5, 6)
+    )["frames"].shape[0] == 6
+
+    subset = convert_render_to_clip(**base, family_required=(0, 1, 2, 6))
+    assert subset.provenance["rig"]["cameraIds"] == [0, 1, 2, 6]
+    assert subset.provenance["rig"]["renderedNotConsumed"] == [3, 5]
+    assert decode_observation(subset.observation, required_cameras=(0, 1, 2, 6))[
+        "frames"
+    ].shape[0] == 4
+
+
+def test_a_render_missing_a_required_camera_is_still_refused():
+    """Subset selection must not become substitution: a four-camera render
+    cannot serve a model that requires six."""
+    from simforge_alpamayo.obs import ObservationError
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    with pytest.raises(ObservationError) as exc:
+        convert_render_to_clip(
+            streams=_render_streams(),
+            rig_profile="alpamayo-4cam",
+            family_required=(0, 1, 2, 3, 5, 6),
+            width=512,
+            height=384,
+            render_fps=30.0,
+            t0_index=200,
+            ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+            ego_heading_rad=0.0,
+            total_frames=600,
+        )
+    assert exc.value.code == "camera_set_invalid"
+    assert exc.value.detail["missing"] == [3, 5]
