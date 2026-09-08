@@ -330,7 +330,8 @@ pub struct ActorState {
     pub best_effort_world_path: bool,
     pub remaining_turns: Vec<TurnRelation>,
     pub speed_mps: f64,
-    #[serde(default)]
+    /// Required: a checkpoint from an engine without it is rejected by the
+    /// `engine_version` guard before this struct is decoded.
     pub longitudinal_velocity_mps: f64,
     pub accel_mps2: f64,
     pub lateral_offset_m: f64,
