@@ -31,7 +31,8 @@ export type ModelSelection = {
 const TARGET_META: Record<ExecutionTarget, { label: string; description: string; icon: typeof Cloud }> = {
   local: {
     label: "This machine",
-    description: "Runs on your GPU with the weights you installed. No cloud cost.",
+    description:
+      "Runs on your GPU with the weights you installed. No cloud cost. Queued as a job, not answered interactively — a single inference takes seconds, so a batch takes minutes.",
     icon: HardDrive,
   },
   runpod: {
