@@ -945,3 +945,66 @@ vehicle that drove where the human drove.
 `speeding` and `wrong-way` remain unevaluable for want of an authoritative source. Those two block
 full G5 on their own and no geometry work can change them. No threshold moved, no value was
 relabelled, and every superseded measurement remains on the record above.
+
+
+---
+
+## 2026-09-08 — Lane binding source built; its control FAILS to qualify it. `laneCentrelines` stays false.
+
+The scoring owner made `lane-departure` unavailable rather than reporting 5.454 m, and asked for
+per-lane rails as the thing that would make it *available* again. Built
+(`python/clipgt_lanes.py` → `simforge.lane-context/v1`, `lanes.ts` → `bindLane`), controlled on
+the recorded human drive, and **it does not earn the authority flag**.
+
+### The binding is containment-first, on purpose
+
+A vehicle is in the lane whose own annotated rails contain it. Nearest-centreline always returns
+a lane, including one the vehicle is nowhere near, which is exactly how the superseded number
+arose. Three outcomes, not two: `contained`, `ambiguous` (in the ~0.20 m inter-rail strip or
+straddling), `outside`. **No offset is ever reported for an unbound sample.** Binding is per-pose,
+so a lane change is a change of binding rather than a permanent departure; the flicker that
+implies is surfaced as `ambiguous` for the consumer to handle explicitly, not absorbed by a band.
+
+### Control on the recorded human drive, and what it exposed
+
+| | value |
+|---|---|
+| samples | 202 |
+| contained | 200 |
+| ambiguous | 2 |
+| outside | 0 |
+| worst offset | 1.732 m = **1.004 half-widths** |
+
+Containment looks healthy, and 1.73 m is far better than 5.454 m. It is still wrong, and the
+reason is not driving behaviour:
+
+- Over x ∈ [138, 177] the annotated lanes sit at centreline **y = −2.06** and **y = −5.68**
+  (3.6 m apart, one lane width). The ego runs **y = −4.0 … −4.5** for that entire stretch, i.e.
+  almost exactly midway between two lane centrelines.
+- That is not confined to one segment. The ego sits near the line between the same lane pair
+  before x = 138 as well (lane-15 at −5.68, lane-17 at −2.06, ego −3.97).
+- The rails are straight there (sagitta 0.000–0.015 m over ~38 m spans), so this is not a
+  chord-cutting artifact from coarse 3-point rails.
+
+A recorded human does not ride a lane line at 31 m/s for twenty seconds. The parsimonious reading
+is a residual **~1.8 m lateral discrepancy between the ego pose frame and the ClipGT lane
+annotations** — the same order and the same character as the 1.101 m nearest-lane mis-binding that
+started all of this, and quite possibly the same underlying cause.
+
+### Therefore
+
+`metricAuthority.laneCentrelines` is **not** set, `lane-departure` stays **unavailable**, and it is
+recorded in the G5 receipt as unavailable with that discrepancy named as the missing artifact. The
+binding source ships because it is the right instrument and it is what will qualify the metric once
+the discrepancy is resolved — but shipping the instrument is not the same as certifying the input,
+and a 1.7 m "departure" by a car driving where the human drove would have been the third repetition
+of one mistake.
+
+Resolving it needs the ego-to-annotation alignment established independently — not another metric
+built on top of the same unverified correspondence.
+
+### G5 now
+
+`off-road` 0, `lane-departure` unavailable, `speeding` unavailable, `wrong-way` unavailable. The
+infraction count is **0** and item (1) has left the reason list. G5 still fails, on three
+unevaluable categories and nothing else. The scene is still not admitted, and no threshold moved.
