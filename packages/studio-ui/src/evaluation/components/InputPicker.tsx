@@ -21,13 +21,22 @@ import { uploadEvaluationInput } from "../upload";
 import { classifyEvaluationInput, type EvaluationInputClass } from "../input-kinds";
 import type { ModelCatalogEntry } from "../model-catalog";
 import { formatBytes } from "../presentation";
+import type { ExecutionTarget } from "../presentation";
 
 export type PreparedInput = {
+  /** Empty for a local run: nothing is uploaded, so no artifact exists. */
   artifacts: UploadedArtifact[];
   classification: EvaluationInputClass;
   cameraProfile: string | null;
   /** Files, in the order their artifacts were produced. */
   files: { name: string; bytes: number }[];
+  /**
+   * The selected files themselves, which a local run needs: the local executor
+   * reads a path on disk, so the host has to stage these rather than upload
+   * them. Retained for both targets so switching target does not force a
+   * re-pick.
+   */
+  sourceFiles: File[];
 };
 
 const MANIFEST_NAME_PATTERN = /(^|[.\/])((clip|scene|replay-context|manifest)\.json)$/i;
@@ -75,6 +84,12 @@ export function InputPicker({
   onPrepared,
   onCleared,
   disabled = false,
+  /**
+   * A local run never uploads: the executor reads the file from disk. Sending
+   * it to cloud storage first would cost the user a multi-gigabyte transfer for
+   * bytes the run will not read, and would need a workspace it does not use.
+   */
+  execution = "runpod",
 }: {
   gateway: EvaluationGateway;
   model: ModelCatalogEntry;
@@ -82,6 +97,7 @@ export function InputPicker({
   onPrepared: (input: PreparedInput) => void;
   onCleared: () => void;
   disabled?: boolean;
+  execution?: ExecutionTarget;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -128,6 +144,21 @@ export function InputPicker({
     [model, onCleared],
   );
 
+  const useWithoutUpload = useCallback(() => {
+    if (files.length === 0 || !classification) return;
+    const cameraProfile =
+      classification.kind === "driving-clip"
+        ? `cameras:${classification.probe.cameraIds.join(",")}`
+        : null;
+    onPrepared({
+      artifacts: [],
+      classification,
+      cameraProfile,
+      files: files.map((file) => ({ name: file.name, bytes: file.size })),
+      sourceFiles: files,
+    });
+  }, [files, classification, onPrepared]);
+
   const upload = useCallback(async () => {
     if (files.length === 0 || !classification) return;
     const controller = new AbortController();
@@ -153,6 +184,7 @@ export function InputPicker({
         classification,
         cameraProfile,
         files: files.map((file) => ({ name: file.name, bytes: file.size })),
+        sourceFiles: files,
       });
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") {
@@ -327,8 +359,13 @@ export function InputPicker({
           data-testid="evaluation-input-ready"
         >
           <CheckCircle2 aria-hidden="true" className="size-4 text-primary" />
-          {prepared.artifacts.length} object{prepared.artifacts.length === 1 ? "" : "s"} stored and
-          verified{prepared.artifacts.some((artifact) => artifact.deduplicated) ? " (already held by this workspace)" : ""}.
+          {prepared.artifacts.length === 0
+            ? `${prepared.files.length} file${prepared.files.length === 1 ? "" : "s"} ready to run on this machine — nothing is uploaded.`
+            : `${prepared.artifacts.length} object${prepared.artifacts.length === 1 ? "" : "s"} stored and verified${
+                prepared.artifacts.some((artifact) => artifact.deduplicated)
+                  ? " (already held by this workspace)"
+                  : ""
+              }.`}
         </p>
       ) : (
         <Button
@@ -340,11 +377,13 @@ export function InputPicker({
             classification === null ||
             classification.kind === "unsupported"
           }
-          onClick={() => void upload()}
+          onClick={execution === "local" ? useWithoutUpload : () => void upload()}
           data-testid="evaluation-upload-button"
         >
           {uploading ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
-          Upload {files.length > 1 ? `${files.length} objects` : "input"}
+          {execution === "local"
+            ? `Use ${files.length > 1 ? `${files.length} files` : "this input"}`
+            : `Upload ${files.length > 1 ? `${files.length} objects` : "input"}`}
           {totalBytes > 0 ? ` (${formatBytes(totalBytes)})` : ""}
         </Button>
       )}
