@@ -534,7 +534,17 @@ async function main(): Promise<number> {
       replayContext: null,
       error: { code: failure.code, message: failure.message, fields: failure.fields },
     });
-    process.stderr.write(`${JSON.stringify({ error: failure.code, message: failure.message })}\n`);
+    // One refusal shape across this package: the nested object the runner CLIs
+    // and the result manifest already use. The flat `{error: "<code>"}` this
+    // line used to write lost `fields` exactly when a refusal is most
+    // actionable - "clip is missing camera ids [3]" arrived with nothing naming
+    // the offending input - and it forced a consumer to parse two shapes from
+    // one package, which hides whichever one is wrong.
+    process.stderr.write(
+      `${JSON.stringify({
+        error: { code: failure.code, message: failure.message, fields: failure.fields },
+      })}\n`,
+    );
     return controller.signal.aborted ? 130 : 2;
   }
 }
