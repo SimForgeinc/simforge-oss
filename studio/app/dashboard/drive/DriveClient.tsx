@@ -497,6 +497,9 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
         : null;
       setEgoActorLabel(timelineLabel ?? role?.label ?? actorId);
       setCameraNotice(null);
+      // A take is the driver's own view of the vehicle; free driving keeps the
+      // last camera choice. Either can be changed from the top bar afterwards.
+      if (mode === "take") setCameraMode("dash");
       setExpandedTool(null);
       setDriving(true);
     } catch (error) {
