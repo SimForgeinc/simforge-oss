@@ -1,9 +1,13 @@
 export interface AssetDownloadStats {
-  /** Requests whose response bodies are still being read. */
+  /** Network requests whose response bodies are still being read (excludes cache). */
   active: number;
-  /** Bytes transferred during the current map/preset load session. */
+  /** Network response-body bytes read during the current map load session. */
   transferredBytes: number;
-  /** Known total bytes for the session, or null while any active size is unknown. */
+  /** Response-body bytes read from the host's persistent asset cache. */
+  cachedBytes: number;
+  /** Whether the viewer has settled the currently selected asset scope. */
+  discoveryComplete: boolean;
+  /** Final network body bytes, or null while the selected scope is still loading. */
   totalBytes: number | null;
   /** Rolling transfer rate while requests are active. */
   bytesPerSecond: number | null;
@@ -13,8 +17,7 @@ export interface AssetDownloadStats {
 
 type Transfer = {
   generation: number;
-  loaded: number;
-  total: number | null;
+  cached: boolean;
 };
 
 type Sample = { at: number; bytes: number };
@@ -33,8 +36,7 @@ export class AssetDownloadTracker {
   private nextId = 1;
   private transfers = new Map<number, Transfer>();
   private transferredBytes = 0;
-  private totalBytes = 0;
-  private unknownActive = 0;
+  private cachedBytes = 0;
   private lastProgressAt: number | null = null;
   private samples: Sample[] = [];
   decodedAssets = 0;
@@ -50,64 +52,65 @@ export class AssetDownloadTracker {
     this.generation++;
     this.transfers.clear();
     this.transferredBytes = 0;
-    this.totalBytes = 0;
-    this.unknownActive = 0;
+    this.cachedBytes = 0;
     this.lastProgressAt = null;
     this.samples = [];
     this.decodedAssets = 0;
   }
 
-  begin(totalBytes?: number | null): number {
+  /** Capture before fetching so a late response cannot enter a newer session. */
+  get sessionId(): number {
+    return this.generation;
+  }
+
+  begin(cached = false, sessionId = this.generation): number {
+    if (sessionId !== this.generation) return -1;
     const id = this.nextId++;
-    const total = validBytes(totalBytes) ? totalBytes : null;
-    this.transfers.set(id, { generation: this.generation, loaded: 0, total });
-    if (total === null) this.unknownActive++;
-    else this.totalBytes += total;
+    this.transfers.set(id, { generation: this.generation, cached });
     return id;
   }
 
   advance(id: number, chunkBytes: number, now = performance.now()): void {
     const transfer = this.transfers.get(id);
     if (!transfer || transfer.generation !== this.generation || !validBytes(chunkBytes)) return;
-    transfer.loaded += chunkBytes;
-    this.transferredBytes += chunkBytes;
-    this.lastProgressAt = now;
-    this.recordSample(now);
+    if (transfer.cached) {
+      this.cachedBytes += chunkBytes;
+    } else {
+      this.transferredBytes += chunkBytes;
+      this.lastProgressAt = now;
+      this.recordSample(now);
+    }
   }
 
   finish(id: number, now = performance.now()): void {
     const transfer = this.transfers.get(id);
     if (!transfer || transfer.generation !== this.generation) return;
     this.transfers.delete(id);
-    if (transfer.total === null) {
-      this.unknownActive = Math.max(0, this.unknownActive - 1);
-      this.totalBytes += transfer.loaded;
-    } else if (transfer.loaded !== transfer.total) {
-      // The manifest or Content-Length value is an estimate until the body
-      // completes. Reconcile it so completed transfers never leave a false gap.
-      this.totalBytes += transfer.loaded - transfer.total;
-    }
-    this.recordSample(now, true);
+    if (!transfer.cached) this.recordSample(now, true);
   }
 
   fail(id: number, now = performance.now()): void {
     const transfer = this.transfers.get(id);
     if (!transfer || transfer.generation !== this.generation) return;
     this.transfers.delete(id);
-    if (transfer.total === null) this.unknownActive = Math.max(0, this.unknownActive - 1);
-    else this.totalBytes -= Math.max(0, transfer.total - transfer.loaded);
-    this.recordSample(now, true);
+    if (!transfer.cached) this.recordSample(now, true);
   }
 
-  snapshot(now = performance.now()): AssetDownloadStats {
-    const active = this.transfers.size;
+  snapshot(now = performance.now(), scopeSettled = false): AssetDownloadStats {
+    let active = 0;
+    for (const transfer of this.transfers.values()) {
+      if (!transfer.cached) active++;
+    }
+    const discoveryComplete = scopeSettled && this.transfers.size === 0;
     const stalledForMs = active > 0 && this.lastProgressAt !== null
       ? Math.max(0, now - this.lastProgressAt)
       : 0;
     return {
       active,
       transferredBytes: this.transferredBytes,
-      totalBytes: this.unknownActive > 0 ? null : this.totalBytes,
+      cachedBytes: this.cachedBytes,
+      discoveryComplete,
+      totalBytes: discoveryComplete ? this.transferredBytes : null,
       bytesPerSecond: active > 0 ? this.rate(now, stalledForMs) : null,
       stalledForMs,
     };
@@ -145,9 +148,10 @@ export async function readResponseBufferWithProgress(
   response: Response,
   tracker: AssetDownloadTracker,
   expectedBytes?: number | null,
+  sessionId = tracker.sessionId,
 ): Promise<ArrayBuffer> {
   const headerBytes = Number(response.headers.get('content-length'));
-  const id = tracker.begin(validBytes(headerBytes) ? headerBytes : expectedBytes);
+  const id = tracker.begin(response.headers.get('x-simforge-cache') === 'hit', sessionId);
   const reader = response.body?.getReader();
   if (!reader) {
     try {
@@ -161,10 +165,11 @@ export async function readResponseBufferWithProgress(
     }
   }
 
-  // A trustworthy uncompressed Content-Length avoids retaining every chunk
-  // plus a second full-size concatenation buffer for large GLBs.
-  let output = validBytes(headerBytes) && !response.headers.get('content-encoding')
-    ? new Uint8Array(headerBytes) : null;
+  // Uncompressed size metadata can avoid retaining every chunk plus a second
+  // concatenation buffer. Mismatched estimates still fall back to chunk assembly.
+  const allocationBytes = validBytes(headerBytes) ? headerBytes : expectedBytes;
+  let output = validBytes(allocationBytes) && !response.headers.get('content-encoding')
+    ? new Uint8Array(allocationBytes) : null;
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {

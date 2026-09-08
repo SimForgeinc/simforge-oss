@@ -209,6 +209,7 @@ class SharedKTX2Loader extends KTX2Loader {
 
   private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
     const tracker = this.tracker!;
+    const sessionId = tracker.sessionId;
     const decoded = tracker.trackDecode();
     const signal = this.signal;
     if (this.activeDownloads >= 8) await new Promise<void>((resolve) => this.waiting.push(resolve));
@@ -218,7 +219,7 @@ class SharedKTX2Loader extends KTX2Loader {
       const resolvedUrl = this.resolvedUrls.get(new URL(url, document.baseURI).href) ?? url;
       const response = await fetch(resolvedUrl, { signal, credentials: this.withCredentials ? 'include' : 'same-origin' });
       if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
-      const buffer = await readResponseBufferWithProgress(response, tracker);
+      const buffer = await readResponseBufferWithProgress(response, tracker, undefined, sessionId);
       signal?.throwIfAborted();
       const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parseAtLimit(buffer, maxDimension, resolve, reject));
       if (signal?.aborted) {
