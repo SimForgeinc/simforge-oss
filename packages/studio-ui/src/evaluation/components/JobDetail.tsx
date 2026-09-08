@@ -119,7 +119,7 @@ function ItemCard({
               {item.status}
             </Badge>
           )}
-          {item.latencyMs !== undefined ? (
+          {item.latencyMs !== null && item.latencyMs !== undefined ? (
             <span className="text-xs font-normal text-muted-foreground">
               {Math.round(item.latencyMs)} ms
             </span>

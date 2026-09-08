@@ -21,7 +21,14 @@ import { Textarea } from "../../components/ui/textarea";
 import { RefusalNotice } from "./RefusalNotice";
 import { InputPicker, type PreparedInput } from "./InputPicker";
 import { ModelPicker, type ModelSelection } from "./ModelPicker";
-import type { ComputeEstimate, ComputeJob, ComputeJobKind } from "../contracts";
+import type {
+  ComputeEstimate,
+  ComputeJob,
+  ComputeJobInputRole,
+  ComputeJobKind,
+  ComputeJobModelRef,
+  ComputeJobSubmission,
+} from "../contracts";
 import type { EvaluationGateway } from "../gateway";
 import { ComputeApiError } from "../gateway";
 import { MODEL_CATALOG } from "../model-catalog";
@@ -121,7 +128,7 @@ export function EvaluationLauncher({
   // entries all with role `clip`, and a text run is exactly one `video`. The
   // params items are emitted in the same order as `inputs`, which is what pairs
   // an item with its artifact — a per-item role suffix would be rejected.
-  const inputRole = kind === "alpamayo.text" ? "video" : "clip";
+  const inputRole: ComputeJobInputRole = kind === "alpamayo.text" ? "video" : "clip";
 
   const params = useMemo(() => {
     if (!prepared) return null;
@@ -155,14 +162,15 @@ export function EvaluationLauncher({
     seed,
   ]);
 
-  const submissionInput = useMemo(() => {
+  const submissionInput = useMemo<ComputeJobSubmission["input"] | null>(() => {
     if (!prepared || !params) return null;
+    const model: ComputeJobModelRef = {
+      family: selection.family,
+      revision: entry.weightsRevision,
+      quant: selection.quant,
+    };
     return {
-      model: {
-        family: selection.family,
-        revision: entry.weightsRevision,
-        quant: selection.quant,
-      },
+      model,
       inputs: prepared.artifacts.map((artifact) => ({
         role: inputRole,
         artifactId: artifact.artifactId,

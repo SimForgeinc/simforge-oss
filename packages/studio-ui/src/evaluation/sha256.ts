@@ -24,6 +24,17 @@ const ROUND_CONSTANTS = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ]);
 
+/**
+ * In-range read of a fixed-size buffer.
+ *
+ * Every index below is structural — a 64-byte block, a 64-word schedule, an
+ * 8-word state — never data-dependent, so the cast records what the index
+ * signature cannot express rather than hiding an unchecked assumption.
+ */
+function word(buffer: Uint32Array | Uint8Array, index: number): number {
+  return buffer[index] as number;
+}
+
 /** Streaming SHA-256. Feed it `update`, read `digestHex` once. */
 export class Sha256Stream {
   private readonly state = new Uint32Array([
@@ -71,7 +82,7 @@ export class Sha256Stream {
 
     let hex = "";
     for (let index = 0; index < 8; index += 1) {
-      hex += this.state[index].toString(16).padStart(8, "0");
+      hex += word(this.state, index).toString(16).padStart(8, "0");
     }
     return hex;
   }
@@ -81,21 +92,32 @@ export class Sha256Stream {
     for (let index = 0; index < 16; index += 1) {
       const at = offset + index * 4;
       w[index] =
-        ((bytes[at] << 24) | (bytes[at + 1] << 16) | (bytes[at + 2] << 8) | bytes[at + 3]) >>> 0;
+        ((word(bytes, at) << 24) |
+          (word(bytes, at + 1) << 16) |
+          (word(bytes, at + 2) << 8) |
+          word(bytes, at + 3)) >>>
+        0;
     }
     for (let index = 16; index < 64; index += 1) {
-      const p = w[index - 15];
-      const q = w[index - 2];
+      const p = word(w, index - 15);
+      const q = word(w, index - 2);
       const s0 = ((p >>> 7) | (p << 25)) ^ ((p >>> 18) | (p << 14)) ^ (p >>> 3);
       const s1 = ((q >>> 17) | (q << 15)) ^ ((q >>> 19) | (q << 13)) ^ (q >>> 10);
-      w[index] = (w[index - 16] + s0 + w[index - 7] + s1) >>> 0;
+      w[index] = (word(w, index - 16) + s0 + word(w, index - 7) + s1) >>> 0;
     }
 
-    let [a, b, c, d, e, f, g, h] = this.state;
+    let a = word(this.state, 0);
+    let b = word(this.state, 1);
+    let c = word(this.state, 2);
+    let d = word(this.state, 3);
+    let e = word(this.state, 4);
+    let f = word(this.state, 5);
+    let g = word(this.state, 6);
+    let h = word(this.state, 7);
     for (let index = 0; index < 64; index += 1) {
       const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
       const ch = (e & f) ^ (~e & g);
-      const temp1 = (h + S1 + ch + ROUND_CONSTANTS[index] + w[index]) >>> 0;
+      const temp1 = (h + S1 + ch + word(ROUND_CONSTANTS, index) + word(w, index)) >>> 0;
       const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
       const maj = (a & b) ^ (a & c) ^ (b & c);
       const temp2 = (S0 + maj) >>> 0;
@@ -109,14 +131,14 @@ export class Sha256Stream {
       a = (temp1 + temp2) >>> 0;
     }
     const s = this.state;
-    s[0] = (s[0] + a) >>> 0;
-    s[1] = (s[1] + b) >>> 0;
-    s[2] = (s[2] + c) >>> 0;
-    s[3] = (s[3] + d) >>> 0;
-    s[4] = (s[4] + e) >>> 0;
-    s[5] = (s[5] + f) >>> 0;
-    s[6] = (s[6] + g) >>> 0;
-    s[7] = (s[7] + h) >>> 0;
+    s[0] = (word(s, 0) + a) >>> 0;
+    s[1] = (word(s, 1) + b) >>> 0;
+    s[2] = (word(s, 2) + c) >>> 0;
+    s[3] = (word(s, 3) + d) >>> 0;
+    s[4] = (word(s, 4) + e) >>> 0;
+    s[5] = (word(s, 5) + f) >>> 0;
+    s[6] = (word(s, 6) + g) >>> 0;
+    s[7] = (word(s, 7) + h) >>> 0;
   }
 }
 
