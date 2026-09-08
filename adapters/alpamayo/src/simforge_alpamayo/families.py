@@ -61,6 +61,21 @@ class QuantOffer:
     #: number may honestly be stated yet.
     min_vram_gib: float | None
     note: str
+    #: WHO produced the evidence behind this row, as data rather than prose.
+    #:
+    #: A UI must be able to badge a receipt differently from a citation
+    #: without parsing ``note``: a consumer inferring a claim from free text
+    #: is one edit away from being silently wrong. Three classes, because
+    #: collapsing them would throw away information to make a table look
+    #: uniform:
+    #:
+    #: * ``measured-here``: WE ran it on hardware we control and the note
+    #:   carries the figures. A receipt.
+    #: * ``vendor-published``: the upstream vendor states it and we have not
+    #:   reproduced it. Real evidence, someone else's. A citation.
+    #: * ``unmeasured``: nobody has a number, ours or theirs. Never present
+    #:   this as a supported configuration.
+    evidence: str
 
 
 @dataclass(frozen=True)
@@ -225,6 +240,7 @@ ALPAMAYO_1 = Family(
             quant="bf16",
             status="supported",
             min_vram_gib=24.0,
+            evidence="vendor-published",
             note=(
                 "VENDOR-PUBLISHED minimum (NVIDIA lists RTX 3090/4090/A5000 "
                 "as tested). NOT measured by us: no bf16 run of this family "
@@ -242,6 +258,7 @@ ALPAMAYO_1 = Family(
             quant="nf4",
             status="supported",
             min_vram_gib=15.0,
+            evidence="measured-here",
             note=(
                 "bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned release runtime (upstream uv.lock at code commit 939f9a28, torch 2.8.0+cu128, SDPA) on an RTX 5080 (15,833 MiB = 15.46 GiB): 8,155 MiB resident after load (7.96 GiB), 9,167 MiB peak allocated (8.95 GiB) at 4 cameras / 1 sample, act 5.1 s wall. Seed-deterministic across repeat calls on the same device. Figures are reported in raw MiB with explicit conversions because MiB/GiB slips are easy to make and hard to spot. The envelope is camera-count and sample-count dependent; only the 4-camera 1-sample profile is measured. Quantization changes behaviour, not only numerics: never compare an NF4 score against a BF16 baseline without the quant label."
                         ),
@@ -250,6 +267,7 @@ ALPAMAYO_1 = Family(
             quant="fp8",
             status="qualification-pending",
             min_vram_gib=None,
+            evidence="unmeasured",
             note="torchao weight-only FP8 recipe is wired; unmeasured on A1.",
         ),
     ),
@@ -288,6 +306,7 @@ ALPAMAYO_1_5 = Family(
             quant="bf16",
             status="supported",
             min_vram_gib=24.0,
+            evidence="vendor-published",
             note=(
                 "VENDOR-PUBLISHED minimum, with NVIDIA's own scaling notes "
                 "(~40 GiB at 16 samples, ~60 GiB with CFG). NOT measured by "
@@ -303,6 +322,7 @@ ALPAMAYO_1_5 = Family(
             quant="nf4",
             status="supported",
             min_vram_gib=12.0,
+            evidence="measured-here",
             note=(
                 "bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned release runtime (upstream uv.lock at code commit 24179cfa, torch 2.8.0+cu128, SDPA) on an RTX 5080 (15,833 MiB = 15.46 GiB): 8,075 MiB resident after load (7.89 GiB), 8,707 MiB peak (8.50 GiB) at 2 cameras and 9,265 MiB peak (9.05 GiB) at 4 cameras, 1 sample, act 1.5-1.8 s. Seed-deterministic across repeat calls on the same device. A prior runtime reported a 2-camera figure quoted as 8.71 GB in mixed units; this measurement is NOT claimed to agree with it, since matching allocation would not establish runtime behavioural identity in any case. The envelope is camera-count and sample-count dependent; the 2- and 4-camera 1-sample profiles are measured and the 7-camera profile is NOT. Quantization changes behaviour, not only numerics: never compare an NF4 score against a BF16 baseline without the quant label."
                         ),
@@ -311,6 +331,7 @@ ALPAMAYO_1_5 = Family(
             quant="fp8",
             status="qualification-pending",
             min_vram_gib=None,
+            evidence="unmeasured",
             note=(
                 "torchao Float8WeightOnly (e4m3). NOT qualified: the only "
                 "measured evidence on a 16 GiB device is an OUT-OF-MEMORY "
@@ -359,6 +380,7 @@ ALPAMAYO_2_SUPER = Family(
             quant="bf16",
             status="supported",
             min_vram_gib=80.0,
+            evidence="measured-here",
             note=(
                 "MEASURED on our own pinned runtime (torch 2.8.0+cu128, code "
                 "revision beb2977d9a7e, weights revision 00554695e729, SDPA) "
@@ -395,6 +417,7 @@ ALPAMAYO_2_SUPER = Family(
             quant="nf4",
             status="unsupported",
             min_vram_gib=None,
+            evidence="unmeasured",
             note=(
                 "No upstream or measured quantized recipe exists for the 32B "
                 "Cosmos 3 Super backbone. Offering it would be a guess."
