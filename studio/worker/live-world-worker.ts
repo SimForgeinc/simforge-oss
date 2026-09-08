@@ -46,8 +46,6 @@ let closed = false;
 let authoredInput: SimScenarioInput | null = null;
 let authoredGraph: LaneGraph | null = null;
 let egoActorId: string | null = null;
-/** Last commanded ego gear (zero-order held by the engine); signs recorded take speed. */
-let egoMotionDirection: 1 | -1 = 1;
 let driveMode: AuthoredDriveMode = 'take';
 let playing = true;
 let inspecting = false;
@@ -139,7 +137,6 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
       postTransport();
       return;
     }
-    if (authoredInput) egoMotionDirection = message.input.reverse ? -1 : 1;
     const outcome = authoredInput
       ? egoActorId === null
         ? { ok: false, error: 'No authored ego vehicle is selected' }
@@ -341,8 +338,7 @@ function beginTake(): void {
   // Every take starts from the document's own initial state so its samples
   // are the clip from t = 0, not a continuation of whatever played before.
   rebuildAuthoredWorld();
-  egoMotionDirection = 1;
-  take = { samples: [initialTakeSample(world, egoActorId, egoMotionDirection)], decoder: new TruthStreamClient() };
+  take = { samples: [initialTakeSample(world, egoActorId)], decoder: new TruthStreamClient() };
   playing = true;
   inspecting = false;
   beginAuthoredClock();
@@ -356,7 +352,7 @@ function recordTakeFrames(frames: readonly Uint8Array[]): void {
   }
   const decoded = [];
   for (const framed of frames) decoded.push(...take.decoder.push(framed));
-  appendTakeSamples(take.samples, decoded, egoActorId, egoMotionDirection);
+  appendTakeSamples(take.samples, decoded, egoActorId);
 }
 
 function sealTake(): void {

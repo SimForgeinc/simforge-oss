@@ -171,7 +171,7 @@ a controllable, non-static vehicle), and **Start take** asks the worker to
 `begin-take`: rebuild the world at t = 0 and read the ego back from the native
 truth stream, one sample per engine tick on the simulation clock, through the
 clip end inclusive. Samples are `{ timeS, x, y, z, headingRad, speedMps }` in
-the scene frame (`speedMps` signed by the commanded gear); the t = 0 sample
+the scene frame (`speedMps` is the truth velocity projected on the body heading, so reversing is negative from actual motion, never from input); the t = 0 sample
 comes from the rebuilt world's snapshot because frames are published after
 each tick. A dropped truth frame, a missing ego or an incomplete span fails the
 take loudly instead of gapping it. Losing focus pauses the world (the clock is

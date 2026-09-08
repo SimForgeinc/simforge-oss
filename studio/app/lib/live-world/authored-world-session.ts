@@ -190,10 +190,10 @@ export type { ManualDriveRecording, ManualDriveSample } from '@simforge-oss/scen
 /**
  * The take's first sample. The native truth stream publishes a frame after
  * each tick, so the initial state at t = 0 comes from the world snapshot,
- * which carries the same scene xz / heading / speed the frames do (the
- * native frame has no height channel: `position[1]` is 0, matched here).
+ * which carries the same scene xz / heading / signed speed the frames do
+ * (the native frame has no height channel: `position[1]` is 0, matched here).
  */
-export function initialTakeSample(world: WorldSession, egoActorId: string, motionDirection: 1 | -1): ManualDriveSample {
+export function initialTakeSample(world: WorldSession, egoActorId: string): ManualDriveSample {
   const snapshot = world.snapshot();
   const ego = snapshot.actors.find((actor) => actor.id === egoActorId);
   if (!ego || !ego.present) throw new Error(`Take aborted: ego ${egoActorId} is not present at t=${snapshot.tS.toFixed(3)} s`);
@@ -203,24 +203,29 @@ export function initialTakeSample(world: WorldSession, egoActorId: string, motio
     y: 0,
     z: ego.z,
     headingRad: ego.headingRad,
-    speedMps: motionDirection * Math.abs(ego.speedMps),
+    speedMps: ego.speedMps,
   };
+}
+
+/**
+ * Signed longitudinal speed: the frame's scene-frame velocity projected on
+ * the body's forward axis (`+x = cos yaw`, `+z = -sin yaw`). Negative means
+ * the body is actually travelling backwards; no input is consulted.
+ */
+export function longitudinalSpeedMps(velocity: readonly [number, number, number], yawRad: number): number {
+  return velocity[0] * Math.cos(yawRad) - velocity[2] * Math.sin(yawRad);
 }
 
 /**
  * Append the ego's state from every truth frame. Frames are the native
  * session's own per-tick scene-state (already y-up scene frame), so this is
- * a projection, not a conversion. `speedMps` is signed longitudinal speed:
- * the frame carries an unsigned magnitude along the heading, so the sign
- * comes from the ego's commanded motion direction at those ticks (zero-order
- * held, exactly as the engine applied it). A frame without the ego present
- * means the take can no longer be an honest recording; it fails rather than gaps.
+ * a projection, not a conversion. A frame without the ego present means the
+ * take can no longer be an honest recording; it fails rather than gaps.
  */
 export function appendTakeSamples(
   samples: ManualDriveSample[],
   frames: readonly TruthFrame[],
   egoActorId: string,
-  motionDirection: 1 | -1,
 ): void {
   for (const frame of frames) {
     const ego = frame.scene.actors.find((actor) => actor.id === egoActorId);
@@ -235,7 +240,7 @@ export function appendTakeSamples(
       y: ego.position[1],
       z: ego.position[2],
       headingRad: ego.yawRad,
-      speedMps: motionDirection * Math.hypot(ego.velocity[0], ego.velocity[2]),
+      speedMps: longitudinalSpeedMps(ego.velocity, ego.yawRad),
     });
   }
 }

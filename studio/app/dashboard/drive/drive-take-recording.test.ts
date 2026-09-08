@@ -10,6 +10,7 @@ import {
   createAuthoredWorldSession,
   finishTakeRecording,
   initialTakeSample,
+  longitudinalSpeedMps,
   type ManualDriveSample,
 } from "../../lib/live-world/authored-world-session";
 
@@ -45,13 +46,13 @@ function runTake(direction: 1 | -1, control: { throttle: number; brake: number }
   const input = worldInput();
   const world = createAuthoredWorldSession(sessions(), input, graph);
   const truth = world.subscribeTruth();
-  const samples: ManualDriveSample[] = [initialTakeSample(world, "ego", direction)];
+  const samples: ManualDriveSample[] = [initialTakeSample(world, "ego")];
   expect(applyEgoControl(world, "ego", { actorId: "ego", steer: 0, ...control, reverse: direction === -1 }, 0)).toEqual({ ok: true });
   for (;;) {
     const ticks = authoredAdvanceTicks(ticksPerBatch, world.time(), input.clipSeconds, input.dt, false);
     if (ticks === 0) break;
     world.advance(ticks);
-    appendTakeSamples(samples, truth.frames(), "ego", direction);
+    appendTakeSamples(samples, truth.frames(), "ego");
   }
   expect(truth.stats.dropped).toBe(0);
   return { input, world, samples };
@@ -78,9 +79,28 @@ describe("Drive take recording", () => {
     for (const sample of recording.samples) expect(Number.isFinite(sample.headingRad)).toBe(true);
   });
 
-  it("signs speed by the commanded gear and refuses to seal a partial take", () => {
+  it("projects the truth velocity on the body heading so reversing reads negative without consulting input", () => {
+    expect(longitudinalSpeedMps([3, 0, 0], 0)).toBeCloseTo(3, 9);
+    expect(longitudinalSpeedMps([-3, 0, 0], 0)).toBeCloseTo(-3, 9);
+    // Scene z = -engine y: a body at yaw π/2 moving along -z is going forward.
+    expect(longitudinalSpeedMps([0, 0, -2], Math.PI / 2)).toBeCloseTo(2, 9);
+    expect(longitudinalSpeedMps([0, 0, 2], Math.PI / 2)).toBeCloseTo(-2, 9);
+  });
+
+  it("records a reverse take from the actual motion: the ego backs up and its speed is negative", () => {
     const { samples } = runTake(-1, { throttle: 1, brake: 0 });
-    expect(samples.at(-1)!.speedMps).toBeLessThan(0);
+    const first = samples[0]!;
+    const last = samples.at(-1)!;
+    // Heading 0 faces +x; reversing moves the body toward -x.
+    expect(last.x).toBeLessThan(first.x);
+    // Requires the native truth stream to carry the engaged gear in its velocity (ManualMotion change + rebuilt addon).
+    expect(last.speedMps).toBeLessThan(0);
+    const stationary = samples.find((sample) => sample.timeS > 0 && Math.abs(sample.x - first.x) < 1e-9);
+    if (stationary) expect(stationary.speedMps).toBe(0);
+  });
+
+  it("refuses to seal a partial take", () => {
+    const { samples } = runTake(1, { throttle: 1, brake: 0 });
     expect(() => finishTakeRecording(samples.slice(0, -1), CLIP_S, DT)).toThrow(/incomplete/);
     expect(() => finishTakeRecording(samples.slice(1), CLIP_S, DT)).toThrow(/incomplete/);
   });
