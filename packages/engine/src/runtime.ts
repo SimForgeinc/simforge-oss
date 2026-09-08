@@ -9,6 +9,7 @@
 
 import { guard } from '@simforge-oss/native-runtime/shared';
 
+import type { ActorKind } from './schema/input.js';
 import type { TopologyIndex } from './map/topology.js';
 import type {
   NativeLaneGraph,
@@ -253,6 +254,27 @@ export class EngineRuntime {
   actionFields(): string[] {
     return this.module.actionFields();
   }
+
+  /**
+   * The motion envelope the engine integrates for an actor class.
+   *
+   * The presets are native constants (`simforge-core::engine::controllers`), so
+   * a generator that needs an acceleration bound reads the one the simulation
+   * will actually apply instead of re-declaring it and drifting from it.
+   */
+  motionLimits(kind: ActorKind): MotionLimits {
+    return JSON.parse(this.module.motionLimitsJson(kind)) as MotionLimits;
+  }
+}
+
+/** One actor class's motion envelope, in engine units. */
+export interface MotionLimits {
+  readonly accelMax: number;
+  readonly brakeComfort: number;
+  readonly brakeHard: number;
+  readonly lateralRateMax: number;
+  readonly lateralAccelMax: number;
+  readonly lateralJerkMax: number;
 }
 
 export type { NativeSeed };

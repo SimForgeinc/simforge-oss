@@ -15,8 +15,10 @@ import type { SceneState } from './scene-state/schema.js';
 import type { EvaluateFilters, TraceEvaluation } from './trace/evaluate.js';
 import type { SimIssue } from './errors.js';
 import type { SimResult } from './result.js';
+import type { ActorKind } from './schema/input.js';
 import {
   EngineRuntime,
+  type MotionLimits,
   type LaneGraph,
   type NativeMap,
   type RunSimulationOptions,
@@ -37,6 +39,11 @@ export function engine(): EngineRuntime {
 
 export function buildLaneGraph(topology: TopologyIndex | Uint8Array): LaneGraph {
   return engine().laneGraph(topology);
+}
+
+/** The motion envelope the engine integrates for `kind`; native constants, not a JS copy. */
+export function motionLimits(kind: ActorKind): MotionLimits {
+  return engine().motionLimits(kind);
 }
 
 export function runSimulation(input: ScenarioSource, options: RunSimulationOptions): SimResult {

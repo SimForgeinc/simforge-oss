@@ -273,6 +273,77 @@ impl JsRoute {
     pub fn snapshot_json(&self) -> Result<String> {
         self.inner.snapshot_json().js()
     }
+    /// `[s, d]` of the closest point on the route to `(x, y)`.
+    #[napi]
+    pub fn project_point(&self, x: f64, y: f64) -> Float64Array {
+        Float64Array::new(self.inner.project_point(x, y).to_vec())
+    }
+    /// Lane width at arc length `s` (clamped).
+    #[napi]
+    pub fn width_at(&self, s: f64) -> f64 {
+        self.inner.width_at(s)
+    }
+    /// `[{rsl, reversed, sStartM, lengthM, turnRelation}]` JSON; empty for a polyline route.
+    #[napi]
+    pub fn legs_json(&self) -> Result<String> {
+        self.inner.legs_json().js()
+    }
+    /// `{x, y, headingRad, rsl, laneS, storageS, reversed, legIndex}` JSON at `s`.
+    #[napi]
+    pub fn pose_json(&self, s: f64) -> Result<String> {
+        self.inner.pose_json(s).js()
+    }
+    /// Re-base onto the lateral neighbour at `s`; `null` when there is none.
+    /// `side` is the driver's side ("left" | "right").
+    #[napi]
+    pub fn retarget_to_neighbour(
+        &self,
+        s: f64,
+        side: String,
+        legal_only: Option<bool>,
+        max_length_m: Option<f64>,
+    ) -> Result<Option<JsNeighbourRetarget>> {
+        let retarget = self
+            .inner
+            .retarget_to_neighbour(s, &side, legal_only.unwrap_or(false), max_length_m)
+            .js()?;
+        Ok(retarget.map(|(route, meta)| JsNeighbourRetarget {
+            route: JsRoute { inner: route },
+            meta,
+        }))
+    }
+}
+
+/// A route re-based onto its lateral neighbour, plus where the actor lands on it.
+#[napi(js_name = "NeighbourRetarget")]
+pub struct JsNeighbourRetarget {
+    route: JsRoute,
+    meta: String,
+}
+
+#[napi]
+impl JsNeighbourRetarget {
+    /// The rebuilt route on the neighbour lane.
+    #[napi(getter)]
+    pub fn route(&self) -> JsRoute {
+        JsRoute {
+            inner: self.route.inner.clone(),
+        }
+    }
+    /// `{s, separationM, legal, targetRsl}` JSON: `s` on the new route,
+    /// the signed lane separation, whether the change is legal there, and the
+    /// lane it landed on.
+    #[napi(getter)]
+    pub fn detail_json(&self) -> String {
+        self.meta.clone()
+    }
+}
+
+/// The motion envelope the engine integrates for an actor class, as JSON:
+/// `{accelMax, brakeComfort, brakeHard, lateralRateMax, lateralAccelMax, lateralJerkMax}`.
+#[napi]
+pub fn motion_limits_json(kind: String) -> Result<String> {
+    rt::motion_limits_json(&kind).js()
 }
 
 #[napi(js_name = "ScenarioInput")]
