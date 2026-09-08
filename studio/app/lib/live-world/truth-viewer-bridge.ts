@@ -13,11 +13,6 @@ export interface TruthViewerBridge {
   readonly actors: ActorRenderer;
   apply(frame: TruthFrame): void;
   setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
-  /**
-   * Ground elevation at a scene (x, z) from the same indexed sampler the
-   * rendered actors are lifted with; null before road geometry has streamed.
-   */
-  sampleGround(x: number, z: number): number | null;
   dispose(): void;
 }
 
@@ -105,9 +100,6 @@ export function createTruthViewerBridge(
 
   return {
     actors: adapter.actors,
-    sampleGround(x, z) {
-      return viewer.getGroundIndex() === null ? null : sampleGround(x, z);
-    },
     apply(frame) {
       if (disposed) return;
       if (latest && frame.tick <= latest.tick) return;

@@ -575,15 +575,9 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
         toast.error("Take discarded", { description: event.message });
         return;
       }
-      // The planar native world reports y = 0. The recorded height is the
-      // viewer's own ground at each (x, z) — the elevation the operator saw
-      // the vehicle driven on — and stays 0 where no ground has streamed.
-      const recording = bridge
-        ? { ...event.recording, samples: event.recording.samples.map((sample) => ({ ...sample, y: bridge.sampleGround(sample.x, sample.z) ?? sample.y })) }
-        : event.recording;
-      setTakePhase({ kind: "review", recording, sourceRevision: revision });
+      setTakePhase({ kind: "review", recording: event.recording, sourceRevision: revision });
     });
-  }, [authoredSource, bridge, take]);
+  }, [authoredSource, take]);
 
   // The input owner neutralises and disengages whenever the window loses
   // focus or the tab is hidden. A take must not keep recording a coasting
