@@ -187,6 +187,7 @@ def run_episode(
     warmup_policy: Policy | None = None,
     warmup_steps: int = 0,
     envelope: EnvelopeMonitor | None = None,
+    enforce_envelope: bool = True,
     cancellation: _Cancellation | None = None,
 ) -> EpisodeSummary:
     """Run one episode; returns its summary and writes the digested trace.
@@ -330,7 +331,7 @@ def run_episode(
             )
         )
 
-        if envelope is not None and envelope.breach is not None:
+        if envelope is not None and enforce_envelope and envelope.breach is not None:
             # Every render past the breach comes from unreliable geometry:
             # stop here, score up to this point, flag the truncation.
             truncated = True
@@ -525,6 +526,11 @@ def main(argv: list[str] | None = None) -> int:
                 warmup_policy=warmup_policy,
                 warmup_steps=warmup_steps,
                 envelope=monitor,
+                # The stock replay MEASURES deviation; it is the gate that
+                # decides whether an envelope may be written at all. Enforcing
+                # a not-yet-measured (zero-width) envelope against it would
+                # make G5 unrunnable by construction.
+                enforce_envelope=args.policy != "recorded-path",
                 cancellation=cancellation,
             )
     except (EndpointPolicyError, FrameSourceError, ReplayContextError) as error:
