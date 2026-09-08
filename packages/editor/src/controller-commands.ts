@@ -44,6 +44,7 @@ import type { SceneTrace, SimScenarioInput } from '@simforge-oss/engine';
 import { ActorRenderer, type ActorView } from '@simforge-oss/viewer';
 import { GhostActor } from './ghostActor';
 import { interactionDraftId } from './interaction-palette';
+import { isManualDrive, manualDriveInteractionId } from './manual-drive';
 import { resolveVehicleDrop, RESNAP_RADIUS_M, type DropOutcome } from './drop-resolver';
 import type { ScreenRect } from './marquee';
 import {
@@ -939,6 +940,29 @@ export abstract class EditorControllerCommands {
     for (const interaction of this.doc.data.choreography.interactions) {
       if (interaction.actor !== sourceActorId || interaction.verb !== 'route') continue;
       const target = interaction.target;
+      if (isManualDrive(interaction)) {
+        // A recorded take travels rigidly in x/z like a timed route; elevation,
+        // heading, speed and timing are recorded facts and stay verbatim.
+        clones.push({
+          ...interaction,
+          id: manualDriveInteractionId(newActorId),
+          actor: newActorId,
+          trigger: { kind: 'at', t: 0 },
+          until: { kind: 'at', t: clipSeconds },
+          target: {
+            mode: 'manualDrive',
+            recording: {
+              ...interaction.target.recording,
+              samples: interaction.target.recording.samples.map((sample) => ({
+                ...sample,
+                x: Number((sample.x + dx).toFixed(3)),
+                z: Number((sample.z + dz).toFixed(3)),
+              })),
+            },
+          },
+        });
+        continue;
+      }
       if (target.mode !== 'customRoute' && target.mode !== 'customTimedRoute') continue;
       const points = target.points.map((point) => ({
         ...point,

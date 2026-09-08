@@ -10,6 +10,7 @@ export * from "./document";
 export * from "./keyboard";
 export * from "./laneIndex";
 export * from "./map";
+export * from "./manual-drive";
 export * from "./map-identity";
 export * from "./obb";
 export * from "./routeOverlay";

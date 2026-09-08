@@ -1,5 +1,6 @@
 import type { Interaction } from "@simforge-oss/scenario";
 import {
+  isManualDrive,
   setExclusiveCustomTimedRoute,
   type EditorDocument,
 } from "@simforge-oss/editor";
@@ -115,14 +116,20 @@ export function needsSimpleRouteConversion(document: EditorDocument): boolean {
     const motion = document.data.choreography.interactions.filter(
       (interaction) => interaction.actor === actorId && isMotionVerb(interaction.verb),
     );
-    if (motion.length !== 1 || !isClipLockedSimpleRoute(motion[0]!, clipSeconds)) return true;
+    if (motion.length !== 1) return true;
+    if (!isClipLockedSimpleRoute(motion[0]!, clipSeconds) && !isManualDrive(motion[0]!)) return true;
   }
   return false;
 }
 
+/**
+ * Motion that Simple mode would have to bake into drawn waypoints. A manual
+ * drive already owns its actor for the whole clip and is never converted: a
+ * recording turned into one-second waypoints would no longer be the recording.
+ */
 export function hasAdvancedMotion(document: EditorDocument): boolean {
   return document.data.choreography.interactions.some(
-    (interaction) => isMotionVerb(interaction.verb) && !isCustomTimedRoute(interaction),
+    (interaction) => isMotionVerb(interaction.verb) && !isCustomTimedRoute(interaction) && !isManualDrive(interaction),
   );
 }
 
@@ -143,6 +150,7 @@ export function convertDocumentToSimpleTimedRoutes(
     const existingMotion = document.data.choreography.interactions.filter(
       (interaction) => interaction.actor === role.id && isMotionVerb(interaction.verb),
     );
+    if (existingMotion.length === 1 && isManualDrive(existingMotion[0]!)) continue;
     if (existingMotion.length === 1 && isCustomTimedRoute(existingMotion[0]!)) {
       const existingRoute = existingMotion[0];
       if (isClipLockedSimpleRoute(existingRoute, clipSeconds)) continue;
