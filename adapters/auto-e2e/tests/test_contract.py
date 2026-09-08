@@ -23,6 +23,12 @@ from simforge_auto_e2e.engine import (  # noqa: E402
     CheckpointUnavailable,
     config_from_checkpoint,
 )
+from simforge_auto_e2e.checkpoint_probe import (  # noqa: E402
+    KNOWN_PLANNER_MISMATCHES,
+    NO_KWARG_RECONCILIATION,
+    OBSERVED_MAP_CHANNEL_WIDTHS,
+    probe_state_dicts,
+)
 from simforge_auto_e2e.obs import (  # noqa: E402
     integrate_control,
     split_control,
@@ -242,3 +248,69 @@ def test_training_code_revision_is_an_independent_prerequisite():
     assert len(contract.V63_TRAINING_CODE_REVISION) == 40
     assert "NOT the code that trained" in contract.TRAINING_CODE_ACCESS_NOTE
     assert len(contract.CHECKPOINT_DELIVERY_PATHS_TRIED) == 4
+
+
+# -- real-checkpoint compatibility probe -----------------------------------
+
+
+class _T:
+    """Minimal stand-in for a tensor, so the probe is testable without torch."""
+
+    def __init__(self, *shape):
+        self.shape = shape
+
+
+def test_probe_reports_shape_disagreement_under_matching_names():
+    """The failure this exists to catch: every name agrees, so a permissive
+    load looks successful while tensors keep their initial values."""
+    ck = {"a.w": _T(256, 896), "a.b": _T(256)}
+    model = {"a.w": _T(896, 896), "a.b": _T(896)}
+    r = probe_state_dicts(ck, model)
+    assert not r.loadable
+    assert r.verdict == "incompatible-same-names"
+    assert not r.missing and not r.unexpected
+    assert r.shape_mismatches["a.w"] == ((256, 896), (896, 896))
+
+
+def test_probe_resolves_the_measured_module_rename():
+    """MapEncoder -> NavigationEncoder is a rename, not 219 differences."""
+    ck = {"Reactive_E2E.MapEncoder.x.weight": _T(96, 3)}
+    model = {"Reactive_E2E.NavigationEncoder.x.weight": _T(96, 3)}
+    r = probe_state_dicts(ck, model)
+    assert r.renamed == {
+        "Reactive_E2E.MapEncoder.x.weight": "Reactive_E2E.NavigationEncoder.x.weight"
+    }
+    assert not r.missing and not r.unexpected and not r.shape_mismatches
+    assert r.remappable and r.verdict == "compatible-after-rename"
+
+
+def test_probe_separates_absent_weights_from_a_rename():
+    """A module only the published code has cannot be remapped: there is
+    nothing to load, so it must not be reported as rescuable."""
+    ck = {"Reactive_E2E.MapEncoder.x.weight": _T(4)}
+    model = {
+        "Reactive_E2E.NavigationEncoder.x.weight": _T(4),
+        "Reactive_E2E.FusedFeaturePooling.reduce_channels.weight": _T(8),
+    }
+    r = probe_state_dicts(ck, model)
+    assert r.missing == [
+        "Reactive_E2E.FusedFeaturePooling.reduce_channels.weight"
+    ]
+    assert not r.remappable and r.verdict == "incompatible"
+
+
+def test_a_clean_checkpoint_is_declared_loadable():
+    r = probe_state_dicts({"a": _T(2, 2)}, {"a": _T(2, 2)})
+    assert r.loadable and r.verdict == "compatible"
+    assert r.as_dict()["note"] is None
+
+
+def test_measured_mismatches_and_raster_widths_are_recorded():
+    """The three raster widths are the reason no default is safe."""
+    assert len(KNOWN_PLANNER_MISMATCHES) == 8
+    assert OBSERVED_MAP_CHANNEL_WIDTHS == {
+        "v35-checkpoint-weights": 3,
+        "published-head-code": 5,
+        "v63-config": 14,
+    }
+    assert "negative" in NO_KWARG_RECONCILIATION
