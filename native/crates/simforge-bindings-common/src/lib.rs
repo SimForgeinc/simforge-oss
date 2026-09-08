@@ -32,5 +32,6 @@ pub const DEFAULT_MAX_OBJECTS: usize = 64;
 /// supported ABI at a time. Bump on any change to exported names, argument
 /// layouts (action row, actor row, batch buffers) or JSON metadata shapes.
 ///
-/// History: 2 added `TrafficHandoff` and its actor/body row layouts.
-pub const ABI_VERSION: u32 = 2;
+/// History: 2 added `TrafficHandoff` and its actor/body row layouts; 3 widened
+/// world snapshot pose rows to `(N, 6)` with `longitudinalSpeedMps`.
+pub const ABI_VERSION: u32 = 3;

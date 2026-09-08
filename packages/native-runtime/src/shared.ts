@@ -24,7 +24,7 @@ export const BEV_CHANNELS = 3;
  * module's `abiVersion()` and refuse any other value; bumped together with
  * `simforge_bindings_common::ABI_VERSION`.
  */
-export const ABI_VERSION = 2;
+export const ABI_VERSION = 3;
 
 /** Flat action slots. `NaN` leaves a field to the authored choreography. */
 export const ACTION_SLOT = {
