@@ -51,6 +51,7 @@ type Capabilities = {
     family: string;
     available: boolean;
     unavailableReason?: string | null;
+    /** Absent means "not reported", which is refused rather than offered. */
     kinds?: string[];
     quants?: string[];
   }[];
@@ -105,8 +106,16 @@ function localRefusal(
     return family?.unavailableReason ?? `No compute service is deployed for ${version.family}.`;
   }
   const jobKind = KINDS.find((entry) => entry.id === kind)!.jobKind;
-  if (!(family.kinds ?? []).includes(jobKind)) {
-    return `The deployed ${version.family} service does not run ${jobKind}.`;
+  // Unknown is not ready, same rule as the shared picker: silence about a
+  // capability is not permission to offer it.
+  if (family.kinds === undefined) {
+    return `Required execution capability not reported for ${version.family}.`;
+  }
+  if (family.kinds.length === 0) {
+    return `No cloud service in this deployment runs ${version.family}.`;
+  }
+  if (!family.kinds.includes(jobKind)) {
+    return `The deployed ${version.family} service runs ${family.kinds.join(", ")}, not ${jobKind}.`;
   }
   if (!(family.quants ?? []).includes(column.quant)) {
     return `The deployed ${version.family} service does not serve ${column.quant}.`;

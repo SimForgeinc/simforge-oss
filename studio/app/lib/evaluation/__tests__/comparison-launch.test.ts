@@ -399,3 +399,46 @@ test("the comparison record round-trips, and a path-shaped id cannot escape the 
     /unsafe comparison id/,
   );
 });
+
+test("an unreported capability is refused, not offered: unknown is not ready", async () => {
+  // Matches ProductSurface's picker rule. A deployment that has not said which
+  // kinds it runs has not said it can run this one, and treating silence as
+  // permission offers a person a cloud target that does not exist.
+  const silent: ComputeCapabilities = {
+    enabled: true,
+    families: [{ family: "alpamayo-2-super", available: true, quants: ["fp16"] }],
+  };
+  const result = await launchComparison(
+    context,
+    request({
+      kind: "openloop",
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
+      columns: [
+        { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
+      ],
+    }),
+    { capabilities: silent, submitComputeJob: async () => "job-never" },
+  );
+  assert.equal(result.launched.length, 0);
+  assert.equal(result.refused[0]!.code, "kind_unsupported_on_target");
+  assert.match(result.refused[0]!.reason, /not reported/);
+});
+
+test("an empty kinds list says no service runs the family, not that a kind is missing", async () => {
+  const none: ComputeCapabilities = {
+    enabled: true,
+    families: [{ family: "alpamayo-2-super", available: true, kinds: [], quants: ["fp16"] }],
+  };
+  const result = await launchComparison(
+    context,
+    request({
+      kind: "openloop",
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
+      columns: [
+        { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
+      ],
+    }),
+    { capabilities: none, submitComputeJob: async () => "job-never" },
+  );
+  assert.match(result.refused[0]!.reason, /No cloud service in this deployment runs alpamayo-2-super/);
+});

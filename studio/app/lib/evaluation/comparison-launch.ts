@@ -125,6 +125,13 @@ export type ComputeCapabilities = {
     readonly family: string;
     readonly available: boolean;
     readonly unavailableReason?: string | null;
+    /**
+     * Job kinds this deployment's service actually runs for the family.
+     *
+     * ABSENT IS NOT PERMISSIVE: an unreported capability is refused, not
+     * offered. Matches ProductSurface's picker rule so the two gates cannot
+     * disagree about one deployment.
+     */
     readonly kinds?: readonly string[];
     readonly quants?: readonly string[];
     readonly pinnedRevision?: string | null;
@@ -321,12 +328,35 @@ export async function launchComparison(
       continue;
     }
     const jobKind = JOB_KIND[request.kind];
-    if (!(family.kinds ?? []).includes(jobKind)) {
+    // UNKNOWN IS NOT READY. A deployment that has not reported its kinds for
+    // this family has not said it can run anything, and treating silence as
+    // permission is how a person is offered a closed-loop cloud target that
+    // does not exist. Reported-and-excluded and never-reported are refused for
+    // different stated reasons, so a reader can tell which it is.
+    if (family.kinds === undefined) {
       refused.push({
         modelVersionId: column.modelVersionId,
         target: 'cloud',
         code: 'kind_unsupported_on_target',
-        reason: `The deployed ${version.family} service does not run ${jobKind}. A worker that serves open-loop inference does not thereby serve the closed loop, which needs the policy socket and a renderer in the same image.`,
+        reason: `Required execution capability not reported for ${version.family}: this deployment has not said which job kinds its service runs.`,
+      });
+      continue;
+    }
+    if (family.kinds.length === 0) {
+      refused.push({
+        modelVersionId: column.modelVersionId,
+        target: 'cloud',
+        code: 'kind_unsupported_on_target',
+        reason: `No cloud service in this deployment runs ${version.family}.`,
+      });
+      continue;
+    }
+    if (!family.kinds.includes(jobKind)) {
+      refused.push({
+        modelVersionId: column.modelVersionId,
+        target: 'cloud',
+        code: 'kind_unsupported_on_target',
+        reason: `The deployed ${version.family} service runs ${family.kinds.join(', ')}, not ${jobKind}. A worker that serves open-loop inference does not thereby serve the closed loop, which needs the policy socket and a renderer in the same image.`,
       });
       continue;
     }
