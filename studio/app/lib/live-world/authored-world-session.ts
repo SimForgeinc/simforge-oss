@@ -203,7 +203,7 @@ export function initialTakeSample(world: WorldSession, egoActorId: string): Manu
     y: 0,
     z: ego.z,
     headingRad: ego.headingRad,
-    speedMps: ego.speedMps,
+    speedMps: ego.longitudinalSpeedMps,
   };
 }
 
