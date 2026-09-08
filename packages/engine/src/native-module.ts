@@ -58,6 +58,8 @@ export interface NativeRoute {
   snapshotJson(): string;
   /** `[s, d]`: arc length of the closest point on the route, and its signed lateral offset. */
   projectPoint(x: number, y: number): Float64Array;
+  /** `[s, d]` with an explicit coarse scan step; 0.5 m is stop-line-grade. */
+  projectPointWithStep(x: number, y: number, stepM: number): Float64Array;
   /** Lane width at arc length `s` (clamped) - the basis of a lane-change separation. */
   widthAt(s: number): number;
   /** `RouteLegSnapshot[]`-shaped JSON: `[{rsl, reversed, sStartM, lengthM, turnRelation}]`. */

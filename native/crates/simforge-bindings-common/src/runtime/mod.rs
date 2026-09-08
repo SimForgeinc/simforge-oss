@@ -313,6 +313,19 @@ impl RouteHandle {
         let projection = self.route.project_point(Vec2 { x, y });
         [projection.s, projection.d]
     }
+    /// [`project_point`] with an explicit coarse scan step. Stop-line-grade
+    /// matching uses 0.5 m; the default 2 m scan can settle in a different
+    /// basin on a route that doubles back, so the caller has to be able to say
+    /// which resolution its comparison needs.
+    pub fn project_point_with_step(&self, x: f64, y: f64, step_m: f64) -> Result<[f64; 2]> {
+        if !(step_m > 0.0) || !step_m.is_finite() {
+            return Err(BindingError::argument(format!(
+                "step_m must be positive and finite, got {step_m}"
+            )));
+        }
+        let projection = self.route.project_point_with_step(Vec2 { x, y }, step_m);
+        Ok([projection.s, projection.d])
+    }
     /// Lane width at arc length `s` (clamped); the basis of a lane-change
     /// separation, so it must come from the same geometry the route walks.
     pub fn width_at(&self, s: f64) -> f64 {
