@@ -799,3 +799,60 @@ clipgt-0009402a stays not admitted, and full admission remains blocked.
 New ingestion dependency, declared: `shapely` and `pyarrow`, used only by
 `python/clipgt_drivable.py` at ingestion time. The scoring consumer receives plain polygon rings
 and needs no geometry library.
+
+
+---
+
+## 2026-09-08 — Off-road v3: source-authoritative boundaries. Control PASSES. Scene still not admitted.
+
+Owner decision was (1): assemble from `road_boundary` with explicit `road_island` exclusions, no
+empirical buffer. Done, and it is a **different instrument** from the lane-union attempt, so it
+carries its own version rather than pretending to be the same measurement.
+
+| instrument | source | control: recorded human drive, 202 poses |
+|---|---|---|
+| `simforge.offroad/v2` | `clipgt-lane-union` | **13 off-road events**, worst 0.099 m — FAILS, retained |
+| `simforge.offroad/v3` | `clipgt-road-boundary` | **0 off-road events**, 201 assessed, 1 unavailable — PASSES |
+
+Both run through the shipped code path, both reproducible from the same package. The v2 failure is
+not overwritten; `--source lane-union` still produces it.
+
+### What the source actually authorises, and what it does not
+
+`road_boundary` states, per vertex, which side of each edge carries traffic
+(`left_driving_direction` FORWARD/BACKWARD against `right_driving_direction` NOT_DRIVABLE). All 135
+boundaries on this scene are sided, none unsided, none dropped. That is the source saying where the
+road is, so the nearest boundary decides the question and no closure is needed.
+
+**No closure was synthesised, because none is available.** Noding the 135 polylines and
+polygonizing yields **zero** faces: they are chains truncated at the clip extent, with 262 `CUT`
+termini against 8 physical ends. Capping them into rings would assert road where labelling merely
+stops. Instead each terminus keeps its flag, and a query whose nearest feature is a `CUT` terminus
+returns **unavailable** — which is what the single unavailable control sample is. Unavailability
+also wins over off-road at the footprint level: if any corner lands past the labelled extent the
+sample is unknown, because with part of the box unlabelled a kerb strike and the end of annotation
+are indistinguishable.
+
+A polyline whose per-vertex side labels disagree along its length is dropped, not averaged.
+
+### Consequence for the recorded verdicts — no verdict was changed
+
+Re-scoring the **replayed** stock-replay trajectory of clipgt-0009402a with v3: 200 samples, 200
+assessed, **0 off-road events**. The v1 off-road infraction does not survive the authoritative
+instrument, which is the third and last of the three infractions to be explained as a lane-binding
+artifact rather than behaviour.
+
+This does **not** admit the scene, and nothing here was done to make it. G5 fails on lateral
+deviation — p95 0.0973 m against a 0.1 m bound is fine, but max 0.6845 m and the with-settle
+statistic 0.3468 m against 0.35 m is a fail on its own terms, independent of any infraction. Speeding
+and wrong-way remain **unavailable** (no speed limit, no travel-direction authority in the source).
+The G5 verdict, the six scene results and every superseded number stay exactly as recorded.
+
+**No threshold has been moved at any point in this workstream.** The lane-union buffer that would
+have made v2 pass was measured, shown to work, and refused because its value came from the result.
+
+### Dependencies
+
+Ingestion only, in `python/clipgt_drivable.py`: `pyarrow`, and `shapely` for the retained lane-union
+dissolve. The boundary path needs neither at scoring time — the consumer receives oriented polylines
+and island rings and does its own arithmetic.

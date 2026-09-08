@@ -6,7 +6,7 @@ import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js'
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
-import { footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
+import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
 import { ReplayContextSchema, servesProfile, type GateVerdict } from '../schema.js';
 
@@ -344,13 +344,15 @@ describe('image-sequence integrity', () => {
   });
 });
 
-describe('drivable-area containment (off-road v2)', () => {
+describe('drivable-area containment (lane-union geometry, off-road v2)', () => {
   // A 20 x 10 rectangle of road with a 4 x 2 island cut out of its middle.
   const area: DrivableArea = {
-    source: 'clipgt',
+    source: 'clipgt-lane-union',
+    geometry: 'polygons',
     frame: 'test-frame',
     confidence: 'authoritative',
     timeSupportUs: null,
+    boundaries: [],
     polygons: [
       { id: 'road', kind: 'drivable', ring: [[0, 0], [20, 0], [20, 10], [0, 10]] },
       { id: 'island', kind: 'hole', ring: [[8, 4], [12, 4], [12, 6], [8, 6]] },
@@ -407,5 +409,76 @@ describe('drivable-area containment (off-road v2)', () => {
     expect(result.metric).toBe('simforge.offroad/v2');
     expect(result.samples).toBe(3);
     expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
+  });
+});
+
+describe('drivable-area classification (road-boundary geometry, off-road v3)', () => {
+  // A corridor: two edges running +x, the road between them. The left edge (y = 10) is walked
+  // in -x so its drivable side is also the corridor; both terminate at a CUT, which is how the
+  // real data ends — labelling stops, the road does not.
+  const area: DrivableArea = {
+    source: 'clipgt-road-boundary',
+    geometry: 'oriented-boundaries',
+    frame: 'test-frame',
+    confidence: 'authoritative',
+    timeSupportUs: null,
+    boundaries: [
+      { id: 'right-edge', points: [[0, 0], [100, 0]], drivableSide: 'left', cutStart: true, cutEnd: true },
+      { id: 'left-edge', points: [[100, 10], [0, 10]], drivableSide: 'left', cutStart: true, cutEnd: true },
+    ],
+    polygons: [{ id: 'median', kind: 'hole', ring: [[40, 4], [60, 4], [60, 6], [40, 6]] }],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 10] },
+  };
+  const car = { lengthM: 4, widthM: 2 };
+
+  it('puts a point on the stated drivable side of the nearest edge on the road', () => {
+    expect(classifyPoint(area, 20, 2).verdict).toBe('drivable');
+    expect(classifyPoint(area, 20, 8).verdict).toBe('drivable');
+  });
+
+  it('calls the far side of an edge off-road, and says how far out', () => {
+    const beyond = classifyPoint(area, 20, -3);
+    expect(beyond.verdict).toBe('off-road');
+    expect(beyond.distanceM).toBeCloseTo(3, 6);
+  });
+
+  it('reports unavailable past a CUT terminus instead of inventing an excursion', () => {
+    // Beyond x = 100 the nearest feature is the cut end of both edges: labelling stopped there.
+    // This is the whole reason the boundary source can be used without synthesising closure.
+    expect(classifyPoint(area, 130, 5).verdict).toBe('unavailable');
+    // And it does not leak inward: well inside the labelled span the answer is still decided.
+    expect(classifyPoint(area, 50, 1).verdict).toBe('drivable');
+  });
+
+  it('keeps an island exclusion undrivable inside the corridor', () => {
+    expect(classifyPoint(area, 50, 5).verdict).toBe('off-road');
+  });
+
+  it('counts an unavailable sample separately from a clean one and never as an event', () => {
+    const poses = [
+      { tUs: 0, x: 20, y: 2, headingRad: 0 },        // clean
+      { tUs: 100_000, x: 20, y: -3, headingRad: 0 }, // genuinely off the road
+      { tUs: 200_000, x: 130, y: 5, headingRad: 0 }, // past the cut: unknown
+    ];
+    const result = scoreOffRoad(area, poses, car);
+    expect(result.metric).toBe('simforge.offroad/v3');
+    expect(result.source).toBe('clipgt-road-boundary');
+    expect(result.samples).toBe(3);
+    expect(result.assessed).toBe(2);
+    expect(result.unavailable).toBe(1);
+    expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
+  });
+
+  it('distinguishes assessed-and-clean from nothing-assessed', () => {
+    const clean = scoreOffRoad(area, [{ tUs: 0, x: 20, y: 2, headingRad: 0 }], car);
+    expect(clean.worstOutsideM).toBe(0);
+    const none = scoreOffRoad(area, [{ tUs: 0, x: 130, y: 5, headingRad: 0 }], car);
+    expect(none.worstOutsideM).toBeNull();
+    expect(none.assessed).toBe(0);
+  });
+
+  it('refuses geometry that declares a kind it does not carry', () => {
+    const parsed = DrivableAreaSchema.safeParse({ ...area, boundaries: [] });
+    expect(parsed.success).toBe(false);
   });
 });

@@ -122,78 +122,160 @@ def _dissolve(polygons: list[dict]) -> list[dict]:
     return out
 
 
+def _oriented_boundaries(table) -> tuple[list[dict], dict]:
+    """Oriented road edges from `clipgt/road_boundary.parquet`.
+
+    A boundary polyline carries, per vertex, which side of it is drivable:
+    `left_driving_direction` is FORWARD/BACKWARD where traffic runs and `right_driving_direction`
+    is NOT_DRIVABLE (or the mirror image). That is the source stating where the road is, so it is
+    what gets emitted — no closure is synthesised.
+
+    Closure is not available on this data and is not faked. Noding the 135 boundary polylines of
+    scene 0009402a and polygonizing yields **zero** faces: the edges form chains along each side
+    of the road that are truncated at the clip extent (131 of 135 endpoints are flagged `CUT`
+    rather than a physical end). A ring can only be produced by inventing caps across the cut,
+    which would assert road where labelling simply stops. Instead each terminus keeps its `CUT`
+    flag and the consumer reports *unavailable* for any query whose nearest feature is one.
+    """
+    boundaries: list[dict] = []
+    census = {"rows": 0, "unsided": 0, "degenerate": 0, "cutTermini": 0, "physicalTermini": 0}
+    for index, row in enumerate(table["road_boundary"]):
+        census["rows"] += 1
+        points = [[float(p["x"]), float(p["y"])] for p in (row.get("location") or [])]
+        if len(points) < 2:
+            census["degenerate"] += 1
+            continue
+        left = [str(v) for v in (row.get("left_driving_direction") or [])]
+        right = [str(v) for v in (row.get("right_driving_direction") or [])]
+        drivable_side = _drivable_side(left, right)
+        if drivable_side is None:
+            # Neither side is stated to carry traffic, or both are. Emitting it with a guessed
+            # orientation would put the road on whichever side we assumed.
+            census["unsided"] += 1
+            continue
+        cut_start = str(row.get("is_first_point_physical_end")) == "CUT"
+        cut_end = str(row.get("is_last_point_physical_end")) == "CUT"
+        census["cutTermini"] += int(cut_start) + int(cut_end)
+        census["physicalTermini"] += int(not cut_start) + int(not cut_end)
+        boundaries.append({"id": f"boundary-{index}", "points": points,
+                           "drivableSide": drivable_side, "cutStart": cut_start, "cutEnd": cut_end})
+    return boundaries, census
+
+
+def _drivable_side(left: list[str], right: list[str]) -> str | None:
+    """Which side of the polyline is road, or None when the source does not say.
+
+    Per-vertex labels are collapsed to one side per polyline only when they agree; a polyline
+    that changes which side is drivable along its length is dropped rather than averaged.
+    """
+    traffic = {"FORWARD", "BACKWARD"}
+    left_drivable = bool(left) and all(v in traffic for v in left) and all(v == "NOT_DRIVABLE" for v in right)
+    right_drivable = bool(right) and all(v in traffic for v in right) and all(v == "NOT_DRIVABLE" for v in left)
+    if left_drivable and not right_drivable:
+        return "left"
+    if right_drivable and not left_drivable:
+        return "right"
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ClipGT drivable-area extraction")
     parser.add_argument("--package", required=True)
     parser.add_argument("--frame", required=True, help="frame the points are in; must match ego.frame")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--source", choices=("road-boundary", "lane-union"), default="road-boundary",
+                        help="road-boundary: oriented road edges, the authoritative outline. "
+                             "lane-union: dissolved lane rails, retained because its control failure "
+                             "is a recorded result and must stay reproducible.")
     args = parser.parse_args()
 
     import pyarrow.parquet as pq
 
+    required = "clipgt/road_boundary.parquet" if args.source == "road-boundary" else "clipgt/lane.parquet"
     with zipfile.ZipFile(args.package) as archive:
         names = set(archive.namelist())
-        if "clipgt/lane.parquet" not in names:
+        if required not in names:
             json.dump(
                 {"error": {"code": "input_error", "retryable": False,
-                           "message": "package carries no clipgt/lane.parquet; drivable area is unavailable",
-                           "fields": ["clipgt/lane.parquet"]}},
+                           "message": f"package carries no {required}; drivable area is unavailable",
+                           "fields": [required]}},
                 sys.stdout)
             print()
             return 2
-        lanes = pq.read_table(io.BytesIO(archive.read("clipgt/lane.parquet"))).to_pydict()
-        polygons = _rings_from_lanes(lanes)
+        table = pq.read_table(io.BytesIO(archive.read(required))).to_pydict()
+        boundaries: list[dict] = []
+        polygons: list[dict] = []
+        boundary_census: dict = {}
+        if args.source == "road-boundary":
+            boundaries, boundary_census = _oriented_boundaries(table)
+        else:
+            polygons = _rings_from_lanes(table)
         island_census = {"rows": 0, "empty": 0, "unreadable": 0}
+        island_rings: list[dict] = []
         if "clipgt/road_island.parquet" in names:
             islands = pq.read_table(io.BytesIO(archive.read("clipgt/road_island.parquet"))).to_pydict()
             island_rings, island_census = _rings_from_islands(islands, "road_island", "hole", "island")
-            polygons += island_rings
 
-    if not polygons:
-        json.dump({"error": {"code": "input_error", "retryable": False,
-                             "message": "no lane produced a usable drivable ring",
-                             "fields": ["clipgt/lane.parquet"]}}, sys.stdout)
-        print()
-        return 2
+    if args.source == "lane-union":
+        if not polygons:
+            json.dump({"error": {"code": "input_error", "retryable": False,
+                                 "message": "no lane produced a usable drivable ring",
+                                 "fields": ["clipgt/lane.parquet"]}}, sys.stdout)
+            print()
+            return 2
+        # DISSOLVE. Lane rings are per-lane, and adjacent lanes do not share byte-identical rails,
+        # so testing membership in individual rings leaves hairline seams between lanes. Measured on
+        # the recorded human drive of scene 0009402a, 18 of 18 footprint corners reported "off-road"
+        # sat within 0.30 m of TWO lane polygons: they were in the seam, not off the road. Dissolving
+        # does not rescue it — the seams are real ~0.20 m gaps — which is why this source is retained
+        # only as the failed control and `road-boundary` is the default.
+        polygons = _dissolve(polygons + island_rings)
+    else:
+        if not boundaries:
+            json.dump({"error": {"code": "input_error", "retryable": False,
+                                 "message": "no road boundary stated which side is drivable; "
+                                            "off-road is unavailable for this scene",
+                                 "fields": ["clipgt/road_boundary.parquet"]}}, sys.stdout)
+            print()
+            return 2
+        # Islands remain explicit exclusions: enclosed non-road inside the road's own outline.
+        polygons = island_rings
 
-    # DISSOLVE. Lane rings are per-lane, and adjacent lanes do not share byte-identical rails,
-    # so testing membership in individual rings leaves hairline seams between lanes. Measured on
-    # the recorded human drive of scene 0009402a, 18 of 18 footprint corners reported "off-road"
-    # sat within 0.30 m of TWO lane polygons: they were in the seam, not off the road. The road
-    # surface is the UNION of its lanes, so the union is what gets emitted — dissolved once here
-    # rather than approximated with a tolerance at scoring time, which would have been a fudge
-    # dressed as a fix.
-    polygons = _dissolve(polygons)
-
-    xs = [p[0] for poly in polygons for p in poly["ring"]]
-    ys = [p[1] for poly in polygons for p in poly["ring"]]
+    xs = [p[0] for poly in polygons for p in poly["ring"]] + [p[0] for b in boundaries for p in b["points"]]
+    ys = [p[1] for poly in polygons for p in poly["ring"]] + [p[1] for b in boundaries for p in b["points"]]
     block = {
-        "source": "clipgt",
+        "source": "clipgt-road-boundary" if args.source == "road-boundary" else "clipgt-lane-union",
+        "geometry": "oriented-boundaries" if args.source == "road-boundary" else "polygons",
         "frame": args.frame,
         "confidence": "authoritative",
-        # Static for the clip: ClipGT lane geometry carries no time dimension, so a consumer
+        # Static for the clip: ClipGT geometry carries no time dimension, so a consumer
         # never has to pick a nearest frame. If a release adds one, this becomes a real window.
         "timeSupportUs": None,
+        "boundaries": boundaries,
         "polygons": polygons,
         "coverage": {"boundsMinXY": [min(xs), min(ys)], "boundsMaxXY": [max(xs), max(ys)]},
         "provenance": {
-            "lanes": len(lanes["lane"]),
-            "dissolved": True,
+            "boundaries": boundary_census,
+            "dissolved": args.source == "lane-union",
             "drivableRings": sum(1 for p in polygons if p["kind"] == "drivable"),
             "holeRings": sum(1 for p in polygons if p["kind"] == "hole"),
             # An empty island row means the scene has no island; an unreadable one means we
             # failed to parse geometry that exists, which would make undrivable ground look
             # drivable. The two must never be confused.
             "islandRows": island_census,
+            "closureSynthesised": False,
+            "closureNote": "boundary chains are truncated at the clip extent; no cap is invented, "
+                           "and a query whose nearest feature is a CUT terminus is unavailable",
             "speedLimitsEmitted": False,
             "speedLimitNote": "lane.speed_limit is 0 (unset) on most lanes; zero is not a limit and no speed is emitted",
             "travelDirectionEmitted": False,
-            "travelDirectionNote": "lane_direction is a geometry class, not traffic direction; no heading authority is derived",
+            "travelDirectionNote": "boundary side labels state where road is, not a legal heading; "
+                                   "no travel-direction authority is derived",
         },
     }
     with open(args.out, "w", encoding="utf-8") as handle:
         json.dump(block, handle)
-    summary = {k: block[k] for k in ("source", "frame", "confidence", "coverage", "provenance")}
+    summary = {k: block[k] for k in ("source", "geometry", "frame", "confidence", "coverage", "provenance")}
     json.dump({**summary, "out": args.out}, sys.stdout, indent=2)
     print()
     return 0
