@@ -264,13 +264,34 @@ async function main() {
       : args["sums-from-installers"] === true
         ? await collectSumsFiles(installersDir)
         : null;
-  const { assets, verifiedAgainstSums } = await collectInstallers({ dir: installersDir, expectedSums });
+  // Full platform coverage is the default and the silent gap is refused. An
+  // interim publication for fewer platforms has to say so out loud:
+  // --platforms names exactly the set being published, the record carries
+  // platformSet "partial", and the notes disclose which platforms are absent
+  // so nobody reads a missing target as a broken one.
+  const declaredPlatforms = typeof args.platforms === "string"
+    ? args.platforms.split(",").map((entry) => entry.trim()).filter(Boolean)
+    : null;
+  const { assets, verifiedAgainstSums } = await collectInstallers({
+    dir: installersDir,
+    expectedSums,
+    requirePlatforms: declaredPlatforms === null,
+  });
   if (!verifiedAgainstSums && publish !== "none") {
     throw new Error(
       "publishing requires the uploaded bytes to be verified: pass --sums <file>, --expect-release <RELEASE.json> or --sums-from-installers",
     );
   }
   const platforms = [...new Set(assets.map((asset) => asset.platform))].sort();
+  if (declaredPlatforms !== null) {
+    // The declaration is checked against the bytes in both directions, so
+    // --platforms can neither hide a platform that is present nor promise one
+    // that is missing.
+    const declared = [...new Set(declaredPlatforms)].sort();
+    if (declared.join(",") !== platforms.join(",")) {
+      throw new Error(`--platforms names ${declared.join(", ")} but the installer set covers ${platforms.join(", ")}`);
+    }
+  }
 
   // 2. The GPL corresponding source that must accompany the binaries. CI
   //    uploads one archive per packaging leg beside the installers; a local
@@ -335,6 +356,10 @@ async function main() {
       interactivePlatforms: typeof args.interactive === "string" ? args.interactive.split(",").map((entry) => entry.trim()) : [],
       packagingVerified: platforms,
       evidence: typeof args.evidence === "string" ? args.evidence.split(",").map((entry) => entry.trim()) : [],
+      platformSet: declaredPlatforms === null ? "complete" : "partial",
+      platformsAbsent: declaredPlatforms === null
+        ? []
+        : ["windows-x64", "macos-arm64", "macos-x64", "linux-x64"].filter((platform) => !platforms.includes(platform)),
     },
     ci: typeof args["ci-run"] === "string"
       ? { runId: Number(args["ci-run"]), url: `https://github.com/${REPOSITORY}/actions/runs/${args["ci-run"]}` }

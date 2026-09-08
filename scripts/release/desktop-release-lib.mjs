@@ -35,10 +35,15 @@ export const NOTICES_FILE = "THIRD_PARTY_NOTICES.md";
 const INSTALLER_EXTENSIONS = [".exe", ".dmg", ".zip", ".appimage", ".deb"];
 
 /** What a platform's binaries were signed with. Anything else is a lie about trust. */
+// "not-published" is the only honest state for a platform this publication
+// does not ship: there are no bytes, so there is nothing signed or unsigned
+// to describe. It is deliberately not a signing outcome any present artifact
+// can claim - assertSigning cross-checks it against the assets.
+export const NOT_PUBLISHED = "not-published";
 export const SIGNING_STATES = Object.freeze({
-  windows: ["unsigned", "authenticode"],
-  macos: ["ad-hoc", "developer-id", "developer-id-notarized"],
-  linux: ["unsigned"],
+  windows: ["unsigned", "authenticode", NOT_PUBLISHED],
+  macos: ["ad-hoc", "developer-id", "developer-id-notarized", NOT_PUBLISHED],
+  linux: ["unsigned", NOT_PUBLISHED],
 });
 
 /** @param {string} path */
@@ -310,12 +315,26 @@ export function releasePageUrl(tag) {
 
 /**
  * @param {{ windows: string; macos: string; linux: string }} signing
+ * @param {{ platform: string }[]} assets the bytes actually being published
  */
-function assertSigning(signing) {
+function assertSigning(signing, assets = []) {
+  // Asset platforms are "linux-x64", "macos-arm64", "windows-x64"; the first
+  // token is the signing key.
+  const published = new Set(assets.map((asset) => asset.platform.split("-")[0]));
   for (const [os, allowed] of Object.entries(SIGNING_STATES)) {
     const state = signing[/** @type {keyof typeof signing} */ (os)];
     if (!allowed.includes(state)) {
       throw new Error(`signing.${os} must be one of ${allowed.join(", ")}, got ${JSON.stringify(state)}`);
+    }
+    // A platform with bytes in this publication has to state how those bytes
+    // were signed, and a platform without bytes cannot claim a signing
+    // outcome. Either direction would misdescribe what a user downloads.
+    const hasBytes = published.has(os);
+    if (hasBytes && state === NOT_PUBLISHED) {
+      throw new Error(`signing.${os} is ${NOT_PUBLISHED} but this release publishes ${os} installers`);
+    }
+    if (!hasBytes && state !== NOT_PUBLISHED) {
+      throw new Error(`signing.${os} is ${JSON.stringify(state)} but this release publishes no ${os} installer`);
     }
   }
   return signing;
@@ -348,7 +367,7 @@ export function buildReleaseRecord(input) {
   assertLabel(label);
   assertLabelMatchesBuild({ label, embeddedVersion });
   if (!Object.hasOwn(CHANNEL_PRERELEASE, channel)) throw new Error(`unknown channel ${channel}`);
-  assertSigning(input.signing);
+  assertSigning(input.signing, input.assets ?? []);
   const tag = releaseTag(label);
 
   return {
@@ -461,6 +480,10 @@ export function renderReleaseNotes({ release, audit }) {
   const platformRow = (/** @type {string} */ platform) => {
     const os = platform.startsWith("windows") ? "windows" : platform.startsWith("macos") ? "macos" : "linux";
     const signing = release.signing[os];
+    // A platform with no bytes has nothing to say about signing, packaging or
+    // redistribution. "blocked" would read as an obligation this publication
+    // failed to meet, and "packaged only" would imply an artifact exists.
+    if (signing === NOT_PUBLISHED) return `| ${platform} | — | not published | — |`;
     const qualified = release.qualification.interactivePlatforms.includes(platform);
     const cleared = audit.platforms?.[platform]?.redistribution === "cleared";
     return `| ${platform} | ${signing} | ${qualified ? "installed and exercised" : "packaged only"} | ${cleared ? "cleared" : "blocked"} |`;
@@ -485,6 +508,15 @@ export function renderReleaseNotes({ release, audit }) {
     "",
   ];
 
+  if ((release.qualification?.platformsAbsent ?? []).length > 0) {
+    // Said before anything else, because a reader scanning the table needs to
+    // know a blank row is a platform this publication does not include rather
+    // than one whose build failed.
+    lines.push(
+      `- This is an **interim publication for ${release.qualification.packagingVerified.join(", ")} only**. `
+      + `No installer is published for ${release.qualification.platformsAbsent.join(", ")}; those rows carry no download, and that is a stated limit of this release rather than a failed build.`,
+    );
+  }
   if (release.cloud.origin !== "https://simforge.ai") {
     lines.push(
       `- This build connects to **${release.cloud.origin}**, not the production service. Accounts, projects and jobs there are staging data.`,
