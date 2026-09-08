@@ -1,7 +1,7 @@
 {
   "name": "@simforge-oss/evaluation",
   "version": "0.1.0-rc.61",
-  "description": "WS5 EvalHarness — frozen policy evaluation protocol: versioned suite (policy-eval-suite.v1), deterministic env server over the suite entries, and suite-hash-keyed report inputs. The Python runner lives under qualification/policy-eval-runner.",
+  "description": "WS5 EvalHarness \u2014 frozen policy evaluation protocol: versioned suite (policy-eval-suite.v1), deterministic env server over the suite entries, and suite-hash-keyed report inputs. The Python runner lives under qualification/policy-eval-runner.",
   "repository": {
     "type": "git",
     "url": "https://github.com/SimForgeinc/simforge-oss",
@@ -66,7 +66,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/protocol/index.ts src/protocol/params.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/worker-cli.ts src/rig-cli.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist && node -e \"require('node:fs').cpSync('src/replay-context/python','dist/replay-context/python',{recursive:true})\"",
+    "build": "tsup src/index.ts src/protocol/index.ts src/protocol/params.ts src/build-suite-cli.ts src/eval-server.ts src/campaign-cli.ts src/worker-cli.ts src/rig-cli.ts src/replay-context/bin.ts src/examiner/extractor/cli.ts --format esm --dts --sourcemap --clean --out-dir dist && node -e \"require('node:fs').cpSync('src/replay-context/python','dist/replay-context/python',{recursive:true})\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
