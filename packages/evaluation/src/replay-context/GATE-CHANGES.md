@@ -617,3 +617,59 @@ against reading that as a clean result:
 
 **G5 FAILS. clipgt-0009402a is NOT ADMITTED.** Six real scenes; one clears G1–G4; none is
 qualified. Admitting this scene needs an authoritative map, not a judgement call.
+
+
+---
+
+## 2026-09-08 — Map provenance: what AlpaSim's own contract does and does not authorise
+
+Investigated because G5 on clipgt-0009402a failed on three infractions, two of which looked
+like artifacts of an unverified lane graph. The question is not whether they *feel* like
+artifacts — it is what the scene's own source authorises us to measure.
+
+### What the artifact contains
+
+A NuRec package ships `map.xodr` (276,237 B here) **and** the ClipGT annotation set the map was
+derived from: `lane`, `lane_line`, `road_boundary`, `road_island`, `intersection_area`,
+`crosswalk`, `wait_line`, `gore_area`, `buffer_zone`, `traffic_light`, `traffic_sign`,
+`obstacle`, `egomotion_estimate`, `calibration_estimate`.
+
+### What AlpaSim actually scores
+
+`NVlabs/alpasim` `src/eval/scorers/__init__.py` registers exactly: CollisionScorer,
+OffRoadScorer, MinDistanceToObstacleScorer, OpenLoopCollisionScorer, GroundTruthScorer,
+MinADEScorer, PlanDeviationScorer, ImageScorer, SafetyScorer. Off-road works from lane geometry
+via `trajdata.vec_map`.
+
+**There is no speed-limit scorer and no wrong-way scorer.** The two infractions that failed our
+G5 beyond off-road are not part of the metric contract these artifacts were published under,
+and the package carries no verified posted speed limits for the first of them.
+
+### How that is encoded — classification, not relaxation
+
+Per the standing instruction that a missing authoritative source makes a metric *unavailable*
+rather than passing, `StockReplayMeasurement.unavailableCategories` names each category that
+could not be evaluated together with the exact artifact that is missing, and **G5 fails when
+any category is unavailable**. Unavailable is not zero: a category nobody could measure must
+block the gate, not silently count as clean.
+
+clipgt-0009402a's recorded G5 is therefore:
+
+- deviation after the defined 1 s settle: max 0.3468 / p50 0.0476 / p95 0.0973 — passes, but the
+  max clears by 4 mm off the first post-window step, and the bound was measured at 8 m/s against
+  this drive's 31.4 m/s;
+- off-road: **1** (a category with an authoritative source, and it failed);
+- speeding: **unavailable** — no authoritative posted speed limits; only an unverified
+  `map.xodr`, and AlpaSim scores no such metric;
+- wrong-way: **unavailable** — no authoritative lane directionality; nearest-lane binding is
+  1.101 m off, and AlpaSim scores no such metric.
+
+**G5 FAILS. The scene is NOT ADMITTED.** It would still fail on off-road alone, so nothing here
+turns on the reclassification — which is exactly why it is safe to make. No map was fabricated,
+no `map.xodr` was treated as ground truth, and no infraction was discounted on speculation.
+
+### Standing state
+
+Six real scenes. One (clipgt-0009402a, profile [0,2,6] — a model-specific three-camera profile
+for Alpamayo 1.5's variable rig, **not** a four-camera claim) clears G1–G4. None is admitted.
+The failed front-wide camera at 16.11 dB and every prior result stay on the record.

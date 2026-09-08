@@ -293,6 +293,18 @@ export interface StockReplayMeasurement {
   readonly p95LateralM: number;
   readonly infractions: number;
   readonly stepsCompared: number;
+  /**
+   * Infraction categories that could NOT be evaluated because the scene lacks an authoritative
+   * source for them, with the missing artifact named. Unavailable is not zero: a category
+   * nobody could measure must block the gate rather than silently count as clean.
+   *
+   * AlpaSim's own scorer set for these artifacts (CollisionScorer, OffRoadScorer,
+   * MinDistanceToObstacle, OpenLoopCollision, GroundTruth, MinADE, PlanDeviation, Image,
+   * Safety) contains no speed-limit and no wrong-way scorer, and a NuRec package ships no
+   * verified speed limits — so on such a scene those categories are unavailable by
+   * construction, not passing.
+   */
+  readonly unavailableCategories?: readonly { readonly category: string; readonly missingArtifact: string }[];
   /** Trace the measurement was taken from, for the persisted verdict. */
   readonly traceRef?: string;
   /** Seconds excluded at the start; must equal the threshold's settle window. */
@@ -321,12 +333,16 @@ export function gateG5(
     ...(measurement.unsettled === undefined ? {} : { withoutSettleWindow: measurement.unsettled }),
     ...(measurement.traceRef === undefined ? {} : { traceRef: measurement.traceRef }),
   });
+  const unavailable = measurement.unavailableCategories ?? [];
   return {
     ...base,
+    detail: { ...base.detail, ...(unavailable.length === 0 ? {} : { unavailableCategories: unavailable }) },
     passed:
       base.passed
       && measurement.p95LateralM <= thresholds.stockReplayP95LateralM
       && measurement.infractions === 0
+      // A category nobody could evaluate cannot be counted as clean.
+      && unavailable.length === 0
       && measurement.stepsCompared > 0,
   };
 }
