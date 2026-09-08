@@ -129,6 +129,23 @@ describe("DrivingControls keyboard lifecycle", () => {
     expect(source.sent.at(-1)).toMatchObject({ throttle: 1, reverse: false });
   });
 
+  it("accepts driving keys right after Engage is clicked with the mouse", () => {
+    const source = fakeSource();
+    render(source, "ego");
+    tick();
+    const engage = host.querySelector<HTMLButtonElement>("[data-testid=driving-engage]")!;
+    act(() => {
+      engage.focus();
+      engage.click();
+    });
+    expect(document.activeElement).not.toBe(engage);
+    act(() => {
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW", bubbles: true, cancelable: true }));
+    });
+    tick();
+    expect(source.sent.at(-1)).toMatchObject({ actorId: "ego", throttle: 1 });
+  });
+
   it("ignores driving keys typed into editable fields and buttons", () => {
     const source = fakeSource();
     render(source, "ego");
