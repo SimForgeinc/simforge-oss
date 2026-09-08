@@ -211,6 +211,7 @@ class EndpointPolicy:
         self._last_reasoning: str | None = None
         #: Whether the most recent decision invoked the model (ZOH resend = False).
         self.last_replanned = False
+        self._observed_step = -1
 
     # ----------------------------------------------------------- handshake
 
@@ -284,9 +285,23 @@ class EndpointPolicy:
             "the endpoint policy needs the decision context (frames + ego poses); the runner must call act_context",
         )
 
+    def observe(self, ctx: DecisionContext) -> None:
+        """Ingest this decision's camera tick without acting.
+
+        The runner calls this on EVERY decision, including the warm-up phase
+        driven by a reference policy: the model needs a full window of real
+        frames at the instant it first acts, and frames only exist while the
+        episode is running. Without it the first model decision would see a
+        one-frame window and be refused (which is what it should do, but the
+        warm-up exists precisely so that never happens).
+        """
+        if self._observed_step == ctx.step:
+            return
+        self.assembler.push(self.frame_source.capture(step=ctx.step, tick=ctx.tick, t_s=ctx.t_s))
+        self._observed_step = ctx.step
+
     def act_context(self, ctx: DecisionContext) -> PolicyDecision:
-        captured = self.frame_source.capture(step=ctx.step, tick=ctx.tick, t_s=ctx.t_s)
-        self.assembler.push(captured)
+        self.observe(ctx)
         if self._held is not None and ctx.step % self.replan_every != 0:
             self.last_replanned = False
             return PolicyDecision(self._held, None)
