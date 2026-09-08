@@ -58,7 +58,7 @@ export default async function afterPack(context) {
       );
     }
   }
-  for (const rel of [manifest.nativeAddon, manifest.nativeRenderLibrary, join(manifest.actorAssetsRoot, "closures"), manifest.browserHarness]) {
+  for (const rel of [manifest.nativeAddon, manifest.nativeRenderLibrary, join(manifest.actorAssetsRoot, "closures"), join(manifest.modelAdapterRoot, "pyproject.toml"), manifest.browserHarness]) {
     await access(join(target, rel)).catch(() => {
       throw new Error(`Packaged resource is missing: ${rel}`);
     });

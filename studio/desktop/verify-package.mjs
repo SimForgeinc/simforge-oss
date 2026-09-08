@@ -199,6 +199,15 @@ for (const rel of archives) {
   }
   const closures = await readdir(join(stage, manifest.actorAssetsRoot, "closures")).catch(() => []);
   if (closures.length === 0) problems.push(`${rel}: ${manifest.actorAssetsRoot} carries no actor closure`);
+  // The model store installs this directory into each family's venv, so an
+  // installer that ships the manifest entry without the project file would
+  // fail only when a user first prepared a runtime.
+  for (const required of ["pyproject.toml", join("src", "simforge_alpamayo", "__init__.py")]) {
+    const file = join(manifest.modelAdapterRoot, required);
+    if (!(await stat(join(stage, file)).then((info) => info.isFile(), () => false))) {
+      problems.push(`${rel}: ${file} is missing from the package`);
+    }
+  }
   for (const name of /** @type {const} */ (["ffmpeg", "ffprobe"])) {
     const toolPath = join(stage, manifest.tools[name]);
     const mismatch = await toolMismatch(toolPath, reference[name]);

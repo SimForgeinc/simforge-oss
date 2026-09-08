@@ -93,6 +93,7 @@ export function targetFor(platform = process.platform, arch = process.arch) {
  * @property {{ ffmpeg: string; ffprobe: string; version: string; license: string; digests?: { ffmpeg: string; ffprobe: string }; sources?: { id: string; commit: string }[]; correspondingSource?: { file: string; sha256: string; sizeBytes: number } }} tools Bundled encoder binaries, the digests of the staged bytes, and the sources they were built from.
  * @property {Record<string, Record<string, string>>} nativeBindings Per disk-loaded dependency, the stage-relative directory of each per-target binding package it resolves.
  * @property {string} actorAssetsRoot Stage-relative root of the pinned actor-appearance closure.
+ * @property {string} modelAdapterRoot Stage-relative root of the Python inference adapter the model store installs into each family's venv.
  * @property {string} browserHarness Stage-relative path of the browser render harness.
  * @property {string} server Stage-relative path of the standalone Next server.
  * @property {string} hostEntry Stage-relative path of the local host launcher.
@@ -101,7 +102,8 @@ export function targetFor(platform = process.platform, arch = process.arch) {
 
 const STRING_FIELDS = /** @type {const} */ ([
   "platform", "arch", "target", "electron", "studioVersion", "nativeAddon", "nativeRuntimeRoot", "nativeRunner",
-  "nativeRenderService", "nativeRenderLibrary", "actorAssetsRoot", "browserHarness", "server", "hostEntry", "workerEntry",
+  "nativeRenderService", "nativeRenderLibrary", "actorAssetsRoot", "modelAdapterRoot", "browserHarness", "server",
+  "hostEntry", "workerEntry",
 ]);
 
 /** @param {unknown} value */

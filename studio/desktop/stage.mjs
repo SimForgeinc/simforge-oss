@@ -240,6 +240,43 @@ async function stageTools() {
   };
 }
 
+/**
+ * The Python inference adapter the model store's runtime provisioning
+ * installs into each family's isolated venv.
+ *
+ * This is our own executable code, not an upstream download, so it has to
+ * travel with the application: a packaged app cannot reference a development
+ * checkout, and `prepare` installing "nothing" would silently produce a venv
+ * with no adapter in it. Only the tracked source ships — 28 files of pure
+ * Python. No model weights, no vendored upstream checkout and no virtualenv:
+ * those are fetched into the user's asset root on request and are never
+ * installer payload or release assets.
+ */
+async function stageModelAdapter() {
+  const source = join(repoRoot, "adapters", "alpamayo");
+  const out = join(stageStudio, "adapters", "alpamayo");
+  await mkdir(out, { recursive: true });
+  const tracked = (await promisify(execFile)("git", ["ls-files", "adapters/alpamayo"], { cwd: repoRoot, encoding: "utf8" }))
+    .stdout.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (tracked.length === 0) fail(`${source} has no tracked files; the model adapter cannot be staged`);
+  for (const relative of tracked) {
+    const from = join(repoRoot, relative);
+    const to = join(out, relative.slice("adapters/alpamayo/".length));
+    await mkdir(dirname(to), { recursive: true });
+    await cp(from, to);
+  }
+  // The provisioning step installs this directory with `uv pip install -e`,
+  // so its project file has to be the one that arrives in the package.
+  for (const required of ["pyproject.toml", "manifest.json"]) {
+    if (!(await stat(join(out, required)).then((info) => info.isFile(), () => false))) {
+      fail(`staged model adapter is missing ${required}`);
+    }
+  }
+  return { root: join("studio", "adapters", "alpamayo"), files: tracked.length };
+}
+
 /** The pinned actor-appearance closure native renders resolve offline. */
 async function stageActorAssets() {
   const out = join(stageStudio, "actor-assets");
@@ -593,6 +630,7 @@ for (const [label, rel] of [
 const nativeRuntime = await stageNativeRuntime();
 const tools = await stageTools();
 const actorAssetsRoot = await stageActorAssets();
+const modelAdapter = await stageModelAdapter();
 
 // 5. Seal and describe: no link leaves the stage, and every native binding,
 //    executable and library in it was built for this target.
@@ -639,6 +677,10 @@ const manifest = {
   },
   nativeBindings,
   actorAssetsRoot: posix(actorAssetsRoot),
+  // Our own Python inference adapter, shipped as source with the app so the
+  // model store's runtime provisioning has something real to install. A
+  // packaged app resolves it from here instead of a development checkout.
+  modelAdapterRoot: posix(modelAdapter.root),
   browserHarness: "packages/render/dist/harness.html",
   server: "studio/server.js",
   hostEntry: "studio/host/host.mjs",
