@@ -179,6 +179,27 @@ export function applyEgoControl(
   });
 }
 
+/**
+ * Take manual ownership of the ego before its next tick: a zero-order-held
+ * neutral control (no throttle, no brake, no steer). The engine then drives
+ * the body from its current physical state under human input only — it
+ * coasts rather than following its authored or recorded route until the
+ * first key. Must run on designation and after every rebuild of an owned
+ * world, before the first advance.
+ */
+export function holdEgoNeutral(world: WorldSession, actorId: string, sequence: number) {
+  return world.applyCommand('drive-worker', sequence, {
+    kind: 'act',
+    actorId,
+    action: { motionDirection: 1, control: { steer: 0, throttle: 0, brake: 0 } },
+  });
+}
+
+/** Release manual ownership: clear the held override so the engine resumes the actor's own behaviour. */
+export function releaseEgo(world: WorldSession, actorId: string, sequence: number) {
+  return world.applyCommand('drive-worker', sequence, { kind: 'act', actorId, action: null });
+}
+
 /* ------------------------------------------------------------- takes */
 
 /**

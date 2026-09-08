@@ -30,7 +30,9 @@ import {
   authoredWorldUnbounded,
   createAuthoredWorldSession,
   finishTakeRecording,
+  holdEgoNeutral,
   initialTakeSample,
+  releaseEgo,
   type AuthoredDriveMode,
   type ManualDriveSample,
 } from '../app/lib/live-world/authored-world-session';
@@ -88,8 +90,15 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
     try {
       if (!authoredInput) throw new Error('ego designation is only available for authored worlds');
       if (message.actorId !== null) assertControllableActor(authoredInput, message.actorId);
+      // Ownership is explicit in the engine, not implied by the first key:
+      // the released actor gets its own behaviour back, the designated one
+      // is held neutral so it coasts instead of following its route.
+      if (egoActorId !== null && egoActorId !== message.actorId) {
+        assertOutcome(releaseEgo(world, egoActorId, commandSequence++));
+      }
       egoActorId = message.actorId;
       driveMode = message.mode ?? 'take';
+      if (egoActorId !== null) assertOutcome(holdEgoNeutral(world, egoActorId, commandSequence++));
       playing = false;
       inspecting = false;
       // Releasing or re-designating the ego ends any take without a recording.
@@ -274,6 +283,10 @@ function rebuildAuthoredWorld(): void {
   commandSequence = 0;
   completed = false;
   take = null;
+  // A rebuilt world knows nothing of the previous one's overrides; the owned
+  // ego must be held neutral again before its first tick, or it would start
+  // on autopilot until the next control arrives.
+  if (egoActorId !== null) assertOutcome(holdEgoNeutral(world, egoActorId, commandSequence++));
   resetAuthoredClock();
 }
 
@@ -520,6 +533,10 @@ function actorKind(blueprint: string): ActorKind {
   if (normalized.startsWith('static.') || normalized.includes('prop')) return 'static_object';
   if (normalized.startsWith('vehicle.')) return 'car';
   throw new Error(`unsupported actor blueprint: ${blueprint}`);
+}
+
+function assertOutcome(outcome: { ok: boolean; error?: string }): void {
+  if (!outcome.ok) throw new Error(outcome.error ?? 'ego ownership command failed');
 }
 
 function post(message: LiveWorldWorkerResponse): void {
