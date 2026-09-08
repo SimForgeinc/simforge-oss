@@ -490,10 +490,10 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
       <CardContent className="space-y-3 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="Driving input mode">
-            <Button type="button" size="sm" variant={mode === "keyboard" ? "secondary" : "ghost"} onClick={() => selectMode("keyboard")}>
+            <Button type="button" size="sm" variant={mode === "keyboard" ? "secondary" : "ghost"} onClick={(event) => { event.currentTarget.blur(); selectMode("keyboard"); }}>
               <Keyboard aria-hidden="true" /> Keyboard
             </Button>
-            <Button type="button" size="sm" variant={mode === "wheel" ? "secondary" : "ghost"} onClick={() => selectMode("wheel")}>
+            <Button type="button" size="sm" variant={mode === "wheel" ? "secondary" : "ghost"} onClick={(event) => { event.currentTarget.blur(); selectMode("wheel"); }}>
               <Gamepad2 aria-hidden="true" /> Wheel
             </Button>
           </div>
@@ -507,7 +507,9 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
             size="sm"
             variant={engaged ? "outline" : "default"}
             disabled={engaged || engageRefusal !== null}
-            onClick={() => {
+            onClick={(event) => {
+              // Leave focus on the document so the next driving key is not shielded as button input.
+              event.currentTarget.blur();
               const refusal = engage();
               if (refusal) setPauseReason(refusal);
             }}
