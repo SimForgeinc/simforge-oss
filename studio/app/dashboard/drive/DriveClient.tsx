@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Camera,
   CircleDot,
@@ -56,6 +56,11 @@ import {
   type V1TimelineBrowserPlayback,
 } from "@simforge-oss/studio-ui/scenario/editor/timeline/V1TimelineRail";
 import { ScenarioEditorReadout, ScenarioEditorShell } from "@simforge-oss/studio-ui/scenario/editor/shell";
+import {
+  MANUAL_DRIVE_TAKE_QUERY,
+  useManualDriveTakeSession,
+  type ManualDriveTakeSession,
+} from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { useDriveAmbientTraffic } from "@/app/lib/scenario/ambient/useDriveAmbientTraffic";
 import { createMultiplexedCameraFeeds, type CameraFeeds } from "@/app/lib/live-world/camera-feeds";
 import {
@@ -88,31 +93,25 @@ type DriveView = "world" | "cameras";
 /** Chase and dash follow the ego; free hands the orbit camera back to the operator. */
 type CameraMode = "chase" | "dash" | "free";
 
-/**
- * A "Manual drive" take opened from the scenario editor. The editor owns the
- * document transaction; Drive owns the wheel, the world and the recording.
- * `revision` is an opaque guard echoed back untouched.
- */
-export type ManualDriveTakeSession = {
-  takeId: string;
-  datasetId: string;
-  documentId: string;
-  mapVersionId: string;
-  interactionId: string;
-  actorRoleId: string;
-  clipSeconds: number;
-  revision: string;
-  /** The exact in-memory editor document at open; the server copy may differ. */
-  content: ScenarioTemplateV2;
-  returnHref: string;
-  onSave(recording: ManualDriveRecording, revision: string): Promise<void>;
-  onCancel(): void;
-};
-
 type ControlTarget = { source: WorldSource | null; actorId: string | null };
 const NO_CONTROL_TARGET: ControlTarget = { source: null, actorId: null };
 const MAP_QUERY = "map";
 
+/**
+ * Page entry: a `?manualDriveTake=` id resolves to the editor's take session
+ * (null when absent or unknown — then this is an ordinary drive page).
+ */
+export function DriveEntry({ maps }: { maps: LocalMapDescriptor[] }) {
+  const searchParams = useSearchParams();
+  const take = useManualDriveTakeSession(searchParams.get(MANUAL_DRIVE_TAKE_QUERY));
+  return <DriveClient maps={maps} take={take} />;
+}
+
+/**
+ * `take`: a "Manual drive" take opened from the scenario editor. The editor
+ * owns the document transaction; Drive owns the wheel, the world and the
+ * recording, and echoes `revision` back untouched.
+ */
 export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[]; take?: ManualDriveTakeSession | null }) {
   const router = useRouter();
   const cloudState = useStudioCloudStatus().status?.state;
@@ -272,7 +271,7 @@ type TakePhase =
 
 function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
   map: ScenarioMapEntry;
-  record: Pick<ScenarioTemplateRecord, "id" | "content"> | null;
+  record: { id: string; content: ScenarioTemplateV2 } | null;
   take: ManualDriveTakeSession | null;
   onLeave: (() => void) | null;
   onControlTarget: (target: ControlTarget) => void;
@@ -929,8 +928,6 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
     </EditorConfigurationBlockProvider>
   );
 }
-
-type ScenarioTemplateRecord = { id: string; content: ScenarioTemplateV2 };
 
 function DriveTimelineDock({ controller, document, state, playback, readOnly }: {
   controller: EditorController | null;
