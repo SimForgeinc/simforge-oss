@@ -26,7 +26,14 @@ import { fileURLToPath } from 'node:url';
 import { fixtureFacts } from './campaign.js';
 import { FINAL_EPISODE_STATUSES, runEpisodeAsync, type EpisodeRunnerOptions } from './episode-runner.js';
 import { describeArtifact, type EvalArtifact, type ResultManifest, type ResultStatus } from './protocol/manifest.js';
-import { parseTraceJsonl, scoreEpisode, type EpisodeScore, type ScoringConfig } from './scoring.js';
+import { acceptDrivableArea, type DrivableArea } from './drivable-area.js';
+import {
+  parseTraceJsonl,
+  scoreEpisode,
+  type EpisodeScore,
+  type InfractionType,
+  type ScoringConfig,
+} from './scoring.js';
 
 export interface EpisodeRunOptions {
   readonly runId: string;
@@ -51,6 +58,59 @@ export interface EpisodeRunOutcome {
   readonly summary: Record<string, unknown>;
   readonly episodeDigest: string | null;
   readonly error: { code: string; message: string } | null;
+}
+
+/**
+ * The scoring inputs a replay-context bundle supplies, or `null` for a
+ * synthetic scenario.
+ *
+ * A reconstructed scene is scored under v2 because its drivable surface is
+ * authoritative geometry while its lane centrelines are a derived convenience —
+ * the distinction that made v1's off-road rule flag a ground-truth drive.
+ *
+ * Everything here fails toward UNAVAILABLE. A bundle that does not declare
+ * speed-limit or travel-direction authority cannot support a speeding or
+ * wrong-way claim, so those are reported unavailable rather than as zero
+ * infractions: a ClipGT lane table whose `speed_limit` is unset on 152 of 168
+ * lanes says nothing about whether a drive was speeding, and a lane's geometry
+ * class is not its traffic direction.
+ */
+async function replaySceneScoring(bundleDir: string | null): Promise<{
+  readonly drivableArea: DrivableArea | null;
+  readonly originUs: number | null;
+  readonly unavailable: readonly InfractionType[];
+} | null> {
+  if (!bundleDir) return null;
+  let document: Record<string, unknown>;
+  try {
+    document = JSON.parse(await readFile(path.join(bundleDir, 'replay-context.json'), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return null;
+  }
+  const ego = (document['ego'] ?? {}) as Record<string, unknown>;
+  const egoFrame = typeof ego['frame'] === 'string' ? ego['frame'] : '';
+  const accepted = acceptDrivableArea(document['drivableArea'] ?? null, egoFrame);
+  if (!accepted.ok) {
+    // A frame disagreement or an empty block is a defect in the bundle, not a
+    // clean episode: the metric goes unavailable and the reason is on the wire.
+    return {
+      drivableArea: null,
+      originUs: typeof ego['originUs'] === 'number' ? ego['originUs'] : null,
+      unavailable: ['off-road', 'speeding', 'wrong-way'],
+    };
+  }
+  const authority = (document['metricAuthority'] ?? {}) as Record<string, unknown>;
+  const unavailable: InfractionType[] = [];
+  if (authority['speedLimits'] !== true) unavailable.push('speeding');
+  if (authority['travelDirection'] !== true) unavailable.push('wrong-way');
+  return {
+    drivableArea: accepted.area,
+    originUs: typeof ego['originUs'] === 'number' ? ego['originUs'] : null,
+    unavailable,
+  };
 }
 
 export async function executeEpisode(options: EpisodeRunOptions): Promise<EpisodeRunOutcome> {
@@ -97,17 +157,29 @@ export async function deriveEpisodeOutcome(
   let score: EpisodeScore | null = null;
   if (scoreable) {
     const facts = await fixtureFacts(options.runner.specPath, options.runner.session);
+    const scene = await replaySceneScoring(options.runner.replayContextDir ?? null);
+    const speedLimitMps = options.speedLimitMps ?? facts.speedLimitMps;
     score = scoreEpisode(
       parseTraceJsonl(outcome.traceText),
       {
         decisionHz: options.runner.decisionHz,
         actorKinds: facts.actorKinds,
-        speedLimitMps: options.speedLimitMps ?? facts.speedLimitMps,
+        speedLimitMps,
         expectedRouteM:
           options.expectedRouteM ??
           (facts.cruiseSpeedMps !== null && facts.clipSeconds !== null
             ? facts.cruiseSpeedMps * facts.clipSeconds
             : null),
+        // A reconstructed scene scores under v2: its drivable surface is
+        // authoritative geometry, and its lane centrelines are not.
+        metricVersion: scene ? 'v2' : 'v1',
+        drivableArea: scene?.drivableArea ?? null,
+        egoDims: facts.egoDims ?? undefined,
+        originUs: scene?.originUs ?? null,
+        unavailableInfractions: [
+          ...(scene?.unavailable ?? []),
+          ...(speedLimitMps == null ? (['speeding'] as const) : []),
+        ],
       },
       options.scoring,
     );
@@ -125,6 +197,10 @@ export async function deriveEpisodeOutcome(
           mode: options.runner.mode,
           truncation: runnerStatus === 'envelope_exceeded' ? 'envelope_exceeded' : null,
           scoredThroughStep: score.steps,
+          metricVersion: score.metricVersion,
+          // Not zero: what this episode could not be assessed for at all.
+          unavailable: score.unavailable,
+          worstOffRoadM: score.worstOffRoadM,
           drivingScore: score.drivingScore,
           routeCompletion: score.routeCompletion,
           penaltyProduct: score.penaltyProduct,
@@ -190,6 +266,9 @@ export async function deriveEpisodeOutcome(
           drivingScore: score.drivingScore,
           routeCompletion: score.routeCompletion,
           infractions: score.infractions,
+          metricVersion: score.metricVersion,
+          unavailableInfractions: score.unavailable,
+          worstOffRoadM: score.worstOffRoadM,
           steps: score.steps,
           deadlineMisses: score.deadlineMisses,
           crossTrackM: outcome.summary['cross_track_m'] ?? null,

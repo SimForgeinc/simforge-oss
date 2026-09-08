@@ -256,7 +256,12 @@ async function emitManifest(
       runtime: { worker: 'simforge-eval-worker', node: process.version, jobKind: job.kind },
       controller: {},
       compute: null,
-      metricVersion: 'simforge.eval-metrics/v1',
+      // The scorer decides its own version per episode: a reconstructed scene
+      // is scored under v2 (footprint containment), a synthetic one under v1.
+      metricVersion:
+        typeof parts.metrics['metricVersion'] === 'string'
+          ? `simforge.eval-metrics/${parts.metrics['metricVersion']}`
+          : 'simforge.eval-metrics/v1',
       reprocessedFrom: parts.reprocessedFrom ?? null,
     },
     timing: {

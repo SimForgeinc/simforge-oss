@@ -229,6 +229,8 @@ export interface FixtureFacts {
   readonly clipSeconds: number | null;
   readonly signalsPresent: boolean;
   readonly speedLimitMps: number;
+  /** The ego's authored box, for footprint-based scoring; null when unauthored. */
+  readonly egoDims: { readonly lengthM: number; readonly widthM: number } | null;
 }
 
 /**
@@ -306,6 +308,12 @@ export async function fixtureFacts(specPath: string, session: number): Promise<F
   const limitKph = typeof startLimit === 'number' && startLimit > 0 ? startLimit : laneLimits[0];
   const speedLimitMps = (limitKph !== undefined ? limitKph / 3.6 : DEFAULT_SPEED_LIMIT_MPS) * trafficSpeedFactor;
 
+  const dims = (ego?.['dims'] ?? {}) as Record<string, unknown>;
+  const egoDims =
+    typeof dims['l'] === 'number' && typeof dims['w'] === 'number'
+      ? { lengthM: dims['l'], widthM: dims['w'] }
+      : null;
+
   return {
     actorKinds,
     egoId,
@@ -313,6 +321,7 @@ export async function fixtureFacts(specPath: string, session: number): Promise<F
     clipSeconds: typeof unwrapped['clipSeconds'] === 'number' ? unwrapped['clipSeconds'] : null,
     signalsPresent: Array.isArray(unwrapped['signalPrograms']) && unwrapped['signalPrograms'].length > 0,
     speedLimitMps,
+    egoDims,
   };
 }
 

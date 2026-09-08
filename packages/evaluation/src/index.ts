@@ -1,5 +1,6 @@
 export * from './policy.js';
 export * from './examiner/index.js';
+export * from './drivable-area.js';
 export * from './scoring.js';
 export * from './protocol/index.js';
 export * from './episode-runner.js';
