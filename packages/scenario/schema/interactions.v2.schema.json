@@ -580,6 +580,47 @@
                   "properties": {
                     "mode": {
                       "type": "string",
+                      "const": "manualDrive"
+                    },
+                    "recording": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "const": 1
+                        },
+                        "clipSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "samples": {
+                          "minItems": 2,
+                          "maxItems": 6001,
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/__schema22"
+                          }
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "clipSeconds",
+                        "samples"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "recording"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
                       "const": "acquire"
                     },
                     "pose": {
@@ -1652,6 +1693,39 @@
         "timeS",
         "x",
         "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema22": {
+      "type": "object",
+      "properties": {
+        "timeS": {
+          "type": "number",
+          "minimum": 0
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "headingRad": {
+          "type": "number"
+        },
+        "speedMps": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "timeS",
+        "x",
+        "y",
+        "z",
+        "headingRad",
+        "speedMps"
       ],
       "additionalProperties": false
     }

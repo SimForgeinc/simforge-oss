@@ -1056,9 +1056,9 @@ pub fn build_follow_route(graph: &Arc<LaneGraph>, options: &FollowRouteOptions<'
 }
 
 /// Resolve a `RouteSpec` from the input document. Scene-frame polyline points
-/// are flipped into the engine frame here; a `timedPolyline` yields the
-/// geometric path through its keyframes (time ownership lives in
-/// [`super::timed::TimedRoute`]).
+/// are flipped into the engine frame here; a `timedPolyline` or
+/// `recordedTrack` yields the geometric path through its keyframes (time
+/// ownership lives in [`super::timed::TimedRoute`]).
 pub fn build_route(graph: &Arc<LaneGraph>, spec: &RouteSpec) -> RouteResult {
     match spec {
         RouteSpec::LanePath { lanes } => {
@@ -1091,6 +1091,11 @@ pub fn build_route(graph: &Arc<LaneGraph>, spec: &RouteSpec) -> RouteResult {
             points
                 .iter()
                 .map(|p| local_from_scene(SceneXZ { x: p.x, z: p.z })),
+        )),
+        RouteSpec::RecordedTrack { samples } => Ok(Route::from_polyline(
+            samples
+                .iter()
+                .map(|s| local_from_scene(SceneXZ { x: s.x, z: s.z })),
         )),
     }
 }

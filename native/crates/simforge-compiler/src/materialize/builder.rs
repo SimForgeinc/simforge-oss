@@ -1,5 +1,6 @@
 //! The builder: one `Materializer` per `(template, bundle, site, draw)`.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
@@ -767,12 +768,38 @@ impl<'a> Materializer<'a> {
             initial_route,
         } = &role.kind
         {
-            let speed_mps = initial_speed(&scope)?;
+            let recorded = self.spawn_recorded_track_for(&role.base.id, is_static)?;
+            let speed_mps = match &recorded {
+                Some(track) => track[0].speed_mps.abs(),
+                None => initial_speed(&scope)?,
+            };
             let ceiling = speed_verb_ceiling(self.template, &role.base.id, &scope, speed_mps)?;
             let rsl = v1_rsl(role);
             let distance = (ceiling * clip_total * 1.6).max(100.0);
+            // A recorded take overrides the authored pose: the trace starts on
+            // sample 0, not wherever the actor was dragged to afterwards.
+            let pose = match &recorded {
+                Some(track) => Cow::Owned(t::ScenePose {
+                    position: t::Vec3 {
+                        x: track[0].x,
+                        y: pose.position.y,
+                        z: track[0].z,
+                    },
+                    heading_rad: track[0].heading_rad,
+                }),
+                None => Cow::Borrowed(pose),
+            };
+            let pose = pose.as_ref();
             let (route, route_spec, sim_lane_ref): (Route, sim::RouteSpec, Option<sim::LaneRef>) =
                 match (initial_route, &rsl) {
+                    _ if recorded.is_some() => {
+                        let samples = recorded.expect("recorded track");
+                        (
+                            Route::from_polyline(samples.iter().map(|s| Vec2 { x: s.x, y: -s.z })),
+                            sim::RouteSpec::RecordedTrack { samples },
+                            None,
+                        )
+                    }
                     (Some(t::SceneAbsoluteInitialRoute::CustomTimedRoute { points }), _) => (
                         Route::from_polyline(points.iter().map(|p| Vec2 { x: p.x, y: -p.z })),
                         sim::RouteSpec::TimedPolyline {
@@ -1595,6 +1622,128 @@ impl<'a> Materializer<'a> {
             return Ok(Some(lanes.clone()));
         }
         Ok(None)
+    }
+
+    /// Manual drive: the recorded take at `t = 0` becomes the actor's spawn
+    /// route and pose. Returns the engine-facing samples once every invariant
+    /// the structural validator states has been re-checked here, because a
+    /// document can reach the compiler without it.
+    fn spawn_recorded_track_for(
+        &mut self,
+        role_id: &str,
+        is_static: bool,
+    ) -> CompileResult<Option<Vec<sim::RecordedSample>>> {
+        let template: &'a ScenarioTemplate = self.template;
+        let mut found: Option<&'a t::Interaction> = None;
+        for it in &template.choreography.interactions {
+            if it.base.actor != role_id {
+                continue;
+            }
+            let is_manual_drive = matches!(
+                &it.verb,
+                t::Verb::Route {
+                    target: t::RouteTarget::ManualDrive { .. }
+                }
+            );
+            match (is_manual_drive, found) {
+                (true, None) => found = Some(it),
+                (true, Some(first)) => {
+                    return Err(CompileError::at(
+                        "axis_conflict",
+                        format!("choreography.interactions.{}", it.base.id),
+                        format!(
+                            "\"{}\" and \"{}\" are both manual drive takes for \"{role_id}\"; one take owns the whole clip",
+                            first.base.id, it.base.id
+                        ),
+                    ));
+                }
+                _ => {}
+            }
+        }
+        let Some(it) = found else {
+            return Ok(None);
+        };
+        let t::Verb::Route {
+            target: t::RouteTarget::ManualDrive { recording },
+        } = &it.verb
+        else {
+            unreachable!("matched above");
+        };
+        let path = format!("choreography.interactions.{}", it.base.id);
+        if is_static {
+            return Err(CompileError::at(
+                "static_actor_motion",
+                format!("{path}.actor"),
+                format!("static role \"{role_id}\" cannot be driven; a manual drive needs a movable actor"),
+            ));
+        }
+        let clip_seconds = self.template.choreography.clip_seconds;
+        if let Some((relative, message)) = recording.rejection(clip_seconds) {
+            return Err(CompileError::at(
+                "route_disconnected",
+                format!("{path}.target.recording.{relative}"),
+                message,
+            ));
+        }
+        let scope = self.base_scope(None);
+        let start = match &it.base.trigger {
+            t::Trigger::At { t } => eval_num(Some(t), &scope, &format!("{path}.trigger.t"), None)?,
+            _ => f64::NAN,
+        };
+        if start != 0.0 {
+            return Err(CompileError::at(
+                "axis_conflict",
+                format!("{path}.trigger"),
+                format!("manual drive \"{}\" owns \"{role_id}\" from the start of the clip; its trigger must be at(0)", it.base.id),
+            ));
+        }
+        let end = match &it.base.until {
+            Some(t::Trigger::At { t }) => {
+                eval_num(Some(t), &scope, &format!("{path}.until.t"), None)?
+            }
+            _ => f64::NAN,
+        };
+        if end != clip_seconds {
+            return Err(CompileError::at(
+                "axis_conflict",
+                format!("{path}.until"),
+                format!("manual drive \"{}\" owns \"{role_id}\" until the clip ends; its until must be at({clip_seconds})", it.base.id),
+            ));
+        }
+        for other in &template.choreography.interactions {
+            if other.base.id == it.base.id || other.base.actor != role_id {
+                continue;
+            }
+            if matches!(
+                other.verb,
+                t::Verb::Speed { .. }
+                    | t::Verb::Gap { .. }
+                    | t::Verb::ChangeLane { .. }
+                    | t::Verb::LaneOffset { .. }
+                    | t::Verb::Route { .. }
+            ) {
+                return Err(CompileError::at(
+                    "axis_conflict",
+                    format!("choreography.interactions.{}", other.base.id),
+                    format!(
+                        "\"{}\" ({}) moves \"{role_id}\", but manual drive \"{}\" already owns its motion for the whole clip; remove one of them",
+                        other.base.id,
+                        other.verb.name(),
+                        it.base.id
+                    ),
+                ));
+            }
+        }
+        let samples = recording.recorded_track();
+        self.fold_initial(it, 0.0);
+        self.notes.push(Note::info(
+            path,
+            format!(
+                "manual drive take ({} samples over {clip_seconds}s) folded into {role_id}'s spawn: the recorded pose, yaw and speed own the actor for the whole clip",
+                samples.len()
+            ),
+        ));
+        Ok(Some(samples))
     }
 
     fn fold_initial(&mut self, it: &t::Interaction, t: f64) {
@@ -2736,6 +2885,19 @@ impl<'a> Materializer<'a> {
                 join_from_current_pose: None,
                 best_effort_world_path: Some(true),
             },
+            // A take on a pinned scene_absolute actor is folded into its spawn
+            // by `spawn_recorded_track_for`; reaching here means the role is
+            // frame-bound, and a recorded scene-frame track cannot drive it.
+            t::RouteTarget::ManualDrive { .. } => {
+                return Err(CompileError::at(
+                    "route_disconnected",
+                    format!("{path}.target"),
+                    format!(
+                        "manual drive take for \"{}\" is map-bound and may only drive a pinned scene_absolute actor",
+                        it.base.actor
+                    ),
+                ));
+            }
             t::RouteTarget::Turn { feature, turn } => {
                 let matched = self.site.feature_matches.get(feature);
                 let actor = self.actor(&it.base.actor);
