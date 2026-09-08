@@ -154,6 +154,11 @@ async function runQualify(args: Args): Promise<Record<string, unknown>> {
       ...(args.flags['splat-command'] === undefined ? {} : { splatCommand: args.flags['splat-command'].split(' ') }),
     },
     ...(args.flags['ticks'] === undefined ? {} : { ticks: Number(args.flags['ticks']) }),
+    // `--profile 0,2,6` qualifies a declared camera subset. The excluded cameras keep their
+    // measured verdicts on the record; the bundle simply cannot serve a rig that needs them.
+    ...(args.flags['profile'] === undefined
+      ? {}
+      : { profileCameraIds: args.flags['profile'].split(',').filter((v) => v !== '').map(Number) }),
   });
   return {
     ...summarise(result.bundle, result.bundleFile),

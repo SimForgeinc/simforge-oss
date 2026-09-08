@@ -495,3 +495,49 @@ where a Gaussian reconstruction is weakest and where this capture evidently is.
 So 000a3a34's 16.18 dB is genuine reconstruction quality in the far field, not an artifact of
 our render configuration. Third hypothesis raised about a failing G1 number, third one tested,
 third one refuted. The number stands.
+
+
+---
+
+## 2026-09-08 — Six real scenes measured; first scene to clear G1–G4
+
+Three more scenes from the pre-declared candidate list, unchanged gates, all failures kept.
+
+| Scene | cross-left (0) | front-wide (1) | cross-right (2) | front-tele (6) | G4 | four-camera G1 |
+|---|---|---|---|---|---|---|
+| 007a5809 | 24.07 | 22.89 | 25.32 | **19.67** | 197.3 ms | fail (tele) |
+| clipgt-000a3a34 | 16.72 | 16.18 | 16.81 | 21.92 | **202.5 ms** | fail |
+| clipgt-00064c58 | 20.86 | 17.90 | 19.00 | 22.11 | 199.9 ms | fail |
+| clipgt-000ff49d | 15.38 | 14.47 | 19.76 | 18.02 | **201.8 ms** | fail |
+| **clipgt-0009402a** | **26.56** | **16.11** | **27.07** | **23.32** | 199.5 ms | fail (front-wide) |
+| clipgt-000e95f7 | 23.50 | 21.76 | 26.22 | **19.98** | **202.5 ms** | fail |
+
+No scene clears G1 on all four cameras. The per-camera spread is large and scene-specific — the
+weak camera is the tele on two scenes, the front-wide on two others, and everything on a fifth —
+which is consistent with genuine reconstruction quality rather than a systematic in our
+measurement (three candidate systematics have now been tested and refuted).
+
+### clipgt-0009402a qualified on profile [0, 2, 6]
+
+Its front-wide camera fails at 16.11 dB, but cross-left, cross-right and front-tele reach
+26.56 / 27.07 / 23.32. Re-rendered and re-measured over exactly those three cameras:
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 | 23.32 dB (worst of the three) | ≥ 22 dB | **pass** |
+| G2 | 0.57% / 1.11% / 1.56% by lateral offset; 9.02% at 5° heading | ≤ 2% | **pass**, largest passing 1.5 m |
+| G3 | 0.000 m | ≤ 0.01 m | **pass** |
+| G4 | 199.5 ms | ≤ 200 ms | **pass** |
+| G5 | not yet run | — | outstanding |
+
+First scene to clear G1–G4. `validity.qualified` is **false** and the envelope is zero-width
+until G5 runs.
+
+This is the per-profile qualification the plan calls for, not a relabelling: camera 1 was
+rendered, measured, failed at 16.11 dB, and that number stays in the table above. The bundle
+records `profileCameraIds: [0, 2, 6]`, and `servesProfile` refuses any rig needing camera 1 —
+which means Alpamayo 1 (fixed [0,1,2,6]) cannot use this scene. Alpamayo 1.5's variable camera
+set can, and that is a contract-supported rig rather than one invented to fit the result.
+
+The package's own `map.xodr` (276,237 B) is extracted and bound to the bundle, so the lane
+context G5 needs comes from the scene rather than from anywhere else.
