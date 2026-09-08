@@ -11,6 +11,7 @@ import {
   normalizeSteer,
   parseWheelProfile,
   pedalsReleased,
+  wheelProfileRefusal,
   type DriveCommand,
 } from "./driving-input";
 
@@ -85,6 +86,22 @@ describe("wheel sample", () => {
     applyWheelSample({ axes: [1], buttons: [1] }, profile, out, { reverseButtonDown: false });
     expect(out).toEqual({ steer: 0, throttle: 0, brake: 0, reverse: false });
     expect(pedalsReleased(out)).toBe(true);
+  });
+
+  it("refuses control until every bound axis carries a user-captured calibration", () => {
+    const profile = defaultWheelProfile("wheel");
+    expect(wheelProfileRefusal(profile)).toBe("Bind a steering axis.");
+    profile.steer.binding = { kind: "axis", index: 0 };
+    expect(wheelProfileRefusal(profile)).toBe("Calibrate steering.");
+    profile.steer.calibration.calibrated = true;
+    expect(wheelProfileRefusal(profile)).toBe("Bind the throttle pedal.");
+    profile.throttle.binding = { kind: "axis", index: 1 };
+    expect(wheelProfileRefusal(profile)).toBe("Calibrate the throttle pedal.");
+    profile.throttle.calibration = { released: 1, pressed: -1, deadzone: 0, calibrated: true };
+    profile.brake.binding = { kind: "button", index: 2 };
+    expect(wheelProfileRefusal(profile)).toBeNull();
+    profile.steer.calibration.left = 0.5;
+    expect(wheelProfileRefusal(profile)).toBe("Calibrate steering.");
   });
 });
 

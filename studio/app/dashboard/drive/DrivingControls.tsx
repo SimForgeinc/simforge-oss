@@ -20,6 +20,7 @@ import {
   neutralize,
   pedalsReleased,
   steeringCalibrationValid,
+  wheelProfileRefusal,
   type DriveCommand,
   type InputMode,
   type PedalBinding,
@@ -168,8 +169,8 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
       const current = profileRef.current;
       if (!current) return "Select a wheel first.";
       if (!padConnectedRef.current) return "The selected wheel is not connected.";
-      if (!current.steer.binding) return "Bind a steering axis first.";
-      if (!steeringCalibrationValid(current.steer.calibration)) return "Steering calibration is unusable; recalibrate.";
+      const refusal = wheelProfileRefusal(current);
+      if (refusal) return refusal;
       if (!pedalsReleased(commandRef.current)) return "Release the pedals before engaging.";
     } else {
       pressedRef.current.clear();
@@ -465,6 +466,7 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
   };
 
   const noVehicle = actorId === null;
+  const profileRefusal = profile ? wheelProfileRefusal(profile) : null;
   const engageRefusal = noVehicle
     ? "Start driving a vehicle to enable controls."
     : sourceStatus !== "running"
@@ -476,8 +478,8 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
             ? "Select a wheel."
             : !live.padConnected
               ? "The selected wheel is not connected."
-              : !profile.steer.binding
-                ? "Bind a steering axis."
+              : profileRefusal !== null
+                ? profileRefusal
                 : !pedalsReleased(live)
                   ? "Release the pedals to engage."
                   : null

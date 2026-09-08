@@ -206,6 +206,23 @@ export function pedalsReleased(command: DriveCommand): boolean {
 }
 
 /**
+ * Why a wheel profile may not take control yet, or null when it is ready.
+ * Every axis must carry a user-captured, usable calibration: the assumed
+ * defaults are never trusted on real hardware. Button pedals need no
+ * calibration because the browser already reports them in [0, 1].
+ */
+export function wheelProfileRefusal(profile: WheelProfile): string | null {
+  if (!profile.steer.binding) return "Bind a steering axis.";
+  if (!profile.steer.calibration.calibrated || !steeringCalibrationValid(profile.steer.calibration)) return "Calibrate steering.";
+  for (const pedal of ["throttle", "brake"] as const) {
+    const { binding, calibration } = profile[pedal];
+    if (!binding) return `Bind the ${pedal} pedal.`;
+    if (binding.kind === "axis" && (!calibration.calibrated || !pedalCalibrationValid(calibration))) return `Calibrate the ${pedal} pedal.`;
+  }
+  return null;
+}
+
+/**
  * Keyboard reduction. `has` answers whether a key code is currently held.
  * Opposite steering keys cancel; S/ArrowDown and Space all brake.
  */
