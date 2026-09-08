@@ -164,6 +164,7 @@ async function runReconstruct(args: Args): Promise<Record<string, unknown>> {
   const tier = {
     ...(args.flags['threedgrut-root'] === undefined ? {} : { threedgrutRoot: args.flags['threedgrut-root'] }),
     ...(args.flags['python'] === undefined ? {} : { pythonCommand: args.flags['python'] }),
+    ...(args.flags['cuda-home'] === undefined ? {} : { cudaHome: args.flags['cuda-home'] }),
   };
   if (args.booleans.has('preflight-only')) {
     const report = await preflightReconstruction(tier);

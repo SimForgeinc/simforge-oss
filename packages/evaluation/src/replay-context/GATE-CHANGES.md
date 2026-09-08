@@ -333,3 +333,42 @@ cannot quietly acquire an ego path nobody recorded.
 **Not qualified, and cannot be.** A bundle from this capture is `source.kind:
 synthetic-fixture`, which the schema structurally bars from ever being `qualified` or scored.
 It exercises the pipeline; it sets no product state.
+
+
+---
+
+## 2026-09-08 — G5 measured and FAILED; scene 007a5809 is fully gated and unqualified
+
+All five gates now have a verdict on this scene. G5 was run by the evaluation owner as a
+forced-recorded-trajectory episode against a form-A spec built from the scene's own
+ClipGT-derived topology (a real 217-lane graph; `nearest_lane(recordedPath[0])` landed 0.50 m
+from lane 12:0:-2, so the lane graph and the recorded path are in the same frame and nothing
+was invented). Bounded to the reconstruction's 20.0 s support window, 200 decisions at 10 Hz.
+
+| Measurement | Value | Bound | Verdict |
+|---|---|---|---|
+| max lateral deviation (rig pose) | 1.0128 m | ≤ 0.35 m | fail |
+| p95 lateral deviation (rig pose) | 0.9001 m | ≤ 0.10 m | fail |
+| infractions | 3 (off-road 1, wrong-way 2) | 0 | fail |
+
+**Frame question, settled before accepting the number.** `ego.recordedPath` is the RIG pose
+(`rig_trajectories[0].T_rig_worlds`), while the executor reports the vehicle reference pose.
+The rig→vehicle transform is `rig_bbox.centroid = [1.3120, 0, 0.7195]` — a pure longitudinal
+offset with zero lateral component, which converts to lateral error only through curvature at
+≈ L²/(2R): ~1.7 cm at R = 50 m, and needing R ≈ 0.96 m to produce 0.9 m. Measured both ways it
+moves centimetres (vehicle pose: max 0.9111, p95 0.9078). The residual is not a frame
+convention.
+
+**Verdict recorded, not explained away.** `qualification/stock-replay.json` holds the failing
+G5, and the bundle is `validity.qualified: false` with a zero-width envelope. The bounds are
+`docs/policy-step.md`'s own executor envelope and were not touched. The cause is that this
+spec's dynamics do not reproduce the recorded drive to 0.10 m p95 — the executor tracks its own
+issued plan well (max cross-track 1.048 m to a plan that is itself off the recorded path).
+
+Infractions carry `provenance: derived-from-reconstruction, confidence: low`, because
+off-road and wrong-way are computed against a ClipGT-derived lane graph rather than an
+authoritative map. They do not change the verdict, which had already failed on deviation.
+
+**State of the scene:** G1 22.89 dB pass · G2 pass (largest passing offset 1.0 m) · G3 0.000 m
+pass · G4 197.3 ms pass · **G5 fail** — for the [0, 1, 2] profile. Not qualified. No scene on
+this host has passed all five gates.
