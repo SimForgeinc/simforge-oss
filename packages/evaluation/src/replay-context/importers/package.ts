@@ -418,6 +418,8 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
     map: { source: 'derived-from-reconstruction', confidence: 'low' },
     validity: {
       qualified: false,
+      // No profile has been measured yet; qualification is always for a camera set.
+      profileCameraIds: [],
       envelope: { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates: {},
       envelopeBasis: { offsetsTestedM: [], headingsTestedRad: [], largestPassingLateralM: 0, largestPassingHeadingRad: 0 },

@@ -380,6 +380,8 @@ export interface QualifyOptions {
   /** Ticks rendered per probe. Ten seconds at 10 Hz by default. */
   readonly ticks?: number;
   readonly thresholds?: GateThresholds;
+  /** Camera ids to render and measure. Defaults to every camera the bundle has. */
+  readonly profileCameraIds?: readonly number[];
   /**
    * Longitudinal freedom, seconds. Bounded by how far the ego may drift in time before the
    * replayed actors are meaningfully desynchronised; defaults to one decision period.
@@ -402,7 +404,18 @@ export interface QualifyResult {
  * cost GPU minutes to produce a number we would then have to discard.
  */
 export async function qualifyRenders(options: QualifyOptions): Promise<QualifyResult> {
-  const { bundle, sceneDir, workDir, tier } = options;
+  const { sceneDir, workDir, tier } = options;
+  // Render and measure exactly the profile being qualified: a camera outside it must not
+  // influence a verdict that does not cover it, in either direction.
+  const profile = options.profileCameraIds;
+  const bundle: ReplayContext = profile === undefined
+    ? options.bundle
+    : { ...options.bundle, cameras: options.bundle.cameras.filter((camera) => profile.includes(camera.cameraId)) };
+  if (bundle.cameras.length === 0) {
+    throw new CapabilityError(
+      `scene ${options.bundle.sceneId}: the requested camera profile [${(profile ?? []).join(', ')}] matches none of its cameras`,
+    );
+  }
   const facts = await readSceneDirFacts(sceneDir);
   const ticks = options.ticks ?? PROBE_TICK_HZ * 10;
   const thresholds = options.thresholds ?? DEFAULT_GATE_THRESHOLDS;

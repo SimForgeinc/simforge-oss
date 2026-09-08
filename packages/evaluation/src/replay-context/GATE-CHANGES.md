@@ -241,3 +241,44 @@ qualify for any rig preset that includes the tele camera — which is both `alpa
 scene stays unqualified.
 
 No threshold was moved at any point in this investigation.
+
+
+---
+
+## 2026-09-08 — Qualification made explicitly per camera profile
+
+**Not a threshold change.** No threshold moved; the failing 4-camera measurement above stands
+exactly as recorded.
+
+A reconstruction can be faithful for wide cameras and not for a narrow tele looking much
+further down the road, which is precisely what this scene showed. "Scene 007a5809 is
+qualified" was therefore never a well-formed statement: qualification is a property of a
+scene **and a camera set**.
+
+`validity.profileCameraIds` now records the camera ids the gates were measured over, the schema
+rejects a bundle qualified over cameras it does not have or over none at all, and
+`servesProfile(bundle, cameraIds)` refuses a rig needing any camera outside the qualified set.
+
+### Wide-camera profile [0, 1, 2], measured on the same renders
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 | 22.89 dB / 0.872 SSIM (worst: front-wide) | ≥ 22 dB / 0.75 | pass |
+| G2 | 0.84% / 1.59% / 2.15% / 6.80% by probe | ≤ 2% | pass, largest passing 1.0 m |
+| G3 | 0.000 m | ≤ 0.01 m | pass |
+| G4 | 197.3 ms | ≤ 200 ms | pass |
+| **G5** | **not measured** | — | **outstanding** |
+
+`validity.qualified` is **still false**, because G5 has not run. Four of five gates passing is
+not qualification, and the envelope stays zero-width until the stock replay proves the
+sim/executor/scoring chain on this world.
+
+### What this does and does not license
+
+- It does **not** relabel the failed 4-camera result. Camera 6 was measured, failed, and is
+  excluded from the profile — not dropped to improve an average, and its number stays on the
+  record above.
+- Alpamayo 1 requires exactly [0, 1, 2, 6] and has no camera-count conditioning, so this scene
+  remains unusable for A1 whatever happens with G5.
+- Alpamayo 1.5 accepts a variable camera set, so [0, 1, 2] is a contract-supported rig rather
+  than an invented one.

@@ -397,6 +397,8 @@ export async function importNurecScene(options: NurecImportOptions): Promise<Rep
     map,
     validity: {
       qualified: false,
+      // No profile has been measured yet; qualification is always for a camera set.
+      profileCameraIds: [],
       envelope: { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates: {},
       envelopeBasis: { offsetsTestedM: [], headingsTestedRad: [], largestPassingLateralM: 0, largestPassingHeadingRad: 0 },
