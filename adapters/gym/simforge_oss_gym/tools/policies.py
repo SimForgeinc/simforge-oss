@@ -164,3 +164,78 @@ def make_policy(name: str, seed: int = 0) -> Policy:
     if name == "torch":
         return TorchMlpPolicy(seed)
     raise ValueError(f"unknown policy {name!r} (expected 'scripted', 'trajectory' or 'torch')")
+
+
+def make_recorded_path_policy(
+    recorded_path: Sequence[tuple[float, float, float, float]], decision_hz: float = 10.0
+) -> Policy:
+    """The G5 stock-replay policy over a replay-context bundle's recorded path."""
+    return RecordedPathPolicy(recorded_path, decision_hz=decision_hz)
+
+
+class RecordedPathPolicy:
+    """Forced ground truth: drive the scene's own recorded ego path.
+
+    This is the G5 stock-replay policy. It emits, at every decision, the
+    upcoming recorded poses transformed into the ego frame at issuance, so the
+    sim, the pure-pursuit executor and the scoring chain are exercised with the
+    trajectory the world was recorded from. If a stock replay cannot reproduce
+    the recorded path within tolerance and without infractions, no model score
+    from that scene means anything — which is why this runs before any model.
+
+    ``recorded_path`` rows are ``(t_s, x, y, heading_rad)`` in the bundle's
+    metric world frame, ascending in time. Nothing is invented: when the
+    horizon runs past the recording, the plan is whatever remains.
+    """
+
+    name = "recorded-path"
+
+    def __init__(
+        self,
+        recorded_path: Sequence[tuple[float, float, float, float]],
+        *,
+        decision_hz: float = 10.0,
+        horizon_s: float = 2.0,
+        sample_s: float = 0.2,
+    ) -> None:
+        if len(recorded_path) < 2:
+            raise ValueError("recorded_path needs at least two poses")
+        self.path = [tuple(float(v) for v in row) for row in recorded_path]
+        self.decision_hz = float(decision_hz)
+        self.horizon = float(horizon_s)
+        self.sample = float(sample_s)
+        self.checkpoint_digest = hashlib.sha256(
+            b"recorded-path-v1:" + repr([tuple(round(v, 6) for v in row) for row in self.path]).encode()
+        ).hexdigest()
+        self.last_replanned = True
+
+    def _pose_at(self, t: float) -> tuple[float, float, float]:
+        """Recorded pose at ``t`` seconds, linearly interpolated, clamped."""
+        path = self.path
+        if t <= path[0][0]:
+            return path[0][1], path[0][2], path[0][3]
+        for index in range(1, len(path)):
+            if path[index][0] >= t:
+                t0, x0, y0, h0 = path[index - 1]
+                t1, x1, y1, h1 = path[index]
+                span = t1 - t0
+                u = 0.0 if span <= 0 else (t - t0) / span
+                return x0 + u * (x1 - x0), y0 + u * (y1 - y0), h0 + u * math.atan2(math.sin(h1 - h0), math.cos(h1 - h0))
+        return path[-1][1], path[-1][2], path[-1][3]
+
+    def act(self, step: int, state_vector: np.ndarray | None) -> PolicyDecision:
+        t0 = self.path[0][0] + step / self.decision_hz
+        x0, y0, h0 = self._pose_at(t0)
+        cos_h, sin_h = math.cos(-h0), math.sin(-h0)
+        points: list[tuple[float, float, float, float, float]] = []
+        previous = (0.0, 0.0)
+        for index in range(1, int(round(self.horizon / self.sample)) + 1):
+            t = index * self.sample
+            xw, yw, hw = self._pose_at(t0 + t)
+            dx, dy = xw - x0, yw - y0
+            ex, ey = dx * cos_h - dy * sin_h, dx * sin_h + dy * cos_h
+            speed = math.hypot(ex - previous[0], ey - previous[1]) / self.sample
+            points.append((ex, ey, math.atan2(math.sin(hw - h0), math.cos(hw - h0)), speed, t))
+            previous = (ex, ey)
+        self.last_replanned = True
+        return PolicyDecision(trajectory(points), f"stock replay: recorded path from t={t0:.2f}s")

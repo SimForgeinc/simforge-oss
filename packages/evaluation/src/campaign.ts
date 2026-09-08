@@ -638,9 +638,7 @@ async function writeEpisodeArtifacts(
         ? 'cancelled'
         : runnerStatus === 'terminated'
           ? 'terminated'
-          : runnerStatus === 'truncated'
-            ? 'truncated'
-            : null,
+          : null,
     metrics: score
       ? {
           drivingScore: score.drivingScore,
