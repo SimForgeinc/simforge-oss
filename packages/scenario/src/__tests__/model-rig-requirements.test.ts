@@ -7,6 +7,7 @@ import {
   modelRigRequirement,
   sensorRigPreset,
 } from '../schema/v2/sensor-rigs.js';
+import { sha256Hex } from '../schema/v2/sha256.js';
 
 describe('model rig requirements', () => {
   it('names a rig that can actually supply the model camera count', () => {
@@ -79,5 +80,53 @@ describe('model rig requirements', () => {
   it('refuses an unknown family instead of returning a default profile', () => {
     expect(modelRigRequirement('not-a-model')).toBeUndefined();
     expect(() => modelRigProfileHash('not-a-model')).toThrow(/no rig requirement/);
+  });
+});
+
+describe('profile hash is browser-safe without being weaker', () => {
+  it('matches node crypto exactly for the payloads it hashes', async () => {
+    // This package is bundled for the editor, so node:crypto cannot be
+    // imported by it. The digests must still be real SHA-256, and equal to
+    // what a server computes - otherwise a manifest written in one place
+    // would not match a check made in the other.
+    const { createHash } = await import('node:crypto');
+    const cases = [
+      '',
+      'a',
+      'alpamayo-1',
+      JSON.stringify({ schema: 'simforge.model-rig-profile/v1', cameraIds: [0, 1, 2, 6] }),
+      'x'.repeat(55), // one byte short of a padding block boundary
+      'x'.repeat(56), // forces an extra block
+      'x'.repeat(64),
+      'x'.repeat(1000),
+      'ünïcödé — multi-byte',
+    ];
+    for (const value of cases) {
+      expect(sha256Hex(value), `mismatch for ${value.length} chars`).toBe(
+        createHash('sha256').update(value).digest('hex'),
+      );
+    }
+  });
+
+  it('imports no node builtins anywhere in the package source', async () => {
+    const { readFile, readdir } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const walk = async (dir: string): Promise<string[]> => {
+      const entries = await readdir(dir, { withFileTypes: true });
+      const files = await Promise.all(
+        entries.map(async (entry) => {
+          const path = join(dir, entry.name);
+          if (entry.isDirectory()) return entry.name === '__tests__' ? [] : walk(path);
+          return path.endsWith('.ts') ? [path] : [];
+        }),
+      );
+      return files.flat();
+    };
+    const offenders: string[] = [];
+    for (const file of await walk(new URL('../', import.meta.url).pathname)) {
+      const source = await readFile(file, 'utf8');
+      if (/from ['"]node:|require\(['"]node:/.test(source)) offenders.push(file);
+    }
+    expect(offenders).toEqual([]);
   });
 });

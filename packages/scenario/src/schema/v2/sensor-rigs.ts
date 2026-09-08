@@ -1,7 +1,5 @@
 /** Canonical actor-mounted perception rig presets. */
 
-import { createHash } from 'node:crypto';
-
 import { z } from 'zod';
 
 import { EntityIdSchema } from '../v1.js';
@@ -24,6 +22,7 @@ import {
   type VehicleAnchorMount,
 } from './sensors.js';
 import { DEFAULT_ACTOR_DIMS, type ActorSpec } from './roles.js';
+import { sha256Hex } from './sha256.js';
 
 export const SensorRigCameraTemplateSchema = DashCameraSensorSchema
   .omit({ mount: true })
@@ -723,6 +722,12 @@ export interface ModelRigRequirement {
   /** Ego history and predicted waypoints are in this frame. */
   readonly coordinateFrame: 'ego-flu-x-forward';
   readonly variableCameras: boolean;
+  /**
+   * Other rig ids this family is officially documented to serve. Present so
+   * a UI can OFFER them; `rigId` is the recommended default, not a
+   * restriction. Empty for families whose contract fixes one set.
+   */
+  readonly alsoSupportedRigIds: readonly string[];
   /** Authored approximation, never the calibrated dataset rig. */
   readonly datasetCalibrated: false;
 }
@@ -743,6 +748,8 @@ export const MODEL_RIG_REQUIREMENTS: readonly ModelRigRequirement[] = Object.fre
     rigId: 'alpamayo-4cam',
     cameraIds: [0, 1, 2, 6],
     variableCameras: false,
+    // Fixed by contract: another set is a refusal, not a degraded mode.
+    alsoSupportedRigIds: [],
     ...ALPAMAYO_INPUT_COMMON,
   },
   {
@@ -753,6 +760,11 @@ export const MODEL_RIG_REQUIREMENTS: readonly ModelRigRequirement[] = Object.fre
     rigId: 'alpamayo-4cam',
     cameraIds: [0, 1, 2, 6],
     variableCameras: true,
+    // RECOMMENDED, not required. This family officially serves other camera
+    // subsets and both were measured here: 8,707 MiB peak at the 2-camera
+    // rig, 9,265 at the 4-camera one. A UI should offer these and must not
+    // present the recommendation as the only legal choice.
+    alsoSupportedRigIds: ['alpamayo-2cam', 'alpamayo-6cam'],
     ...ALPAMAYO_INPUT_COMMON,
   },
   {
@@ -760,6 +772,9 @@ export const MODEL_RIG_REQUIREMENTS: readonly ModelRigRequirement[] = Object.fre
     rigId: 'alpamayo-6cam',
     cameraIds: [0, 1, 2, 3, 5, 6],
     variableCameras: false,
+    // Its text/VQA tasks use a different documented set, which is why the
+    // vqa rig exists as a preset rather than as a variant of this entry.
+    alsoSupportedRigIds: ['alpamayo-6cam-vqa'],
     ...ALPAMAYO_INPUT_COMMON,
   },
 ]);
@@ -806,7 +821,8 @@ export function modelRigProfileHash(family: string): string {
       ...(sensor.type === 'dash_camera' ? { fov: sensor.fov, dims: sensor.dims } : {}),
     })),
   };
-  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  // Browser-safe: this package is bundled for the editor, so no node:crypto.
+  return sha256Hex(JSON.stringify(payload));
 }
 
 /**

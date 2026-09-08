@@ -9,11 +9,20 @@ enter. So it lives here, in code, with typed refusals a UI can display.
 Three refusals matter more than the rest, because each has a plausible,
 tempting, wrong alternative:
 
-* ONE VIDEO FANNED OUT TO A MULTI-CAMERA RIG. A fixed-rig model takes N
-  distinct views and has no camera-identity channel, so duplicated streams
-  cannot be detected by the network - it will happily return a trajectory
-  computed from four copies of the front camera. Per-camera content digests
-  are compared and identical streams are refused.
+* DUPLICATED IMAGE CONTENT ACROSS A MULTI-CAMERA RIG. A fixed-rig model
+  takes N distinct views and has no camera-identity channel, so duplicated
+  streams cannot be detected by the network - it will happily return a
+  trajectory computed from four copies of the front camera. Per-camera
+  content digests are compared and identical streams are refused.
+
+  What the digest proves, precisely: the CONTENT is duplicated. It does not
+  prove one video was fanned out. A genuinely uniform scene - dense fog, a
+  night frame, a camera pointed at a wall, a render that failed to a black
+  buffer - can produce identical bytes from distinct cameras. That is why
+  the refusal names duplicated content rather than accusing the caller of
+  fanning out a video, and why `allow_identical_streams` exists: a caller
+  who knows the scene is legitimately uniform can proceed, and the decision
+  is recorded in provenance instead of being silently permitted.
 * AN UNDECLARED TIME BASE. The model was trained at a fixed cadence. A
   render at 24 fps cannot be resampled to 10 Hz by nearest-frame selection
   without up to +/-20.8 ms of jitter, which is silently absorbed and shows
@@ -151,29 +160,51 @@ def _stream_digest(frames: list[bytes]) -> str:
     return digest.hexdigest()
 
 
-def assert_distinct_streams(streams: dict[str, list[bytes]]) -> dict[str, str]:
-    """Refuse a single video fanned out across a multi-camera rig.
-
-    This is the failure the plan calls out by name. A fixed-rig model cannot
-    detect duplicated views, so the refusal has to happen here or not at all.
-    """
+def find_duplicate_streams(
+    streams: dict[str, list[bytes]],
+) -> tuple[dict[str, str], list[list[str]]]:
+    """Return per-camera content digests and any groups sharing content."""
     digests = {sensor: _stream_digest(frames) for sensor, frames in streams.items()}
-    seen: dict[str, list[str]] = {}
+    by_digest: dict[str, list[str]] = {}
     for sensor, digest in digests.items():
-        seen.setdefault(digest, []).append(sensor)
-    duplicates = {d: s for d, s in seen.items() if len(s) > 1}
-    if duplicates:
+        by_digest.setdefault(digest, []).append(sensor)
+    duplicates = [sorted(group) for group in by_digest.values() if len(group) > 1]
+    return digests, duplicates
+
+
+def assert_distinct_streams(
+    streams: dict[str, list[bytes]], *, allow_identical: bool = False
+) -> tuple[dict[str, str], list[list[str]]]:
+    """Refuse duplicated image content across a multi-camera rig.
+
+    A fixed-rig model cannot detect duplicated views, so this check happens
+    here or not at all. The refusal states what the evidence supports -
+    identical CONTENT - and not that a video was fanned out, because a
+    legitimately uniform scene (fog, night, a failed-to-black render) can
+    also produce identical bytes from distinct cameras.
+
+    ``allow_identical`` lets a caller who knows the scene is uniform proceed.
+    It never silences the finding: the groups are returned either way and
+    recorded in provenance.
+    """
+    digests, duplicates = find_duplicate_streams(streams)
+    if duplicates and not allow_identical:
         raise _refuse(
             "input_error",
             "identical image content supplied for multiple cameras: "
-            + "; ".join(", ".join(sorted(s)) for s in duplicates.values())
-            + ". A multi-camera model takes distinct views and has no "
-            "camera-identity channel, so duplicated streams cannot be "
-            "detected by the network - it would return a trajectory computed "
-            "from copies of one camera. Render each camera in the rig.",
-            duplicateGroups=[sorted(s) for s in duplicates.values()],
+            + "; ".join(", ".join(group) for group in duplicates)
+            + ". This model takes distinct views and has no camera-identity "
+            "channel, so duplicated content cannot be detected by the "
+            "network - it would return a trajectory computed from copies of "
+            "one camera. Note what this shows: the CONTENT is identical. It "
+            "does not prove one video was fanned out; a uniform scene (dense "
+            "fog, night, or a render that failed to a black buffer) can also "
+            "produce identical bytes from distinct cameras. If the scene is "
+            "genuinely uniform, pass allow_identical_streams=True and the "
+            "decision is recorded rather than assumed.",
+            duplicateGroups=duplicates,
         )
-    return digests
+    return digests, duplicates
 
 
 def convert_render_to_clip(
@@ -189,6 +220,7 @@ def convert_render_to_clip(
     ego_heading_rad: float,
     total_frames: int,
     encoding: str = "raw",
+    allow_identical_streams: bool = False,
 ) -> ClipConversion:
     """Convert one authored render into a model observation.
 
@@ -221,7 +253,9 @@ def convert_render_to_clip(
                 got=len(frames),
             )
 
-    digests = assert_distinct_streams(streams)
+    digests, duplicate_groups = assert_distinct_streams(
+        streams, allow_identical=allow_identical_streams
+    )
 
     exact, jitter = render_fps_is_compatible(render_fps)
 
@@ -298,6 +332,9 @@ def convert_render_to_clip(
         "rigProfile": rig_profile,
         "cameraMap": camera_map,
         "streamDigests": digests,
+        # Recorded whether or not it was allowed, so a reviewer sees it.
+        "duplicateContentGroups": duplicate_groups,
+        "identicalStreamsAllowed": bool(allow_identical_streams),
         "timeBase": time_base,
         "t0RenderIndex": t0_index,
         "historyRenderIndices": history_indices,
