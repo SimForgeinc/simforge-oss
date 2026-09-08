@@ -566,3 +566,29 @@ def test_identical_streams_are_refused_by_default_and_allowed_only_explicitly():
     allowed = _convert(30.0, streams=duplicated, allow_identical_streams=True)
     assert allowed.provenance["identicalStreamsAllowed"] is True
     assert allowed.provenance["duplicateContentGroups"] != []
+
+
+def test_provenance_carries_identity_under_the_keys_the_reader_expects():
+    """The comparison reader keys on rig.captureVersion (family-free) and
+    treats model.requirementVersion as metadata. The writer must agree, or
+    every pair degrades to incomplete identity."""
+    converted = _convert(
+        30.0,
+        capture_profile_version="alpamayo-4cam@5d56b3d837c8",
+        model_requirement_version="alpamayo-1.5@e1a393f5b1d7",
+    )
+    rig = converted.provenance["rig"]
+    assert rig["captureVersion"] == "alpamayo-4cam@5d56b3d837c8"
+    assert rig["cameraIds"] == [0, 1, 2, 6]
+    assert converted.provenance["model"]["requirementVersion"] == "alpamayo-1.5@e1a393f5b1d7"
+    assert converted.provenance["identityComplete"] is True
+
+
+def test_missing_identity_is_recorded_as_incomplete_never_invented():
+    """Recomputing the digest in Python would be a second implementation of
+    one hash, which is how two runs silently stop comparing. So an absent
+    version is reported, not derived."""
+    converted = _convert(30.0)
+    assert converted.provenance["rig"]["captureVersion"] is None
+    assert converted.provenance["identityComplete"] is False
+    assert "second implementation" in converted.provenance["identityNote"]

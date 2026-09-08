@@ -226,6 +226,8 @@ def convert_render_to_clip(
     total_frames: int,
     encoding: str = "raw",
     allow_identical_streams: bool = False,
+    capture_profile_version: str | None = None,
+    model_requirement_version: str | None = None,
 ) -> ClipConversion:
     """Convert one authored render into a model observation.
 
@@ -233,6 +235,15 @@ def convert_render_to_clip(
     that camera, oldest first, already sampled at the model cadence via
     :func:`sample_indices`. ``ego_world_xyz`` is the simulation's per-frame
     ego position in world coordinates, indexed like the render.
+
+    ``capture_profile_version`` and ``model_requirement_version`` are the
+    identity tags produced by ``captureProfileVersion`` and
+    ``modelRequirementVersion`` in ``@simforge-oss/engine``. They are PASSED
+    IN, never computed here: re-deriving them in Python would be a second
+    hash implementation of the same payload, and two implementations of one
+    digest is how a comparison silently stops matching. When absent they are
+    recorded as ``None`` with a reason rather than guessed, and a consumer
+    reports the run as having incomplete identity.
     """
     camera_map = validate_rig(family_required, rig_profile)
 
@@ -342,8 +353,27 @@ def convert_render_to_clip(
 
     provenance = {
         "source": "authored-scenario-render",
-        "rigProfile": rig_profile,
-        "cameraMap": camera_map,
+        # Grouped to match the shape the comparison reader consumes:
+        # rig.captureVersion is the family-free sensor-comparability key and
+        # model.requirementVersion is metadata that must never enter it.
+        "rig": {
+            "profile": rig_profile,
+            "captureVersion": capture_profile_version,
+            "cameraMap": camera_map,
+            "cameraIds": sorted(camera_map.values()),
+        },
+        "model": {
+            "requirementVersion": model_requirement_version,
+        },
+        "identityComplete": bool(capture_profile_version),
+        "identityNote": (
+            None
+            if capture_profile_version
+            else "no capture profile version supplied; the caller must pass "
+            "captureProfileVersion(rigId) from @simforge-oss/engine. It is "
+            "not computed here, because a second implementation of the same "
+            "digest is how two runs stop comparing."
+        ),
         "streamDigests": digests,
         # Recorded whether or not it was allowed, so a reviewer sees it.
         "duplicateContentGroups": duplicate_groups,
