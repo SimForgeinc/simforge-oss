@@ -119,6 +119,18 @@ export const CameraTimingSchema = z.union([
     timestampsUs: z.array(TimestampUs).min(1),
     shutterUs: z.number().int().min(0),
   }),
+  /**
+   * Only these capture instants are published, not a complete timeline.
+   *
+   * The NuRec AV releases ship a single reference frame per camera rather than the recorded
+   * sequence, so pretending those instants are the camera's timeline would invent a 1-frame
+   * recording. They are what G1 compares renders against; the drive's clock is `ego.recordedPath`.
+   */
+  z.strictObject({
+    kind: z.literal('reference-frames'),
+    timestampsUs: z.array(TimestampUs).min(1),
+    shutterUs: z.number().int().min(0),
+  }),
   z.strictObject({
     kind: z.literal('constant-rate'),
     fps: Finite.positive(),
