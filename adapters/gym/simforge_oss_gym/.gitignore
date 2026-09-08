@@ -1,0 +1,5 @@
+# Built by `maturin develop`; never committed - it embeds the build
+# machine absolute paths and is platform/ABI specific.
+_native.abi3.so
+_native*.so
+_native*.pyd
