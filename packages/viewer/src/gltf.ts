@@ -1,8 +1,8 @@
 /// <reference path="./ktx-parse.d.ts" />
 
-import type { BufferGeometry, Material, Object3D, Texture, WebGLRenderer } from 'three';
+import type { BufferGeometry, Light, Material, Object3D, Texture, WebGLRenderer } from 'three';
 import { CompressedTexture, Mesh, RGBAFormat, RGBA_S3TC_DXT1_Format } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
@@ -27,6 +27,34 @@ export const DEFAULT_KTX2_TRANSCODER_PATH = '/basis/';
 export function defaultKtx2TranscoderPath(): string {
   if (typeof document !== 'undefined' && document.baseURI) return new URL(DEFAULT_KTX2_TRANSCODER_PATH, document.baseURI).href;
   return DEFAULT_KTX2_TRANSCODER_PATH;
+}
+
+/** Map illumination belongs to the viewer sun/sky and semantic luminaire pool. */
+export async function parseMapGLTF(loader: GLTFLoader, buffer: ArrayBuffer, path: string): Promise<GLTF> {
+  const gltf = await loader.parseAsync(buffer, path);
+  for (const scene of gltf.scenes) scene.traverse(node => {
+    // Do not hide the node: authored mesh children must remain renderable.
+    if ((node as Light).isLight) node.layers.disableAll();
+  });
+  return gltf;
+}
+
+const linkedPrograms = new WeakSet<WebGLProgram>();
+
+/** Three's compileAsync polls completion, which does not imply successful linking. */
+export function assertMaterialsLinked(renderer: WebGLRenderer, materials: readonly Material[]): void {
+  for (const material of materials) {
+    const programs = renderer.properties.get(material).programs as Map<string, { program: WebGLProgram }> | undefined;
+    if (!programs) continue;
+    for (const { program } of programs.values()) {
+      if (linkedPrograms.has(program)) continue;
+      const gl = renderer.getContext();
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(`Shader linking failed for ${material.name || material.type}: ${gl.getProgramInfoLog(program) || 'no driver log'}`);
+      }
+      linkedPrograms.add(program);
+    }
+  }
 }
 
 interface SharedTextureEntry {
@@ -239,7 +267,7 @@ class SharedKTX2Loader extends KTX2Loader {
     const sessionId = tracker.sessionId;
     const decoded = tracker.trackDecode();
     const signal = this.signal;
-    if (this.activeDownloads >= 32) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    if (this.activeDownloads >= 16) await new Promise<void>((resolve) => this.waiting.push(resolve));
     else this.activeDownloads++;
     try {
       signal?.throwIfAborted();

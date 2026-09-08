@@ -2,7 +2,7 @@ import { Box3, Group, Vector3 } from 'three';
 import type { Camera, Object3D, Texture, WebGLRenderer, Scene } from 'three';
 import type { ManifestLod } from './types';
 import type { AssetResources } from './gltf';
-import { disposeResources, uploadTexture } from './gltf';
+import { assertMaterialsLinked, disposeResources, uploadTexture } from './gltf';
 import { estimateLodBytes } from './manifest';
 
 export class RequiredAssetBudgetError extends Error {
@@ -441,14 +441,16 @@ export class TileStreamLayer {
           disposeResources(asset.resources);
           return;
         }
+        assertMaterialsLinked(this.opts.renderer, asset.resources.materials);
         this.compiledAssets++;
         this.swapIn(entry, index, asset);
-      }, (cause: unknown): void => {
+      })
+      .catch((cause: unknown): void => {
         asset.dispose?.();
         disposeResources(asset.resources);
         if (!this.disposed) {
           entry.failures = MAX_FAILURES;
-          this.reportFailure(entry, index, new Error(`[${this.opts.name}] compiling ${entry.def.id} failed`, { cause }));
+          this.reportFailure(entry, index, new Error(`[${this.opts.name}] compiling ${entry.def.id} failed: ${cause instanceof Error ? cause.message : String(cause)}`, { cause }), true);
         }
       })
       .finally(() => {
@@ -466,9 +468,9 @@ export class TileStreamLayer {
     );
   }
 
-  private reportFailure(entry: Entry, index: number, error: Error): void {
+  private reportFailure(entry: Entry, index: number, error: Error, shaderFailure = false): void {
     console.error(error);
-    if (this.opts.essentialAll || (this.opts.pinCoarsest && index === 0)) this.opts.onError?.(error);
+    if (shaderFailure || this.opts.essentialAll || (this.opts.pinCoarsest && index === 0)) this.opts.onError?.(error);
   }
 
   /** Resolves after all non-cancellable Three.js shader polls have stopped. */

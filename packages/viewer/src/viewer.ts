@@ -28,6 +28,7 @@ import {
   disposeResources,
   estimateResourceBytes,
   getGLTFLoader,
+  parseMapGLTF,
   trackedTextureDimension,
   resourceDirectory,
   disposeTrackedLoader,
@@ -403,6 +404,11 @@ export class CityViewer {
       alpha: false,
       stencil: false,
     });
+    this.renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+      const error = new Error(`WebGL shader compilation/linking failed: ${gl.getProgramInfoLog(program) || 'no program log'}\nVertex: ${gl.getShaderInfoLog(vertexShader) || ''}\nFragment: ${gl.getShaderInfoLog(fragmentShader) || ''}`);
+      console.error(error);
+      this.recordStreamingError(error);
+    };
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.options.maxPixelRatio));
     this.renderer.toneMapping = AgXToneMapping;
     this.renderer.toneMappingExposure = this.options.exposure;
@@ -449,7 +455,7 @@ export class CityViewer {
         const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
-        const gltf = await loader.parseAsync(buffer, resourceDirectory(derivativeUrl));
+        const gltf = await parseMapGLTF(loader, buffer, resourceDirectory(derivativeUrl));
         const root = gltf.scene;
         this.prepareTree(root);
         const resources = collectResources(root);
@@ -915,7 +921,7 @@ export class CityViewer {
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
-      const parsed = await loader.parseAsync(buffer, resourceDirectory(selectedUrl));
+      const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(selectedUrl));
       this.variantLoads[selected.variant]++;
       this.canvas.dataset.assetVariant = selected.variant;
       return parsed;
@@ -924,7 +930,7 @@ export class CityViewer {
         && (error as { name?: string } | null)?.name !== 'AbortError') {
         const fallbackUrl = resolveUrl(this.assetBase, selected.fallbackFile);
         const fallback = await this.fetchBuffer(fallbackUrl, signal);
-        const parsed = await loader.parseAsync(fallback, resourceDirectory(fallbackUrl));
+        const parsed = await parseMapGLTF(loader, fallback, resourceDirectory(fallbackUrl));
         this.variantFallbacks++;
         this.variantLoads['roads-only']++;
         this.canvas.dataset.assetVariant = 'roads-only-v1-fallback';
@@ -935,7 +941,7 @@ export class CityViewer {
       this.variantFallbacks++;
       const sourceUrl = resolveUrl(this.assetBase, sourceFile);
       const source = await this.fetchBuffer(sourceUrl, signal, sourceBytes);
-      const parsed = await loader.parseAsync(source, resourceDirectory(sourceUrl));
+      const parsed = await parseMapGLTF(loader, source, resourceDirectory(sourceUrl));
       this.variantLoads.original++;
       this.canvas.dataset.assetVariant = 'original-fallback';
       return parsed;
@@ -955,7 +961,7 @@ export class CityViewer {
     const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
-    const parsed = await loader.parseAsync(buffer, resourceDirectory(fileUrl));
+    const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(fileUrl));
     this.variantLoads[variant]++;
     this.canvas.dataset.assetVariant = variant;
     return parsed;
@@ -1434,7 +1440,8 @@ export class CityViewer {
       && sum((s) => s.loading + s.queued + s.uploading + s.pendingTextureUploads
         + s.compiling + s.requiredPendingAssets) === 0;
     const downloads = this.downloadTracker.snapshot(performance.now(), scopeSettled);
-    const stage = downloads.active > 0 ? 'downloading'
+    const stage = streamingError ? 'error'
+      : downloads.active > 0 ? 'downloading'
       : sum((s) => s.pendingTextureUploads) > 0 ? 'uploading'
       : sum((s) => s.compiling) > 0 ? 'compiling'
       : sum((s) => s.loading + s.queued + s.uploading) + auxiliaryPending > 0 ? 'decoding'
