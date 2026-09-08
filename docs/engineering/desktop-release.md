@@ -236,40 +236,45 @@ deletes anything there. Release notes and the download page state both
 locations, because a user who uninstalls the app is entitled to know that
 72 GB of weights is still on their disk and how to remove it.
 
-## State as of 2026-09-08
+## State as of 2026-09-08 (evening)
 
 A snapshot, so the next person does not re-derive it. Everything here was
 read from an artifact, an API or a live endpoint rather than asserted.
 
-**Installer set.** Run `34187617763` at source `05a6d31a`, all four platforms
-succeeded: `linux-x64` (AppImage + deb), `windows-x64` (NSIS), `macos-arm64`
-and `macos-x64` (dmg + zip). Every digest verified with `sha256sum -c`
-against the checksum file its own packaging leg wrote. All four
-licence-**cleared** against their own corresponding-source archives. The
-encoder configure line was read out of the shipped binary on Linux and both
-macOS targets — our exact closure, zero `--enable-nonfree`; Windows rests on
-its receipt for the reason given above.
+**Public releases.** `studio-preview.1` (release id `384451104`, source
+`f4146f738`, build 0.1.1) was published at 15:18Z and remains public as a
+record. `studio-preview.2` (release id `384989037`, source `c79c4af6`, build
+0.1.2, installer run `34255225493`) was published at 19:24Z and is the
+preview channel pointer: it adds the assistant workspace selection that the
+staging Cloud's `/api/desktop/ai/anthropic` route now requires
+(`docs/product/ai-providers.md`). Both are prereleases; there is no stable
+release and no `latest`. The withdrawn `desktop-v0.1.0-preview.20260907`
+draft (`b102bceac`) stays private for evidence and must never be republished.
+
+**Installer set (preview.2).** All four platforms succeeded: `linux-x64`
+(AppImage + deb), `windows-x64` (NSIS), `macos-arm64` and `macos-x64`
+(dmg + zip). Every digest verified against the checksum file its own
+packaging leg wrote and again from GitHub's reported asset digests. All four
+licence-**cleared** against their own corresponding-source archives, which
+are published beside the installers. The encoder configure line was read out
+of the shipped binary on Linux and both macOS targets — our exact closure,
+zero `--enable-nonfree`; Windows rests on its receipt for the reason given
+above.
 
 **Qualification.** Linux only, and completely: all eight gates pass on the
-downloaded CI bytes. There is no Windows or macOS host here, so those
-platforms have payload, encoder, addon and digest evidence but **no
-installed-launch proof**. A release must say so per platform rather than
-implying parity.
+downloaded CI bytes for both the AppImage and the deb. There is no Windows or
+macOS host here, so those platforms have payload, encoder, addon and digest
+evidence but **no installed-launch proof**. A release must say so per
+platform rather than implying parity; the manifest's `interactivelyQualified`
+does.
 
-**Publication.** Draft `studio-preview.1` (release id `384451104`) exists and
-is deliberately **private**. It holds an older `7937edc9` set that predates
-the bounded-drain fix, so it must be replaced wholesale — not topped up —
-before it can be published. GitHub's reported asset digests matched the
-uploaded bytes exactly, so the publication path itself is proven.
-
-**Cloud.** `https://staging.simforge.ai` serves the candidate;
-`/download/releases.json` answers 200 `application/json` with schema
-`simforge.downloads/v1`, `channels` still null because nothing is published,
-and the packaged update check against it returns `unavailable` / "no preview
-release is published", which is correct. Compute routes are **not** on
-staging: `/api/simforge/compute/{jobs,estimate,capabilities}` return 404,
-because that candidate deliberately excludes the compute surface. Deployment
-and identity details are recorded in `docs/operations.md`.
+**Cloud.** `https://staging.simforge.ai/download` serves the downloads page
+and `/download/releases.json` answers 200 `application/json` with schema
+`simforge.downloads/v1`, `channels.preview = studio-preview.2`, `stable`
+null. Compute routes are **not** on staging:
+`/api/simforge/compute/{jobs,estimate,capabilities}` return 404, because that
+candidate deliberately excludes the compute surface. Deployment and identity
+details are recorded in `docs/operations.md`.
 
 **Blocked on credentials, not on code.** Windows Authenticode and Apple
 Developer ID + notarization are absent — zero repository and zero
