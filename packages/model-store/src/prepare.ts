@@ -78,12 +78,36 @@ export class PrepareError extends Error {
 
 type RunResult = { code: number; stdout: string; stderr: string };
 
+/**
+ * A local deferred, rather than `Promise.withResolvers` or a shared helper.
+ *
+ * `Promise.withResolvers` needs `lib: es2024`, and raising this package's
+ * target alone would be exactly the kind of per-package divergence that bites
+ * later. Importing the equivalent helper from `packages/evaluation` would make
+ * this package depend on one that is on zod 4 while this one is on zod 3 — a
+ * dependency edge far more expensive than three lines. The runtime is
+ * identical either way.
+ */
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((resolveFn, rejectFn) => {
+    resolve = resolveFn;
+    reject = rejectFn;
+  });
+  return { promise, resolve, reject };
+}
+
 async function run(
   command: string,
   args: readonly string[],
   options: { cwd?: string; env?: Record<string, string>; step: PrepareStep },
 ): Promise<RunResult> {
-  const { promise, resolve, reject } = Promise.withResolvers<RunResult>();
+  const { promise, resolve, reject } = deferred<RunResult>();
   const child = spawn(command, [...args], {
     cwd: options.cwd,
     env: { ...process.env, ...options.env },
@@ -278,7 +302,7 @@ export async function prepareRuntime(options: PrepareOptions): Promise<RuntimeRe
     python,
     pythonVersion: version,
     codeCommit: entry.code.commit,
-    upstreamLock: entry.runtime.lock,
+    upstreamLock: entry.code.lock,
     flashAttn: options.flashAttn ?? false,
     preparedAt: new Date().toISOString(),
     steps,

@@ -39,6 +39,22 @@ export type ModelsOptions = {
   pretty?: boolean;
 };
 
+/**
+ * A one-second tick between install-state polls.
+ *
+ * A local deferred rather than `Promise.withResolvers`, which needs
+ * `lib: es2024`; raising this package's target for a sleep would be a
+ * per-package divergence for no benefit.
+ */
+function sleep(ms: number): Promise<void> {
+  let wake!: () => void;
+  const waited = new Promise<void>((resolve) => {
+    wake = resolve;
+  });
+  setTimeout(() => wake(), ms);
+  return waited;
+}
+
 function requireFamily(value: string | undefined): ModelFamilyId {
   if (!value) {
     throw new CliError('missing_argument', 'a model family is required', {
@@ -187,9 +203,7 @@ export async function modelsInstall(options: ModelsInstallOptions): Promise<numb
     // promise: the same loop then works whether this process started the
     // install or is attaching to one the app began.
     while (state.state === 'downloading' || state.state === 'verifying') {
-      const tick = Promise.withResolvers<void>();
-      setTimeout(() => tick.resolve(), 1000);
-      await tick.promise;
+      await sleep(1000);
       state = await installState(family);
     }
   }
