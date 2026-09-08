@@ -61,6 +61,34 @@ function HorizonTable({ label, metrics }: { label: string; metrics: HorizonMetri
   );
 }
 
+/** Provenance values are free-form; render them readably without asserting a shape. */
+function formatProvenanceValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (Array.isArray(value)) return value.length > 0 ? value.map(String).join(", ") : "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/**
+ * Name the field that marks this run's runtime as unqualified, or null.
+ *
+ * A run executed on an unpinned interpreter is deliberately stamped by the
+ * producer so its numbers cannot become a published envelope. Surfacing that
+ * stamp is the whole point of it existing: an unqualified measurement shown
+ * without its caveat is how a pending quantization gets quietly promoted.
+ */
+function unqualifiedRuntimeStamp(runtime: Record<string, unknown> | null): string | null {
+  if (!runtime) return null;
+  for (const [field, value] of Object.entries(runtime)) {
+    if (typeof value !== "string") continue;
+    const lowered = value.toLowerCase();
+    if (lowered === "pending" || lowered === "unqualified" || lowered === "qualification-pending") {
+      return `${field}: ${value}`;
+    }
+  }
+  return null;
+}
+
 function ItemCard({
   item,
   videoUrl,
@@ -231,6 +259,12 @@ export function JobDetail({
   const aggregate = openLoop?.aggregate;
   const provenanceModel = manifest?.provenance.model ?? null;
   const provenanceInput = manifest?.provenance.input ?? null;
+  // The runtime block is where an unpinned-interpreter run is stamped, so it is
+  // rendered rather than hidden behind the model fields.
+  const runtimeEntries = manifest?.provenance.runtime ?? null;
+  const provenanceRuntime =
+    runtimeEntries && Object.keys(runtimeEntries).length > 0 ? runtimeEntries : null;
+  const unqualifiedRuntime = unqualifiedRuntimeStamp(provenanceRuntime);
 
   return (
     <div className={cn("space-y-6", className)} data-testid="job-detail">
@@ -359,15 +393,26 @@ export function JobDetail({
         </section>
       ) : null}
 
-      {provenanceModel || provenanceInput ? (
+      {provenanceModel || provenanceInput || provenanceRuntime ? (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Provenance</h2>
+          {unqualifiedRuntime ? (
+            <RefusalNotice
+              tone="warn"
+              title="This run was produced on an unqualified runtime"
+              reasons={[
+                `The runtime stamped ${unqualifiedRuntime}. Numbers from an unqualified runtime are signal, not a published envelope: they cannot promote a quantization from pending to supported, and they are not comparable with results measured on the pinned release runtime.`,
+              ]}
+            />
+          ) : null}
           <dl className="grid gap-x-8 gap-y-2 text-xs sm:grid-cols-3">
             {provenanceModel
               ? Object.entries(provenanceModel).map(([field, value]) => (
                   <div key={field}>
                     <dt className="uppercase tracking-wide text-muted-foreground">{field}</dt>
-                    <dd className="min-w-0 truncate font-mono text-foreground">{String(value)}</dd>
+                    <dd className="min-w-0 truncate font-mono text-foreground">
+                      {formatProvenanceValue(value)}
+                    </dd>
                   </div>
                 ))
               : null}
@@ -376,7 +421,17 @@ export function JobDetail({
                   <div key={`input-${field}`}>
                     <dt className="uppercase tracking-wide text-muted-foreground">input.{field}</dt>
                     <dd className="min-w-0 truncate font-mono text-foreground">
-                      {Array.isArray(value) ? value.join(", ") : String(value)}
+                      {formatProvenanceValue(value)}
+                    </dd>
+                  </div>
+                ))
+              : null}
+            {provenanceRuntime
+              ? Object.entries(provenanceRuntime).map(([field, value]) => (
+                  <div key={`runtime-${field}`}>
+                    <dt className="uppercase tracking-wide text-muted-foreground">runtime.{field}</dt>
+                    <dd className="min-w-0 truncate font-mono text-foreground">
+                      {formatProvenanceValue(value)}
                     </dd>
                   </div>
                 ))
@@ -386,6 +441,9 @@ export function JobDetail({
             Same seed alone is not proof of reproducibility across GPUs: the model revision,
             checkpoint digest, quantization, runtime and RNG provenance above are what pin this
             result.
+            {provenanceModel?.determinismScope
+              ? ` The producer records its determinism scope as ${provenanceModel.determinismScope}.`
+              : ""}
           </p>
         </section>
       ) : null}
