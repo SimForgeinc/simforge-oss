@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2, gateG5 } from '../gates.js';
+import { LaneContextSchema, bindLane, summariseBinding, type LaneContext } from '../lanes.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
@@ -539,5 +540,67 @@ describe('G5 states why it failed', () => {
     const verdict = gateG5({ ...measurement, infractions: 0, infractionCategories: [], unavailableCategories: [] });
     expect(verdict.passed).toBe(true);
     expect((verdict.detail as { failureReasons: string[] }).failureReasons).toEqual([]);
+  });
+});
+
+describe('lane binding', () => {
+  // Two parallel 3 m lanes running +x, separated by the ~0.2 m inter-rail strip the annotation
+  // leaves between adjacent lanes.
+  const context: LaneContext = {
+    schema: 'simforge.lane-context/v1',
+    source: 'clipgt-lane-rails',
+    frame: 'test-frame',
+    timeSupportUs: null,
+    lanes: [
+      { id: 'right', centreline: [[0, 1.5], [100, 1.5]], leftRail: [[0, 3], [100, 3]], rightRail: [[0, 0], [100, 0]], widthM: 3 },
+      { id: 'left', centreline: [[0, 4.7], [100, 4.7]], leftRail: [[0, 6.2], [100, 6.2]], rightRail: [[0, 3.2], [100, 3.2]], widthM: 3 },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 6.2] },
+  };
+
+  it('binds to the lane whose own rails contain the point, with a signed offset', () => {
+    const binding = bindLane(context, 50, 2.0);
+    expect(binding.kind).toBe('contained');
+    expect(binding.laneId).toBe('right');
+    // 0.5 m left of that lane's centreline.
+    expect(binding.lateralOffsetM).toBeCloseTo(0.5, 6);
+    expect(bindLane(context, 50, 1.0).lateralOffsetM).toBeCloseTo(-0.5, 6);
+  });
+
+  it('reports ambiguous in the inter-rail strip rather than picking the nearer lane', () => {
+    // y = 3.1 is between the two lanes' rails: in neither ring.
+    const binding = bindLane(context, 50, 3.1);
+    expect(binding.kind).toBe('ambiguous');
+    expect(binding.laneId).toBeNull();
+    // The whole point: no offset is reported from a lane the vehicle is not in. Reporting one
+    // is how a 5.454 m departure was produced for a car driving where the human drove.
+    expect(binding.lateralOffsetM).toBeNull();
+  });
+
+  it('reports outside when no lane is plausibly the vehicle\'s', () => {
+    expect(bindLane(context, 50, -20).kind).toBe('outside');
+  });
+
+  it('summarises a sequence and never averages an unbound sample into the offset', () => {
+    const summary = summariseBinding(context, [
+      { x: 10, y: 1.5 },   // dead centre
+      { x: 20, y: 2.4 },   // 0.9 m off centre, still contained
+      { x: 30, y: 3.1 },   // ambiguous
+      { x: 40, y: -20 },   // outside
+    ]);
+    expect(summary).toMatchObject({ samples: 4, contained: 2, ambiguous: 1, outside: 1 });
+    expect(summary.worstOffsetM).toBeCloseTo(0.9, 6);
+    expect(summary.worstOffsetFraction).toBeCloseTo(0.6, 6);
+  });
+
+  it('reports null rather than zero when nothing was bound', () => {
+    const summary = summariseBinding(context, [{ x: 40, y: -20 }]);
+    expect(summary.contained).toBe(0);
+    expect(summary.worstOffsetM).toBeNull();
+    expect(summary.worstOffsetFraction).toBeNull();
+  });
+
+  it('refuses a context with no lanes', () => {
+    expect(LaneContextSchema.safeParse({ ...context, lanes: [] }).success).toBe(false);
   });
 });
