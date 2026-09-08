@@ -4,6 +4,12 @@ import {
   type LaneGraph,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
+import {
+  MANUAL_DRIVE_RECORDING_VERSION,
+  validateManualDriveRecording,
+  type ManualDriveRecording,
+  type ManualDriveSample,
+} from '@simforge-oss/scenario';
 import type { SessionRuntime, TruthFrame, WorldSession } from '@simforge-oss/training-env/browser';
 
 import type { ControlInput } from './types';
@@ -173,26 +179,13 @@ export function applyEgoControl(
 
 /* ------------------------------------------------------------- takes */
 
-/** One engine tick of the ego during a recorded take: scene y-up metres and radians. */
-export interface ManualDriveSample {
-  readonly timeS: number;
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-  readonly headingRad: number;
-  readonly speedMps: number;
-}
-
 /**
- * The actual simulated path of a bounded take, one sample per engine tick on
- * the authoritative simulation clock from `t = 0` through the clip end
- * inclusive. Nothing is decimated or synthesised from input.
+ * The recording is the scenario schema's own `manualDrive` take: one sample
+ * per engine tick on the authoritative simulation clock from `t = 0` through
+ * the clip end inclusive, scene y-up metres and radians, `speedMps` signed.
+ * Nothing is decimated or synthesised from input.
  */
-export interface ManualDriveRecording {
-  readonly version: 1;
-  readonly clipSeconds: number;
-  readonly samples: readonly ManualDriveSample[];
-}
+export type { ManualDriveRecording, ManualDriveSample } from '@simforge-oss/scenario';
 
 /**
  * The take's first sample. The native truth stream publishes a frame after
@@ -247,7 +240,10 @@ export function appendTakeSamples(
   }
 }
 
-/** Seal a take: the sample set must cover every tick of the clip, or the take is not a recording. */
+/**
+ * Seal a take: every tick of the clip must be present and the result must
+ * pass the schema's own structural rule, or the take is not a recording.
+ */
 export function finishTakeRecording(
   samples: readonly ManualDriveSample[],
   clipSeconds: number,
@@ -264,5 +260,15 @@ export function finishTakeRecording(
   if (samples.length !== expected) {
     throw new Error(`Take is incomplete: ${samples.length} samples captured, ${expected} engine ticks expected`);
   }
-  return { version: 1, clipSeconds, samples };
+  // The last frame may sit a floating-point rounding error past the clip end;
+  // pin it to the clip only within that tolerance. Anything larger is a real gap.
+  const recording: ManualDriveRecording = {
+    version: MANUAL_DRIVE_RECORDING_VERSION,
+    clipSeconds,
+    samples: samples.map((sample, index) =>
+      index === samples.length - 1 && Math.abs(sample.timeS - clipSeconds) <= 1e-6 ? { ...sample, timeS: clipSeconds } : sample),
+  };
+  const verdict = validateManualDriveRecording(recording, clipSeconds);
+  if (!verdict.ok) throw new Error(`Take is not a valid recording (${verdict.path}): ${verdict.message}`);
+  return recording;
 }
