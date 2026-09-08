@@ -539,6 +539,14 @@ export function renderReleaseNotes({ release, audit }) {
       `- Interactive qualification of a downloaded installer was performed on ${release.qualification.interactivePlatforms.join(", ") || "no platform"}. ${notQualified.join(", ")} passed packaging verification only.`,
     );
   }
+  // Limits stated by whoever qualified the build, carried verbatim. A
+  // capability tested through injected input, or on one input device only, is
+  // published as such: the notes are where a user finds out what was actually
+  // exercised, and paraphrasing that is how "tested" quietly becomes a claim
+  // nobody made.
+  for (const limit of release.qualification.statedLimits ?? []) {
+    lines.push(`- ${limit}`);
+  }
   lines.push(
     "- Your data (database, artifacts, map cache, job state) lives outside the install directory and is not removed by uninstalling.",
     "- Downloaded model weights live separately again, under `$SIMFORGE_ASSETS_ROOT` (default `~/simforge-assets`), and can be tens of gigabytes. Uninstalling the app does not delete them; `simforge models uninstall` or Remove on the Models screen does.",

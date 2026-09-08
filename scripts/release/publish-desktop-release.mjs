@@ -363,6 +363,14 @@ async function main() {
       interactivePlatforms: typeof args.interactive === "string" ? args.interactive.split(",").map((entry) => entry.trim()) : [],
       packagingVerified: platforms,
       evidence: typeof args.evidence === "string" ? args.evidence.split(",").map((entry) => entry.trim()) : [],
+      // Pipe-separated, because these are sentences and a limit legitimately
+      // contains a semicolon: --stated-limits "Keyboard driving tested
+      // end-to-end.|Wheel controls tested with injected input; physical
+      // hardware remains unverified." Carried into the notes verbatim rather
+      // than summarised.
+      statedLimits: typeof args["stated-limits"] === "string"
+        ? args["stated-limits"].split("|").map((entry) => entry.trim()).filter(Boolean)
+        : [],
       platformSet: declaredPlatforms === null ? "complete" : "partial",
       platformsAbsent: declaredPlatforms === null
         ? []
