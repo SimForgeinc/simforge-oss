@@ -673,3 +673,64 @@ no `map.xodr` was treated as ground truth, and no infraction was discounted on s
 Six real scenes. One (clipgt-0009402a, profile [0,2,6] — a model-specific three-camera profile
 for Alpamayo 1.5's variable rig, **not** a four-camera claim) clears G1–G4. None is admitted.
 The failed front-wide camera at 16.11 dB and every prior result stay on the record.
+
+
+## 2026-09-08 — Off-road diagnosis: the third infraction is also a lane-binding artifact
+
+Bounded CPU diagnosis of the one infraction category I had called authoritative. It is not, and
+this corrects my own earlier claim a second time.
+
+### The event
+
+From the scored episode's `events.json`, every infraction fires in the first second:
+
+| tick | t | event | data |
+|---|---|---|---|
+| 1 | 0.2 s | off-road | `lateralOffsetM: -5.454` |
+| 1 | 0.2 s | wrong-way | `reverseM: 1.494` |
+| 9 | 1.0 s | speeding | 30.89 m/s vs limit 11.11 m/s |
+
+At tick 1 the replayed ego is **0.16 m** from `ego.recordedPath` (deviation only reaches its
+0.425 m peak at step 7) — it is, to within 16 cm, exactly where the human drove. Yet the
+off-road detector reports it **5.454 m from the centreline of the lane the spec bound to**.
+
+### What that means
+
+The 5.45 m is not the vehicle leaving the road. It is the distance from a lane centreline that
+was already mis-bound at the start: `nearestLaneAtStart` recorded lane `67:0:-2` at a lateral
+offset of **1.101 m**, and the detector is measuring against a lane the ego is not driving in —
+roughly a lane-width away, which also explains a `wrong-way` firing on a straight drive at
+0.2 s.
+
+The decisive point: **the recorded human trajectory itself would be flagged off-road by this
+detector**, since the replay is within 16 cm of it. A metric that fails the ground-truth drive
+is measuring the binding, not the drive.
+
+It also measures a different quantity from AlpaSim's: their `OffRoadScorer` works from lane
+**polygons** via `trajdata.vec_map` (drivable-area containment), whereas ours is a
+**centreline lateral offset**. Those are not the same test, and only the first is meaningful
+against a low-confidence binding.
+
+### Consequence, and what I did NOT do
+
+All three infraction categories on this scene are therefore artifacts of lane binding, not
+observations of the drive. I have **not** reclassified off-road as unavailable, **not** added a
+polygon-containment metric, and **not** touched a threshold — implementing a new metric policy
+here would be exactly the move that admits a scene by changing the rules. G5 stands as FAILED
+and clipgt-0009402a stands as NOT ADMITTED.
+
+### Exact external input / explicit policy choice required
+
+1. **Drivable-area geometry with authority.** The artifact already carries `road_boundary`,
+   `lane` and `road_island` ClipGT parquet, which is the raw material AlpaSim's polygon-based
+   off-road scorer uses, but nothing in our stack ingests them — our lane graph is built from
+   the package's `map.xodr` and bound by nearest-centreline. Ingesting ClipGT geometry is real
+   work and a decision, not a fix I should slip in under a gate investigation.
+2. **A policy choice on what off-road means for us:** centreline lateral offset (current, and
+   demonstrably wrong here) or drivable-area polygon containment (AlpaSim's, and the only one
+   the evidence supports). That choice belongs to whoever owns the scoring contract.
+3. **Speed limits and lane directionality remain unavailable** on this corpus regardless, as
+   recorded above.
+
+Until 1 and 2 are settled, full admission is BLOCKED — not by scene sampling, which cannot
+help, and not by anything more GPU time would produce.
