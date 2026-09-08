@@ -283,13 +283,21 @@ jobs:
         # Written where the bytes were made, before they travel: the release
         # job verifies every artifact against these, so a truncated download
         # or a swapped file cannot become a release asset.
+        # macOS ships shasum, not sha256sum, and Windows runs this under Git
+        # bash: node is the one hasher present and identical on all three, and
+        # it writes the same "<digest>  <name>" lines the release job parses.
         run: |
-          cd dist/desktop/out
-          shopt -s nullglob
-          files=(*.exe *.dmg *.zip *.AppImage *.deb)
-          [ ${#files[@]} -gt 0 ] || { echo "no installers to record"; exit 1; }
-          sha256sum "${files[@]}" > SHA256SUMS
-          cat SHA256SUMS
+          node -e '
+            const { createHash } = require("node:crypto");
+            const { readdirSync, readFileSync, writeFileSync } = require("node:fs");
+            const wanted = [".exe", ".dmg", ".zip", ".AppImage", ".deb"];
+            const dir = "dist/desktop/out";
+            const files = readdirSync(dir).filter((f) => wanted.some((e) => f.endsWith(e))).sort();
+            if (files.length === 0) { console.error("no installers to record"); process.exit(1); }
+            const lines = files.map((f) => createHash("sha256").update(readFileSync(dir + "/" + f)).digest("hex") + "  " + f);
+            writeFileSync(dir + "/SHA256SUMS", lines.join("\n") + "\n");
+            process.stdout.write(lines.join("\n") + "\n");
+          '
 
       - uses: actions/upload-artifact@v4
         with:
