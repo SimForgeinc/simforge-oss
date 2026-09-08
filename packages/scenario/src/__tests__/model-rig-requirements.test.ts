@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MODEL_RIG_REQUIREMENTS,
-  modelRigProfilePayload,
+  captureProfilePayload,
+  modelRequirementPayload,
   modelRigRequirement,
   sensorRigPreset,
 } from '../schema/v2/sensor-rigs.js';
@@ -43,11 +44,37 @@ describe('model rig requirements', () => {
     expect(modelRigRequirement('alpamayo-1.5')?.variableCameras).toBe(true);
   });
 
-  it('emits a payload whose sensors come from the named preset', () => {
+  it('gives two families sharing a rig the SAME capture identity', () => {
+    // The bug this prevents: A1 and A1.5 both consume the four-camera rig,
+    // so a run over identical imagery must not look sensor-different just
+    // because a different model asked for it. Capture identity therefore
+    // excludes the family entirely.
+    const a1 = modelRigRequirement('alpamayo-1')!;
+    const a15 = modelRigRequirement('alpamayo-1.5')!;
+    expect(a1.rigId).toBe(a15.rigId);
+    expect(JSON.stringify(captureProfilePayload(a1.rigId))).toBe(
+      JSON.stringify(captureProfilePayload(a15.rigId)),
+    );
+    expect(JSON.stringify(captureProfilePayload(a1.rigId))).not.toContain('alpamayo-1"');
+
+    // ...while their requirement identities differ, because the binding does.
+    expect(JSON.stringify(modelRequirementPayload('alpamayo-1'))).not.toBe(
+      JSON.stringify(modelRequirementPayload('alpamayo-1.5')),
+    );
+  });
+
+  it('refuses a capture profile for a rig with no Alpamayo camera mapping', () => {
+    // Otherwise it would report the Alpamayo cadence and history window for
+    // a capture that was never made under them.
+    expect(() => captureProfilePayload('basic-dash-camera')).toThrow(/no Alpamayo capture profile/);
+    expect(() => captureProfilePayload('not-a-rig')).toThrow(/unknown sensor rig/);
+  });
+
+  it('emits a capture payload whose sensors come from the named preset', () => {
     // The payload must describe the geometry it names, not restate it: a
     // second copy is how a profile ends up calibrated in one file only.
     for (const requirement of MODEL_RIG_REQUIREMENTS) {
-      const payload = modelRigProfilePayload(requirement.family) as {
+      const payload = captureProfilePayload(requirement.rigId) as {
         rigId: string;
         cameraIds: number[];
         sensors: { id: string }[];
@@ -59,13 +86,13 @@ describe('model rig requirements', () => {
     }
   });
 
-  it('gives each family a distinguishable payload', () => {
-    const payloads = MODEL_RIG_REQUIREMENTS.map((r) => JSON.stringify(modelRigProfilePayload(r.family)));
+  it('gives each family a distinguishable requirement payload', () => {
+    const payloads = MODEL_RIG_REQUIREMENTS.map((r) => JSON.stringify(modelRequirementPayload(r.family)));
     expect(new Set(payloads).size).toBe(payloads.length);
   });
 
   it('refuses an unknown family instead of returning a default profile', () => {
     expect(modelRigRequirement('not-a-model')).toBeUndefined();
-    expect(() => modelRigProfilePayload('not-a-model')).toThrow(/no rig requirement/);
+    expect(() => modelRequirementPayload('not-a-model')).toThrow(/no rig requirement/);
   });
 });

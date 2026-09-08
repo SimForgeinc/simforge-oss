@@ -786,44 +786,87 @@ export function modelRigRequirement(family: string): ModelRigRequirement | undef
 }
 
 /**
- * The exact profile payload that must not drift between the render and the
- * evaluation: the model's camera order and input cadence, plus the resolved
- * sensor geometry of the rig it requires.
+ * CAPTURE identity: what was physically recorded, independent of any model.
  *
- * Returned as DATA, deliberately unhashed. This package sits below the one
- * that owns content hashing (`@simforge-oss/engine` depends on this one, so
- * the reverse import is impossible), and adding a second SHA-256 here to
- * avoid that layering would be exactly the duplicate catalog this mapping
- * exists to prevent. Callers hash it with the existing helper:
- * `modelRigProfileHash` in `@simforge-oss/engine`.
+ * Deliberately excludes the model family. The same four-camera capture is
+ * the same capture whether A1 or A1.5 consumed it, so a comparison that
+ * keyed on a family-prefixed value would call two runs over identical
+ * imagery "sensor-different" and refuse to rank them. Capture identity
+ * answers "was this the same rig, the same camera ids, the same cadence and
+ * the same history window", and nothing about which model asked for it.
  *
- * Sensor fields are read from the preset rather than restated, so the
- * payload cannot disagree with the geometry it describes.
+ * Returned as DATA, unhashed: this package sits below the one that owns
+ * content hashing (`@simforge-oss/engine` depends on this one), and adding a
+ * second SHA-256 here to dodge that layering would duplicate the primitive.
+ * Hash it with `captureProfileHash` in `@simforge-oss/engine`.
+ *
+ * Sensor fields are read from the preset, so the payload cannot disagree
+ * with the geometry it describes.
  */
-export function modelRigProfilePayload(family: string): Record<string, unknown> {
-  const requirement = modelRigRequirement(family);
-  if (!requirement) throw new Error(`no rig requirement for model family "${family}"`);
-  const preset = sensorRigPreset(requirement.rigId);
-  if (!preset) {
-    throw new Error(`rig requirement for "${family}" names unknown rig "${requirement.rigId}"`);
+export function captureProfilePayload(rigId: string): Record<string, unknown> {
+  const preset = sensorRigPreset(rigId);
+  if (!preset) throw new Error(`unknown sensor rig "${rigId}"`);
+
+  // The cadence and history window below are the Alpamayo capture contract.
+  // Emitting them for a rig that has no Alpamayo camera mapping would
+  // describe a capture nobody made, so such a rig is refused rather than
+  // given borrowed constants.
+  const cameraIds = preset.sensors.map(
+    (sensor) => ALPAMAYO_CAMERA_INDEX[sensor.id as AlpamayoCameraName],
+  );
+  const unmapped = preset.sensors
+    .filter((_, index) => cameraIds[index] === undefined)
+    .map((sensor) => sensor.id);
+  if (unmapped.length > 0) {
+    throw new Error(
+      `rig "${rigId}" has sensors with no Alpamayo camera index (${unmapped.join(', ')}); ` +
+        'it has no Alpamayo capture profile',
+    );
   }
+
   return {
-    schema: 'simforge.model-rig-profile/v1',
-    family: requirement.family,
-    rigId: requirement.rigId,
-    cameraIds: [...requirement.cameraIds],
-    renderWidth: requirement.renderWidth,
-    renderHeight: requirement.renderHeight,
-    framesPerCamera: requirement.framesPerCamera,
-    cadenceHz: requirement.cadenceHz,
-    historySteps: requirement.historySteps,
-    coordinateFrame: requirement.coordinateFrame,
+    schema: 'simforge.capture-profile/v1',
+    rigId,
+    cameraIds,
+    renderWidth: ALPAMAYO_INPUT_COMMON.renderWidth,
+    renderHeight: ALPAMAYO_INPUT_COMMON.renderHeight,
+    framesPerCamera: ALPAMAYO_INPUT_COMMON.framesPerCamera,
+    cadenceHz: ALPAMAYO_INPUT_COMMON.cadenceHz,
+    historySteps: ALPAMAYO_INPUT_COMMON.historySteps,
+    coordinateFrame: ALPAMAYO_INPUT_COMMON.coordinateFrame,
     sensors: preset.sensors.map((sensor) => ({
       id: sensor.id,
       type: sensor.type,
       mount: sensor.mount,
       ...(sensor.type === 'dash_camera' ? { fov: sensor.fov, dims: sensor.dims } : {}),
     })),
+  };
+}
+
+/**
+ * MODEL REQUIREMENT identity: which capture profile a family binds to, and
+ * on what terms.
+ *
+ * Separate from capture identity on purpose, and it carries the rig id
+ * rather than restating geometry, so the two can be compared
+ * independently: two runs can share a capture and differ in the model that
+ * consumed it, which is precisely the comparison the product wants to make.
+ * Never derive one from the other by stripping a prefix.
+ */
+export function modelRequirementPayload(family: string): Record<string, unknown> {
+  const requirement = modelRigRequirement(family);
+  if (!requirement) throw new Error(`no rig requirement for model family "${family}"`);
+  return {
+    schema: 'simforge.model-rig-requirement/v1',
+    family: requirement.family,
+    rigId: requirement.rigId,
+    cameraIds: [...requirement.cameraIds],
+    variableCameras: requirement.variableCameras,
+    alsoSupportedRigIds: [...requirement.alsoSupportedRigIds],
+    framesPerCamera: requirement.framesPerCamera,
+    cadenceHz: requirement.cadenceHz,
+    historySteps: requirement.historySteps,
+    coordinateFrame: requirement.coordinateFrame,
   };
 }
 
