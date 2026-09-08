@@ -140,6 +140,8 @@ export const ResultManifestSchema = z.object({
         manifestSha256: z.string().length(64),
         traceSha256: z.string().length(64),
         sourceCommit: z.string().min(7),
+        /** SHA-256 of the built worker script that produced this reading. */
+        workerSha256: z.string().length(64),
         at: z.string(),
       })
       .nullable()

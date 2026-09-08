@@ -21,6 +21,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { fixtureFacts } from './campaign.js';
 import { FINAL_EPISODE_STATUSES, runEpisodeAsync, type EpisodeRunnerOptions } from './episode-runner.js';
@@ -210,6 +211,8 @@ export interface ReprocessedProvenance {
   readonly manifestSha256: string;
   readonly traceSha256: string;
   readonly sourceCommit: string;
+  /** SHA-256 of the built script doing the reading, from its own argv. */
+  readonly workerSha256: string;
   readonly at: string;
 }
 
@@ -260,6 +263,9 @@ export async function reprocessEpisode(options: {
       manifestSha256: createHash('sha256').update(priorManifest).digest('hex'),
       traceSha256: createHash('sha256').update(traceText).digest('hex'),
       sourceCommit: options.sourceCommit,
+      workerSha256: createHash('sha256')
+        .update(await readFile(process.argv[1] ?? fileURLToPath(import.meta.url)))
+        .digest('hex'),
       at: new Date().toISOString(),
     },
   };
