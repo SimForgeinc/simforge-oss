@@ -24,6 +24,7 @@ const CTX: ScenarioScoringContext = {
 
 interface StepOverrides {
   readonly speed?: number;
+  readonly ex?: TraceStepRecord['ex'];
   readonly accel?: number;
   readonly latOff?: number;
   readonly routeS?: number;
@@ -51,6 +52,7 @@ function mkStep(step: number, o: StepOverrides = {}): TraceStepRecord {
     terms: o.terms ?? [0, 0, 0],
     objs: o.objs ?? [],
     ...(o.sig !== undefined ? { sig: o.sig } : {}),
+    ...(o.ex !== undefined ? { ex: o.ex } : {}),
   };
 }
 
@@ -357,5 +359,110 @@ describe('parseTraceJsonl', () => {
     expect(trace.reset?.seed).toBe(7);
     expect(trace.steps.map((s) => s.step)).toEqual([0, 1]); // sorted
     expect(trace.summary?.['episode_digest']).toBe('abc');
+  });
+});
+
+describe('off-road v2: footprint containment', () => {
+  /** A 40 m x 8 m straight corridor centred on y = 0, plus a 2 m island at x 20. */
+  const AREA = {
+    schema: 'simforge.drivable-area/v1' as const,
+    source: 'clipgt',
+    frame: 'nurec-source-z-up',
+    confidence: 'authoritative' as const,
+    polygons: [
+      {
+        id: 'lane',
+        kind: 'drivable' as const,
+        ring: [
+          [0, -4],
+          [40, -4],
+          [40, 4],
+          [0, 4],
+        ] as [number, number][],
+      },
+      {
+        id: 'island',
+        kind: 'hole' as const,
+        ring: [
+          [19, -1],
+          [21, -1],
+          [21, 1],
+          [19, 1],
+        ] as [number, number][],
+      },
+    ],
+    timeSupportUs: null,
+    coverage: null,
+  };
+  const V2: ScenarioScoringContext = {
+    ...CTX,
+    metricVersion: 'v2',
+    drivableArea: AREA,
+    egoDims: { lengthM: 4, widthM: 2 },
+  };
+
+  it('does not flag a drive that stays on the surface but is far from the centreline', () => {
+    // The v1 defect, exactly: 3.5 m of centreline offset inside an 8 m corridor.
+    // v1 called this off-road; the vehicle never left the road.
+    const steps = [5, 10, 15].map((x, i) =>
+      mkStep(i, { latOff: 3.5, ex: { x, y: 2.5, headingRad: 0 } }),
+    );
+    const score = scoreEpisode(mkTrace(steps), V2);
+    expect(score.infractions['off-road']).toBe(0);
+    expect(score.worstOffRoadM).toBe(0);
+    // The centreline claim is still made, under its own name.
+    expect(score.infractions['lane-departure']).toBe(1);
+    expect(scoreEpisode(mkTrace(steps), CTX).infractions['off-road']).toBe(1);
+  });
+
+  it('flags a footprint corner leaving the surface and reports how far out', () => {
+    const steps = [mkStep(0, { ex: { x: 10, y: 3.5, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), V2);
+    expect(score.infractions['off-road']).toBe(1);
+    // Corners at y = 2.5 and y = 4.5; the outer pair is 0.5 m past the edge.
+    expect(score.worstOffRoadM).toBeCloseTo(0.5, 6);
+  });
+
+  it('flags a footprint over a hole even though it is inside the outer ring', () => {
+    const steps = [mkStep(0, { ex: { x: 20, y: 0, headingRad: 0 } })];
+    expect(scoreEpisode(mkTrace(steps), V2).infractions['off-road']).toBe(1);
+  });
+
+  it('reports unavailable rather than clean when the geometry is absent', () => {
+    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: null });
+    expect(score.infractions['off-road']).toBe(0);
+    expect(score.unavailable).toContain('off-road');
+  });
+
+  it('reports unavailable when no decision carried an ego pose', () => {
+    const score = scoreEpisode(mkTrace([mkStep(0, { latOff: 0 })]), V2);
+    expect(score.unavailable).toContain('off-road');
+  });
+
+  it('reports unavailable for a decision outside the polygons\' time support', () => {
+    const bounded = { ...AREA, timeSupportUs: { startUs: 1_000_000, endUs: 2_000_000 } };
+    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: bounded, originUs: 9_000_000 });
+    expect(score.unavailable).toContain('off-road');
+  });
+
+  it('carries declared unavailability through without counting it', () => {
+    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), {
+      ...V2,
+      unavailableInfractions: ['speeding', 'wrong-way'],
+    });
+    expect(score.unavailable).toEqual(['speeding', 'wrong-way']);
+    expect(score.infractions['speeding']).toBe(0);
+    expect(score.metricVersion).toBe('v2');
+  });
+
+  it('leaves v1 scoring unchanged and emits no lane-departure', () => {
+    const score = scoreEpisode(mkTrace([mkStep(0, { latOff: 3.01 })]), CTX);
+    expect(score.metricVersion).toBe('v1');
+    expect(score.infractions['off-road']).toBe(1);
+    expect(score.infractions['lane-departure']).toBe(0);
+    expect(score.unavailable).toEqual([]);
   });
 });

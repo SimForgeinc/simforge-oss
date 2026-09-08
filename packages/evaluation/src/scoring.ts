@@ -26,6 +26,11 @@
 
 /* ------------------------------------------------------------ trace shapes */
 
+import {
+  footprintContainment,
+  type DrivableArea,
+} from './drivable-area.js';
+
 /** Perception object row on the wire: [id, rangeM, bearingRad, rangeRateMps, lineOfSight]. */
 export type TraceObj = readonly [string, number, number, number, number];
 
@@ -63,6 +68,13 @@ export interface TraceStepRecord {
   readonly objs: readonly TraceObj[];
   /** Optional signal annotation; enables the red-light checker when present. */
   readonly sig?: TraceSignalState | null;
+  /**
+   * Executor telemetry when the decision drove a trajectory: the ego's WORLD
+   * pose, which is what drivable-area containment needs. Absent on
+   * speed-setpoint decisions, and its absence makes containment unavailable
+   * rather than passing.
+   */
+  readonly ex?: { readonly x: number; readonly y: number; readonly headingRad: number } | null;
 }
 
 export interface ParsedTrace {
@@ -150,6 +162,7 @@ export type InfractionType =
   | 'collision-pedestrian'
   | 'collision-static'
   | 'off-road'
+  | 'lane-departure'
   | 'wrong-way'
   | 'red-light'
   | 'stuck'
@@ -179,6 +192,7 @@ export interface PenaltyFactors {
   collisionPedestrian: number;
   collisionStatic: number;
   offRoad: number;
+  laneDeparture: number;
   wrongWay: number;
   redLight: number;
   stuck: number;
@@ -217,6 +231,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     collisionPedestrian: 0.5,
     collisionStatic: 0.65,
     offRoad: 0.75,
+    laneDeparture: 0.75,
     wrongWay: 0.7,
     redLight: 0.7,
     stuck: 0.8,
@@ -249,6 +264,30 @@ export interface ScenarioScoringContext {
    * (unassessed) unless the episode reached an explicit goal.
    */
   readonly expectedRouteM?: number | null;
+  /**
+   * `v2` scores off-road as footprint containment in {@link drivableArea} and
+   * reports the centreline rule separately as `lane-departure`. `v1` keeps
+   * off-road as the centreline rule and never emits `lane-departure`.
+   *
+   * Defaults to `v1`: an existing caller's numbers do not change meaning
+   * because this code shipped.
+   */
+  readonly metricVersion?: 'v1' | 'v2';
+  /** Authoritative drivable polygons, in the ego's frame. Absent -> unavailable. */
+  readonly drivableArea?: DrivableArea | null;
+  /** Ego box for the footprint; defaults to the engine's own default dims. */
+  readonly egoDims?: { readonly lengthM: number; readonly widthM: number };
+  /** Absolute time of decision 0, for polygons that declare a time support. */
+  readonly originUs?: number | null;
+  /**
+   * Infractions the SCENE cannot support a claim about, declared by the caller.
+   *
+   * A metric with no authority behind it is unavailable, not zero: a ClipGT
+   * scene whose lane speed limits are unset cannot say a drive was speeding,
+   * and one with no travel-direction authority cannot say it went the wrong
+   * way. Reported in {@link EpisodeScore.unavailable} and never counted.
+   */
+  readonly unavailableInfractions?: readonly InfractionType[];
 }
 
 /* ---------------------------------------------------------------- scoring */
@@ -270,6 +309,17 @@ export interface EpisodeScore {
   readonly steps: number;
   readonly deadlineMisses: number;
   readonly events: readonly ScoreEvent[];
+  /** Which metric definition produced this score. */
+  readonly metricVersion: 'v1' | 'v2';
+  /**
+   * Infractions this episode could not be assessed for, sorted.
+   *
+   * NOT the same as zero. A consumer that reads `infractions['off-road'] === 0`
+   * as clean must check this first; the manifest carries it for that reason.
+   */
+  readonly unavailable: readonly InfractionType[];
+  /** Worst footprint excursion beyond the drivable surface, metres; null when unassessed. */
+  readonly worstOffRoadM: number | null;
 }
 
 const INFRACTION_TYPES: readonly InfractionType[] = [
@@ -277,6 +327,7 @@ const INFRACTION_TYPES: readonly InfractionType[] = [
   'collision-pedestrian',
   'collision-static',
   'off-road',
+  'lane-departure',
   'wrong-way',
   'red-light',
   'stuck',
@@ -289,6 +340,7 @@ function penaltyFor(type: InfractionType, p: PenaltyFactors): number {
     case 'collision-pedestrian': return p.collisionPedestrian;
     case 'collision-static': return p.collisionStatic;
     case 'off-road': return p.offRoad;
+    case 'lane-departure': return p.laneDeparture;
     case 'wrong-way': return p.wrongWay;
     case 'red-light': return p.redLight;
     case 'stuck': return p.stuck;
@@ -338,6 +390,7 @@ export function scoreEpisode(
     'collision-pedestrian': 0,
     'collision-static': 0,
     'off-road': 0,
+    'lane-departure': 0,
     'wrong-way': 0,
     'red-light': 0,
     'stuck': 0,
@@ -359,8 +412,17 @@ export function scoreEpisode(
   // Route-completion baseline: the reset record's route arc when present.
   const s0 = trace.reset?.sv?.[8] ?? trace.steps[0]?.sv?.[8] ?? null;
 
+  const metricVersion = ctx.metricVersion ?? 'v1';
+  const drivableArea = metricVersion === 'v2' ? (ctx.drivableArea ?? null) : null;
+  // DEFAULT_ACTOR_DIMS' car: the spec's own dims when the caller supplies them.
+  const egoDims = ctx.egoDims ?? { lengthM: 4.5, widthM: 1.9 };
+  const unavailable = new Set<InfractionType>(ctx.unavailableInfractions ?? []);
+  let containmentAssessed = 0;
+  let worstOffRoadM: number | null = null;
+
   // Checker state.
   let offRoadActive = false;
+  let laneDepartureActive = false;
   let reverseAccumM = 0;
   let wrongWayActive = false;
   let stoppedSteps = 0;
@@ -397,12 +459,43 @@ export function scoreEpisode(
       push('deadline-miss', step, 'info', { applied: step.applied ?? null });
     }
 
-    // Off-road: strict > on entry, hysteresis on exit.
-    if (!offRoadActive && Math.abs(latOff) > cfg.offRoadLateralM) {
-      offRoadActive = true;
-      push('off-road', step, 'infraction', { lateralOffsetM: latOff });
-    } else if (offRoadActive && Math.abs(latOff) <= cfg.offRoadLateralM - cfg.offRoadClearM) {
-      offRoadActive = false;
+    // The centreline rule. Under v1 it IS off-road; under v2 it is
+    // lane-departure, and off-road is the containment question below.
+    const centrelineType: InfractionType = metricVersion === 'v2' ? 'lane-departure' : 'off-road';
+    if (!laneDepartureActive && Math.abs(latOff) > cfg.offRoadLateralM) {
+      laneDepartureActive = true;
+      push(centrelineType, step, 'infraction', { lateralOffsetM: latOff });
+    } else if (laneDepartureActive && Math.abs(latOff) <= cfg.offRoadLateralM - cfg.offRoadClearM) {
+      laneDepartureActive = false;
+    }
+
+    // v2 off-road: did the FOOTPRINT leave the drivable surface. A decision
+    // whose containment cannot be decided leaves the metric unavailable rather
+    // than contributing a pass.
+    if (metricVersion === 'v2') {
+      const pose = step.ex ? { x: step.ex.x, y: step.ex.y, headingRad: step.ex.headingRad } : null;
+      const tUs =
+        ctx.originUs != null && Number.isFinite(step.t) ? Math.round(ctx.originUs + step.t * 1e6) : null;
+      const verdict = footprintContainment(drivableArea, pose, egoDims, tUs);
+      if ('unavailable' in verdict) {
+        unavailable.add('off-road');
+      } else {
+        containmentAssessed += 1;
+        // Assessed-and-clean is 0, not null: null means the question was never
+        // asked, and a consumer must be able to tell those apart.
+        worstOffRoadM = Math.max(worstOffRoadM ?? 0, verdict.outsideM);
+        if (!offRoadActive && !verdict.inside) {
+          offRoadActive = true;
+          push('off-road', step, 'infraction', {
+            outsideM: verdict.outsideM,
+            worstCorner: verdict.worstCorner,
+          });
+        } else if (offRoadActive && verdict.inside) {
+          // No hysteresis band: containment is a geometric fact, not a
+          // thresholded proxy, so re-entry is re-entry.
+          offRoadActive = false;
+        }
+      }
     }
 
     // Wrong-way: accumulate reverse route-arc progress while moving.
@@ -541,6 +634,11 @@ export function scoreEpisode(
     if (n > 0) penaltyProduct *= penaltyFor(type, cfg.penalties) ** n;
   }
 
+  // An episode where NOTHING could be assessed for containment has no off-road
+  // answer at all; one partly assessed keeps the events it did find and still
+  // declares the gap.
+  if (metricVersion === 'v2' && containmentAssessed === 0) unavailable.add('off-road');
+
   return {
     drivingScore: routeCompletion * penaltyProduct,
     routeCompletion,
@@ -557,5 +655,8 @@ export function scoreEpisode(
     steps: trace.steps.length,
     deadlineMisses,
     events,
+    metricVersion,
+    unavailable: [...unavailable].sort(),
+    worstOffRoadM,
   };
 }
