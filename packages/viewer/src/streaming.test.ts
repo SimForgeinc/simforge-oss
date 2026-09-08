@@ -1,4 +1,4 @@
-import { Box3, DataTexture, Group, Scene, Vector3 } from 'three';
+import { Box3, DataTexture, Group, MeshStandardMaterial, Scene, Vector3 } from 'three';
 import type { WebGLRenderer } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { TileStreamLayer, type PreparedAsset } from './streaming';
@@ -253,6 +253,42 @@ describe('essential streaming assets', () => {
     expect(layer.stats().residentAssets).toBe(0);
     expect(layer.stats().requiredPendingAssets).toBeGreaterThan(0);
     expect(onError.mock.calls[0]?.[0]).toMatchObject({ cause: failure });
+    layer.dispose();
+  });
+
+  it('rejects a completed but unlinked shader even on an optional streamed asset', async () => {
+    const asset = emptyAsset();
+    asset.resources.materials.push(new MeshStandardMaterial());
+    const onError = vi.fn();
+    const layer = new TileStreamLayer({
+      name: 'optional-geometry',
+      renderer: {
+        compileAsync: async () => undefined,
+        properties: { get: () => ({ programs: new Map([['failed', { program: {} }]]) }) },
+        getContext: () => ({
+          LINK_STATUS: 0x8b82,
+          getProgramParameter: () => false,
+          getProgramInfoLog: () => 'FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)',
+        }),
+      } as unknown as WebGLRenderer,
+      scene: new Scene(),
+      defs: [{
+        id: 'optional-tile',
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => asset,
+      maxConcurrent: 1,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      onError,
+    });
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    expect(layer.stats()).toMatchObject({ residentAssets: 0, compiledAssets: 0, compiling: 0, pendingBytes: 0 });
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]?.[0].message).toContain('MAX_FRAGMENT_UNIFORM_VECTORS(1024)');
     layer.dispose();
   });
 });

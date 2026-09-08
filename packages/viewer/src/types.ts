@@ -254,7 +254,7 @@ export interface CityViewerStats {
     compiledAssets: number;
     /** Effective map texture mip limit after fitting required geometry into the budget. */
     textureMaxDimension?: number;
-    stage: 'downloading' | 'decoding' | 'uploading' | 'compiling' | 'ready';
+    stage: 'downloading' | 'decoding' | 'uploading' | 'compiling' | 'ready' | 'error';
   };
   jsHeapMB: number | null;
   cameraMode: 'orbit' | 'fly';

@@ -1,8 +1,9 @@
-import { CompressedTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RGBA_S3TC_DXT1_Format, Group } from 'three';
-import { afterEach, describe, expect, it } from 'vitest';
+import { CompressedTexture, Light, Mesh, MeshStandardMaterial, PerspectiveCamera, PlaneGeometry, RGBA_S3TC_DXT1_Format, Group } from 'three';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultContainer, read as readKtx2, write as writeKtx2, VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, resourceDirectory, selectKtx2MipLevels, sharedTextures, textureDimensionForBudget } from './gltf';
+import { collectResources, disposeResources, estimateResourceBytes, limitCompressedTextureMipmaps, parseMapGLTF, resourceDirectory, selectKtx2MipLevels, sharedTextures, textureDimensionForBudget } from './gltf';
 
 function decoded(bytes: number): CompressedTexture {
   const texture = new CompressedTexture([{ data: new Uint8Array(bytes), width: 4, height: 4 }], 4, 4, RGBA_S3TC_DXT1_Format);
@@ -17,7 +18,57 @@ function cellWith(texture: CompressedTexture): Group {
   return group;
 }
 
-afterEach(() => sharedTextures.clear());
+afterEach(() => {
+  sharedTextures.clear();
+  vi.unstubAllGlobals();
+});
+
+describe('map lighting ownership', () => {
+  it('excludes imported lights from every camera layer without hiding their authored mesh children or changing generic loads', async () => {
+    // Three emits browser progress events while reading inline glTF buffers.
+    vi.stubGlobal('ProgressEvent', Event);
+    const document = {
+      asset: { version: '2.0' },
+      extensionsUsed: ['KHR_lights_punctual'],
+      extensions: { KHR_lights_punctual: { lights: [{ type: 'spot' }, { type: 'point' }] } },
+      scenes: [{ nodes: [0] }, { nodes: [2] }],
+      scene: 0,
+      nodes: [
+        { name: 'Street_Light', extensions: { KHR_lights_punctual: { light: 0 } }, children: [1] },
+        { name: 'Fixture', mesh: 0 },
+        { extensions: { KHR_lights_punctual: { light: 1 } } },
+      ],
+      buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA' }],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+      materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.5, 0.25, 0.75, 1], roughnessFactor: 0.4 } }],
+    };
+    const buffer = new TextEncoder().encode(JSON.stringify(document)).buffer;
+    const loader = new GLTFLoader();
+    const map = await parseMapGLTF(loader, buffer, '');
+    const generic = await loader.parseAsync(buffer, '');
+    const camera = new PerspectiveCamera();
+    camera.layers.enableAll();
+    let importedLights = 0;
+    for (const scene of map.scenes) scene.traverse(node => {
+      if ((node as Light).isLight) {
+        importedLights++;
+        expect(node.layers.test(camera.layers)).toBe(false);
+      }
+    });
+    expect(importedLights).toBe(2);
+    const fixture = map.scene.getObjectByName('Fixture') as Mesh;
+    const original = generic.scene.getObjectByName('Fixture') as Mesh;
+    expect(fixture.parent?.name).toBe('Street_Light');
+    expect(fixture.visible && fixture.parent?.visible && fixture.layers.test(camera.layers)).toBe(true);
+    expect(fixture.geometry.attributes.position?.array).toEqual(original.geometry.attributes.position?.array);
+    expect((fixture.material as MeshStandardMaterial).color).toEqual((original.material as MeshStandardMaterial).color);
+    expect((fixture.material as MeshStandardMaterial).roughness).toBe(0.4);
+    expect(generic.scene.getObjectByName('Street_Light')?.layers.test(camera.layers)).toBe(true);
+    for (const scene of [...map.scenes, ...generic.scenes]) disposeResources(collectResources(scene));
+  });
+});
 
 describe('shared KTX2 texture cache', () => {
   it('decodes a URL once and hands every requester a clone that shares the source', async () => {
