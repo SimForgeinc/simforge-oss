@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2, gateG5 } from '../gates.js';
-import { LaneContextSchema, bindLane, summariseBinding, type LaneContext } from '../lanes.js';
+import { LaneContextSchema, bindLane, detectLaneTransitions, summariseBinding, type LaneContext } from '../lanes.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
@@ -549,6 +549,7 @@ describe('lane binding', () => {
   const context: LaneContext = {
     schema: 'simforge.lane-context/v1',
     source: 'clipgt-lane-rails',
+    sourceSha256: 'a'.repeat(64),
     frame: 'test-frame',
     timeSupportUs: null,
     lanes: [
@@ -602,5 +603,86 @@ describe('lane binding', () => {
 
   it('refuses a context with no lanes', () => {
     expect(LaneContextSchema.safeParse({ ...context, lanes: [] }).success).toBe(false);
+  });
+});
+
+describe('lane transitions are diagnostics, never infractions', () => {
+  const context: LaneContext = {
+    schema: 'simforge.lane-context/v1',
+    source: 'clipgt-lane-rails',
+    sourceSha256: 'b'.repeat(64),
+    frame: 'test-frame',
+    timeSupportUs: null,
+    lanes: [
+      { id: 'right', centreline: [[0, 1.5], [100, 1.5]], leftRail: [[0, 3], [100, 3]], rightRail: [[0, 0], [100, 0]], widthM: 3 },
+      { id: 'left', centreline: [[0, 4.7], [100, 4.7]], leftRail: [[0, 6.2], [100, 6.2]], rightRail: [[0, 3.2], [100, 3.2]], widthM: 3 },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 6.2] },
+  };
+
+  it('reports a lane change as one transition, with the ambiguous crossing marked', () => {
+    // A car moving steadily left across the boundary: this is a manoeuvre, not an offence, and
+    // deciding whether it was unsafe needs route and rule context this geometry does not carry.
+    const poses = [{ x: 10, y: 1.5 }, { x: 20, y: 2.6 }, { x: 30, y: 3.1 }, { x: 40, y: 4.0 }, { x: 50, y: 4.7 }];
+    const transitions = detectLaneTransitions(context, poses);
+    expect(transitions.map((t) => t.kind)).toEqual(['entered-ambiguous', 'lane-transition']);
+    expect(transitions[1]).toMatchObject({ fromLaneId: 'right', toLaneId: 'left' });
+  });
+
+  it('calls the next tile of the same lane a segment advance, not a lane change', () => {
+    // ClipGT tiles a lane into ~38 m segments, so a car going perfectly straight changes bound
+    // lane id every few seconds. Reporting those as manoeuvres would put a lane change every 40 m
+    // on a vehicle that never moved sideways.
+    const tiled: LaneContext = {
+      ...context,
+      lanes: [
+        { id: 'seg-a', centreline: [[0, 1.5], [50, 1.5]], leftRail: [[0, 3], [50, 3]], rightRail: [[0, 0], [50, 0]], widthM: 3 },
+        { id: 'seg-b', centreline: [[50, 1.5], [100, 1.5]], leftRail: [[50, 3], [100, 3]], rightRail: [[50, 0], [100, 0]], widthM: 3 },
+      ],
+    };
+    const transitions = detectLaneTransitions(tiled, [{ x: 20, y: 1.5 }, { x: 70, y: 1.5 }]);
+    expect(transitions.map((t) => t.kind)).toEqual(['segment-advance']);
+  });
+
+  it('still calls it a lane change when the crossing lands exactly on a segment end', () => {
+    // The validation drive does exactly this, and a coverage test alone would miss it: the old
+    // lane has run out beneath the vehicle, so only the successor geometry reveals the manoeuvre.
+    const offset: LaneContext = {
+      ...context,
+      lanes: [
+        { id: 'seg-a', centreline: [[0, 1.5], [50, 1.5]], leftRail: [[0, 3], [50, 3]], rightRail: [[0, 0], [50, 0]], widthM: 3 },
+        { id: 'seg-left', centreline: [[50, 4.7], [100, 4.7]], leftRail: [[50, 6.2], [100, 6.2]], rightRail: [[50, 3.2], [100, 3.2]], widthM: 3 },
+      ],
+    };
+    const transitions = detectLaneTransitions(offset, [{ x: 20, y: 1.5 }, { x: 70, y: 4.7 }]);
+    expect(transitions.map((t) => t.kind)).toEqual(['lane-transition']);
+  });
+
+  it('emits nothing for steady lane keeping', () => {
+    expect(detectLaneTransitions(context, [{ x: 10, y: 1.4 }, { x: 20, y: 1.6 }, { x: 30, y: 1.5 }])).toEqual([]);
+  });
+
+  it('marks leaving support so an unavailable stretch is explained, not a silent gap', () => {
+    const transitions = detectLaneTransitions(context, [{ x: 10, y: 1.5 }, { x: 20, y: -20 }]);
+    expect(transitions).toEqual([{ kind: 'left-support', atIndex: 1, fromLaneId: 'right', toLaneId: null }]);
+  });
+
+  it('scopes availability to exact bytes, a frame and a support region', () => {
+    const authority = {
+      available: true,
+      validatedFrame: 'test-frame',
+      supportScope: { boundsMinXY: [0, 0] as [number, number], boundsMaxXY: [100, 6.2] as [number, number], note: 'validated over the recorded drive corridor' },
+      evidence: ['stratified binding control'],
+      notCertified: ['legality of any lane position'],
+    };
+    expect(LaneContextSchema.safeParse({ ...context, authority }).success).toBe(true);
+    // An availability record with no evidence is not an availability record.
+    expect(LaneContextSchema.safeParse({ ...context, authority: { ...authority, evidence: [] } }).success).toBe(false);
+    // Nor is one that forgets to say what it does not certify.
+    expect(LaneContextSchema.safeParse({ ...context, authority: { ...authority, notCertified: [] } }).success).toBe(false);
+  });
+
+  it('refuses a context whose source hash is not a sha256', () => {
+    expect(LaneContextSchema.safeParse({ ...context, sourceSha256: 'not-a-hash' }).success).toBe(false);
   });
 });
