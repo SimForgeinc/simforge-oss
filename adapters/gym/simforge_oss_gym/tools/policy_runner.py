@@ -247,19 +247,23 @@ def run_episode(
 
         acting: Policy = warmup_policy if (warmup_policy is not None and step < warmup_steps) else policy
         is_warmup = acting is not policy
+        context = DecisionContext(
+            step=step,
+            t_s=float(info["t_s"]),
+            tick=int(round(float(info["t_s"]) * env.engine_hz)),
+            state_vector=observation["state_vector"],
+            ego_trail=tuple(ego_trail),
+            info=info,
+        )
         t0 = time.perf_counter()
         try:
+            # The evaluated policy observes every decision, warm-up included:
+            # a model's frame window has to be full of REAL frames by the time
+            # it first acts, and frames only exist while the episode runs.
+            if is_warmup and hasattr(policy, "observe"):
+                policy.observe(context)
             if hasattr(acting, "act_context"):
-                decision = acting.act_context(
-                    DecisionContext(
-                        step=step,
-                        t_s=float(info["t_s"]),
-                        tick=int(round(float(info["t_s"]) * env.engine_hz)),
-                        state_vector=observation["state_vector"],
-                        ego_trail=tuple(ego_trail),
-                        info=info,
-                    )
-                )
+                decision = acting.act_context(context)
             else:
                 decision = acting.act(step, observation["state_vector"])
         except (EndpointPolicyError, FrameSourceError, ReplayContextError) as error:
