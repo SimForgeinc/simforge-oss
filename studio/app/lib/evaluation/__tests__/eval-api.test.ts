@@ -178,45 +178,77 @@ test("frame route serves episode-jailed images only", async () => {
   assert.equal(traversalPng.status, 404);
 });
 
-test("compare reports per-scenario deltas and the divergence step", async () => {
+test("compare reports N columns, per-metric availability and divergence", async () => {
+  const compareUrl = (...ids: string[]) =>
+    `/api/evaluation/campaigns/${FIXTURE_CAMPAIGN_ID}/compare?` +
+    ids.map((id) => `policy=${encodeURIComponent(id)}`).join("&");
+
   const response = await getCompare(
-    request(
-      `/api/evaluation/campaigns/${FIXTURE_CAMPAIGN_ID}/compare` +
-        `?a=${FIXTURE_BASELINE_POLICY_ID}&b=${FIXTURE_CANDIDATE_POLICY_ID}`,
-    ),
+    request(compareUrl(FIXTURE_BASELINE_POLICY_ID, FIXTURE_CANDIDATE_POLICY_ID)),
     params({ campaignId: FIXTURE_CAMPAIGN_ID }),
   );
   assert.equal(response.status, 200);
   const comparison = (await response.json()) as EvalRunComparison;
   assert.equal(comparison.episodes.length, 3);
+  assert.equal(comparison.columns.length, 2);
+  // Column order is the request order: the first column is the baseline every
+  // verdict is taken against, so sorting it would change the meaning.
+  assert.equal(comparison.columns[0]!.policyId, FIXTURE_BASELINE_POLICY_ID);
 
   const pedCrossing = comparison.episodes.find(
     (episode) => episode.scenarioId === "richmond.ped-crossing.v1",
   )!;
   // Candidate drifts laterally after step 60 → divergence detected shortly after.
-  assert.ok(pedCrossing.divergenceStep !== null, "ped-crossing diverges");
-  assert.ok(pedCrossing.divergenceStep! > FIXTURE_DIVERGENCE_AFTER_STEP);
-  assert.ok(Math.abs(pedCrossing.scoreDelta! - (0.885 - 0.71)) < 1e-9);
+  assert.ok(pedCrossing.divergenceStep[1] !== null, "ped-crossing diverges from the baseline");
+  assert.ok(pedCrossing.divergenceStep[1]! > FIXTURE_DIVERGENCE_AFTER_STEP);
+  const baselineScore = pedCrossing.cells[0]!.metrics["drivingScore"]!;
+  const candidateScore = pedCrossing.cells[1]!.metrics["drivingScore"]!;
+  assert.ok(Math.abs(candidateScore - baselineScore - (0.885 - 0.71)) < 1e-9);
+  // A column is never compared against itself as a difference.
+  assert.equal(pedCrossing.verdicts[0], "matched");
 
   // signal-left has no drift and both fixture traces share the generator
   // phase, so its traces are identical → no divergence.
   const signalLeft = comparison.episodes.find(
     (episode) => episode.scenarioId === "richmond.signal-left.v2",
   )!;
-  assert.equal(signalLeft.divergenceStep, null);
-  assert.equal(typeof signalLeft.scoreDelta, "number");
+  assert.equal(signalLeft.divergenceStep[1], null);
+
+  // Rankings exist per metric and never impute a value: a column with no
+  // comparable rows reports null rather than zero.
+  const driving = comparison.rankings.find((ranking) => ranking.metricId === "drivingScore")!;
+  assert.equal(driving.columns.length, 2);
+  for (const column of driving.columns) {
+    assert.ok(column.mean === null || Number.isFinite(column.mean));
+    if (column.rows === 0) assert.equal(column.mean, null);
+  }
+
+  // A repeated policy is a legitimate repeat control, not an error.
+  const repeat = await getCompare(
+    request(compareUrl(FIXTURE_BASELINE_POLICY_ID, FIXTURE_BASELINE_POLICY_ID)),
+    params({ campaignId: FIXTURE_CAMPAIGN_ID }),
+  );
+  assert.equal(repeat.status, 200);
 
   const missing = await getCompare(
-    request(`/api/evaluation/campaigns/${FIXTURE_CAMPAIGN_ID}/compare?a=x&b=y`),
+    request(compareUrl("x", "y")),
     params({ campaignId: FIXTURE_CAMPAIGN_ID }),
   );
   assert.equal(missing.status, 404);
 
-  const badQuery = await getCompare(
-    request(`/api/evaluation/campaigns/${FIXTURE_CAMPAIGN_ID}/compare?a=x`),
+  const oneColumn = await getCompare(
+    request(compareUrl("x")),
     params({ campaignId: FIXTURE_CAMPAIGN_ID }),
   );
-  assert.equal(badQuery.status, 400);
+  assert.equal(oneColumn.status, 400);
+
+  // The retired ?a=&b= form is gone rather than aliased: a caller that still
+  // sends it must fail loudly instead of silently comparing nothing.
+  const legacy = await getCompare(
+    request(`/api/evaluation/campaigns/${FIXTURE_CAMPAIGN_ID}/compare?a=x&b=y`),
+    params({ campaignId: FIXTURE_CAMPAIGN_ID }),
+  );
+  assert.equal(legacy.status, 400);
 });
 
 test("promotion gate: queued run refused, succeeded run promotes", async () => {

@@ -253,24 +253,91 @@ export type EvalEpisodePayload = {
   complete: boolean;
 };
 
+/**
+ * One (scenario, seed) row across N columns.
+ *
+ * N columns rather than a and b: comparing three models is the normal case, and
+ * a two-sided shape forced a reader to open three pages and hold the baseline
+ * in their head. `cells[i]` is column `i`'s run, `null` where that column has no
+ * episode for this row. Column 0 is the baseline every verdict is taken against.
+ */
 export type EvalEpisodeComparison = {
   scenarioId: string;
   seed: number;
-  aEpisodeId: string | null;
-  bEpisodeId: string | null;
-  aScore: number | null;
-  bScore: number | null;
-  /** b - a; null unless both sides completed the scenario+seed. */
-  scoreDelta: number | null;
-  /** First trace step where ego positions drift apart beyond the threshold. */
-  divergenceStep: number | null;
-  divergenceTS: number | null;
+  cells: (EvalComparisonCell | null)[];
+  /** Verdict of each column against column 0; `cells[0]` is `matched` to itself. */
+  verdicts: EvalComparabilityVerdict[];
+  /** Identity fields that differ from the baseline, per column. */
+  differing: string[][];
+  /** First trace step where column i's ego drifts from the baseline's. */
+  divergenceStep: (number | null)[];
+  divergenceTS: (number | null)[];
+};
+
+export type EvalComparabilityVerdict =
+  | 'matched'
+  | 'sensor-different'
+  | 'runtime-different'
+  | 'incomparable';
+
+/** A column's run for one row: its result, its identity, its gaps. */
+export type EvalComparisonCell = {
+  episodeId: string | null;
+  status: string | null;
+  scored: boolean;
+  truncation: string | null;
+  /** Why a legitimate run produced no score (structural, not a failure). */
+  unscoredReason: string | null;
+  metrics: Record<string, number | null>;
+  /** Metric ids this run could not assess. Never rendered as zero. */
+  unavailable: string[];
+  scenarioInputDigest: string | null;
+  identity: EvalComparisonIdentity;
+};
+
+export type EvalComparisonIdentity = {
+  family: string | null;
+  familyLabel: string | null;
+  revision: string | null;
+  quant: string | null;
+  checkpointDigest: string | null;
+  policySeed: number | null;
+  rig: {
+    profile: string | null;
+    profileVersion: string | null;
+    profileSha256: string | null;
+    cameraIds: number[];
+    resolution: { width: number | null; height: number | null };
+    intrinsicsSha256: string | null;
+    extrinsicsSha256: string | null;
+    historyFrames: number | null;
+    historyDtS: number | null;
+    cadenceHz: number | null;
+    cadenceDividesExactly: boolean | null;
+    worstResampleErrorS: number | null;
+  };
+  runtime: {
+    engineVersion: string | null;
+    abiVersion: number | null;
+    addonSha256: string | null;
+    decisionHz: number | null;
+  };
+};
+
+export type EvalMetricRanking = {
+  metricId: string;
+  columns: { columnIndex: number; mean: number | null; rows: number }[];
+  excluded: { scenarioId: string; seed: number; reason: string }[];
+  /** False means these are comparable readings, not an ordering. */
+  orderable: boolean;
 };
 
 export type EvalRunComparison = {
   campaignId: string;
   divergenceThresholdM: number;
-  a: EvalPolicySummary;
-  b: EvalPolicySummary;
+  /** Column order as requested; column 0 is the baseline. */
+  columns: EvalPolicySummary[];
   episodes: EvalEpisodeComparison[];
+  /** Per-metric ranking over matched, defined rows only. */
+  rankings: EvalMetricRanking[];
 };

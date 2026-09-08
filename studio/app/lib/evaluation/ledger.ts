@@ -2,6 +2,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import type { AppContext } from "../db/app-context";
+import { comparability, rankMetric } from "./model-comparison";
 import { listModelVersions } from "../models/model-registry-store";
 import {
   EvalCampaignSpecSchema,
@@ -11,6 +12,8 @@ import {
   EvalScoreSchema,
   EvalTraceLineSchema,
   type EvalCampaignSummary,
+  type EvalComparabilityVerdict,
+  type EvalComparisonCell,
   type EvalEpisodeComparison,
   type EvalEpisodePayload,
   type EvalEvent,
@@ -362,58 +365,194 @@ export function divergenceStep(
   return null;
 }
 
+/**
+ * Read one column's cell for a row: its result, its identity, its gaps.
+ *
+ * Identity comes from the episode's own artifacts, never from the request: a
+ * comparison that trusted the caller's claim about which model produced a
+ * column could rank a run against a label rather than against a run. Fields the
+ * artifacts do not carry stay null and make the pair non-`matched`, which is the
+ * conservative direction.
+ */
+async function comparisonCell(
+  campaignId: string,
+  line: EvalLedgerLine | undefined,
+): Promise<EvalComparisonCell | null> {
+  if (!line || !isSafeArtifactId(line.episodeId)) return null;
+  const [provenance, score] = await Promise.all([
+    readEpisodeProvenance(campaignId, line.episodeId),
+    readEpisodeScore(campaignId, line.episodeId),
+  ]);
+  const extra = (provenance ?? {}) as Record<string, unknown>;
+  const model = (extra["model"] ?? {}) as Record<string, unknown>;
+  const rig = (extra["rig"] ?? {}) as Record<string, unknown>;
+  const runtime = (extra["runtime"] ?? {}) as Record<string, unknown>;
+  const timeBase = (extra["timeBase"] ?? {}) as Record<string, unknown>;
+  const scoreDoc = (score ?? {}) as Record<string, unknown>;
+  const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
+  const num = (value: unknown): number | null => (typeof value === "number" ? value : null);
+  const bool = (value: unknown): boolean | null => (typeof value === "boolean" ? value : null);
+
+  // Metrics the comparison ranks. Driving score comes from the ledger line when
+  // score.json is absent, which is the same fallback the campaign summary uses.
+  const metrics: Record<string, number | null> = {
+    drivingScore: num(scoreDoc["drivingScore"]) ?? line.drivingScore,
+    routeCompletion: num(scoreDoc["routeCompletion"]) ?? line.routeCompletion,
+  };
+  const unavailable = Array.isArray(scoreDoc["unavailable"])
+    ? (scoreDoc["unavailable"] as unknown[]).filter((entry): entry is string => typeof entry === "string")
+    : [];
+
+  return {
+    episodeId: line.episodeId,
+    status: line.status,
+    scored: score !== null || line.status === "complete",
+    truncation: text(scoreDoc["truncation"]),
+    unscoredReason: text(extra["unscoredReason"]),
+    metrics,
+    unavailable,
+    scenarioInputDigest:
+      text((extra["scenario"] as Record<string, unknown> | undefined)?.["fixtureSha256"]) ??
+      text(extra["inputDigest"]),
+    identity: {
+      family: text(model["family"]),
+      familyLabel: text(model["familyLabel"]) ?? text(model["family"]),
+      revision: text(model["revision"]),
+      quant: text(model["quant"]),
+      checkpointDigest:
+        text(model["checkpointDigest"]) ??
+        text((extra["policy"] as Record<string, unknown> | undefined)?.["checkpointDigest"]),
+      policySeed: num(extra["policySeed"]),
+      rig: {
+        profile: text(rig["profile"]) ?? text(model["cameraProfile"]),
+        profileVersion: text(rig["profileVersion"]),
+        profileSha256: text(rig["profileSha256"]),
+        cameraIds: Array.isArray(rig["cameraIds"])
+          ? (rig["cameraIds"] as unknown[])
+              .filter((id): id is number => typeof id === "number")
+              .slice()
+              .sort((x, y) => x - y)
+          : [],
+        resolution: {
+          width: num(rig["renderWidth"]),
+          height: num(rig["renderHeight"]),
+        },
+        intrinsicsSha256: text(rig["intrinsicsSha256"]),
+        extrinsicsSha256: text(rig["extrinsicsSha256"]),
+        historyFrames: num(rig["framesPerCamera"]),
+        historyDtS: num(rig["historyDtS"]),
+        cadenceHz: num(rig["cadenceHz"]),
+        cadenceDividesExactly: bool(timeBase["cadence_divides_exactly"]),
+        worstResampleErrorS: num(timeBase["worst_resample_error_s"]),
+      },
+      runtime: {
+        engineVersion: text(runtime["engineVersion"]),
+        abiVersion: num(runtime["abiVersion"]),
+        addonSha256: text(runtime["addonSha256"]),
+        decisionHz: num(extra["decisionHz"]),
+      },
+    },
+  };
+}
+
+/** Metrics the comparison ranks, in the order a reader should see them. */
+const COMPARED_METRICS = ["drivingScore", "routeCompletion"] as const;
+
+/**
+ * Compare N policy columns over one campaign.
+ *
+ * Column 0 is the baseline every verdict is taken against. There is no two-sided
+ * form: a comparison of three models was previously three pages and a reader
+ * holding the baseline in their head.
+ */
 export async function comparePolicies(
   context: AppContext | null,
   campaignId: string,
-  aPolicyId: string,
-  bPolicyId: string,
+  policyIds: readonly string[],
 ): Promise<EvalRunComparison | null> {
   if (!isSafeArtifactId(campaignId)) return null;
+  if (policyIds.length < 2) return null;
   const summary = await campaignSummary(campaignId, await versionIdsByDigest(context));
-  const a = summary?.policies.find((policy) => policy.policyId === aPolicyId);
-  const b = summary?.policies.find((policy) => policy.policyId === bPolicyId);
-  if (!summary || !a || !b) return null;
+  if (!summary) return null;
+  const columns = policyIds.map((policyId) =>
+    summary.policies.find((policy) => policy.policyId === policyId),
+  );
+  if (columns.some((column) => column === undefined)) return null;
 
   const lines = await readLedgerLines(campaignId);
-  const cells = new Map<string, { a?: EvalLedgerLine; b?: EvalLedgerLine }>();
+  const rows = new Map<string, (EvalLedgerLine | undefined)[]>();
   for (const line of lines) {
-    if (line.policyId !== aPolicyId && line.policyId !== bPolicyId) continue;
+    const columnIndex = policyIds.indexOf(line.policyId);
+    if (columnIndex < 0) continue;
     const key = `${line.scenarioId}\u0000${line.seed}`;
-    const cell = cells.get(key) ?? {};
-    if (line.policyId === aPolicyId) cell.a = line;
-    else cell.b = line;
-    cells.set(key, cell);
+    const row = rows.get(key) ?? Array.from({ length: policyIds.length }, () => undefined);
+    row[columnIndex] = line;
+    rows.set(key, row);
   }
 
   const episodes: EvalEpisodeComparison[] = [];
-  for (const [key, cell] of cells) {
+  for (const [key, row] of rows) {
     const [scenarioId = "", seedText = ""] = key.split("\u0000");
-    let divergence: { step: number; tS: number } | null = null;
-    if (
-      cell.a &&
-      cell.b &&
-      isSafeArtifactId(cell.a.episodeId) &&
-      isSafeArtifactId(cell.b.episodeId)
-    ) {
-      const [traceA, traceB] = await Promise.all([
-        readViewTicks(campaignId, cell.a.episodeId),
-        readViewTicks(campaignId, cell.b.episodeId),
-      ]);
-      divergence = divergenceStep(traceA, traceB);
+    const cells = await Promise.all(row.map((line) => comparisonCell(campaignId, line)));
+    const baseline = cells[0] ?? null;
+    const baselineTicks =
+      baseline?.episodeId && isSafeArtifactId(baseline.episodeId)
+        ? await readViewTicks(campaignId, baseline.episodeId)
+        : null;
+    const verdicts: EvalComparabilityVerdict[] = [];
+    const differing: string[][] = [];
+    const divergenceSteps: (number | null)[] = [];
+    const divergenceTimes: (number | null)[] = [];
+    for (let index = 0; index < cells.length; index += 1) {
+      const cell = cells[index] ?? null;
+      const detail = index === 0 && cell ? { verdict: "matched" as const, differing: [] } : comparability(baseline, cell);
+      verdicts.push(detail.verdict);
+      differing.push([...detail.differing]);
+      let divergence: { step: number; tS: number } | null = null;
+      if (index > 0 && baselineTicks && cell?.episodeId && isSafeArtifactId(cell.episodeId)) {
+        divergence = divergenceStep(baselineTicks, await readViewTicks(campaignId, cell.episodeId));
+      }
+      divergenceSteps.push(divergence?.step ?? null);
+      divergenceTimes.push(divergence?.tS ?? null);
     }
     episodes.push({
       scenarioId,
       seed: Number(seedText),
-      aEpisodeId: cell.a?.episodeId ?? null,
-      bEpisodeId: cell.b?.episodeId ?? null,
-      aScore: cell.a?.drivingScore ?? null,
-      bScore: cell.b?.drivingScore ?? null,
-      scoreDelta: cell.a && cell.b ? cell.b.drivingScore - cell.a.drivingScore : null,
-      divergenceStep: divergence?.step ?? null,
-      divergenceTS: divergence?.tS ?? null,
+      cells,
+      verdicts,
+      differing,
+      divergenceStep: divergenceSteps,
+      divergenceTS: divergenceTimes,
     });
   }
   episodes.sort((x, y) => x.scenarioId.localeCompare(y.scenarioId) || x.seed - y.seed);
 
-  return { campaignId, divergenceThresholdM: DIVERGENCE_THRESHOLD_M, a, b, episodes };
+  const rankRows = episodes.map((episode) => ({
+    scenarioId: episode.scenarioId,
+    seed: episode.seed,
+    cells: episode.cells,
+  }));
+  const rankings = COMPARED_METRICS.map((metricId) => {
+    const ranking = rankMetric(rankRows, policyIds.length, metricId);
+    return {
+      metricId: ranking.metricId,
+      columns: ranking.columns.map((column) => ({ ...column })),
+      // The reason union is the rule module's; on the wire it is a string the
+      // page maps to a sentence, so it widens here rather than the type.
+      excluded: ranking.excluded.map((entry) => ({
+        scenarioId: entry.scenarioId,
+        seed: entry.seed,
+        reason: String(entry.reason),
+      })),
+      orderable: ranking.orderable,
+    };
+  });
+
+  return {
+    campaignId,
+    divergenceThresholdM: DIVERGENCE_THRESHOLD_M,
+    columns: columns as EvalPolicySummary[],
+    episodes,
+    rankings,
+  };
 }

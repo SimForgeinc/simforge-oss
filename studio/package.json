@@ -27,7 +27,8 @@
     "test:map-cache": "tsx --test app/lib/map-cache/__tests__/service.test.ts && node --test desktop/__tests__/map-cache.test.mjs",
     "test:eval": "tsx --test app/lib/evaluation/__tests__/eval-api.test.ts",
     "test:hifi-preview": "tsx --test app/lib/hifi-preview/__tests__/camera-roundtrip.test.ts worker/__tests__/native-ready-map.test.ts worker/__tests__/payload-framing.test.ts",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:eval-compare": "tsx --test app/lib/evaluation/__tests__/model-comparison.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
