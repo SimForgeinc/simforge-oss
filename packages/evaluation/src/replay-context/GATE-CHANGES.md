@@ -127,3 +127,85 @@ enforceable window to the **intersection** of the episode and the reconstruction
 an episode entering that tail truncates with `envelope_exceeded` / `time-support` instead of
 being rendered from geometry that does not exist. G4 reports the overhang in its detail so the
 scene's shortfall is visible in the bundle.
+
+
+---
+
+## 2026-09-08 — G2's unsupported-pixel test could never fire
+
+**Status when changed:** found by the first real render, and fixed before the coverage numbers
+it produces were used for anything. Both the vacuous and the corrected measurements are below.
+
+### The defect
+
+`_unsupported_mask` treated a pixel as having no surface when its depth was non-finite or
+non-positive. A splat render never produces either: sky and no-hit pixels come back as finite,
+positive depth in the hundreds to thousands of metres. Measured on the real renders, `<=0`
+pixels: **0 of 2,073,600** per frame; depth ranged 2.12 m – 19,011 m.
+
+So G2 measured **exactly zero newly-unsupported pixels at every offset** and passed
+unconditionally. A gate that cannot fail is worse than one that fails wrongly: it had already
+"passed" at ±1.5 m and 5°, which would have written a 1.5 m envelope licensing renders nobody
+had checked.
+
+### Corrected definition
+
+A pixel is unsupported when depth is non-finite, non-positive, **or at/beyond the camera's
+calibrated far plane** (`farM`, 1000 m for this rig) — the renderer's own statement of "no
+surface within range". Baseline subtraction against the on-trajectory render is unchanged, so
+a scene is not charged for its standing sky.
+
+### Superseded and corrected measurements, same renders
+
+| Probe | Vacuous mask | Corrected mask | vs 2% |
+|---|---|---|---|
+| lateral 0.5 m | 0.000 | **0.0084** | pass |
+| lateral 1.0 m | 0.000 | **0.0159** | pass |
+| lateral 1.5 m | 0.000 | **0.0215** | FAIL |
+| heading 5° | 0.000 | **0.0680** | FAIL |
+
+The corrected numbers rise monotonically with displacement, which is the behaviour the metric
+claims to have and the vacuous one could not exhibit.
+
+---
+
+## 2026-09-08 — First real G1/G2 measurement (result, not a change)
+
+Scene `007a5809`, package sha256 `36665d69…`, rendered through the provisioned tier: 3DGRUT at
+the pinned `a37ef721…`, Kaolin 0.18.0, torch 2.8.0+cu128, CUDA 12.8.1, `simforge-oss-splat`.
+Four cameras (ids 0, 1, 2, 6), 4 ticks per probe, 5 probes.
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 on-trajectory fidelity (worst camera) | **19.67 dB / 0.760 SSIM** | ≥ 22 dB / 0.75 | **FAIL** |
+| G2 off-trajectory coverage | largest passing offset **1.0 m lateral**, 5° heading fails | ≤ 2% | pass |
+| G3 ego-history parity | 0.000 m | ≤ 0.01 m | pass |
+| G4 dynamics | 197.3 ms | ≤ 200 ms | pass |
+
+**`validity.qualified` is false and the recorded envelope is zero-width.** G1 failed, so the
+1.0 m envelope G2 measured is deliberately *not* written into the bundle — an envelope is only
+meaningful on a scene whose on-trajectory renders were trustworthy in the first place.
+
+Per-camera G1, on trajectory:
+
+| Camera | PSNR | SSIM |
+|---|---|---|
+| cross-left 120° | 24.07 dB | 0.905 |
+| front-wide 120° | 22.89 dB | 0.872 |
+| cross-right 120° | 25.32 dB | 0.913 |
+| **front-tele 30°** | **19.67 dB** | **0.760** |
+
+Three of four cameras clear the bar; the 30° tele fails it. The threshold is **not** being
+lowered to accommodate this. Two candidate explanations are untested and are recorded as
+hypotheses, not conclusions:
+
+1. *Temporal quantisation.* Renders are placed on a 10 Hz tick grid while the ground-truth
+   frames sit at arbitrary instants; the tele frame is 19.3 ms from its nearest tick, ~0.19 m
+   of ego motion at this speed. A narrow-FoV camera is penalised far more than a 120° one by
+   the same longitudinal error, which is consistent with the tele being the only failure.
+2. *Genuine reconstruction quality.* Distant structure carries most of a tele frame, and it is
+   where a Gaussian reconstruction is weakest.
+
+Distinguishing them requires rendering at the frames' exact instants rather than on the tick
+grid. That is a change to *when* we sample, not to what passes, and if it is made the number
+above stays on the record alongside the new one.

@@ -49,6 +49,9 @@ import type { GateVerdict, ReplayContext } from './schema.js';
 export const PROBE_TICK_HZ = 10;
 
 
+/** Default camera far plane, matching the NuRec rigs' calibrated `farM`. */
+export const DEFAULT_FAR_M = 1000;
+
 export interface RenderTier {
   /** `simforge-oss-splat` console script, or an interpreter invocation of it. */
   readonly splatCommand?: readonly string[];
@@ -60,6 +63,8 @@ export interface RenderTier {
   readonly hoodDir: string;
   /** 3DGRUT checkout, exported as `THREEDGRUT_ROOT` for the child process. */
   readonly threedgrutRoot?: string;
+  /** Camera far plane in metres; defaults to {@link DEFAULT_FAR_M}. */
+  readonly farM?: number;
 }
 
 interface SceneActorDoc {
@@ -344,6 +349,8 @@ export async function measureProbe(
     // The renderer's own clock, so a rendered tick is compared with the frame it depicts.
     '--episode-start-us', String(facts.episodeStartUs),
     '--tick-hz', String(PROBE_TICK_HZ),
+    // The rig's far plane: depth at or beyond it is the renderer saying "no surface here".
+    '--far-m', String(tier.farM ?? DEFAULT_FAR_M),
   ];
   if (baselineDir !== undefined) args.push('--baseline-dir', baselineDir);
   const result = await run(tier.pythonCommand ?? 'python3', args, { ...process.env });
