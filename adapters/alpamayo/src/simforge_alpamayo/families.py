@@ -225,7 +225,18 @@ ALPAMAYO_1 = Family(
             quant="bf16",
             status="supported",
             min_vram_gib=24.0,
-            note="NVIDIA-published minimum (RTX 3090/4090/A5000 tested).",
+            note=(
+                "VENDOR-PUBLISHED minimum (NVIDIA lists RTX 3090/4090/A5000 "
+                "as tested). NOT measured by us: no bf16 run of this family "
+                "has happened on any device we control, so unlike the nf4 "
+                "figures beside it this number is third-party evidence, not "
+                "a receipt. It is offered because a vendor test is real "
+                "evidence and the requirement is a floor rather than a "
+                "claim about our stack - but a reviewer comparing bf16 and "
+                "nf4 rows should know only one of them was measured here. "
+                "The bf16 upstream-parity run that would produce our own "
+                "figure needs a >=24 GiB device; this host has 15.46 GiB."
+            ),
         ),
         QuantOffer(
             quant="nf4",
@@ -277,7 +288,16 @@ ALPAMAYO_1_5 = Family(
             quant="bf16",
             status="supported",
             min_vram_gib=24.0,
-            note="NVIDIA-published minimum; ~40 GiB at 16 samples, ~60 GiB with CFG.",
+            note=(
+                "VENDOR-PUBLISHED minimum, with NVIDIA's own scaling notes "
+                "(~40 GiB at 16 samples, ~60 GiB with CFG). NOT measured by "
+                "us: no bf16 run of this family has happened on any device "
+                "we control, so unlike the nf4 figures beside it this is "
+                "third-party evidence rather than a receipt. The 16-sample "
+                "and CFG numbers in particular are vendor scaling claims we "
+                "have tested at neither setting. Our bf16 upstream-parity "
+                "run needs a >=24 GiB device; this host has 15.46 GiB."
+            ),
         ),
         QuantOffer(
             quant="nf4",
