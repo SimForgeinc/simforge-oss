@@ -217,6 +217,7 @@ export type { SimIssue, SimIssueCode, SimIssueSeverity } from './errors.js';
 
 /* -------------------------------------------------------------------- util */
 export { canonicalJson, contentHash, sha256, sha256Bytes } from './core/hash.js';
+export { modelRigProfileHash, modelRigProfileVersion } from './core/model-rig-profile.js';
 export { obbAt, obbOverlap, obbCorners, obbSeparation, sweptObbTimeOfImpact, type SweptObbResult } from './core/math.js';
 export type { Obb, Vec2 } from './core/math.js';
 

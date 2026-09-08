@@ -23,12 +23,17 @@ tempting, wrong alternative:
   fanning out a video, and why `allow_identical_streams` exists: a caller
   who knows the scene is legitimately uniform can proceed, and the decision
   is recorded in provenance instead of being silently permitted.
-* AN UNDECLARED TIME BASE. The model was trained at a fixed cadence. A
-  render at 24 fps cannot be resampled to 10 Hz by nearest-frame selection
-  without up to +/-20.8 ms of jitter, which is silently absorbed and shows
-  up as a metric difference nobody can attribute. Either the render cadence
-  divides the model cadence exactly, or the sample times are declared and
-  the jitter is reported.
+* A FALSELY DECLARED TIME BASE. The model was trained at a fixed cadence,
+  and a render at 24 fps cannot be resampled to 10 Hz by nearest-frame
+  selection without up to +/-20.8 ms of error. The wrong fix is to declare
+  `ego_history_rate_hz = 10` and let the decoder believe the samples are
+  evenly spaced - that is pretending, and it makes the gate pass by
+  weakening it. So this module emits `ego_history_t_s`: the ACTUAL sample
+  times of the frames it selected, computed from the render cadence. The
+  decoder then measures the real spacing and applies its own 5 ms tolerance
+  to a true value. A 30 or 20 fps render yields exact times and passes
+  cleanly; a 24 fps render yields the times it really has and is reported
+  as such rather than corrected.
 * A MISSING REFERENCE FUTURE. Without it the run is inference-only. That is
   legitimate - but it must be labelled, never scored, and a simulated clip
   usually HAS a future, so the common case is a scorable one and it would be
@@ -266,6 +271,9 @@ def convert_render_to_clip(
         "model_hz": NOMINAL_HZ,
         "cadence_divides_exactly": exact,
         "worst_resample_error_s": jitter,
+        # The times handed to the decoder are real, so the decoder's own
+        # tolerance is applied to a true spacing rather than to a fiction.
+        "sample_times": "actual",
     }
 
     # Reference future. Refuse to invent one; refuse also to silently drop a
@@ -319,12 +327,17 @@ def convert_render_to_clip(
         for sensor in sorted(camera_map, key=lambda s: camera_map[s])
     ]
 
+    # ACTUAL sample times, relative to t0, from the frames really selected.
+    # Never a nominal 10 Hz: if the render cadence does not divide the model
+    # cadence, these are unevenly spaced and the decoder must see that.
+    history_t_s = [
+        (index - t0_index) / render_fps for index in history_indices
+    ]
+
     observation: dict[str, Any] = {
         "cameras": cameras,
         "ego_history_xyz": ego_history,
-        # Declared, not measured: the renderer's cadence is authored and
-        # fixed, which is exactly the case the decoder accepts as declared.
-        "ego_history_rate_hz": NOMINAL_HZ,
+        "ego_history_t_s": history_t_s,
     }
 
     provenance = {

@@ -22,7 +22,6 @@ import {
   type VehicleAnchorMount,
 } from './sensors.js';
 import { DEFAULT_ACTOR_DIMS, type ActorSpec } from './roles.js';
-import { sha256Hex } from './sha256.js';
 
 export const SensorRigCameraTemplateSchema = DashCameraSensorSchema
   .omit({ mount: true })
@@ -787,23 +786,28 @@ export function modelRigRequirement(family: string): ModelRigRequirement | undef
 }
 
 /**
- * Stable hash over everything that must not drift between the render and
- * the evaluation: the model's camera order and input cadence, plus the
- * resolved sensor geometry of the rig it requires.
+ * The exact profile payload that must not drift between the render and the
+ * evaluation: the model's camera order and input cadence, plus the resolved
+ * sensor geometry of the rig it requires.
  *
- * Persisted in the render and eval manifests so a stored result names the
- * exact profile it was produced under. If a template's FOV or mount is
- * edited, this changes, and an old result stops claiming to match a new
- * profile. Sensor fields are read from the preset rather than restated, so
- * the hash cannot silently disagree with the geometry it describes.
+ * Returned as DATA, deliberately unhashed. This package sits below the one
+ * that owns content hashing (`@simforge-oss/engine` depends on this one, so
+ * the reverse import is impossible), and adding a second SHA-256 here to
+ * avoid that layering would be exactly the duplicate catalog this mapping
+ * exists to prevent. Callers hash it with the existing helper:
+ * `modelRigProfileHash` in `@simforge-oss/engine`.
+ *
+ * Sensor fields are read from the preset rather than restated, so the
+ * payload cannot disagree with the geometry it describes.
  */
-export function modelRigProfileHash(family: string): string {
+export function modelRigProfilePayload(family: string): Record<string, unknown> {
   const requirement = modelRigRequirement(family);
   if (!requirement) throw new Error(`no rig requirement for model family "${family}"`);
   const preset = sensorRigPreset(requirement.rigId);
-  if (!preset) throw new Error(`rig requirement for "${family}" names unknown rig "${requirement.rigId}"`);
-
-  const payload = {
+  if (!preset) {
+    throw new Error(`rig requirement for "${family}" names unknown rig "${requirement.rigId}"`);
+  }
+  return {
     schema: 'simforge.model-rig-profile/v1',
     family: requirement.family,
     rigId: requirement.rigId,
@@ -821,17 +825,6 @@ export function modelRigProfileHash(family: string): string {
       ...(sensor.type === 'dash_camera' ? { fov: sensor.fov, dims: sensor.dims } : {}),
     })),
   };
-  // Browser-safe: this package is bundled for the editor, so no node:crypto.
-  return sha256Hex(JSON.stringify(payload));
-}
-
-/**
- * Version tag for a persisted profile: family plus the first 12 hex of the
- * hash. Short enough for a manifest field and a UI badge, and it changes
- * whenever the geometry or the input contract changes.
- */
-export function modelRigProfileVersion(family: string): string {
-  return `${family}@${modelRigProfileHash(family).slice(0, 12)}`;
 }
 
 /** Resolve a fixed or vehicle-anchored preset mount to an actor-local numeric mount. */

@@ -472,3 +472,97 @@ def test_variable_camera_family_gets_its_documented_default():
     assert [c["camera_id"] for c in obs["cameras"]] == list(
         get_family("alpamayo-1.5").cameras.default
     )
+
+
+def _render_streams(cameras: int = 4, frames: int = 4) -> dict:
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    names = [
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_front_tele_30fov",
+    ][:cameras]
+    return {
+        name: [
+            (rng.integers(0, 250, (384, 512, 3), dtype=np.uint8) + index)
+            .astype(np.uint8)
+            .tobytes()
+            for _ in range(frames)
+        ]
+        for index, name in enumerate(names)
+    }
+
+
+def _convert(render_fps: float, **overrides):
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    args = dict(
+        streams=_render_streams(),
+        rig_profile="alpamayo-4cam",
+        family_required=(0, 1, 2, 6),
+        width=512,
+        height=384,
+        render_fps=render_fps,
+        t0_index=200,
+        ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+        ego_heading_rad=0.0,
+        total_frames=600,
+    )
+    args.update(overrides)
+    return convert_render_to_clip(**args)
+
+
+def test_converted_clip_carries_actual_sample_times_not_a_nominal_rate():
+    """The gate must be applied to real spacing, never to a declared 10 Hz.
+
+    Declaring `ego_history_rate_hz = 10` for a 24 fps render would make the
+    decoder believe evenly spaced samples and hide 20.8 ms of error. So the
+    converter emits the times it really selected: exact at 30 fps, genuinely
+    uneven at 24, and the decoder measures either way.
+    """
+    from simforge_alpamayo.obs import decode_observation
+
+    exact = _convert(30.0)
+    assert "ego_history_rate_hz" not in exact.observation
+    times = exact.observation["ego_history_t_s"]
+    gaps = {round(b - a, 6) for a, b in zip(times, times[1:])}
+    assert gaps == {0.1}
+    decoded = decode_observation(exact.observation, required_cameras=(0, 1, 2, 6))
+    assert decoded["time_base"]["time_base"] == "measured"
+    assert decoded["time_base"]["scorable"] is True
+    assert decoded["time_base"]["history_dt_max_error_s"] < 1e-9
+
+    jittered = _convert(24.0)
+    times = jittered.observation["ego_history_t_s"]
+    gaps = {round(b - a, 5) for a, b in zip(times, times[1:])}
+    # 24 fps cannot land on 10 Hz: the real spacing alternates.
+    assert len(gaps) > 1
+    decoded = decode_observation(jittered.observation, required_cameras=(0, 1, 2, 6))
+    assert decoded["time_base"]["time_base"] == "measured"
+    assert decoded["time_base"]["history_dt_max_error_s"] > 0.02
+    assert "deviates" in decoded["time_base"]["time_base_warning"]
+    assert jittered.provenance["timeBase"]["cadence_divides_exactly"] is False
+    assert jittered.provenance["timeBase"]["sample_times"] == "actual"
+
+
+def test_identical_streams_are_refused_by_default_and_allowed_only_explicitly():
+    """A uniform scene (fog, night, a render failed to black) can legitimately
+    produce identical bytes, so the escape hatch exists - but it must be
+    asked for, and the finding is recorded either way."""
+    from simforge_alpamayo.obs import ObservationError
+
+    black = [b"\x00" * (512 * 384 * 3)] * 4
+    duplicated = {name: black for name in _render_streams()}
+
+    with pytest.raises(ObservationError) as exc:
+        _convert(30.0, streams=duplicated)
+    assert exc.value.code == "input_error"
+    assert len(exc.value.detail["duplicateGroups"]) == 1
+    # The message must not accuse the caller of fanning out one video.
+    assert "does not prove one video was fanned out" in str(exc.value)
+
+    allowed = _convert(30.0, streams=duplicated, allow_identical_streams=True)
+    assert allowed.provenance["identicalStreamsAllowed"] is True
+    assert allowed.provenance["duplicateContentGroups"] != []
