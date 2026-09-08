@@ -370,7 +370,11 @@ export async function buildEncoders(distRoot, target, { jobs = 4 } = {}) {
     "",
   ].join("\n"));
 
-  await exec("tar", ["-czf", layout.correspondingSource, "-C", staging, "."]);
+  // Through the build shell with POSIX paths, not a direct spawn: GNU tar
+  // reads a Windows path's drive colon as a remote host spec and fails with
+  // "Cannot connect to D: resolve failed". This is the same MSYS2 shell the
+  // configure and make steps already use, so the path form is consistent.
+  await shellExec(staging, `tar -czf '${shellPath(layout.correspondingSource)}' .`);
   const [sourceDigest, sourceInfo] = await Promise.all([sha256File(layout.correspondingSource), stat(layout.correspondingSource)]);
 
   // 6. The manifest every later verification step reads.

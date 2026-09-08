@@ -32,10 +32,13 @@ export async function GET(_request: Request, route: { params: Promise<{ runId: s
   if (auth.response) return auth.response;
   const { runId } = await route.params;
 
-  const run = await getModelRun(auth.context, runId);
-  if (!run) return NextResponse.json({ error: "model_run_not_found" }, { status: 404 });
+  // getModelRun returns the run with its attempts and events, so the record
+  // is one level in. Read from the wrapper and the refs are always empty,
+  // which is a silent "no result manifest" for every run that has one.
+  const detail = await getModelRun(auth.context, runId);
+  if (!detail) return NextResponse.json({ error: "model_run_not_found" }, { status: 404 });
 
-  const refs: FileRef[] = Array.isArray(run.outputRefs) ? (run.outputRefs as FileRef[]) : [];
+  const refs: FileRef[] = Array.isArray(detail.run.outputRefs) ? (detail.run.outputRefs as FileRef[]) : [];
   const manifestRef = refs.find(
     (ref) => typeof ref.path === "string" && ref.path.endsWith("result.json"),
   );
