@@ -687,6 +687,8 @@ async function writeEpisodeArtifacts(
       controller: provenance.controller,
       compute: null,
       metricVersion: 'simforge.eval-metrics/v1',
+      // The campaign runner always executes; it never re-reads a retained run.
+      reprocessedFrom: null,
     },
     timing: {
       startedAt,

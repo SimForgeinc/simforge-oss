@@ -127,6 +127,23 @@ export const ResultManifestSchema = z.object({
     controller: z.record(z.string(), z.unknown()).default({}),
     compute: z.record(z.string(), z.unknown()).nullable().default(null),
     metricVersion: z.string().default('simforge.eval-metrics/v1'),
+    /**
+     * Present only when this manifest was DERIVED from a retained episode's
+     * artifacts instead of from a fresh execution: the scorer or the status
+     * mapping changed and the original receipt is superseded. It carries the
+     * superseded manifest's digest and the trace digest it re-read, so the
+     * chain from the original run is checkable and no reprocessed document can
+     * be mistaken for a new measurement.
+     */
+    reprocessedFrom: z
+      .object({
+        manifestSha256: z.string().length(64),
+        traceSha256: z.string().length(64),
+        sourceCommit: z.string().min(7),
+        at: z.string(),
+      })
+      .nullable()
+      .default(null),
   }),
   timing: z.object({
     startedAt: z.string(),
