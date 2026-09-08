@@ -306,6 +306,10 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const preparedDocumentHashRef = useRef<string | null>(null);
   const sourceRevisionRef = useRef(0);
+  // The bridge outlives sources (it is bound to the viewer), so it reads the
+  // current authored source's asset mapping through a ref.
+  const authoredSourceRef = useRef<AuthoredWorldSource | null>(null);
+  authoredSourceRef.current = authoredSource;
   const remoteWorld = useMemo(() => resolveRemoteWorld(), []);
   const world = useWorldSource(source);
   const transport = authoredSource?.transport ?? null;
@@ -434,7 +438,16 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
 
   useEffect(() => {
     if (!bridge || !source) return;
-    return source.subscribeFrames((frame) => bridge.apply(frame));
+    // A rebuilt world restarts at tick 0; without the reset the bridge would
+    // drop every frame until the new run passed the old one's last tick.
+    // A new source is a new world too: start from a clean watermark and cache.
+    bridge.reset();
+    const unsubscribeResets = source.subscribeResets?.(() => bridge.reset());
+    const unsubscribeFrames = source.subscribeFrames((frame) => bridge.apply(frame));
+    return () => {
+      unsubscribeResets?.();
+      unsubscribeFrames();
+    };
   }, [bridge, source]);
   const followingEgo = driving && !transport?.completed && cameraMode !== "free";
   useEffect(() => {
@@ -462,7 +475,15 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
 
   const onViewerReady = useCallback((readyViewer: CityViewer) => {
     setViewer(readyViewer);
-    setBridge(createTruthViewerBridge(readyViewer, { layer: "drive-live", groundLift: true }));
+    setBridge(createTruthViewerBridge(readyViewer, {
+      layer: "drive-live",
+      groundLift: true,
+      authoredCatalogId: (actorId) => authoredSourceRef.current?.catalogIdForActor(actorId) ?? null,
+      onError: (error) => {
+        setViewerError(`Authored vehicle cannot be rendered: ${error.message}`);
+        toast.error("Drive cannot render an authored vehicle", { description: error.message });
+      },
+    }));
     setViewerError(null);
   }, []);
 

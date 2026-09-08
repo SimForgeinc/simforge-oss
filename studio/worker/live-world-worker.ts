@@ -58,6 +58,8 @@ let completed = false;
  * discards it; only a clip that ran to its end seals a recording.
  */
 let take: { samples: ManualDriveSample[]; decoder: TruthStreamClient } | null = null;
+/** Increments on every rebuild; frames after a `world-reset` belong to the new generation. */
+let worldGeneration = 0;
 let authoredTickHz = 20;
 let authoredClockLastWallTimeMs: number | null = null;
 let authoredClockRemainderS = 0;
@@ -288,6 +290,10 @@ function rebuildAuthoredWorld(): void {
   // on autopilot until the next control arrives.
   if (egoActorId !== null) assertOutcome(holdEgoNeutral(world, egoActorId, commandSequence++));
   resetAuthoredClock();
+  // Frames restart at tick 0. Consumers dedupe by tick, so the new generation
+  // is announced first, in order, on the same channel the frames use.
+  worldGeneration += 1;
+  post({ type: 'world-reset', generation: worldGeneration });
 }
 
 function applyTransport(message: Extract<LiveWorldWorkerRequest, { type: 'transport' }>): void {

@@ -1,4 +1,5 @@
 import type { TruthFrame } from '@simforge-oss/training-env/browser';
+import { getEntry } from '@simforge-oss/asset-catalog';
 import {
   ThreeRendererAdapter,
   actorOrigin,
@@ -9,16 +10,37 @@ import {
   type CityViewer,
 } from '@simforge-oss/viewer';
 
+export interface TruthViewerBridgeOptions {
+  layer?: string;
+  groundLift?: boolean;
+  /**
+   * The authored asset for an actor id, or null when the world did not
+   * author one (then the truth class picks a generic stand-in). Consulted
+   * once per actor id and cached until the next `reset`; an authored id
+   * unknown to the asset catalog is an error, never a silent generic substitute.
+   */
+  authoredCatalogId?: (actorId: string) => string | null;
+  /** Where an appearance failure is reported; rendering stops until the next `reset`. */
+  onError?: (error: Error) => void;
+}
+
 export interface TruthViewerBridge {
   readonly actors: ActorRenderer;
+  /** Newer frames only (by tick); older ones are dropped. Use `reset` when the world legitimately restarts. */
   apply(frame: TruthFrame): void;
+  /**
+   * The world was rebuilt at t = 0: forget the tick watermark and the
+   * interpolation pair so the new generation's first frame (tick 0) renders
+   * immediately instead of being dropped as stale.
+   */
+  reset(): void;
   setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
   dispose(): void;
 }
 
 export function createTruthViewerBridge(
   viewer: CityViewer,
-  opts: { layer?: string; groundLift?: boolean } = {},
+  opts: TruthViewerBridgeOptions = {},
 ): TruthViewerBridge {
   const layer = opts.layer ?? 'live-world';
   const shouldGroundLift = opts.groundLift ?? true;
@@ -32,11 +54,39 @@ export function createTruthViewerBridge(
   let followMode: 'chase' | 'dash' = 'chase';
   let disposed = false;
   let lastRendered = new Map<string, ActorRenderState>();
+  const appearance = new Map<string, { catalogId: string; authored: boolean }>();
+
+  const appearanceOf = (actorId: string, actorClass: TruthFrame['actors'][number]['class']) => {
+    const cached = appearance.get(actorId);
+    if (cached) return cached;
+    const authoredId = opts.authoredCatalogId?.(actorId) ?? null;
+    if (authoredId !== null) getEntry(authoredId); // throws on an unknown authored asset
+    const resolved = authoredId !== null
+      ? { catalogId: authoredId, authored: true }
+      : { catalogId: catalogIdFor(actorClass), authored: false };
+    appearance.set(actorId, resolved);
+    return resolved;
+  };
 
   viewer.scene.add(adapter.actors.group);
 
+  let failed: Error | null = null;
   const render = (dt: number): void => {
-    if (disposed || !latest) return;
+    if (disposed || !latest || failed) return;
+    try {
+      renderLatest(dt);
+    } catch (error) {
+      // An authored asset the catalog does not know is a document error, not
+      // something to paper over with a generic body. Stop rendering frames and
+      // say so once; a new source (new bridge) starts clean.
+      failed = error instanceof Error ? error : new Error(String(error));
+      opts.onError?.(failed);
+      if (!opts.onError) throw failed;
+    }
+  };
+
+  const renderLatest = (dt: number): void => {
+    if (!latest) return;
     elapsedSinceLatest += Math.max(0, dt);
     const duration = earlier ? latest.timeSec - earlier.timeSec : 0;
     const alpha = duration > 0 ? Math.min(1, elapsedSinceLatest / duration) : 1;
@@ -54,10 +104,11 @@ export function createTruthViewerBridge(
       const z = prior ? interpolate(prior.position[2], current.position[2], alpha) : current.position[2];
       const headingRad = prior ? interpolateAngle(prior.yawRad, current.yawRad, alpha) : current.yawRad;
       const y = groundReady ? sampleGround(x, z) ?? current.position[1] : current.position[1];
+      const look = appearanceOf(current.id, meta.class);
       actors.push({
         id: current.id,
-        catalogId: catalogIdFor(meta.class),
-        catalogIdAuthored: false,
+        catalogId: look.catalogId,
+        catalogIdAuthored: look.authored,
         x,
         y,
         z,
@@ -107,6 +158,14 @@ export function createTruthViewerBridge(
       latest = frame;
       elapsedSinceLatest = 0;
       render(0);
+    },
+    reset() {
+      if (disposed) return;
+      earlier = null;
+      latest = null;
+      failed = null;
+      appearance.clear();
+      elapsedSinceLatest = 0;
     },
     setFollow(actorId, mode = 'chase') {
       if (disposed) return;

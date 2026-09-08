@@ -41,6 +41,12 @@ export interface AuthoredWorldSource extends WorldSource {
   selectEgo(preferredActorId?: string | null): string | null;
   roleIdForActor(actorId: string): string | null;
   /**
+   * The authored asset the compiler assigned this actor (`catalog:` tag),
+   * resolved once per actor id. Null for actors the document did not author
+   * with a specific asset.
+   */
+  catalogIdForActor(actorId: string): string | null;
+  /**
    * Designate (or release) the ego. `take` parks the world at the document's
    * clip end; `free` keeps the live world advancing under the ego's control.
    */
@@ -93,7 +99,9 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   private readonly decoder = new TruthStreamClient();
   private readonly input: SimScenarioInput;
   private readonly roleIdByActorId: ReadonlyMap<string, string>;
+  private readonly catalogIdByActorId: ReadonlyMap<string, string>;
   private readonly frameListeners = new Set<Parameters<WorldSource['subscribeFrames']>[0]>();
+  private readonly resetListeners = new Set<(generation: number) => void>();
   private readonly statusListeners = new Set<Parameters<WorldSource['subscribeStatus']>[0]>();
   private readonly warningListeners = new Set<(message: string) => void>();
   private readonly transportListeners = new Set<(transport: WorldTransport) => void>();
@@ -110,6 +118,10 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   constructor(input: SimScenarioInput, document: EditorDocument, map: ScenarioMapEntry, tickHz: number) {
     this.input = input;
     this.roleIdByActorId = matchCompiledActorsToRoles(input, document);
+    this.catalogIdByActorId = new Map(input.actors.flatMap((actor) => {
+      const catalogId = actor.tags.find((tag) => tag.startsWith('catalog:'))?.slice('catalog:'.length);
+      return catalogId ? [[actor.id, catalogId] as const] : [];
+    }));
     this.transportState = { playing: false, inspecting: false, completed: false, time: 0 };
     const sessionId = `authored-world-${nextSessionId++}`;
     const source = this;
@@ -163,6 +175,11 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     return () => this.frameListeners.delete(fn);
   }
 
+  subscribeResets(fn: (generation: number) => void): () => void {
+    this.resetListeners.add(fn);
+    return () => this.resetListeners.delete(fn);
+  }
+
   subscribeStatus(fn: Parameters<WorldSource['subscribeStatus']>[0]): () => void {
     this.statusListeners.add(fn);
     fn(this.currentStatus, this.currentError);
@@ -179,6 +196,10 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     this.transportListeners.add(fn);
     fn(this.transport);
     return () => this.transportListeners.delete(fn);
+  }
+
+  catalogIdForActor(actorId: string): string | null {
+    return this.catalogIdByActorId.get(actorId) ?? null;
   }
 
   subscribeTakes(fn: (event: TakeEvent) => void): () => void {
@@ -240,6 +261,7 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     this.worker.terminate();
     this.setStatus('closed', null);
     this.frameListeners.clear();
+    this.resetListeners.clear();
     this.statusListeners.clear();
     this.warningListeners.clear();
     this.transportListeners.clear();
@@ -263,6 +285,10 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     if (message.type === 'ready') {
       clearTimeout(this.readyTimeout);
       if (this.currentStatus !== 'error') this.setStatus('running', null);
+      return;
+    }
+    if (message.type === 'world-reset') {
+      for (const listener of this.resetListeners) listener(message.generation);
       return;
     }
     if (message.type === 'frame') {

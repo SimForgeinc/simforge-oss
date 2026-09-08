@@ -23,6 +23,8 @@ export type LiveWorldWorkerResponse =
   | { type: 'ready' }
   | { type: 'take-complete'; recording: ManualDriveRecording }
   | { type: 'take-failed'; message: string }
+  /** The world was rebuilt at t = 0; every following `frame` restarts from tick 0. */
+  | { type: 'world-reset'; generation: number }
   | { type: 'frame'; bytes: ArrayBuffer }
   | { type: 'transport'; playing: boolean; inspecting: boolean; completed: boolean; time: number; duration: number }
   | { type: 'result'; requestId: number; actorId?: string }
