@@ -129,8 +129,12 @@ export const PolicyEpisodeParamsSchema = z
     fallback: z.enum(['repeat-last', 'zero-control', 'scripted']).default('zero-control'),
     forceMissAt: z.array(z.number().int().nonnegative()).default([]),
     execution: z.enum(['pure-pursuit', 'speed-setpoint']).default('pure-pursuit'),
-    /** `endpoint` runs the model; scripted/trajectory/torch are references. */
-    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint']).default('scripted'),
+    /**
+     * `endpoint` runs the model; scripted/trajectory/torch are references;
+     * `recorded-path` is the G5 stock replay of a replay-context bundle's own
+     * recorded ego path, which needs no model and no frame source.
+     */
+    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint', 'recorded-path']).default('scripted'),
     policySeed: z.number().int().nonnegative().default(0),
     cameraProfile: z.string().min(1).default('alpamayo-4cam'),
     /** Model replan cadence; the executor holds the plan in between (ZOH). */
@@ -176,6 +180,13 @@ export const PolicyEpisodeParamsSchema = z
         code: z.ZodIssueCode.custom,
         path: ['frameSource'],
         message: 'the endpoint policy needs a real frame source; camera views are never synthesized',
+      });
+    }
+    if (value.runnerPolicy === 'recorded-path' && !value.replayContext && !value.replayContextRole) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['replayContext'],
+        message: 'the stock replay drives a bundle\'s recorded path; it needs replayContext',
       });
     }
     if (!value.spec && !value.specRole) {

@@ -205,6 +205,22 @@
         "types": "./dist/lib/scenario/session/model.d.ts",
         "default": "./dist/lib/scenario/session/model.js"
       },
+      "./lib/scenario/signals/cross-map-transfer": {
+        "types": "./dist/lib/scenario/signals/cross-map-transfer.d.ts",
+        "default": "./dist/lib/scenario/signals/cross-map-transfer.js"
+      },
+      "./lib/scenario/signals/lens-kinds": {
+        "types": "./dist/lib/scenario/signals/lens-kinds.d.ts",
+        "default": "./dist/lib/scenario/signals/lens-kinds.js"
+      },
+      "./lib/scenario/signals/movement-diagram": {
+        "types": "./dist/lib/scenario/signals/movement-diagram.d.ts",
+        "default": "./dist/lib/scenario/signals/movement-diagram.js"
+      },
+      "./lib/scenario/signals/trigger-targets": {
+        "types": "./dist/lib/scenario/signals/trigger-targets.d.ts",
+        "default": "./dist/lib/scenario/signals/trigger-targets.js"
+      },
       "./lib/scenario/signals/plan": {
         "types": "./dist/lib/scenario/signals/plan.d.ts",
         "default": "./dist/lib/scenario/signals/plan.js"
@@ -595,6 +611,26 @@
       "development": "./src/lib/scenario/session/model.ts",
       "types": "./dist/lib/scenario/session/model.d.ts",
       "default": "./dist/lib/scenario/session/model.js"
+    },
+    "./lib/scenario/signals/cross-map-transfer": {
+      "development": "./src/lib/scenario/signals/cross-map-transfer.ts",
+      "types": "./dist/lib/scenario/signals/cross-map-transfer.d.ts",
+      "default": "./dist/lib/scenario/signals/cross-map-transfer.js"
+    },
+    "./lib/scenario/signals/lens-kinds": {
+      "development": "./src/lib/scenario/signals/lens-kinds.ts",
+      "types": "./dist/lib/scenario/signals/lens-kinds.d.ts",
+      "default": "./dist/lib/scenario/signals/lens-kinds.js"
+    },
+    "./lib/scenario/signals/movement-diagram": {
+      "development": "./src/lib/scenario/signals/movement-diagram.ts",
+      "types": "./dist/lib/scenario/signals/movement-diagram.d.ts",
+      "default": "./dist/lib/scenario/signals/movement-diagram.js"
+    },
+    "./lib/scenario/signals/trigger-targets": {
+      "development": "./src/lib/scenario/signals/trigger-targets.ts",
+      "types": "./dist/lib/scenario/signals/trigger-targets.d.ts",
+      "default": "./dist/lib/scenario/signals/trigger-targets.js"
     },
     "./lib/scenario/signals/plan": {
       "development": "./src/lib/scenario/signals/plan.ts",

@@ -29,7 +29,12 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { executeEpisode } from './episode-run.js';
+import {
+  executeEpisode,
+  reprocessEpisode,
+  type EpisodeRunOutcome,
+  type ReprocessedProvenance,
+} from './episode-run.js';
 import { executeOpenloop } from './openloop-run.js';
 import {
   ComputeJobInputSchema,
@@ -42,6 +47,7 @@ import {
   APPROXIMATED_EXTRINSICS_OOD,
   PolicyEpisodeParamsSchema,
   rigHasApproximatedExtrinsics,
+  type PolicyEpisodeParams,
 } from './protocol/params.js';
 import {
   endpointHealth,
@@ -74,6 +80,9 @@ class JobFailure extends Error {
 interface Flags {
   job?: string;
   out?: string;
+  /** `reprocess` only: the retained run directory being re-read. */
+  retained?: string;
+  'source-commit'?: string;
 }
 
 function parseFlags(argv: readonly string[]): Flags {
@@ -91,6 +100,12 @@ function parseFlags(argv: readonly string[]): Flags {
         break;
       case '--out':
         flags.out = value();
+        break;
+      case '--retained':
+        flags.retained = value();
+        break;
+      case '--source-commit':
+        flags['source-commit'] = value();
         break;
       default:
         throw new Error(`unknown flag ${arg}`);
@@ -151,6 +166,8 @@ interface ManifestParts {
   /** Out-of-distribution stamps, e.g. `approximated_extrinsics`. */
   readonly ood: readonly string[];
   readonly replayContext: Record<string, unknown> | null;
+  /** Set only by `reprocess`: this document re-reads a retained run. */
+  readonly reprocessedFrom?: ReprocessedProvenance | null;
   readonly error: { code: ErrorCode; message: string; fields?: readonly string[] } | null;
 }
 
@@ -240,6 +257,7 @@ async function emitManifest(
       controller: {},
       compute: null,
       metricVersion: 'simforge.eval-metrics/v1',
+      reprocessedFrom: parts.reprocessedFrom ?? null,
     },
     timing: {
       startedAt,
@@ -258,10 +276,118 @@ async function emitManifest(
   });
 }
 
+function episodeManifestParts(
+  params: PolicyEpisodeParams,
+  outcome: EpisodeRunOutcome,
+  replayContextDir: string | null,
+  reprocessedFrom?: ReprocessedProvenance,
+): ManifestParts {
+  return {
+    kind: 'closedloop-episode',
+    status: outcome.status,
+    scored: outcome.scored,
+    // Truncated, unscored and cancelled episodes never promote a model, and
+    // neither does a run with no model in the loop: a reference policy or the
+    // stock replay of a recorded path scores a SCENE, not a model.
+    promotable: outcome.scored && outcome.status === 'succeeded' && params.runnerPolicy === 'endpoint',
+    mode: params.mode,
+    truncation: outcome.truncation,
+    metrics: outcome.metrics,
+    artifacts: outcome.artifacts,
+    model: outcome.model,
+    inputKind: replayContextDir ? 'replay-context' : 'scenario',
+    // Rendered from an authored rig: its extrinsics are approximations of
+    // the dataset rig, so the result says so and cannot be read as parity.
+    ood:
+      params.runnerPolicy === 'endpoint' && rigHasApproximatedExtrinsics(params.cameraProfile)
+        ? [APPROXIMATED_EXTRINSICS_OOD]
+        : [],
+    inputDigest: null,
+    replayContext:
+      outcome.summary['replay_context'] && typeof outcome.summary['replay_context'] === 'object'
+        ? (outcome.summary['replay_context'] as Record<string, unknown>)
+        : null,
+    reprocessedFrom: reprocessedFrom ?? null,
+    error: outcome.error ? { ...episodeErrorClass(outcome.error), fields: [outcome.error.code] } : null,
+  };
+}
+
+/**
+ * Re-derive a retained episode's receipt under the current source.
+ *
+ * This runs no model and no simulation: it re-reads the retained trace and
+ * runner summary and applies today's status mapping and scorer. The superseded
+ * directory is never written to, and the new manifest carries
+ * `provenance.reprocessedFrom` naming the superseded manifest's digest, the
+ * trace digest it read and the source commit that produced the reading — so a
+ * corrected receipt can never be mistaken for a fresh measurement.
+ */
+async function reprocess(argv: readonly string[]): Promise<number> {
+  const flags = parseFlags(argv);
+  if (!flags.job || !flags.retained || !flags.out || !flags['source-commit']) {
+    process.stderr.write('reprocess requires --job, --retained, --out and --source-commit\n');
+    return 2;
+  }
+  const startedAt = new Date().toISOString();
+  const job = ComputeJobInputSchema.parse(JSON.parse(await readFile(flags.job, 'utf8')));
+  const params = PolicyEpisodeParamsSchema.parse(job.params);
+  const outDir = path.resolve(flags.out);
+  const replayContextDir = params.replayContextRole
+    ? inputPath(job, null, params.replayContextRole)
+    : params.replayContext;
+  const outcome = await reprocessEpisode({
+    retainedDir: flags.retained,
+    outDir,
+    sourceCommit: flags['source-commit'],
+    run: {
+      runId: job.jobId,
+      scoring: params.scoring,
+      expectedRouteM: params.expectedRouteM,
+      speedLimitMps: params.speedLimitMps,
+      runner: {
+        specPath: inputPath(job, params.spec, params.specRole),
+        session: params.session,
+        runnerPolicy: params.runnerPolicy,
+        seed: params.seed,
+        policySeed: params.policySeed,
+        steps: params.steps,
+        mode: params.mode,
+        deadlineMs: params.deadlineMs,
+        fallback: params.fallback,
+        execution: params.execution,
+        decisionHz: params.decisionHz,
+        tracePath: path.join(outDir, 'trace.jsonl'),
+        replayContextDir,
+        endpointSocket: null,
+        cameraProfile: params.cameraProfile,
+        frameSource: params.frameSource,
+        replanHz: params.replanHz,
+        numTrajSamples: params.numTrajSamples,
+        navText: params.navText,
+        model: job.model,
+        allowColdStart: params.allowColdStart,
+        warmupPolicy: params.warmupPolicy,
+        warmupSteps: params.warmupSteps,
+      },
+    },
+  });
+  await emitManifest(
+    job,
+    outDir,
+    startedAt,
+    episodeManifestParts(params, outcome, replayContextDir, outcome.reprocessedFrom),
+  );
+  return outcome.status === 'failed' ? 2 : 0;
+}
+
 async function main(): Promise<number> {
   const [command, ...rest] = process.argv.slice(2);
+  if (command === 'reprocess') return reprocess(rest);
   if (command !== 'openloop' && command !== 'episode') {
-    process.stderr.write('usage: simforge-eval-worker <openloop|episode> --job <job.json> --out <dir>\n');
+    process.stderr.write(
+      'usage: simforge-eval-worker <openloop|episode> --job <job.json> --out <dir>\n' +
+        '       simforge-eval-worker reprocess --job <job.json> --retained <dir> --out <dir> --source-commit <sha>\n',
+    );
     return 2;
   }
   const flags = parseFlags(rest);
@@ -370,31 +496,7 @@ async function main(): Promise<number> {
         warmupSteps: params.warmupSteps,
       },
     });
-    await emitManifest(job, outDir, startedAt, {
-      kind: 'closedloop-episode',
-      status: outcome.status,
-      scored: outcome.scored,
-      // Truncated, unscored and cancelled episodes never promote a model.
-      promotable: outcome.scored && outcome.status === 'succeeded',
-      mode: params.mode,
-      truncation: outcome.truncation,
-      metrics: outcome.metrics,
-      artifacts: outcome.artifacts,
-      model: outcome.model,
-      inputKind: replayContextDir ? 'replay-context' : 'scenario',
-      // Rendered from an authored rig: its extrinsics are approximations of
-      // the dataset rig, so the result says so and cannot be read as parity.
-      ood:
-        params.runnerPolicy === 'endpoint' && rigHasApproximatedExtrinsics(params.cameraProfile)
-          ? [APPROXIMATED_EXTRINSICS_OOD]
-          : [],
-      inputDigest: null,
-      replayContext:
-        outcome.summary['replay_context'] && typeof outcome.summary['replay_context'] === 'object'
-          ? (outcome.summary['replay_context'] as Record<string, unknown>)
-          : null,
-      error: outcome.error ? { ...episodeErrorClass(outcome.error), fields: [outcome.error.code] } : null,
-    });
+    await emitManifest(job, outDir, startedAt, episodeManifestParts(params, outcome, replayContextDir));
     if (outcome.status === 'cancelled') return 130;
     return outcome.status === 'failed' ? 2 : 0;
   } catch (error) {

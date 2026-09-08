@@ -335,7 +335,7 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
   });
   it('exports the runtime-clamped effective lane-change duration', () => {
     const input = mappedLaneChangeFixture(1, 1);
-    const simulation = engine().runSimulation(input, { engine: engine(), graph: laneGraph });
+    const simulation = engine().runSimulation(input, { graph: laneGraph });
     const planned = simulation.trace.events.find((event) => event.kind === 'lateral_maneuver_planned')!;
     expect(planned.effectiveDurationS).toBeGreaterThan(1);
     const result = exportOpenScenarioXml14(input, { engine: engine(), graph: laneGraph, executionMode: 'actions' });

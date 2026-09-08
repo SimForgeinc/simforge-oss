@@ -195,8 +195,8 @@ class RecordedPathPolicy:
         recorded_path: Sequence[tuple[float, float, float, float]],
         *,
         decision_hz: float = 10.0,
-        horizon_s: float = 2.0,
-        sample_s: float = 0.2,
+        horizon_s: float = 1.2,
+        sample_s: float = 0.1,
     ) -> None:
         if len(recorded_path) < 2:
             raise ValueError("recorded_path needs at least two poses")
@@ -223,9 +223,27 @@ class RecordedPathPolicy:
                 return x0 + u * (x1 - x0), y0 + u * (y1 - y0), h0 + u * math.atan2(math.sin(h1 - h0), math.cos(h1 - h0))
         return path[-1][1], path[-1][2], path[-1][3]
 
+    def act_context(self, ctx: Any) -> PolicyDecision:
+        """Plan the recorded path from the ego's LIVE pose.
+
+        The plan must be expressed in the ego frame at issuance, so the
+        recorded poses are transformed against where the ego actually IS, not
+        against where the recording says it should be. Anchoring on the
+        recorded pose instead makes the replay open-loop: any tracking error
+        accumulates and the ego walks away from the path it is supposed to be
+        reproducing, which is exactly what a stock replay must not do.
+        """
+        live = ctx.ego_trail[-1]
+        return self._plan(ctx.step, live[1], live[2], live[3])
+
     def act(self, step: int, state_vector: np.ndarray | None) -> PolicyDecision:
+        # Without a live pose the recorded pose is the only anchor available;
+        # the runner supplies context, so this path is the degenerate one.
         t0 = self.path[0][0] + step / self.decision_hz
-        x0, y0, h0 = self._pose_at(t0)
+        return self._plan(step, *self._pose_at(t0))
+
+    def _plan(self, step: int, x0: float, y0: float, h0: float) -> PolicyDecision:
+        t0 = self.path[0][0] + step / self.decision_hz
         cos_h, sin_h = math.cos(-h0), math.sin(-h0)
         points: list[tuple[float, float, float, float, float]] = []
         previous = (0.0, 0.0)
