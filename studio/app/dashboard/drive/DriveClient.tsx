@@ -81,6 +81,7 @@ import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { ScenarioAuthoringQuality } from "@/app/lib/scenario/contracts";
 import { useEditorRuntime } from "@simforge-oss/studio-ui/lib/scenario/editor/use-editor-runtime";
+import { requestedDriveMapId, useRequestedMapOpen } from "./drive-map-request";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { PoleCameraGrid } from "./cameras/PoleCameraGrid";
 import { DriveMapChooser, driveMapUsable } from "./DriveMapChooser";
@@ -120,13 +121,14 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
   const [opening, setOpening] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [controlTarget, setControlTarget] = useState<ControlTarget>(NO_CONTROL_TARGET);
-  // Read after hydration: the server render has no query string, and a
-  // pre-selected map in the chooser must not differ between the two.
-  const [requestedMapId, setRequestedMapId] = useState<string | null>(take?.mapVersionId ?? null);
+  // The take session resolves from localStorage after hydration, so the map
+  // it names can arrive after the first render; the URL deep link is read
+  // client-side because the server render has no query string.
+  const [urlMapId, setUrlMapId] = useState<string | null>(null);
   useEffect(() => {
-    if (take) return;
-    setRequestedMapId(new URLSearchParams(window.location.search).get(MAP_QUERY));
-  }, [take]);
+    setUrlMapId(new URLSearchParams(window.location.search).get(MAP_QUERY));
+  }, []);
+  const requestedMapId = requestedDriveMapId(take?.mapVersionId ?? null, urlMapId);
 
   // A direct bundle bypasses the catalog entirely (un-ingested maps, see README).
   useEffect(() => {
@@ -165,6 +167,7 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
       const url = new URL(window.location.href);
       url.searchParams.set(MAP_QUERY, mapVersionId);
       window.history.replaceState(window.history.state, "", url);
+      setUrlMapId(mapVersionId);
     } catch (error) {
       if (signal?.aborted) return;
       const message = errorMessage(error);
@@ -180,15 +183,14 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
     }
   }, [take]);
 
-  // Deep link (`?map=`) or an editor take: open the requested map directly,
-  // through the same gate as an explicit choice.
-  useEffect(() => {
-    if (!requestedMapId || activeMap || directMap) return;
-    const controller = new AbortController();
-    void openMap(requestedMapId, controller.signal);
-    return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per requested id
-  }, [requestedMapId]);
+  // Deep link (`?map=`) or an editor take: open through the same gate as an
+  // explicit choice; a take that resolves after hydration still opens.
+  useRequestedMapOpen({
+    requestedMapId,
+    activeMapVersionId: activeMap?.mapVersionId ?? null,
+    suspended: directMap !== null,
+    open: openMap,
+  });
 
   // Loss of access: a fresh catalog that no longer allows the active map
   // disposes the world (DriveSurface unmount) and returns to the chooser.
@@ -204,6 +206,7 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
 
   const leaveMap = useCallback(() => {
     setActiveMap(null);
+    setUrlMapId(null);
     const url = new URL(window.location.href);
     url.searchParams.delete(MAP_QUERY);
     window.history.replaceState(window.history.state, "", url);
