@@ -12,15 +12,97 @@ import type {
   AssistantBackend,
   UpdateAiProviderSettings,
 } from "@/app/lib/ai-providers/contracts";
+import type { StudioCloudWorkspace } from "@simforge-oss/studio-host";
 
 const SETTINGS_URL = "/api/simforge/ai-providers";
+const WORKSPACES_URL = "/api/simforge/cloud/workspaces";
 
 type StatusResult = { status: AiProviderSettingsStatus | null; error: string | null };
 
 async function readStatusResponse(response: Response): Promise<StatusResult> {
   if (response.ok) return { status: (await response.json()) as AiProviderSettingsStatus, error: null };
-  const body = (await response.json().catch(() => null)) as { error?: string } | null;
-  return { status: null, error: body?.error ?? `AI provider settings request failed (${response.status}).` };
+  const body = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+  return {
+    status: null,
+    error: body?.message ?? body?.error ?? `AI provider settings request failed (${response.status}).`,
+  };
+}
+
+/**
+ * The workspace the managed assistant runs in. Cloud attributes every
+ * assistant call to this workspace and refuses calls that name none, so the
+ * choice is explicit and visible here rather than inferred.
+ */
+function WorkspacePicker({
+  selected,
+  busy,
+  onSelect,
+}: {
+  selected: { workspaceId: string; workspaceName: string } | null;
+  busy: boolean;
+  onSelect: (workspace: { workspaceId: string; workspaceName: string } | null) => Promise<void>;
+}) {
+  const selectId = useId();
+  const [workspaces, setWorkspaces] = useState<StudioCloudWorkspace[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(WORKSPACES_URL, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as { message?: string; error?: string } | null;
+          throw new Error(body?.message ?? body?.error ?? `Workspaces could not be loaded (${response.status}).`);
+        }
+        const body = (await response.json()) as { workspaces: StudioCloudWorkspace[] };
+        setWorkspaces(body.workspaces);
+        setLoadError(null);
+      })
+      .catch((reason) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        setLoadError(reason instanceof Error ? reason.message : "Workspaces could not be loaded.");
+      });
+    return () => controller.abort();
+  }, []);
+
+  const selectedIsMember = selected !== null && (workspaces?.some((workspace) => workspace.id === selected.workspaceId) ?? true);
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor={selectId} className="text-xs font-medium text-white/60">
+        Assistant workspace
+      </label>
+      <select
+        id={selectId}
+        value={selectedIsMember && selected ? selected.workspaceId : ""}
+        disabled={busy || workspaces === null}
+        onChange={(event) => {
+          const workspace = workspaces?.find((candidate) => candidate.id === event.target.value) ?? null;
+          void onSelect(workspace ? { workspaceId: workspace.id, workspaceName: workspace.name } : null);
+        }}
+        className="block w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white disabled:opacity-60"
+      >
+        <option value="">{workspaces === null && !loadError ? "Loading workspaces…" : "Choose a workspace"}</option>
+        {(workspaces ?? []).map((workspace) => (
+          <option key={workspace.id} value={workspace.id}>
+            {workspace.name} ({workspace.role})
+          </option>
+        ))}
+      </select>
+      {loadError ? (
+        <p role="alert" className="text-[11px] leading-4 text-red-200">{loadError}</p>
+      ) : selected && !selectedIsMember ? (
+        <p role="alert" className="text-[11px] leading-4 text-amber-200/90">
+          Your account is no longer a member of {selected.workspaceName}. Choose another workspace.
+        </p>
+      ) : (
+        <p className="text-[11px] leading-4 text-white/40">
+          Assistant requests run in this SimCloud workspace and count against it. Import, publish and
+          uploads still ask for a workspace each time.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function sourceLabel(status: AiProviderKeyStatus): string {
@@ -192,7 +274,9 @@ export function AiProviderSettingsClient() {
               {status.assistant.available
                 ? `Ready: ${
                     status.assistant.backend === "simcloud"
-                      ? `SimCloud assistant as ${status.assistant.simcloud.user ?? "your account"}`
+                      ? `SimCloud assistant as ${status.assistant.simcloud.user ?? "your account"} in ${
+                          status.assistant.simcloud.workspace?.workspaceName ?? "the selected workspace"
+                        }`
                       : `your Anthropic key, model ${status.assistant.anthropic.model}`
                   }.`
                 : status.assistant.reason}
@@ -286,10 +370,19 @@ export function AiProviderSettingsClient() {
               </form>
             </div>
             ) : (
-              <p className="mt-5 text-xs text-white/50">
-                SimCloud selects its managed model. Your Anthropic key and model settings are used only
-                when you choose My Anthropic API key.
-              </p>
+              <div className="mt-5 space-y-4">
+                {status.assistant.simcloud.connected ? (
+                  <WorkspacePicker
+                    selected={status.assistant.simcloud.workspace}
+                    busy={busy}
+                    onSelect={(workspace) => patch({ simcloudWorkspace: workspace })}
+                  />
+                ) : null}
+                <p className="text-xs text-white/50">
+                  SimCloud selects its managed model. Your Anthropic key and model settings are used only
+                  when you choose My Anthropic API key.
+                </p>
+              </div>
             )}
           </section>
 

@@ -15,7 +15,9 @@ export { DEFAULT_ANTHROPIC_MODEL };
 /**
  * Managed SimCloud path: the Anthropic SDK's Messages API, reverse-proxied by
  * Cloud under the desktop session. The local service never holds a Cloud
- * model key; `cloudRequest` attaches the user's session bearer.
+ * model key; `cloudRequest` attaches the user's session bearer and names the
+ * workspace the user chose for the assistant, which Cloud verifies against
+ * live membership and attributes the call to.
  */
 export const SIMCLOUD_ANTHROPIC_PROXY_PATH = "/api/desktop/ai/anthropic";
 
@@ -56,7 +58,8 @@ export async function createChatModel(): Promise<ChatAnthropic> {
   const backend = await getAssistantBackend();
   if (backend === "simcloud") {
     const status = await getAiProviderSettingsStatus();
-    if (!status.assistant.available) {
+    const workspace = status.assistant.simcloud.workspace;
+    if (!status.assistant.available || !workspace) {
       throw new AssistantUnavailableError(status.assistant.reason ?? "SimCloud is not connected.");
     }
     return new ChatAnthropic({
@@ -64,7 +67,7 @@ export async function createChatModel(): Promise<ChatAnthropic> {
       // The SDK requires a key string; the proxy authenticates by session bearer and ignores it.
       apiKey: "simcloud-session",
       anthropicApiUrl: `https://simcloud.invalid${SIMCLOUD_ANTHROPIC_PROXY_PATH}`,
-      clientOptions: { fetch: simcloudAnthropicFetch },
+      clientOptions: { fetch: simcloudAnthropicFetch(workspace.workspaceId) },
     });
   }
 
@@ -78,14 +81,21 @@ export async function createChatModel(): Promise<ChatAnthropic> {
 
 /**
  * Route the Anthropic SDK's requests through the authenticated Cloud
- * connector. Only the path under the proxy prefix is forwarded; the SDK's
- * placeholder `x-api-key` is dropped so no client-side credential is sent.
+ * connector, in the chosen workspace. Only the path under the proxy prefix is
+ * forwarded; the SDK's placeholder `x-api-key` is dropped so no client-side
+ * credential is sent.
  */
-async function simcloudAnthropicFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-  const url = new URL(input instanceof Request ? input.url : input);
-  const headers = new Headers(input instanceof Request ? input.headers : undefined);
-  new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
-  headers.delete("x-api-key");
-  headers.delete("authorization");
-  return cloudRequest(`${url.pathname}${url.search}`, { ...init, headers }, { signal: init?.signal ?? undefined });
+function simcloudAnthropicFetch(workspaceId: string) {
+  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const url = new URL(input instanceof Request ? input.url : input);
+    const headers = new Headers(input instanceof Request ? input.headers : undefined);
+    new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+    headers.delete("x-api-key");
+    headers.delete("authorization");
+    return cloudRequest(
+      `${url.pathname}${url.search}`,
+      { ...init, headers },
+      { workspaceId, signal: init?.signal ?? undefined },
+    );
+  };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UpdateAiProviderSettingsSchema } from "@/app/lib/ai-providers/contracts";
 import {
+  AssistantWorkspaceSelectionError,
   getAiProviderSettingsStatus,
   updateAiProviderSettings,
 } from "@/app/lib/ai-providers/settings";
@@ -32,5 +33,14 @@ export async function PATCH(request: NextRequest) {
       ),
     );
   }
-  return auth.apply(NextResponse.json(await updateAiProviderSettings(parsed.data), { headers: NO_STORE }));
+  try {
+    return auth.apply(NextResponse.json(await updateAiProviderSettings(parsed.data), { headers: NO_STORE }));
+  } catch (error) {
+    if (error instanceof AssistantWorkspaceSelectionError) {
+      return auth.apply(
+        NextResponse.json({ error: error.code, message: error.message }, { status: 409, headers: NO_STORE }),
+      );
+    }
+    throw error;
+  }
 }

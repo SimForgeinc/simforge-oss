@@ -22,12 +22,20 @@ imports, exports — works without any provider and without a SimCloud account.
   is no plaintext file fallback. Requests go directly from the user's machine
   to Anthropic.
 - **SimCloud assistant**. Available only while the app is connected to
-  SimCloud. The local service keeps running the assistant's tools against local
-  maps and documents; only the Anthropic Messages call is reverse-proxied by
-  Cloud at `POST /api/desktop/ai/anthropic/v1/messages` under the user's native
-  session bearer. The desktop never receives or sends a model key; the Cloud
-  route forwards only that one endpoint, only `claude-*` models, and answers
-  `503 managed_assistant_unavailable` on a deployment without an Anthropic key.
+  SimCloud **and** an assistant workspace is chosen. The local service keeps
+  running the assistant's tools against local maps and documents; only the
+  Anthropic Messages call is reverse-proxied by Cloud at
+  `POST /api/desktop/ai/anthropic/v1/messages` under the user's native session
+  bearer, with `X-SimForge-Workspace-Id` naming the chosen workspace. Cloud
+  re-checks membership on every call and attributes the call to that
+  workspace; a call without a workspace is refused `400 workspace_required`
+  and a workspace the account no longer belongs to is refused
+  `403 workspace_forbidden`, both in the Anthropic error envelope. The
+  selection is stored per signed-in account, so connecting as a different
+  account starts with no workspace rather than inheriting someone else's. The
+  desktop never receives or sends a model key; the Cloud route forwards only
+  that one endpoint, only `claude-*` models, and answers
+  `503 managed_assistant_unavailable` on a deployment without a managed model.
 - **Meshy** for asset generation is always bring-your-own. Generated GLBs are
   imported, measured and published into the local asset library exactly like an
   uploaded model.
@@ -51,5 +59,7 @@ key's source and last four characters, never the key.
 
 `GET /api/simforge/ai-providers` → `AiProviderSettingsStatus`
 (`studio/app/lib/ai-providers/contracts.ts`). `PATCH` with any of
-`assistantBackend`, `anthropicApiKey`, `anthropicModel`, `meshyApiKey`; a `null`
+`assistantBackend`, `anthropicApiKey`, `anthropicModel`, `meshyApiKey`,
+`simcloudWorkspace` (`{ workspaceId, workspaceName }`, or `null` to clear; refused
+`409 cloud_disconnected` when no account is connected to bind it to); a `null`
 key clears it. Keys are write-only.

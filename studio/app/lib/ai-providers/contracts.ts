@@ -24,10 +24,27 @@ export type AiProviderKeyStatus = {
   keyHint: string | null;
 };
 
+/**
+ * The SimCloud workspace the managed assistant runs in. The service stores
+ * it per signed-in account and never carries it across sign-ins: the
+ * selection lapses when a different account connects, so one person's
+ * workspace is never silently billed for another's requests.
+ */
+export type AssistantWorkspaceSelection = {
+  workspaceId: string;
+  workspaceName: string;
+};
+
 export type AiAssistantStatus = {
   backend: AssistantBackend;
   anthropic: AiProviderKeyStatus & { model: string };
-  simcloud: { connected: boolean; origin: string | null; user: string | null };
+  simcloud: {
+    connected: boolean;
+    origin: string | null;
+    user: string | null;
+    /** Null until the user picks a workspace for this account. */
+    workspace: AssistantWorkspaceSelection | null;
+  };
   /** Whether the selected backend can actually serve a request right now. */
   available: boolean;
   /** Human-readable reason when unavailable; null when available. */
@@ -56,6 +73,16 @@ export const UpdateAiProviderSettingsSchema = z.strictObject({
   assistantBackend: z.enum(ASSISTANT_BACKENDS).optional(),
   anthropicApiKey: ApiKeyPatchSchema,
   anthropicModel: z.union([z.string().trim().min(1).max(120), z.null()]).optional(),
+  /** The SimCloud workspace for the managed assistant; `null` clears the selection. */
+  simcloudWorkspace: z
+    .union([
+      z.strictObject({
+        workspaceId: z.string().trim().min(1).max(120),
+        workspaceName: z.string().trim().min(1).max(200),
+      }),
+      z.null(),
+    ])
+    .optional(),
   meshyApiKey: ApiKeyPatchSchema,
 });
 export type UpdateAiProviderSettings = z.infer<typeof UpdateAiProviderSettingsSchema>;
@@ -68,3 +95,6 @@ export const ASSISTANT_NOT_CONFIGURED_MESSAGE =
 
 export const ASSET_GENERATION_NOT_CONFIGURED_MESSAGE =
   "3D asset generation needs a Meshy API key. Add one in Settings → AI providers.";
+
+export const ASSISTANT_WORKSPACE_NOT_SELECTED_MESSAGE =
+  "Choose the SimCloud workspace the assistant runs in (Settings → AI providers).";
