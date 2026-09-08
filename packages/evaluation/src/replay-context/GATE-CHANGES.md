@@ -1008,3 +1008,63 @@ built on top of the same unverified correspondence.
 `off-road` 0, `lane-departure` unavailable, `speeding` unavailable, `wrong-way` unavailable. The
 infraction count is **0** and item (1) has left the reason list. G5 still fails, on three
 unevaluable categories and nothing else. The scene is still not admitted, and no threshold moved.
+
+
+---
+
+## 2026-09-08 — Correction: I inferred a frame defect from plausibility. Withdrawn.
+
+In the entry above I wrote that the parsimonious reading of the lane-binding control is "a
+residual ~1.8 m lateral discrepancy between the ego pose frame and the ClipGT lane annotations".
+That is an inference from *a human would not ride a lane line at 31 m/s*, which is a plausibility
+argument, not evidence. Sustained straddling can happen. Withdrawn as a conclusion.
+
+Worse, evidence already in this session argues against it, and I did not weigh it before writing
+the sentence. **The offsets are not uniform.** Per bound segment, worst |offset| on the recorded
+drive:
+
+| segment | worst offset | | segment | worst offset |
+|---|---|---|---|---|
+| lane-14 | 1.73 m | | lane-106 | 0.53 m |
+| lane-16 | 1.66 m | | lane-87 | 0.39 m |
+| lane-11 | 0.95 m | | lane-71 | 0.26 m |
+| lane-19 | 0.85 m | | lane-77 | 0.15 m |
+| lane-22 | 0.58 m | | lane-83 | 0.09 m |
+
+A constant frame offset would displace every segment alike. These span 0.09 m to 1.73 m — more
+than a factor of eighteen — with the ego centred to within 9 cm in some segments and at the rail
+in others. That is not the signature of a rigid transform error, and I should have noticed before
+naming one.
+
+### What is observed, stated without a cause
+
+1. The ego's bound lateral offset varies from 0.09 m to 1.73 m across consecutive lane segments of
+   one continuous drive.
+2. Over x ∈ [138, 177] the annotated centrelines are at y = −2.06 and y = −5.68 and the ego runs
+   y = −4.0 … −4.5, sustained between them; the same holds for the preceding segment pair.
+3. Rails in the high-offset segments are straight (sagitta 0.000–0.015 m over ~38 m spans).
+4. Containment holds throughout: 200 of 202 samples inside exactly one lane, 0 outside, 2 ambiguous.
+
+### Competing explanations, none selected
+
+- **Alignment.** A pose-to-annotation correspondence error. Argued against by (1): a rigid offset
+  should not vary eighteenfold between segments. A *non-rigid* or drifting correspondence is not
+  excluded by (1).
+- **Annotation.** The lane tiling shifting laterally between independently labelled segments —
+  each ClipGT lane row is its own autolabel (`minimap:lanes:autolabels:v0`) and nothing forces
+  neighbouring segments onto a consistent lateral registration. Consistent with (1) and (2).
+- **Behaviour.** The drive genuinely tracks near a lane line over part of the route — a wide lane,
+  an off-ramp taper, or a lane change in progress. Consistent with (2) and not excluded by
+  anything measured. Sustained straddling is a real thing vehicles do.
+
+Distinguishing these needs independent calibration or correspondence evidence — a known
+ground-truth registration between ego poses and the annotation set, or an annotation source with
+stated lateral registration. It cannot be settled by another metric computed on the same
+unverified correspondence, which is why no further diagnostic is being built here.
+
+### Status
+
+Feature **BLOCKED** on those exact source inputs. `metricAuthority.laneCentrelines` stays false,
+`lane-departure` stays unavailable, and its missing-artifact string is now observational rather
+than causal. Source, instrument and every measurement are retained. No GPU, no further scene
+sampling, no core change.
