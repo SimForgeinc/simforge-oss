@@ -575,6 +575,7 @@ describe('lane-departure: rail binding and the lane-change policy', () => {
   const LANES = {
     schema: 'simforge.lane-context/v1' as const,
     source: 'clipgt-lane-rails' as const,
+    sourceSha256: 'f'.repeat(64),
     frame: 'nurec-source-z-up',
     timeSupportUs: null,
     lanes: [lane('L1', 0), lane('L2', 3.4)],
@@ -600,9 +601,17 @@ describe('lane-departure: rail binding and the lane-change policy', () => {
     expect(score.infractions['lane-departure']).toBe(0);
     expect(score.laneDeparture?.bound).toBe(2);
     expect(score.laneDeparture?.transitions).toBe(1);
-    const transition = score.events.find((e) => e.type === 'lane-transition');
-    expect(transition?.severity).toBe('info');
-    expect((transition?.data as { toLaneId?: string } | undefined)?.toLaneId).toBe('L2');
+    // The detector reports entering the strip and then the lateral move; the
+    // lane-transition is the one that names both lanes.
+    const events = score.events.filter((e) => e.type === 'lane-transition');
+    expect(events.every((e) => e.severity === 'info')).toBe(true);
+    const lateral = events.find(
+      (e) => (e.data as { kind?: string } | undefined)?.kind === 'lane-transition',
+    );
+    expect((lateral?.data as { fromLaneId?: string; toLaneId?: string } | undefined)).toMatchObject({
+      fromLaneId: 'L1',
+      toLaneId: 'L2',
+    });
     // Which crossings are illegitimate needs route, marking and rule context a
     // reconstruction does not carry, so the metric stays unavailable.
     expect(score.unavailable).toContain('lane-departure');

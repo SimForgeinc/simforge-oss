@@ -31,7 +31,7 @@ import {
   offRoadMetricVersion,
   type DrivableArea,
 } from './replay-context/drivable.js';
-import { bindLane, type LaneContext } from './replay-context/lanes.js';
+import { bindLane, detectLaneTransitions, type LaneContext } from './replay-context/lanes.js';
 
 /** Perception object row on the wire: [id, rangeM, bearingRad, rangeRateMps, lineOfSight]. */
 export type TraceObj = readonly [string, number, number, number, number];
@@ -475,7 +475,6 @@ export function scoreEpisode(
   let laneSamplesUnavailable = 0;
   let worstLaneOffsetM: number | null = null;
   let undecidedRun = 0;
-  let undecidedFrom: string | null = null;
   let undecidedReported = false;
   let laneTransitions = 0;
   let worstOffRoadM: number | null = null;
@@ -538,29 +537,21 @@ export function scoreEpisode(
         laneSamplesUnavailable += 1;
       } else if (binding.kind === 'contained') {
         laneSamplesBound += 1;
-        const lane = laneContext.lanes.find((candidate) => candidate.id === binding.laneId);
         const offset = binding.lateralOffsetM ?? 0;
         worstLaneOffsetM = Math.max(worstLaneOffsetM ?? 0, Math.abs(offset));
-        if (undecidedFrom !== null && binding.laneId !== undecidedFrom && undecidedRun > 0) {
-          laneTransitions += 1;
-          push('lane-transition', step, 'info', {
-            fromLaneId: undecidedFrom,
-            toLaneId: binding.laneId,
-            crossingSeconds: Number(undecidedRun.toFixed(3)),
-            withinCrossingBound: undecidedRun <= cfg.laneChangeMaxS,
-          });
-        }
         undecidedRun = 0;
-        undecidedFrom = binding.laneId;
       } else {
+        // `ambiguous`, `outside` and `out-of-support` are all undecided at this
+        // layer; the transition pass below says which.
+        laneSamplesUnavailable += 1;
         undecidedRun += dtS;
         if (undecidedRun > cfg.laneChangeMaxS && !undecidedReported) {
           undecidedReported = true;
           push('lane-transition', step, 'info', {
-            reason: binding.kind === 'outside' ? 'left_every_lane' : 'undecided_run_exceeded',
+            reason: 'undecided_run_exceeded',
             seconds: Number(undecidedRun.toFixed(3)),
+            kind: binding.kind,
             candidateLaneIds: [...binding.candidateLaneIds],
-            fromLaneId: undecidedFrom,
           });
         }
       }
@@ -766,6 +757,27 @@ export function scoreEpisode(
   if (containmentEnabled && containmentAssessed === 0) unavailable.add('off-road');
   // Rail-bound lane-departure has the same rule as containment: nothing bound
   // means no answer, some bound means an answer plus its gaps.
+  // Transitions come from the lane module's own detector, which distinguishes a
+  // real lateral move from a SEGMENT ADVANCE: ClipGT tiles a lane into ~38 m
+  // pieces, so a bound-id change every few seconds is what driving straight
+  // looks like. Counting id changes reported 17 lane changes on a drive with
+  // one, and coverage alone reported zero, because this drive's change lands
+  // exactly where a segment ends - it needs both tests, which is why this calls
+  // the module rather than repeating either.
+  if (laneContext) {
+    const poses = trace.steps.flatMap((step) => (step.ex ? [{ x: step.ex.x, y: step.ex.y }] : []));
+    for (const transition of detectLaneTransitions(laneContext, poses)) {
+      if (transition.kind === 'lane-transition') laneTransitions += 1;
+      const step = trace.steps[transition.atIndex];
+      if (!step) continue;
+      push('lane-transition', step, 'info', {
+        kind: transition.kind,
+        fromLaneId: transition.fromLaneId,
+        toLaneId: transition.toLaneId,
+      });
+    }
+  }
+
   // Rail binding tells you WHERE the vehicle was, not whether it was allowed to
   // be there. Availability of the geometry is scoped to validated support and
   // its hash; it is not a certification of legality, so lane-departure remains
