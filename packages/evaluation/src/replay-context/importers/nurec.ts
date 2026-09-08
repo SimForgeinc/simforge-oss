@@ -384,6 +384,14 @@ export async function importNurecScene(options: NurecImportOptions): Promise<Rep
       sourcePackage: packagePath,
       sourcePackageSha256: expectedSha,
       ...(background.digest === undefined ? {} : { memberDigest: background.digest }),
+      ...(background.metadata?.timeRangeUs === undefined
+        ? {}
+        : {
+            timeSupportUs: {
+              startUs: Math.round(background.metadata.timeRangeUs.start),
+              endUs: Math.round(background.metadata.timeRangeUs.end),
+            },
+          }),
       renderer: 'nurec-splat-renderer',
     },
     map,

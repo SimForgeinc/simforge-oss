@@ -83,3 +83,47 @@ its tracks are genuinely sparser, not whether the threshold should move.
 
 G1, G2, G3 and G5 definitions and thresholds are untouched. G1/G2/G5 remain unmeasured: they
 need the renderer, which needs the 3DGRUT tracer build.
+
+
+---
+
+## 2026-09-07 — G4's frame-window check re-pointed at the reconstruction's time support
+
+**Status when changed:** still no renderer result; G1/G2/G5 unmeasured.
+
+**Same scene** as above, imported through the *scene-directory* path (sidecars +
+hash-verified package) rather than the package-only path.
+
+### Superseded measurement, retained
+
+| Metric | Measured | Verdict |
+|---|---|---|
+| published reference instants outside the **episode** window | **4 of 4** | FAIL |
+| published reference instants outside the **reconstruction's time support** | **0 of 4** | pass |
+
+### Why the first was wrong
+
+The two windows are not the same thing and the check was using the wrong one:
+
+- reconstruction time support (`background.metadata.timeRangeUs`): 7,109,278,000 – 7,129,278,000 µs
+- evaluated episode (`ego-reference.json`): 7,112,500,060 – 7,132,500,060 µs
+- the four published reference frames: 7,109,393,945 – 7,109,458,707 µs
+
+The frames sit **3.1 s before the episode starts** but comfortably inside the reconstruction.
+They are frames of the same drive; the episode is simply a 20 s window selected from a longer
+recording. Failing them said only that we had compared against the wrong interval. The check's
+purpose — "do the frames and the trajectory describe the same drive?" — is answered by the
+reconstruction's extent, so the bundle now carries `geometry.timeSupportUs` and G4 uses it.
+
+### A real finding this surfaced, kept rather than smoothed
+
+The episode's ego reference runs **3,222,060 µs (3.22 s) past the end of the reconstruction's
+support** (`egoBeyondSupportUs`). Those last 3.22 s cannot be rendered at all — the splat
+backend rejects a tick outside support — so an episode driven to the end of the ego reference
+would leave the renderable world before it ran out of trajectory.
+
+This is now enforced rather than merely reported: `createEnvelopeMonitor` clamps the
+enforceable window to the **intersection** of the episode and the reconstruction support, so
+an episode entering that tail truncates with `envelope_exceeded` / `time-support` instead of
+being rendered from geometry that does not exist. G4 reports the overhang in its detail so the
+scene's shortfall is visible in the bundle.

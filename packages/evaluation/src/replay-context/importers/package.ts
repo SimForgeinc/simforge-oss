@@ -409,6 +409,8 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
       kind: 'nurec-usdz',
       sourcePackage: packagePath,
       sourcePackageSha256: digest,
+      // The recorded rig trajectory is the extent the reconstruction was built over.
+      timeSupportUs: { startUs: recordedPath[0]!.tUs, endUs: recordedPath[recordedPath.length - 1]!.tUs },
       renderer: 'nurec-splat-renderer',
     },
     // The package carries no lane graph; route context is whatever the scene itself implies

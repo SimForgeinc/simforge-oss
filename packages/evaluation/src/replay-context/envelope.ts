@@ -132,7 +132,11 @@ export interface EnvelopeMonitor {
 export function createEnvelopeMonitor(bundle: ReplayContext): EnvelopeMonitor {
   const limits = bundle.validity.envelope;
   const path = bundle.ego.recordedPath;
-  const { originUs, endUs } = bundle.ego;
+  // Renders outside the reconstruction's support do not exist, so the enforceable window is
+  // the intersection of the episode and the reconstruction — not the episode alone.
+  const support = bundle.geometry.timeSupportUs;
+  const originUs = Math.max(bundle.ego.originUs, support?.startUs ?? bundle.ego.originUs);
+  const endUs = Math.min(bundle.ego.endUs, support?.endUs ?? bundle.ego.endUs);
   return {
     limits,
     check(sample: PoseSample): EnvelopeCheck {
@@ -282,11 +286,19 @@ export function measureDynamicsConsistency(bundle: ReplayContext): DynamicsConsi
   let intersections = 0;
   let framesOutsideWindow = 0;
 
+  // Frames are checked against the RECONSTRUCTION's support, not the episode window. A
+  // published reference frame a few seconds before the evaluated episode still belongs to the
+  // same drive; one outside the reconstruction does not.
+  const support = bundle.geometry.timeSupportUs;
+  const windowStart = support?.startUs ?? bundle.ego.originUs;
+  const windowEnd = support?.endUs ?? bundle.ego.endUs;
   for (const camera of bundle.cameras) {
     for (const tUs of cameraTimestamps(camera)) {
-      if (tUs < bundle.ego.originUs || tUs > bundle.ego.endUs) framesOutsideWindow += 1;
+      if (tUs < windowStart || tUs > windowEnd) framesOutsideWindow += 1;
     }
   }
+  // How far the evaluated episode runs past what the reconstruction can render at all.
+  const egoBeyondSupportUs = support === undefined ? 0 : Math.max(0, bundle.ego.endUs - support.endUs);
 
   for (const track of bundle.dynamics.tracks) {
     for (let i = 1; i < track.samples.length; i += 1) {
@@ -307,6 +319,7 @@ export function measureDynamicsConsistency(bundle: ReplayContext): DynamicsConsi
     egoPathIntersections: intersections,
     tracksChecked: bundle.dynamics.tracks.length,
     framesOutsideWindow,
+    egoBeyondSupportUs,
   };
 }
 

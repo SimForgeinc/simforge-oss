@@ -291,6 +291,16 @@ export const GeometrySchema = z.strictObject({
   sourcePackageSha256: Sha256,
   /** `volume.nurec` member digest inside the package, when the source is a NuRec archive. */
   memberDigest: Sha256.optional(),
+  /**
+   * The reconstruction's own recorded time support.
+   *
+   * Distinct from `ego.originUs`/`ego.endUs`, which bound the *episode* selected for
+   * evaluation and may start later or run past the reconstruction. Renders outside this
+   * window do not exist — the splat backend refuses them ("tick outside reconstruction
+   * support") — so the envelope monitor intersects the two and a published frame is checked
+   * against this, not against the episode.
+   */
+  timeSupportUs: z.strictObject({ startUs: TimestampUs, endUs: TimestampUs }).optional(),
   /** Renderer role that can consume this geometry. */
   renderer: z.enum(['nurec-splat-renderer', 'native-bevy']),
 });
