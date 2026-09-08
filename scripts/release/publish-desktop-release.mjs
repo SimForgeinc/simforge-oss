@@ -174,7 +174,14 @@ async function gh(argv) {
  * @param {{ assetName: string; sha256: string; sizeBytes: number }[]} expected
  */
 async function verifyUploadedAssets(tag, expected) {
-  const payload = JSON.parse(await gh(["api", `repos/${REPOSITORY}/releases/tags/${tag}`]));
+  // A draft release has no git tag until it is published, so
+  // /releases/tags/<tag> answers 404 for exactly the case this tool creates
+  // first. The release list carries drafts and their assets, so the release
+  // is found by its tag_name there and verification works before publication
+  // rather than only after it.
+  const releases = JSON.parse(await gh(["api", "--paginate", `repos/${REPOSITORY}/releases`]));
+  const payload = releases.find((/** @type {any} */ release) => release.tag_name === tag);
+  if (!payload) throw new Error(`no release found for ${tag} after creating it`);
   const assets = new Map(
     (payload.assets ?? []).map((/** @type {any} */ asset) => [asset.name, asset]),
   );
