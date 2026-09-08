@@ -49,6 +49,25 @@ const FAMILY_PREFERENCE: readonly ModelFamilyId[] = [
  * sync: when a measurement lands and flips a quant from pending to supported,
  * this follows.
  */
+/** The family the launcher falls back to when nothing is qualified anywhere. */
+const FALLBACK_FAMILY: ModelFamilyId = "alpamayo-1.5";
+
+/**
+ * The family's best precision: the highest supported offer, else the highest it
+ * lists at all. Every family lists at least `bf16`, which is why that is the
+ * final fallback rather than an invented value.
+ */
+export function highestOfferedQuant(family: ModelFamilyId): ModelQuant {
+  const offers = MODEL_CATALOG[family].quants;
+  for (const quant of PRECISION_PREFERENCE) {
+    if (offers.some((offer) => offer.quant === quant && offer.status === "supported")) return quant;
+  }
+  for (const quant of PRECISION_PREFERENCE) {
+    if (offers.some((offer) => offer.quant === quant)) return quant;
+  }
+  return "bf16";
+}
+
 export function preferredSelection(
   host: HostExecutionSnapshot,
   runtime: ModelRuntimeSnapshot | null,
@@ -67,8 +86,10 @@ export function preferredSelection(
       if (offered?.status === "supported") return { family, quant, target: "runpod" };
     }
   }
-  const fallback = FAMILY_PREFERENCE[0];
-  return { family: fallback, quant: MODEL_CATALOG[fallback].quants[0].quant, target: "runpod" };
+  // Nothing on this machine is qualified and no family lists a supported
+  // precision, which should not happen — but the form still has to open on a
+  // concrete choice, and the backend remains the authority on whether it runs.
+  return { family: FALLBACK_FAMILY, quant: highestOfferedQuant(FALLBACK_FAMILY), target: "runpod" };
 }
 
 export type EvaluationHostKind = "browser" | "desktop";

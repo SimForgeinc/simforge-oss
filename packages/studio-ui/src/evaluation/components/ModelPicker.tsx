@@ -20,7 +20,7 @@ import { SelectMenu } from "../../components/ui/select-menu";
 import type { ModelFamilyId, ModelQuant } from "../model-catalog";
 import { MODEL_CATALOG, MODEL_FAMILIES } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
-import { executionOffers, formatBytes, runtimeKey } from "../presentation";
+import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 
 export type ModelSelection = {
   family: ModelFamilyId;
@@ -89,9 +89,7 @@ export function ModelPicker({
               onClick={() =>
                 onChange({
                   family,
-                  quant:
-                    candidate.quants.find((offer) => offer.status === "supported")?.quant ??
-                    candidate.quants[0].quant,
+                  quant: highestOfferedQuant(family),
                   target: candidate.remoteOnly ? "runpod" : selection.target,
                 })
               }

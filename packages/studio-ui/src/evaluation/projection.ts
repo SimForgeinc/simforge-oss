@@ -16,28 +16,44 @@ const KNOWN_DISTORTION_MODELS = ["none", "pinhole", "plumb_bob", "radtan", "open
 export type ImagePoint = { x: number; y: number; depth: number };
 
 /**
- * Invert a rigid 4x4 transform. Rotation is orthonormal by construction here,
- * so the inverse is the transpose with a re-expressed translation — using a
- * general inverse would only add error.
+ * Flatten a square matrix of `size` rows into row-major numbers, or null when
+ * it is not that shape or carries a non-finite entry.
+ *
+ * Validating once here is what lets the projector below read fixed offsets
+ * without a guard per element, and it is also the honest place to refuse: a
+ * calibration with a missing or NaN entry cannot be projected with, and the
+ * caller falls back to the metric plot.
  */
-function invertRigid(matrix: number[][]): { r: number[][]; t: number[] } {
-  const r = [
-    [matrix[0][0], matrix[1][0], matrix[2][0]],
-    [matrix[0][1], matrix[1][1], matrix[2][1]],
-    [matrix[0][2], matrix[1][2], matrix[2][2]],
-  ];
-  const t = [matrix[0][3], matrix[1][3], matrix[2][3]];
-  return {
-    r,
-    t: [
-      -(r[0][0] * t[0] + r[0][1] * t[1] + r[0][2] * t[2]),
-      -(r[1][0] * t[0] + r[1][1] * t[1] + r[1][2] * t[2]),
-      -(r[2][0] * t[0] + r[2][1] * t[1] + r[2][2] * t[2]),
-    ],
-  };
+function flattenSquare(
+  rows: readonly (readonly number[])[],
+  size: number,
+): Float64Array | null {
+  if (rows.length !== size) return null;
+  const flat = new Float64Array(size * size);
+  for (let row = 0; row < size; row += 1) {
+    const entries = rows[row];
+    if (!entries || entries.length < size) return null;
+    for (let column = 0; column < size; column += 1) {
+      const value = entries[column];
+      if (typeof value !== "number" || !Number.isFinite(value)) return null;
+      flat[row * size + column] = value;
+    }
+  }
+  return flat;
 }
 
-export type Projector = (point: number[]) => ImagePoint | null;
+/**
+ * Read a validated matrix entry.
+ *
+ * `flattenSquare` has already proved every index below `size * size` holds a
+ * finite number, so the fallback is unreachable — it exists only because the
+ * index signature cannot express that proof.
+ */
+function at(matrix: Float64Array, index: number): number {
+  return matrix[index] ?? 0;
+}
+
+export type Projector = (point: readonly number[]) => ImagePoint | null;
 
 /**
  * Build a projector for one camera, or null when the calibration is not one
@@ -54,24 +70,46 @@ export function createProjector(projection: TrajectoryProjection): Projector | n
   const distorted = coeffs.some((value) => value !== 0);
   if (distorted && !KNOWN_DISTORTION_MODELS.includes(model)) return null;
 
-  const K = projection.K;
-  if (K.length !== 3 || K.some((row) => row.length !== 3)) return null;
-  const fx = K[0][0];
-  const fy = K[1][1];
-  const cx = K[0][2];
-  const cy = K[1][2];
-  if (!Number.isFinite(fx) || !Number.isFinite(fy) || fx === 0 || fy === 0) return null;
+  const k = flattenSquare(projection.K, 3);
+  if (!k) return null;
+  const fx = at(k, 0);
+  const cx = at(k, 2);
+  const fy = at(k, 4);
+  const cy = at(k, 5);
+  if (fx === 0 || fy === 0) return null;
 
-  const { r, t } = invertRigid(projection.extrinsicsRigFromCamera);
+  // Rigid inverse: the rotation is orthonormal by construction, so the inverse
+  // is its transpose with a re-expressed translation. A general inverse would
+  // only add error. Every entry is hoisted into a scalar here so the per-point
+  // path below does no indexing at all.
+  const e = flattenSquare(projection.extrinsicsRigFromCamera, 4);
+  if (!e) return null;
+  const r00 = at(e, 0);
+  const r01 = at(e, 4);
+  const r02 = at(e, 8);
+  const r10 = at(e, 1);
+  const r11 = at(e, 5);
+  const r12 = at(e, 9);
+  const r20 = at(e, 2);
+  const r21 = at(e, 6);
+  const r22 = at(e, 10);
+  const tx = at(e, 3);
+  const ty = at(e, 7);
+  const tz = at(e, 11);
+  const t0 = -(r00 * tx + r01 * ty + r02 * tz);
+  const t1 = -(r10 * tx + r11 * ty + r12 * tz);
+  const t2 = -(r20 * tx + r21 * ty + r22 * tz);
+
   const [k1 = 0, k2 = 0, p1 = 0, p2 = 0, k3 = 0] = coeffs;
-  const [width, height] = projection.imageSize;
+  const [width = 0, height = 0] = projection.imageSize;
 
-  return (point: number[]) => {
-    if (point.length < 3) return null;
+  return (point: readonly number[]) => {
+    const [px, py, pz] = point;
+    if (px === undefined || py === undefined || pz === undefined) return null;
     // FLU rig metres -> optical camera metres.
-    const x = r[0][0] * point[0] + r[0][1] * point[1] + r[0][2] * point[2] + t[0];
-    const y = r[1][0] * point[0] + r[1][1] * point[1] + r[1][2] * point[2] + t[1];
-    const z = r[2][0] * point[0] + r[2][1] * point[1] + r[2][2] * point[2] + t[2];
+    const x = r00 * px + r01 * py + r02 * pz + t0;
+    const y = r10 * px + r11 * py + r12 * pz + t1;
+    const z = r20 * px + r21 * py + r22 * pz + t2;
     if (z <= 0.05) return null; // Behind or on the image plane: nothing to draw.
 
     const nx = x / z;

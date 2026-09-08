@@ -25,11 +25,15 @@ function extentOf(polylines: number[][][]): Extent {
   let maxY = 0;
   for (const line of polylines) {
     for (const point of line) {
-      if (point.length < 2) continue;
-      minX = Math.min(minX, point[0]);
-      maxX = Math.max(maxX, point[0]);
-      minY = Math.min(minY, point[1]);
-      maxY = Math.max(maxY, point[1]);
+      const forward = point[0];
+      const lateral = point[1];
+      // A waypoint with fewer than two components is not plottable; skip it
+      // rather than charting a zero the producer never wrote.
+      if (forward === undefined || lateral === undefined) continue;
+      minX = Math.min(minX, forward);
+      maxX = Math.max(maxX, forward);
+      minY = Math.min(minY, lateral);
+      maxY = Math.max(maxY, lateral);
     }
   }
   // Keep the ego at the bottom centre with a readable minimum window.
@@ -74,19 +78,22 @@ export function TrajectoryPlot({
   );
 
   // Forward (+x) is up; left (+y) is left, so lateral is negated in screen x.
-  const project = (point: number[]) => ({
-    x: WIDTH / 2 - point[1] * scale,
-    y: HEIGHT - PADDING - (point[0] - extent.minX) * scale,
+  const project = (forward: number, lateral: number) => ({
+    x: WIDTH / 2 - lateral * scale,
+    y: HEIGHT - PADDING - (forward - extent.minX) * scale,
   });
 
-  const pathOf = (line: number[][]) =>
-    line
-      .filter((point) => point.length >= 2)
-      .map((point, index) => {
-        const { x, y } = project(point);
-        return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
-      })
-      .join(" ");
+  const pathOf = (line: readonly (readonly number[])[]) => {
+    const commands: string[] = [];
+    for (const point of line) {
+      const forward = point[0];
+      const lateral = point[1];
+      if (forward === undefined || lateral === undefined) continue;
+      const { x, y } = project(forward, lateral);
+      commands.push(`${commands.length === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
+    }
+    return commands.join(" ");
+  };
 
   const gridStepM = spanForward > 60 ? 20 : spanForward > 25 ? 10 : 5;
   const gridLines: number[] = [];

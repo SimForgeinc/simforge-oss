@@ -195,11 +195,12 @@ function QuantRow({
 
       {install?.state === "installed" ? (
         <p className="text-xs text-muted-foreground">
-          {formatBytes(install.bytesOnDisk)} on disk · revision {install.revision.slice(0, 12)} ·
-          digests verified {new Date(install.digestVerifiedAt).toLocaleString()}
+          {formatBytes(install.bytesOnDisk)} on disk · revision {install.revision.slice(0, 12)}
+          {install.digestVerifiedAt
+            ? ` · digests verified ${new Date(install.digestVerifiedAt).toLocaleString()}`
+            : " · digests not verified yet — run Verify"}
         </p>
       ) : null}
-
       {install?.state === "error" ? (
         <RefusalNotice
           title={`Install failed during ${install.step}`}
