@@ -47,7 +47,7 @@ fn main() {
         }
         samples.push(json!({
             "timeS": (t * 1e6).round() / 1e6,
-            "x": x, "z": z, "headingRad": heading, "speedMps": speed,
+            "x": x, "y": 0.0, "z": z, "headingRad": heading, "speedMps": speed,
         }));
     }
     let first = samples[0].clone();

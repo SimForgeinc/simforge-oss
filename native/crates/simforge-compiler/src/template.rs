@@ -1734,7 +1734,7 @@ pub struct SceneTimedPoint {
 }
 
 /// One recorded engine tick of a manual drive, y-up scene frame. `y` is the
-/// renderer's ground elevation and is not consumed by the 2-D engine.
+/// renderer's ground projection at `(x, z)`; carried through verbatim.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ManualDriveSample {
@@ -1852,14 +1852,14 @@ impl ManualDriveRecording {
         None
     }
 
-    /// The engine-facing track: the same samples without the elevation
-    /// channel the 2-D engine has no use for.
+    /// The engine-facing track: every sample verbatim.
     pub fn recorded_track(&self) -> Vec<simforge_core::types::RecordedSample> {
         self.samples
             .iter()
             .map(|s| simforge_core::types::RecordedSample {
                 time_s: s.time_s,
                 x: s.x,
+                y: s.y,
                 z: s.z,
                 heading_rad: s.heading_rad,
                 speed_mps: s.speed_mps,

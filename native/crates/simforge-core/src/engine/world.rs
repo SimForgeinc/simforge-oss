@@ -191,8 +191,11 @@ pub struct ActorSnapshot {
     pub x: f64,
     pub y: f64,
     pub heading_rad: f64,
+    /// Speed magnitude; sign it with `motion_direction` for a world velocity.
     pub speed_mps: f64,
     pub accel_mps2: f64,
+    /// Engaged gear (not a pending request): `-1` while actually reversing.
+    pub motion_direction: MotionDirection,
     /// Whether the actor exists in the world at this instant.
     pub present: bool,
     /// Lane-relative lateral offset, metres (positive = left).
@@ -1122,6 +1125,7 @@ impl Simulation {
             heading_rad: a.heading_rad,
             speed_mps: a.speed_mps,
             accel_mps2: a.accel_mps2,
+            motion_direction: a.motion_direction,
             present: a.present,
             lateral_offset_m: a.lateral_offset_m,
             lateral_rate_mps: a.lateral_rate_mps,
