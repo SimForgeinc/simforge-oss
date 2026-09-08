@@ -8,6 +8,7 @@ import { assertLocalMapAccess, upstreamGet } from "@/app/lib/cloud/maps";
 import { getScenarioMapThumbnail } from "@/app/lib/scenario/map-thumbnail-store";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
 import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
+import { discardResponseBody } from "@/app/lib/cloud/drain";
 
 type Context = { params: Promise<{ mapVersionId: string }> };
 
@@ -41,7 +42,7 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     await assertLocalMapAccess(mapVersionId);
     const upstream = await upstreamGet(`/api/simforge/maps/${encodeURIComponent(mapVersionId)}/thumbnail`, request.signal);
     if (!upstream.ok) {
-      await upstream.body?.cancel().catch(() => undefined);
+      await discardResponseBody(upstream);
       return NextResponse.json({ error: "map_thumbnail_unavailable" }, { status: upstream.status === 404 ? 404 : 502, headers: NO_STORE });
     }
     const headers = new Headers({
@@ -51,7 +52,7 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     const length = upstream.headers.get("content-length");
     if (length) headers.set("content-length", length);
     if (headOnly) {
-      await upstream.body?.cancel().catch(() => undefined);
+      await discardResponseBody(upstream);
       return new Response(null, { headers });
     }
     return new Response(upstream.body, { headers });

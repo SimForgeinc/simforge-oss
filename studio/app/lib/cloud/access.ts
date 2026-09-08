@@ -3,6 +3,7 @@ import { localObjectPath, readLocalObjectMetadata } from "@/app/lib/s3/s3-object
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { cloudPublicRequest, cloudRequest, cloudSessionScope, primeCloudSession } from "./connection";
 import {
+import { discardResponseBody } from "@/app/lib/cloud/drain";
   MAP_CACHE_BUCKET,
   resolveKnownMap,
   type MapProfile,
@@ -205,11 +206,11 @@ async function requestDownloadUrls(
     ? await cloudRequest("/api/simforge/maps/cache-download-urls", init, { signal })
     : await cloudPublicRequest("/api/simforge/maps/cache-download-urls", init, signal);
   if (response.status === 401 || response.status === 403) {
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     throw new MapAccessError("NotAuthorized", "map_requires_cloud_connection", "map_requires_cloud_connection");
   }
   if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     throw new MapAccessError("MapCacheError", "map_download_urls_unavailable", `SimCloud answered ${response.status} for download URLs`);
   }
   const payload = await response.json() as { assets?: unknown };
