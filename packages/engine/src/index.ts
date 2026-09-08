@@ -218,8 +218,9 @@ export type { SimIssue, SimIssueCode, SimIssueSeverity } from './errors.js';
 /* -------------------------------------------------------------------- util */
 export { canonicalJson, contentHash, sha256, sha256Bytes } from './core/hash.js';
 export {
-  captureProfileHash,
-  captureProfileVersion,
+  captureHashFromSensors,
+  captureVersionFromSensors,
+  expectedCaptureHash,
   modelRequirementHash,
   modelRequirementVersion,
 } from './core/model-rig-profile.js';

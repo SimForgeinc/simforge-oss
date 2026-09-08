@@ -786,7 +786,16 @@ export function modelRigRequirement(family: string): ModelRigRequirement | undef
 }
 
 /**
- * CAPTURE identity: what was physically recorded, independent of any model.
+ * The EXPECTED capture profile for a rig id: the canonical preset, unedited.
+ *
+ * THIS IS A RECOMMENDATION, NOT AN IDENTITY. It answers "what would a
+ * default fitting of this rig look like", which is what a UI should show
+ * before a render exists. It must NOT be used to identify a capture that
+ * already happened: an author can edit a camera's FOV or mount per actor,
+ * and this function would still return the default preset's fields, so two
+ * genuinely different captures would hash the same and compare as matched.
+ * For a render that exists, use `capturePayloadFromSensors` with the
+ * sensors the manifest actually recorded.
  *
  * Deliberately excludes the model family. The same four-camera capture is
  * the same capture whether A1 or A1.5 consumed it, so a comparison that
@@ -803,7 +812,7 @@ export function modelRigRequirement(family: string): ModelRigRequirement | undef
  * Sensor fields are read from the preset, so the payload cannot disagree
  * with the geometry it describes.
  */
-export function captureProfilePayload(rigId: string): Record<string, unknown> {
+export function expectedCapturePayload(rigId: string): Record<string, unknown> {
   const preset = sensorRigPreset(rigId);
   if (!preset) throw new Error(`unknown sensor rig "${rigId}"`);
 
@@ -825,7 +834,7 @@ export function captureProfilePayload(rigId: string): Record<string, unknown> {
   }
 
   return {
-    schema: 'simforge.capture-profile/v1',
+    schema: 'simforge.expected-capture-profile/v1',
     rigId,
     cameraIds,
     renderWidth: ALPAMAYO_INPUT_COMMON.renderWidth,
@@ -1069,4 +1078,80 @@ export function defaultRadar(
     enabled: true,
     mount: resolveSensorMountPreset('front-bumper', actor),
   });
+}
+
+
+/** One sensor as the render actually used it, after any authored edits. */
+export interface ActualCaptureSensor {
+  /** Preset sensor id, or the authored id when the author renamed it. */
+  readonly id: string;
+  readonly type: string;
+  /** Model camera index this sensor was fed to, positional. */
+  readonly cameraId: number;
+  /** Resolved actor-local mount - numeric, post-anchor-resolution. */
+  readonly mount: unknown;
+  /** Field of view actually rendered, when the sensor is a camera. */
+  readonly fov?: number;
+  /** Rendered pixel dimensions actually used. */
+  readonly dims?: unknown;
+}
+
+/**
+ * CAPTURE identity: what was ACTUALLY recorded.
+ *
+ * Hashed from the sensors the render used, not from a preset lookup, so an
+ * author who widens a camera's FOV or moves a mount produces a different
+ * capture identity - which is the whole point. Keying on `rigId` alone
+ * would hand two genuinely different captures the same digest and let a
+ * comparison rank them as matched.
+ *
+ * `cameraIds` is the SUBSET actually fed to the model, in positional order.
+ * A four-camera rig rendered but consumed as two cameras is a different
+ * capture from the same rig consumed as four.
+ *
+ * `rigId` is carried as a LABEL only. Two authors can name one capture
+ * differently and the digest settles identity.
+ *
+ * Returned as DATA. Hash it with `captureHashFromSensors` in
+ * `@simforge-oss/engine`; there is one hash primitive in this repo and it
+ * does not live here.
+ */
+export function capturePayloadFromSensors(input: {
+  readonly sensors: readonly ActualCaptureSensor[];
+  readonly renderWidth: number;
+  readonly renderHeight: number;
+  readonly framesPerCamera: number;
+  readonly historySteps: number;
+  readonly coordinateFrame: string;
+  readonly rigLabel?: string;
+}): Record<string, unknown> {
+  if (input.sensors.length === 0) {
+    throw new Error('capture payload needs at least one sensor; a capture with no camera has no identity');
+  }
+  const cameraIds = input.sensors.map((sensor) => sensor.cameraId);
+  if (new Set(cameraIds).size !== cameraIds.length) {
+    throw new Error(`capture payload has duplicate camera ids [${cameraIds.join(', ')}]`);
+  }
+  // Ordered by the positional camera index the model consumes, so an
+  // author's listing order cannot change the digest.
+  const sensors = [...input.sensors].sort((a, b) => a.cameraId - b.cameraId);
+  return {
+    schema: 'simforge.capture-profile/v2',
+    // Label, not identity.
+    rigLabel: input.rigLabel ?? null,
+    cameraIds: sensors.map((sensor) => sensor.cameraId),
+    renderWidth: input.renderWidth,
+    renderHeight: input.renderHeight,
+    framesPerCamera: input.framesPerCamera,
+    historySteps: input.historySteps,
+    coordinateFrame: input.coordinateFrame,
+    sensors: sensors.map((sensor) => ({
+      id: sensor.id,
+      type: sensor.type,
+      cameraId: sensor.cameraId,
+      mount: sensor.mount,
+      ...(sensor.fov === undefined ? {} : { fov: sensor.fov }),
+      ...(sensor.dims === undefined ? {} : { dims: sensor.dims }),
+    })),
+  };
 }
