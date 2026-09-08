@@ -60,6 +60,7 @@ import {
   MANUAL_DRIVE_TAKE_QUERY,
   useManualDriveTakeSession,
   type ManualDriveTakeSession,
+  type ManualDriveTakeUnavailableReason,
 } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { useDriveAmbientTraffic } from "@/app/lib/scenario/ambient/useDriveAmbientTraffic";
 import { createMultiplexedCameraFeeds, type CameraFeeds } from "@/app/lib/live-world/camera-feeds";
@@ -98,14 +99,42 @@ type ControlTarget = { source: WorldSource | null; actorId: string | null };
 const NO_CONTROL_TARGET: ControlTarget = { source: null, actorId: null };
 const MAP_QUERY = "map";
 
+const TAKE_UNAVAILABLE_COPY: Record<ManualDriveTakeUnavailableReason, string> = {
+  expired: "This take link has expired or was cancelled in the editor.",
+  delivered: "This take was already returned to the editor for review.",
+  consumed: "This take can no longer be driven from this link; start it again from the editor.",
+};
+
 /**
- * Page entry: a `?manualDriveTake=` id resolves to the editor's take session
- * (null when absent or unknown — then this is an ordinary drive page).
+ * Page entry. A `?manualDriveTake=` id is a contract with the editor: the
+ * surface mounts only for a ready session, never as an ordinary free drive
+ * that could be mistaken for a recording. Without the id it is the plain
+ * Drive page.
  */
 export function DriveEntry({ maps }: { maps: LocalMapDescriptor[] }) {
   const searchParams = useSearchParams();
-  const take = useManualDriveTakeSession(searchParams.get(MANUAL_DRIVE_TAKE_QUERY));
-  return <DriveClient maps={maps} take={take} />;
+  const boundary = useManualDriveTakeSession(searchParams.get(MANUAL_DRIVE_TAKE_QUERY));
+  if (boundary.state === "idle") return <DriveClient maps={maps} />;
+  if (boundary.state === "ready") return <DriveClient maps={maps} take={boundary.session} />;
+  if (boundary.state === "loading") {
+    return (
+      <div className="grid h-full min-h-0 place-items-center bg-background text-sm text-muted-foreground" role="status">
+        Loading the manual drive take…
+      </div>
+    );
+  }
+  return (
+    <div className="grid h-full min-h-0 place-items-center bg-background" role="alert" data-testid="drive-take-unavailable">
+      <div className="flex max-w-md flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+        <span>{TAKE_UNAVAILABLE_COPY[boundary.reason]}</span>
+        {boundary.returnHref ? (
+          <Button asChild size="sm" variant="outline">
+            <a href={boundary.returnHref}>Return to editor</a>
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 /**
