@@ -38,6 +38,13 @@ export type ClipManifestProbe = {
   hasFrameTimestamps: boolean;
   hasEgoHistory: boolean;
   hasReferenceFuture: boolean;
+  /**
+   * A replayable-scene bundle's own declarations. A bundle that says it is a
+   * synthetic fixture, or that its validity gates did not pass, must never be
+   * presented as scoreable however complete it otherwise looks.
+   */
+  sourceKind: string | null;
+  qualified: boolean | null;
   durationS: number | null;
   itemCount: number;
 };
@@ -119,9 +126,22 @@ export function probeClipManifest(document: unknown): ClipManifestProbe | null {
     return null;
   }
 
+  const source = record.source;
+  const sourceKind =
+    typeof source === "object" && source !== null && typeof (source as Record<string, unknown>).kind === "string"
+      ? ((source as Record<string, unknown>).kind as string)
+      : null;
+  const validity = record.validity;
+  const qualified =
+    typeof validity === "object" && validity !== null && typeof (validity as Record<string, unknown>).qualified === "boolean"
+      ? ((validity as Record<string, unknown>).qualified as boolean)
+      : null;
+
   const items = record.items;
   return {
     schema,
+    sourceKind,
+    qualified,
     cameraIds,
     hasCalibration,
     hasFrameTimestamps: timestampsPresent,
@@ -212,7 +232,25 @@ function classifyProbe(probe: ClipManifestProbe, model: ModelCatalogEntry): Eval
     );
   }
 
-  return { kind: "driving-clip", scoreable: probe.hasReferenceFuture, probe, modelMismatch };
+  // A fixture or an unqualified bundle can carry a reference future and still
+  // not be scoreable: the bundle itself says its numbers do not count, and the
+  // worker enforces that. Saying so here means the user learns it before the
+  // run rather than from a result that arrives unscored.
+  const declaredUnscoreable =
+    probe.sourceKind === "synthetic-fixture" || probe.qualified === false;
+  if (declaredUnscoreable) {
+    modelMismatch.push(
+      probe.sourceKind === "synthetic-fixture"
+        ? "This bundle declares itself a synthetic fixture, which is a test artifact: it can be run but never scored, and it cannot set qualified state."
+        : "This bundle's validity gates did not pass (validity.qualified is false), so a run against it is not scored and its envelope is not usable.",
+    );
+  }
+  return {
+    kind: "driving-clip",
+    scoreable: probe.hasReferenceFuture && !declaredUnscoreable,
+    probe,
+    modelMismatch,
+  };
 }
 
 /**
