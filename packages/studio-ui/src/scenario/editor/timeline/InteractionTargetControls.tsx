@@ -18,6 +18,12 @@ type SpeedInteraction = Extract<Interaction, { verb: "speed" }>;
 type ChangeLaneInteraction = Extract<Interaction, { verb: "changeLane" }>;
 type RouteInteraction = Extract<Interaction, { verb: "route" }>;
 type RouteTarget = RouteInteraction["target"];
+/**
+ * A manual drive is recorded, never typed: it cannot be chosen as a mode here,
+ * and an existing one is only ever replaced by another recorded take.
+ */
+type HandAuthoredRouteTarget = Exclude<RouteTarget, { mode: "manualDrive" }>;
+type HandAuthoredRouteMode = HandAuthoredRouteTarget["mode"];
 
 const SPEED_MODES: readonly SpeedInteraction["target"]["mode"][] = [
   "absolute",
@@ -32,7 +38,7 @@ const LANE_CHANGE_MODES: readonly ChangeLaneInteraction["target"]["mode"][] = [
   "absolute",
   "toRole",
 ];
-const ROUTE_MODES: readonly RouteTarget["mode"][] = [
+const ROUTE_MODES: readonly HandAuthoredRouteMode[] = [
   "turn",
   "nextJunction",
   "toFeature",
@@ -336,6 +342,14 @@ function RouteTargetControls({
   onChange: (target: RouteTarget) => void;
 }) {
   const { target } = interaction;
+  if (target.mode === "manualDrive") {
+    const { recording } = target;
+    return (
+      <TargetSummary
+        value={`Manual drive: ${recording.samples.length} recorded poses over ${recording.clipSeconds}s. Select the Manual drive on the timeline to record it again.`}
+      />
+    );
+  }
   return (
     <div className="space-y-2">
       <SelectMenuField
@@ -343,7 +357,7 @@ function RouteTargetControls({
         label="Route target mode"
         options={ROUTE_MODES.map((value) => ({ value, label: humanize(value) }))}
         value={target.mode}
-        onChange={(mode) => onChange(defaultRouteTarget(mode as RouteTarget["mode"], peer))}
+        onChange={(mode) => onChange(defaultRouteTarget(mode as HandAuthoredRouteMode, peer))}
       />
       {target.mode === "turn" ? (
         <div className="grid grid-cols-2 gap-2">
@@ -370,7 +384,7 @@ function RouteTargetControls({
         <TextListField label="Lane ids (comma separated)" value={target.lanes} onChange={(lanes) => onChange({ ...target, lanes })} />
       ) : target.mode === "acquire" ? (
         <FramePoseControls interactionId={interaction.id} pose={target.pose} onChange={(pose) => onChange({ ...target, pose })} />
-      ) : (
+      ) : target.mode === "nearMiss" ? (
         <div className="grid grid-cols-2 gap-2">
           <SelectMenuField className="h-8 text-xs" label="Near-miss actor" options={roleOptions} value={target.target} onChange={(next) => onChange({ ...target, target: next })} />
           <SelectMenuField className="h-8 text-xs" label="Pass" options={["front", "behind", "auto"]} value={target.pass ?? "auto"} onChange={(pass) => onChange({ ...target, pass: pass as NonNullable<typeof target.pass> })} />
@@ -379,7 +393,7 @@ function RouteTargetControls({
           {numberTarget(interaction.id, "Maximum speed (kph)", "near-miss-max-speed", target.maxSpeedKph ?? 50, 0, (maxSpeedKph) => onChange({ ...target, maxSpeedKph }))}
           {numberTarget(interaction.id, "Deadline (s)", "near-miss-deadline", target.deadlineS ?? 10, 0, (deadlineS) => onChange({ ...target, deadlineS }))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -476,7 +490,7 @@ function defaultLaneChangeTarget(mode: ChangeLaneInteraction["target"]["mode"], 
   return { mode, role: peer };
 }
 
-function defaultRouteTarget(mode: RouteTarget["mode"], peer: string): RouteTarget {
+function defaultRouteTarget(mode: HandAuthoredRouteMode, peer: string): HandAuthoredRouteTarget {
   if (mode === "turn") return { mode, feature: "feature", turn: "left" };
   if (mode === "nextJunction") return { mode, turn: "straight" };
   if (mode === "toFeature") return { mode, feature: "feature" };
@@ -495,7 +509,7 @@ function defaultRouteTarget(mode: RouteTarget["mode"], peer: string): RouteTarge
   if (mode === "customTimedRoute") return { mode, points: [{ timeS: 0, x: 0, z: 0 }] };
   if (mode === "lanePath") return { mode, lanes: ["1:0:-1"] };
   if (mode === "acquire") return { mode, pose: { s: 0, laneOffset: 0, tFrac: 0, headingOffsetRad: 0 } };
-  return { mode, target: peer, clearanceM: 1, pass: "auto", minSpeedKph: 0, maxSpeedKph: 50, deadlineS: 10 };
+  return { mode: "nearMiss", target: peer, clearanceM: 1, pass: "auto", minSpeedKph: 0, maxSpeedKph: 50, deadlineS: 10 };
 }
 
 function numberTarget(
