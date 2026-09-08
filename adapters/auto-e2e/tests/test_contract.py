@@ -29,6 +29,7 @@ from simforge_auto_e2e.checkpoint_probe import (  # noqa: E402
     OBSERVED_MAP_CHANNEL_WIDTHS,
     probe_state_dicts,
 )
+from simforge_auto_e2e.provenance import code_identity  # noqa: E402
 from simforge_auto_e2e.obs import (  # noqa: E402
     integrate_control,
     split_control,
@@ -242,20 +243,68 @@ def test_history_masking_matches_the_checkpoints_training_policy():
         contract.apply_history_masking([0.0] * 10, mask_latest_acceleration=True)
 
 
-def test_training_code_revision_is_an_independent_prerequisite():
-    """Even with weights, the code that trained them is not identified.
+def test_provenance_parser_excludes_the_validation_split_sha():
+    """The mistake this prevents is one I made: a 40-hex string read out of a
+    run and reported as the training revision, when it identified the
+    validation split manifest. Uses the real v63 keys."""
+    params = {
+        "data/dataset": "KIT-MRT/KITScenes-Multimodal",
+        "ctx/train_docker_image": contract.TRAINING_IMAGE,
+        "train/reconstruction_audit_sha256": "f7ae9f48febedcdd72c22c749ce57160fd98d3a8be276253b341ba8b0a66504b",
+        "data/navigation_quality_audit_sha256": "f3246a87ab64887c7622c54b06db4b0502d430b73164d8d51a0469eacc5943ee",
+        "validation.source_revision": contract.V63_VALIDATION_SPLIT_SOURCE_REVISION,
+    }
+    tags = {
+        "mlflow.source.type": "LOCAL",
+        "mlflow.source.name": "/opt/conda/bin/pyflyte-execute",
+        "checkpoint_sha256": "1a9b6765a0d65b9d0c024aa73aa3ae3ce2d9b17468dadee78c97afbc967ce2f5",
+    }
+    ident = code_identity(params, tags)
 
-    Pins the correction too: the one revision string the runs DO carry
-    describes the validation split, not the model code, and must not be
-    quoted as evidence about the code.
-    """
-    assert not contract.TRAINING_CODE_REVISION_RECORDED
-    assert not contract.TRAINING_IMAGE_PULLABLE
-    assert contract.TRAINING_IMAGE.endswith(":latest")   # mutable, not a digest
-    assert len(contract.V63_VALIDATION_SPLIT_SOURCE_REVISION) == 40
-    assert not hasattr(contract, "V63_TRAINING_CODE_REVISION")
-    assert "no code revision at all" in contract.TRAINING_CODE_ACCESS_NOTE
-    assert len(contract.CHECKPOINT_DELIVERY_PATHS_TRIED) == 4
+    # The split revision is revision-SHAPED and must not become code identity.
+    assert ident.revision is None
+    assert not ident.resolvable
+    assert (
+        ident.excluded["validation.source_revision"]
+        == contract.V63_VALIDATION_SPLIT_SOURCE_REVISION
+    )
+    # Checkpoint and audit digests are excluded for the same reason.
+    assert "checkpoint_sha256" in ident.excluded
+    assert "train/reconstruction_audit_sha256" in ident.excluded
+
+
+def test_a_real_git_commit_is_accepted_as_code_identity():
+    """The parser is not simply always-None: a genuine commit resolves."""
+    sha = "21f98c5209dd4058ea92f5734c29da1f34d1c558"
+    ident = code_identity({}, {"mlflow.source.git.commit": sha})
+    assert ident.revision == sha
+    assert ident.revision_key == "mlflow.source.git.commit"
+    assert ident.resolvable
+    assert sha not in ident.excluded.values()
+
+
+def test_an_eval_image_is_not_training_provenance():
+    """v63 records only an eval image. Even digest-pinned, that is not the
+    code that trained the weights, so it must not resolve identity."""
+    ident = code_identity(
+        {"ctx/eval_docker_image": "repo/auto-e2e/eval@sha256:" + "b" * 64}, {}
+    )
+    assert ident.image_role == "eval"
+    assert ident.image_is_digest_pinned
+    assert not ident.resolvable
+
+
+def test_a_mutable_image_tag_is_not_resolvable_identity():
+    """`:latest` resolves to different code over time, so it cannot
+    reproduce a past run; a digest can."""
+    tag = code_identity({"ctx/train_docker_image": "repo/auto-e2e/training:latest"}, {})
+    assert tag.image_is_digest_pinned is False and not tag.resolvable
+
+    digest = code_identity(
+        {"ctx/train_docker_image": "repo/auto-e2e/training@sha256:" + "a" * 64}, {}
+    )
+    assert digest.image_role == "training"
+    assert digest.image_is_digest_pinned and digest.resolvable
 
 
 def test_a_concrete_export_request_is_recorded():
