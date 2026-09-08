@@ -210,6 +210,16 @@ export function RenderEvaluationHandoff({
               ["Camera videos", provenance.cameraVideoArtifactIds.join(", ")],
               ["Clip bundle", provenance.clipBundleArtifactId],
               ["Reference", `${provenance.referenceKind}${provenance.referenceKind === "authored" ? " — simulation truth" : ""}`],
+              [
+                "Frame cadence",
+                provenance.timeBase
+                  ? `${provenance.timeBase.renderFps} fps rendered → ${provenance.timeBase.modelHz} Hz consumed · ${
+                    provenance.timeBase.cadenceDividesExactly
+                      ? "divides exactly, no resampling"
+                      : `nearest-frame, worst error ${(provenance.timeBase.worstResampleErrorS * 1000).toFixed(1)} ms`
+                  }`
+                  : "not reported by the converter",
+              ],
               ["Model", `${provenance.model.family} @ ${provenance.model.revision.slice(0, 12)} · ${provenance.model.quant}`],
               ["Evaluation run", provenance.computeJobId],
             ].map(([label, value]) => (

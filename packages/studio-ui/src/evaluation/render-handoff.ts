@@ -164,6 +164,21 @@ export type RenderClipIngestResult = {
    */
   reference: { kind: "authored" | "dataset"; points?: number };
   frameCount: number;
+  /**
+   * The converter's own account of cadence, passed through untouched.
+   *
+   * A model consumes frames at a fixed rate; a render rate that does not
+   * divide it forces nearest-frame selection, and the resulting jitter is
+   * reported rather than corrected. `cadenceDividesExactly: false` means the
+   * clip is usable but carries a timing error that belongs on screen, because
+   * it lands in the metric with nothing else to attribute it to.
+   */
+  timeBase?: {
+    renderFps: number;
+    modelHz: number;
+    cadenceDividesExactly: boolean;
+    worstResampleErrorS: number;
+  };
 };
 
 /** Every link from the authored scenario to the scored result, as stored fields. */
@@ -178,6 +193,8 @@ export type RenderEvaluationProvenance = {
   cameraVideoArtifactIds: readonly string[];
   clipBundleArtifactId: string;
   referenceKind: "authored" | "dataset";
+  /** Null when the converter reported no cadence account. */
+  timeBase: RenderClipIngestResult["timeBase"] | null;
   computeJobId: string;
   model: ComputeJobModelRef;
 };
@@ -306,6 +323,7 @@ export async function runRenderHandoff(
       cameraVideoArtifactIds,
       clipBundleArtifactId: bundle.artifactId,
       referenceKind: bundle.reference.kind,
+      timeBase: bundle.timeBase ?? null,
       computeJobId: job.id,
       model: plan.model,
     },
