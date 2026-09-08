@@ -320,15 +320,17 @@ const ALPAMAYO_1: ModelCatalogEntry = {
       status: 'supported',
       minVramGiB: 15,
       note:
-        'bitsandbytes NF4 + double quantization, bf16 compute. MEASURED on the ' +
-        'pinned release runtime (upstream uv.lock at code commit 939f9a28, torch ' +
-        '2.8.0+cu128, SDPA) on an RTX 5080 15.46 GiB: 8.08 GiB resident after ' +
-        'load, 8.95 GiB peak allocated and 15.08 GiB device-used at 4 cameras / ' +
-        '1 sample, act 5.1 s wall. Seed-deterministic across repeat calls on the ' +
-        'same device. The envelope is camera-count and sample-count dependent; ' +
-        'only the 4-camera 1-sample profile is measured. Quantization changes ' +
-        'behaviour, not only numerics: an NF4 score is never comparable to a ' +
-        'BF16 baseline without the quant label.',
+        'bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned ' +
+        'release runtime (upstream uv.lock at code commit 939f9a28, torch 2.8.0' +
+        '+cu128, SDPA) on an RTX 5080 (15,833 MiB = 15.46 GiB): 8,155 MiB resid' +
+        'ent after load (7.96 GiB), 9,167 MiB peak allocated (8.95 GiB) at 4 ca' +
+        'meras / 1 sample, act 5.1 s wall. Seed-deterministic across repeat cal' +
+        'ls on the same device. Figures are reported in raw MiB with explicit c' +
+        'onversions because MiB/GiB slips are easy to make and hard to spot. Th' +
+        'e envelope is camera-count and sample-count dependent; only the 4-came' +
+        'ra 1-sample profile is measured. Quantization changes behaviour, not o' +
+        'nly numerics: never compare an NF4 score against a BF16 baseline witho' +
+        'ut the quant label.',
     },
     {
       quant: 'fp8',
@@ -399,16 +401,19 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       status: 'supported',
       minVramGiB: 12,
       note:
-        'bitsandbytes NF4 + double quant, bf16 compute. RE-MEASURED on the pinned' +
-        ' release runtime (upstream uv.lock at code commit 24179cfa, torch 2.8.0+' +
-        'cu128, SDPA) on an RTX 5080 15.46 GiB: 8.08 GiB resident after load, 8.7' +
-        '1 GiB peak at 2 cameras and 9.27 GiB peak at 4 cameras, 1 sample, act 1.' +
-        '5-1.8 s. The 2-camera figure reproduces the prior runtime's measurement ' +
-        'exactly. Seed-deterministic across repeat calls on the same device. The ' +
-        'envelope is camera-count and sample-count dependent; the 2- and 4-camera' +
-        ' 1-sample profiles are measured and the 7-camera profile is not. Quantiz' +
-        'ation changes behaviour, not only numerics: never compare an NF4 score a' +
-        'gainst a BF16 baseline without the quant label.',
+        'bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned ' +
+        'release runtime (upstream uv.lock at code commit 24179cfa, torch 2.8.0' +
+        '+cu128, SDPA) on an RTX 5080 (15,833 MiB = 15.46 GiB): 8,075 MiB resid' +
+        'ent after load (7.89 GiB), 8,707 MiB peak (8.50 GiB) at 2 cameras and ' +
+        '9,265 MiB peak (9.05 GiB) at 4 cameras, 1 sample, act 1.5-1.8 s. Seed-' +
+        'deterministic across repeat calls on the same device. A prior runtime ' +
+        'reported a 2-camera figure quoted as 8.71 GB in mixed units; this meas' +
+        'urement is NOT claimed to agree with it, since matching allocation wou' +
+        'ld not establish runtime behavioural identity in any case. The envelop' +
+        'e is camera-count and sample-count dependent; the 2- and 4-camera 1-sa' +
+        'mple profiles are measured and the 7-camera profile is NOT. Quantizati' +
+        'on changes behaviour, not only numerics: never compare an NF4 score ag' +
+        'ainst a BF16 baseline without the quant label.',
     },
     {
       quant: 'fp8',
