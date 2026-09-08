@@ -17,8 +17,11 @@ mod world;
 
 use std::sync::Arc;
 
+use simforge_core::engine::controllers::limits_for_kind;
 use simforge_core::engine::{RunOptions, StaticMapCollider};
-use simforge_core::map::LaneGraph;
+use simforge_core::map::{retarget_to_neighbour, LaneGraph, LaneSide, RetargetOptions};
+use simforge_core::math::Vec2;
+use simforge_core::types::ActorKind;
 use simforge_core::rng::Seed;
 use simforge_core::types::SimScenarioInput;
 use simforge_session::episode::EpisodeConfig;
@@ -280,6 +283,7 @@ impl Graph {
 }
 
 /// A resolved route: engine-frame geometry plus its persisted snapshot.
+#[derive(Clone)]
 pub struct RouteHandle {
     route: simforge_core::map::Route,
     /// Empty for freeform (polyline) routes.
@@ -302,6 +306,136 @@ impl RouteHandle {
     pub fn snapshot_json(&self) -> Result<String> {
         Ok(serde_json::to_string(&self.route.snapshot())?)
     }
+    /// `[s, d]`: arc length of the closest point on the route, and its signed
+    /// lateral offset. The pair a caller needs to say "where along this route is
+    /// that world point", which no other accessor answers.
+    pub fn project_point(&self, x: f64, y: f64) -> [f64; 2] {
+        let projection = self.route.project_point(Vec2 { x, y });
+        [projection.s, projection.d]
+    }
+    /// Lane width at arc length `s` (clamped); the basis of a lane-change
+    /// separation, so it must come from the same geometry the route walks.
+    pub fn width_at(&self, s: f64) -> f64 {
+        self.route.width_at(s)
+    }
+    /// The route's legs as JSON: `[{rsl, reversed, sStartM, lengthM, turnRelation}]`.
+    /// Empty for a polyline route, which has no lane lineage.
+    pub fn legs_json(&self) -> Result<String> {
+        // A LaneId is an index into its graph; only the graph can name it.
+        let graph = self.route.graph();
+        let legs: Vec<_> = self
+            .route
+            .legs()
+            .iter()
+            .map(|leg| {
+                serde_json::json!({
+                    "rsl": graph.map(|graph| graph.rsl(leg.lane).to_string()),
+                    "reversed": leg.reversed,
+                    "sStartM": leg.s_start,
+                    "lengthM": leg.length_m,
+                    "turnRelation": leg.turn_relation,
+                })
+            })
+            .collect();
+        Ok(serde_json::to_string(&legs)?)
+    }
+    /// The pose at `s`, including its lane lineage: `{x, y, headingRad, rsl,
+    /// laneS, storageS, reversed, legIndex}`. `pose_at` alone loses the lane,
+    /// and every caller that rebases a route across map versions needs it.
+    pub fn pose_json(&self, s: f64) -> Result<String> {
+        let pose = self.route.pose_at(s);
+        Ok(serde_json::to_string(&serde_json::json!({
+            "x": pose.point.x,
+            "y": pose.point.y,
+            "headingRad": pose.heading_rad,
+            "rsl": pose
+                .lane
+                .and_then(|lane| self.route.graph().map(|graph| graph.rsl(lane).to_string())),
+            "laneS": pose.lane_s,
+            "storageS": pose.storage_s,
+            "reversed": pose.reversed,
+            "legIndex": pose.leg_index,
+        }))?)
+    }
+    /// Re-base this route onto its lateral neighbour at `s`, as a lane change
+    /// completing does. `side` is the DRIVER's side; a reversed leg swaps
+    /// storage left/right, which is why this cannot be composed correctly from
+    /// `successors` outside the engine.
+    pub fn retarget_to_neighbour(
+        &self,
+        s: f64,
+        side: &str,
+        legal_only: bool,
+        max_length_m: Option<f64>,
+    ) -> Result<Option<(RouteHandle, String)>> {
+        let side = match side {
+            "left" => LaneSide::Left,
+            "right" => LaneSide::Right,
+            other => {
+                return Err(BindingError::argument(format!(
+                    "side must be \"left\" or \"right\", got {other:?}"
+                )))
+            }
+        };
+        let options = RetargetOptions {
+            legal_only,
+            remaining_turns: &[],
+            max_length_m,
+        };
+        let Some(retarget) = retarget_to_neighbour(&self.route, s, side, &options) else {
+            return Ok(None);
+        };
+        let target_rsl = retarget
+            .route
+            .graph()
+            .map(|graph| graph.rsl(retarget.target).to_string());
+        let meta = serde_json::to_string(&serde_json::json!({
+            "s": retarget.s,
+            "separationM": retarget.separation_m,
+            "legal": retarget.legal,
+            "targetRsl": target_rsl,
+        }))?;
+        let lane_rsls = retarget
+            .route
+            .graph()
+            .map(|graph| {
+                retarget
+                    .route
+                    .legs()
+                    .iter()
+                    .map(|leg| graph.rsl(leg.lane).to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+        Ok(Some((
+            RouteHandle {
+                route: retarget.route,
+                lane_rsls,
+            },
+            meta,
+        )))
+    }
+}
+
+/// The motion envelope the engine applies to an actor class, as JSON
+/// (`{accelMax, brakeComfort, brakeHard, lateralRateMax, lateralAccelMax,
+/// lateralJerkMax}`).
+///
+/// The presets live in the native controller and are what the simulation
+/// actually integrates; re-declaring them in JS is how a generator ends up
+/// authoring an envelope the engine does not use.
+pub fn motion_limits_json(kind: &str) -> Result<String> {
+    let actor_kind: ActorKind = serde_json::from_value(serde_json::Value::String(kind.to_string()))
+        .map_err(|_| BindingError::argument(format!("unknown actor kind {kind:?}")))?;
+    let limits = limits_for_kind(actor_kind);
+    Ok(serde_json::to_string(&serde_json::json!({
+        "accelMax": limits.accel_max,
+        "brakeComfort": limits.brake_comfort,
+        "brakeHard": limits.brake_hard,
+        "lateralRateMax": limits.lateral_rate_max,
+        "lateralAccelMax": limits.lateral_accel_max,
+        "lateralJerkMax": limits.lateral_jerk_max,
+    }))?)
 }
 
 fn route_error(e: simforge_core::map::RouteBuildError) -> BindingError {

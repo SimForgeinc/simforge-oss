@@ -56,6 +56,23 @@ export interface NativeRoute {
   poseAt(s: number): Float64Array;
   /** `RouteSnapshot` JSON. */
   snapshotJson(): string;
+  /** `[s, d]`: arc length of the closest point on the route, and its signed lateral offset. */
+  projectPoint(x: number, y: number): Float64Array;
+  /** Lane width at arc length `s` (clamped) - the basis of a lane-change separation. */
+  widthAt(s: number): number;
+  /** `RouteLegSnapshot[]`-shaped JSON: `[{rsl, reversed, sStartM, lengthM, turnRelation}]`. */
+  legsJson(): string;
+  /** `{x, y, headingRad, rsl, laneS, storageS, reversed, legIndex}` JSON at `s`. */
+  poseJson(s: number): string;
+  /** Re-base onto the lateral neighbour at `s`; `null` when the map has none there. */
+  retargetToNeighbour(s: number, side: 'left' | 'right', legalOnly?: boolean | null, maxLengthM?: number | null): NativeNeighbourRetarget | null;
+}
+
+/** A route re-based onto its lateral neighbour, plus where the actor lands on it. */
+export interface NativeNeighbourRetarget {
+  readonly route: NativeRoute;
+  /** `{s, separationM, legal, targetRsl}` JSON. */
+  readonly detailJson: string;
 }
 
 export interface NativeScenarioInput {
@@ -374,6 +391,8 @@ export interface NativeModule {
   compileTemplate(templateJson: string, bundle: NativeMapBundle, site: string | null, seed?: NativeSeed | null, optionsJson?: string | null): NativeCompileResult;
   /** Match one site by id (`null` = top-ranked; an explicit id may name a rejected site) as a native handle. */
   findSite(templateJson: string, bundle: NativeMapBundle, siteId: string | null): NativeSite;
+  /** The engine's own motion envelope for an actor class, as JSON. */
+  motionLimitsJson(kind: string): string;
   /** `AdaptNote[]` JSON: clauses the anchor adapter drops or rewrites before matching. */
   adaptTemplateNotesJson(templateJson: string): string;
   /** `{templateId, paramsVersion}` JSON - the replay-key identity of a template. */
