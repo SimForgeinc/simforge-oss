@@ -1068,3 +1068,67 @@ Feature **BLOCKED** on those exact source inputs. `metricAuthority.laneCentrelin
 `lane-departure` stays unavailable, and its missing-artifact string is now observational rather
 than causal. Source, instrument and every measurement are retained. No GPU, no further scene
 sampling, no core change.
+
+
+## 2026-09-08 — Resolved: the offsets are a lane change, and the layers agree. My variation argument is refuted.
+
+New evidence arrived from the scoring owner: an independent probe using the boundary layer — the
+one whose ground-truth control passes — marching perpendicular from each recorded pose to the road
+edge. It is independent of the lane annotations by construction. Two measurements of mine follow
+from it, and together they settle all three competing explanations.
+
+### 1. Stratified binding control: every large offset is in the manoeuvre
+
+| window | samples | contained | ambiguous | worst offset | half-widths |
+|---|---|---|---|---|---|
+| pre-manoeuvre, x < 80 | 26 | 26 | 0 | **0.600 m** | 0.354 |
+| manoeuvre, 107 ≤ x ≤ 177 | 22 | 20 | 2 | 1.732 m | 1.004 |
+| settled, x > 400 | 80 | 80 | 0 | **0.555 m** | 0.320 |
+
+The ego traverses 3.7 m laterally (6.65 → 2.95 m from the left edge) and holds. Outside the
+traverse it sits within 0.6 m of a centreline — about a third of a half-width, ordinary lane
+keeping. A constant misalignment does not switch off when a car stops manoeuvring.
+
+### 2. The road is three lanes plus a shoulder, so the layers do not disagree
+
+Transect across the road at the ego, stepping 5 cm and asking both layers:
+
+| at x | road width | what the transect crosses |
+|---|---|---|
+| 49 | 11.80 m | lane 2.90 · ambiguous 0.90 · lane 3.40 · lane 3.50 · **outside-lanes 1.15** |
+| 301 | 11.65 m | lane 2.90 · ambiguous 0.90 · lane 3.35 · lane 3.55 · **outside-lanes 1.00** |
+| 599 | 11.75 m | lane 3.05 · ambiguous 0.95 · lane 3.40 · lane 3.50 · **outside-lanes 0.90** |
+
+Three lanes of ~3.45 m plus ~1.0 m of shoulder is ~11.8 m, which is the measured road width. The
+owner's "implied 3-lane width 3.957 m" divided the shoulder into the lanes; there is **no ~0.36 m
+lane-width disagreement** between the ClipGT layers. They are consistent.
+
+### 3. My own argument was wrong
+
+I claimed the eighteenfold per-segment variation (0.09 → 1.73 m) ruled out a single cause and
+pointed at per-segment autolabel registration. It does not: the variation is **ordered in space**,
+concentrated in the traverse, not scattered by segment identity. Sorting worst-offset by segment
+made it look like a property of the segments; it is a property of where the car was in its lane
+change. The scoring owner accepted that argument and wrote it into `docs/eval-campaigns.md` as
+durable guidance, so it needs correcting there too — it was mine and it was wrong.
+
+That is the third reading of this data that evidence has overturned: nearest-centreline binding,
+then my ~1.8 m frame discrepancy, now my per-segment registration. In each case the correction
+came from measuring something new, never from re-reasoning over the same numbers.
+
+### Where this leaves qualification
+
+The binding source behaves correctly. In steady state the human sits near the lane centre; through
+the manoeuvre it reports contained-near-edge, then two `ambiguous` samples at the crossing, then
+contained in the new lane — which is exactly what a per-pose containment binding should do. The
+reason I withheld `metricAuthority.laneCentrelines` was the discrepancy, and the discrepancy is
+gone.
+
+I am **not** flipping the flag in the same breath as finding the evidence — three readings have
+already been overturned today, two of them mine, and certifying an input is a different act from
+measuring it. Recommending it, with the one open question stated: a lane change legitimately puts
+a vehicle between centrelines, so the metric owner needs a stated policy for whether a manoeuvre
+is a departure before availability means anything. That is his call, not a geometry question.
+
+No threshold moved. No GPU, no scene sampling, no core change; both measurements above are CPU
+reads of artifacts already emitted.
