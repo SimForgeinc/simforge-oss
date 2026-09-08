@@ -76,13 +76,32 @@ KNOWN_PLANNER_MISMATCHES = {
 #: negative width. The checkpoint projected each stream down to embed_dim
 #: before concatenating; the published code concatenates raw features and
 #: halves. That is an architecture change, not a hyperparameter.
-#: Observed navigation-raster channel widths, all three from primary sources.
-#: No default is safe; the loaded checkpoint decides.
-OBSERVED_MAP_CHANNEL_WIDTHS = {
-    "v35-checkpoint-weights": 3,
-    "published-head-code": 5,
-    "v63-config": 14,
+#: Navigation-encoder INPUT widths from primary sources, with the reason each
+#: differs. CORRECTION to an earlier claim of mine: I called these "three
+#: widths for one input". They are not. The published encoder takes
+#: `map_context_channels + route_channels` concatenated (reactive_e2e.py:
+#: in_channels=..., then torch.cat([gated_map, gated_route])), so 5 = 3 map
+#: + 2 route. Against v35's 3 that is route conditioning being ADDED after
+#: v35, not a raster width changing. Only v63's 14-channel map is a genuine
+#: raster change, and it arrives with its own navigation geometry id
+#: (kitscenes-v3-bev-1m-v1). Both widths must come from the loaded config.
+OBSERVED_NAV_ENCODER_INPUTS = {
+    # label: (total in_channels, map channels, route channels)
+    "v35-checkpoint-weights": (3, 3, 0),
+    "published-head-default": (5, 3, 2),
+    "v63-config": (16, 14, 2),
 }
+
+#: What survives the correction, stated without inflation.
+NAV_RASTER_FINDING = (
+    "The map raster width is a property of the checkpoint's navigation "
+    "geometry rather than a constant: 3 channels for v35, 14 for v63. Route "
+    "conditioning is separately optional and postdates v35, which accounts "
+    "for the published default's 5 = 3 + 2. A caller must take both widths "
+    "from the loaded checkpoint's config and cannot synthesise a raster of a "
+    "guessed width - but my earlier framing of 'three contradictory widths' "
+    "overstated it."
+)
 
 NO_KWARG_RECONCILIATION = (
     "The published BezierPlanner hardcodes visual_history_proj as "

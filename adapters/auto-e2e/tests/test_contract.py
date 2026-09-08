@@ -26,7 +26,8 @@ from simforge_auto_e2e.engine import (  # noqa: E402
 from simforge_auto_e2e.checkpoint_probe import (  # noqa: E402
     KNOWN_PLANNER_MISMATCHES,
     NO_KWARG_RECONCILIATION,
-    OBSERVED_MAP_CHANNEL_WIDTHS,
+    NAV_RASTER_FINDING,
+    OBSERVED_NAV_ENCODER_INPUTS,
     probe_state_dicts,
 )
 from simforge_auto_e2e.provenance import code_identity  # noqa: E402
@@ -372,12 +373,23 @@ def test_a_clean_checkpoint_is_declared_loadable():
     assert r.as_dict()["note"] is None
 
 
-def test_measured_mismatches_and_raster_widths_are_recorded():
-    """The three raster widths are the reason no default is safe."""
+def test_nav_encoder_widths_decompose_into_map_plus_route():
+    """Pins the correction: 5 vs 3 is route conditioning being added, not a
+    raster width contradiction, because the encoder concatenates the two.
+    The real raster change is 3 -> 14."""
+    for label, (total, map_ch, route_ch) in OBSERVED_NAV_ENCODER_INPUTS.items():
+        assert total == map_ch + route_ch, label
+
+    assert OBSERVED_NAV_ENCODER_INPUTS["v35-checkpoint-weights"][2] == 0
+    assert OBSERVED_NAV_ENCODER_INPUTS["published-head-default"][1] == (
+        OBSERVED_NAV_ENCODER_INPUTS["v35-checkpoint-weights"][1]
+    )
+    # The map width genuinely changes between checkpoints, which is the part
+    # that survives the correction.
+    assert OBSERVED_NAV_ENCODER_INPUTS["v63-config"][1] == 14
+    assert "overstated" in NAV_RASTER_FINDING
+
+
+def test_measured_mismatches_are_recorded():
     assert len(KNOWN_PLANNER_MISMATCHES) == 8
-    assert OBSERVED_MAP_CHANNEL_WIDTHS == {
-        "v35-checkpoint-weights": 3,
-        "published-head-code": 5,
-        "v63-config": 14,
-    }
     assert "negative" in NO_KWARG_RECONCILIATION
