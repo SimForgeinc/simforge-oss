@@ -86,6 +86,17 @@ function responseFromBytes(bytes: ArrayBuffer, source: Response) {
   });
 }
 
+/** Reusing a body is not another network transfer; keep its stream intact. */
+function cachedResponse(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("x-simforge-cache", "hit");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function requestedRange(init: RequestInit) {
   return new Headers(init.headers).get("range");
 }
@@ -140,7 +151,7 @@ export async function fetchMapAsset(
       if (range) {
         const bytes = await cached.arrayBuffer();
         const partial = rangeResponse(bytes, range, cached);
-        if (partial) return partial;
+        if (partial) return cachedResponse(partial);
       }
       if (expectedSha256) {
         const bytes = await cached.arrayBuffer();
@@ -150,7 +161,7 @@ export async function fetchMapAsset(
           index.urls[canonicalUrl] = knownSha;
           index.content[knownSha] = { bytes: bytes.byteLength, lastUsed: Date.now() };
           writeIndex(index, deferIndexWrite);
-          return responseFromBytes(bytes, cached);
+          return cachedResponse(responseFromBytes(bytes, cached));
         }
       } else {
         index.urls[canonicalUrl] = knownSha;
@@ -160,14 +171,14 @@ export async function fetchMapAsset(
           lastUsed: Date.now(),
         };
         writeIndex(index, deferIndexWrite);
-        return cached;
+        return cachedResponse(cached);
       }
     }
   }
 
   const inFlightKey = knownSha && SHA256.test(knownSha) ? knownSha : canonicalUrl;
   const existing = inFlight.get(inFlightKey);
-  if (existing) return (await existing).clone();
+  if (existing) return cachedResponse((await existing).clone());
   const persist = async (response: Response) => {
     const bytes = await response.arrayBuffer();
     const actualSha = await digest(bytes);

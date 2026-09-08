@@ -131,6 +131,8 @@ function snapshotActivityKey(snapshot: MapModelLoadSnapshot): string {
     snapshot.pendingTextureUploads ?? 0,
     snapshot.downloads?.active ?? 0,
     snapshot.downloads?.transferredBytes ?? 0,
+    snapshot.downloads?.cachedBytes ?? 0,
+    snapshot.downloads?.discoveryComplete,
     snapshot.downloads?.totalBytes ?? "unknown",
   ].join(":");
 }
