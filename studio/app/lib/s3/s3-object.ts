@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { copyFile, link, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { copyFile, link, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import { PassThrough, type Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { LOCAL_ARTIFACTS_DIR, LOCAL_ARTIFACT_BUCKET } from "../db/config";
 import { MAP_CACHE_BUCKET, MAP_CACHE_KEY_PREFIX } from "../cloud/map-registry";
 import { resolveCachedMapAsset } from "../map-cache/service";
@@ -67,6 +68,59 @@ export async function writeLocalObject(
   };
   await writeFile(metaPath, JSON.stringify(metadata));
   return metadata;
+}
+
+export type LocalObjectWriteRefusal = { refusal: "object_checksum_mismatch" | "object_size_mismatch" };
+
+/**
+ * Write an upload straight to disk, hashing as it goes.
+ *
+ * The buffering form needs the whole object in memory before it can hash it,
+ * which for a render's video means holding the entire file. This reads the
+ * request body in chunks into a temporary file, so peak memory is one chunk
+ * regardless of how long the clip is, and only promotes the file once the
+ * digest and length the caller declared are proven. A rejected upload leaves
+ * nothing behind: the temporary file is removed and the previous object at
+ * that key is untouched, because the rename never happens.
+ */
+export async function writeLocalObjectStream(
+  bucket: string,
+  key: string,
+  body: Readable,
+  contentType = "application/octet-stream",
+  declared: { sha256?: string | null; length?: number | null } = {},
+): Promise<LocalObjectMetadata | LocalObjectWriteRefusal> {
+  const filePath = localObjectPath(bucket, key);
+  const metaPath = metadataPath(bucket, key);
+  await mkdir(dirname(filePath), { recursive: true });
+  await mkdir(dirname(metaPath), { recursive: true });
+  const temporaryPath = `${filePath}.${randomUUID()}.tmp`;
+  const hash = createHash("sha256");
+  let sizeBytes = 0;
+  try {
+    const sink = createWriteStream(temporaryPath);
+    await pipeline(body, async function* (source) {
+      for await (const chunk of source) {
+        const bytes = chunk as Uint8Array;
+        sizeBytes += bytes.byteLength;
+        hash.update(bytes);
+        yield bytes;
+      }
+    }, sink);
+    const checksumSha256Hex = hash.digest("hex");
+    if (declared.length !== null && declared.length !== undefined && declared.length !== sizeBytes) {
+      return { refusal: "object_size_mismatch" };
+    }
+    if (declared.sha256 && declared.sha256 !== checksumSha256Hex) {
+      return { refusal: "object_checksum_mismatch" };
+    }
+    await rename(temporaryPath, filePath);
+    const metadata: LocalObjectMetadata = { contentType, checksumSha256Hex, sizeBytes };
+    await writeFile(metaPath, JSON.stringify(metadata));
+    return metadata;
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 }
 
 /** Register a seed asset without duplicating it when source and store share a filesystem. */

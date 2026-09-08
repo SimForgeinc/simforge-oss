@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
-import { readLocalObjectMetadata, streamLocalObject, writeLocalObject } from "@/app/lib/s3/s3-object";
+import { readLocalObjectMetadata, streamLocalObject, writeLocalObjectStream } from "@/app/lib/s3/s3-object";
 import { writeMultipartPart } from "@/app/lib/s3/s3-presign";
 import { verifyLocalObjectRequest } from "@/app/lib/s3/local-object-auth";
 
@@ -68,30 +68,46 @@ export async function PUT(request: Request, context: RouteContext): Promise<Resp
   const refused = refusesMapCache(bucket);
   if (refused) return refused;
   const url = new URL(request.url);
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  const declaredLength = request.headers.get("content-length");
-  if (declaredLength !== null && Number(declaredLength) !== bytes.byteLength) {
-    return Response.json({ error: "object_size_mismatch" }, { status: 400 });
-  }
-  const actualSha256 = createHash("sha256").update(bytes).digest("hex");
   const queryChecksum = url.searchParams.get("sha256")?.toLowerCase();
   const headerChecksumBase64 = request.headers.get("x-amz-checksum-sha256");
   const headerChecksum = headerChecksumBase64
     ? Buffer.from(headerChecksumBase64, "base64").toString("hex")
     : null;
   const declaredChecksum = queryChecksum ?? headerChecksum;
-  if (declaredChecksum && declaredChecksum !== actualSha256) {
-    return Response.json({ error: "object_checksum_mismatch" }, { status: 400 });
-  }
+  const declaredLengthHeader = request.headers.get("content-length");
+  const declaredLength = declaredLengthHeader === null ? null : Number(declaredLengthHeader);
+
   const uploadId = url.searchParams.get("uploadId");
-  const partNumber = Number(url.searchParams.get("partNumber"));
   if (uploadId) {
-    await writeMultipartPart(uploadId, partNumber, bytes);
-    return new Response(null, { status: 200, headers: { etag: `"${actualSha256}"` } });
+    // A part is sized by the uploader's chunking, so buffering one is bounded.
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (declaredLength !== null && declaredLength !== bytes.byteLength) {
+      return Response.json({ error: "object_size_mismatch" }, { status: 400 });
+    }
+    const partSha256 = createHash("sha256").update(bytes).digest("hex");
+    if (declaredChecksum && declaredChecksum !== partSha256) {
+      return Response.json({ error: "object_checksum_mismatch" }, { status: 400 });
+    }
+    await writeMultipartPart(uploadId, Number(url.searchParams.get("partNumber")), bytes);
+    return new Response(null, { status: 200, headers: { etag: `"${partSha256}"` } });
   }
+
   const contentType = url.searchParams.get("content-type")
     ?? request.headers.get("content-type")
     ?? "application/octet-stream";
-  const metadata = await writeLocalObject(bucket, key.join("/"), bytes, contentType);
-  return Response.json({ checksumSha256: metadata.checksumSha256Hex, sizeBytes: metadata.sizeBytes });
+  if (!request.body) return Response.json({ error: "object_size_mismatch" }, { status: 400 });
+  // Whole objects are renders: a 20 s clip is tens of megabytes and a longer
+  // or higher-resolution one is larger still, so the body is streamed to disk
+  // and hashed on the way through rather than held in memory. The digest gate
+  // is unchanged - it is applied to what actually landed, before the file is
+  // promoted to its key.
+  const written = await writeLocalObjectStream(
+    bucket,
+    key.join("/"),
+    Readable.fromWeb(request.body as import("node:stream/web").ReadableStream<Uint8Array>),
+    contentType,
+    { sha256: declaredChecksum ?? null, length: declaredLength },
+  );
+  if ("refusal" in written) return Response.json({ error: written.refusal }, { status: 400 });
+  return Response.json({ checksumSha256: written.checksumSha256Hex, sizeBytes: written.sizeBytes });
 }
