@@ -209,3 +209,35 @@ hypotheses, not conclusions:
 Distinguishing them requires rendering at the frames' exact instants rather than on the tick
 grid. That is a change to *when* we sample, not to what passes, and if it is made the number
 above stays on the record alongside the new one.
+
+
+---
+
+## 2026-09-08 — Tick-quantisation hypothesis TESTED AND REFUTED
+
+The G1 result above listed two candidate explanations for the 30° tele camera failing. The
+first was testable, so it was tested rather than left as a caveat.
+
+**Method.** Each camera was re-rendered with the episode anchored so that a 10 Hz tick lands
+*exactly* on that camera's published frame instant — offset 0 ms instead of up to 50 ms. Four
+separate single-camera renders, same scene, same package, same tier, nothing else changed.
+
+| Camera | On the tick grid (up to 50 ms off) | At the exact frame instant (0 ms) | Δ |
+|---|---|---|---|
+| cross-left 120° | 24.07 dB / 0.905 | 23.95 dB / 0.901 | −0.12 dB |
+| front-wide 120° | 22.89 dB / 0.872 | 23.00 dB / 0.875 | +0.11 dB |
+| cross-right 120° | 25.32 dB / 0.913 | 25.02 dB / 0.905 | −0.30 dB |
+| **front-tele 30°** | **19.67 dB / 0.760** | **19.86 dB / 0.763** | **+0.19 dB** |
+
+**Conclusion.** Temporal quantisation is not the cause. Removing the tele frame's 19.3 ms
+offset entirely moved it 0.19 dB — nowhere near the 2.3 dB it needs to reach the bar, and
+within the scatter seen on the cameras that were already passing. The remaining explanation
+stands: **this reconstruction is genuinely weaker at the distances a 30° tele camera looks at.**
+
+**What that means for the product, stated rather than smoothed:** scene `007a5809` does not
+qualify for any rig preset that includes the tele camera — which is both `alpamayo-2cam`
+([1, 6]) and `alpamayo-4cam` ([0, 1, 2, 6]), i.e. every preset Alpamayo 1 can use. Its three
+120° cameras reconstruct well (22.9–25.3 dB); the tele does not. G1 stays at 22 dB and the
+scene stays unqualified.
+
+No threshold was moved at any point in this investigation.
