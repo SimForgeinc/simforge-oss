@@ -10,11 +10,12 @@ use crate::error::{SimIssue, SimIssueCode};
 use crate::map::LaneId;
 use crate::math::{angle_delta, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
-    BodyIndex, MotionBackend, MotionIntent, VehicleMotionState, WorldContactRef,
+    BodyIndex, MotionBackend, MotionDirection, MotionIntent, VehicleMotionState, WorldContactRef,
     WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
 };
 use crate::trace::metrics::StaticShape;
 use crate::trace::{AbortReason, ActorFrame, PhysicsFrame, ReleasedReason, SignalFrame, SimEvent};
+use crate::types::SetValue;
 
 use super::actor::{
     ActorIndex, ActorRuntime, AxisId, LateralKind, LongitudinalKind, PendingRetarget,
@@ -25,7 +26,10 @@ use super::controllers::{
     ConflictHazard, Leader,
 };
 use super::cornering::{cornering_plan, CornerSpeedInput, CorneringPlan};
-use super::gear::{govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS};
+use super::gear::{
+    gear_of_motion_direction, govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS,
+    MOTION_GEAR_ENGAGED_KEY, MOTION_GEAR_KEY,
+};
 use super::signals::{AuthorityKind, ControlSlot};
 use super::spatial::{candidate_pairs, point_cell, SpatialBounds};
 use super::surface::SurfaceQuery;
@@ -518,25 +522,55 @@ impl Simulation {
             return Ok(plan);
         }
 
-        // Exact-time authored trajectory owns motion until its last keyframe.
-        if let Some(timed) = &a.timed_route {
-            let end = timed.end_time_s();
-            if timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9) {
-                let sample_at = (t + dt).min(self.input.clip_seconds);
-                let sample = timed.sample(sample_at, a.heading_rad);
-                let projected = a.route.project_point(sample.position);
-                plan.position = sample.position;
-                plan.heading = normalize_angle(sample.heading_rad);
-                plan.speed = sample.speed_mps;
-                plan.accel = (sample.speed_mps - a.speed_mps) / dt;
-                plan.route_s = projected.s;
-                plan.lateral_offset = a.route.lateral_offset_at(projected.s, sample.position);
-                plan.lateral_rate = 0.0;
-                plan.lateral_accel = 0.0;
-                plan.lateral_reference_offset = plan.lateral_offset;
-                plan.lateral_reference_rate = 0.0;
-                plan.lateral_reference_accel = 0.0;
-                return Ok(plan);
+        // Exact-time trajectory owns motion until its last keyframe. A staged
+        // caller override is a human at the wheel: it takes the body back from
+        // the track for the rest of the run (a re-take of a recorded drive must
+        // not be steered by the previous take), so the track releases below.
+        if action.is_none() {
+            if let Some(timed) = &a.timed_route {
+                let end = timed.end_time_s();
+                if timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9) {
+                    let sample_at = (t + dt).min(self.input.clip_seconds);
+                    let sample = timed.sample(sample_at, a.heading_rad);
+                    let recorded = timed.is_recorded();
+                    let projected = a.route.project_point(sample.position);
+                    plan.position = sample.position;
+                    plan.heading = normalize_angle(sample.heading_rad);
+                    plan.speed = sample.speed_mps.abs();
+                    plan.accel = (plan.speed - a.speed_mps) / dt;
+                    plan.route_s = projected.s;
+                    plan.lateral_offset = a.route.lateral_offset_at(projected.s, sample.position);
+                    plan.lateral_rate = 0.0;
+                    plan.lateral_accel = 0.0;
+                    plan.lateral_reference_offset = plan.lateral_offset;
+                    plan.lateral_reference_rate = 0.0;
+                    plan.lateral_reference_accel = 0.0;
+                    if recorded {
+                        // The take's signed speed is the gear: engage it directly
+                        // so the body's velocity sign and `motion.gear*` keys
+                        // report what was recorded, without the at-rest gate a
+                        // requested gear change normally waits for.
+                        let direction = if sample.speed_mps < 0.0 {
+                            MotionDirection::Reverse
+                        } else if sample.speed_mps > 0.0 {
+                            MotionDirection::Forward
+                        } else {
+                            a.motion_direction
+                        };
+                        let a = &mut self.actors[index.index()];
+                        if direction != a.motion_direction {
+                            a.motion_direction = direction;
+                            a.pending_motion_direction = None;
+                            let gear = gear_of_motion_direction(direction);
+                            a.set_state_key_str(MOTION_GEAR_KEY, SetValue::Text(gear.to_owned()));
+                            a.set_state_key_str(
+                                MOTION_GEAR_ENGAGED_KEY,
+                                SetValue::Text(gear.to_owned()),
+                            );
+                        }
+                    }
+                    return Ok(plan);
+                }
             }
         }
         if self.actors[index.index()].timed_route.is_some() {

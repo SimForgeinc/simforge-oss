@@ -675,6 +675,9 @@ impl Simulation {
             RouteActionTarget::Spec(RouteSpec::TimedPolyline { points }) => {
                 Some(TimedRoute::from_scene_points(points))
             }
+            RouteActionTarget::Spec(RouteSpec::RecordedTrack { samples }) => {
+                Some(TimedRoute::from_recorded_samples(samples))
+            }
             _ => None,
         };
         a.best_effort_world_path = best_effort_world_path;

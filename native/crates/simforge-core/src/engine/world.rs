@@ -886,6 +886,9 @@ impl Simulation {
         let driver = self.driver_profile(spec, rules.aggression);
         let timed_route = match &spec.behavior.route {
             RouteSpec::TimedPolyline { points } => Some(TimedRoute::from_scene_points(points)),
+            RouteSpec::RecordedTrack { samples } => {
+                Some(TimedRoute::from_recorded_samples(samples))
+            }
             _ => None,
         };
         let remaining_turns = match &spec.behavior.route {

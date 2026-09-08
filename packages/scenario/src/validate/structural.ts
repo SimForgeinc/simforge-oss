@@ -45,7 +45,8 @@
 import { collectParamRefs, tryEvaluateExpr, type Expr, type ExprScope } from '../expr/index.js';
 import type { AnchorFeature } from '../schema/v2/anchor.js';
 import type { Condition, Interaction, PointRef, Trigger } from '../schema/v2/interactions.js';
-import { CONTINUOUS_VERBS, conditionLeaves } from '../schema/v2/interactions.js';
+import { CONTINUOUS_VERBS, conditionLeaves, interactionAxis } from '../schema/v2/interactions.js';
+import { validateManualDriveRecording } from '../schema/v2/manual-drive.js';
 import { paramDefault } from '../schema/v2/params.js';
 import { isPortableRole, rolePose, VRU_CLASSES, type RoleBinding } from '../schema/v2/roles.js';
 import { checkSetValue, lookupSetKey, setKeyNamespace } from '../schema/v2/set-keys.js';
@@ -514,6 +515,36 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
           if (interaction.target.mode === 'customTimedRoute') {
             validateTimedRoute(interaction.target.points, joinPath(base, 'target'), out);
           }
+        } else if (interaction.target.mode === 'manualDrive') {
+          const actor = roles.get(interaction.actor);
+          if (!actor || actor.kind !== 'scene_absolute' || !template.anchor.pin) {
+            out.push(issue(
+              'error',
+              'route_disconnected',
+              joinPath(base, 'target'),
+              'a manual drive take is map-bound and may only drive a pinned scene_absolute actor',
+            ));
+          }
+          if (actor && (actor.actor.static || actor.actor.class === 'static_object')) {
+            out.push(issue(
+              'error',
+              'static_actor_motion',
+              joinPath(base, 'actor'),
+              `static role "${actor.id}" cannot be driven; a manual drive needs a movable actor`,
+            ));
+          }
+          const verdict = validateManualDriveRecording(
+            interaction.target.recording,
+            template.choreography.clipSeconds,
+          );
+          if (!verdict.ok) {
+            out.push(issue(
+              'error',
+              'route_disconnected',
+              joinPath(base, 'target', 'recording', verdict.path),
+              verdict.message,
+            ));
+          }
         } else if (interaction.target.mode === 'nearMiss') {
           needRole(interaction.target.target, joinPath(base, 'target', 'target'));
           if (interaction.target.target === interaction.actor) {
@@ -882,6 +913,53 @@ function timelineIssues(
         );
       }
     }
+  });
+
+  // A manual drive take is the actor's motion for the whole clip: it must
+  // span exactly [0, clipEnd], and no other interaction may move that actor.
+  // Discrete state (`set`) and existence stay with the timeline, but any
+  // longitudinal / lateral / topology owner is a competing motion source.
+  template.choreography.interactions.forEach((interaction, index) => {
+    if (interaction.verb !== 'route' || interaction.target.mode !== 'manualDrive') return;
+    const base = joinPath('choreography', 'interactions', index);
+    const start = resolveTriggerTime(interaction.trigger, ctx);
+    if (start.kind !== 'exact' || start.t !== 0) {
+      out.push(
+        issue(
+          'error',
+          'axis_conflict',
+          joinPath(base, 'trigger'),
+          `manual drive "${interaction.id}" owns "${interaction.actor}" from the start of the clip; its trigger must be at(0)`,
+          { required: { kind: 'at', t: 0 }, actual: interaction.trigger },
+        ),
+      );
+    }
+    const end = interaction.until ? resolveTriggerTime(interaction.until, ctx) : undefined;
+    if (!end || end.kind !== 'exact' || end.t !== ctx.clipEnd) {
+      out.push(
+        issue(
+          'error',
+          'axis_conflict',
+          joinPath(base, 'until'),
+          `manual drive "${interaction.id}" owns "${interaction.actor}" until the clip ends; its until must be at(${ctx.clipEnd})`,
+          { required: { kind: 'at', t: ctx.clipEnd }, actual: interaction.until ?? null },
+        ),
+      );
+    }
+    template.choreography.interactions.forEach((other, otherIndex) => {
+      if (otherIndex === index || other.actor !== interaction.actor) return;
+      const axis = interactionAxis(other);
+      if (axis !== 'longitudinal' && axis !== 'lateral' && axis !== 'topology') return;
+      out.push(
+        issue(
+          'error',
+          'axis_conflict',
+          joinPath('choreography', 'interactions', otherIndex),
+          `"${other.id}" moves "${interaction.actor}" on the ${axis} axis, but manual drive "${interaction.id}" already owns its motion for the whole clip; remove one of them`,
+          { required: 'no other motion interaction', actual: [interaction.id, other.id] },
+        ),
+      );
+    });
   });
 
   // One axis, one owner. See the module docs for the decision procedure.

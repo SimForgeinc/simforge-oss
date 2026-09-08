@@ -112,6 +112,10 @@ export type TurnRelation = z.infer<typeof turnRelationSchema>;
  *   than cruise speed, owns the actor through the final authored timestamp;
  *   normal physics takes over and brakes immediately afterward (or on
  *   material contact).
+ * - `recordedTrack` — a take recorded from the engine itself: pose, body
+ *   yaw and signed speed per tick. Replay follows the samples verbatim (yaw
+ *   included, so a reversing or stationary body keeps its recorded
+ *   orientation) and holds the final sample once the track ends.
  */
 export const routeSpecSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -137,6 +141,19 @@ export const routeSpecSchema = z.discriminatedUnion('kind', [
       x: finite,
       z: finite,
     })).min(1),
+  }),
+  z.object({
+    kind: z.literal('recordedTrack'),
+    /** At least the opening and closing samples; strictly increasing `timeS`. */
+    samples: z.array(z.object({
+      timeS: nonNeg,
+      x: finite,
+      z: finite,
+      /** Body yaw, radians, CCW about `+Y` from `+X`. */
+      headingRad: finite,
+      /** Signed longitudinal speed; negative = reversing. */
+      speedMps: finite,
+    })).min(2),
   }),
 ]);
 export type RouteSpec = z.infer<typeof routeSpecSchema>;

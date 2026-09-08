@@ -1733,6 +1733,141 @@ pub struct SceneTimedPoint {
     pub z: f64,
 }
 
+/// One recorded engine tick of a manual drive, y-up scene frame. `y` is the
+/// renderer's ground elevation and is not consumed by the 2-D engine.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ManualDriveSample {
+    pub time_s: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    /// Body yaw, CCW about `+Y` from `+X`.
+    pub heading_rad: f64,
+    /// Signed longitudinal speed; negative = reversing.
+    pub speed_mps: f64,
+}
+
+/// A complete recorded take. See `packages/scenario` `manual-drive.ts` for
+/// the invariants; the compiler re-checks them because a document can reach
+/// it without passing the structural validator.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ManualDriveRecording {
+    pub version: u32,
+    pub clip_seconds: f64,
+    pub samples: Vec<ManualDriveSample>,
+}
+
+/// The only recording format the compiler accepts.
+pub const MANUAL_DRIVE_RECORDING_VERSION: u32 = 1;
+/// Longest clip (120 s) at the instance step (0.02 s), plus the closing sample.
+pub const MANUAL_DRIVE_MAX_SAMPLES: usize = 6001;
+/// Slack on the recording clock against the clip clock, seconds.
+pub const MANUAL_DRIVE_TIME_TOLERANCE_S: f64 = 1e-6;
+
+impl ManualDriveRecording {
+    /// Why this take cannot drive a `clip_seconds` clip, as a
+    /// `(relative path, message)` pair; `None` when it is a valid take.
+    pub fn rejection(&self, clip_seconds: f64) -> Option<(String, String)> {
+        if self.version != MANUAL_DRIVE_RECORDING_VERSION {
+            return Some((
+                "version".to_owned(),
+                format!(
+                    "unsupported manual drive recording version {}",
+                    self.version
+                ),
+            ));
+        }
+        if !self.clip_seconds.is_finite() || self.clip_seconds <= 0.0 {
+            return Some((
+                "clipSeconds".to_owned(),
+                "recording clipSeconds must be a positive finite number".to_owned(),
+            ));
+        }
+        if (self.clip_seconds - clip_seconds).abs() > MANUAL_DRIVE_TIME_TOLERANCE_S {
+            return Some((
+                "clipSeconds".to_owned(),
+                format!(
+                    "take was driven against a {}s clip, but the choreography is {clip_seconds}s; re-record it",
+                    self.clip_seconds
+                ),
+            ));
+        }
+        let samples = &self.samples;
+        if samples.len() < 2 {
+            return Some((
+                "samples".to_owned(),
+                "a take needs at least 2 samples".to_owned(),
+            ));
+        }
+        if samples.len() > MANUAL_DRIVE_MAX_SAMPLES {
+            return Some((
+                "samples".to_owned(),
+                format!(
+                    "take has {} samples, above the {MANUAL_DRIVE_MAX_SAMPLES} supported for a 120s clip at 0.02s",
+                    samples.len()
+                ),
+            ));
+        }
+        for (index, sample) in samples.iter().enumerate() {
+            for (key, value) in [
+                ("timeS", sample.time_s),
+                ("x", sample.x),
+                ("y", sample.y),
+                ("z", sample.z),
+                ("headingRad", sample.heading_rad),
+                ("speedMps", sample.speed_mps),
+            ] {
+                if !value.is_finite() {
+                    return Some((
+                        format!("samples.{index}.{key}"),
+                        format!("sample {key} must be finite"),
+                    ));
+                }
+            }
+            if index > 0 && sample.time_s <= samples[index - 1].time_s {
+                return Some((
+                    format!("samples.{index}.timeS"),
+                    "sample times must be strictly increasing".to_owned(),
+                ));
+            }
+        }
+        if samples[0].time_s.abs() > MANUAL_DRIVE_TIME_TOLERANCE_S {
+            return Some((
+                "samples.0.timeS".to_owned(),
+                format!("a take starts at t=0s, not t={}s", samples[0].time_s),
+            ));
+        }
+        let last = samples.len() - 1;
+        if (samples[last].time_s - self.clip_seconds).abs() > MANUAL_DRIVE_TIME_TOLERANCE_S {
+            return Some((
+                format!("samples.{last}.timeS"),
+                format!(
+                    "a take ends at t={}s (the clip end), not t={}s",
+                    self.clip_seconds, samples[last].time_s
+                ),
+            ));
+        }
+        None
+    }
+
+    /// The engine-facing track: the same samples without the elevation
+    /// channel the 2-D engine has no use for.
+    pub fn recorded_track(&self) -> Vec<simforge_core::types::RecordedSample> {
+        self.samples
+            .iter()
+            .map(|s| simforge_core::types::RecordedSample {
+                time_s: s.time_s,
+                x: s.x,
+                z: s.z,
+                heading_rad: s.heading_rad,
+                speed_mps: s.speed_mps,
+            })
+            .collect()
+    }
+}
+
 /// Exact map-bound route a participant owns from the start of the clip.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]
@@ -2661,6 +2796,10 @@ pub enum RouteTarget {
     CustomTimedRoute {
         points: Vec<SceneTimedPoint>,
     },
+    /// Manual drive: a recorded take owns the actor's pose for the whole clip.
+    ManualDrive {
+        recording: ManualDriveRecording,
+    },
     Acquire {
         pose: FramePose,
     },
@@ -2691,6 +2830,7 @@ impl RouteTarget {
             Self::LanePath { .. } => "lanePath",
             Self::CustomRoute { .. } => "customRoute",
             Self::CustomTimedRoute { .. } => "customTimedRoute",
+            Self::ManualDrive { .. } => "manualDrive",
             Self::Acquire { .. } => "acquire",
             Self::NearMiss { .. } => "nearMiss",
         }
