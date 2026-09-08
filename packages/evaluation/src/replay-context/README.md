@@ -100,10 +100,33 @@ allocation. The pins live in `tier-lock.ts` as the single source of truth:
 | Kaolin | NVIDIA Kaolin `0.18.0` from NVIDIA's index for the image's exact torch/CUDA (the PyPI project of the same name is unrelated and is never a substitute) |
 | torch | `>=2.8`, CUDA build matching the driver; the tracer compiles against it, so they are resolved together |
 
-`BUILD_VERIFIED` is `false` and stays false until every item in `BUILD_EVIDENCE_OWED` has been
+`BUILD_VERIFIED` is `false` and stays false until every item in `BUILD_EVIDENCE` has been
 produced on the image that will run the work. `preflightReconstruction` compares a resolved
 checkout's `HEAD` against the pin and fails when they differ — gate numbers measured against a
 different upstream revision are not comparable with anything else recorded.
+
+Provisioned and exercised on this host (2026-09-08): the tracer compiles and imports, Kaolin
+0.18.0 matches the pin, and a real scene renders through `simforge-oss-splat` at four cameras.
+The reconstruction path has not yet been exercised, which is why the flag stays false.
+
+### Measured on a real scene
+
+Scene `007a5809` (PhysicalAI-AV NuRec; package sha256 verified against the digest pinned in its
+own `background.json`), through the provisioned tier:
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 on-trajectory | 19.67 dB (30° tele; the three 120° cameras are 22.9–25.3 dB) | ≥ 22 dB | **fail** |
+| G2 off-trajectory | 0.84% at 0.5 m, 1.59% at 1.0 m, 2.15% at 1.5 m, 6.80% at 5° | ≤ 2% | pass, envelope 1.0 m |
+| G3 ego-history parity | 0.000 m | ≤ 0.01 m | pass |
+| G4 dynamics | 197.3 ms | ≤ 200 ms | pass |
+
+The bundle is `qualified: false` with a **zero-width** envelope: the 1.0 m G2 measured is not
+written, because an envelope means nothing on a scene whose on-trajectory renders did not hold
+up. The tele failure was investigated, not excused — rendering at the frames' exact instants
+instead of on the 10 Hz tick grid moved it 0.19 dB, refuting temporal quantisation and leaving
+genuine reconstruction quality at distance. So this scene cannot serve any rig preset
+containing the tele camera. Every superseded measurement is retained in `GATE-CHANGES.md`.
 
 Absence surfaces as a `capability_error` from `scene reconstruct --preflight-only` and from
 the render tier, before any GPU is allocated — never as a crash or a fake success.

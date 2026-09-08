@@ -10,9 +10,9 @@
  * Provisioning targets product-owned images and storage only. No research host, allocation,
  * frozen set or existing research process is used to satisfy any of these.
  *
- * `BUILD_VERIFIED` is false and must stay false until every item in `BUILD_EVIDENCE_OWED` has
- * been produced on the image that will run the work. A pin states which source is used; it is
- * never a claim that the source builds or runs.
+ * `BUILD_VERIFIED` is false and must stay false until every item in `BUILD_EVIDENCE` has been
+ * produced on the image that will run the work. A pin states which source is used; it is never
+ * a claim that the source builds or runs.
  */
 
 export const THREEDGRUT = {
@@ -73,11 +73,48 @@ export const NCORE = {
   whenAbsent: 'f-theta rigs are refused with a capability restriction naming this package',
 } as const;
 
+/**
+ * Still false: three of the four owed items are produced, the fourth is not.
+ *
+ * A tier is "build verified" when everything it is used for has been exercised on it, and the
+ * reconstruction path has not been. Flipping this on three quarters of the evidence would make
+ * the flag mean "mostly".
+ */
 export const BUILD_VERIFIED = false;
 
-export const BUILD_EVIDENCE_OWED: readonly string[] = [
-  "3DGRUT tracer compiled successfully against the image's torch/CUDA at the pinned commit",
-  'kaolin imports and reports the expected version against that same torch build',
-  'one render of a known scene through simforge-oss-splat, digest recorded',
-  'one reconstruction of a calibrated sequence completing training and exporting a NuRec .usdz',
+export interface BuildEvidenceItem {
+  readonly item: string;
+  readonly produced: boolean;
+  readonly evidence?: string;
+}
+
+/**
+ * Evidence produced on this host, 2026-09-08, against the pins above.
+ *
+ * Recorded here rather than in a report so the flag and its justification cannot drift apart.
+ */
+export const BUILD_EVIDENCE: readonly BuildEvidenceItem[] = [
+  {
+    item: "3DGRUT tracer compiled successfully against the image's torch/CUDA at the pinned commit",
+    produced: true,
+    evidence:
+      'installed at the pinned commit with submodules; threedgut_tracer imports, tiny-cuda-nn ready, '
+      + 'PPISP 1.2.1, Fused-SSIM ready, against torch 2.8.0+cu128 (upstream lock) and CUDA 12.8.1',
+  },
+  {
+    item: 'kaolin imports and reports the expected version against that same torch build',
+    produced: true,
+    evidence: 'kaolin 0.18.0 imports, matching the pin above',
+  },
+  {
+    item: 'one render of a known scene through simforge-oss-splat, digest recorded',
+    produced: true,
+    evidence:
+      'scene 007a5809 (package sha256 36665d69…, verified against its pinned digest) rendered at four '
+      + 'cameras over five probes; G1 19.67 dB worst camera, G2 coverage 0.84/1.59/2.15/6.80% by offset',
+  },
+  {
+    item: 'one reconstruction of a calibrated sequence completing training and exporting a NuRec .usdz',
+    produced: false,
+  },
 ];
