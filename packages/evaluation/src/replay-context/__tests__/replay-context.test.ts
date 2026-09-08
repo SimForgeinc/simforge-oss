@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { loadEvalClip, reconstructionRefusal } from '../clip.js';
+import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
@@ -315,5 +315,30 @@ describe('per-profile qualification', () => {
     const parsed = ReplayContextSchema.safeParse(noProfile);
     expect(parsed.success).toBe(false);
     expect(JSON.stringify(parsed.error?.issues)).toContain('camera set');
+  });
+});
+
+describe('image-sequence integrity', () => {
+  it('digests a sequence as a whole, so a changed or added frame is detected', async () => {
+    const { cp, mkdtemp, rm, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const nodePath = await import('node:path');
+
+    const scratch = await mkdtemp(nodePath.join(tmpdir(), 'sf-seq-'));
+    try {
+      const source = fixture('video-only-clip/frames/camera_front_wide_120fov');
+      const copy = nodePath.join(scratch, 'frames');
+      await cp(source, copy, { recursive: true });
+      const original = await sequenceDigest(copy);
+      expect(original).toMatch(/^[a-f0-9]{64}$/);
+      // Same bytes, same digest.
+      expect(await sequenceDigest(copy)).toBe(original);
+
+      // An added frame changes it — a per-file check on a directory path could not see this.
+      await writeFile(nodePath.join(copy, '0000000001.png'), Buffer.from([1, 2, 3]));
+      expect(await sequenceDigest(copy)).not.toBe(original);
+    } finally {
+      await rm(scratch, { recursive: true, force: true });
+    }
   });
 });
