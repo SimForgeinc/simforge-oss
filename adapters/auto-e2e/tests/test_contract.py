@@ -243,11 +243,27 @@ def test_history_masking_matches_the_checkpoints_training_policy():
 
 
 def test_training_code_revision_is_an_independent_prerequisite():
-    """Even with weights, the code that trained them is not published."""
-    assert not contract.V63_TRAINING_CODE_PUBLISHED
-    assert len(contract.V63_TRAINING_CODE_REVISION) == 40
-    assert "NOT the code that trained" in contract.TRAINING_CODE_ACCESS_NOTE
+    """Even with weights, the code that trained them is not identified.
+
+    Pins the correction too: the one revision string the runs DO carry
+    describes the validation split, not the model code, and must not be
+    quoted as evidence about the code.
+    """
+    assert not contract.TRAINING_CODE_REVISION_RECORDED
+    assert not contract.TRAINING_IMAGE_PULLABLE
+    assert contract.TRAINING_IMAGE.endswith(":latest")   # mutable, not a digest
+    assert len(contract.V63_VALIDATION_SPLIT_SOURCE_REVISION) == 40
+    assert not hasattr(contract, "V63_TRAINING_CODE_REVISION")
+    assert "no code revision at all" in contract.TRAINING_CODE_ACCESS_NOTE
     assert len(contract.CHECKPOINT_DELIVERY_PATHS_TRIED) == 4
+
+
+def test_a_concrete_export_request_is_recorded():
+    """A named prerequisite beats a general claim of impossibility."""
+    asks = contract.AUTOE2E_EXPORT_NEEDED
+    assert len(asks) == 3
+    assert any("training-code revision" in a for a in asks)
+    assert any("digest" in a for a in asks)
 
 
 # -- real-checkpoint compatibility probe -----------------------------------
@@ -261,8 +277,10 @@ class _T:
 
 
 def test_probe_reports_shape_disagreement_under_matching_names():
-    """The failure this exists to catch: every name agrees, so a permissive
-    load looks successful while tensors keep their initial values."""
+    """The failure this exists to catch: every NAME agrees, so any check
+    that compares key sets - or reads only missing/unexpected keys back from
+    load_state_dict - sees a clean match. torch itself raises on the size
+    mismatch; a name-only comparison in our own code would not."""
     ck = {"a.w": _T(256, 896), "a.b": _T(256)}
     model = {"a.w": _T(896, 896), "a.b": _T(896)}
     r = probe_state_dicts(ck, model)

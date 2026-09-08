@@ -270,8 +270,24 @@ class RegisteredCheckpoint:
 
 #: Version 63, the current final checkpoint. Metadata and config.yaml are
 #: publicly retrievable; the .pt is not (see below).
-V63_TRAINING_CODE_REVISION = "6fde0034446669e2ed7235e4c7fe323cd23d599d"
-V63_TRAINING_CODE_PUBLISHED = False   # not an object in the public repo
+#: CORRECTION. I previously called this the training-code revision. It is
+#: not. It appears only at `training.validation_split.source_revision` and
+#: `validation.source_revision`, so it is the provenance of the VALIDATION
+#: SPLIT MANIFEST, not of the model code. It being absent from the public
+#: repo says nothing about the training code.
+V63_VALIDATION_SPLIT_SOURCE_REVISION = "6fde0034446669e2ed7235e4c7fe323cd23d599d"
+
+#: What the runs actually record about their code, checked exhaustively on
+#: both the v35 and v63 runs: NOTHING resolvable. `mlflow.source.type` is
+#: LOCAL and `mlflow.source.name` is /opt/conda/bin/pyflyte-execute; there is
+#: no mlflow.source.git.commit, and a regex for any 40-hex string across both
+#: complete run records returns zero matches. The only code identity recorded
+#: anywhere is a MUTABLE Docker tag.
+TRAINING_CODE_REVISION_RECORDED = False
+TRAINING_IMAGE = "381491877296.dkr.ecr.us-west-2.amazonaws.com/auto-e2e/training:latest"
+EVAL_IMAGE = "381491877296.dkr.ecr.us-west-2.amazonaws.com/auto-e2e/eval:latest"
+#: Private registry: anonymous /v2/ and manifest requests both return 401.
+TRAINING_IMAGE_PULLABLE = False
 V63_NAVIGATION_GEOMETRY_ID = "kitscenes-v3-bev-1m-v1"
 V63_BEV_PC_RANGE = (-85.5, -128.0, -5.0, 170.5, 128.0, 3.0)
 V63_DATASET = "KIT-MRT/KITScenes-Multimodal"
@@ -346,15 +362,32 @@ CHECKPOINT_ACCESS_NOTE = (
 #: A second, independent prerequisite that survives even if the weights
 #: arrive: the checkpoint was produced by code that is not published.
 TRAINING_CODE_ACCESS_NOTE = (
-    "The run records source_revision "
-    "6fde0034446669e2ed7235e4c7fe323cd23d599d, which is not an object in the "
-    "public auto_e2e repository (git cat-file: bad object). The published "
-    "HEAD is therefore NOT the code that trained the registered checkpoint. "
-    "Loading weights with a differently-shaped or differently-behaved "
-    "published model is exactly the failure mode that returns plausible "
-    "numbers, so a qualified run needs the training revision published or "
-    "the checkpoint's own config honoured strictly - which is why this "
-    "adapter derives every shape from the config rather than from source."
+    "The published HEAD is not the code that trained the registered "
+    "checkpoints - established by LOADING v35 and observing a renamed "
+    "encoder, a module with no weights, a deleted pair and eight shape "
+    "disagreements under identical names, NOT by inferring it from a "
+    "revision string. The runs record no code revision at all: source type "
+    "LOCAL, no git commit tag, no 40-hex identifier anywhere in either run "
+    "record. Code identity exists only as the mutable tag "
+    "auto-e2e/training:latest in a private ECR registry that returns 401 "
+    "anonymously, and the public repository is a single squashed commit, so "
+    "there is no historical revision to check out either."
+)
+
+#: The precise export that would unblock this, stated so it can be requested
+#: rather than restated as a general impossibility. Any ONE of these closes
+#: it; nothing else is needed.
+AUTOE2E_EXPORT_NEEDED = (
+    "1. The training-code revision that produced a registered checkpoint - "
+    "either pushed to the public repository or supplied as a source archive "
+    "- identified by the immutable digest of "
+    "auto-e2e/training:latest rather than the tag.",
+    "2. OR an authorized read of the ECR image by digest, from which the "
+    "installed training package can be read directly.",
+    "3. OR an authorized export of a v36+ checkpoint (checkpoints bucket, "
+    "currently 403/500) TOGETHER with confirmation that it was trained by "
+    "the published HEAD - v63's own config differs from HEAD in navigation "
+    "raster width, so this needs confirming rather than assuming.",
 )
 
 

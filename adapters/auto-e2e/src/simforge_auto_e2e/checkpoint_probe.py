@@ -30,9 +30,14 @@ they need different answers:
    remappable: there is nothing to load.
 3. A DELETED pair. The checkpoint's `TrajectoryPlanner.ego_state_proj` and
    `.bev_proj` have no published counterpart.
-4. REWIRED shapes. Eight tensors share a name and disagree on shape - the
-   dangerous class, because `strict=False` reports no name problem and only
-   a shape check catches it. Seven are the planner. The eighth is the
+4. REWIRED shapes. Eight tensors share a name and disagree on shape.
+   CORRECTION to an earlier note of mine: `load_state_dict(strict=False)`
+   does NOT silently ignore these - it raises RuntimeError on a size
+   mismatch just as strict=True does. The real hazard is narrower and worth
+   stating precisely: code that inspects only the returned
+   missing_keys/unexpected_keys, or that compares key sets itself, sees
+   perfect agreement. This probe therefore compares shapes as well as
+   names. Seven are the planner. The eighth is the
    navigation raster's input width: the checkpoint's map backbone takes a
    3-channel raster, the published code expects 5, and v63's config records
    14. Three different widths for the same input, which is exactly why this
