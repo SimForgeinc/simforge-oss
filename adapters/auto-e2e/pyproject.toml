@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "simforge-auto-e2e"
+version = "0.1.0"
+description = "SimForge adapter for the Autoware AutoE2E end-to-end driving model."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+
+# torch and the upstream auto_e2e package come from the family's own isolated
+# environment, exactly as for the Alpamayo families. Upstream pins its own
+# requirements.txt at the pinned commit; nothing is resolved across families.
+dependencies = ["numpy>=1.24"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/simforge_auto_e2e"]
