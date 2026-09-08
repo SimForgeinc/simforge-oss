@@ -469,6 +469,24 @@ describe('drivable-area classification (road-boundary geometry, off-road v3)', (
     expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
   });
 
+  it('keeps a KNOWN excursion an excursion even when another corner is unknown', () => {
+    // Straddling the cut at x = 100: the front corners are past the labelled extent, the rear
+    // corners are decidedly below the y = 0 edge. The car is off the road and we know it, so
+    // unavailability of the unrelated corners must not launder that into "no data".
+    const result = footprintContainment(area, { x: 99.5, y: -2, headingRad: 0, lengthM: 4, widthM: 2 });
+    expect(result.unavailable).toBe(false);
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBeGreaterThan(0);
+    expect(result.worstOutsideM).toBeGreaterThan(0);
+  });
+
+  it('reports unavailable only when nothing was decided against the vehicle', () => {
+    // On the road at the near corners, past the cut at the far ones: genuinely ambiguous.
+    const ambiguous = footprintContainment(area, { x: 99.5, y: 5, headingRad: 0, lengthM: 4, widthM: 2 });
+    expect(ambiguous.unavailable).toBe(true);
+    expect(ambiguous.cornersOutside).toBe(0);
+  });
+
   it('distinguishes assessed-and-clean from nothing-assessed', () => {
     const clean = scoreOffRoad(area, [{ tUs: 0, x: 20, y: 2, headingRad: 0 }], car);
     expect(clean.worstOutsideM).toBe(0);

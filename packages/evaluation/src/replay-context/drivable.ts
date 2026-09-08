@@ -240,23 +240,30 @@ export interface ContainmentResult {
  * two wheels over the kerb has left the road, and requiring all four corners out would only
  * report the cases nobody needed a metric to notice.
  *
- * Unavailability wins over off-road. If any corner lands where labelling stopped, the sample is
- * unknown rather than an excursion: with part of the box unlabelled we cannot tell a kerb strike
- * from the end of the annotated extent, and guessing would manufacture the finding.
+ * Unavailability does NOT erase a determination. If some corner is *known* to be off the road,
+ * the footprint left the road and the sample is an excursion — another corner falling past the
+ * labelled extent adds no doubt about the corner that was decided. Unknown only wins when
+ * nothing was decided against the vehicle: no corner off-road, at least one undecidable. That
+ * ordering keeps unavailability from laundering a real excursion into "no data", while still
+ * refusing to invent one.
  */
 export function footprintContainment(area: DrivableArea, footprint: Footprint): ContainmentResult {
   let outside = 0;
   let worst = 0;
+  let unknown = false;
   for (const [x, y] of footprintCorners(footprint)) {
     const classification = classifyPoint(area, x, y);
     if (classification.verdict === 'unavailable') {
-      return { inside: false, unavailable: true, cornersOutside: 0, worstOutsideM: 0 };
+      unknown = true;
+      continue;
     }
     if (classification.verdict === 'drivable') continue;
     outside += 1;
     worst = Math.max(worst, classification.distanceM);
   }
-  return { inside: outside === 0, unavailable: false, cornersOutside: outside, worstOutsideM: worst };
+  if (outside > 0) return { inside: false, unavailable: false, cornersOutside: outside, worstOutsideM: worst };
+  if (unknown) return { inside: false, unavailable: true, cornersOutside: 0, worstOutsideM: 0 };
+  return { inside: true, unavailable: false, cornersOutside: 0, worstOutsideM: 0 };
 }
 
 export interface OffRoadEvent {

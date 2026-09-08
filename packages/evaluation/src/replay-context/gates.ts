@@ -319,6 +319,12 @@ export interface StockReplayMeasurement {
  * This is the precondition for any model episode on the scene: it proves the
  * sim/executor/scoring chain on this specific world before a policy is allowed to be blamed
  * for anything.
+ *
+ * G5 is composite, but a verdict carries one `measured`/`threshold` pair — the deviation. A
+ * reader seeing `passed: false` next to a deviation that is *inside* its bound would reasonably
+ * conclude the deviation failed, so every failing criterion is named in `failureReasons`. The
+ * deviation numbers are never restated against a different window: `measured` is the settled
+ * statistic the threshold is defined for, and the unsettled pair travels beside it.
  */
 export function gateG5(
   measurement: StockReplayMeasurement,
@@ -334,16 +340,30 @@ export function gateG5(
     ...(measurement.traceRef === undefined ? {} : { traceRef: measurement.traceRef }),
   });
   const unavailable = measurement.unavailableCategories ?? [];
+  const failureReasons: string[] = [];
+  if (!base.passed) {
+    failureReasons.push(`max lateral deviation ${measurement.maxLateralM} m exceeds ${thresholds.stockReplayMaxLateralM} m`);
+  }
+  if (measurement.p95LateralM > thresholds.stockReplayP95LateralM) {
+    failureReasons.push(`p95 lateral deviation ${measurement.p95LateralM} m exceeds ${thresholds.stockReplayP95LateralM} m`);
+  }
+  if (measurement.infractions !== 0) {
+    failureReasons.push(`${measurement.infractions} infraction(s) recorded`);
+  }
+  for (const entry of unavailable) {
+    // Unavailable is not zero, and it is not a deviation failure either.
+    failureReasons.push(`${entry.category} could not be evaluated: ${entry.missingArtifact}`);
+  }
+  if (measurement.stepsCompared <= 0) failureReasons.push('no steps were compared');
   return {
     ...base,
-    detail: { ...base.detail, ...(unavailable.length === 0 ? {} : { unavailableCategories: unavailable }) },
-    passed:
-      base.passed
-      && measurement.p95LateralM <= thresholds.stockReplayP95LateralM
-      && measurement.infractions === 0
-      // A category nobody could evaluate cannot be counted as clean.
-      && unavailable.length === 0
-      && measurement.stepsCompared > 0,
+    detail: {
+      ...base.detail,
+      ...(unavailable.length === 0 ? {} : { unavailableCategories: unavailable }),
+      // Present even when empty on a pass, so absence never has to be interpreted.
+      failureReasons,
+    },
+    passed: failureReasons.length === 0,
   };
 }
 
