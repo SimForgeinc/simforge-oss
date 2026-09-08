@@ -46,8 +46,12 @@ export interface ManualDriveTakeRequest {
   readonly clipSeconds: number;
   /** Opaque editor guard. Echo it back unchanged with the recording. */
   readonly revision: string;
-  /** The exact in-memory document at open time. Recorders load this, not a server copy. */
-  readonly content: ScenarioTemplateV2;
+  /**
+   * The exact in-memory document at open time. Recorders load this, not a
+   * server copy. Absent only in the stored record after the recorder consumed
+   * it to make room for a large result; a live session always carries it.
+   */
+  readonly content?: ScenarioTemplateV2;
   /** Where a same-tab recorder returns to when it finishes. */
   readonly returnHref: string;
   readonly openedAt: number;
@@ -59,9 +63,15 @@ export type ManualDriveTakeResult =
 
 /** What the Drive page receives: the request plus the two ways a take ends. */
 export interface ManualDriveTakeSession extends ManualDriveTakeRequest {
-  /** Deliver the finished take. Resolves once the editor can see it; the tab then closes or returns. */
+  readonly content: ScenarioTemplateV2;
+  /**
+   * Deliver the finished take. Resolves once the editor can see it; the tab
+   * then closes or returns. Rejects with `ManualDriveTakeDeliveryError` when the
+   * browser refuses to store it; the session stays open and the same take may
+   * be saved again after the operator frees storage.
+   */
   onSave(recording: ManualDriveRecording, revision: string): Promise<void>;
-  /** Abandon the take. Nothing is written to the document. */
+  /** Abandon the take. Nothing is written to the document. Throws like `onSave` if delivery fails. */
   onCancel(): void;
 }
 
@@ -122,7 +132,7 @@ export function manualDriveTakeHref(takeId: string): string {
  * Returns the href to open; the caller decides between a new tab and same-tab.
  */
 export function openManualDriveTake(
-  request: Omit<ManualDriveTakeRequest, "takeId" | "openedAt">,
+  request: Omit<ManualDriveTakeRequest, "takeId" | "openedAt" | "content"> & { readonly content: ScenarioTemplateV2 },
 ): { readonly takeId: string; readonly href: string } | { readonly error: string } {
   const store = storage();
   if (!store) return { error: "This browser does not allow the editor to hand a take to the recorder (localStorage is unavailable)." };
@@ -153,10 +163,53 @@ export function readManualDriveTakeResult(takeId: string): ManualDriveTakeResult
   return readJson<ManualDriveTakeResult>(resultKey(takeId));
 }
 
-export function writeManualDriveTakeResult(takeId: string, result: ManualDriveTakeResult): void {
+/** Thrown when a take could not be handed back; the recorder must keep the take and let the operator retry. */
+export class ManualDriveTakeDeliveryError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = "ManualDriveTakeDeliveryError";
+  }
+}
+
+/**
+ * Hand a finished take back to the editor.
+ *
+ * A full-length take (up to the schema's sample budget) plus the document the
+ * request carried can exceed the origin's storage quota. The request's
+ * `content` is only needed to *start* the recorder, so on a refused write it is
+ * dropped and the result is written again once; the editor keeps the guard in
+ * the result's `revision` and needs nothing else from the request. A write that
+ * still fails throws, and the take is untouched: nothing has been discarded and
+ * nothing pretends to be saved.
+ */
+export function deliverManualDriveTakeResult(takeId: string, result: ManualDriveTakeResult): void {
   const store = storage();
-  if (!store) throw new Error("localStorage is unavailable; the take cannot be returned to the editor");
-  store.setItem(resultKey(takeId), JSON.stringify(result));
+  if (!store) throw new ManualDriveTakeDeliveryError("localStorage is unavailable; the take cannot be returned to the editor.");
+  const payload = JSON.stringify(result);
+  const key = resultKey(takeId);
+  try {
+    store.setItem(key, payload);
+    return;
+  } catch (first) {
+    const request = readManualDriveTakeRequest(takeId);
+    if (!request) {
+      throw new ManualDriveTakeDeliveryError(`The take could not be returned to the editor: ${describe(first)}`, first);
+    }
+    const { content: _consumed, ...slim } = request;
+    try {
+      store.setItem(requestKey(takeId), JSON.stringify(slim));
+      store.setItem(key, payload);
+    } catch (second) {
+      throw new ManualDriveTakeDeliveryError(
+        `The take could not be returned to the editor because this browser's storage is full (${describe(second)}). Free storage for this site, then save again; the take is still here.`,
+        second,
+      );
+    }
+  }
+}
+
+function describe(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
 }
 
 /** The take a document is waiting on, if any. */
@@ -208,8 +261,9 @@ function leaveRecorder(request: ManualDriveTakeRequest): void {
 
 /**
  * The Drive page's view of a take: `null` when the page was not opened for one
- * or the request has expired. Callbacks deliver exactly once; a second call
- * after the take ended is a no-op.
+ * or the request has expired. Callbacks deliver exactly once *on success*: a
+ * delivery the browser refuses leaves the session open so the same take can be
+ * saved again, and `onSave` rejects with the reason to show the operator.
  */
 export function useManualDriveTakeSession(takeId: string | null): ManualDriveTakeSession | null {
   const [request, setRequest] = useState<ManualDriveTakeRequest | null>(null);
@@ -217,20 +271,20 @@ export function useManualDriveTakeSession(takeId: string | null): ManualDriveTak
     setRequest(takeId ? readManualDriveTakeRequest(takeId) : null);
   }, [takeId]);
   return useMemo(() => {
-    if (!request) return null;
+    if (!request || !request.content) return null;
     let finished = false;
     return {
       ...request,
       async onSave(recording, revision) {
         if (finished) return;
+        deliverManualDriveTakeResult(request.takeId, { kind: "saved", recording, revision, finishedAt: Date.now() });
         finished = true;
-        writeManualDriveTakeResult(request.takeId, { kind: "saved", recording, revision, finishedAt: Date.now() });
         leaveRecorder(request);
       },
       onCancel() {
         if (finished) return;
+        deliverManualDriveTakeResult(request.takeId, { kind: "cancelled", finishedAt: Date.now() });
         finished = true;
-        writeManualDriveTakeResult(request.takeId, { kind: "cancelled", finishedAt: Date.now() });
         leaveRecorder(request);
       },
     };
