@@ -11,10 +11,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EvaluationWorkspace } from "@simforge-oss/studio-ui/evaluation";
-import { RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
+import { EvaluationWorkspace, RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
+import type { LocalRunLauncher } from "@simforge-oss/studio-ui/evaluation";
 import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
 import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
+import { LocalRunUnavailable, startLocalRun } from "@/app/lib/host/local-runs";
 
 type CloudWorkspace = { id: string; name: string; role: string };
 
@@ -49,6 +50,34 @@ export function CloudRunsClient() {
     return () => controller.abort();
   }, []);
 
+  /**
+   * Start the run on this machine. Local execution is a real path, not a label:
+   * the inputs are staged on disk, the local model-run queue leases the run, and
+   * the worker writes the same result manifest a cloud run produces.
+   */
+  const runLocally = useCallback<LocalRunLauncher>(
+    async ({ selection, prepared, params }) => {
+      try {
+        const started = await startLocalRun({
+          family: selection.family,
+          quant: selection.quant,
+          files: prepared.sourceFiles,
+          params,
+          seed: typeof params.seed === "number" ? params.seed : 0,
+        });
+        setError(null);
+        router.push(`/dashboard/evaluation/local/${started.runId}`);
+      } catch (cause) {
+        setError(
+          cause instanceof LocalRunUnavailable
+            ? cause.message
+            : `The local run could not be started: ${cause instanceof Error ? cause.message : String(cause)}`,
+        );
+      }
+    },
+    [router],
+  );
+
   const openJob = useCallback(
     (jobId: string) => router.push(`/dashboard/evaluation/runs/${jobId}`),
     [router],
@@ -77,7 +106,13 @@ export function CloudRunsClient() {
         </div>
       ) : null}
 
-      <EvaluationWorkspace gateway={gateway} host={host} runtime={null} onOpenJob={openJob} />
+      <EvaluationWorkspace
+        gateway={gateway}
+        host={host}
+        runtime={null}
+        onOpenJob={openJob}
+        onRunLocally={runLocally}
+      />
     </div>
   );
 }

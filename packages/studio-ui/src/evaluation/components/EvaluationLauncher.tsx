@@ -264,11 +264,16 @@ export function EvaluationLauncher({
   const paramsRefusal =
     (kind === "alpamayo.text" ? pathShapedRefusal("Your question", prompt) : null) ??
     pathShapedRefusal("The navigation instruction", navText);
+  const localUnavailable =
+    selection.target === "local" && onRunLocally === undefined
+      ? "This host cannot start local runs. Choose cloud execution, or run this from the desktop app."
+      : null;
   const canSubmit =
     prepared !== null &&
     submissionInput !== null &&
     blockedReason === null &&
     paramsRefusal === null &&
+    localUnavailable === null &&
     textReady &&
     !submitting &&
     (selection.target === "local"
@@ -293,6 +298,7 @@ export function EvaluationLauncher({
             setEstimate(null);
           }}
           disabled={submitting}
+          execution={selection.target}
         />
       </section>
 
@@ -489,6 +495,10 @@ export function EvaluationLauncher({
             </p>
           )}
         </section>
+      ) : null}
+
+      {localUnavailable ? (
+        <RefusalNotice title="Local execution is not available here" reasons={[localUnavailable]} />
       ) : null}
 
       {paramsRefusal ? (
