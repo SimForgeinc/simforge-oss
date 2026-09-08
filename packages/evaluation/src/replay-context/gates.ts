@@ -291,7 +291,14 @@ export interface StockReplayMeasurement {
   /** Measured AFTER `stockReplaySettleS`; see that field for why. */
   readonly maxLateralM: number;
   readonly p95LateralM: number;
+  /**
+   * How many infractions were recorded. A bare count cannot say *what* failed, and on a scene
+   * where one artifact has already masqueraded under two names it must: pass
+   * {@link infractionCategories} so the verdict names them.
+   */
   readonly infractions: number;
+  /** The non-zero infraction categories behind that count, so the reason is legible. */
+  readonly infractionCategories?: readonly { readonly category: string; readonly count: number }[];
   readonly stepsCompared: number;
   /**
    * Infraction categories that could NOT be evaluated because the scene lacks an authoritative
@@ -334,6 +341,7 @@ export function gateG5(
     p95LateralM: measurement.p95LateralM,
     p95ThresholdM: thresholds.stockReplayP95LateralM,
     infractions: measurement.infractions,
+    ...(measurement.infractionCategories === undefined ? {} : { infractionCategories: measurement.infractionCategories }),
     stepsCompared: measurement.stepsCompared,
     settleS: measurement.settleS ?? thresholds.stockReplaySettleS,
     ...(measurement.unsettled === undefined ? {} : { withoutSettleWindow: measurement.unsettled }),
@@ -348,7 +356,11 @@ export function gateG5(
     failureReasons.push(`p95 lateral deviation ${measurement.p95LateralM} m exceeds ${thresholds.stockReplayP95LateralM} m`);
   }
   if (measurement.infractions !== 0) {
-    failureReasons.push(`${measurement.infractions} infraction(s) recorded`);
+    const named = (measurement.infractionCategories ?? []).filter((entry) => entry.count > 0);
+    const detail = named.length === 0
+      ? ''
+      : `: ${named.map((entry) => (entry.count === 1 ? entry.category : `${entry.category} x${entry.count}`)).join(', ')}`;
+    failureReasons.push(`${measurement.infractions} infraction(s) recorded${detail}`);
   }
   for (const entry of unavailable) {
     // Unavailable is not zero, and it is not a deviation failure either.

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
-import { gateG2 } from '../gates.js';
+import { gateG2, gateG5 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
@@ -498,5 +498,46 @@ describe('drivable-area classification (road-boundary geometry, off-road v3)', (
   it('refuses geometry that declares a kind it does not carry', () => {
     const parsed = DrivableAreaSchema.safeParse({ ...area, boundaries: [] });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe('G5 states why it failed', () => {
+  // The values recorded for clipgt-0009402a. Both deviation criteria are inside their bounds.
+  const measurement = {
+    maxLateralM: 0.3468,
+    p95LateralM: 0.0973,
+    infractions: 1,
+    infractionCategories: [{ category: 'lane-departure', count: 1 }],
+    stepsCompared: 190,
+    settleS: 1,
+    unsettled: { maxLateralM: 0.6845, p95LateralM: 0.1175 },
+    unavailableCategories: [{ category: 'speeding', missingArtifact: 'authoritative posted speed limits' }],
+  };
+
+  it('never blames deviation when the settled statistic is inside its bound', () => {
+    const verdict = gateG5(measurement);
+    const reasons = (verdict.detail as { failureReasons: string[] }).failureReasons;
+    expect(verdict.passed).toBe(false);
+    // The unsettled 0.6845 m is recorded but is not the statistic the threshold is defined for.
+    expect(reasons.some((reason) => /deviation/i.test(reason))).toBe(false);
+    expect((verdict.detail as { withoutSettleWindow: unknown }).withoutSettleWindow).toEqual(measurement.unsettled);
+  });
+
+  it('names the infraction category rather than reporting a bare count', () => {
+    const reasons = (gateG5(measurement).detail as { failureReasons: string[] }).failureReasons;
+    expect(reasons[0]).toBe('1 infraction(s) recorded: lane-departure');
+    expect(reasons.some((reason) => reason.startsWith('speeding could not be evaluated'))).toBe(true);
+  });
+
+  it('does blame deviation when the settled statistic actually exceeds its bound', () => {
+    const reasons = (gateG5({ ...measurement, maxLateralM: 0.51, infractions: 0, infractionCategories: [], unavailableCategories: [] })
+      .detail as { failureReasons: string[] }).failureReasons;
+    expect(reasons).toEqual(['max lateral deviation 0.51 m exceeds 0.35 m']);
+  });
+
+  it('passes with an empty reason list when every criterion is met', () => {
+    const verdict = gateG5({ ...measurement, infractions: 0, infractionCategories: [], unavailableCategories: [] });
+    expect(verdict.passed).toBe(true);
+    expect((verdict.detail as { failureReasons: string[] }).failureReasons).toEqual([]);
   });
 });
