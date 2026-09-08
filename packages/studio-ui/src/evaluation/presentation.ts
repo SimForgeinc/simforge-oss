@@ -113,8 +113,10 @@ export type HostExecutionSnapshot = {
    * Readiness is per KIND, not per family: a worker serving open-loop
    * inference does not serve closed-loop episodes, which need the policy
    * socket and a renderer in the same image. Null `kinds` means the
-   * deployment did not say - the offer is then made and the backend remains
-   * the authority, which is better than hiding a model on a guess.
+   * deployment did not say, which is NOT the same as ready - the target is
+   * offered disabled with that reason, because inviting a launch the control
+   * plane is already known not to serve is worse than saying so. The model
+   * itself stays visible either way.
    */
   cloud: {
     connected: boolean;
@@ -220,13 +222,23 @@ export function executionOffers(
         "Sign in to a SimCloud workspace to run in the cloud. Cloud runs do not require downloading the weights.",
     );
   }
+  // Readiness is per kind. Unknown is NOT ready: offering a target the
+  // deployment has not said it can serve invites a launch that is already
+  // known to be unqualified. The model stays visible with the reason on it, so
+  // the choice is explained rather than hidden.
   const servedKinds = host.cloud.kinds?.[entry.family] ?? null;
-  if (kind !== null && servedKinds !== null && !servedKinds.includes(kind)) {
-    cloudReasons.push(
-      servedKinds.length === 0
-        ? `No cloud service in this deployment runs ${entry.displayName}.`
-        : `This deployment's ${entry.displayName} service does not run ${kind}. It serves ${servedKinds.join(", ")}.`,
-    );
+  if (kind !== null) {
+    if (servedKinds === null) {
+      cloudReasons.push(
+        `This deployment has not reported which jobs its ${entry.displayName} service runs, so ${kind} cannot be offered here — required execution capability not reported.`,
+      );
+    } else if (!servedKinds.includes(kind)) {
+      cloudReasons.push(
+        servedKinds.length === 0
+          ? `No cloud service in this deployment runs ${entry.displayName}.`
+          : `This deployment's ${entry.displayName} service does not run ${kind}. It serves ${servedKinds.join(", ")}.`,
+      );
+    }
   }
 
   return [

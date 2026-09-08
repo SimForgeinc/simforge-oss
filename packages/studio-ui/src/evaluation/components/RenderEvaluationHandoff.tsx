@@ -204,7 +204,17 @@ export function RenderEvaluationHandoff({
               ["Scenario", `${provenance.scenarioDocumentId} · ${provenance.scenarioContentSha256.slice(0, 16)}`],
               ["Render job", provenance.renderJobId],
               ["Rig", provenance.rigPresetId ?? "authored rig"],
-              ["Camera slots", provenance.cameraSlots.join(", ")],
+              [
+                "Capture identity",
+                provenance.captureVersion
+                  ?? "not supplied by the producer — the rig name is not an identity",
+              ],
+              [
+                "Camera slots",
+                provenance.renderedNotConsumed.length > 0
+                  ? `${provenance.cameraSlots.join(", ")} consumed · ${provenance.renderedNotConsumed.join(", ")} rendered but not consumed`
+                  : provenance.cameraSlots.join(", "),
+              ],
               ["Render manifest", provenance.renderManifestArtifactId],
               ["Behaviour trace", provenance.traceArtifactId],
               ["Camera videos", provenance.cameraVideoArtifactIds.join(", ")],

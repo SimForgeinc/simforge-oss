@@ -63,6 +63,22 @@ export type RenderedCamera = {
 /** What a completed native render offers an evaluation. */
 export type RenderHandoffSource = {
   renderJobId: string;
+  /**
+   * Identity of what was ACTUALLY captured, supplied by the producer.
+   *
+   * Deliberately data rather than something computed here. It must hash the
+   * sensors the render really used - post-edit mounts, the FOV actually
+   * rendered, the dimensions used - and the camera subset the model consumed,
+   * because an author who widens one camera's FOV while the rig id stays
+   * `alpamayo-4cam` has produced a different capture. Two things it must NOT
+   * be: the unedited preset's digest, which is a recommendation and not an
+   * identity, and the render's `rigRevision`, which is a monotonic
+   * per-session counter and cannot identify a capture across runs or machines.
+   *
+   * Null when the producer did not supply one; the panel then says so instead
+   * of showing a rig name as though it were an identity.
+   */
+  captureVersion: string | null;
   /** The scenario document and the content hash the render froze. */
   scenarioDocumentId: string;
   scenarioContentSha256: string;
@@ -173,6 +189,8 @@ export type RenderClipIngestResult = {
    * clip is usable but carries a timing error that belongs on screen, because
    * it lands in the metric with nothing else to attribute it to.
    */
+  /** Slots present in the capture that this model did not consume. */
+  renderedNotConsumed?: readonly number[];
   timeBase?: {
     renderFps: number;
     modelHz: number;
@@ -187,7 +205,10 @@ export type RenderEvaluationProvenance = {
   scenarioContentSha256: string;
   renderJobId: string;
   rigPresetId: string | null;
+  captureVersion: string | null;
   cameraSlots: readonly number[];
+  /** Slots rendered but not consumed by this model, from the converter. */
+  renderedNotConsumed: readonly number[];
   renderManifestArtifactId: string;
   traceArtifactId: string;
   cameraVideoArtifactIds: readonly string[];
@@ -317,7 +338,9 @@ export async function runRenderHandoff(
       scenarioContentSha256: plan.source.scenarioContentSha256,
       renderJobId: plan.source.renderJobId,
       rigPresetId: plan.source.rigPresetId,
+      captureVersion: plan.source.captureVersion,
       cameraSlots: plan.check.slots,
+      renderedNotConsumed: bundle.renderedNotConsumed ?? [],
       renderManifestArtifactId: plan.source.manifestArtifactId,
       traceArtifactId: plan.source.traceArtifactId,
       cameraVideoArtifactIds,

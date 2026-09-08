@@ -62,9 +62,12 @@ export function ModelPicker({
    *
    * Cloud readiness is per kind: a worker serving open-loop inference does not
    * serve closed-loop episodes, which need the policy socket and a renderer in
-   * the same image. Given, the cloud target is offered only where the
-   * deployment says it runs this kind for this family - so the picker stops
-   * offering a target the control plane would then refuse.
+   * the same image. Given, the cloud target is READY only where the deployment
+   * says it runs this kind for this family. A deployment that has not reported
+   * its kinds is unknown, and unknown is not ready - the target renders
+   * disabled with that reason and the model stays visible, because a friendly
+   * picker explains a gap rather than hiding the model or inviting a launch
+   * that is already known to be unqualified.
    */
   kind?: ComputeJobKind | null;
 }) {
