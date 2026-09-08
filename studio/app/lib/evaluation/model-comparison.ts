@@ -14,12 +14,14 @@
  * word "better".
  *
  * - `matched` — same scenario INPUT DIGEST, same seed and policy seed, same rig
- *   (profile id AND its version/hash AND resolution, intrinsics, extrinsics,
+ *   (the family-free capture version AND resolution, intrinsics, extrinsics,
  *   cadence and history depth), same quant and checkpoint digest, same runtime.
  *   Camera ids alone are NOT sufficient: two rigs can feed slots [0,1,2,6] at
  *   different resolutions or with different extrinsics and produce different
  *   observations.
- * - `sensor-different` — same scenario and seed, different rig. Metrics are
+ * - `sensor-different` — same scenario and seed, genuinely different rig or
+ *   camera set. NOT two models whose requirement versions differ over one
+ *   identical capture; that is the comparison this page exists to make. Metrics are
  *   still shown, badged, because "A scored 0.71 with four cameras and B scored
  *   0.64 with two" is worth reading; it is not a ranking.
  * - `runtime-different` — same rig, different quant, checkpoint digest, engine
@@ -39,22 +41,27 @@ export type ComparisonRig = {
   /** Human-facing preset name, e.g. `alpamayo-4cam`. */
   readonly profile: string | null;
   /**
-   * `modelRigProfileVersion(family)` from '@simforge-oss/engine', shaped
-   * `family@12hex`: a digest over the model's camera order and input cadence
-   * TOGETHER with the rig's resolved sensor geometry. Equal implies an
-   * identical rig; unequal is at least sensor-different even when the profile
-   * NAME matches, which is the cheap exact test the long field list below
-   * cannot give on its own.
+   * `captureProfileVersion(rigId)` from '@simforge-oss/engine', shaped
+   * `rigId@12hex` (e.g. `alpamayo-4cam@5d56b3d837c8`): a digest over what was
+   * physically recorded — rig id, camera ids, sensor geometry, render size,
+   * cadence, frames per camera, history window, coordinate frame. NO family.
    *
-   * READ AT RUNTIME, never pinned as a literal. The digest's input changed when
-   * the helper moved into the engine (JSON.stringify insertion order ->
-   * canonicalJson sorted keys), so any value quoted before that move is dead.
-   * Nothing here stores an expected value: the field is compared between two
-   * runs, so a scheme change degrades a pair to not-comparable rather than to a
-   * false match — which is the direction that cannot produce a wrong ranking.
+   * This is the field that decides whether two runs saw the same world, and it
+   * is deliberately NOT `modelRigProfileVersion(family)`. That value is
+   * family-prefixed (`alpamayo-1@...` vs `alpamayo-1.5@...`) and digests the
+   * model's REQUIREMENTS, so two models driven through an identical 4-camera
+   * capture carry different requirement versions while having seen exactly the
+   * same pixels. Comparing on it would make every cross-family comparison
+   * sensor-different — which is the one comparison a model comparison exists to
+   * make. The requirement version is carried separately, as metadata, on
+   * `ComparisonIdentity.modelRequirementVersion`.
+   *
+   * Not derived here by stripping the family prefix: a prefix strip would leave
+   * a digest whose input still included the family's requirements, so equal
+   * captures would still read unequal. The engine emits this hash over the
+   * resolved capture alone.
    */
-  readonly profileVersion: string | null;
-  readonly profileSha256: string | null;
+  readonly captureVersion: string | null;
   /** Model camera slots actually fed, sorted. */
   readonly cameraIds: readonly number[];
   readonly resolution: { readonly width: number | null; readonly height: number | null };
@@ -105,6 +112,21 @@ export type ComparisonIdentity = {
   readonly quant: string | null;
   readonly checkpointDigest: string | null;
   readonly rig: ComparisonRig;
+  /**
+   * `modelRigProfileVersion(family)` from '@simforge-oss/engine', shaped
+   * `family@12hex`: a digest over what the MODEL requires of a capture, not
+   * over the capture itself. Family-prefixed, so two models never share one.
+   *
+   * Carried here, beside the model's own identity, because that is what it
+   * describes. It is reported as metadata and never as a sensor difference:
+   * Alpamayo 1 and 1.5 driven through one identical 4-camera capture must read
+   * as matched, and they carry different requirement versions while doing so.
+   *
+   * Read at runtime, never pinned: the digest's input changed when the helper
+   * moved into the engine (JSON.stringify insertion order -> canonicalJson
+   * sorted keys), so any value quoted before that move is dead.
+   */
+  readonly modelRequirementVersion: string | null;
   readonly runtime: ComparisonRuntime;
   readonly policySeed: number | null;
 };
@@ -160,6 +182,13 @@ export type ComparabilityDetail = {
   readonly verdict: ComparabilityVerdict;
   /** Identity fields that differ, named for display. Empty for `matched`. */
   readonly differing: readonly string[];
+  /**
+   * Fields that differ WITHOUT meaning the runs are not comparable: the rig
+   * preset name and the model's family-prefixed requirement version. Shown so a
+   * reader is not surprised by them, kept out of `differing` so they cannot
+   * turn a model comparison into a sensor difference.
+   */
+  readonly metadata: readonly string[];
 };
 
 const sameIds = (a: readonly number[], b: readonly number[]): boolean =>
@@ -181,7 +210,9 @@ function missingIdentity(cell: ComparisonCellResult): string[] {
   if (cell.identity.checkpointDigest === null) missing.push('checkpointDigest');
   if (cell.identity.policySeed === null) missing.push('policySeed');
   const rig = cell.identity.rig;
-  if (rig.profileVersion === null) missing.push('rig.profileVersion');
+  if (rig.captureVersion === null) missing.push('rig.captureVersion');
+  if (rig.intrinsicsSha256 === null) missing.push('rig.intrinsics');
+  if (rig.extrinsicsSha256 === null) missing.push('rig.extrinsics');
   if (rig.cameraIds.length === 0) missing.push('rig.cameraIds');
   if (rig.resolution.width === null || rig.resolution.height === null) missing.push('rig.resolution');
   if (rig.cadenceHz === null) missing.push('rig.cadenceHz');
@@ -194,20 +225,29 @@ function missingIdentity(cell: ComparisonCellResult): string[] {
   return missing;
 }
 
-function rigDifferences(a: ComparisonRig, b: ComparisonRig): string[] {
+/**
+ * Sensor differences between two rigs, and separately the metadata that differs
+ * without meaning the runs saw different worlds.
+ *
+ * The split is the whole point of a MODEL comparison: two models fed one
+ * identical capture must read as matched, and they will differ in preset name
+ * and in their family-prefixed requirement version while doing so.
+ */
+function rigDifferences(a: ComparisonRig, b: ComparisonRig): { sensor: string[]; metadata: string[] } {
+  const metadata: string[] = [];
   // The profile version is a digest over camera order, input cadence and
   // resolved sensor geometry, so an inequality here settles it without needing
   // every field below to be present. The field-by-field list still runs, so a
   // reader is told WHICH part differs rather than only that something did.
   const differing: string[] =
-    a.profileVersion !== null && b.profileVersion !== null && a.profileVersion !== b.profileVersion
-      ? ['rig.profileVersion']
+    a.captureVersion !== null && b.captureVersion !== null && a.captureVersion !== b.captureVersion
+      ? ['rig.captureVersion']
       : [];
-  if ((a.profile ?? null) !== (b.profile ?? null)) differing.push('rig.profile');
-  if (!differing.includes('rig.profileVersion') && (a.profileVersion ?? null) !== (b.profileVersion ?? null)) {
-    differing.push('rig.profileVersion');
-  }
-  if ((a.profileSha256 ?? null) !== (b.profileSha256 ?? null)) differing.push('rig.profileSha256');
+  // The preset NAME is metadata, not evidence: two families name the same
+  // 4-camera capture differently, and the digest above already settles whether
+  // the capture was the same. Reported so a reader sees it, never on its own a
+  // sensor difference.
+  if ((a.profile ?? null) !== (b.profile ?? null)) metadata.push('rig.profile');
   if (!sameIds(a.cameraIds, b.cameraIds)) differing.push('rig.cameraIds');
   if (a.resolution.width !== b.resolution.width || a.resolution.height !== b.resolution.height) {
     differing.push('rig.resolution');
@@ -227,7 +267,7 @@ function rigDifferences(a: ComparisonRig, b: ComparisonRig): string[] {
   if ((a.worstResampleErrorS ?? null) !== (b.worstResampleErrorS ?? null)) {
     differing.push('rig.worstResampleErrorS');
   }
-  return differing;
+  return { sensor: differing, metadata };
 }
 
 /**
@@ -241,7 +281,7 @@ export function comparability(
   b: ComparisonCellResult | null,
 ): ComparabilityDetail {
   if (!a || !b || !a.episodeId || !b.episodeId) {
-    return { verdict: 'incomparable', differing: ['episode'] };
+    return { verdict: 'incomparable', differing: ['episode'], metadata: [] };
   }
   // The scenario INPUT, not its label: a re-authored fixture keeps its id.
   if (
@@ -249,17 +289,27 @@ export function comparability(
     b.scenarioInputDigest !== null &&
     a.scenarioInputDigest !== b.scenarioInputDigest
   ) {
-    return { verdict: 'incomparable', differing: ['scenarioInputDigest'] };
+    return { verdict: 'incomparable', differing: ['scenarioInputDigest'], metadata: [] };
   }
   // Absence before equality: a field neither side recorded cannot make them
   // alike, so an incomplete identity is reported as such rather than compared.
   const missing = [...new Set([...missingIdentity(a), ...missingIdentity(b)])].sort();
-  if (missing.length > 0) return { verdict: 'incomplete-identity', differing: missing };
+  if (missing.length > 0) return { verdict: 'incomplete-identity', differing: missing, metadata: [] };
   if ((a.identity.policySeed ?? null) !== (b.identity.policySeed ?? null)) {
-    return { verdict: 'runtime-different', differing: ['policySeed'] };
+    return { verdict: 'runtime-different', differing: ['policySeed'], metadata: [] };
   }
 
-  const sensor = rigDifferences(a.identity.rig, b.identity.rig);
+  const rig = rigDifferences(a.identity.rig, b.identity.rig);
+  // The family-prefixed requirement version and the preset name are METADATA:
+  // a model comparison is exactly the case where they legitimately differ while
+  // the capture is identical, so they are reported and never classified as a
+  // sensor difference.
+  const metadata = [...rig.metadata];
+  if (
+    (a.identity.modelRequirementVersion ?? null) !== (b.identity.modelRequirementVersion ?? null)
+  ) {
+    metadata.push('model.requirementVersion');
+  }
   const runtime: string[] = [];
   if ((a.identity.quant ?? null) !== (b.identity.quant ?? null)) runtime.push('quant');
   if ((a.identity.checkpointDigest ?? null) !== (b.identity.checkpointDigest ?? null)) {
@@ -282,11 +332,15 @@ export function comparability(
 
   // Sensors first: a rig difference is the one a reader is most likely to
   // mistake for a model difference, so it is never hidden behind a runtime note.
-  if (sensor.length > 0) return { verdict: 'sensor-different', differing: [...sensor, ...runtime] };
-  if (runtime.length > 0) return { verdict: 'runtime-different', differing: runtime };
-  // Two columns of the SAME model differ in nothing at all; that is a repeat,
-  // and it is matched — a repeat is exactly the control a reader may want.
-  return { verdict: 'matched', differing: [] };
+  if (rig.sensor.length > 0) {
+    return { verdict: 'sensor-different', differing: [...rig.sensor, ...runtime], metadata };
+  }
+  if (runtime.length > 0) return { verdict: 'runtime-different', differing: runtime, metadata };
+  // Matched with metadata differing is the ordinary model comparison: two
+  // different models, one identical capture. Two columns of the SAME model
+  // differ in nothing at all, which is a repeat, and a repeat is the control a
+  // reader may want.
+  return { verdict: 'matched', differing: [], metadata };
 }
 
 /** Whether this cell produced a result at all, and if not, why. */

@@ -12,8 +12,7 @@ import {
 
 const rig = (overrides: Partial<ComparisonIdentity["rig"]> = {}): ComparisonIdentity["rig"] => ({
   profile: "alpamayo-4cam",
-  profileVersion: "alpamayo-1@ea8ec92ae4ae",
-  profileSha256: "a".repeat(64),
+  captureVersion: "alpamayo-4cam@5d56b3d837c8",
   cameraIds: [0, 1, 2, 6],
   resolution: { width: 512, height: 384 },
   intrinsicsSha256: "b".repeat(64),
@@ -34,6 +33,7 @@ const identity = (overrides: Partial<ComparisonIdentity> = {}): ComparisonIdenti
   quant: "nf4",
   checkpointDigest: "d".repeat(64),
   policySeed: 7,
+  modelRequirementVersion: "alpamayo-1@00e8e20863b4",
   rig: rig(),
   runtime: { engineVersion: "0.1.0", abiVersion: 2, addonSha256: "e".repeat(64), decisionHz: 10 },
   ...overrides,
@@ -69,7 +69,7 @@ test("only the model differing is matched; a different rig is sensor-different",
 
   // Same profile NAME, different resolved geometry: caught by the version.
   const reauthored = cell({
-    identity: identity({ rig: rig({ profileVersion: "alpamayo-1@ffffffffffff" }) }),
+    identity: identity({ rig: rig({ captureVersion: "alpamayo-1@ffffffffffff" }) }),
   });
   assert.equal(comparability(baseline, reauthored).verdict, "sensor-different");
 });
@@ -231,13 +231,13 @@ test("two unknowns are never a match: absent identity is incomplete, not equal",
     cell({
       metrics: { drivingScore: score },
       identity: identity({
-        rig: rig({ profileVersion: null }),
+        rig: rig({ captureVersion: null }),
         runtime: { engineVersion: "0.1.0", abiVersion: 2, addonSha256: null, decisionHz: 10 },
       }),
     });
   const detail = comparability(blind(0.6), blind(0.8));
   assert.equal(detail.verdict, "incomplete-identity");
-  assert.ok(detail.differing.includes("rig.profileVersion"));
+  assert.ok(detail.differing.includes("rig.captureVersion"));
   assert.ok(detail.differing.includes("runtime.addonSha256"));
 
   // And it is not rankable: an unknown-identity row makes the metric a set of
@@ -261,4 +261,63 @@ test("a completed run with a partial identity is not silently comparable", () =>
   const complete = cell();
   const partial = cell({ scenarioInputDigest: null });
   assert.equal(comparability(complete, partial).verdict, "incomplete-identity");
+});
+
+test("two models over one identical capture are matched: that is the comparison", () => {
+  // The case the page exists for. Capture identity is family-free, so both
+  // cells carry alpamayo-4cam@5d56b3d837c8; the family-prefixed requirement
+  // version differs, as it must between two models, and that is metadata.
+  const a = cell({
+    identity: identity({
+      family: "alpamayo-1",
+      checkpointDigest: "a1checkpoint",
+      modelRequirementVersion: "alpamayo-1@00e8e20863b4",
+      rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }),
+    }),
+  });
+  const b = cell({
+    identity: identity({
+      family: "alpamayo-1.5",
+      checkpointDigest: "a15checkpoint",
+      modelRequirementVersion: "alpamayo-1.5@e1a393f5b1d7",
+      rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }),
+    }),
+  });
+  const detail = comparability(a, b);
+  // Different weights are a runtime difference by checkpoint, NOT a sensor one:
+  // nothing about the imagery changed.
+  assert.equal(detail.verdict, "runtime-different");
+  assert.deepEqual(detail.differing, ["checkpointDigest"]);
+  assert.ok(detail.metadata.includes("model.requirementVersion"));
+  assert.ok(!detail.differing.includes("model.requirementVersion"));
+});
+
+test("a differing requirement version alone never makes runs sensor-different", () => {
+  const base = rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" });
+  const a = cell({ identity: identity({ modelRequirementVersion: "alpamayo-1@00e8e20863b4", rig: base }) });
+  const b = cell({ identity: identity({ modelRequirementVersion: "alpamayo-2-super@ab9e93bced10", rig: base }) });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "matched");
+  assert.deepEqual(detail.metadata, ["model.requirementVersion"]);
+});
+
+test("a genuinely different capture is still sensor-different", () => {
+  const a = cell({ identity: identity({ rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }) }) });
+  const b = cell({
+    identity: identity({
+      rig: rig({ captureVersion: "alpamayo-6cam@3187a344fb6f", cameraIds: [0, 1, 2, 3, 4, 5] }),
+    }),
+  });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "sensor-different");
+  assert.ok(detail.differing.includes("rig.captureVersion"));
+});
+
+test("the rig preset NAME is metadata, not evidence of a different capture", () => {
+  // Two families name one capture differently; the digest settles it.
+  const a = cell({ identity: identity({ rig: rig({ profile: "alpamayo-4cam" }) }) });
+  const b = cell({ identity: identity({ rig: rig({ profile: "a15-4cam" }) }) });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "matched");
+  assert.deepEqual(detail.metadata, ["rig.profile"]);
 });

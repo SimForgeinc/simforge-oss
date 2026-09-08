@@ -304,10 +304,12 @@ export type EvalComparisonIdentity = {
   quant: string | null;
   checkpointDigest: string | null;
   policySeed: number | null;
+  /** `modelRequirementVersion(family)`: metadata, never a sensor difference. */
+  modelRequirementVersion: string | null;
   rig: {
     profile: string | null;
-    profileVersion: string | null;
-    profileSha256: string | null;
+    /** `captureProfileVersion(rigId)`: the family-free capture identity. */
+    captureVersion: string | null;
     cameraIds: number[];
     resolution: { width: number | null; height: number | null };
     intrinsicsSha256: string | null;

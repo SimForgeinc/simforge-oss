@@ -424,10 +424,16 @@ async function comparisonCell(
         text(model["checkpointDigest"]) ??
         text((extra["policy"] as Record<string, unknown> | undefined)?.["checkpointDigest"]),
       policySeed: num(extra["policySeed"]),
+      // Two identities, deliberately not one. `captureProfileVersion(rigId)`
+      // says what was physically recorded and carries no family, so two models
+      // over one 4-camera capture share it exactly; the family-prefixed
+      // `modelRequirementVersion(family)` says which capture a family binds to
+      // and is expected to differ in the comparison a person came to make.
+      modelRequirementVersion:
+        text(model["requirementVersion"]) ?? text(model["modelRequirementVersion"]),
       rig: {
         profile: text(rig["profile"]) ?? text(model["cameraProfile"]),
-        profileVersion: text(rig["profileVersion"]),
-        profileSha256: text(rig["profileSha256"]),
+        captureVersion: text(rig["captureVersion"]) ?? text(rig["captureProfileVersion"]),
         cameraIds: Array.isArray(rig["cameraIds"])
           ? (rig["cameraIds"] as unknown[])
               .filter((id): id is number => typeof id === "number")
