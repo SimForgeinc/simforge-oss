@@ -20,6 +20,7 @@ import { SelectMenu } from "../../components/ui/select-menu";
 import type { ModelFamilyId, ModelQuant } from "../model-catalog";
 import { MODEL_CATALOG, MODEL_FAMILIES } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
+import type { ComputeJobKind } from "../contracts";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 
 export type ModelSelection = {
@@ -48,6 +49,7 @@ export function ModelPicker({
   selection,
   onChange,
   disabled = false,
+  kind = null,
 }: {
   host: HostExecutionSnapshot;
   /** Desktop only. Null in the browser portal, which has no local model store. */
@@ -55,6 +57,16 @@ export function ModelPicker({
   selection: ModelSelection;
   onChange: (selection: ModelSelection) => void;
   disabled?: boolean;
+  /**
+   * The job kind this picker is choosing a model for.
+   *
+   * Cloud readiness is per kind: a worker serving open-loop inference does not
+   * serve closed-loop episodes, which need the policy socket and a renderer in
+   * the same image. Given, the cloud target is offered only where the
+   * deployment says it runs this kind for this family - so the picker stops
+   * offering a target the control plane would then refuse.
+   */
+  kind?: ComputeJobKind | null;
 }) {
   const entry = MODEL_CATALOG[selection.family];
   const key = runtimeKey(selection.family, selection.quant);
@@ -65,6 +77,7 @@ export function ModelPicker({
     runtime?.installs[key] ?? null,
     runtime?.eligibility[key] ?? null,
     runtime ? runtime.prepared[selection.family] ?? null : null,
+    kind,
   );
 
   // The measured envelope is exclusive-use: the runtime's own requirement, or
