@@ -300,6 +300,7 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
   const [driveMode, setDriveMode] = useState<AuthoredDriveMode>("free");
   const [enteringDrive, setEnteringDrive] = useState(false);
   const [takePhase, setTakePhase] = useState<TakePhase>({ kind: "idle" });
+  const [takeDeliveryError, setTakeDeliveryError] = useState<string | null>(null);
   const [expandedTool, setExpandedTool] = useState<ViewportTool | null>(null);
   const [transportRevision, setTransportRevision] = useState(0);
   const [documentRevision, setDocumentRevision] = useState(0);
@@ -571,6 +572,7 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
       setEgoActorLabel(null);
       setCameraNotice(null);
       setTakePhase({ kind: "idle" });
+      setTakeDeliveryError(null);
     }
   }, [authoredSource, bridge, egoActorId, source]);
 
@@ -593,6 +595,7 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
       if (take) {
         authoredSource.beginTake();
         setTakePhase({ kind: "recording" });
+        setTakeDeliveryError(null);
       } else {
         authoredSource.transport.reset();
         authoredSource.transport.play();
@@ -649,17 +652,34 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
       return;
     }
     setTakePhase({ kind: "saving" });
+    setTakeDeliveryError(null);
     try {
       await take.onSave(takePhase.recording, take.revision);
     } catch (error) {
+      // Delivery to the editor failed (e.g. storage quota). The take is still
+      // in memory: back to review with the error shown and "Save again" armed.
+      const message = errorMessage(error);
       setTakePhase({ kind: "review", recording: takePhase.recording, sourceRevision: takePhase.sourceRevision });
-      toast.error("Take could not be saved", { description: errorMessage(error) });
+      setTakeDeliveryError(message);
+      toast.error("Take could not be delivered to the editor", { description: message });
     }
   }, [take, takePhase]);
 
   const discardTake = useCallback(() => {
+    if (!take) {
+      exitDrive();
+      return;
+    }
+    try {
+      take.onCancel();
+    } catch (error) {
+      // The editor could not be told; keep the session (and any reviewed take) alive.
+      const message = errorMessage(error);
+      setTakeDeliveryError(message);
+      toast.error("Take could not be cancelled", { description: message });
+      return;
+    }
     exitDrive();
-    take?.onCancel();
   }, [exitDrive, take]);
 
   const driveSpeedKph = actorSpeedKph(world.latestFrame, driving ? egoActorId : null);
@@ -912,8 +932,9 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
                   <span className="text-editor-text">
                     Take complete · {takePhase.kind === "review" ? `${takePhase.recording.samples.length} samples over ${takePhase.recording.clipSeconds.toFixed(1)} s` : "saving…"}
                   </span>
+                  {takeDeliveryError ? <span className="text-destructive" role="alert">{takeDeliveryError}</span> : null}
                   <Button type="button" size="sm" onClick={() => void saveTake()} disabled={takePhase.kind !== "review"}>
-                    <Save /> Save take
+                    <Save /> {takeDeliveryError ? "Save again" : "Save take"}
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={restartDrive} disabled={takePhase.kind !== "review"}>
                     <RotateCcw /> Drive again
