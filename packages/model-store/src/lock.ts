@@ -204,15 +204,30 @@ export async function lockEntry(family: ModelFamilyId): Promise<ModelLockEntry> 
   return entry;
 }
 
+/**
+ * One file an install must materialize, and where it lands under the install
+ * root. `gated` decides whether the download is allowed to carry the user's
+ * Hugging Face token, so it is part of the element type rather than inferred:
+ * only a repo the lock marks gated ever receives a credential.
+ */
+export type InstallFileEntry = {
+  role: "weights" | "sidecar";
+  repo: string;
+  revision: string;
+  gated: boolean | "auto";
+  file: ModelLockFile;
+  destination: string;
+};
+
 /** Every file an install of one family must materialize, with its destination. */
-export function installFiles(
-  entry: ModelLockEntry,
-): { role: "weights" | "sidecar"; repo: string; revision: string; gated: boolean | "auto"; file: ModelLockFile; destination: string }[] {
-  const out = entry.weights.files.map((file) => ({
-    role: "weights" as const,
+export function installFiles(entry: ModelLockEntry): InstallFileEntry[] {
+  const out: InstallFileEntry[] = entry.weights.files.map((file) => ({
+    role: "weights",
     repo: entry.weights.repo,
     revision: entry.weights.revision,
-    gated: false as const,
+    // The Alpamayo weight repositories are ungated; a token is never attached
+    // to a request that does not need one.
+    gated: false,
     file,
     destination: join("weights", file.path),
   }));
