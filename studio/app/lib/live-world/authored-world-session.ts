@@ -117,7 +117,9 @@ function routeRunwayScore(actor: SimScenarioInput['actors'][number]): number {
     const stationM = actor.initial.laneRef?.s ?? 0;
     return route.lanes.length * 1_000_000 - stationM;
   }
+  // Time-parameterised routes score by how long they keep the actor moving.
   if (route.kind === 'timedPolyline') return route.points.at(-1)?.timeS ?? 0;
+  if (route.kind === 'recordedTrack') return route.samples.at(-1)?.timeS ?? 0;
   let distanceM = 0;
   for (let index = 1; index < route.points.length; index += 1) {
     const previous = route.points[index - 1]!;
