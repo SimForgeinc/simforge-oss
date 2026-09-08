@@ -85,11 +85,12 @@ export class ShadowAtlas {
     const file = this.pickLightmap(tile);
     if (!file) return;
     const decoded = tracker?.trackDecode();
+    const sessionId = tracker?.sessionId;
     try {
       const res = await fetch(resolveUrl(baseUrl, file), { signal });
       if (!res.ok) return;
       const blob = tracker
-        ? new Blob([await readResponseBufferWithProgress(res, tracker)], { type: res.headers.get('content-type') ?? '' })
+        ? new Blob([await readResponseBufferWithProgress(res, tracker, undefined, sessionId)], { type: res.headers.get('content-type') ?? '' })
         : await res.blob();
       const bitmap = await createImageBitmap(blob);
       if (this.disposed) {

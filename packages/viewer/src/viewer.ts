@@ -559,10 +559,13 @@ export class CityViewer {
     })) as CityManifest;
     if (this.disposed) return;
     this.manifest = manifest;
-    this.staticSemantics = await this.loadStaticSemantics(manifest);
+    const [staticSemantics, variantManifest] = await Promise.all([
+      this.loadStaticSemantics(manifest),
+      this.loadVariantManifest(),
+    ]);
+    this.staticSemantics = staticSemantics;
+    this.variantManifest = variantManifest;
     this.capabilities = staticSemanticsCapabilities(this.staticSemantics);
-    if (this.disposed) return;
-    this.variantManifest = await this.loadVariantManifest();
     if (this.disposed) return;
 
     this.sceneBox = boundsToBox3(manifest.scene.bounds);
@@ -844,9 +847,10 @@ export class CityViewer {
     signal: AbortSignal,
     expectedBytes?: number | null,
   ): Promise<ArrayBuffer> {
+    const sessionId = this.downloadTracker.sessionId;
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error(`${res.status} ${url}`);
-    return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes);
+    return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes, sessionId);
   }
 
   private async readJsonResponse(response: Response): Promise<unknown> {
@@ -1418,12 +1422,18 @@ export class CityViewer {
     const snowStreaming = snowStreamingContribution(snow);
     const sum = (pick: (s: NonNullable<typeof city>) => number): number =>
       (city ? pick(city) : 0) + (veg ? pick(veg) : 0) + (road ? pick(road) : 0);
-    const downloads = this.downloadTracker.snapshot();
     const auxiliaryPending = Number(this.mapLoadActive) + this.presetTransitions
       + this.auxiliaryLoads + snowStreaming.loading + snowStreaming.queued;
     const streamingError = this.renderer.getContext().isContextLost()
       ? 'WebGL context was lost; reload the map to recreate its GPU resources'
       : this.streamingError;
+    // Body-reader gaps are not completion: queued GLBs can still reveal textures.
+    // Scope can reopen as camera selection or a preset changes.
+    const scopeSettled = this.mapLoaded && !this.disposed && !streamingError
+      && auxiliaryPending === 0
+      && sum((s) => s.loading + s.queued + s.uploading + s.pendingTextureUploads
+        + s.compiling + s.requiredPendingAssets) === 0;
+    const downloads = this.downloadTracker.snapshot(performance.now(), scopeSettled);
     const stage = downloads.active > 0 ? 'downloading'
       : sum((s) => s.pendingTextureUploads) > 0 ? 'uploading'
       : sum((s) => s.compiling) > 0 ? 'compiling'
