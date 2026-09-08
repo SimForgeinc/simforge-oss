@@ -64,6 +64,7 @@ export function ModelPicker({
     selection.quant,
     runtime?.installs[key] ?? null,
     runtime?.eligibility[key] ?? null,
+    runtime ? runtime.prepared[selection.family] ?? null : null,
   );
 
   // The measured envelope is exclusive-use: the runtime's own requirement, or

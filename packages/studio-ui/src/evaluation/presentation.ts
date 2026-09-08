@@ -119,6 +119,14 @@ export type HostExecutionSnapshot = {
  */
 export type ModelRuntimeSnapshot = {
   installs: Record<string, ModelInstallState | undefined>;
+  /**
+   * Whether each family's isolated runtime is provisioned, keyed by family.
+   *
+   * Separate from install state on purpose: weights and runtime are provisioned
+   * by independent steps that fail independently, so `installed` does not imply
+   * runnable. Offering a local run against an unprepared runtime fails at spawn.
+   */
+  prepared: Record<string, boolean | undefined>;
   eligibility: Record<string, ModelExecutionEligibility | undefined>;
   vault: { hfTokenPresent: boolean; hfTokenIdentity: string | null } | null;
 };
@@ -149,6 +157,8 @@ export function executionOffers(
   quant: ModelQuant,
   install: ModelInstallState | null,
   eligibility: ModelExecutionEligibility | null,
+  /** `false` when the family's runtime is known to be unprepared; null when unknown. */
+  runtimePrepared: boolean | null = null,
 ): ExecutionOffer[] {
   const localReasons: string[] = [];
   let qualification: ExecutionOffer["qualification"] = null;
@@ -166,6 +176,10 @@ export function executionOffers(
     if (!install || install.state !== "installed") {
       localReasons.push(
         `${entry.displayName} (${quant}) is not installed. Download it in Models first — downloading is separate from being able to execute it.`,
+      );
+    } else if (runtimePrepared === false) {
+      localReasons.push(
+        `${entry.displayName}'s weights are installed but its runtime is not prepared. Prepare it in Models — the weights and the isolated runtime are provisioned separately, so one can be present without the other.`,
       );
     }
     if (eligibility) {

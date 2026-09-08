@@ -26,6 +26,13 @@ export type ModelStoreView = {
   installs: ({ family: ModelFamilyId; quant: ModelQuant } & ModelInstallState)[];
   eligibility: ModelExecutionEligibility[];
   preflight: Record<string, unknown>;
+  /** Per-family runtime provisioning; independent of whether weights are installed. */
+  runtimes: { family: ModelFamilyId; prepared: boolean; runtime: Record<string, unknown> | null }[];
+  /**
+   * Unresolved obligations. `resolved` is typed as the literal `false` by the
+   * producer so no document can assert one is closed.
+   */
+  reviewGates: { family: ModelFamilyId; kind: "license-conflict" | "gated-sidecar"; resolved: false; note: string }[];
   vault: {
     persistence: "os-vault" | "session";
     hfTokenPresent: boolean;
@@ -159,8 +166,12 @@ export function toRuntimeSnapshot(view: ModelStoreView): ModelRuntimeSnapshot {
   for (const entry of view.eligibility) {
     eligibility[runtimeKey(entry.family, entry.quant)] = entry;
   }
+  const prepared: Record<string, boolean | undefined> = {};
+  for (const entry of view.runtimes ?? []) prepared[entry.family] = entry.prepared;
+
   return {
     installs,
+    prepared,
     eligibility,
     vault: { hfTokenPresent: view.vault.hfTokenPresent, hfTokenIdentity: view.vault.hfTokenIdentity },
   };
