@@ -483,7 +483,10 @@ export class HttpRegistryBackend implements RegistryBackend {
     });
     if (!response.ok) throw Object.assign(new Error(`registry ranged GET ${key} failed: HTTP ${response.status}`), { statusCode: response.status });
     if (response.status !== 206) {
-      await response.body?.cancel();
+      // Read rather than cancel: an unread body's `cancel()` never settles on
+      // the Node build inside the packaged desktop app, which deadlocks this
+      // error path instead of reporting the status.
+      await response.text().catch(() => undefined);
       throw new Error(`registry does not support bounded range reads: ${key}`);
     }
     return new Uint8Array(await response.arrayBuffer());

@@ -274,7 +274,9 @@ async function runtimeAssets(signal: AbortSignal): Promise<ProfileMapAsset[]> {
           }
           const total = /\/(\d+)$/.exec(range.headers.get("content-range") ?? "")?.[1];
           bytes = Number(total ?? (range.status === 200 ? range.headers.get("content-length") : null));
-          await range.body?.cancel().catch(() => undefined);
+          // Reading drains the body; an unread body's `cancel()` never
+          // settles on the desktop app's Node build.
+          await range.text().catch(() => undefined);
         }
         if (!Number.isSafeInteger(bytes) || bytes <= 0) {
           throw new Error(`SUMO runtime cache asset has no verified size: ${url}`);

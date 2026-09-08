@@ -280,7 +280,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
 
   const anyLive =
     view?.installs.some(
-      (entry) => entry.state === "downloading" || entry.state === "verifying",
+      (entry) => entry.state.state === "downloading" || entry.state.state === "verifying",
     ) ?? false;
 
   // The light poll: install progress is durable on disk, so polling is
@@ -344,6 +344,20 @@ export function ModelStorePanel({ className }: { className?: string }) {
   return (
     <div className={cn("space-y-6", className)} data-testid="model-store-panel">
       {error ? <RefusalNotice title="Model store" reasons={[error]} /> : null}
+      {(view.reviewGates ?? []).length > 0 ? (
+        <RefusalNotice
+          tone="warn"
+          title="Unresolved obligations on these models"
+          reasons={(view.reviewGates ?? []).map(
+            (gate) => `${gate.family} — ${gate.kind}: ${gate.note}`,
+          )}
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            Recorded as unresolved and not markable from here. Downloading and running a model
+            locally is unaffected; commercial use is not.
+          </p>
+        </RefusalNotice>
+      ) : null}
       {verify ? (
         <RefusalNotice
           tone={verify.ok ? "info" : "refusal"}

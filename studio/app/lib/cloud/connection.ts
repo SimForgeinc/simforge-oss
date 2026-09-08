@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { StudioCloudStatus, StudioCloudUser } from "@simforge-oss/studio-host";
 import { z } from "zod";
 import { openSecretVault, type SecretVault } from "./vault";
+import { discardResponseBody } from "@/app/lib/cloud/drain";
 
 /**
  * The installed Studio's connection to SimCloud.
@@ -466,7 +467,7 @@ export async function cloudRequest(
   };
   let response = await send(credential.accessToken);
   if (response.status === 401 && bodyIsReplayable) {
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     credential = await validAccessToken(options.signal, true);
     response = await send(credential.accessToken);
     if (response.status === 401) {
@@ -514,7 +515,7 @@ async function followRedirects(url: URL, init: RequestInit, origin: string, sign
     const location = response.headers.get("location");
     if (response.status < 300 || response.status > 399 || !location) return response;
     if (hop >= MAX_REDIRECTS) throw new CloudConnectionError("cloud_unreachable", "too many redirects");
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     const next = new URL(location, current);
     if (next.protocol !== "https:" && !(next.protocol === "http:" && isLoopbackHost(next.hostname))) {
       throw new CloudConnectionError("cloud_unreachable", `refused redirect to ${next.protocol}//${next.host}`);

@@ -23,6 +23,7 @@ import {
   primeCloudSession,
 } from "./connection";
 import {
+import { discardResponseBody } from "@/app/lib/cloud/drain";
   CLOUD_DOWNLOAD_PROVENANCE,
   getRegisteredMap,
   invalidateRegisteredMap,
@@ -135,7 +136,7 @@ async function fetchUpstreamCatalog(signal?: AbortSignal): Promise<UpstreamDescr
   if (cached && cached.scope === scope && cached.expiresAt > Date.now()) return cached.value;
   const response = await upstreamGet("/api/simforge/maps", signal);
   if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     throw new CloudConnectionError("cloud_unreachable", `SimCloud map catalog answered ${response.status}`);
   }
   const payload = await response.json() as { maps?: unknown };
@@ -154,7 +155,7 @@ async function fetchUpstreamPlan(profile: MapProfile, signal?: AbortSignal): Pro
   if (cached && cached.scope === scope && cached.expiresAt > Date.now()) return cached.value;
   const response = await upstreamGet(`/api/simforge/maps/cache-plan?profile=${profile}`, signal);
   if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
+    await discardResponseBody(response);
     throw new CloudConnectionError("cloud_unreachable", `SimCloud cache plan answered ${response.status}`);
   }
   const payload = await response.json() as { maps?: unknown };
