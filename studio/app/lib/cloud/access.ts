@@ -2,8 +2,8 @@ import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-
 import { localObjectPath, readLocalObjectMetadata } from "@/app/lib/s3/s3-object";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
 import { cloudPublicRequest, cloudRequest, cloudSessionScope, primeCloudSession } from "./connection";
-import {
 import { discardResponseBody } from "@/app/lib/cloud/drain";
+import {
   MAP_CACHE_BUCKET,
   resolveKnownMap,
   type MapProfile,
