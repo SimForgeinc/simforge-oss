@@ -313,6 +313,7 @@ export type EvalComparisonIdentity = {
     historyFrames: number | null;
     historyDtS: number | null;
     cadenceHz: number | null;
+    renderFps: number | null;
     cadenceDividesExactly: boolean | null;
     worstResampleErrorS: number | null;
   };

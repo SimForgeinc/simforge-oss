@@ -60,6 +60,16 @@ export type ComparisonRig = {
   /** Camera cadence in Hz; a rig at 10 Hz is not a rig at 30 Hz. */
   readonly cadenceHz: number | null;
   /**
+   * Render frame rate the clip was produced at (20, 24 or 30 today).
+   *
+   * Compared as part of the RIG rather than the runtime, because it decides
+   * what the model saw: a 24 fps clip feeding a 10 Hz model carries up to
+   * 20.8 ms of nearest-frame jitter against a 5 ms tolerance, and that lands in
+   * the metric. Two runs from different render rates are not matched even when
+   * every other field agrees.
+   */
+  readonly renderFps: number | null;
+  /**
    * Whether the render cadence divided the model's input cadence exactly.
    *
    * A history resampled from 24 fps carries up to 20.8 ms of jitter against one
@@ -156,8 +166,15 @@ function rigDifferences(a: ComparisonRig, b: ComparisonRig): string[] {
   if ((a.historyFrames ?? null) !== (b.historyFrames ?? null)) differing.push('rig.historyFrames');
   if ((a.historyDtS ?? null) !== (b.historyDtS ?? null)) differing.push('rig.historyDtS');
   if ((a.cadenceHz ?? null) !== (b.cadenceHz ?? null)) differing.push('rig.cadenceHz');
+  if ((a.renderFps ?? null) !== (b.renderFps ?? null)) differing.push('rig.renderFps');
   if ((a.cadenceDividesExactly ?? null) !== (b.cadenceDividesExactly ?? null)) {
     differing.push('rig.cadenceDividesExactly');
+  }
+  // The jitter magnitude itself, not only the boolean: two runs both flagged
+  // inexact can still differ in how badly, and the worse one is not
+  // interchangeable with the better.
+  if ((a.worstResampleErrorS ?? null) !== (b.worstResampleErrorS ?? null)) {
+    differing.push('rig.worstResampleErrorS');
   }
   return differing;
 }

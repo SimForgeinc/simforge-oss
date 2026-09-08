@@ -51,14 +51,11 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
             <Link
               href={{
                 pathname: `/dashboard/evaluation/${campaign.campaignId}/compare`,
-                // Ordered columns; the first is the baseline. More than two are
-                // supported by the page, so this link is a starting point and
-                // not the shape of the contract.
-                query: { policy: [policyA.policyId, policyB.policyId] },
+                query: { a: policyA.policyId, b: policyB.policyId },
               }}
             >
               <GitCompareArrows className="mr-1.5 h-4 w-4" />
-              Compare models
+              Compare A/B
             </Link>
           </Button>
         ) : null}

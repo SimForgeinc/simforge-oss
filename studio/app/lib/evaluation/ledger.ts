@@ -441,9 +441,15 @@ async function comparisonCell(
         extrinsicsSha256: text(rig["extrinsicsSha256"]),
         historyFrames: num(rig["framesPerCamera"]),
         historyDtS: num(rig["historyDtS"]),
-        cadenceHz: num(rig["cadenceHz"]),
-        cadenceDividesExactly: bool(timeBase["cadence_divides_exactly"]),
-        worstResampleErrorS: num(timeBase["worst_resample_error_s"]),
+        cadenceHz: num(rig["cadenceHz"]) ?? num(timeBase["modelHz"]),
+        renderFps: num(timeBase["renderFps"]) ?? num(timeBase["render_fps"]),
+        // Both spellings: the converter writes snake_case and the renderer's
+        // provenance writes camelCase, and a run recorded by either must not
+        // read as "cadence unknown".
+        cadenceDividesExactly:
+          bool(timeBase["cadenceDividesExactly"]) ?? bool(timeBase["cadence_divides_exactly"]),
+        worstResampleErrorS:
+          num(timeBase["worstResampleErrorS"]) ?? num(timeBase["worst_resample_error_s"]),
       },
       runtime: {
         engineVersion: text(runtime["engineVersion"]),

@@ -21,6 +21,7 @@ const rig = (overrides: Partial<ComparisonIdentity["rig"]> = {}): ComparisonIden
   historyFrames: 4,
   historyDtS: 0.1,
   cadenceHz: 10,
+  renderFps: 30,
   cadenceDividesExactly: true,
   worstResampleErrorS: 0,
   ...overrides,
@@ -109,6 +110,30 @@ test("a resampled camera history is not matched with a clean one", () => {
   const detail = comparability(clean, jittered);
   assert.equal(detail.verdict, "sensor-different");
   assert.ok(detail.differing.includes("rig.cadenceDividesExactly"));
+});
+
+test("clips rendered at different frame rates are not matched", () => {
+  // 30 fps divides a 10 Hz model exactly; 24 fps does not, and the nearest
+  // frame can be 20.8 ms away against a 5 ms tolerance.
+  const clean = cell();
+  const fromTwentyFour = cell({
+    identity: identity({
+      rig: rig({ renderFps: 24, cadenceDividesExactly: false, worstResampleErrorS: 0.0208 }),
+    }),
+  });
+  const detail = comparability(clean, fromTwentyFour);
+  assert.equal(detail.verdict, "sensor-different");
+  assert.ok(detail.differing.includes("rig.renderFps"));
+  assert.ok(detail.differing.includes("rig.worstResampleErrorS"));
+
+  // Same flag, different magnitude: still not interchangeable.
+  const worse = cell({
+    identity: identity({ rig: rig({ cadenceDividesExactly: false, worstResampleErrorS: 0.0208 }) }),
+  });
+  const better = cell({
+    identity: identity({ rig: rig({ cadenceDividesExactly: false, worstResampleErrorS: 0.004 }) }),
+  });
+  assert.equal(comparability(worse, better).verdict, "sensor-different");
 });
 
 test("a re-authored scenario with the same id is incomparable", () => {
