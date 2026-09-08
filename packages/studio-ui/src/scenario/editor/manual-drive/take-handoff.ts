@@ -259,22 +259,61 @@ function leaveRecorder(request: ManualDriveTakeRequest): void {
   window.location.assign(request.returnHref);
 }
 
+/** Why a `?manualDriveTake` link cannot start a recorder right now. */
+export type ManualDriveTakeUnavailableReason =
+  /** No request with this id: it expired, was swept, or the editor abandoned it. */
+  | "expired"
+  /** The recorder already delivered a result for this take; the editor is reviewing it. */
+  | "delivered"
+  /** The request's document was consumed to make room for a result; the take cannot be redriven from this link. */
+  | "consumed";
+
 /**
- * The Drive page's view of a take: `null` when the page was not opened for one
- * or the request has expired. Callbacks deliver exactly once *on success*: a
- * delivery the browser refuses leaves the session open so the same take can be
- * saved again, and `onSave` rejects with the reason to show the operator.
+ * What the Drive page sees at its boundary. `idle` = no take in the URL
+ * (ordinary free drive). Only `ready` may drive; every other state must be
+ * shown to the operator with a way back to the editor, never silently turned
+ * into free drive.
  */
-export function useManualDriveTakeSession(takeId: string | null): ManualDriveTakeSession | null {
-  const [request, setRequest] = useState<ManualDriveTakeRequest | null>(null);
+export type ManualDriveTakeBoundary =
+  | { readonly state: "idle" }
+  | { readonly state: "loading"; readonly takeId: string }
+  | { readonly state: "ready"; readonly session: ManualDriveTakeSession }
+  | {
+      readonly state: "unavailable";
+      readonly takeId: string;
+      readonly reason: ManualDriveTakeUnavailableReason;
+      /** The editor to return to, when the stored request still names it. */
+      readonly returnHref: string | null;
+    };
+
+/**
+ * The Drive page's view of a take. Callbacks deliver exactly once *on success*:
+ * a delivery the browser refuses leaves the session open so the same take can
+ * be saved again, and `onSave` rejects with the reason to show the operator.
+ */
+export function useManualDriveTakeSession(takeId: string | null): ManualDriveTakeBoundary {
+  const [loaded, setLoaded] = useState<{
+    readonly takeId: string;
+    readonly request: ManualDriveTakeRequest | null;
+    readonly delivered: boolean;
+  } | null>(null);
   useEffect(() => {
-    setRequest(takeId ? readManualDriveTakeRequest(takeId) : null);
+    setLoaded(takeId
+      ? { takeId, request: readManualDriveTakeRequest(takeId), delivered: readManualDriveTakeResult(takeId) !== null }
+      : null);
   }, [takeId]);
-  return useMemo(() => {
-    if (!request || !request.content) return null;
+  return useMemo<ManualDriveTakeBoundary>(() => {
+    if (!takeId) return { state: "idle" };
+    if (!loaded || loaded.takeId !== takeId) return { state: "loading", takeId };
+    const { request } = loaded;
+    if (!request) return { state: "unavailable", takeId, reason: "expired", returnHref: null };
+    if (loaded.delivered) return { state: "unavailable", takeId, reason: "delivered", returnHref: request.returnHref };
+    const content = request.content;
+    if (!content) return { state: "unavailable", takeId, reason: "consumed", returnHref: request.returnHref };
     let finished = false;
-    return {
+    const session: ManualDriveTakeSession = {
       ...request,
+      content,
       async onSave(recording, revision) {
         if (finished) return;
         deliverManualDriveTakeResult(request.takeId, { kind: "saved", recording, revision, finishedAt: Date.now() });
@@ -288,5 +327,6 @@ export function useManualDriveTakeSession(takeId: string | null): ManualDriveTak
         leaveRecorder(request);
       },
     };
-  }, [request]);
+    return { state: "ready", session };
+  }, [loaded, takeId]);
 }
