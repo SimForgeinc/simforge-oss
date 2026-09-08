@@ -357,7 +357,18 @@ ALPAMAYO_2_SUPER = Family(
                 "about accuracy and is not upstream parity. NVIDIA "
                 "separately report 72,115 MiB device peak at 7 cameras with "
                 "10 diffusion steps; ours is a 6-camera profile and the two "
-                "are not claimed to agree. No smaller device is validated."
+                "are not claimed to agree. No smaller device is validated. "
+                "PROVENANCE, weaker than it looks: the worker image that "
+                "produced this measurement was built from TWO commits - the "
+                "evaluation runtime and encoder lock from the integration "
+                "tip, and adapters/alpamayo from 9c6cd650, which the tip "
+                "did not carry - and records both as SIMFORGE_OSS_COMMIT and "
+                "SIMFORGE_ADAPTER_SOURCE_COMMIT. So this figure is "
+                "reproducible from two recorded commits, not from one. That "
+                "is true but weaker than single-commit reproducibility, and "
+                "it stays stated here, next to the number, until the "
+                "adapter lands in the tip and an image can be rebuilt from "
+                "a single commit."
             ),
         ),
         QuantOffer(
