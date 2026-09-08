@@ -76,7 +76,17 @@ What it guarantees, in code rather than in this document:
   (`--signing-from-artifacts`), which CI derives from the secrets actually
   present. There is no flag that asserts a build is signed.
 - The embedded version is read from the artifact names, not passed in.
-- A partial platform set cannot become a public release.
+- A partial platform set cannot become a public release *silently*. Full
+  coverage is the default and a gap is refused. An interim publication has to
+  name its set with `--platforms linux-x64`, which is cross-checked against
+  the bytes in both directions, records `platformSet: "partial"` with the
+  absent platforms, and discloses them in the notes. A platform with no bytes
+  takes the `not-published` signing state, which is refused for any platform
+  whose installers are present, and its row reports no signing, packaging or
+  redistribution outcome rather than a blocked obligation it never had.
+- Republishing a label from a newer source removes every asset that is not in
+  the new set before uploading. `--clobber` alone replaces only same-named
+  files, which would leave two revisions' bytes under one manifest.
 
 `.github/workflows/desktop.yml` can create the draft itself
 (`publish: draft` with a `distribution_label`), but it can never make a
@@ -100,22 +110,42 @@ invalidates the determination, so a new upstream build cannot inherit the
 previous one's clearance. `undetermined` blocks exactly like `unsatisfied`:
 nobody-checked is not permission.
 
-The bundled ffmpeg/ffprobe are **not one component**. The four packages carry
-three different upstream builds:
+The bundled ffmpeg/ffprobe are **built from pinned source on every platform**,
+which is what makes them redistributable. All four legs compile the same two
+Git commits with the same closure, so the licence outcome is identical
+everywhere and the corresponding source is a single tree per platform:
 
-| Platform | Builder | ffmpeg | Applicable license |
-|---|---|---|---|
-| linux-x64 | johnvansickle.com static | 7.0.2 | GPL-3.0-only |
-| windows-x64 | gyan.dev essentials | 6.1.1 | GPL-3.0-only |
-| macos-x64 | evermeet.cx (`tessus`) | 8.0 | GPL-3.0-or-later |
-| macos-arm64 | unidentified arm64 build | undetermined | **nonfree — unredistributable** |
+| Component | Source | Commit |
+|---|---|---|
+| FFmpeg | https://github.com/FFmpeg/FFmpeg.git | `3a0867c2bfda4a4d4309ca1a8cbdc6175e67f587` (7.1.5) |
+| libx264 | https://github.com/mirror/x264.git | `31e19f92f00c7003fa115047ce50978bc98c3a0d` |
 
-The macOS arm64 binary's compiled-in configure line contains
-`--enable-nonfree`. That build may not be redistributed at all, so the macOS
-arm64 installer cannot be published publicly with these bytes; it needs a
-repinned encoder and a rebuilt leg. The GPL platforms need complete
-corresponding source or a written offer, which no upstream builder publishes
-as part of the pinned release.
+The closure is `studio/desktop/encoders.lock.json`: GPL and version3 enabled,
+libx264 and zlib the only external libraries, autodetect and network
+disabled. zlib is not optional — FFmpeg gates its EXR decoder on it
+(`exr_decoder_deps="zlib"`), and the renderer's sky plates are EXR, so a
+build without it cannot prepare the sky at all. The outcome is
+GPL-3.0-or-later, and each packaging leg publishes a
+`corresponding-source/*.tar.gz` beside its installers; the audit refuses a
+platform whose archive or build receipt is missing.
+
+**Why this replaced downloaded binaries.** The four packages previously
+carried three different upstream builds, and the macOS arm64 one had
+`--enable-nonfree` in its compiled-in configure line while its metadata
+claimed the same version and licence as the others. That build may not be
+redistributed at all. The lesson is in the method, not the flag: read the
+configure line out of the binary, because the metadata was wrong. The
+per-platform verification of a shipped set is therefore:
+
+```sh
+strings -a <package>/tools/ffmpeg | grep -m1 -o -- "--prefix=.\{0,700\}" \
+  | tr ' ' '\n' | grep -E "^--(enable|disable)"
+```
+
+That works on Linux and macOS packages. A Windows NSIS installer's payload is
+LZMA-compressed, so there is no plaintext configure line to read and Windows
+rests on its build receipt and the CI encoder step succeeding from source —
+a scan of the compressed installer proves nothing either way.
 
 ## Updates
 
@@ -147,6 +177,45 @@ at `https://simforge.ai` with production actually serving `/desktop/connect`
 the installers were built from, and the update check present in the built
 source.
 
+## Qualifying a downloaded installer
+
+```sh
+export TMPDIR=/mnt/storage/<somewhere with room>   # a 1.1 GB artifact fills /tmp
+node scripts/release/qualify-installed-desktop.mjs \
+  --artifact <file.AppImage|.deb> --expect-sha256 <digest> [--json] [--keep]
+```
+
+It unpacks the artifact under a throwaway `HOME` and touches only paths inside
+the installed tree, so a developer's existing cache, map bundles or session
+cannot make a broken installer look healthy. Eight gates, each failing closed
+with its reason: the digest matches what the release claims; the artifact
+opens; every executable and library the stage manifest names is present,
+executable and for this platform; the original capabilities are there (actor
+closure, `.skytex` sky plates, local host, CPU worker, render harness); the
+packaged encoders run, can decode EXR, and are not `--enable-nonfree`; the
+packaged addon loads from the installed tree and its compiled exports answer;
+the app starts under Xvfb until its bundled local host responds; and the baked
+Cloud origin is reachable.
+
+Two deliberate distinctions. The addon gate asks the **binary**, because a
+regenerated `.d.ts` can declare operations the compiled `.node` does not
+contain — that typechecks and then throws at runtime. And an absent
+`/download/releases.json` is reported as a pending publication rather than a
+defect: before the first release there is nothing to serve, and the update
+check is required to say so gracefully. Only a served document that is not a
+downloads manifest fails.
+
+The launch gate accepts the local host answering `401`: the host demands the
+trusted-local session cookie the shell sets, so an unauthenticated probe
+getting `401` proves the host is up **and** enforcing its own auth. It also
+proves nothing about the UI behind it — installed-app acceptance is a separate
+exercise, not something this harness can stand in for.
+
+`electron-builder` packaging is **not reproducible**: the same source builds
+bytes with different digests locally and in CI. Acceptance evidence therefore
+belongs to a digest, not to a revision, and a local rebuild cannot stand in
+for the CI artifact that will be published.
+
 ## Data on disk
 
 `resolveDataRoot` in `studio/desktop/main.mjs` keeps the database,
@@ -166,3 +235,43 @@ them. Only `simforge models uninstall`, or Remove on the Models screen,
 deletes anything there. Release notes and the download page state both
 locations, because a user who uninstalls the app is entitled to know that
 72 GB of weights is still on their disk and how to remove it.
+
+## State as of 2026-09-08
+
+A snapshot, so the next person does not re-derive it. Everything here was
+read from an artifact, an API or a live endpoint rather than asserted.
+
+**Installer set.** Run `34187617763` at source `05a6d31a`, all four platforms
+succeeded: `linux-x64` (AppImage + deb), `windows-x64` (NSIS), `macos-arm64`
+and `macos-x64` (dmg + zip). Every digest verified with `sha256sum -c`
+against the checksum file its own packaging leg wrote. All four
+licence-**cleared** against their own corresponding-source archives. The
+encoder configure line was read out of the shipped binary on Linux and both
+macOS targets — our exact closure, zero `--enable-nonfree`; Windows rests on
+its receipt for the reason given above.
+
+**Qualification.** Linux only, and completely: all eight gates pass on the
+downloaded CI bytes. There is no Windows or macOS host here, so those
+platforms have payload, encoder, addon and digest evidence but **no
+installed-launch proof**. A release must say so per platform rather than
+implying parity.
+
+**Publication.** Draft `studio-preview.1` (release id `384451104`) exists and
+is deliberately **private**. It holds an older `7937edc9` set that predates
+the bounded-drain fix, so it must be replaced wholesale — not topped up —
+before it can be published. GitHub's reported asset digests matched the
+uploaded bytes exactly, so the publication path itself is proven.
+
+**Cloud.** `https://staging.simforge.ai` serves the candidate;
+`/download/releases.json` answers 200 `application/json` with schema
+`simforge.downloads/v1`, `channels` still null because nothing is published,
+and the packaged update check against it returns `unavailable` / "no preview
+release is published", which is correct. Compute routes are **not** on
+staging: `/api/simforge/compute/{jobs,estimate,capabilities}` return 404,
+because that candidate deliberately excludes the compute surface. Deployment
+and identity details are recorded in `docs/operations.md`.
+
+**Blocked on credentials, not on code.** Windows Authenticode and Apple
+Developer ID + notarization are absent — zero repository and zero
+organization secrets are available. Stable therefore fails closed, and
+nothing is ever labelled signed on the strength of an assertion.
