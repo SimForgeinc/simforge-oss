@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertTriangle, Gauge, Route, Timer, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { summarizeRecording } from "./authoring";
 import type { ManualDriveRecorder, ManualDriveTakeReview } from "./use-manual-drive-recorder";
@@ -12,6 +13,10 @@ import type { ManualDriveRecorder, ManualDriveTakeReview } from "./use-manual-dr
  * and any other motion the actor still carried. Lights, horn, existence
  * and every other actor are untouched, and the dialog says so rather than
  * leaving the author to guess.
+ *
+ * Portaled to `document.body` like `SensorSetupModal`: the editor overlay root
+ * is `pointer-events-none` so the viewport receives the pointer, and a dialog
+ * rendered inside it would let Save fall through to the map.
  */
 export function ManualDriveReviewPanel({
   review,
@@ -23,6 +28,9 @@ export function ManualDriveReviewPanel({
   recorder: Pick<ManualDriveRecorder, "saveReview" | "discardReview" | "rerecord">;
 }) {
   const [failure, setFailure] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const dialogRef = useRef<HTMLElement>(null);
+  useEffect(() => setMounted(true), []);
   const summary = summarizeRecording(review.recording);
   const refusal = review.check.ok ? null : review.check.reason;
   const current = review.replaces.current;
@@ -30,22 +38,45 @@ export function ManualDriveReviewPanel({
     ? null
     : `its previous recording (${current.target.recording.samples.length} samples over ${current.target.recording.clipSeconds}s)`;
 
+  // Escape discards, exactly as the close button does; the take stays in the
+  // mailbox only until this dialog answers, so leaving it must be deliberate.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      recorder.discardReview();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [recorder]);
+
+  // Focus lands on the dialog itself when Save is refused, so keyboard users
+  // are never left on the canvas behind a modal.
+  useEffect(() => {
+    if (!mounted || !refusal) return;
+    dialogRef.current?.focus();
+  }, [mounted, refusal]);
+
   const run = (action: () => string | null) => {
     setFailure(action());
   };
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+      className="pointer-events-auto fixed inset-0 z-[150] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
       data-testid="manual-drive-review-backdrop"
     >
       <section
+        ref={dialogRef}
         aria-describedby="manual-drive-review-description"
         aria-labelledby="manual-drive-review-title"
         aria-modal="true"
-        className="w-full max-w-md border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
+        className="w-full max-w-md border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.7)] focus:outline-none"
         data-testid="manual-drive-review"
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center bg-[#E8E044] text-black">
@@ -168,6 +199,7 @@ export function ManualDriveReviewPanel({
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
