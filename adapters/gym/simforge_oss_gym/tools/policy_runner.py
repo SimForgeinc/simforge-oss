@@ -366,10 +366,24 @@ def run_episode(
     return summary
 
 
+def _make_policy(name: str, seed: int) -> Policy:
+    """Construct a reference policy, reporting a missing optional dependency
+    as a typed refusal rather than an interpreter traceback (the torch policy
+    imports torch lazily so the scripted path stays torch-free)."""
+    try:
+        return make_policy(name, seed)
+    except ImportError as error:
+        raise EndpointPolicyError(
+            "policy_unavailable",
+            f"policy {name!r} needs a dependency this interpreter does not have: {error}",
+            {"policy": name},
+        ) from error
+
+
 def _build_policy(args: argparse.Namespace, env: SimForgeEnv) -> tuple[Policy, Any]:
     """Return the evaluated policy and any resource that must be closed."""
     if args.policy != "endpoint":
-        return make_policy(args.policy, args.policy_seed), None
+        return _make_policy(args.policy, args.policy_seed), None
     if not args.endpoint_socket:
         raise EndpointPolicyError("endpoint_socket_required", "--policy endpoint requires --endpoint-socket")
     camera_map = profile_camera_map(args.camera_profile)
@@ -467,12 +481,12 @@ def main(argv: list[str] | None = None) -> int:
             if args.policy == "endpoint":
                 require_model_episode_admission(replay)
             monitor = EnvelopeMonitor(replay)
-        warmup_policy = make_policy(args.warmup_policy, args.policy_seed) if args.warmup_policy else None
+        warmup_policy = _make_policy(args.warmup_policy, args.policy_seed) if args.warmup_policy else None
         warmup_steps = int(args.warmup_steps)
         if args.policy == "endpoint" and warmup_policy is None and warmup_steps == 0:
             # The model needs 16 real ego poses and 4 real camera ticks; the
             # warm-up phase produces them instead of padding the observation.
-            warmup_policy = make_policy("scripted", args.policy_seed)
+            warmup_policy = _make_policy("scripted", args.policy_seed)
             warmup_steps = 16
         with SimForgeEnv(args.spec, session=args.session, decision_hz=args.decision_hz, maps_dir=args.maps_dir) as env:
             policy, resource = _build_policy(args, env)
