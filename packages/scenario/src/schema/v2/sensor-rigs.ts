@@ -1,5 +1,7 @@
 /** Canonical actor-mounted perception rig presets. */
 
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
 import { EntityIdSchema } from '../v1.js';
@@ -684,6 +686,136 @@ const BUILT_IN_SENSOR_RIGS_BY_ID: Readonly<Record<string, SensorRigPreset>> = {
 
 export function sensorRigPreset(id: string): SensorRigPreset | undefined {
   return BUILT_IN_SENSOR_RIGS_BY_ID[id];
+}
+
+/**
+ * Which rig a model REQUIRES, and the input properties that must survive
+ * from the editor through the render into the evaluation manifest.
+ *
+ * This is a mapping onto the presets above, not a second catalog: the
+ * geometry lives in `ALPAMAYO_CAMERA_TEMPLATES` and is referenced by rig id
+ * here. Duplicating intrinsics or extrinsics into a model table is exactly
+ * how a rig ends up "calibrated" in one file and not in another.
+ *
+ * `cameraIds` is the model's POSITIONAL camera order. These models carry no
+ * camera-identity channel, so order is contract, not presentation.
+ *
+ * Honest limits recorded per entry rather than implied:
+ * - `datasetCalibrated: false` everywhere. These are authored approximations
+ *   fitted to the published rig description; none is the calibrated dataset
+ *   camera, whose extrinsics live inside a gated archive.
+ * - `variableCameras` marks a family that legitimately accepts other sets.
+ *   A1 and A2 do not: a different set is a refusal, not a degraded mode.
+ */
+export interface ModelRigRequirement {
+  readonly family: string;
+  readonly rigId: string;
+  /** Positional camera order the model consumes. */
+  readonly cameraIds: readonly number[];
+  /** Render size the model's preprocessing expects. */
+  readonly renderWidth: number;
+  readonly renderHeight: number;
+  /** Frames per camera, and the cadence they must be sampled at. */
+  readonly framesPerCamera: number;
+  readonly cadenceHz: number;
+  /** Ego-history steps at `cadenceHz`, oldest first, t0 last. */
+  readonly historySteps: number;
+  /** Ego history and predicted waypoints are in this frame. */
+  readonly coordinateFrame: 'ego-flu-x-forward';
+  readonly variableCameras: boolean;
+  /** Authored approximation, never the calibrated dataset rig. */
+  readonly datasetCalibrated: false;
+}
+
+const ALPAMAYO_INPUT_COMMON = {
+  renderWidth: ALPAMAYO_RENDER_WIDTH,
+  renderHeight: ALPAMAYO_RENDER_HEIGHT,
+  framesPerCamera: 4,
+  cadenceHz: 10,
+  historySteps: 16,
+  coordinateFrame: 'ego-flu-x-forward',
+  datasetCalibrated: false,
+} as const;
+
+export const MODEL_RIG_REQUIREMENTS: readonly ModelRigRequirement[] = Object.freeze([
+  {
+    family: 'alpamayo-1',
+    rigId: 'alpamayo-4cam',
+    cameraIds: [0, 1, 2, 6],
+    variableCameras: false,
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+  {
+    // Variable by contract: it runs on other sets, and the default is the
+    // dataset-default four. A UI may offer the others; it must not silently
+    // substitute one.
+    family: 'alpamayo-1.5',
+    rigId: 'alpamayo-4cam',
+    cameraIds: [0, 1, 2, 6],
+    variableCameras: true,
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+  {
+    family: 'alpamayo-2-super',
+    rigId: 'alpamayo-6cam',
+    cameraIds: [0, 1, 2, 3, 5, 6],
+    variableCameras: false,
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+]);
+
+const MODEL_RIG_REQUIREMENTS_BY_FAMILY: Readonly<Record<string, ModelRigRequirement>> =
+  Object.fromEntries(MODEL_RIG_REQUIREMENTS.map((entry) => [entry.family, entry]));
+
+export function modelRigRequirement(family: string): ModelRigRequirement | undefined {
+  return MODEL_RIG_REQUIREMENTS_BY_FAMILY[family];
+}
+
+/**
+ * Stable hash over everything that must not drift between the render and
+ * the evaluation: the model's camera order and input cadence, plus the
+ * resolved sensor geometry of the rig it requires.
+ *
+ * Persisted in the render and eval manifests so a stored result names the
+ * exact profile it was produced under. If a template's FOV or mount is
+ * edited, this changes, and an old result stops claiming to match a new
+ * profile. Sensor fields are read from the preset rather than restated, so
+ * the hash cannot silently disagree with the geometry it describes.
+ */
+export function modelRigProfileHash(family: string): string {
+  const requirement = modelRigRequirement(family);
+  if (!requirement) throw new Error(`no rig requirement for model family "${family}"`);
+  const preset = sensorRigPreset(requirement.rigId);
+  if (!preset) throw new Error(`rig requirement for "${family}" names unknown rig "${requirement.rigId}"`);
+
+  const payload = {
+    schema: 'simforge.model-rig-profile/v1',
+    family: requirement.family,
+    rigId: requirement.rigId,
+    cameraIds: [...requirement.cameraIds],
+    renderWidth: requirement.renderWidth,
+    renderHeight: requirement.renderHeight,
+    framesPerCamera: requirement.framesPerCamera,
+    cadenceHz: requirement.cadenceHz,
+    historySteps: requirement.historySteps,
+    coordinateFrame: requirement.coordinateFrame,
+    sensors: preset.sensors.map((sensor) => ({
+      id: sensor.id,
+      type: sensor.type,
+      mount: sensor.mount,
+      ...(sensor.type === 'dash_camera' ? { fov: sensor.fov, dims: sensor.dims } : {}),
+    })),
+  };
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+}
+
+/**
+ * Version tag for a persisted profile: family plus the first 12 hex of the
+ * hash. Short enough for a manifest field and a UI badge, and it changes
+ * whenever the geometry or the input contract changes.
+ */
+export function modelRigProfileVersion(family: string): string {
+  return `${family}@${modelRigProfileHash(family).slice(0, 12)}`;
 }
 
 /** Resolve a fixed or vehicle-anchored preset mount to an actor-local numeric mount. */
