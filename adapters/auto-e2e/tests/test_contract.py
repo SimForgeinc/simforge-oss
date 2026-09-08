@@ -32,7 +32,7 @@ from simforge_auto_e2e.obs import (  # noqa: E402
 
 def observation(**overrides):
     obs = {
-        "camera_tiles": [None] * contract.NUM_VIEWS,
+        "camera_tiles": [None] * contract.DEFAULT_NUM_VIEWS,
         "map_context": object(),
         "route_mask": object(),
         "egomotion_history": [0.0] * contract.EGOMOTION_DIM,
@@ -48,7 +48,7 @@ def test_dimensions_match_upstream_source():
     assert contract.EGOMOTION_DIM == 256
     assert contract.VISUAL_HISTORY_DIM == 896
     assert contract.TRAJECTORY_DIM == 128
-    assert contract.NUM_VIEWS == 7
+    assert contract.DEFAULT_NUM_VIEWS == 7
     assert contract.HORIZON_SECONDS == pytest.approx(6.4)
 
 
@@ -169,3 +169,76 @@ def test_integration_requires_a_real_initial_speed():
 def test_upstream_pin_is_recorded_as_a_commit():
     assert len(contract.UPSTREAM_COMMIT) == 40
     assert "no release or tag" in contract.UPSTREAM_PINNED_BY
+
+
+# -- the checkpoint config is the authority over the documentation ---------
+
+
+def _cfg(num_views: int) -> contract.ModelConfig:
+    return contract.ModelConfig(
+        backbone="swin_v2_tiny", planner_mode="bezier", num_views=num_views
+    )
+
+
+def test_view_count_comes_from_the_checkpoint_not_the_readme():
+    """v63 has 6 views; the README says 7. Views are positional, so
+    validating against the documented number would accept a stack whose every
+    camera is mis-assigned, and reject the checkpoint's real input."""
+    six = observation()
+    six["camera_tiles"] = [None] * 6
+
+    # Against the documented default this six-view input is refused...
+    with pytest.raises(AutoE2EError) as no_cfg:
+        validate_observation(six, scored=True)
+    assert no_cfg.value.code == "camera_set_invalid"
+    assert no_cfg.value.detail["expectedFrom"] == "documented default"
+
+    # ...and against the real checkpoint's config it is correct.
+    prov = validate_observation(six, scored=True, config=_cfg(6))
+    assert prov["views"] == 6
+
+    # The documented seven-view stack is then the one that must be refused.
+    with pytest.raises(AutoE2EError) as wrong:
+        validate_observation(observation(), scored=True, config=_cfg(6))
+    assert wrong.value.detail["expected"] == 6
+    assert wrong.value.detail["expectedFrom"] == "checkpoint config"
+
+
+def test_registered_checkpoint_exists_and_is_not_qualified():
+    """The v63 record must state both halves of the truth: the artifact is
+    real and identified, and it fails its own evaluation gate."""
+    v63 = contract.V63
+    assert v63.run_id and len(v63.sha256) == 64
+    assert v63.num_views == 6           # not the documented 7
+    assert v63.config_retrievable       # config.yaml is public
+    assert not v63.bytes_retrievable    # the .pt is not served
+    assert not v63.eval_gate_pass       # ...and it fails its gate
+    assert v63.validation_ade_m > 3.0
+    assert "access prerequisite, not a missing artifact" in contract.CHECKPOINT_ACCESS_NOTE
+
+
+def test_history_masking_matches_the_checkpoints_training_policy():
+    """v63 masked the newest acceleration during training. Passing a real
+    value there is off-distribution and undetectable downstream, so the mask
+    is applied from the checkpoint's policy and recorded, not assumed."""
+    ego = [1.0] * contract.EGOMOTION_DIM
+    kept, off = contract.apply_history_masking(ego, mask_latest_acceleration=False)
+    assert kept == ego and off["maskedLatestAcceleration"] is False
+
+    masked, prov = contract.apply_history_masking(ego, mask_latest_acceleration=True)
+    idx = prov["maskedIndex"]
+    # newest timestep (63), acceleration is signal index 1 of 4
+    assert idx == 63 * 4 + 1
+    assert masked[idx] == 0.0 and prov["maskedValue"] == 1.0
+    assert sum(1 for a, b in zip(ego, masked) if a != b) == 1
+
+    with pytest.raises(ValueError):
+        contract.apply_history_masking([0.0] * 10, mask_latest_acceleration=True)
+
+
+def test_training_code_revision_is_an_independent_prerequisite():
+    """Even with weights, the code that trained them is not published."""
+    assert not contract.V63_TRAINING_CODE_PUBLISHED
+    assert len(contract.V63_TRAINING_CODE_REVISION) == 40
+    assert "NOT the code that trained" in contract.TRAINING_CODE_ACCESS_NOTE
+    assert len(contract.CHECKPOINT_DELIVERY_PATHS_TRIED) == 4

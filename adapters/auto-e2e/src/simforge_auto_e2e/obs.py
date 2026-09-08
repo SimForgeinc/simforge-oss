@@ -21,27 +21,42 @@ def _missing(field: str, why: str) -> AutoE2EError:
     return AutoE2EError("missing_fields", f"{field} is required: {why}", fields=[field])
 
 
-def validate_observation(obs: dict[str, Any], *, scored: bool) -> dict[str, Any]:
+def validate_observation(
+    obs: dict[str, Any],
+    *,
+    scored: bool,
+    config: contract.ModelConfig | None = None,
+) -> dict[str, Any]:
     """Validate a wire observation against the upstream contract.
 
     Returns a provenance record describing what was supplied. ``scored``
     tightens the geometry rule: a scored run may not use the pseudo-geometry
     fallback, which upstream itself labels a learned spatial prior rather than
     real geometry.
+
+    ``config`` is the LOADED checkpoint's config and is the authority on the
+    view count. The documented default (7) is wrong for real trained
+    checkpoints — registered v63 uses 6 — and views are positional, so a
+    count validated against the wrong number is the exact failure that
+    silently mis-assigns every camera.
     """
+    expect_views = config.num_views if config is not None else contract.DEFAULT_NUM_VIEWS
+    views_source = "checkpoint config" if config is not None else "documented default"
+
     views = obs.get("camera_tiles")
     if views is None:
-        raise _missing("camera_tiles", f"{contract.NUM_VIEWS} surround views are the model's primary input")
-    if len(views) != contract.NUM_VIEWS:
+        raise _missing("camera_tiles", f"{expect_views} surround views are the model's primary input")
+    if len(views) != expect_views:
         raise AutoE2EError(
             "camera_set_invalid",
-            f"AutoE2E takes exactly {contract.NUM_VIEWS} views in a fixed "
-            f"order; got {len(views)}. Views are POSITIONAL for this model — "
-            "there is no camera-id channel, so a short or reordered stack "
-            "cannot be detected by the network and would silently mis-assign "
-            "every view.",
-            expected=contract.NUM_VIEWS,
+            f"AutoE2E takes exactly {expect_views} views in a fixed "
+            f"order ({views_source}); got {len(views)}. Views are POSITIONAL "
+            "for this model — there is no camera-id channel, so a short or "
+            "reordered stack cannot be detected by the network and would "
+            "silently mis-assign every view.",
+            expected=expect_views,
             got=len(views),
+            expectedFrom=views_source,
         )
 
     nav = obs.get("map_context")
@@ -119,7 +134,8 @@ def validate_observation(obs: dict[str, Any], *, scored: bool) -> dict[str, Any]
         )
 
     return {
-        "views": contract.NUM_VIEWS,
+        "views": len(views),
+        "viewCountFrom": views_source,
         "geometry_type": geometry,
         "geometry_is_real": geometry != contract.GEOMETRY_TYPE_SHAPE_ONLY,
         "navigation_raster": "supplied",

@@ -265,18 +265,27 @@ class AutoE2EEngine:
         }
 
     def capabilities(self) -> dict[str, Any]:
+        # The loaded checkpoint's own config is the authority; the documented
+        # defaults are only a fallback for an unloaded engine, and they are
+        # known to disagree with real checkpoints (v63: 6 views, 14 map
+        # channels vs the README's 7 and 3). Advertising the wrong view count
+        # on a positional-camera model would mis-assign every view.
+        cfg = self.config
+        views = cfg.num_views if cfg else contract.DEFAULT_NUM_VIEWS
+        map_ch = cfg.map_context_channels if cfg else contract.DEFAULT_MAP_CONTEXT_CHANNELS
         return {
+            "shapesFrom": "checkpoint" if cfg else "documented-default",
             "cameras": {
                 # Positional, not identified: view ORDER is the contract and
                 # there is no camera-id channel to validate against.
-                "count": contract.NUM_VIEWS,
+                "count": views,
                 "identified": False,
                 "positional": True,
                 "size": [contract.CAMERA_WIDTH, contract.CAMERA_HEIGHT],
             },
             "navigationRaster": {
                 "required": True,
-                "mapContextChannels": contract.MAP_CONTEXT_CHANNELS,
+                "mapContextChannels": map_ch,
                 "routeChannels": contract.ROUTE_CHANNELS,
                 "size": [contract.MAP_WIDTH, contract.MAP_HEIGHT],
             },
@@ -332,7 +341,19 @@ class AutoE2EEngine:
                 "engine is not loaded; AutoE2E requires an authorized trained "
                 "checkpoint before it can produce a trajectory"
             )
-        provenance = validate_observation(obs, scored=scored)
+        provenance = validate_observation(obs, scored=scored, config=self.config)
+
+        # Apply the checkpoint's own history-masking policy before inference.
+        # v63 was trained with the newest acceleration masked; an unmasked
+        # value is off-distribution and nothing downstream can detect it.
+        ego, mask_prov = contract.apply_history_masking(
+            list(obs["egomotion_history"]),
+            mask_latest_acceleration=bool(
+                self.config and self.config.mask_latest_history_acceleration
+            ),
+        )
+        obs = {**obs, "egomotion_history": ego}
+        provenance = {**provenance, "historyMasking": mask_prov}
 
         torch.manual_seed(seed)
         if torch.cuda.is_available():

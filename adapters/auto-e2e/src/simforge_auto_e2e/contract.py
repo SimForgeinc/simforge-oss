@@ -43,7 +43,14 @@ DISPLAY_NAME = "Autoware AutoE2E"
 #: Surround view. Unlike Alpamayo, camera identity is POSITIONAL here: the
 #: model takes a (B, V, 3, H, W) stack plus a projection operator, and there
 #: is no per-camera id channel, so the caller's view order IS the contract.
-NUM_VIEWS = 7
+#:
+#: THIS IS A DEFAULT, NOT THE CONTRACT. The checkpoint's own config is the
+#: authority and real trained checkpoints disagree with the documentation:
+#: registered model `auto-e2e-driving-policy` v63 was trained with
+#: `model.num_views = 6` on KIT Scenes, while Model/README.md says 7. Always
+#: read `ModelConfig.num_views` from the loaded checkpoint; never assume 7.
+DEFAULT_NUM_VIEWS = 7
+NUM_VIEWS = DEFAULT_NUM_VIEWS
 CAMERA_HEIGHT = 256
 CAMERA_WIDTH = 256
 
@@ -51,7 +58,13 @@ CAMERA_WIDTH = 256
 
 #: The nav map is a rendered raster, not an HD map viewer and not optional.
 #: A scored run may not substitute a blank or synthetic map.
-MAP_CONTEXT_CHANNELS = 3
+#:
+#: ALSO A DEFAULT. v63's config records `model.map_context_channels = 14`,
+#: not the 3 the README implies, so the raster's channel count is a property
+#: of the checkpoint's navigation geometry (v63:
+#: `kitscenes-v3-bev-1m-v1`) rather than a constant. Read it from the config.
+DEFAULT_MAP_CONTEXT_CHANNELS = 3
+MAP_CONTEXT_CHANNELS = DEFAULT_MAP_CONTEXT_CHANNELS
 ROUTE_CHANNELS = 2
 MAP_HEIGHT = 256
 MAP_WIDTH = 256
@@ -139,13 +152,13 @@ class ModelConfig:
     backbone: str
     planner_mode: str
     embed_dim: int = 256
-    num_views: int = NUM_VIEWS
+    num_views: int = DEFAULT_NUM_VIEWS
     num_timesteps: int = FUTURE_TIMESTEPS
     num_signals: int = NUM_TARGET_SIGNALS
     egomotion_dim: int = EGOMOTION_DIM
     visual_history_dim: int = VISUAL_HISTORY_DIM
     map_type: str = "rasterized"
-    map_context_channels: int = MAP_CONTEXT_CHANNELS
+    map_context_channels: int = DEFAULT_MAP_CONTEXT_CHANNELS
     route_channels: int = ROUTE_CHANNELS
     enable_route_conditioning: bool = True
     map_fusion_mode: str = "residual"
@@ -157,6 +170,14 @@ class ModelConfig:
     #: because it changes what `is_pretrained=True` downloads at build time;
     #: it is NOT the trained policy.
     is_pretrained: bool = True
+    #: Per-signal output scales the model was trained with. The trajectory
+    #: loss applies dataset-specific scales, so a consumer that ignores them
+    #: mis-reads the head's output magnitude. v63:
+    #: acceleration 0.778, curvature 0.035.
+    acceleration_signal_scale: float | None = None
+    curvature_signal_scale: float | None = None
+    #: History-masking policy the checkpoint was trained with. v63: True.
+    mask_latest_history_acceleration: bool = False
 
     def as_kwargs(self) -> dict[str, object]:
         """Constructor kwargs for upstream `AutoE2E`."""
@@ -208,3 +229,166 @@ CHECKPOINT_REQUIRED_FIELDS: frozenset[str] = frozenset(
 CHECKPOINT_REGISTRY = "MLflow"
 CHECKPOINT_REGISTRY_URI = "http://mlflow.mlflow.svc.cluster.local:5000"
 CHECKPOINT_REGISTRY_REACHABLE_PUBLICLY = False
+
+
+# -- known registered checkpoints -----------------------------------------
+
+#: Public MLflow for the Autoware AutoE2E platform. NOT only in-cluster: the
+#: in-cluster URI in Platform/HowToUseMLflow.md is the developer address, and
+#: this CloudFront distribution serves the same registry publicly.
+PUBLIC_MLFLOW = "https://d33520viyb0smg.cloudfront.net"
+PUBLIC_CONSOLE = "https://d2itskdqq39tx1.cloudfront.net"
+REGISTERED_MODEL = "auto-e2e-driving-policy"
+
+
+@dataclass(frozen=True)
+class RegisteredCheckpoint:
+    """A checkpoint that provably exists in the public registry.
+
+    Recorded so the product can name the exact artifact it needs rather than
+    reporting a vague unavailability. `bytes_retrievable` is False when the
+    metadata and config are public but the weight object itself is not
+    served — which is the current state and is an ACCESS limitation, not
+    absence.
+    """
+
+    version: str
+    run_id: str
+    s3_uri: str
+    sha256: str
+    epoch: int
+    role: str
+    num_views: int
+    backbone: str
+    fusion_mode: str
+    validation_ade_m: float
+    validation_fde_m: float
+    eval_gate_pass: bool
+    bytes_retrievable: bool
+    config_retrievable: bool
+
+
+#: Version 63, the current final checkpoint. Metadata and config.yaml are
+#: publicly retrievable; the .pt is not (see below).
+V63_TRAINING_CODE_REVISION = "6fde0034446669e2ed7235e4c7fe323cd23d599d"
+V63_TRAINING_CODE_PUBLISHED = False   # not an object in the public repo
+V63_NAVIGATION_GEOMETRY_ID = "kitscenes-v3-bev-1m-v1"
+V63_BEV_PC_RANGE = (-85.5, -128.0, -5.0, 170.5, 128.0, 3.0)
+V63_DATASET = "KIT-MRT/KITScenes-Multimodal"
+V63_DATASET_VERSION = "v3.3"
+
+#: Per-signal output scales this checkpoint was trained with
+#: (acceleration, curvature). A consumer that ignores them mis-reads the
+#: head's magnitude.
+V63_SIGNAL_SCALES = (0.778, 0.035)
+
+#: The newest acceleration sample in the egomotion history was MASKED during
+#: training. Feeding a real value into that slot at inference is off
+#: distribution, and nothing in the network can report that it happened, so
+#: the adapter applies the same mask and records it.
+V63_MASK_LATEST_HISTORY_ACCELERATION = True
+
+V63 = RegisteredCheckpoint(
+    version="63",
+    run_id="8e238504ab354e7f8c7828acb8f51b1f",
+    s3_uri=(
+        "s3://auto-e2e-platform-checkpoints-381491877296/imitation-learning/"
+        "8e238504ab354e7f8c7828acb8f51b1f/epoch-0020.pt"
+    ),
+    sha256="804c035a768e79ba0f626f946560601e7e26bdc4a37a17331eadc383507bbb5f",
+    epoch=20,
+    role="final",
+    num_views=6,
+    backbone="swin_v2_tiny",
+    fusion_mode="bev",
+    validation_ade_m=3.9544286981114913,
+    validation_fde_m=11.04423553182655,
+    # eval/gate_pass = 0.0 in the run's own metrics. THIS IS THE POINT: the
+    # checkpoint exists and is READY in the registry, and it FAILS its own
+    # evaluation gate. Availability is not quality. Offering it as a
+    # qualified model would be the same error as publishing an unmeasured
+    # VRAM envelope.
+    eval_gate_pass=False,
+    bytes_retrievable=False,
+    config_retrievable=True,
+)
+
+#: Why the weights cannot be fetched today, recorded precisely.
+#: Every public delivery path attempted, so the gate is a fact rather than an
+#: impression. All four were tried; none yields the weight bytes.
+CHECKPOINT_DELIVERY_PATHS_TRIED = (
+    "GET /api/2.0/mlflow/model-versions/get-download-uri -> 200, but returns "
+    "an s3:// URI rather than a presigned HTTP URL",
+    "GET /get-artifact and /api/2.0/mlflow-artifacts/artifacts/... for the "
+    ".pt -> 500 INTERNAL_ERROR; the server's own S3 read of the checkpoints "
+    "bucket fails (the same endpoints serve config.yaml and "
+    "training/metadata.json at 200, so the proxy itself works)",
+    "S3 HEAD on the exact object -> 403 anonymously and 403 with the "
+    "available authorized AWS profile",
+    "DataModelConsole registry view -> declares itself 'Phase 1 - read-only' "
+    "and offers no artifact download, only outbound links to the MLflow and "
+    "Flyte UIs",
+)
+
+CHECKPOINT_ACCESS_NOTE = (
+    "Registry metadata and the run's config.yaml are publicly retrievable "
+    "from the MLflow distribution, but the checkpoint object is not: the "
+    "artifact proxy returns INTERNAL_ERROR for the .pt because its own S3 "
+    "read fails, and direct S3 HEAD on the object returns 403 both "
+    "anonymously and with the available authorized AWS profile. The "
+    "checkpoint therefore EXISTS and is identified by sha256 "
+    "804c035a768e79ba0f626f946560601e7e26bdc4a37a17331eadc383507bbb5f; what "
+    "is missing is authorized read access or a maintainer-provided export. "
+    "This is an access prerequisite, not a missing artifact, and it must not "
+    "be worked around by bypassing authentication."
+)
+
+#: A second, independent prerequisite that survives even if the weights
+#: arrive: the checkpoint was produced by code that is not published.
+TRAINING_CODE_ACCESS_NOTE = (
+    "The run records source_revision "
+    "6fde0034446669e2ed7235e4c7fe323cd23d599d, which is not an object in the "
+    "public auto_e2e repository (git cat-file: bad object). The published "
+    "HEAD is therefore NOT the code that trained the registered checkpoint. "
+    "Loading weights with a differently-shaped or differently-behaved "
+    "published model is exactly the failure mode that returns plausible "
+    "numbers, so a qualified run needs the training revision published or "
+    "the checkpoint's own config honoured strictly - which is why this "
+    "adapter derives every shape from the config rather than from source."
+)
+
+
+def apply_history_masking(
+    egomotion: list[float], *, mask_latest_acceleration: bool
+) -> tuple[list[float], dict[str, Any]]:
+    """Apply the checkpoint's own history-masking policy.
+
+    v63 was trained with `mask_latest_history_acceleration = True`: the most
+    recent acceleration sample is masked. Supplying a real value there is off
+    distribution and undetectable downstream, so the mask is applied here and
+    recorded in provenance rather than assumed by the caller.
+    """
+    if len(egomotion) != EGOMOTION_DIM:
+        raise ValueError(
+            f"egomotion history must be {EGOMOTION_DIM} values, got {len(egomotion)}"
+        )
+    if not mask_latest_acceleration:
+        return list(egomotion), {"maskedLatestAcceleration": False}
+
+    out = list(egomotion)
+    # Timestep-major (64, 4); the newest timestep is last, acceleration is
+    # signal index 1.
+    idx = (HISTORY_TIMESTEPS - 1) * len(EGOMOTION_SIGNALS) + EGOMOTION_SIGNALS.index(
+        "acceleration"
+    )
+    replaced = out[idx]
+    out[idx] = 0.0
+    return out, {
+        "maskedLatestAcceleration": True,
+        "maskedIndex": idx,
+        "maskedValue": replaced,
+        "reason": (
+            "checkpoint trained with mask_latest_history_acceleration=True; "
+            "an unmasked newest acceleration is off-distribution"
+        ),
+    }
