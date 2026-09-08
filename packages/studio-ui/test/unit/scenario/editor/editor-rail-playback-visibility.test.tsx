@@ -47,7 +47,6 @@ vi.mock("../../../../src/scenario/editor/regions/EditorCanvasRegion", () => ({ E
 vi.mock("../../../../src/scenario/editor/regions/EditorHeader", () => ({ EditorHeader: () => null }));
 vi.mock("../../../../src/scenario/editor/regions/EditorModeBanner", () => ({ EditorModeBanner: () => null }));
 vi.mock("../../../../src/scenario/editor/regions/slots", () => ({
-  AssistantChatSlot: () => null,
   NotificationDockSlot: () => null,
   ScenarioRailSlot: () => null,
   TutorialOverlaySlot: () => null,

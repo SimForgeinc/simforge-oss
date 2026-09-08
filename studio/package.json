@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "main": "desktop/main.mjs",
@@ -27,13 +27,11 @@
     "test:map-cache": "tsx --test app/lib/map-cache/__tests__/service.test.ts && node --test desktop/__tests__/map-cache.test.mjs",
     "test:eval": "tsx --test app/lib/evaluation/__tests__/eval-api.test.ts",
     "test:hifi-preview": "tsx --test app/lib/hifi-preview/__tests__/camera-roundtrip.test.ts worker/__tests__/native-ready-map.test.ts worker/__tests__/payload-framing.test.ts",
-    "test:native-assistant": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts app/lib/editor-map/__tests__/native-map-bundle.test.ts app/lib/editor-map/__tests__/native-map-bundle-loader.test.ts",
+    "test:fresh-schema": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
-    "@langchain/anthropic": "^1.3.26",
-    "@langchain/core": "^1.1.39",
     "@mapbox/vector-tile": "^2.0.4",
     "@msgpack/msgpack": "^3.1.3",
     "@napi-rs/keyring": "2.0.0",
@@ -69,7 +67,6 @@
     "fflate": "^0.8.2",
     "flatbush": "^4.5.1",
     "gl-matrix": "^3.4.4",
-    "langchain": "^1.3.1",
     "lucide-react": "^0.577.0",
     "maplibre-gl": "^4.7.0",
     "meshoptimizer": "^1.0.1",
