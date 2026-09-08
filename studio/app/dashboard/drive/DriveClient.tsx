@@ -444,11 +444,21 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
   useEffect(() => () => bridge?.dispose(), [bridge]);
 
   // The wheel/keyboard owner transmits only with an active ego; a map change
-  // or an exited drive hands it `null` and it neutralises on its own.
+  // or an exited drive hands it `null` and it neutralises and disengages on
+  // its own. A bounded drive (clip or take) also hands it `null` once the
+  // clip has ended or a take is under review, so nothing keeps steering a
+  // parked world and the next take needs an intentional re-engage with the
+  // pedals released. A free drive stays live past the clip.
+  // `transport.completed` is a live getter; `transportRevision` is what re-renders it.
+  const clipParked = Boolean(transport?.completed);
+  const controlsLive = driving
+    && (driveMode === "free" || !clipParked)
+    && takePhase.kind !== "review"
+    && takePhase.kind !== "saving";
   useEffect(() => {
-    onControlTarget({ source, actorId: driving ? egoActorId : null });
+    onControlTarget({ source, actorId: controlsLive ? egoActorId : null });
     return () => onControlTarget(NO_CONTROL_TARGET);
-  }, [driving, egoActorId, onControlTarget, source]);
+  }, [controlsLive, egoActorId, onControlTarget, source]);
 
   const onViewerReady = useCallback((readyViewer: CityViewer) => {
     setViewer(readyViewer);
