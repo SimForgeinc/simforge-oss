@@ -8,13 +8,27 @@ import {
   useRef,
   useState,
 } from "react";
-import { Camera, LayoutGrid, LogIn, LogOut, RotateCcw, Video } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Camera,
+  CircleDot,
+  Eye,
+  LayoutGrid,
+  LogIn,
+  LogOut,
+  Map as MapIcon,
+  RotateCcw,
+  Save,
+  Trash2,
+  Video,
+} from "lucide-react";
 import type {
   EditorController,
   EditorDocument,
   EditorState,
   ScenarioMapEntry,
 } from "@simforge-oss/editor";
+import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { CityViewerOptions } from "@simforge-oss/viewer";
 import { CityViewer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
@@ -48,6 +62,7 @@ import {
   createAuthoredWorldSource,
   type AuthoredWorldSource,
 } from "@/app/lib/live-world/authored-world-source";
+import type { AuthoredDriveMode, ManualDriveRecording } from "@/app/lib/live-world/authored-world-session";
 import { createRemoteWorldSource } from "@/app/lib/live-world/remote-world-source";
 import { createTruthViewerBridge, type TruthViewerBridge } from "@/app/lib/live-world/truth-viewer-bridge";
 import type {
@@ -57,80 +72,208 @@ import type {
   WorldSourceStatus,
 } from "@/app/lib/live-world/types";
 import { useWorldSource } from "@/app/lib/live-world/use-world-source";
+import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
+import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { ScenarioAuthoringQuality } from "@/app/lib/scenario/contracts";
 import { useEditorRuntime } from "@simforge-oss/studio-ui/lib/scenario/editor/use-editor-runtime";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import { PoleCameraGrid } from "./cameras/PoleCameraGrid";
+import { DriveMapChooser, driveMapUsable } from "./DriveMapChooser";
+import { DrivingControls } from "./DrivingControls";
 import { HistoryDock } from "./history/HistoryDock";
 import { usePoleCameras } from "./pole-cameras";
 import { actorSpeedKph, formatClipTime } from "./drive-telemetry";
 
 type DriveView = "world" | "cameras";
-type FollowMode = "chase" | "dash";
+/** Chase and dash follow the ego; free hands the orbit camera back to the operator. */
+type CameraMode = "chase" | "dash" | "free";
 
-const CONTROLLED_KEY_CODES: Record<string, true> = {
-  ArrowUp: true,
-  ArrowDown: true,
-  ArrowLeft: true,
-  ArrowRight: true,
-  KeyW: true,
-  KeyA: true,
-  KeyS: true,
-  KeyD: true,
-  KeyR: true,
-  Space: true,
+/**
+ * A "Manual drive" take opened from the scenario editor. The editor owns the
+ * document transaction; Drive owns the wheel, the world and the recording.
+ * `revision` is an opaque guard echoed back untouched.
+ */
+export type ManualDriveTakeSession = {
+  takeId: string;
+  datasetId: string;
+  documentId: string;
+  mapVersionId: string;
+  interactionId: string;
+  actorRoleId: string;
+  clipSeconds: number;
+  revision: string;
+  /** The exact in-memory editor document at open; the server copy may differ. */
+  content: ScenarioTemplateV2;
+  returnHref: string;
+  onSave(recording: ManualDriveRecording, revision: string): Promise<void>;
+  onCancel(): void;
 };
 
-export function DriveClient() {
-  const [map, setMap] = useState<ScenarioMapEntry | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
+type ControlTarget = { source: WorldSource | null; actorId: string | null };
+const NO_CONTROL_TARGET: ControlTarget = { source: null, actorId: null };
+const MAP_QUERY = "map";
 
+export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[]; take?: ManualDriveTakeSession | null }) {
+  const router = useRouter();
+  const cloudState = useStudioCloudStatus().status?.state;
+  const [directMap, setDirectMap] = useState<{ map: ScenarioMapEntry | null; error: string | null } | null>(null);
+  const [activeMap, setActiveMap] = useState<ScenarioMapEntry | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [controlTarget, setControlTarget] = useState<ControlTarget>(NO_CONTROL_TARGET);
+  const requestedMapId = useMemo(
+    () => take?.mapVersionId ?? (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(MAP_QUERY)),
+    [take?.mapVersionId],
+  );
+
+  // A direct bundle bypasses the catalog entirely (un-ingested maps, see README).
   useEffect(() => {
-    const controller = new AbortController();
     const params = new URLSearchParams(window.location.search);
     const manifestOverride = params.get("manifest") ?? process.env.NEXT_PUBLIC_DRIVE_MAP_MANIFEST_URL ?? null;
     const lanesOverride = params.get("lanes") ?? process.env.NEXT_PUBLIC_DRIVE_MAP_LANES_URL ?? null;
-    if (manifestOverride) {
-      try {
-        setMap(directMapEntry({
-          manifestUrl: manifestOverride,
-          topologyUrl: lanesOverride,
-          label: params.get("label") ?? "Direct bundle",
-        }));
-        setMapError(null);
-      } catch (error) {
-        const message = errorMessage(error);
-        setMapError(message);
-        toast.error("Drive could not use the direct map bundle", { description: message });
-      }
-      return () => controller.abort();
-    }
-    void studioHost.artifacts.listMaps(controller.signal)
-      .then((maps) => {
-        if (maps.length === 0) throw new Error("No published maps are available for Drive");
-        setMap(maps.find((candidate) => /richmond/i.test(candidate.label)) ?? maps[0]!);
-        setMapError(null);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        const message = errorMessage(error);
-        setMapError(message);
-        toast.error("Drive could not load the map catalog", { description: message });
+    if (!manifestOverride) return;
+    try {
+      setDirectMap({
+        map: directMapEntry({ manifestUrl: manifestOverride, topologyUrl: lanesOverride, label: params.get("label") ?? "Direct bundle" }),
+        error: null,
       });
-    return () => controller.abort();
+    } catch (error) {
+      const message = errorMessage(error);
+      setDirectMap({ map: null, error: message });
+      toast.error("Drive could not use the direct map bundle", { description: message });
+    }
   }, []);
 
-  if (!map) {
-    return (
-      <div className="grid h-full min-h-0 place-items-center bg-background text-sm text-muted-foreground" role={mapError ? "alert" : "status"}>
-        {mapError ?? "Loading Drive map…"}
+  // Authorization changes re-read the catalog, exactly as the Maps app does.
+  useEffect(() => {
+    if (cloudState && cloudState !== "connecting") router.refresh();
+  }, [cloudState, router]);
+
+  const openMap = useCallback(async (mapVersionId: string, signal?: AbortSignal) => {
+    setOpening(mapVersionId);
+    setNotice(null);
+    try {
+      // The usable catalog is the server's decision: installed closure and
+      // current authorization. Drive never assembles a map entry itself.
+      const entry = (await studioHost.artifacts.listMaps(signal, { fresh: true }))
+        .find((candidate) => candidate.mapVersionId === mapVersionId);
+      if (!entry) throw new Error("This map is not prepared or authorized on this computer.");
+      if (signal?.aborted) return;
+      setActiveMap(entry);
+      const url = new URL(window.location.href);
+      url.searchParams.set(MAP_QUERY, mapVersionId);
+      window.history.replaceState(window.history.state, "", url);
+    } catch (error) {
+      if (signal?.aborted) return;
+      const message = errorMessage(error);
+      setNotice(message);
+      if (take) {
+        toast.error("Manual drive take could not open its map", { description: message });
+        take.onCancel();
+      } else {
+        toast.error("Drive could not open the map", { description: message });
+      }
+    } finally {
+      if (!signal?.aborted) setOpening(null);
+    }
+  }, [take]);
+
+  // Deep link (`?map=`) or an editor take: open the requested map directly,
+  // through the same gate as an explicit choice.
+  useEffect(() => {
+    if (!requestedMapId || activeMap || directMap) return;
+    const controller = new AbortController();
+    void openMap(requestedMapId, controller.signal);
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per requested id
+  }, [requestedMapId]);
+
+  // Loss of access: a fresh catalog that no longer allows the active map
+  // disposes the world (DriveSurface unmount) and returns to the chooser.
+  useEffect(() => {
+    if (!activeMap) return;
+    const descriptor = maps.find((map) => map.mapVersionId === activeMap.mapVersionId);
+    if (descriptor && driveMapUsable(descriptor, cloudState)) return;
+    if (cloudState === undefined || cloudState === "connecting") return;
+    setActiveMap(null);
+    setNotice(`${activeMap.label} is no longer available on this computer; the world was closed.`);
+    if (take) take.onCancel();
+  }, [activeMap, cloudState, maps, take]);
+
+  const leaveMap = useCallback(() => {
+    setActiveMap(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete(MAP_QUERY);
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+
+  const surfaceMap = directMap?.map ?? activeMap;
+  const takeRecord = useMemo(
+    () => take ? { id: take.documentId, content: take.content } : null,
+    [take],
+  );
+
+  return (
+    <div className="relative flex h-full min-h-0">
+      <div className="min-h-0 min-w-0 flex-1">
+        {surfaceMap ? (
+          <DriveSurface
+            key={surfaceMap.mapVersionId}
+            map={surfaceMap}
+            record={takeRecord}
+            take={take}
+            onLeave={directMap ? null : leaveMap}
+            onControlTarget={setControlTarget}
+          />
+        ) : directMap?.error ? (
+          <div className="grid h-full min-h-0 place-items-center bg-background text-sm text-destructive" role="alert">
+            {directMap.error}
+          </div>
+        ) : take ? (
+          <div className="grid h-full min-h-0 place-items-center gap-3 bg-background text-sm text-muted-foreground" role={notice ? "alert" : "status"}>
+            <span>{notice ?? `Opening the take's map…`}</span>
+            {notice ? (
+              <Button type="button" size="sm" variant="outline" onClick={take.onCancel}>Back to the editor</Button>
+            ) : null}
+          </div>
+        ) : (
+          <DriveMapChooser
+            maps={maps}
+            initialMapVersionId={requestedMapId}
+            opening={opening}
+            notice={notice}
+            onDrive={(map) => void openMap(map.mapVersionId)}
+          />
+        )}
       </div>
-    );
-  }
-  return <DriveSurface map={map} />;
+      {/* Mounted once for the life of the page so device choice and wheel
+          calibration survive map changes; it only transmits with an ego. */}
+      <div
+        className={cn(
+          "pointer-events-none z-20 w-80 shrink-0",
+          surfaceMap ? "absolute bottom-4 right-4 top-16" : "border-l border-white/10 bg-[#07100d] p-3",
+        )}
+        data-testid="driving-controls-dock"
+      >
+        <DrivingControls source={controlTarget.source} actorId={controlTarget.actorId} />
+      </div>
+    </div>
+  );
 }
 
-function DriveSurface({ map }: { map: ScenarioMapEntry }) {
+type TakePhase =
+  | { kind: "idle" }
+  | { kind: "recording" }
+  | { kind: "review"; recording: ManualDriveRecording; sourceRevision: number }
+  | { kind: "saving" };
+
+function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
+  map: ScenarioMapEntry;
+  record: Pick<ScenarioTemplateRecord, "id" | "content"> | null;
+  take: ManualDriveTakeSession | null;
+  onLeave: (() => void) | null;
+  onControlTarget: (target: ControlTarget) => void;
+}) {
   const [source, setSource] = useState<WorldSource | null>(null);
   const [authoredSource, setAuthoredSource] = useState<AuthoredWorldSource | null>(null);
   const [sourceCreationError, setSourceCreationError] = useState<string | null>(null);
@@ -144,17 +287,20 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
   const [clock, setClock] = useState<WorldClock | null>(null);
   const [replay, setReplay] = useState<WorldReplayCapabilities | null>(null);
   const [replayError, setReplayError] = useState<string | null>(null);
-  const [followMode, setFollowMode] = useState<FollowMode>("chase");
+  const [cameraMode, setCameraMode] = useState<CameraMode>("chase");
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
   const [egoActorLabel, setEgoActorLabel] = useState<string | null>(null);
   const [cameraNotice, setCameraNotice] = useState<string | null>(null);
   const [driving, setDriving] = useState(false);
+  const [driveMode, setDriveMode] = useState<AuthoredDriveMode>("free");
   const [enteringDrive, setEnteringDrive] = useState(false);
+  const [takePhase, setTakePhase] = useState<TakePhase>({ kind: "idle" });
   const [expandedTool, setExpandedTool] = useState<ViewportTool | null>(null);
   const [transportRevision, setTransportRevision] = useState(0);
   const [documentRevision, setDocumentRevision] = useState(0);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const preparedDocumentHashRef = useRef<string | null>(null);
+  const sourceRevisionRef = useRef(0);
   const remoteWorld = useMemo(() => resolveRemoteWorld(), []);
   const world = useWorldSource(source);
   const transport = authoredSource?.transport ?? null;
@@ -168,9 +314,8 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
 
   useEffect(() => setQuality(defaultAuthoringQuality()), []);
 
-
   const runtime = useEditorRuntime({
-    record: null,
+    record,
     map,
     viewer,
     runtimeReady: mapLoaded,
@@ -182,8 +327,11 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
   const selectedVehicleRole = selectedActor
     ? editorDocument?.data.roles.find((role) => role.id === selectedActor.id && isVehicleRole(role)) ?? null
     : null;
-  const availableEgoActorId = authoredSource?.selectEgo(selectedVehicleRole?.id) ?? null;
-
+  // A take is bound to its role; otherwise the selected vehicle, else the best authored runway.
+  const availableEgoActorId = authoredSource?.selectEgo(take?.actorRoleId ?? selectedVehicleRole?.id) ?? null;
+  const takeEgoMismatch = take && authoredSource && availableEgoActorId
+    ? authoredSource.roleIdForActor(availableEgoActorId) !== take.actorRoleId
+    : false;
 
   useEffect(() => {
     if (!remoteWorld && !editorDocument) return;
@@ -193,6 +341,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     setSourceCreationError(null);
     setSource(null);
     setAuthoredSource(null);
+    setTakePhase({ kind: "idle" });
     const open = async () => remoteWorld
       ? createRemoteWorldSource({ truthUrl: `${remoteWorld}/twin`, commandUrl: `${remoteWorld}/drive` })
       : createAuthoredWorldSource({ document: editorDocument!, map, tickHz: 20 });
@@ -200,6 +349,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
       .then((nextSource) => {
         if (disposed) return nextSource.close();
         live = nextSource;
+        sourceRevisionRef.current += 1;
         setSource(nextSource);
         setAuthoredSource(remoteWorld ? null : nextSource as AuthoredWorldSource);
       })
@@ -281,13 +431,19 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     if (!bridge || !source) return;
     return source.subscribeFrames((frame) => bridge.apply(frame));
   }, [bridge, source]);
+  const followingEgo = driving && !transport?.completed && cameraMode !== "free";
   useEffect(() => {
     if (!bridge) return;
-    bridge.setFollow(driving && !transport?.completed ? egoActorId : null, followMode);
-  }, [bridge, driving, egoActorId, followMode, transport, transportRevision]);
+    bridge.setFollow(followingEgo ? egoActorId : null, cameraMode === "dash" ? "dash" : "chase");
+  }, [bridge, cameraMode, egoActorId, followingEgo, transportRevision]);
   useEffect(() => () => bridge?.dispose(), [bridge]);
 
-  useDriveControls(source, driving ? egoActorId : null);
+  // The wheel/keyboard owner transmits only with an active ego; a map change
+  // or an exited drive hands it `null` and it neutralises on its own.
+  useEffect(() => {
+    onControlTarget({ source, actorId: driving ? egoActorId : null });
+    return () => onControlTarget(NO_CONTROL_TARGET);
+  }, [driving, egoActorId, onControlTarget, source]);
 
   const onViewerReady = useCallback((readyViewer: CityViewer) => {
     setViewer(readyViewer);
@@ -295,8 +451,10 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     setViewerError(null);
   }, []);
 
+  // Entering a free drive or a clip drive resumes the world in place. A take
+  // starts only from `beginTake`, which rebuilds the world at t = 0.
   useEffect(() => {
-    if (!driving || !authoredSource || !egoActorId) return;
+    if (!driving || !authoredSource || !egoActorId || take) return;
     let secondFrame = 0;
     const firstFrame = requestAnimationFrame(() => {
       secondFrame = requestAnimationFrame(() => authoredSource.transport.play());
@@ -305,7 +463,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
       cancelAnimationFrame(firstFrame);
       cancelAnimationFrame(secondFrame);
     };
-  }, [authoredSource, driving, egoActorId]);
+  }, [authoredSource, driving, egoActorId, take]);
 
   const selectActor = useCallback((actorId: string | null) => {
     setExpandedTool(null);
@@ -316,14 +474,16 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     if (tool) controller?.setSelection([]);
   }, [controller]);
 
-  const enterDrive = useCallback(() => {
+  const enterDrive = useCallback((mode: AuthoredDriveMode) => {
     if (!authoredSource || !viewer || !editorDocument || enteringDrive) return;
     setEnteringDrive(true);
     try {
       const selectedRole = selectedVehicleRole;
       const actorId = availableEgoActorId;
       if (!actorId) throw new Error("Place an authored vehicle before entering drive");
-      authoredSource.setEgo(actorId);
+      if (takeEgoMismatch) throw new Error("The take's vehicle is not a controllable actor in this document");
+      authoredSource.setEgo(actorId, mode);
+      setDriveMode(mode);
       setEgoActorId(actorId);
       const roleId = authoredSource.roleIdForActor(actorId);
       const role = editorDocument.data.roles.find((candidate) => candidate.id === roleId)
@@ -334,7 +494,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
         ? timelineActorLabels(editorDocument.data.roles).get(role.id)
         : null;
       setEgoActorLabel(timelineLabel ?? role?.label ?? actorId);
-      bridge?.setFollow(actorId, followMode);
+      setCameraNotice(null);
       setExpandedTool(null);
       setDriving(true);
     } catch (error) {
@@ -345,11 +505,10 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
   }, [
     authoredSource,
     availableEgoActorId,
-    bridge,
     editorDocument,
     enteringDrive,
-    followMode,
     selectedVehicleRole,
+    takeEgoMismatch,
     viewer,
   ]);
 
@@ -372,16 +531,79 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
       setEgoActorId(null);
       setEgoActorLabel(null);
       setCameraNotice(null);
+      setTakePhase({ kind: "idle" });
     }
   }, [authoredSource, bridge, egoActorId, source]);
+
+  // A world that errored or a map that stopped serving assets (revoked access,
+  // closed service) cannot be driven: release the ego so controls go neutral.
+  const worldLost = world.status === "error" || world.status === "closed" || Boolean(viewerError);
+  useEffect(() => {
+    if (driving && worldLost) exitDrive();
+  }, [driving, exitDrive, worldLost]);
+
   const switchView = useCallback((next: DriveView) => {
     if (next === "cameras" && driving) exitDrive();
     setView(next);
   }, [driving, exitDrive]);
 
+  /** Back to t = 0 and rolling: a fresh take, or a replay of the clip/free world. */
+  const restartDrive = useCallback(() => {
+    if (!authoredSource) return;
+    try {
+      if (take) {
+        authoredSource.beginTake();
+        setTakePhase({ kind: "recording" });
+      } else {
+        authoredSource.transport.reset();
+        authoredSource.transport.play();
+      }
+      setCameraNotice(null);
+    } catch (error) {
+      toast.error("Drive could not restart", { description: errorMessage(error) });
+    }
+  }, [authoredSource, take]);
+
+  useEffect(() => {
+    if (!authoredSource || !take) return;
+    const revision = sourceRevisionRef.current;
+    return authoredSource.subscribeTakes((event) => {
+      if (event.kind === "failed") {
+        setTakePhase({ kind: "idle" });
+        toast.error("Take discarded", { description: event.message });
+        return;
+      }
+      setTakePhase({ kind: "review", recording: event.recording, sourceRevision: revision });
+    });
+  }, [authoredSource, take]);
+
+  const saveTake = useCallback(async () => {
+    if (!take || takePhase.kind !== "review") return;
+    // The document was edited or recompiled since this take ran: its samples
+    // no longer describe this scenario. Never hand a stale take to the editor.
+    if (takePhase.sourceRevision !== sourceRevisionRef.current) {
+      setTakePhase({ kind: "idle" });
+      toast.error("Take is stale", { description: "The scenario changed while the take was being reviewed. Drive it again." });
+      return;
+    }
+    setTakePhase({ kind: "saving" });
+    try {
+      await take.onSave(takePhase.recording, take.revision);
+    } catch (error) {
+      setTakePhase({ kind: "review", recording: takePhase.recording, sourceRevision: takePhase.sourceRevision });
+      toast.error("Take could not be saved", { description: errorMessage(error) });
+    }
+  }, [take, takePhase]);
+
+  const discardTake = useCallback(() => {
+    exitDrive();
+    take?.onCancel();
+  }, [exitDrive, take]);
 
   const driveSpeedKph = actorSpeedKph(world.latestFrame, driving ? egoActorId : null);
-  const driveClipTime = transport ? formatClipTime(transport.time, transport.duration) : null;
+  const driveTime = transport
+    ? driveMode === "free" ? `${Math.max(0, transport.time).toFixed(1)} s` : formatClipTime(transport.time, transport.duration)
+    : null;
   useEffect(() => {
     if (!driving || !bridge || !egoActorId || !world.latestFrame || transport?.completed) return;
     const followedActorIsPresent = world.latestFrame.scene.actors.some(
@@ -420,15 +642,23 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     : world.status;
   const effectiveError = sourceCreationError ?? runtime.error ?? world.error;
   const driveUnavailableReason = authoredSource && !availableEgoActorId
-    ? "Place an authored vehicle and wait for it to finish preparing before entering drive."
-    : null;
+    ? take
+      ? "The take's vehicle is not present in this scenario."
+      : "Place an authored vehicle and wait for it to finish preparing before entering drive."
+    : takeEgoMismatch
+      ? "The take's vehicle is not a controllable actor in this document."
+      : null;
+  const canEnterDrive = Boolean(authoredSource && viewer && world.status === "running" && availableEgoActorId && !takeEgoMismatch && !enteringDrive);
+  const takeComplete = Boolean(take && driving && takePhase.kind !== "idle" && takePhase.kind !== "recording");
+  const clipEnded = Boolean(transport?.completed);
+  const editingLocked = driving || Boolean(take);
 
   return (
-    <EditorConfigurationBlockProvider blocked={driving}>
+    <EditorConfigurationBlockProvider blocked={editingLocked}>
       <EditorOverlayProvider
         documentKey={editorDocument}
         selectedActorId={selectedActor?.id ?? null}
-        suppressActorDetails={driving || state?.mode === "drawingRoute"}
+        suppressActorDetails={editingLocked || state?.mode === "drawingRoute"}
         onSelectActor={selectActor}
       >
         <EditorHeader
@@ -440,6 +670,11 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
         />
         <TopBarActionsPortal>
           <div className="flex items-center gap-1" aria-label="Drive view">
+            {onLeave ? (
+              <Button type="button" size="sm" variant="ghost" onClick={() => { if (driving) exitDrive(); onLeave(); }} title="Choose another map">
+                <MapIcon /> {map.label}
+              </Button>
+            ) : null}
             <Button type="button" size="sm" variant={view === "world" ? "secondary" : "ghost"} onClick={() => switchView("world")} aria-pressed={view === "world"}>
               <LayoutGrid /> World
             </Button>
@@ -453,23 +688,48 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
             <div className="flex items-center gap-1">
               {driving ? (
                 <>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setFollowMode((mode) => mode === "chase" ? "dash" : "chase")}>
-                    <Camera /> {followMode === "chase" ? "Chase" : "Dash"}
+                  <div className="flex items-center gap-0.5" role="group" aria-label="Driving camera">
+                    <Button type="button" size="sm" variant={cameraMode === "chase" ? "secondary" : "ghost"} aria-pressed={cameraMode === "chase"} onClick={() => setCameraMode("chase")}>
+                      <Camera /> Chase
+                    </Button>
+                    <Button type="button" size="sm" variant={cameraMode === "dash" ? "secondary" : "ghost"} aria-pressed={cameraMode === "dash"} onClick={() => setCameraMode("dash")}>
+                      <Camera /> Dash
+                    </Button>
+                    <Button type="button" size="sm" variant={cameraMode === "free" ? "secondary" : "ghost"} aria-pressed={cameraMode === "free"} onClick={() => setCameraMode("free")}>
+                      <Eye /> Free
+                    </Button>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={restartDrive} disabled={takePhase.kind === "saving"} title={take ? "Restart the take from the beginning" : "Restart the world from the beginning"}>
+                    <RotateCcw /> {take ? "Restart take" : "Restart"}
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={exitDrive}>
-                    <LogOut /> Exit drive
+                  {take ? (
+                    <Button type="button" size="sm" variant="secondary" onClick={discardTake} disabled={takePhase.kind === "saving"}>
+                      <LogOut /> Discard & leave
+                    </Button>
+                  ) : (
+                    <Button type="button" size="sm" variant="secondary" onClick={exitDrive}>
+                      <LogOut /> Exit drive
+                    </Button>
+                  )}
+                </>
+              ) : take ? (
+                <>
+                  <Button type="button" size="sm" disabled={!canEnterDrive} title={driveUnavailableReason ?? undefined} onClick={() => enterDrive("take")}>
+                    <CircleDot /> {enteringDrive ? "Entering…" : "Take the wheel"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={take.onCancel}>
+                    <LogOut /> Cancel take
                   </Button>
                 </>
               ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!authoredSource || !viewer || world.status !== "running" || !availableEgoActorId || enteringDrive}
-                  title={driveUnavailableReason ?? undefined}
-                  onClick={enterDrive}
-                >
-                  <LogIn /> {enteringDrive ? "Entering…" : "Enter drive"}
-                </Button>
+                <>
+                  <Button type="button" size="sm" disabled={!canEnterDrive} title={driveUnavailableReason ?? "Drive the live world with no time limit"} onClick={() => enterDrive("free")}>
+                    <LogIn /> {enteringDrive ? "Entering…" : "Free drive"}
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!canEnterDrive} title={driveUnavailableReason ?? `Drive the authored ${transport ? transport.duration.toFixed(0) : ""} s clip; the world parks at its end`} onClick={() => enterDrive("take")}>
+                    <CircleDot /> Drive clip
+                  </Button>
+                </>
               )}
             </div>
           ) : null}
@@ -490,7 +750,7 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
           data-testid="drive-surface"
           canvasMode="interactive"
           header={null}
-          leftSidebar={view === "world" && !driving ? (slotProps) => (
+          leftSidebar={view === "world" && !editingLocked ? (slotProps) => (
             <div {...slotProps} className={cn(slotProps.className, "flex h-full")}>
               <ActorLibraryRail
                 controller={controller}
@@ -509,28 +769,26 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
           canvas={(slotProps) => (
             <div {...slotProps} className={cn(slotProps.className, "relative bg-background")}>
               <div ref={hostRef} className={cn("absolute inset-0", view === "world" ? "visible" : "invisible pointer-events-none")}>
-                {map ? (
-                  <CityView
-                    key={quality}
-                    manifestUrl={map.browserManifestUrl}
-                    options={viewerOptions(quality)}
-                    onReady={onViewerReady}
-                    onMapLoaded={() => {
-                      setMapLoaded(true);
-                      setViewerError(null);
-                    }}
-                    onError={(reason) => {
-                      const message = errorMessage(reason);
-                      setMapLoaded(false);
-                      setViewerError(message);
-                      toast.error("Drive map could not load", { description: message });
-                    }}
-                    className="h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                    ariaLabel={`${map.label} authored driving scenario`}
-                    role="application"
-                    tabIndex={0}
-                  />
-                ) : null}
+                <CityView
+                  key={quality}
+                  manifestUrl={map.browserManifestUrl}
+                  options={viewerOptions(quality)}
+                  onReady={onViewerReady}
+                  onMapLoaded={() => {
+                    setMapLoaded(true);
+                    setViewerError(null);
+                  }}
+                  onError={(reason) => {
+                    const message = errorMessage(reason);
+                    setMapLoaded(false);
+                    setViewerError(message);
+                    toast.error("Drive map could not load", { description: message });
+                  }}
+                  className="h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  ariaLabel={`${map.label} authored driving scenario`}
+                  role="application"
+                  tabIndex={0}
+                />
               </div>
               {view === "cameras" ? (
                 <div className="absolute inset-0 overflow-auto bg-background p-4">
@@ -554,16 +812,17 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
               ) : view === "world" && state?.mode && state.mode !== "idle" ? (
                 <div className="pointer-events-auto"><EditorModeBanner state={state} controller={controller} /></div>
               ) : null}
-              {view === "world" && driving && driveClipTime ? (
+              {view === "world" && driving && driveTime ? (
                 <ScenarioEditorReadout
                   className="absolute left-4 top-4 flex items-baseline gap-3"
                   role="status"
-                  aria-label={`Driving ${egoActorLabel ?? "vehicle"}, speed ${driveSpeedKph.toFixed(1)} kilometers per hour, clip time ${driveClipTime}${transport?.playing ? "" : ", paused"}`}
+                  aria-label={`Driving ${egoActorLabel ?? "vehicle"}, speed ${driveSpeedKph.toFixed(1)} kilometers per hour, ${driveMode === "free" ? "elapsed" : "clip time"} ${driveTime}${transport?.playing ? "" : ", paused"}`}
                 >
                   <span className="text-editor-text">{egoActorLabel ? `Driving ${egoActorLabel}` : "Driving"}</span>
                   <span className="text-editor-text tabular-nums">{driveSpeedKph.toFixed(1)} km/h</span>
-                  <span className="tabular-nums">{driveClipTime}</span>
-                  {!transport?.playing && !transport?.completed ? <span>Paused</span> : null}
+                  <span className="tabular-nums">{driveTime}</span>
+                  {take && takePhase.kind === "recording" ? <span className="text-red-400">● Recording</span> : null}
+                  {!transport?.playing && !clipEnded ? <span>Paused</span> : null}
                 </ScenarioEditorReadout>
               ) : null}
               {view === "world" && cameraNotice ? (
@@ -571,11 +830,37 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
                   <span className="text-editor-text">{cameraNotice}</span>
                 </ScenarioEditorReadout>
               ) : null}
-              {view === "world" && transport?.completed ? (
+              {view === "world" && take && driving && takePhase.kind === "idle" && !clipEnded ? (
                 <ScenarioEditorReadout className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3" role="status">
-                  <span className="text-editor-text">Scenario complete · {formatClipTime(transport.time, transport.duration)} · Free camera restored</span>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => transport.play()}>
-                    <RotateCcw /> Replay
+                  <span className="text-editor-text">
+                    Ready to record {take.clipSeconds.toFixed(1)} s of {egoActorLabel ?? "the vehicle"} · the world restarts from t = 0
+                  </span>
+                  <Button type="button" size="sm" onClick={restartDrive}>
+                    <CircleDot /> Start take
+                  </Button>
+                </ScenarioEditorReadout>
+              ) : view === "world" && takeComplete && take ? (
+                <ScenarioEditorReadout className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3" role="status">
+                  <span className="text-editor-text">
+                    Take complete · {takePhase.kind === "review" ? `${takePhase.recording.samples.length} samples over ${takePhase.recording.clipSeconds.toFixed(1)} s` : "saving…"}
+                  </span>
+                  <Button type="button" size="sm" onClick={() => void saveTake()} disabled={takePhase.kind !== "review"}>
+                    <Save /> Save take
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={restartDrive} disabled={takePhase.kind !== "review"}>
+                    <RotateCcw /> Drive again
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={discardTake} disabled={takePhase.kind !== "review"}>
+                    <Trash2 /> Discard
+                  </Button>
+                </ScenarioEditorReadout>
+              ) : view === "world" && clipEnded && transport ? (
+                <ScenarioEditorReadout className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3" role="status">
+                  <span className="text-editor-text">
+                    {driving ? "Clip ended" : "Scenario complete"} · {formatClipTime(transport.time, transport.duration)}{driving ? "" : " · Free camera restored"}
+                  </span>
+                  <Button type="button" size="sm" variant="secondary" onClick={driving ? restartDrive : () => transport.play()}>
+                    <RotateCcw /> {driving ? "Drive again" : "Replay"}
                   </Button>
                 </ScenarioEditorReadout>
               ) : effectiveStatus !== "running" || viewerError || driveUnavailableReason ? (
@@ -593,15 +878,15 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
                 <HistoryDock source={source} capabilities={replay} clock={clock} replayError={replayError} />
               </div>
             </div>
-          ) : view === "world" && editorDocument ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4" data-testid="floating-timeline-layer">
+          ) : view === "world" && editorDocument && !(driving && driveMode === "free") ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4 pr-[21rem]" data-testid="floating-timeline-layer">
               <div className="pointer-events-auto relative h-auto max-h-[min(65vh,520px)] w-full max-w-[920px] min-w-0">
                 <DriveTimelineDock
                   controller={controller}
                   document={editorDocument}
                   state={state}
                   playback={timelinePlayback}
-                  readOnly={driving}
+                  readOnly={editingLocked}
                 />
               </div>
             </div>
@@ -612,6 +897,8 @@ function DriveSurface({ map }: { map: ScenarioMapEntry }) {
     </EditorConfigurationBlockProvider>
   );
 }
+
+type ScenarioTemplateRecord = { id: string; content: ScenarioTemplateV2 };
 
 function DriveTimelineDock({ controller, document, state, playback, readOnly }: {
   controller: EditorController | null;
@@ -688,7 +975,6 @@ function directMapEntry({ manifestUrl, topologyUrl, label }: { manifestUrl: stri
   };
 }
 
-
 type ScenarioRole = EditorDocument["data"]["roles"][number];
 function isVehicleRole(role: ScenarioRole): boolean {
   return !role.actor.static && role.actor.class !== "pedestrian" && role.actor.class !== "static_object";
@@ -701,49 +987,6 @@ function viewerOptions(quality: ScenarioAuthoringQuality): CityViewerOptions {
     antialias: preset.antialias,
     cinematicLighting: preset.cinematicLighting,
   };
-}
-
-function useDriveControls(source: WorldSource | null, actorId: string | null) {
-  useEffect(() => {
-    if (!source || !actorId) return;
-    const pressed = new Set<string>();
-    const editableTarget = (target: EventTarget | null) => {
-      const element = target as HTMLElement | null;
-      return element?.isContentEditable || element?.tagName === "INPUT" || element?.tagName === "TEXTAREA";
-    };
-    const keyDown = (event: KeyboardEvent) => {
-      if (!CONTROLLED_KEY_CODES[event.code] || editableTarget(event.target)) return;
-      event.preventDefault();
-      pressed.add(event.code);
-    };
-    const keyUp = (event: KeyboardEvent) => {
-      if (!CONTROLLED_KEY_CODES[event.code]) return;
-      event.preventDefault();
-      pressed.delete(event.code);
-    };
-    const transmit = () => {
-      const throttle = pressed.has("KeyW") || pressed.has("ArrowUp") ? 1 : 0;
-      const brake = pressed.has("Space") || pressed.has("KeyS") || pressed.has("ArrowDown") ? 1 : 0;
-      const steerLeft = pressed.has("KeyA") || pressed.has("ArrowLeft");
-      const steerRight = pressed.has("KeyD") || pressed.has("ArrowRight");
-      source.control({
-        actorId,
-        throttle,
-        brake,
-        steer: steerLeft === steerRight ? 0 : steerLeft ? -1 : 1,
-        reverse: pressed.has("KeyR"),
-      });
-    };
-    window.addEventListener("keydown", keyDown);
-    window.addEventListener("keyup", keyUp);
-    const interval = window.setInterval(transmit, 50);
-    transmit();
-    return () => {
-      window.removeEventListener("keydown", keyDown);
-      window.removeEventListener("keyup", keyUp);
-      window.clearInterval(interval);
-    };
-  }, [actorId, source]);
 }
 
 function errorMessage(error: unknown): string {

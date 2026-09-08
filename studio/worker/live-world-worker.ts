@@ -7,7 +7,13 @@ import {
   type SimScenarioInput,
   type TopologyIndex,
 } from '@simforge-oss/engine';
-import { loadSessions, type SessionRuntime, type TruthSubscription, type WorldSession } from '@simforge-oss/training-env/browser';
+import {
+  loadSessions,
+  TruthStreamClient,
+  type SessionRuntime,
+  type TruthSubscription,
+  type WorldSession,
+} from '@simforge-oss/training-env/browser';
 
 import type {
   LiveWorldWorkerRequest,
@@ -15,11 +21,17 @@ import type {
 } from '../app/lib/live-world/worker-protocol';
 import {
   applyEgoControl,
+  appendTakeSamples,
   assertControllableActor,
+  authoredAdvanceTicks,
   authoredPlaybackBudget,
   authoredClipCompleted,
   authoredPlaybackRequiresReset,
+  authoredWorldUnbounded,
   createAuthoredWorldSession,
+  finishTakeRecording,
+  type AuthoredDriveMode,
+  type ManualDriveSample,
 } from '../app/lib/live-world/authored-world-session';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
@@ -33,9 +45,18 @@ let closed = false;
 let authoredInput: SimScenarioInput | null = null;
 let authoredGraph: LaneGraph | null = null;
 let egoActorId: string | null = null;
+/** Last commanded ego gear (zero-order held by the engine); signs recorded take speed. */
+let egoMotionDirection: 1 | -1 = 1;
+let driveMode: AuthoredDriveMode = 'take';
 let playing = true;
 let inspecting = false;
 let completed = false;
+/**
+ * A bounded take in progress: the ego's per-tick state read back from the
+ * native truth stream. Any rebuild of the world (reset, seek back, replay)
+ * discards it; only a clip that ran to its end seals a recording.
+ */
+let take: { samples: ManualDriveSample[]; decoder: TruthStreamClient } | null = null;
 let authoredTickHz = 20;
 let authoredClockLastWallTimeMs: number | null = null;
 let authoredClockRemainderS = 0;
@@ -69,10 +90,25 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
       if (!authoredInput) throw new Error('ego designation is only available for authored worlds');
       if (message.actorId !== null) assertControllableActor(authoredInput, message.actorId);
       egoActorId = message.actorId;
+      driveMode = message.mode ?? 'take';
       playing = false;
       inspecting = false;
+      // Releasing or re-designating the ego ends any take without a recording.
+      take = null;
+      // A free-driving ego owns a healthy live world past the clip boundary;
+      // the parked flag belongs to the bounded transport only.
+      if (authoredWorldUnbounded(egoActorId, driveMode)) completed = false;
       resetAuthoredClock();
       postTransport();
+    } catch (error) {
+      fail(error);
+    }
+    return;
+  }
+
+  if (message.type === 'begin-take') {
+    try {
+      beginTake();
     } catch (error) {
       fail(error);
     }
@@ -92,12 +128,17 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
     // A completed authored clip is a healthy, parked world. Keyboard control
     // continues at 20 Hz while Drive is mounted, so ignore it until replay
     // instead of asking a finished WorldSession to accept another act command.
-    if (authoredInput && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))) {
+    if (
+      authoredInput
+      && !authoredWorldUnbounded(egoActorId, driveMode)
+      && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))
+    ) {
       completed = true;
       playing = false;
       postTransport();
       return;
     }
+    if (authoredInput) egoMotionDirection = message.input.reverse ? -1 : 1;
     const outcome = authoredInput
       ? egoActorId === null
         ? { ok: false, error: 'No authored ego vehicle is selected' }
@@ -234,6 +275,7 @@ function rebuildAuthoredWorld(): void {
   truth = world.subscribeTruth();
   commandSequence = 0;
   completed = false;
+  take = null;
   resetAuthoredClock();
 }
 
@@ -276,7 +318,11 @@ function applyTransport(message: Extract<LiveWorldWorkerRequest, { type: 'transp
     resetAuthoredClock();
   } else {
     // Play from the parked end state means replay, matching media controls.
-    if (authoredPlaybackRequiresReset(completed, world.time(), authoredInput.clipSeconds)) {
+    // A free-driving ego resumes in place: its world has no end to replay from.
+    if (
+      !authoredWorldUnbounded(egoActorId, driveMode)
+      && authoredPlaybackRequiresReset(completed, world.time(), authoredInput.clipSeconds)
+    ) {
       rebuildAuthoredWorld();
     }
     playing = true;
@@ -285,6 +331,38 @@ function applyTransport(message: Extract<LiveWorldWorkerRequest, { type: 'transp
   inspecting = false;
   completed = false;
   postTransport();
+}
+
+function beginTake(): void {
+  if (!authoredInput || !world) throw new Error('takes are only available for authored worlds');
+  if (egoActorId === null) throw new Error('No authored ego vehicle is selected for the take');
+  if (driveMode !== 'take') throw new Error('A take needs the bounded drive mode');
+  // Every take starts from the document's own initial state so its samples
+  // are the clip from t = 0, not a continuation of whatever played before.
+  rebuildAuthoredWorld();
+  take = { samples: [], decoder: new TruthStreamClient() };
+  egoMotionDirection = 1;
+  playing = true;
+  inspecting = false;
+  beginAuthoredClock();
+  postTransport();
+}
+
+function recordTakeFrames(frames: readonly Uint8Array[]): void {
+  if (!take || !truth || egoActorId === null) return;
+  if (truth.stats.dropped > 0) {
+    throw new Error(`Take aborted: the truth stream dropped ${truth.stats.dropped} frame(s)`);
+  }
+  const decoded = [];
+  for (const framed of frames) decoded.push(...take.decoder.push(framed));
+  appendTakeSamples(take.samples, decoded, egoActorId, egoMotionDirection);
+}
+
+function sealTake(): void {
+  if (!take || !authoredInput) return;
+  const recording = finishTakeRecording(take.samples, authoredInput.clipSeconds, authoredInput.dt);
+  take = null;
+  post({ type: 'take-complete', recording });
 }
 
 
@@ -322,18 +400,40 @@ function tick(): void {
         lastAuthoredLagWarningMs = nowMs;
       }
 
+      const unbounded = authoredWorldUnbounded(egoActorId, driveMode);
       if (budget.ticks > 0) {
-        const remainingS = Math.max(0, authoredInput.clipSeconds - world.time());
-        const remainingTicks = Math.ceil(remainingS / authoredInput.dt - 1e-9);
-        const ticks = Math.min(budget.ticks, remainingTicks);
+        const ticks = authoredAdvanceTicks(
+          budget.ticks,
+          world.time(),
+          authoredInput.clipSeconds,
+          authoredInput.dt,
+          unbounded,
+        );
         if (ticks > 0) world.advance(ticks);
-        postTruthFrames(truth.pull(), true);
+        const frames = truth.pull();
+        if (take) {
+          try {
+            recordTakeFrames(frames);
+          } catch (error) {
+            take = null;
+            post({ type: 'take-failed', message: error instanceof Error ? error.message : String(error) });
+          }
+        }
+        postTruthFrames(frames, true);
       }
-      completed = authoredClipCompleted(world.time(), authoredInput.clipSeconds);
+      completed = !unbounded && authoredClipCompleted(world.time(), authoredInput.clipSeconds);
 
       if (completed) {
         playing = false;
         resetAuthoredClock();
+        if (take) {
+          try {
+            sealTake();
+          } catch (error) {
+            take = null;
+            post({ type: 'take-failed', message: error instanceof Error ? error.message : String(error) });
+          }
+        }
       }
       postTransport();
       return;
@@ -380,7 +480,7 @@ function postTransport(): void {
     playing,
     completed,
     inspecting,
-    time: completed ? authoredInput.clipSeconds : Math.min(authoredInput.clipSeconds, Math.max(0, world.time())),
+    time: completed ? authoredInput.clipSeconds : Math.max(0, world.time()),
     duration: authoredInput.clipSeconds,
   });
 }
