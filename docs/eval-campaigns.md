@@ -215,23 +215,54 @@ can only miss an excursion, never invent one — the mitigation is denser island
 rings in the ingestion rather than edge sampling here, and a regression pins it
 so it cannot change silently.
 
-### Lane-departure needs centreline authority
+### Lane-departure: binding, and what a lane change is
 
 `lane-departure` is a claim about lane POSITION, so it requires an authoritative
-centreline: the bundle must declare `metricAuthority.laneCentrelines`. Without
-it the metric is unavailable, not a number.
+binding: the bundle declares `metricAuthority.laneCentrelines`, and without it
+the metric is unavailable rather than a number.
 
-That is not a formality. On a reconstructed clip the derived lane graph was
-mis-bound by 1.10 m at the start and reported -5.454 m of lane departure for a
-trajectory 0.16 m from the recorded human path — the same artifact that made
-off-road v1 flag ground truth, surviving under a new name because renaming a
-metric does not give it a better lane. Rail-containment binding (per-pose,
-contained / ambiguous / outside, no offset reported for an unbound sample)
-reduced the worst case to 1.73 m and still did not qualify: on one continuous
-drive the worst per-segment offset ranges 0.09 m to 1.73 m, an eighteenfold
-variation that no rigid frame correction can explain, so a single global offset
-would fix some segments and break others. The metric stays unavailable until the
-ego-to-annotation correspondence is established independently.
+The requirement was earned. A derived lane graph mis-bound by 1.10 m reported
+-5.454 m of departure for a trajectory 0.16 m from the recorded human path — the
+artifact that made off-road v1 flag ground truth, surviving under a new name
+because renaming a metric does not give it a better lane. The binding that
+replaced it is rail containment, per pose: a vehicle is in the lane whose own
+rails contain it, and a sample contained by two lanes (or by none, within half a
+lane of one) is `ambiguous` with its candidates named. No offset is ever
+reported for an unbound sample, because an offset from a lane the vehicle is not
+in is exactly the quantity that must never be reported.
+
+On the reference drive that binding is sound: 200 of 202 samples contained, 2
+ambiguous, 0 outside. Its large offsets are confined to a lane change — worst
+0.600 m before the traverse, 1.732 m during it, 0.555 m after the vehicle
+settles, with 106 of 128 steady-state samples inside a third of a half-width.
+A constant frame misalignment does not switch off when the car stops
+manoeuvring, so the manoeuvre is the explanation and the geometry is not
+suspect. (Two earlier readings of this data — a rigid ~1.8 m ego-to-annotation
+discrepancy, and a per-segment autolabel registration error — were both
+withdrawn against these numbers, as was a supposed 0.36 m disagreement between
+the boundary and lane layers: the road carries three ~3.45 m lanes plus a ~1.0 m
+shoulder, and dividing the shoulder into the lanes is what made the layers look
+inconsistent.)
+
+**A lane-boundary crossing is a lane TRANSITION, and transitions are
+diagnostic.** Rail binding tells you where the vehicle was, not whether it was
+allowed to be there: which crossings are illegitimate depends on the route the
+vehicle was meant to take, the markings it crossed and the rules in force, none
+of which a reconstructed scene establishes. So a rail binding emits
+`lane-transition` INFORMATION — `{fromLaneId, toLaneId, crossingSeconds,
+withinCrossingBound}`, or an `undecided_run_exceeded` note when a vehicle rides
+the strip for longer than `laneChangeMaxS` — and never an infraction, and
+`lane-departure` remains unavailable under a rail binding alone. Penalising a
+crossing would fail a stock replay for driving the way the human drove.
+
+Geometry availability is therefore scoped to validated support and its hash. It
+is not a certification of legality, and nothing in this scorer converts one into
+the other.
+
+The binding surfaces ambiguity rather than absorbing it for the same reason: a
+consumer that later has route and rule authority can decide which lane an
+undecided sample belonged to, with the candidates in front of it, instead of
+inheriting a band that silently picked one.
 
 **Absent geometry is `unavailable`, never a pass.** With no drivable-area block,
 empty polygons, or a decision outside the polygons' time support, v2 reports

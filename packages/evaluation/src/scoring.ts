@@ -31,6 +31,7 @@ import {
   offRoadMetricVersion,
   type DrivableArea,
 } from './replay-context/drivable.js';
+import { bindLane, type LaneContext } from './replay-context/lanes.js';
 
 /** Perception object row on the wire: [id, rangeM, bearingRad, rangeRateMps, lineOfSight]. */
 export type TraceObj = readonly [string, number, number, number, number];
@@ -171,6 +172,7 @@ export type InfractionType =
 
 export type ScoreEventType =
   | InfractionType
+  | 'lane-transition'
   | 'ttc-critical'
   | 'accel-bound'
   | 'jerk-bound'
@@ -214,6 +216,12 @@ export interface ScoringConfig {
   stuckSpeedMps: number;
   /** Stuck fires when continuously stopped for at least this long (>=), seconds. */
   stuckTimeoutS: number;
+  /**
+   * How long an undecided (`ambiguous`) run may last and still be a lane
+   * CHANGE rather than a departure, seconds. A crossing is bounded; riding a
+   * lane line is not a crossing.
+   */
+  laneChangeMaxS: number;
   /** Speeding when speed > limit × (1 + tolerance) (strict >). */
   speedingToleranceFrac: number;
   /** Speeding fires when continuously over for at least this long (>=), seconds. */
@@ -240,6 +248,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   },
   offRoadLateralM: 3.0,
   offRoadClearM: 0.5,
+  laneChangeMaxS: 4.0,
   wrongWayReverseM: 1.0,
   wrongWayMinSpeedMps: 0.5,
   stuckSpeedMps: 0.3,
@@ -276,6 +285,12 @@ export interface ScenarioScoringContext {
   readonly metricVersion?: 'v1' | 'v2';
   /** Authoritative drivable polygons, in the ego's frame. Absent -> unavailable. */
   readonly drivableArea?: DrivableArea | null;
+  /**
+   * Authoritative lane rails. Present WITH `metricAuthority.laneCentrelines`
+   * they move lane-departure onto rail containment, where a lane change is a
+   * change of binding rather than a permanent excursion.
+   */
+  readonly laneContext?: LaneContext | null;
   /** Ego box for the footprint; defaults to the engine's own default dims. */
   readonly egoDims?: { readonly lengthM: number; readonly widthM: number };
   /** Absolute time of decision 0, for polygons that declare a time support. */
@@ -339,6 +354,14 @@ export interface EpisodeScore {
     readonly offered: number;
     readonly assessed: number;
     readonly unavailableSamples: number;
+  } | null;
+  /** Rail-bound lane accounting; null when lane-departure used the centreline rule. */
+  readonly laneDeparture: {
+    readonly bound: number;
+    readonly unavailableSamples: number;
+    readonly worstOffsetM: number | null;
+    /** Diagnostic lane transitions observed; never penalised. */
+    readonly transitions: number;
   } | null;
 }
 
@@ -447,6 +470,14 @@ export function scoreEpisode(
   const unavailable = new Set<InfractionType>(ctx.unavailableInfractions ?? []);
   let containmentAssessed = 0;
   let containmentUnavailableSamples = 0;
+  const laneContext = containmentEnabled ? (ctx.laneContext ?? null) : null;
+  let laneSamplesBound = 0;
+  let laneSamplesUnavailable = 0;
+  let worstLaneOffsetM: number | null = null;
+  let undecidedRun = 0;
+  let undecidedFrom: string | null = null;
+  let undecidedReported = false;
+  let laneTransitions = 0;
   let worstOffRoadM: number | null = null;
 
   // Checker state.
@@ -491,7 +522,49 @@ export function scoreEpisode(
     // The centreline rule. Under v1 it IS off-road; under v2 it is
     // lane-departure, and off-road is the containment question below.
     const centrelineType: InfractionType = containmentEnabled ? 'lane-departure' : 'off-road';
-    if (!laneDepartureActive && Math.abs(latOff) > cfg.offRoadLateralM) {
+    if (laneContext) {
+      // Rail containment, reported DIAGNOSTICALLY.
+      //
+      // A lane-boundary crossing is a lane TRANSITION, not an unsafe act: which
+      // crossings are illegitimate depends on the route the vehicle was meant
+      // to take, the markings it crossed and the rules in force, none of which
+      // a reconstructed scene establishes. So this emits `lane-transition`
+      // information and never an infraction; lane-departure stays unavailable
+      // until a scene declares that authority. Penalising a legitimate lane
+      // change would fail a stock replay for driving the way the human drove.
+      const pose = step.ex ?? null;
+      const binding = pose ? bindLane(laneContext, pose.x, pose.y) : null;
+      if (!binding) {
+        laneSamplesUnavailable += 1;
+      } else if (binding.kind === 'contained') {
+        laneSamplesBound += 1;
+        const lane = laneContext.lanes.find((candidate) => candidate.id === binding.laneId);
+        const offset = binding.lateralOffsetM ?? 0;
+        worstLaneOffsetM = Math.max(worstLaneOffsetM ?? 0, Math.abs(offset));
+        if (undecidedFrom !== null && binding.laneId !== undecidedFrom && undecidedRun > 0) {
+          laneTransitions += 1;
+          push('lane-transition', step, 'info', {
+            fromLaneId: undecidedFrom,
+            toLaneId: binding.laneId,
+            crossingSeconds: Number(undecidedRun.toFixed(3)),
+            withinCrossingBound: undecidedRun <= cfg.laneChangeMaxS,
+          });
+        }
+        undecidedRun = 0;
+        undecidedFrom = binding.laneId;
+      } else {
+        undecidedRun += dtS;
+        if (undecidedRun > cfg.laneChangeMaxS && !undecidedReported) {
+          undecidedReported = true;
+          push('lane-transition', step, 'info', {
+            reason: binding.kind === 'outside' ? 'left_every_lane' : 'undecided_run_exceeded',
+            seconds: Number(undecidedRun.toFixed(3)),
+            candidateLaneIds: [...binding.candidateLaneIds],
+            fromLaneId: undecidedFrom,
+          });
+        }
+      }
+    } else if (!laneDepartureActive && Math.abs(latOff) > cfg.offRoadLateralM) {
       laneDepartureActive = true;
       push(centrelineType, step, 'infraction', { lateralOffsetM: latOff });
     } else if (laneDepartureActive && Math.abs(latOff) <= cfg.offRoadLateralM - cfg.offRoadClearM) {
@@ -691,6 +764,13 @@ export function scoreEpisode(
   // the labelled extent - does not discard an otherwise assessed episode; only
   // an episode with nothing assessable has no off-road answer at all.
   if (containmentEnabled && containmentAssessed === 0) unavailable.add('off-road');
+  // Rail-bound lane-departure has the same rule as containment: nothing bound
+  // means no answer, some bound means an answer plus its gaps.
+  // Rail binding tells you WHERE the vehicle was, not whether it was allowed to
+  // be there. Availability of the geometry is scoped to validated support and
+  // its hash; it is not a certification of legality, so lane-departure remains
+  // unavailable under a rail binding alone.
+  if (laneContext) unavailable.add('lane-departure');
 
   return {
     drivingScore: routeCompletion * penaltyProduct,
@@ -711,6 +791,14 @@ export function scoreEpisode(
     metricVersion,
     unavailable: [...unavailable].sort(),
     worstOffRoadM,
+    laneDeparture: laneContext
+      ? {
+          bound: laneSamplesBound,
+          unavailableSamples: laneSamplesUnavailable,
+          worstOffsetM: worstLaneOffsetM,
+          transitions: laneTransitions,
+        }
+      : null,
     offRoad: containmentEnabled
       ? {
           offered: trace.steps.length,

@@ -27,6 +27,7 @@ import { fixtureFacts } from './campaign.js';
 import { FINAL_EPISODE_STATUSES, runEpisodeAsync, type EpisodeRunnerOptions } from './episode-runner.js';
 import { describeArtifact, type EvalArtifact, type ResultManifest, type ResultStatus } from './protocol/manifest.js';
 import { DrivableAreaSchema, type DrivableArea } from './replay-context/drivable.js';
+import { LaneContextSchema, type LaneContext } from './replay-context/lanes.js';
 import {
   parseTraceJsonl,
   scoreEpisode,
@@ -77,6 +78,7 @@ export interface EpisodeRunOutcome {
  */
 async function replaySceneScoring(bundleDir: string | null): Promise<{
   readonly drivableArea: DrivableArea | null;
+  readonly laneContext: LaneContext | null;
   readonly originUs: number | null;
   readonly unavailable: readonly InfractionType[];
 } | null> {
@@ -101,9 +103,21 @@ async function replaySceneScoring(bundleDir: string | null): Promise<{
     // bundle, not a clean episode: nothing here transforms coordinates, so the
     // metric goes unavailable rather than being scored against the wrong world.
     if (!parsed.success || parsed.data.frame !== egoFrame) {
-      return { drivableArea: null, originUs, unavailable: ['off-road', 'speeding', 'wrong-way'] };
+      return {
+        drivableArea: null,
+        laneContext: null,
+        originUs,
+        unavailable: ['off-road', 'lane-departure', 'speeding', 'wrong-way'],
+      };
     }
     area = parsed.data;
+  }
+  // Lane rails, on the same terms as the drivable area: same frame or nothing.
+  let lanes: LaneContext | null = null;
+  const rawLanes = document['laneContext'] ?? null;
+  if (rawLanes !== null && rawLanes !== undefined) {
+    const parsedLanes = LaneContextSchema.safeParse(rawLanes);
+    if (parsedLanes.success && parsedLanes.data.frame === egoFrame) lanes = parsedLanes.data;
   }
   const authority = (document['metricAuthority'] ?? {}) as Record<string, unknown>;
   const unavailable: InfractionType[] = [];
@@ -116,9 +130,11 @@ async function replaySceneScoring(bundleDir: string | null): Promise<{
   // 0.16 m from the recorded human path. That magnitude measures the binding,
   // not the drive, which is the same defect class that made off-road v1 flag
   // ground truth. Absent authority is unavailable, not a number.
-  if (authority['laneCentrelines'] !== true) unavailable.push('lane-departure');
+  // Authority AND geometry: the declaration alone is not a binding, and rails
+  // in another frame are not this scene's rails.
+  if (authority['laneCentrelines'] !== true || !lanes) unavailable.push('lane-departure');
   if (!area) unavailable.push('off-road');
-  return { drivableArea: area, originUs, unavailable };
+  return { drivableArea: area, laneContext: lanes, originUs, unavailable };
 }
 
 export async function executeEpisode(options: EpisodeRunOptions): Promise<EpisodeRunOutcome> {
@@ -182,6 +198,7 @@ export async function deriveEpisodeOutcome(
         // authoritative geometry, and its lane centrelines are not.
         metricVersion: scene ? 'v2' : 'v1',
         drivableArea: scene?.drivableArea ?? null,
+        laneContext: scene?.laneContext ?? null,
         egoDims: facts.egoDims ?? undefined,
         originUs: scene?.originUs ?? null,
         unavailableInfractions: [

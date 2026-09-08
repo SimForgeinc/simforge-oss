@@ -528,3 +528,112 @@ describe('off-road v2: footprint containment', () => {
     expect(score.unavailable).toEqual([]);
   });
 });
+
+const AREA_FOR_LANES = {
+  source: 'clipgt-road-boundary' as const,
+  geometry: 'polygons' as const,
+  frame: 'nurec-source-z-up',
+  confidence: 'authoritative' as const,
+  boundaries: [],
+  polygons: [
+    {
+      id: 'road',
+      kind: 'drivable' as const,
+      ring: [
+        [0, -2],
+        [200, -2],
+        [200, 5.4],
+        [0, 5.4],
+      ] as [number, number][],
+    },
+  ],
+  timeSupportUs: null,
+  coverage: { boundsMinXY: [0, -2] as [number, number], boundsMaxXY: [200, 5.4] as [number, number] },
+};
+
+describe('lane-departure: rail binding and the lane-change policy', () => {
+  /** Two 3.4 m lanes side by side, centred at y = 0 and y = 3.4, running along x. */
+  const lane = (id: string, centreY: number) => ({
+    id,
+    widthM: 3.4,
+    centreline: [
+      [0, centreY],
+      [200, centreY],
+    ] as [number, number][],
+    // Rails INSET by 5 cm, as the real ClipGT rails are: the 0.1 m strip
+    // between neighbours is what makes a line-rider `ambiguous` instead of
+    // silently contained by whichever lane won a tie.
+    leftRail: [
+      [0, centreY + 1.65],
+      [200, centreY + 1.65],
+    ] as [number, number][],
+    rightRail: [
+      [0, centreY - 1.65],
+      [200, centreY - 1.65],
+    ] as [number, number][],
+  });
+  const LANES = {
+    schema: 'simforge.lane-context/v1' as const,
+    source: 'clipgt-lane-rails' as const,
+    frame: 'nurec-source-z-up',
+    timeSupportUs: null,
+    lanes: [lane('L1', 0), lane('L2', 3.4)],
+    coverage: { boundsMinXY: [0, -1.7] as [number, number], boundsMaxXY: [200, 5.1] as [number, number] },
+  };
+  const BOUND: ScenarioScoringContext = {
+    ...CTX,
+    metricVersion: 'v2',
+    drivableArea: AREA_FOR_LANES,
+    laneContext: LANES,
+    egoDims: { lengthM: 4, widthM: 2 },
+  };
+
+  it('reports a lane change as a diagnostic transition, never an infraction', () => {
+    // Contained in L1, two undecided samples crossing the line, contained in L2.
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1, { ex: { x: 12, y: 1.7, headingRad: 0 } }),
+      mkStep(2, { ex: { x: 14, y: 1.70, headingRad: 0 } }),
+      mkStep(3, { ex: { x: 16, y: 3.4, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.infractions['lane-departure']).toBe(0);
+    expect(score.laneDeparture?.bound).toBe(2);
+    expect(score.laneDeparture?.transitions).toBe(1);
+    const transition = score.events.find((e) => e.type === 'lane-transition');
+    expect(transition?.severity).toBe('info');
+    expect((transition?.data as { toLaneId?: string } | undefined)?.toLaneId).toBe('L2');
+    // Which crossings are illegitimate needs route, marking and rule context a
+    // reconstruction does not carry, so the metric stays unavailable.
+    expect(score.unavailable).toContain('lane-departure');
+  });
+
+  it('reports an over-long undecided run diagnostically, not as an infraction', () => {
+    // Riding the line for 5 s at 10 Hz, past the 4 s crossing bound.
+    const steps = Array.from({ length: 50 }, (_, i) =>
+      mkStep(i, { ex: { x: 10 + i, y: 1.7, headingRad: 0 } }),
+    );
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.infractions['lane-departure']).toBe(0);
+    const event = score.events.find((e) => e.type === 'lane-transition');
+    expect(event?.severity).toBe('info');
+    expect((event?.data as { reason?: string } | undefined)?.reason).toBe('undecided_run_exceeded');
+  });
+
+  it('records the worst in-lane offset without penalising it', () => {
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1, { ex: { x: 12, y: 1.2, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.laneDeparture?.worstOffsetM).toBeCloseTo(1.2, 6);
+    expect(score.infractions['lane-departure']).toBe(0);
+  });
+
+  it('binds nothing outside the rails and still reports unavailable', () => {
+    const steps = [mkStep(0, { ex: { x: 10, y: 40, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.laneDeparture?.bound).toBe(0);
+    expect(score.unavailable).toContain('lane-departure');
+  });
+});
