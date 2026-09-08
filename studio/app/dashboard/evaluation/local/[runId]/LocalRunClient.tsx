@@ -15,7 +15,8 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
+import { readEvalResultManifest, RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
+import type { EvalResultManifest } from "@simforge-oss/studio-ui/evaluation";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
@@ -43,7 +44,9 @@ const POLL_MS = 2000;
 export function LocalRunClient({ runId }: { runId: string }) {
   useSetPageTitle("Local run");
   const [run, setRun] = useState<LocalRun | null>(null);
+  const [manifest, setManifest] = useState<EvalResultManifest | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [manifestProblem, setManifestProblem] = useState<string | null>(null);
 
   const refresh = useCallback(
     async (signal: AbortSignal) => {
@@ -57,9 +60,34 @@ export function LocalRunClient({ runId }: { runId: string }) {
           return;
         }
         if (!response.ok) throw new Error(`status ${response.status}`);
-        const payload = (await response.json()) as { run?: LocalRun } & LocalRun;
-        setRun(payload.run ?? payload);
+        // POST /api/models/runs and this GET both return the run row itself,
+        // not a wrapper.
+        const row = (await response.json()) as LocalRun;
+        setRun(row);
         setError(null);
+
+        // The run row's `metrics` is a summary; the manifest is the result. Read
+        // it through the same reader the cloud screen uses, so a document this
+        // build cannot understand is reported rather than silently skipped.
+        if (row.status === "succeeded" || row.status === "failed") {
+          const manifestResponse = await fetch(
+            `/api/simforge/local-runs/${encodeURIComponent(runId)}/result`,
+            { cache: "no-store", signal },
+          );
+          if (manifestResponse.ok) {
+            const read = readEvalResultManifest(await manifestResponse.json());
+            if (read.ok) {
+              setManifest(read.value);
+              setManifestProblem(null);
+            } else {
+              setManifestProblem(`This run's result.json could not be displayed: ${read.reason}`);
+            }
+          } else if (manifestResponse.status !== 404) {
+            setManifestProblem(
+              `This run's result.json could not be read (${manifestResponse.status}).`,
+            );
+          }
+        }
       } catch (cause) {
         if (signal.aborted) return;
         setError(`The run could not be read: ${cause instanceof Error ? cause.message : String(cause)}`);
@@ -87,12 +115,20 @@ export function LocalRunClient({ runId }: { runId: string }) {
       />
       <div className="space-y-6 px-5 py-5 sm:px-6">
         {error ? <RefusalNotice title="Local run" reasons={[error]} /> : null}
+        {manifestProblem ? (
+          <RefusalNotice tone="warn" title="Result document" reasons={[manifestProblem]} />
+        ) : null}
 
         {run ? (
           <>
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="outline">{run.status}</Badge>
               <Badge variant="outline">on this machine</Badge>
+              {manifest ? <Badge variant="outline">{manifest.mode}</Badge> : null}
+              {manifest && !manifest.scored ? <Badge variant="outline">not scored</Badge> : null}
+              {manifest?.truncation ? (
+                <Badge variant="outline">truncated: {manifest.truncation}</Badge>
+              ) : null}
               <span className="font-mono text-xs text-muted-foreground">{run.id}</span>
               {live ? (
                 <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
@@ -131,9 +167,30 @@ export function LocalRunClient({ runId }: { runId: string }) {
               />
             ) : null}
 
-            {run.metrics && Object.keys(run.metrics).length > 0 ? (
+            {manifest ? (
               <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-foreground">Metrics</h2>
+                <h2 className="text-sm font-semibold text-foreground">Result</h2>
+                <dl className="grid gap-x-8 gap-y-1 text-xs sm:grid-cols-3">
+                  {Object.entries(manifest.metrics).map(([field, value]) => (
+                    <div key={field}>
+                      <dt className="uppercase tracking-wide text-muted-foreground">{field}</dt>
+                      <dd className="min-w-0 truncate font-mono text-foreground">
+                        {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {manifest.scored
+                    ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or AlpaSim benchmark number."
+                    : "This run is not scored: no reference future was available, so the numbers above are not a driving score."}
+                </p>
+              </section>
+            ) : null}
+
+            {!manifest && run.metrics && Object.keys(run.metrics).length > 0 ? (
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold text-foreground">Metrics (run summary)</h2>
                 <dl className="grid gap-x-8 gap-y-1 text-xs sm:grid-cols-3">
                   {Object.entries(run.metrics).map(([field, value]) => (
                     <div key={field}>

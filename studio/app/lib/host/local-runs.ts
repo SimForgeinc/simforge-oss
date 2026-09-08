@@ -164,8 +164,9 @@ export async function startLocalRun(input: {
       }`.trim(),
     );
   }
-  const created = (await response.json()) as { id?: string; run?: { id: string } };
-  const runId = created.run?.id ?? created.id;
+  // 201 returns the run row itself, not a wrapper.
+  const created = (await response.json()) as { id?: string };
+  const runId = created.id;
   if (!runId) {
     throw new LocalRunUnavailable("rejected", "The local run was created but no run id came back.");
   }
