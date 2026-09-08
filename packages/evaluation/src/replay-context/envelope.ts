@@ -132,7 +132,11 @@ export interface EnvelopeMonitor {
 export function createEnvelopeMonitor(bundle: ReplayContext): EnvelopeMonitor {
   const limits = bundle.validity.envelope;
   const path = bundle.ego.recordedPath;
-  const { originUs, endUs } = bundle.ego;
+  // Renders outside the reconstruction's support do not exist, so the enforceable window is
+  // the intersection of the episode and the reconstruction — not the episode alone.
+  const support = bundle.geometry.timeSupportUs;
+  const originUs = Math.max(bundle.ego.originUs, support?.startUs ?? bundle.ego.originUs);
+  const endUs = Math.min(bundle.ego.endUs, support?.endUs ?? bundle.ego.endUs);
   return {
     limits,
     check(sample: PoseSample): EnvelopeCheck {
@@ -255,34 +259,52 @@ function boxesOverlap(
 const DEFAULT_EGO_FOOTPRINT = { l: 4.8, w: 2.0 };
 
 /**
- * G4 measurement: worst camera-to-track time skew, and how many recorded actor samples
- * intersect the recorded ego footprint at the same instant.
+ * G4 measurement: are the recorded actor tracks usable as a replayed world?
  *
- * A recorded actor overlapping the recorded ego is not a collision the ego caused — it is
- * proof that the tracks and the ego pose are not in the same frame or the same clock.
+ * Two properties, and neither is "the track sample lands on a clock tick". Rendering places a
+ * recorded actor by INTERPOLATING its trajectory at the render instant
+ * (`providers/nurec.Traj.at`, position lerp + quaternion nlerp), so exact coincidence with any
+ * clock is irrelevant — what matters is that the samples are dense enough for that
+ * interpolation to be faithful, and that the tracks describe the same drive as the ego.
+ *
+ *   `maxTrackSampleGapUs`  the coarsest sampling interval in any track. Interpolation error
+ *                          for a turning vehicle grows as v·Δt²·ω/8, so the gap bounds how
+ *                          wrong a replayed actor's pose can be between samples.
+ *   `egoPathIntersections` recorded actors overlapping the recorded ego footprint at the same
+ *                          instant — impossible in a real recording, so it means the tracks and
+ *                          the ego pose are not in the same frame or the same clock.
+ *   `framesOutsideWindow`  published camera reference instants outside the recorded window,
+ *                          which would mean the frames and the trajectory are different drives.
+ *
+ * This replaced a nearest-tick skew measurement, which was doubly wrong on real data: it
+ * failed a genuine NuRec release by ~20 s for publishing one reference frame per camera, and
+ * even against the rig clock it could only ever measure half the clock period (~50 ms at
+ * 10 Hz), i.e. a property of the sampling grid rather than of the scene.
  */
 export function measureDynamicsConsistency(bundle: ReplayContext): DynamicsConsistency {
-  const cameraTimes: number[] = bundle.cameras.flatMap((camera) => cameraTimestamps(camera));
-  cameraTimes.sort((a, b) => a - b);
-
-  let maxSkew = 0;
+  let maxGap = 0;
   let intersections = 0;
+  let framesOutsideWindow = 0;
+
+  // Frames are checked against the RECONSTRUCTION's support, not the episode window. A
+  // published reference frame a few seconds before the evaluated episode still belongs to the
+  // same drive; one outside the reconstruction does not.
+  const support = bundle.geometry.timeSupportUs;
+  const windowStart = support?.startUs ?? bundle.ego.originUs;
+  const windowEnd = support?.endUs ?? bundle.ego.endUs;
+  for (const camera of bundle.cameras) {
+    for (const tUs of cameraTimestamps(camera)) {
+      if (tUs < windowStart || tUs > windowEnd) framesOutsideWindow += 1;
+    }
+  }
+  // How far the evaluated episode runs past what the reconstruction can render at all.
+  const egoBeyondSupportUs = support === undefined ? 0 : Math.max(0, bundle.ego.endUs - support.endUs);
+
   for (const track of bundle.dynamics.tracks) {
+    for (let i = 1; i < track.samples.length; i += 1) {
+      maxGap = Math.max(maxGap, track.samples[i]!.tUs - track.samples[i - 1]!.tUs);
+    }
     for (const sample of track.samples) {
-      if (cameraTimes.length > 0) {
-        let nearest = Number.POSITIVE_INFINITY;
-        // Binary search for the closest camera timestamp.
-        let lo = 0;
-        let hi = cameraTimes.length - 1;
-        while (lo <= hi) {
-          const mid = (lo + hi) >> 1;
-          const value = cameraTimes[mid]!;
-          nearest = Math.min(nearest, Math.abs(value - sample.tUs));
-          if (value < sample.tUs) lo = mid + 1;
-          else hi = mid - 1;
-        }
-        maxSkew = Math.max(maxSkew, nearest);
-      }
       const ego = poseAt(bundle.ego.recordedPath, sample.tUs);
       if (ego === undefined) continue;
       const overlap = boxesOverlap(
@@ -292,7 +314,13 @@ export function measureDynamicsConsistency(bundle: ReplayContext): DynamicsConsi
       if (overlap) intersections += 1;
     }
   }
-  return { maxTimeSkewUs: maxSkew, egoPathIntersections: intersections, tracksChecked: bundle.dynamics.tracks.length };
+  return {
+    maxTrackSampleGapUs: maxGap,
+    egoPathIntersections: intersections,
+    tracksChecked: bundle.dynamics.tracks.length,
+    framesOutsideWindow,
+    egoBeyondSupportUs,
+  };
 }
 
 /* ----------------------------------------------------------------------- G5 */

@@ -147,9 +147,16 @@ def _rendered_ticks(render_dir: Path, sensor_id: str, kind: str, suffix: str) ->
     return ticks
 
 
-def _unsupported_mask(depth: np.ndarray) -> np.ndarray:
-    """Pixels the renderer produced no surface for: non-finite or non-positive depth."""
-    return ~np.isfinite(depth) | (depth <= 0.0)
+def _unsupported_mask(depth: np.ndarray, far_m: float) -> np.ndarray:
+    """Pixels the renderer produced no surface for.
+
+    Measured against the rig's own far plane rather than against zero. A splat render returns
+    finite, positive depth everywhere — sky and no-hit pixels come back at hundreds or
+    thousands of metres, not as 0 or NaN — so a zero/NaN test never fires and the coverage
+    gate it feeds can only ever pass. The camera's calibrated `farM` (1000 m for this rig) is
+    the renderer's own statement of "no surface within range", so that is the boundary.
+    """
+    return ~np.isfinite(depth) | (depth <= 0.0) | (depth >= far_m)
 
 
 def main() -> int:
@@ -160,6 +167,12 @@ def main() -> int:
     parser.add_argument("--cameras", required=True, help="comma-separated <cameraId>:<sensorId> pairs")
     parser.add_argument("--episode-start-us", type=int, default=0)
     parser.add_argument("--tick-hz", type=float, default=10.0)
+    parser.add_argument(
+        "--far-m",
+        type=float,
+        default=1000.0,
+        help="camera far plane in metres; depth at or beyond it is a no-hit pixel",
+    )
     args = parser.parse_args()
 
     package = Path(args.package)
@@ -210,10 +223,10 @@ def main() -> int:
                 if depth_path is None:
                     continue
                 depth = np.load(depth_path)
-                mask = _unsupported_mask(depth)
+                mask = _unsupported_mask(depth, args.far_m)
                 base_path = baseline_depth.get(tick)
                 if base_path is not None:
-                    base_mask = _unsupported_mask(np.load(base_path))
+                    base_mask = _unsupported_mask(np.load(base_path), args.far_m)
                     if base_mask.shape == mask.shape:
                         mask = mask & ~base_mask
                 newly_unsupported.append(float(np.mean(mask)))

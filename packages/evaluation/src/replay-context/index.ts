@@ -21,6 +21,8 @@ export * from './clip.js';
 export * from './gates.js';
 export * from './envelope.js';
 export * from './qualify.js';
+export * from './scene-bundle.js';
+export * from './drivable.js';
 export * from './usdz.js';
 export * from './capability.js';
 export { buildSceneStateStream, measureProbe, qualifyRenders, readSceneDirFacts, renderProbe, PROBE_TICK_HZ } from './render.js';

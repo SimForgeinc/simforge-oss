@@ -27,7 +27,10 @@ export const RawBackgroundSchema = z.looseObject({
   rigCentroid: z.array(Num).optional(),
   actorTracks: z.record(z.string(), z.string()).optional(),
   episode: z.looseObject({ startTimestampUs: Num.optional(), durationS: Num.optional() }).optional(),
-  metadata: z.looseObject({ nreSceneId: z.string().optional() }).optional(),
+  metadata: z.looseObject({
+    nreSceneId: z.string().optional(),
+    timeRangeUs: z.looseObject({ start: Num, end: Num }).optional(),
+  }).optional(),
 });
 export type RawBackground = z.infer<typeof RawBackgroundSchema>;
 
@@ -101,6 +104,9 @@ export const RawRigTrajectoriesSchema = z.looseObject({
   rig_trajectories: z.array(z.looseObject({
     T_rig_worlds: z.array(z.array(z.array(Num))).optional(),
     T_rig_world_timestamps_us: z.array(Num).optional(),
+    /** Per-camera [exposureStartUs, exposureEndUs] pairs: the real capture timeline. */
+    cameras_frame_timestamps_us: z.record(z.string(), z.array(z.array(Num))).optional(),
+    rig_bbox: z.looseObject({ centroid: z.array(Num).optional() }).optional(),
   })).optional(),
 });
 

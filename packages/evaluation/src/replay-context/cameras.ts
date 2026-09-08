@@ -131,7 +131,16 @@ export function servableRigPresets(available: readonly number[]): readonly strin
  */
 export function cameraTimestamps(camera: CalibratedCamera): number[] {
   const timing = camera.timing;
-  if (timing.kind === 'explicit') return [...timing.timestampsUs];
+  if (timing.kind === 'explicit' || timing.kind === 'reference-frames') return [...timing.timestampsUs];
   return Array.from({ length: timing.frameCount }, (_, frame) =>
     Math.round(timing.offsetUs + (frame * 1e6) / timing.fps));
+}
+
+/**
+ * True when the camera publishes a complete capture timeline rather than a few reference
+ * instants. Callers that need per-frame times (frame extraction, time-alignment) must check
+ * this rather than assuming `cameraTimestamps` covers the drive.
+ */
+export function hasCompleteTimeline(camera: CalibratedCamera): boolean {
+  return camera.timing.kind !== 'reference-frames';
 }

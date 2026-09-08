@@ -49,6 +49,9 @@ import type { GateVerdict, ReplayContext } from './schema.js';
 export const PROBE_TICK_HZ = 10;
 
 
+/** Default camera far plane, matching the NuRec rigs' calibrated `farM`. */
+export const DEFAULT_FAR_M = 1000;
+
 export interface RenderTier {
   /** `simforge-oss-splat` console script, or an interpreter invocation of it. */
   readonly splatCommand?: readonly string[];
@@ -60,6 +63,8 @@ export interface RenderTier {
   readonly hoodDir: string;
   /** 3DGRUT checkout, exported as `THREEDGRUT_ROOT` for the child process. */
   readonly threedgrutRoot?: string;
+  /** Camera far plane in metres; defaults to {@link DEFAULT_FAR_M}. */
+  readonly farM?: number;
 }
 
 interface SceneActorDoc {
@@ -285,6 +290,12 @@ export async function renderProbe(
   const command = tier.splatCommand ?? ['simforge-oss-splat'];
   const env: NodeJS.ProcessEnv = { ...process.env };
   if (tier.threedgrutRoot !== undefined) env['THREEDGRUT_ROOT'] = tier.threedgrutRoot;
+  // The renderer shells out to siblings of its own entrypoint: `slangc`, the Slang compiler the
+  // 3DGUT tracer invokes at runtime, lives in the same venv bin directory. Invoking the console
+  // script by absolute path leaves that directory off PATH, so the tracer fails with ENOENT on
+  // slangc after the scene has already loaded. Prepend it.
+  const commandDir = path.dirname(path.resolve(command[0]!));
+  env['PATH'] = `${commandDir}${path.delimiter}${env['PATH'] ?? ''}`;
   const result = await run(command[0]!, [...command.slice(1), 'job', '--params', paramsPath, '--out-dir', outDir], env);
   if (result.code === 0) return outDir;
   const detail = result.stderr.trim() || result.stdout.trim();
@@ -338,6 +349,8 @@ export async function measureProbe(
     // The renderer's own clock, so a rendered tick is compared with the frame it depicts.
     '--episode-start-us', String(facts.episodeStartUs),
     '--tick-hz', String(PROBE_TICK_HZ),
+    // The rig's far plane: depth at or beyond it is the renderer saying "no surface here".
+    '--far-m', String(tier.farM ?? DEFAULT_FAR_M),
   ];
   if (baselineDir !== undefined) args.push('--baseline-dir', baselineDir);
   const result = await run(tier.pythonCommand ?? 'python3', args, { ...process.env });
@@ -367,6 +380,8 @@ export interface QualifyOptions {
   /** Ticks rendered per probe. Ten seconds at 10 Hz by default. */
   readonly ticks?: number;
   readonly thresholds?: GateThresholds;
+  /** Camera ids to render and measure. Defaults to every camera the bundle has. */
+  readonly profileCameraIds?: readonly number[];
   /**
    * Longitudinal freedom, seconds. Bounded by how far the ego may drift in time before the
    * replayed actors are meaningfully desynchronised; defaults to one decision period.
@@ -389,7 +404,18 @@ export interface QualifyResult {
  * cost GPU minutes to produce a number we would then have to discard.
  */
 export async function qualifyRenders(options: QualifyOptions): Promise<QualifyResult> {
-  const { bundle, sceneDir, workDir, tier } = options;
+  const { sceneDir, workDir, tier } = options;
+  // Render and measure exactly the profile being qualified: a camera outside it must not
+  // influence a verdict that does not cover it, in either direction.
+  const profile = options.profileCameraIds;
+  const bundle: ReplayContext = profile === undefined
+    ? options.bundle
+    : { ...options.bundle, cameras: options.bundle.cameras.filter((camera) => profile.includes(camera.cameraId)) };
+  if (bundle.cameras.length === 0) {
+    throw new CapabilityError(
+      `scene ${options.bundle.sceneId}: the requested camera profile [${(profile ?? []).join(', ')}] matches none of its cameras`,
+    );
+  }
   const facts = await readSceneDirFacts(sceneDir);
   const ticks = options.ticks ?? PROBE_TICK_HZ * 10;
   const thresholds = options.thresholds ?? DEFAULT_GATE_THRESHOLDS;

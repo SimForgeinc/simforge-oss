@@ -428,6 +428,9 @@
       ],
       "largestPassingLateralM": 1.0,
       "largestPassingHeadingRad": 0.0872664625997165
-    }
+    },
+    "profileCameraIds": [
+      1
+    ]
   }
 }

@@ -135,6 +135,15 @@ export interface StockReplayInput {
 
 export interface QualifyBundleOptions extends Omit<RenderQualifyOptions, 'bundle'> {
   readonly bundle: ReplayContext;
+  /**
+   * Camera ids to qualify over. Defaults to every camera the scene has.
+   *
+   * Qualifying a subset is a legitimate and often the honest outcome: a reconstruction can be
+   * faithful for wide cameras and not for a narrow tele. It is NOT a way to make a failing
+   * scene pass — the subset must be chosen and stated, the gates are re-measured over exactly
+   * those cameras, and the bundle records which set it was measured for.
+   */
+  readonly profileCameraIds?: readonly number[];
   /** Where the qualified bundle and its gate report are written. */
   readonly bundleDir: string;
   /** G5 evidence. Absent means G5 is not recorded and the bundle cannot become qualified. */
@@ -158,7 +167,9 @@ export interface QualifyBundleResult {
  * unsupported pixels"), not silently absent.
  */
 export async function qualifyBundle(options: QualifyBundleOptions): Promise<QualifyBundleResult> {
-  const renders = await qualifyRenders(options);
+  const profileCameraIds = [...(options.profileCameraIds ?? options.bundle.cameras.map((camera) => camera.cameraId))]
+    .sort((a, b) => a - b);
+  const renders = await qualifyRenders({ ...options, profileCameraIds });
   const gates: Partial<Record<GateId, GateVerdict>> = {
     ...options.bundle.validity.gates,
     G1: renders.G1,
@@ -185,6 +196,7 @@ export async function qualifyBundle(options: QualifyBundleOptions): Promise<Qual
       // means nothing when the scene did not pass the gates that make renders trustworthy.
       envelope: qualified ? renders.G2.envelope : { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates,
+      profileCameraIds,
       envelopeBasis: {
         offsetsTestedM: [...renders.G2.basis.offsetsTestedM],
         headingsTestedRad: [...renders.G2.basis.headingsTestedRad],
@@ -205,6 +217,7 @@ export async function qualifyBundle(options: QualifyBundleOptions): Promise<Qual
         schema: 'simforge.replay-context-gates/v1',
         sceneId: bundle.sceneId,
         qualified,
+        profileCameraIds,
         envelope: bundle.validity.envelope,
         gates,
         probes: renders.probes.map((probe) => ({

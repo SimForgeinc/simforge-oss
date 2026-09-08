@@ -55,6 +55,16 @@ export interface PackageImportOptions {
   /** Expected package digest. When given it is enforced; when absent it is computed and recorded. */
   readonly expectedSha256?: string;
   readonly source?: ReplayContext['source']['kind'];
+  /**
+   * Lane/route context to bind to the scene.
+   *
+   * A NuRec package carries no lane graph, so without this the bundle records
+   * `derived-from-reconstruction` with no path and a closed-loop consumer has no topology to
+   * instantiate. Supplying a map the scene was imported alongside is binding known context, not
+   * inventing it — which is why the caller must pass it explicitly rather than have the importer
+   * guess at a sibling directory.
+   */
+  readonly map?: ReplayContext['map'];
   readonly thresholds?: GateThresholds;
 }
 
@@ -237,6 +247,23 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
 
   const frames = recordedFrames(entries);
   const framesBySensor = new Map(frames.map((entry) => [entry.sensorId, entry]));
+  // Per-camera capture timeline and exposure, keyed by the package's `<sensor>@<sequence>` names.
+  const rawTimeline = (rig.rig_trajectories ?? [])[0]?.cameras_frame_timestamps_us ?? {};
+  const timelineBySensor = new Map<string, number[]>();
+  const shutterBySensor = new Map<string, number>();
+  for (const [key, pairs] of Object.entries(rawTimeline)) {
+    const sensor = key.split('@')[0]!;
+    const starts = pairs.map((pair) => Math.round(pair[0] ?? 0)).filter((value) => value > 0);
+    if (starts.length === 0) continue;
+    timelineBySensor.set(sensor, starts);
+    const exposures = pairs
+      .map((pair) => Math.round((pair[1] ?? 0) - (pair[0] ?? 0)))
+      .filter((value) => value > 0)
+      .sort((a, b) => a - b);
+    if (exposures.length > 0) shutterBySensor.set(sensor, exposures[Math.floor(exposures.length / 2)]!);
+  }
+  const shutterFor = (sensorId: string): number => shutterBySensor.get(sensorId) ?? 30_000;
+
   const cameras: CalibratedCamera[] = [];
   const droppedCameras: { sensorId: string; reason: string }[] = [];
   for (const calibration of Object.values(rig.camera_calibrations ?? {})) {
@@ -262,6 +289,7 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
       droppedCameras.push({ sensorId, reason: 'T_sensor_rig is not a row-major 3x4/4x4 transform' });
       continue;
     }
+    const timeline = timelineBySensor.get(sensorId);
     const recorded = framesBySensor.get(sensorId);
     if (recorded === undefined || recorded.timestampsUs.length === 0) {
       droppedCameras.push({ sensorId, reason: 'the package contains no recorded frames for this sensor' });
@@ -281,11 +309,14 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
           [rows[2]![0]!, rows[2]![1]!, rows[2]![2]!, rows[2]![3]!],
         ],
       },
-      timing: {
-        kind: 'explicit',
-        timestampsUs: [...recorded.timestampsUs],
-        shutterUs: Math.round(firstNumber(parameters, ['shutter_duration_us']) ?? 30_000),
-      },
+      // The package records the real capture timeline in `cameras_frame_timestamps_us` as
+      // [exposureStart, exposureEnd] pairs (~30 Hz). That is the camera's timing. The handful of
+      // stored JPEGs are recorded separately as referenceFrames: they are the imagery available
+      // for comparison, not the recording's clock.
+      timing: timeline === undefined
+        ? { kind: 'reference-frames' as const, timestampsUs: [...recorded.timestampsUs], shutterUs: shutterFor(sensorId) }
+        : { kind: 'explicit' as const, timestampsUs: timeline, shutterUs: shutterFor(sensorId) },
+      referenceFrames: recorded.timestampsUs.map((tUs, index) => ({ tUs, member: recorded.members[index]! })),
     });
   }
   if (cameras.length === 0) {
@@ -407,13 +438,17 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
       kind: 'nurec-usdz',
       sourcePackage: packagePath,
       sourcePackageSha256: digest,
+      // The recorded rig trajectory is the extent the reconstruction was built over.
+      timeSupportUs: { startUs: recordedPath[0]!.tUs, endUs: recordedPath[recordedPath.length - 1]!.tUs },
       renderer: 'nurec-splat-renderer',
     },
     // The package carries no lane graph; route context is whatever the scene itself implies
     // until a map bundle is bound to it, and that is recorded as low confidence.
-    map: { source: 'derived-from-reconstruction', confidence: 'low' },
+    map: options.map ?? { source: 'derived-from-reconstruction', confidence: 'low' },
     validity: {
       qualified: false,
+      // No profile has been measured yet; qualification is always for a camera set.
+      profileCameraIds: [],
       envelope: { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates: {},
       envelopeBasis: { offsetsTestedM: [], headingsTestedRad: [], largestPassingLateralM: 0, largestPassingHeadingRad: 0 },

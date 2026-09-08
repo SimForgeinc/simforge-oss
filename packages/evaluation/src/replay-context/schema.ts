@@ -119,6 +119,18 @@ export const CameraTimingSchema = z.union([
     timestampsUs: z.array(TimestampUs).min(1),
     shutterUs: z.number().int().min(0),
   }),
+  /**
+   * Only these capture instants are published, not a complete timeline.
+   *
+   * The NuRec AV releases ship a single reference frame per camera rather than the recorded
+   * sequence, so pretending those instants are the camera's timeline would invent a 1-frame
+   * recording. They are what G1 compares renders against; the drive's clock is `ego.recordedPath`.
+   */
+  z.strictObject({
+    kind: z.literal('reference-frames'),
+    timestampsUs: z.array(TimestampUs).min(1),
+    shutterUs: z.number().int().min(0),
+  }),
   z.strictObject({
     kind: z.literal('constant-rate'),
     fps: Finite.positive(),
@@ -143,7 +155,17 @@ export const CalibratedCameraSchema = z.strictObject({
   height: z.number().int().positive(),
   intrinsics: IntrinsicsSchema,
   extrinsics: ExtrinsicsSchema,
+  /** When the camera captured — the full recorded timeline, independent of what imagery survives. */
   timing: CameraTimingSchema,
+  /**
+   * Recorded imagery actually available for comparison, with the archive member holding it.
+   *
+   * Distinct from `timing`: a NuRec package records a ~30 Hz capture timeline but ships only a
+   * handful of stored frames. Conflating the two makes a 20 s drive look like a four-frame
+   * recording, which is what an earlier version of this importer did. G1 compares renders
+   * against these; everything time-related uses `timing`.
+   */
+  referenceFrames: z.array(z.strictObject({ tUs: TimestampUs, member: z.string().min(1) })).optional(),
 });
 export type CalibratedCamera = z.infer<typeof CalibratedCameraSchema>;
 
@@ -279,6 +301,16 @@ export const GeometrySchema = z.strictObject({
   sourcePackageSha256: Sha256,
   /** `volume.nurec` member digest inside the package, when the source is a NuRec archive. */
   memberDigest: Sha256.optional(),
+  /**
+   * The reconstruction's own recorded time support.
+   *
+   * Distinct from `ego.originUs`/`ego.endUs`, which bound the *episode* selected for
+   * evaluation and may start later or run past the reconstruction. Renders outside this
+   * window do not exist — the splat backend refuses them ("tick outside reconstruction
+   * support") — so the envelope monitor intersects the two and a published frame is checked
+   * against this, not against the episode.
+   */
+  timeSupportUs: z.strictObject({ startUs: TimestampUs, endUs: TimestampUs }).optional(),
   /** Renderer role that can consume this geometry. */
   renderer: z.enum(['nurec-splat-renderer', 'native-bevy']),
 });
@@ -343,8 +375,19 @@ export const ValiditySchema = z.strictObject({
   /**
    * True only when every gate in `gates` passed. A model episode must be refused on a
    * bundle with `qualified === false`; that is a precondition check, not a score.
+   *
+   * Qualification is always **for a specific camera set** — see `profileCameraIds`. A
+   * reconstruction can be faithful for wide cameras and not for a narrow tele looking much
+   * further down the road, so "this scene is qualified" is not something a scene can say on
+   * its own. A consumer must check that the rig it intends to use is covered: a scene
+   * qualified for [0, 1, 2] must not be driven with a rig that includes camera 6.
    */
   qualified: z.boolean(),
+  /**
+   * The camera ids `qualified`, `envelope` and `gates` were measured over. Never wider than
+   * what was actually rendered, and never widened after the fact.
+   */
+  profileCameraIds: z.array(z.number().int().min(0).max(6)),
   envelope: EnvelopeSchema,
   /** Partial: G1/G2/G5 arrive only after rendering and a stock replay. */
   gates: z.partialRecord(GateIdSchema, GateVerdictSchema),
@@ -446,6 +489,25 @@ export const ReplayContextSchema = z.strictObject({
       });
     }
   }
+  const declaredIds = new Set(ctx.value.cameras.map((camera) => camera.cameraId));
+  for (const id of ctx.value.validity.profileCameraIds) {
+    if (!declaredIds.has(id)) {
+      ctx.issues.push({
+        code: 'custom',
+        message: `validity.profileCameraIds names camera ${id}, which the scene does not have`,
+        path: ['validity', 'profileCameraIds'],
+        input: id,
+      });
+    }
+  }
+  if (ctx.value.validity.qualified && ctx.value.validity.profileCameraIds.length === 0) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'validity.qualified is true but no camera profile was measured; qualification is always for a camera set',
+      path: ['validity', 'profileCameraIds'],
+      input: ctx.value.validity.profileCameraIds,
+    });
+  }
   if (ctx.value.validity.qualified && ctx.value.source.kind === 'synthetic-fixture') {
     ctx.issues.push({
       code: 'custom',
@@ -537,4 +599,32 @@ export function replayContextInputRef(bundle: ReplayContext): {
 } {
   const geometryDigest = bundle.geometry.sourcePackageSha256;
   return { kind: 'replay-context', ref: bundle.sceneId, digest: geometryDigest };
+}
+
+/**
+ * May this bundle carry a rig using exactly `cameraIds`?
+ *
+ * Qualification is per camera set, so serving a rig needs the bundle qualified over a set that
+ * *covers* it. A scene qualified for the three 120° cameras cannot serve a preset that also
+ * uses the tele, even though the scene physically has a tele camera — the tele's renders were
+ * measured and found wanting, or were never measured at all.
+ */
+export function servesProfile(bundle: ReplayContext, cameraIds: readonly number[]): {
+  readonly ok: boolean;
+  readonly reason?: string;
+} {
+  if (!bundle.validity.qualified) {
+    return { ok: false, reason: `scene ${bundle.sceneId} is not qualified for closed-loop use` };
+  }
+  const qualifiedFor = new Set(bundle.validity.profileCameraIds);
+  const uncovered = cameraIds.filter((id) => !qualifiedFor.has(id));
+  if (uncovered.length > 0) {
+    return {
+      ok: false,
+      reason:
+        `scene ${bundle.sceneId} is qualified for cameras [${bundle.validity.profileCameraIds.join(', ')}] `
+        + `but the requested rig also needs [${uncovered.join(', ')}], which were not qualified on this scene`,
+    };
+  }
+  return { ok: true };
 }

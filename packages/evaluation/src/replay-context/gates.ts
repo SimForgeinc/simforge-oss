@@ -28,10 +28,14 @@
  * - **G3 (ego-history parity).** A numerical, not physical, tolerance: the bundle re-derives
  *   the same 16-step history from the same poses, so any disagreement beyond frame/unit
  *   conversion noise is a bug. 1 cm / 1 mrad.
- * - **G4 (dynamics/time alignment).** 20 ms maximum skew between an actor track sample and
- *   the camera timestamp it is rendered against — one half of the 10 Hz decision period,
- *   from the evaluation plan's clip contract. Recorded actors intersecting the recorded ego
- *   path is a hard zero: it means the tracks and the ego pose disagree about the world.
+ * - **G4 (dynamics usability).** Recorded actors are replayed by interpolating their
+ *   trajectories at the render instant, so the gate bounds the coarsest sampling interval
+ *   rather than any clock coincidence: interpolation error for a turning vehicle goes as
+ *   v·Δt²·ω/8, which at 15 m/s and 0.3 rad/s is ~2 cm at 200 ms and ~14 cm at 500 ms, so
+ *   200 ms (two decision periods) keeps a replayed actor's pose well inside its own footprint
+ *   between samples. Recorded actors intersecting the recorded ego path is a hard zero — it
+ *   means tracks and ego are not in the same frame or clock — as is a published camera
+ *   reference instant outside the recorded window.
  * - **G5 (stock replay).** Bounds taken from this repository's own conventions:
  *   `docs/policy-step.md` bounds the pure-pursuit executor at p95 cross-track ≤ 0.35 m
  *   (measured there: p50 0.14, p95 0.24, max 0.29), and the NuRec importer's own accepted
@@ -54,12 +58,22 @@ export interface GateThresholds {
   readonly egoHistoryPositionM: number;
   /** G3: maximum heading disagreement (rad) in the re-derived ego history. */
   readonly egoHistoryHeadingRad: number;
-  /** G4: maximum |track sample time − camera timestamp| (µs). */
-  readonly trackTimeSkewUs: number;
+  /** G4: coarsest allowed actor-track sampling interval (µs). */
+  readonly trackSampleGapUs: number;
   /** G5: maximum lateral deviation (m) when replaying the recorded trajectory. */
   readonly stockReplayMaxLateralM: number;
   /** G5: p95 lateral deviation (m) for the same replay. */
   readonly stockReplayP95LateralM: number;
+  /**
+   * G5: seconds excluded from the start of the replay before deviation is measured.
+   *
+   * Not a tolerance — it is part of the bound's own definition. `docs/policy-step.md` states
+   * its p95 <= 0.35 m executor envelope "after 1 s settle", because a pure-pursuit controller
+   * acquiring a path from its initial pose has a transient that is a property of the
+   * controller's initialisation, not of the scene under test. Applying the number without the
+   * window the number was measured under was a misapplication on our side.
+   */
+  readonly stockReplaySettleS: number;
 }
 
 /** Documented defaults; see the module docstring for the justification of each. */
@@ -69,9 +83,10 @@ export const DEFAULT_GATE_THRESHOLDS: GateThresholds = {
   offTrajectoryHoleFraction: 0.02,
   egoHistoryPositionM: 0.01,
   egoHistoryHeadingRad: 0.001,
-  trackTimeSkewUs: 20_000,
+  trackSampleGapUs: 200_000,
   stockReplayMaxLateralM: 0.35,
   stockReplayP95LateralM: 0.10,
+  stockReplaySettleS: 1,
 };
 
 /** Lateral offsets (m) probed by G2. The largest passing one becomes the envelope. */
@@ -83,7 +98,7 @@ const RATIONALE: Record<GateId, string> = {
   G1: 'Renders at recorded poses are near-training views of the reconstruction; below 22 dB PSNR / 0.75 SSIM the scene is visibly wrong or mis-posed. Provisional floor, tightened from the measured distribution once three sequences have passed.',
   G2: 'Measures pixels that become unsupported when the camera moves off the recorded path, relative to the on-trajectory baseline for the same camera. Above 2% the renderer is showing unobserved surface as a hole rather than an edge artefact, so the render is no longer evidence about the world.',
   G3: 'The bundle re-derives the 16-step ego history from the same recorded poses, so disagreement beyond unit/frame conversion noise (1 cm, 1 mrad) is a defect in the derivation, not a property of the scene.',
-  G4: 'Actor tracks must be time-aligned with the camera timestamps they are rendered against to within half a decision period (20 ms at 10 Hz), and recorded actors must not intersect the recorded ego path — an intersection means tracks and ego disagree about the world.',
+  G4: 'Replayed actors are interpolated at the render instant, so their sampling interval must stay within two decision periods (200 ms) for the interpolated pose to be faithful; recorded actors must not intersect the recorded ego path, and published camera reference instants must fall inside the recorded window.',
   G5: 'Replaying the recorded trajectory through the full sim/executor/scoring chain must stay inside the pure-pursuit executor bound documented in docs/policy-step.md (p95 cross-track <= 0.35 m; measured p50 0.14 / p95 0.24 / max 0.29) and produce no infraction. This qualifies our chain, not a model.',
 };
 
@@ -246,29 +261,56 @@ export function gateG3(parity: EgoHistoryParity, thresholds: GateThresholds = DE
 }
 
 export interface DynamicsConsistency {
-  readonly maxTimeSkewUs: number;
+  /** Coarsest sampling interval found in any recorded track. */
+  readonly maxTrackSampleGapUs: number;
   readonly egoPathIntersections: number;
   readonly tracksChecked: number;
+  /** Published camera reference instants outside the reconstruction's recorded time support. */
+  readonly framesOutsideWindow: number;
+  /** Microseconds by which the episode's ego window runs past the reconstruction's support. */
+  readonly egoBeyondSupportUs: number;
 }
 
 /** G4 — actor tracks are time-aligned with the cameras and consistent with the recorded ego path. */
 export function gateG4(consistency: DynamicsConsistency, thresholds: GateThresholds = DEFAULT_GATE_THRESHOLDS): GateVerdict {
-  const base = verdict('G4', 'Dynamics consistency', consistency.maxTimeSkewUs, thresholds.trackTimeSkewUs, 'at-most', 'µs', {
+  const base = verdict('G4', 'Dynamics consistency', consistency.maxTrackSampleGapUs, thresholds.trackSampleGapUs, 'at-most', 'µs', {
     egoPathIntersections: consistency.egoPathIntersections,
     tracksChecked: consistency.tracksChecked,
+    framesOutsideWindow: consistency.framesOutsideWindow,
+    egoBeyondSupportUs: consistency.egoBeyondSupportUs,
   });
-  return { ...base, passed: base.passed && consistency.egoPathIntersections === 0 };
+  return {
+    ...base,
+    passed: base.passed && consistency.egoPathIntersections === 0 && consistency.framesOutsideWindow === 0,
+  };
 }
 
 /* ----------------------------------------------------------------------- G5 */
 
 export interface StockReplayMeasurement {
+  /** Measured AFTER `stockReplaySettleS`; see that field for why. */
   readonly maxLateralM: number;
   readonly p95LateralM: number;
   readonly infractions: number;
   readonly stepsCompared: number;
+  /**
+   * Infraction categories that could NOT be evaluated because the scene lacks an authoritative
+   * source for them, with the missing artifact named. Unavailable is not zero: a category
+   * nobody could measure must block the gate rather than silently count as clean.
+   *
+   * AlpaSim's own scorer set for these artifacts (CollisionScorer, OffRoadScorer,
+   * MinDistanceToObstacle, OpenLoopCollision, GroundTruth, MinADE, PlanDeviation, Image,
+   * Safety) contains no speed-limit and no wrong-way scorer, and a NuRec package ships no
+   * verified speed limits — so on such a scene those categories are unavailable by
+   * construction, not passing.
+   */
+  readonly unavailableCategories?: readonly { readonly category: string; readonly missingArtifact: string }[];
   /** Trace the measurement was taken from, for the persisted verdict. */
   readonly traceRef?: string;
+  /** Seconds excluded at the start; must equal the threshold's settle window. */
+  readonly settleS?: number;
+  /** The same statistics WITHOUT any exclusion, always recorded alongside. */
+  readonly unsettled?: { readonly maxLateralM: number; readonly p95LateralM: number };
 }
 
 /**
@@ -287,14 +329,20 @@ export function gateG5(
     p95ThresholdM: thresholds.stockReplayP95LateralM,
     infractions: measurement.infractions,
     stepsCompared: measurement.stepsCompared,
+    settleS: measurement.settleS ?? thresholds.stockReplaySettleS,
+    ...(measurement.unsettled === undefined ? {} : { withoutSettleWindow: measurement.unsettled }),
     ...(measurement.traceRef === undefined ? {} : { traceRef: measurement.traceRef }),
   });
+  const unavailable = measurement.unavailableCategories ?? [];
   return {
     ...base,
+    detail: { ...base.detail, ...(unavailable.length === 0 ? {} : { unavailableCategories: unavailable }) },
     passed:
       base.passed
       && measurement.p95LateralM <= thresholds.stockReplayP95LateralM
       && measurement.infractions === 0
+      // A category nobody could evaluate cannot be counted as clean.
+      && unavailable.length === 0
       && measurement.stepsCompared > 0,
   };
 }

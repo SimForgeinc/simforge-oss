@@ -256,7 +256,8 @@ export async function importNurecScene(options: NurecImportOptions): Promise<Rep
         ],
       },
       timing: {
-        kind: 'explicit',
+        // Same as the package importer: the archive publishes reference frames, not a timeline.
+        kind: 'reference-frames',
         timestampsUs: [...recorded.timestampsUs],
         shutterUs: Number(projection.shutter?.durationUs ?? shutterUs),
       },
@@ -383,11 +384,21 @@ export async function importNurecScene(options: NurecImportOptions): Promise<Rep
       sourcePackage: packagePath,
       sourcePackageSha256: expectedSha,
       ...(background.digest === undefined ? {} : { memberDigest: background.digest }),
+      ...(background.metadata?.timeRangeUs === undefined
+        ? {}
+        : {
+            timeSupportUs: {
+              startUs: Math.round(background.metadata.timeRangeUs.start),
+              endUs: Math.round(background.metadata.timeRangeUs.end),
+            },
+          }),
       renderer: 'nurec-splat-renderer',
     },
     map,
     validity: {
       qualified: false,
+      // No profile has been measured yet; qualification is always for a camera set.
+      profileCameraIds: [],
       envelope: { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates: {},
       envelopeBasis: { offsetsTestedM: [], headingsTestedRad: [], largestPassingLateralM: 0, largestPassingHeadingRad: 0 },
