@@ -109,6 +109,14 @@ async function replaySceneScoring(bundleDir: string | null): Promise<{
   const unavailable: InfractionType[] = [];
   if (authority['speedLimits'] !== true) unavailable.push('speeding');
   if (authority['travelDirection'] !== true) unavailable.push('wrong-way');
+  // Lane-departure is a claim about lane POSITION, so it needs an authoritative
+  // lane centreline. A reconstruction whose lane graph was derived from the clip
+  // does not have one: on scene 0009402a the nearest-lane binding is 1.10 m off
+  // at the start, and it reported -5.454 m of lane departure for a trajectory
+  // 0.16 m from the recorded human path. That magnitude measures the binding,
+  // not the drive, which is the same defect class that made off-road v1 flag
+  // ground truth. Absent authority is unavailable, not a number.
+  if (authority['laneCentrelines'] !== true) unavailable.push('lane-departure');
   if (!area) unavailable.push('off-road');
   return { drivableArea: area, originUs, unavailable };
 }

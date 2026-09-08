@@ -491,6 +491,22 @@ describe('off-road v2: footprint containment', () => {
     expect(score.worstOffRoadM).toBe(0);
   });
 
+  it('reports lane-departure as unavailable when no centreline authority exists', () => {
+    // The claim is about lane POSITION, so a derived lane graph that is 1.1 m
+    // off cannot support it: on a real reconstruction it reported -5.454 m of
+    // departure for a trajectory 0.16 m from the recorded human path.
+    const steps = [mkStep(0, { latOff: 3.5, ex: { x: 10, y: 2.5, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), {
+      ...V2,
+      unavailableInfractions: ['lane-departure'],
+    });
+    expect(score.infractions['lane-departure']).toBe(0);
+    expect(score.unavailable).toContain('lane-departure');
+    // Off-road is unaffected: containment has its own authority.
+    expect(score.infractions['off-road']).toBe(0);
+    expect(score.offRoad).toEqual({ offered: 1, assessed: 1, unavailableSamples: 0 });
+  });
+
   it('carries declared unavailability through without counting it', () => {
     const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
     const score = scoreEpisode(mkTrace(steps), {
