@@ -13,6 +13,7 @@ import {
   readComputeCapabilities,
   type ComparisonLaunchRequest,
   type ComputeCapabilities,
+  type LocalReadiness,
 } from "../comparison-launch";
 import {
   COMPARISON_SCHEMA,
@@ -60,6 +61,18 @@ before(async () => {
   endpointlessVersionId = bare.kind === "created" ? bare.version.id : "";
 });
 
+/** What the model store reports for a verified, eligible A1 install. */
+const readyLocal: Record<string, LocalReadiness> = {
+  "alpamayo-1": {
+    install: { state: "installed", digestVerifiedAt: "2026-09-08T00:00:00.000Z" },
+    eligibility: { executionEligible: true, qualification: "qualified", reasons: [] },
+  },
+  "alpamayo-2-super": {
+    install: { state: "installed", digestVerifiedAt: "2026-09-08T00:00:00.000Z" },
+    eligibility: { executionEligible: true, qualification: "qualified", reasons: [] },
+  },
+};
+
 const request = (
   overrides: Partial<ComparisonLaunchRequest> = {},
 ): ComparisonLaunchRequest => ({
@@ -94,7 +107,7 @@ const openloopOnlyCloud: ComputeCapabilities = {
 };
 
 test("a local column submits one real run per seed", async () => {
-  const result = await launchComparison(context, request({ seeds: [4, 5, 6] }));
+  const result = await launchComparison(context, request({ seeds: [4, 5, 6] }), { localReadiness: readyLocal });
   assert.equal(result.refused.length, 0);
   assert.equal(result.launched.length, 1);
   assert.equal(result.launched[0]!.runIds.length, 3);
@@ -105,7 +118,7 @@ test("a local column submits one real run per seed", async () => {
 });
 
 test("a local column records the identity it was submitted with", async () => {
-  const result = await launchComparison(context, request());
+  const result = await launchComparison(context, request(), { localReadiness: readyLocal });
   const identity = result.launched[0]!.identity;
   assert.equal(identity.family, "alpamayo-1");
   assert.equal(identity.quant, "nf4");
@@ -121,6 +134,7 @@ test("a model with no enabled endpoint cannot be leased locally", async () => {
         { modelVersionId: endpointlessVersionId, target: "local", rigProfile: "alpamayo-4cam", quant: "fp16" },
       ],
     }),
+    { localReadiness: readyLocal },
   );
   assert.equal(result.launched.length, 0);
   assert.equal(result.refused[0]!.code, "no_local_endpoint");
@@ -220,7 +234,7 @@ test("no compute service means no cloud column, with the reason carried through"
 });
 
 test("a local column with no frame source is refused instead of inventing pixels", async () => {
-  const result = await launchComparison(context, request({ frameSource: null }));
+  const result = await launchComparison(context, request({ frameSource: null }), { localReadiness: readyLocal });
   assert.equal(result.launched.length, 0);
   assert.equal(result.refused[0]!.code, "no_frame_source");
   assert.match(result.refused[0]!.reason, /never synthesized/);
@@ -261,7 +275,7 @@ test("a cloud column runs while a local column lacking frames is refused", async
         { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
       ],
     }),
-    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-y" },
+    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-y", localReadiness: readyLocal },
   );
   assert.deepEqual(
     result.refused.map((entry) => entry.code),
@@ -308,7 +322,7 @@ test("a mixed request launches what can run and refuses the rest", async () => {
         { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
       ],
     }),
-    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-x" },
+    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-x", localReadiness: readyLocal },
   );
   assert.equal(result.launched.length, 1);
   assert.equal(result.launched[0]!.target, "local");
@@ -324,6 +338,7 @@ test("an unknown model version is refused, not submitted", async () => {
         { modelVersionId: "mv-does-not-exist", target: "local", rigProfile: "alpamayo-4cam", quant: "nf4" },
       ],
     }),
+    { localReadiness: readyLocal },
   );
   assert.equal(result.refused[0]!.code, "model_version_not_found");
 });
@@ -441,4 +456,60 @@ test("an empty kinds list says no service runs the family, not that a kind is mi
     { capabilities: none, submitComputeJob: async () => "job-never" },
   );
   assert.match(result.refused[0]!.reason, /No cloud service in this deployment runs alpamayo-2-super/);
+});
+
+test("an enabled endpoint row is not readiness: uninstalled weights are refused", async () => {
+  // The row can outlive the weights. createModelRun checks only that the row
+  // exists, is enabled and belongs to this workspace, so the store's verdict is
+  // what decides whether a local column may be offered.
+  const result = await launchComparison(context, request(), {
+    localReadiness: {
+      "alpamayo-1": {
+        install: { state: "not_installed" },
+        eligibility: { executionEligible: true, qualification: "qualified", reasons: [] },
+      },
+    },
+  });
+  assert.equal(result.launched.length, 0);
+  assert.equal(result.refused[0]!.code, "weights_not_installed");
+});
+
+test("weights present but never digest-verified cannot claim a checkpoint", async () => {
+  const result = await launchComparison(context, request(), {
+    localReadiness: {
+      "alpamayo-1": {
+        install: { state: "installed", digestVerifiedAt: null },
+        eligibility: { executionEligible: true, qualification: "qualified", reasons: [] },
+      },
+    },
+  });
+  assert.equal(result.refused[0]!.code, "weights_unverified");
+  assert.match(result.refused[0]!.reason, /honestly claim which checkpoint/);
+});
+
+test("an ineligible device is refused in the store's own words", async () => {
+  // Closed loop is asked with the renderer reserved, so this is the verdict
+  // that matters: fitting alone is not fitting with the renderer resident.
+  const result = await launchComparison(context, request({ kind: "closedloop-episode" }), {
+    localReadiness: {
+      "alpamayo-1": {
+        install: { state: "installed", digestVerifiedAt: "2026-09-08T00:00:00.000Z" },
+        eligibility: {
+          executionEligible: false,
+          qualification: "qualified",
+          reasons: ["Needs 15.5 GiB with the renderer resident; this device reports 15.8 GiB total."],
+        },
+      },
+    },
+  });
+  assert.equal(result.launched.length, 0);
+  assert.equal(result.refused[0]!.code, "local_execution_ineligible");
+  assert.match(result.refused[0]!.reason, /renderer resident/);
+});
+
+test("no readiness report at all is refused: unknown is not ready, locally too", async () => {
+  const result = await launchComparison(context, request(), {});
+  assert.equal(result.launched.length, 0);
+  assert.equal(result.refused[0]!.code, "local_execution_ineligible");
+  assert.match(result.refused[0]!.reason, /unknown is not ready/);
 });

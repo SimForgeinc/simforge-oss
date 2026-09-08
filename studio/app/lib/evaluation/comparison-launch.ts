@@ -84,6 +84,9 @@ export type ComparisonColumnRefusal = {
   readonly code:
     | 'model_version_not_found'
     | 'no_local_endpoint'
+    | 'weights_not_installed'
+    | 'weights_unverified'
+    | 'local_execution_ineligible'
     | 'kind_unsupported_on_target'
     | 'quant_unsupported_on_target'
     | 'compute_unavailable'
@@ -182,11 +185,41 @@ const RUN_KIND: Record<ComparisonLaunchRequest['kind'], string> = {
   openloop: 'openloop',
 };
 
+/**
+ * The desktop model store's own verdicts, injected rather than imported.
+ *
+ * `@simforge-oss/model-store` reads the local disk and probes the GPU, so it is
+ * passed in: the route calls it, and tests exercise every verdict without a
+ * card. There is no second implementation of the predicate here — this module
+ * only decides what a verdict MEANS for a launch.
+ */
+export type LocalReadiness = {
+  /** `installState(family)` from the model store. */
+  readonly install: { readonly state: string; readonly digestVerifiedAt?: string | null };
+  /**
+   * `qualify()`/`preflight()` for this family+quant. Closed loop MUST be asked
+   * with `reserveRenderer: true`: whether the model fits alone is a different
+   * question from whether it fits with the native renderer resident on the same
+   * device, and only the second one answers a closed-loop launch.
+   */
+  readonly eligibility: {
+    readonly executionEligible: boolean;
+    readonly qualification: string;
+    readonly reasons: readonly string[];
+  } | null;
+};
+
 export type LaunchDependencies = {
   /** Submits a cloud job; returns its id. Injected so the route owns transport. */
   readonly submitComputeJob?: (body: unknown) => Promise<string>;
   readonly capabilities?: ComputeCapabilities | null;
   readonly capabilitiesReason?: string | null;
+  /**
+   * Per-family local readiness from the model store, asked for the KIND being
+   * launched (closed loop with the renderer reserved). Absent means the caller
+   * could not consult the store — which is refused, not assumed ready.
+   */
+  readonly localReadiness?: Readonly<Record<string, LocalReadiness | undefined>>;
 };
 
 /**
@@ -230,6 +263,63 @@ export async function launchComparison(
           code: 'no_frame_source',
           reason:
             'A local run needs a real frame source (`dir:<path>` or `bevy:<rig.json>`); camera views are never synthesized.',
+        });
+        continue;
+      }
+      // AN ENABLED ENDPOINT ROW IS NOT READINESS. `createModelRun` checks only
+      // that the row exists, is enabled and belongs to this workspace (see
+      // model-run-store.ts: SELECT id FROM simforge.model_endpoints WHERE id
+      // = :id AND workspace_id = :workspace_id AND model_version_id =
+      // :model_version_id AND enabled). The row can outlive the weights, name a
+      // half-verified install, or point at a device that cannot hold the model
+      // with the renderer resident. The worker discovers that at lease time,
+      // after a person has been told the run started.
+      //
+      // So the store's own verdicts decide what may be OFFERED, and the lease
+      // remains the authority on what may execute. No duplicate predicate: the
+      // install state and eligibility below are computed by
+      // '@simforge-oss/model-store' and passed in.
+      const readiness = deps.localReadiness?.[version.family];
+      if (!readiness) {
+        refused.push({
+          modelVersionId: column.modelVersionId,
+          target: 'local',
+          code: 'local_execution_ineligible',
+          reason:
+            'Local readiness for this model was not reported: the desktop model store could not be consulted, and unknown is not ready.',
+        });
+        continue;
+      }
+      if (readiness.install.state !== 'installed') {
+        refused.push({
+          modelVersionId: column.modelVersionId,
+          target: 'local',
+          code: 'weights_not_installed',
+          reason: `The weights for ${version.family} are ${readiness.install.state.replace('_', ' ')} on this machine. Install them before a local column can run.`,
+        });
+        continue;
+      }
+      if (!readiness.install.digestVerifiedAt) {
+        // Present but unverified: the bytes on disk have not been proven to be
+        // the checkpoint the column would claim to have run.
+        refused.push({
+          modelVersionId: column.modelVersionId,
+          target: 'local',
+          code: 'weights_unverified',
+          reason: `The ${version.family} install has not been digest-verified, so a run could not honestly claim which checkpoint it used. Verify the install first.`,
+        });
+        continue;
+      }
+      if (!readiness.eligibility || !readiness.eligibility.executionEligible) {
+        refused.push({
+          modelVersionId: column.modelVersionId,
+          target: 'local',
+          code: 'local_execution_ineligible',
+          // The store's own words, kept rather than summarised: they name the
+          // device, the VRAM and the renderer headroom this kind needs.
+          reason:
+            readiness.eligibility?.reasons.join(' ') ??
+            `This machine has no execution verdict for ${version.family}.`,
         });
         continue;
       }

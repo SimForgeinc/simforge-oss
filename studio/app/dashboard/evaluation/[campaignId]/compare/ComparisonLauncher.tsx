@@ -57,6 +57,11 @@ type Capabilities = {
   }[];
 };
 
+type LocalVerdict = {
+  install: { state: string; digestVerifiedAt?: string | null };
+  eligibility: { executionEligible: boolean; reasons: string[] } | null;
+};
+
 type ColumnDraft = {
   key: string;
   modelVersionId: string;
@@ -94,10 +99,25 @@ function localRefusal(
   versions: readonly ModelVersion[],
   capabilities: Capabilities | null,
   capabilitiesReason: string | null,
+  local: Record<string, LocalVerdict> | null,
 ): string | null {
   const version = versions.find((candidate) => candidate.id === column.modelVersionId);
   if (!version) return "Pick a model version.";
-  if (column.target === "local") return null;
+  if (column.target === "local") {
+    if (local === null) return null; // still asking; not a claim either way
+    const verdict = local[version.family];
+    if (!verdict) return `Local readiness for ${version.family} was not reported here.`;
+    if (verdict.install.state !== "installed") {
+      return `The weights for ${version.family} are ${verdict.install.state.replace("_", " ")} on this machine.`;
+    }
+    if (!verdict.install.digestVerifiedAt) {
+      return `The ${version.family} install has not been digest-verified.`;
+    }
+    if (!verdict.eligibility || !verdict.eligibility.executionEligible) {
+      return verdict.eligibility?.reasons.join(" ") ?? `No execution verdict for ${version.family} here.`;
+    }
+    return null;
+  }
   if (!capabilities || !capabilities.enabled) {
     return capabilitiesReason ?? capabilities?.reason ?? "No compute service is deployed here.";
   }
@@ -127,6 +147,7 @@ export function ComparisonLauncher({ campaignId }: { campaignId: string }) {
   const [versions, setVersions] = useState<readonly ModelVersion[]>([]);
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [capabilitiesReason, setCapabilitiesReason] = useState<string | null>(null);
+  const [local, setLocal] = useState<Record<string, LocalVerdict> | null>(null);
   const [kind, setKind] = useState<Kind>("closedloop-episode");
   const [spec, setSpec] = useState("");
   const [frameSource, setFrameSource] = useState("");
@@ -176,6 +197,52 @@ export function ComparisonLauncher({ campaignId }: { campaignId: string }) {
     };
   }, []);
 
+  // The desktop model store's own verdicts, asked for the KIND selected: closed
+  // loop reserves the native renderer, and whether a model fits alone is a
+  // different question from whether it fits with the renderer resident. Refetched
+  // when the kind changes, because the answer changes with it.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const reserve = kind === "closedloop-episode" ? "?reserveRenderer=1" : "";
+        const [storeResponse, preflightResponse] = await Promise.all([
+          fetch("/api/models/store", { headers: { accept: "application/json" } }),
+          fetch(`/api/models/store/preflight${reserve}`, { headers: { accept: "application/json" } }),
+        ]);
+        if (!storeResponse.ok || !preflightResponse.ok) {
+          // Desktop-only routes. In the browser portal there is no local store,
+          // and the local target is refused with that reason rather than offered.
+          if (!cancelled) setLocal({});
+          return;
+        }
+        const store = (await storeResponse.json()) as {
+          installs?: { family: string; state: { state: string; digestVerifiedAt?: string | null } }[];
+        };
+        const report = (await preflightResponse.json()) as {
+          eligibility?: { family: string; executionEligible: boolean; reasons: string[] }[];
+        };
+        const merged: Record<string, LocalVerdict> = {};
+        for (const entry of report.eligibility ?? []) {
+          if (merged[entry.family]) continue;
+          merged[entry.family] = {
+            install:
+              store.installs?.find((install) => install.family === entry.family)?.state ?? {
+                state: "not_installed",
+              },
+            eligibility: { executionEligible: entry.executionEligible, reasons: entry.reasons },
+          };
+        }
+        if (!cancelled) setLocal(merged);
+      } catch {
+        if (!cancelled) setLocal({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+
   const seeds = seedText
     .split(/[,\s]+/)
     .map((piece) => Number.parseInt(piece, 10))
@@ -205,7 +272,7 @@ export function ComparisonLauncher({ campaignId }: { campaignId: string }) {
     );
   }
   const refusals = columns.map((column) =>
-    localRefusal(column, kind, versions, capabilities, capabilitiesReason),
+    localRefusal(column, kind, versions, capabilities, capabilitiesReason, local),
   );
   const submittable = blocking.length === 0 && refusals.every((refusal) => refusal === null);
 

@@ -15,6 +15,9 @@ import {
   requireScenarioContext,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
+import { installState, preflight, type ModelFamilyId } from "@simforge-oss/model-store";
+import { listModelVersions } from "@/app/lib/models/model-registry-store";
+import { MODEL_FAMILIES } from "@simforge-oss/model-store/catalog";
 
 const LaunchSchema = z
   .object({
@@ -112,7 +115,47 @@ export async function POST(request: Request) {
     ? await readComputeCapabilities(fetch, origin)
     : ({ ok: false, reason: "no cloud column requested" } as const);
 
+  // Local readiness comes from the desktop model store, asked for the KIND
+  // being launched: closed loop reserves the native renderer, because whether
+  // the model fits alone and whether it fits with the renderer resident on the
+  // same device are different verdicts (about 2% headroom, measured, for A1 NF4
+  // at four cameras on a 16 GiB card). The enabled endpoint row is not this
+  // check; the lease re-checks at start and stays the authority on execution.
+  const localReadiness: Record<
+    string,
+    {
+      install: { state: string; digestVerifiedAt?: string | null };
+      eligibility: { executionEligible: boolean; qualification: string; reasons: readonly string[] } | null;
+    }
+  > = {};
+  const localColumns = launchRequest.columns.filter((column) => column.target === "local");
+  if (localColumns.length > 0) {
+    const versions = await listModelVersions(auth.context);
+    const report = await preflight({ reserveRenderer: launchRequest.kind === "closedloop-episode" });
+    for (const column of localColumns) {
+      const family = versions.find((version) => version.id === column.modelVersionId)?.family;
+      if (!family || localReadiness[family]) continue;
+      const eligibility =
+        report.eligibility.find((entry) => entry.family === family && entry.quant === column.quant) ??
+        report.eligibility.find((entry) => entry.family === family) ??
+        null;
+      localReadiness[family] = {
+        install: (MODEL_FAMILIES as readonly string[]).includes(family)
+          ? await installState(family as ModelFamilyId)
+          : { state: "not_installed" },
+        eligibility: eligibility
+          ? {
+              executionEligible: eligibility.executionEligible,
+              qualification: eligibility.qualification,
+              reasons: eligibility.reasons,
+            }
+          : null,
+      };
+    }
+  }
+
   const result = await launchComparison(auth.context, launchRequest, {
+    localReadiness,
     capabilities: capabilities.ok ? capabilities.capabilities : null,
     capabilitiesReason: capabilities.ok ? null : capabilities.reason,
     submitComputeJob: async (jobBody) => {
