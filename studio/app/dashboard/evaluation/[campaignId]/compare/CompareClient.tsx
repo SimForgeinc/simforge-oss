@@ -1,5 +1,6 @@
 "use client";
 
+import { ComparisonLauncher } from "./ComparisonLauncher";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -276,12 +277,23 @@ export function CompareClient({
   const url = policies.length >= 2 ? `/api/evaluation/campaigns/${campaignId}/compare?${query}` : null;
   const state = useJsonFetch<EvalRunComparison>(url);
 
+  // With nothing selected the page is not empty: choosing models and STARTING a
+  // comparison is the other half of this surface, and it is the half a person
+  // reaches for when there is nothing to compare yet.
   if (policies.length < 2) {
     return (
-      <PanelMessage>
-        Pick at least two runs to compare: add <code>?policy=&lt;id&gt;&amp;policy=&lt;id&gt;</code>. The
-        first is the baseline.
-      </PanelMessage>
+      <div className="flex h-full flex-col gap-4 overflow-y-auto p-5">
+        <PageHeader
+          eyebrow={campaignId}
+          title="Model comparison"
+          description="Compare completed runs, or start a new comparison across models."
+        />
+        <PanelMessage>
+          To compare runs that already finished, pick at least two:{" "}
+          <code>?policy=&lt;id&gt;&amp;policy=&lt;id&gt;</code>. The first is the baseline.
+        </PanelMessage>
+        <ComparisonLauncher campaignId={campaignId} />
+      </div>
     );
   }
   if (state.kind === "loading") return <PanelMessage>Comparing runs…</PanelMessage>;
