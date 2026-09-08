@@ -46,6 +46,9 @@ use crate::trace::pairs::along_route_gap_m;
 #[derive(Debug, Clone, Default)]
 pub(super) struct Plan {
     pub speed: f64,
+    /// Actual signed velocity along the body yaw; `None` = `speed` signed by
+    /// the engaged gear (kinematic paths), `Some` = the physics backend's own.
+    pub longitudinal_velocity: Option<f64>,
     pub accel: f64,
     pub route_s: f64,
     pub lateral_offset: f64,
@@ -70,6 +73,7 @@ impl Plan {
     fn hold(a: &ActorRuntime) -> Plan {
         Plan {
             speed: a.speed_mps,
+            longitudinal_velocity: None,
             accel: 0.0,
             route_s: a.route_s,
             lateral_offset: a.lateral_offset_m,
@@ -509,6 +513,7 @@ impl Simulation {
                 } else {
                     st.longitudinal_velocity_mps.abs()
                 };
+                plan.longitudinal_velocity = Some(st.longitudinal_velocity_mps);
                 plan.accel = st.longitudinal_acceleration_mps2 * a.direction_sign();
                 plan.position = Vec2 { x: st.x, y: st.y };
                 plan.heading = st.yaw_rad;
@@ -537,6 +542,11 @@ impl Simulation {
                     plan.position = sample.position;
                     plan.heading = normalize_angle(sample.heading_rad);
                     plan.speed = sample.speed_mps.abs();
+                    plan.longitudinal_velocity = Some(if recorded {
+                        sample.speed_mps
+                    } else {
+                        plan.speed * a.direction_sign()
+                    });
                     plan.accel = (plan.speed - a.speed_mps) / dt;
                     plan.route_s = projected.s;
                     plan.lateral_offset = a.route.lateral_offset_at(projected.s, sample.position);
@@ -908,6 +918,7 @@ impl Simulation {
                 // Never publish the first off-corridor integration for
                 // generated traffic; hold the last valid pose and retire.
                 plan.speed = 0.0;
+                plan.longitudinal_velocity = None;
                 plan.accel = -a.speed_mps / dt;
                 plan.route_s = a.route_s;
                 plan.lateral_offset = a.lateral_offset_m;
@@ -932,6 +943,7 @@ impl Simulation {
                 return Ok(plan);
             }
             plan.speed = st.longitudinal_velocity_mps.abs();
+            plan.longitudinal_velocity = Some(st.longitudinal_velocity_mps);
             plan.accel = st.longitudinal_acceleration_mps2 * a.direction_sign();
             plan.route_s = projected.s;
             plan.lateral_offset = projected_offset;
@@ -973,6 +985,7 @@ impl Simulation {
             // terminal pose; only exist(absent) despawns.
             plan.accel = -a.speed_mps / dt;
             plan.speed = 0.0;
+            plan.longitudinal_velocity = None;
             plan.lateral_rate = 0.0;
             plan.lateral_accel = 0.0;
             plan.retire = true;
@@ -1023,6 +1036,9 @@ impl Simulation {
             {
                 let a = &mut self.actors[index];
                 a.speed_mps = plan.speed;
+                a.longitudinal_velocity_mps = plan
+                    .longitudinal_velocity
+                    .unwrap_or(plan.speed * a.direction_sign());
                 a.accel_mps2 = plan.accel;
                 a.route_s = plan.route_s;
                 a.lateral_offset_m = plan.lateral_offset;

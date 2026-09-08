@@ -209,8 +209,8 @@ pub struct WorldActorState {
     pub heading_rad: f64,
     /// Speed magnitude.
     pub speed_mps: f64,
-    /// Actual longitudinal speed along the body yaw, signed by the engaged
-    /// gear (negative = reversing); `speed_mps` keeps the magnitude.
+    /// Actual physical velocity along the body yaw (negative = moving
+    /// backwards); `speed_mps` keeps the magnitude.
     pub longitudinal_speed_mps: f64,
     pub present: bool,
     pub s: f64,
@@ -410,9 +410,10 @@ impl WorldTruthPublisher {
                 present: a.present,
                 position: Vec2 { x: a.x, y: a.y },
                 heading_rad: a.heading_rad,
-                // Signed by the engaged gear so the frame's velocity is the
-                // actual world velocity: negative along the yaw when reversing.
-                speed_mps: a.speed_mps * a.motion_direction.sign(),
+                // The actual physical velocity along the body yaw, so the
+                // frame's velocity is negative while the body backs up even
+                // before (or without) a gear being engaged.
+                speed_mps: a.longitudinal_velocity_mps,
             }),
         );
         let mut actors = Vec::with_capacity(scene.actors.len());
@@ -695,7 +696,7 @@ impl WorldSession {
                 z: scene.z,
                 heading_rad: scene_heading(a.heading_rad),
                 speed_mps: a.speed_mps,
-                longitudinal_speed_mps: a.speed_mps * a.motion_direction.sign(),
+                longitudinal_speed_mps: a.longitudinal_velocity_mps,
                 present: a.present,
                 s: a.s,
                 lane_rsl: a.lane.map(|l| self.graph.rsl(l).to_owned()),
