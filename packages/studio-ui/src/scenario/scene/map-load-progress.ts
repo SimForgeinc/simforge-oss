@@ -48,29 +48,12 @@ export function sceneLoadProgressFromSnapshot(
     snapshot.loading + snapshot.queued + snapshot.uploading,
   );
   const peakOutstanding = Math.max(tracker.peakOutstanding, outstanding, 1);
-  const completedFraction = Math.max(
-    0,
-    Math.min(1, 1 - outstanding / peakOutstanding),
-  );
-  const download = snapshot.downloads?.active
+  const download = snapshot.downloads &&
+    (snapshot.downloads.active > 0 || snapshot.downloads.transferredBytes > 0 || snapshot.downloads.cachedBytes > 0)
     ? downloadProgress(snapshot.downloads)
     : undefined;
-  const byteFraction = snapshot.downloads?.totalBytes
-    ? Math.max(
-        0,
-        Math.min(1, snapshot.downloads.transferredBytes / snapshot.downloads.totalBytes),
-      )
-    : 0;
-  const hasExactByteProgress = Boolean(download && snapshot.downloads?.totalBytes);
-  const nextPercent = outstanding === 0
-    ? 94
-    : Math.round(
-        55 + (hasExactByteProgress ? byteFraction : completedFraction) * 35,
-      );
-  const percent = hasExactByteProgress
-    ? Math.min(94, nextPercent)
-    : Math.max(tracker.percent, Math.min(94, nextPercent));
-  const trackerPercent = Math.max(tracker.percent, percent);
+  const percent = null;
+  const trackerPercent = tracker.percent;
 
   if (snapshot.streamingError) {
     return {
@@ -89,24 +72,28 @@ export function sceneLoadProgressFromSnapshot(
       tracker: { peakOutstanding, percent: trackerPercent },
       progress: {
         phase: "stabilizing",
-        percent,
+        percent: 94,
         message: `Finishing ${label}`,
         detail: "Checking the completed scene and preparing the first frame…",
+        download,
       },
     };
   }
 
   const parts = [
-    snapshot.loading > 0 ? `${snapshot.loading} downloading` : null,
+    snapshot.downloads?.active ? `${snapshot.downloads.active} downloading` : null,
+    snapshot.loading > 0 ? `${snapshot.loading} assets processing` : null,
     snapshot.queued > 0 ? `${snapshot.queued} queued` : null,
-    snapshot.uploading > 0 ? `${snapshot.uploading} uploading` : null,
+    snapshot.uploading > 0 ? `${snapshot.uploading} preparing GPU resources` : null,
+    snapshot.downloads?.cachedBytes ? `${formatBytes(snapshot.downloads.cachedBytes)} reused locally` : null,
+    snapshot.downloads && !snapshot.downloads.discoveryComplete ? "Total pending asset discovery" : null,
   ].filter(Boolean);
   return {
     tracker: { peakOutstanding, percent: trackerPercent },
     progress: {
       phase: "assets",
       percent,
-      percentExact: hasExactByteProgress,
+      percentExact: false,
       message: `Loading ${label} assets`,
       detail: download?.stalled
         ? `No download data received for ${download.stalledFor}. The connection may be stalled.`
@@ -122,7 +109,11 @@ function downloadProgress(downloads: NonNullable<MapModelLoadSnapshot["downloads
   return {
     transferred: formatBytes(downloads.transferredBytes),
     total: downloads.totalBytes === null ? null : formatBytes(downloads.totalBytes),
-    speed: downloads.bytesPerSecond === null
+    speed: downloads.discoveryComplete && downloads.active === 0
+      ? "Download complete"
+      : downloads.active === 0
+      ? "Preparing scene assets"
+      : downloads.bytesPerSecond === null
       ? "Measuring speed"
       : `${formatBytes(downloads.bytesPerSecond)}/s`,
     stalled: downloads.stalledForMs >= 5_000,
