@@ -95,7 +95,11 @@ export function ModelPicker({
     value: offer.quant,
     label:
       offer.status === "supported"
-        ? `${offer.quant}${offer.minVramGiB ? ` · ${offer.minVramGiB} GiB VRAM` : ""}`
+        ? `${offer.quant}${offer.minVramGiB ? ` · ${offer.minVramGiB} GiB VRAM` : ""}${
+          // Whose evidence the figure rests on. A vendor number and one measured
+          // here are both real; rendering them identically hid which was which.
+          offer.evidence === "vendor-published" ? " · vendor figure" : offer.evidence === "unmeasured" ? " · unmeasured" : ""
+        }`
         : `${offer.quant} · ${offer.status === "unsupported" ? "unsupported" : "pending measurement"}`,
     disabled: offer.status !== "supported",
   }));

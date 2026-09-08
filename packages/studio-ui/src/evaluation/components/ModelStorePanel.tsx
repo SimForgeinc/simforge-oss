@@ -133,6 +133,21 @@ function QuantRow({
               {offer.status === "unsupported" ? "Unsupported" : "Unavailable — pending measurement"}
             </Badge>
           )}
+          {/*
+            Whose evidence this row rests on. A vendor figure and a figure
+            measured here are both real, and both were previously rendered with
+            identical weight - so a reader could not tell a receipt from a
+            citation. Read from the catalog's own field rather than inferred
+            from the note beside it: the runtime owner tried that heuristic on
+            their own prose and it mislabelled four rows.
+          */}
+          <Badge variant="outline" data-testid={`quant-evidence-${entry.family}-${quant}`}>
+            {offer.evidence === "measured-here"
+              ? "Measured on this machine"
+              : offer.evidence === "vendor-published"
+                ? "Vendor-published · untested here"
+                : "No measurement exists"}
+          </Badge>
           {state === "installed" ? (
             <Badge variant="secondary">
               <CheckCircle2 aria-hidden="true" className="mr-1 size-3" />
