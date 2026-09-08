@@ -73,6 +73,15 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     externalDir: true,
+    // Local render artifacts are uploaded to this app's own loopback object
+    // store, and a 20 s 720p clip is already ~10-30 MB. Next's default request
+    // ceiling is 10 MiB and it TRUNCATES rather than rejecting: the worker's
+    // PUT arrives cut short, the store recomputes the digest, and the job dies
+    // with `object_checksum_mismatch` - which reads like corruption rather
+    // than a size limit. A render is bounded by its own resolution, frame rate
+    // and duration gates, not by this number, so the ceiling is raised to a
+    // value no single sensor's video can reach.
+    middlewareClientMaxBodySize: 2 * 1024 * 1024 * 1024,
   },
 };
 
