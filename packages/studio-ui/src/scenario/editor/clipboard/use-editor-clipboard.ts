@@ -78,6 +78,9 @@ export function useEditorClipboard({
                 });
                 const parts = [`Pasted ${result.ids.length} actor${result.ids.length === 1 ? "" : "s"}`];
                 if (result.unanchored > 0) parts.push(`${result.unanchored} unanchored`);
+                if (result.droppedManualDrives > 0) {
+                  parts.push(`${result.droppedManualDrives} manual drive${result.droppedManualDrives === 1 ? "" : "s"} not pasted (clip length differs)`);
+                }
                 onNotice(parts.join(" — "));
               },
             );

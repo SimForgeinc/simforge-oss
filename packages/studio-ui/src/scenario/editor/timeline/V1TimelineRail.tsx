@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   CarFront,
   Clock3,
+  Gamepad2,
   Globe2,
   Lock,
   PersonStanding,
@@ -32,6 +33,8 @@ import { newTemplateId, type Interaction, type ReasoningTraceSegment } from "@si
 import {
   actionsForActor,
   interactionForAction,
+  isManualDrive,
+  MANUAL_DRIVE_ACTION_ID,
   setExclusiveCustomTimedRoute,
   type ActionDefinition,
   type EditorDocument,
@@ -77,6 +80,8 @@ import { DynamicActorCatalogIcon, isDynamicActorCatalogId } from '../regions/Dyn
 import { cn } from "../../../lib/utils";
 import { isUnconfiguredSimpleTimedRoute } from "../simple-route-status";
 import { isCustomTimedRoute } from "../simple-timed-routes";
+import { addManualDrive, competingMotionRefusal } from "../manual-drive/authoring";
+import { notifyScenario } from "../status";
 import { TimelineCarlaCompatibilityMarker } from "./TimelineCarlaCompatibilityMarker";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelineTransportControls } from "./TimelineTransportControls";
@@ -521,6 +526,23 @@ export function V1TimelineRail({
       (candidate) => candidate.id === definitionId,
     );
     if (!definition) return;
+    const actor = { id: role.id, label: actorLabels.get(role.id) ?? role.id };
+    if (definition.id === MANUAL_DRIVE_ACTION_ID) {
+      const added = addManualDrive(document, actor);
+      if ("error" in added) {
+        notifyScenario({ severity: "warning", source: "authoring", message: "Manual drive not added", detail: added.error });
+      } else {
+        selectInteraction(added.interactionId, role.id);
+      }
+      setContextMenu(null);
+      return;
+    }
+    const refusal = competingMotionRefusal(document, actor, definition);
+    if (refusal) {
+      notifyScenario({ severity: "warning", source: "authoring", message: "Motion is owned by a Manual drive", detail: refusal });
+      setContextMenu(null);
+      return;
+    }
     const interaction = interactionForAction(
       definition,
       role.id,
@@ -549,6 +571,12 @@ export function V1TimelineRail({
     if (readOnly || disableInteractionCreation) return;
     const otherRole = gapPeerFor(role, document.data.roles);
     if (verb === "gap" && !otherRole) return;
+    const refusal = competingMotionRefusal(document, { id: role.id, label: actorLabels.get(role.id) ?? role.id }, { verb });
+    if (refusal) {
+      notifyScenario({ severity: "warning", source: "authoring", message: "Motion is owned by a Manual drive", detail: refusal });
+      setContextMenu(null);
+      return;
+    }
     const startS = snapToTimeGrid(timeS);
     const id = uniqueTimelineInteractionId(
       `${verb}_${role.id}`,
@@ -580,7 +608,7 @@ export function V1TimelineRail({
   };
 
   const commitRange = (interaction: Interaction, range: AuthoredTimelineRange) => {
-    if (readOnly || isCustomTimedRoute(interaction)) return;
+    if (readOnly || isCustomTimedRoute(interaction) || isManualDrive(interaction)) return;
     const ranged = interactionWithAuthoredTimelineRange(interaction, range);
     document.replaceInteraction(
       interaction.id,
@@ -1493,8 +1521,11 @@ function InteractionBand({
   const customTimedRoute = isCustomTimedRoute(interaction);
   const simpleTimedRoute = lockSimpleTimedRoutes && customTimedRoute;
   const routeNeedsSetup = simpleTimedRoute && isUnconfiguredSimpleTimedRoute(interaction);
-  const timingLocked = readOnly || customTimedRoute;
-  const endsWithScenario = interaction.verb === 'route' && (interaction.target.mode === 'customRoute' || customTimedRoute);
+  const manualDrive = isManualDrive(interaction);
+  // A manual drive is a whole-clip recording: its window is the clip, so there
+  // is nothing to move or resize, in either editor mode.
+  const timingLocked = readOnly || customTimedRoute || manualDrive;
+  const endsWithScenario = interaction.verb === 'route' && (interaction.target.mode === 'customRoute' || customTimedRoute || manualDrive);
   const editable = authoredTimelineRange(interaction);
   const shownRange = preview
     ? { startMs: preview.startS * 1000, endMs: preview.endS * 1000 }
@@ -1601,7 +1632,9 @@ function InteractionBand({
             label,
             timingHelp,
             conflictMessage,
-            simpleTimedRoute
+            manualDrive
+              ? "Manual drive owns the whole clip; select it to record"
+              : simpleTimedRoute
               ? routeNeedsSetup
                 ? "Route setup required"
                 : "Route timing is managed by Simple mode"
@@ -1780,6 +1813,7 @@ function ContextActionMenu({
               >
                 <span className="flex items-center gap-1.5">
                   {action.id === 'custom_route' ? <RouteIcon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
+                  {action.id === MANUAL_DRIVE_ACTION_ID ? <Gamepad2 aria-hidden="true" className="size-3.5 shrink-0" /> : null}
                   <span>{action.label}</span>
                 </span>
               </ActionMenuButton>

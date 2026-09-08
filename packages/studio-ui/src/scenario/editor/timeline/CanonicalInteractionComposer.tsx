@@ -20,6 +20,7 @@ import {
 } from "@simforge-oss/scenario";
 
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
+import { competingMotionRefusal } from "../manual-drive/authoring";
 import { uniqueTimelineInteractionId } from "./v1-timeline-model";
 
 type Role = EditorDocument["data"]["roles"][number];
@@ -236,7 +237,7 @@ export function CanonicalInteractionComposer({
     triggerKind,
     otherRole,
     interactions,
-  });
+  }) ?? competingMotionRefusal(document, { id: role.id, label: role.label ?? role.id }, variant);
   const availabilityId = `${testIdPrefix}-availability`;
 
   const add = () => {

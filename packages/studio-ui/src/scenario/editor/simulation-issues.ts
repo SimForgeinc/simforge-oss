@@ -1,6 +1,7 @@
 import {
   emptyTimedRouteIssues,
   isSimpleModeEngineIssueSuppressed,
+  manualDriveIssues,
 } from "@simforge-oss/editor";
 import type { Interaction } from "@simforge-oss/scenario";
 import { getEntry } from "@simforge-oss/asset-catalog";
@@ -87,6 +88,8 @@ export function collectSimulationIssues(input: {
   experience?: "simple" | "advanced" | null;
   actorNames?: Readonly<Record<string, string>>;
   interactions?: readonly Interaction[];
+  /** Needed to notice a take recorded for a clip the document no longer has. */
+  clipSeconds?: number;
   preparationMessage?: string | null;
   preparationFailed?: boolean;
   playbackError?: string | null;
@@ -103,6 +106,9 @@ export function collectSimulationIssues(input: {
 }): SimulationIssue[] {
   const issues: SimulationIssue[] = [];
   issues.push(...emptyTimedRouteIssues(input.interactions ?? [], input.actorNames));
+  if (input.clipSeconds !== undefined) {
+    issues.push(...manualDriveIssues(input.interactions ?? [], input.clipSeconds, input.actorNames));
+  }
   const preparationFailed = Boolean(
     input.preparationFailed ||
       input.preparationMessage?.toLowerCase().includes("unavailable"),

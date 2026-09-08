@@ -29,6 +29,7 @@ import {
 } from '@simforge-oss/engine';
 import type { Interaction, ScenarioTemplateV2, SceneAbsoluteInitialRoute } from '@simforge-oss/scenario';
 import type { LaneIndex } from './laneIndex';
+import { isManualDrive, manualDriveFor, type ManualDriveInteraction } from './manual-drive';
 
 export type RouteMarkerKind = 'turn-left' | 'turn-right' | 'reroute' | 'lane-change' | 'stop' | 'speed-change' | 'near-miss';
 
@@ -415,6 +416,18 @@ function initialRouteSpec(route: SceneAbsoluteInitialRoute): RouteSpec {
 }
 
 /**
+ * The compiler folds a manual drive into spawn state: the actor's route becomes
+ * the recorded 2D track and no interaction is emitted. Authored parity must
+ * describe the same fold or Play would refuse every recorded take.
+ */
+function manualDriveRouteSpec(interaction: ManualDriveInteraction): unknown {
+  return {
+    kind: 'recordedTrack',
+    samples: interaction.target.recording.samples.map(({ timeS, x, z, headingRad, speedMps }) => ({ timeS, x, z, headingRad, speedMps })),
+  };
+}
+
+/**
  * Fail-closed contract between the persisted authoring plan and the concrete
  * simulator input installed by Play. It deliberately covers only map-bound
  * route-bearing geometry; appearance, ambient population and signal-engine
@@ -425,7 +438,7 @@ export function routeExecutionParity(
   input: Pick<SimScenarioInput, 'actors' | 'interactions'>,
 ): RouteExecutionParity {
   const routeRoles = template.roles
-    .flatMap((role) => role.kind === 'scene_absolute' && role.initialRoute ? [role] : [])
+    .flatMap((role) => role.kind === 'scene_absolute' && (role.initialRoute || manualDriveFor(template, role.id)) ? [role] : [])
     .sort((a, b) => a.id.localeCompare(b.id));
   const canonicalAuthoredInteraction = (interaction: Interaction): unknown | null => {
     if (interaction.verb === 'route' && interaction.target.mode === 'lanePath') {
@@ -448,14 +461,17 @@ export function routeExecutionParity(
     }
     return null;
   };
-  const authored = routeRoles.map((role) => ({
-    id: role.id,
-    initialRoute: initialRouteSpec(role.initialRoute!),
-    interactions: template.choreography.interactions
-      .filter((interaction) => interaction.actor === role.id)
-      .map(canonicalAuthoredInteraction)
-      .filter((interaction) => interaction !== null),
-  }));
+  const authored = routeRoles.map((role) => {
+    const manualDrive = manualDriveFor(template, role.id);
+    return {
+      id: role.id,
+      initialRoute: manualDrive ? manualDriveRouteSpec(manualDrive) : initialRouteSpec(role.initialRoute!),
+      interactions: template.choreography.interactions
+        .filter((interaction) => interaction.actor === role.id && !isManualDrive(interaction))
+        .map(canonicalAuthoredInteraction)
+        .filter((interaction) => interaction !== null),
+    };
+  });
   const canonicalCompiledInteraction = (interaction: SimScenarioInput['interactions'][number]): unknown | null => {
     if (interaction.verb === 'route' && interaction.target.kind === 'lanePath') {
       return { id: interaction.id, verb: 'route', lanes: interaction.target.lanes };
@@ -523,9 +539,11 @@ export function authoringRoutes(
     const customRoute = template.choreography.interactions.find((interaction) =>
       interaction.actor === route.actorId &&
       interaction.verb === 'route' &&
-      (interaction.target.mode === 'customRoute' || interaction.target.mode === 'customTimedRoute'),
+      (interaction.target.mode === 'customRoute' || interaction.target.mode === 'customTimedRoute' || interaction.target.mode === 'manualDrive'),
     );
-    const customRoutePoints = customRoute?.verb === 'route' &&
+    const customRoutePoints = customRoute?.verb === 'route' && customRoute.target.mode === 'manualDrive'
+      ? customRoute.target.recording.samples.map((sample) => ({ x: sample.x, z: sample.z }))
+      : customRoute?.verb === 'route' &&
       (customRoute.target.mode === 'customRoute' || customRoute.target.mode === 'customTimedRoute')
       ? customRoute.target.points.map((point) => ({ x: point.x, z: point.z }))
       : initialRoute && initialRoute.mode !== 'lanePath'
@@ -556,17 +574,20 @@ export function routesFromTemplate(
       || role.actor.class === 'static_object'
     ) return [];
     const initialRoute = role.kind === 'scene_absolute' ? role.initialRoute : undefined;
-    if (!initialRoute) return [];
-    const planned = resolvedRoutePoints(
-      initialRouteSpec(initialRoute),
-      index,
-      role.kind === 'scene_absolute' && role.laneRef
-        ? {
-          laneRsl: `${role.laneRef.roadId}:${role.laneRef.section}:${role.laneRef.laneId}`,
-          storageS: role.laneRef.s,
-        }
-        : undefined,
-    );
+    const manualDrive = manualDriveFor(template, role.id);
+    if (!initialRoute && !manualDrive) return [];
+    const planned = manualDrive
+      ? manualDrive.target.recording.samples.map((sample) => ({ x: sample.x, z: sample.z }))
+      : resolvedRoutePoints(
+        initialRouteSpec(initialRoute!),
+        index,
+        role.kind === 'scene_absolute' && role.laneRef
+          ? {
+            laneRsl: `${role.laneRef.roadId}:${role.laneRef.section}:${role.laneRef.laneId}`,
+            storageS: role.laneRef.s,
+          }
+          : undefined,
+      );
     if (planned.length < 2) return [];
     const authoredColor = role.extensions?.['studio.presentation.bodyColor'];
     return [{

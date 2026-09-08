@@ -6,6 +6,7 @@ import {
   DEFAULT_AUTHORED_VEHICLE_SPEED_KPH,
   DEFAULT_AUTHORED_WALKER_SPEED_KPH,
 } from '@simforge-oss/scenario/contracts';
+import { MANUAL_DRIVE_ACTION_ID, MANUAL_DRIVE_LABEL } from './manual-drive';
 
 export type ActorClass = ScenarioTemplateV2['roles'][number]['actor']['class'];
 export type ActionFamily = 'vehicle' | 'pedestrian' | 'robot' | 'drone' | 'cyclist' | 'static';
@@ -41,11 +42,26 @@ const customTimedRoute = (): ActionDefinition => ({
   resource: 'topology',
   durationS: 1,
 });
+/**
+ * Recorded by driving the vehicle in the simulator, so unlike every other
+ * definition its target is never authored here: the editor seeds a whole-clip
+ * hold on the actor and the recorder replaces it. Callers must route this id
+ * through `manualDrivePlaceholder`, never `interactionForAction`.
+ */
+const manualDrive = (): ActionDefinition => ({
+  id: MANUAL_DRIVE_ACTION_ID,
+  label: MANUAL_DRIVE_LABEL,
+  group: 'Routes',
+  verb: 'route',
+  target: { mode: 'manualDrive' },
+  resource: 'topology',
+  durationS: 0,
+});
 const signal = (id: string, label: string, key: string, value: unknown, resource: ActionResource): ActionDefinition => ({ id, label, group: 'Signals', verb: 'set', target: { key, value }, resource, durationS: .35 });
 
 const VEHICLE: readonly ActionDefinition[] = [
   speed('accelerate', 'Accelerate to target speed', { mode: 'absolute', valueKph: 48 }), speed('increase_speed', 'Increase speed by 10 km/h', { mode: 'delta', deltaKph: 10 }), speed('decelerate', 'Decrease speed by 10 km/h', { mode: 'delta', deltaKph: -10 }), speed('brake_stop', 'Brake to stop', { mode: 'stop' }, 1.5), speed('resume', 'Resume default speed', { mode: 'resume' }),
-  lateral('lane_left', 'Change lane left (if available)', 'changeLane', { mode: 'relative', dk: 1 }), lateral('lane_right', 'Change lane right (if available)', 'changeLane', { mode: 'relative', dk: -1 }), route('keep_lane', 'Go straight at next junction', 'straight'), route('turn_left', 'Turn left at next junction', 'left'), route('turn_right', 'Turn right at next junction', 'right'), customRoute(), customTimedRoute(), lateral('pull_over', 'Pull over', 'laneOffset', { tFrac: -.8, reference: 'lane_center' }, 3),
+  lateral('lane_left', 'Change lane left (if available)', 'changeLane', { mode: 'relative', dk: 1 }), lateral('lane_right', 'Change lane right (if available)', 'changeLane', { mode: 'relative', dk: -1 }), route('keep_lane', 'Go straight at next junction', 'straight'), route('turn_left', 'Turn left at next junction', 'left'), route('turn_right', 'Turn right at next junction', 'right'), customRoute(), customTimedRoute(), manualDrive(), lateral('pull_over', 'Pull over', 'laneOffset', { tFrac: -.8, reference: 'lane_center' }, 3),
   signal('indicator_left', 'Left blinker', 'lights.indicator', 'left', 'indicator'), signal('indicator_right', 'Right blinker', 'lights.indicator', 'right', 'indicator'), signal('indicator_hazard', 'Hazard lights', 'lights.indicator', 'hazard', 'indicator'), signal('indicator_off', 'Blinkers off', 'lights.indicator', 'off', 'indicator'), signal('horn_on', 'Sound horn', 'audio.horn', true, 'horn'), signal('horn_off', 'Stop horn', 'audio.horn', false, 'horn'), signal('lights_on', 'Headlights on', 'lights.headlights', 'low', 'lights'), signal('lights_off', 'Headlights off', 'lights.headlights', 'off', 'lights'),
 ];
 const PEDESTRIAN: readonly ActionDefinition[] = [

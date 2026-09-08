@@ -105,6 +105,8 @@ import { usePlaybackControllerState } from "../../lib/scenario/playback/usePlayb
 import { useMapSignalOverlays } from "../../lib/scenario/useMapSignalOverlays";
 import { useScenarioNotification } from "./status";
 import { configureCustomRouteAtClipStart } from "./custom-route-configuration";
+import { ManualDriveReviewPanel } from "./manual-drive/ManualDriveReviewPanel";
+import { useManualDriveRecorder } from "./manual-drive/use-manual-drive-recorder";
 import { EditorSceneEnvironmentBridge } from "./EditorSceneEnvironmentBridge";
 import {
   collectSimulationIssues,
@@ -830,6 +832,7 @@ export function ScenarioEditorSurface({
           ]),
         ),
         interactions: editorDocument?.data.choreography.interactions,
+        clipSeconds: editorDocument?.data.choreography.clipSeconds,
         carlaCompatibilityTable,
         // Readiness text has to name actors the way the timeline and viewport
         // label them ("Fire truck 1"), not by catalog id: an author matching a
@@ -896,6 +899,21 @@ export function ScenarioEditorSurface({
     if (viewer) hideStalePlacementGhost(viewer.scene, controller.state.mode);
     setTransportError(result.configured ? null : "Custom route could not be configured at this timestamp.");
   }, [controller, editorDocument, sharedPlayback, setTransportError, viewer]);
+
+  const manualDriveActorLabel = useCallback(
+    (actorId: string) =>
+      editorDocument
+        ? timelineActorLabels(editorDocument.data.roles).get(actorId) ?? actorId
+        : actorId,
+    [editorDocument],
+  );
+  const manualDrive = useManualDriveRecorder({
+    document: editorDocument,
+    documentId: record?.id ?? null,
+    datasetId,
+    map,
+    actorLabel: manualDriveActorLabel,
+  });
 
   return (
     <EditorConfigurationBlockProvider blocked={Boolean(sharedPlayback?.inspecting)}>
@@ -1081,8 +1099,16 @@ export function ScenarioEditorSurface({
         controller={controller}
         document={editorDocument}
         onConfigureCustomRoute={configureCustomRoute}
+        manualDrive={manualDrive}
         showActorMotionControls={experience === "advanced"}
       />
+      {manualDrive.review ? (
+        <ManualDriveReviewPanel
+          actorLabel={manualDriveActorLabel(manualDrive.review.actorRoleId)}
+          recorder={manualDrive}
+          review={manualDrive.review}
+        />
+      ) : null}
       <AssistantChatSlot
         controller={controller}
         document={editorDocument}

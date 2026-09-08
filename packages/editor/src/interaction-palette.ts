@@ -79,7 +79,12 @@ export const DYNAMICS_DEFAULTS: readonly Dynamics[] = DYNAMICS_SHAPES.flatMap((s
 
 const target = <V extends Verb>(id: string, label: string, verb: V, value: InteractionTargetForVerb<V>): TargetVariant<V> => ({ id, label, verb, target: value });
 
-/** Every target discriminant accepted by each of the seven verbs. */
+/**
+ * Every target discriminant accepted by each of the seven verbs that can be
+ * authored by hand. `route.manualDrive` is deliberately absent: its target is a
+ * recorded take, produced by the simulator through `manualDrivePlaceholder`
+ * and the take handoff rather than typed into a form.
+ */
 export const TARGET_VARIANTS = {
   speed: [target('speed.absolute', 'Absolute speed', 'speed', { mode: 'absolute', valueKph: 48 }), target('speed.delta', 'Speed delta', 'speed', { mode: 'delta', deltaKph: 10 }), target('speed.factor', 'Speed factor', 'speed', { mode: 'factor', factor: 1.1 }), target('speed.match', 'Match role speed', 'speed', { mode: 'match', role: OTHER_ROLE, offsetKph: 0 }), target('speed.stop', 'Stop', 'speed', { mode: 'stop' }), target('speed.resume', 'Resume', 'speed', { mode: 'resume' })],
   gap: [target('gap.time', 'Time gap', 'gap', { role: OTHER_ROLE, value: 1.5, unit: 'time' }), target('gap.distance', 'Distance gap', 'gap', { role: OTHER_ROLE, value: 12, unit: 'distance' })],

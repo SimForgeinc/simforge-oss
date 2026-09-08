@@ -5,10 +5,12 @@ import { Input } from "../../../components/ui/input";
 import {
   actionsForActor,
   interactionForAction,
+  MANUAL_DRIVE_ACTION_ID,
   type EditorDocument,
 } from "@simforge-oss/editor";
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import type { Interaction } from "@simforge-oss/scenario";
+import { addManualDrive, competingMotionRefusal } from "../manual-drive/authoring";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
 
 type Role = EditorDocument["data"]["roles"][number];
@@ -63,8 +65,15 @@ export function ActionPalette({
   const [targetSpeedKph, setTargetSpeedKph] = useState(defaultTargetSpeed);
   useEffect(() => setTargetSpeedKph(defaultTargetSpeed), [defaultTargetSpeed, role?.id]);
 
+  const [refusal, setRefusal] = useState<string | null>(null);
+  useEffect(() => setRefusal(null), [role?.id]);
+  const actorRef = role ? { id: role.id, label: role.label ?? role.id } : null;
+
   const addDirect = (verb: "gap" | "exist", target: Interaction["target"]) => {
-    if (!role) return;
+    if (!role || !actorRef) return;
+    const blocked = competingMotionRefusal(document, actorRef, { verb });
+    setRefusal(blocked);
+    if (blocked) return;
     const continuous = verb === "gap";
     document.addInteraction({
       id: `${verb}_${role.id}_${interactions.length + 1}`,
@@ -78,6 +87,31 @@ export function ActionPalette({
         ? { dynamics: { shape: "linear", constraint: "time", value: 1 } }
         : {}),
     } as Interaction);
+  };
+
+  const addAction = (action: (typeof actions)[number]) => {
+    if (!role || !actorRef) return;
+    if (action.id === MANUAL_DRIVE_ACTION_ID) {
+      const added = addManualDrive(document, actorRef);
+      setRefusal("error" in added ? added.error : null);
+      return;
+    }
+    const blocked = competingMotionRefusal(document, actorRef, action);
+    setRefusal(blocked);
+    if (blocked) return;
+    document.addInteraction(
+      interactionForAction(
+        action === targetSpeedAction
+          ? {
+              ...action,
+              target: { ...action.target, valueKph: targetSpeedKph },
+            }
+          : action,
+        role.id,
+        time,
+        interactions.length + 1,
+      ),
+    );
   };
 
   return (
@@ -135,27 +169,17 @@ export function ActionPalette({
           />
         </div>
       ) : null}
+      {refusal ? (
+        <p className="mt-2 text-[10px] leading-4 text-amber-200" data-testid="action-palette-refusal" role="alert">
+          {refusal}
+        </p>
+      ) : null}
       <div className="mt-2 max-h-36 overflow-y-auto">
         {actions.map((action) => (
           <PaletteButton
             key={action.id}
             testId={`action-palette-${action.id}`}
-            onClick={() =>
-              role &&
-              document.addInteraction(
-                interactionForAction(
-                  action === targetSpeedAction
-                    ? {
-                        ...action,
-                        target: { ...action.target, valueKph: targetSpeedKph },
-                      }
-                    : action,
-                  role.id,
-                  time,
-                  interactions.length + 1,
-                ),
-              )
-            }
+            onClick={() => addAction(action)}
           >
             {action.label}
           </PaletteButton>
