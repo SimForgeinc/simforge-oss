@@ -36,12 +36,12 @@ interface Flags {
   scene?: string;
   out?: string;
   ego: string;
-  dims: { l: number; w: number; h: number };
+  dims: { length: number; width: number; height: number };
   size?: { width: number; height: number };
 }
 
 function parseFlags(argv: readonly string[]): Flags {
-  const flags: Flags = { ego: 'ego', dims: { l: 4.7, w: 1.9, h: 1.45 } };
+  const flags: Flags = { ego: 'ego', dims: { length: 4.7, width: 1.9, height: 1.45 } };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]!;
     const value = () => {
@@ -55,11 +55,11 @@ function parseFlags(argv: readonly string[]): Flags {
       case '--out': flags.out = value(); break;
       case '--ego': flags.ego = value(); break;
       case '--actor-dims': {
-        const [l, w, h] = value().split(',').map(Number);
-        if (![l, w, h].every((component) => Number.isFinite(component) && component! > 0)) {
-          throw new Error('--actor-dims wants three positive numbers: l,w,h');
+        const [length, width, height] = value().split(',').map(Number);
+        if (![length, width, height].every((component) => Number.isFinite(component) && component! > 0)) {
+          throw new Error('--actor-dims wants three positive numbers: length,width,height');
         }
-        flags.dims = { l: l!, w: w!, h: h! };
+        flags.dims = { length: length!, width: width!, height: height! };
         break;
       }
       case '--size': {
@@ -78,7 +78,7 @@ const flags = parseFlags(process.argv.slice(2));
 if (!flags.preset) {
   process.stderr.write(
     'usage: simforge-eval-rig --preset <rig id> --scene <scene.json> [--out rig.json] [--ego <actorId>] ' +
-      '[--actor-dims l,w,h] [--size WxH]\n' +
+      '[--actor-dims length,width,height] [--size WxH]\n' +
       `known rigs: ${BUILT_IN_SENSOR_RIGS.map((rig) => rig.id).join(', ')}\n`,
   );
   process.exit(2);
@@ -92,11 +92,15 @@ if (!preset) {
 
 const cameraIndex = ALPAMAYO_CAMERA_INDEX as Readonly<Record<string, number>>;
 const cameras = preset.sensors
-  .filter((sensor) => sensor.type === 'camera')
+  // `dash_camera` is the camera member of the authored sensor union; lidar and
+  // radar templates in a preset are not rendered by a camera rig.
+  .filter((sensor) => sensor.type === 'dash_camera')
   .map((sensor) => {
-    const mount = resolveSensorRigMount(sensor.mount, { dims: flags.dims });
-    const width = flags.size?.width ?? sensor.projection?.width ?? ALPAMAYO_RENDER_WIDTH;
-    const height = flags.size?.height ?? sensor.projection?.height ?? ALPAMAYO_RENDER_HEIGHT;
+    const mount = resolveSensorRigMount(sensor.mount, { class: 'car', dims: flags.dims });
+    // The authored camera carries FOV and aspect, not a pixel size: the render
+    // size is the model's (512x384 = the processor's max pixels) unless asked.
+    const width = flags.size?.width ?? ALPAMAYO_RENDER_WIDTH;
+    const height = flags.size?.height ?? ALPAMAYO_RENDER_HEIGHT;
     return {
       sensorId: sensor.id,
       width,
@@ -108,7 +112,7 @@ const cameras = preset.sensors
       target: [1, 0, 0],
       attach: {
         actorId: flags.ego,
-        offsetM: [mount.offset.x, mount.offset.y, mount.offset.z],
+        offsetM: [mount.position.x, mount.position.y, mount.position.z],
         yawDeg: (mount.rotation.yawRad * 180) / Math.PI,
         pitchDeg: (mount.rotation.pitchRad * 180) / Math.PI,
         rollDeg: (mount.rotation.rollRad * 180) / Math.PI,
