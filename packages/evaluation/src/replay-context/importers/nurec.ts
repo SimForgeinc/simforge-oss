@@ -256,7 +256,8 @@ export async function importNurecScene(options: NurecImportOptions): Promise<Rep
         ],
       },
       timing: {
-        kind: 'explicit',
+        // Same as the package importer: the archive publishes reference frames, not a timeline.
+        kind: 'reference-frames',
         timestampsUs: [...recorded.timestampsUs],
         shutterUs: Number(projection.shutter?.durationUs ?? shutterUs),
       },

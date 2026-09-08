@@ -34,7 +34,14 @@ import {
   type MissingField,
   type Refusal,
 } from './refusal.js';
-import { canServeFamily, servableRigPresets, type ModelFamily, type ServeVerdict } from './cameras.js';
+import {
+  cameraTimestamps,
+  canServeFamily,
+  hasCompleteTimeline,
+  servableRigPresets,
+  type ModelFamily,
+  type ServeVerdict,
+} from './cameras.js';
 
 /** Manifest file name inside a clip directory. */
 export const EVAL_CLIP_FILENAME = 'clip.json';
@@ -80,8 +87,16 @@ function drivingInputGaps(clip: EvalClip): MissingField[] {
   }
   const cameras = clip.cameras ?? [];
   cameras.forEach((camera, index) => {
-    const timing = camera.timing;
-    const declared = timing.kind === 'explicit' ? timing.timestampsUs.length : timing.frameCount;
+    // A customer clip must carry a real capture timeline. Reference instants are something a
+    // published reconstruction ships, not something an uploaded clip can be evaluated from.
+    if (!hasCompleteTimeline(camera)) {
+      gaps.push({
+        path: `cameras[${index}].timing`,
+        requirement: `a complete per-frame capture timeline for camera ${camera.sensorId}, not a set of reference instants`,
+      });
+      return;
+    }
+    const declared = cameraTimestamps(camera).length;
     if (declared < 4) {
       gaps.push({
         path: `cameras[${index}].timing`,

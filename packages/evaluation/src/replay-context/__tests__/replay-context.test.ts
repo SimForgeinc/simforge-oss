@@ -229,3 +229,54 @@ describe('bundle loading', () => {
     await expect(loadReplayContext(fixture('video-only-clip/clip.json'))).rejects.toThrow(/replay-context/);
   });
 });
+
+describe('G4 against real package shapes', () => {
+  it('does not fail a scene for publishing reference frames instead of a timeline', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    // The NuRec AV releases ship one reference frame per camera. Measuring track alignment
+    // against those instants failed a genuine release by ~20 s; the gate must not care.
+    const referenceOnly = {
+      ...bundle,
+      cameras: bundle.cameras.map((camera) => ({
+        ...camera,
+        timing: { kind: 'reference-frames' as const, timestampsUs: [bundle.ego.originUs + 1_000], shutterUs: 30_000 },
+      })),
+    };
+
+    const measured = measureDynamicsConsistency(referenceOnly);
+    expect(measured.framesOutsideWindow).toBe(0);
+    expect(trajectoryGates(referenceOnly).G4.passed).toBe(true);
+  });
+
+  it('fails a scene whose actor tracks are too sparse to interpolate', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    const sparse = {
+      ...bundle,
+      dynamics: {
+        ...bundle.dynamics,
+        tracks: bundle.dynamics.tracks.map((track) => ({
+          ...track,
+          // Keep the endpoints only: a 2 s gap cannot be interpolated into a faithful pose.
+          samples: [track.samples[0]!, track.samples[track.samples.length - 1]!],
+        })),
+      },
+    };
+
+    expect(measureDynamicsConsistency(sparse).maxTrackSampleGapUs).toBeGreaterThan(200_000);
+    expect(trajectoryGates(sparse).G4.passed).toBe(false);
+  });
+
+  it('fails a scene whose published frames fall outside the recorded window', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    const strayFrame = {
+      ...bundle,
+      cameras: bundle.cameras.map((camera) => ({
+        ...camera,
+        timing: { kind: 'reference-frames' as const, timestampsUs: [bundle.ego.endUs + 5_000_000], shutterUs: 0 },
+      })),
+    };
+
+    expect(measureDynamicsConsistency(strayFrame).framesOutsideWindow).toBe(1);
+    expect(trajectoryGates(strayFrame).G4.passed).toBe(false);
+  });
+});

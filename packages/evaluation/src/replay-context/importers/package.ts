@@ -282,7 +282,9 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
         ],
       },
       timing: {
-        kind: 'explicit',
+        // These releases publish a reference frame per camera, not the recorded sequence, so
+        // the instants are labelled for what they are rather than passed off as a timeline.
+        kind: 'reference-frames',
         timestampsUs: [...recorded.timestampsUs],
         shutterUs: Math.round(firstNumber(parameters, ['shutter_duration_us']) ?? 30_000),
       },
