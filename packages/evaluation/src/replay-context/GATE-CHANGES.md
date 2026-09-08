@@ -372,3 +372,58 @@ authoritative map. They do not change the verdict, which had already failed on d
 **State of the scene:** G1 22.89 dB pass · G2 pass (largest passing offset 1.0 m) · G3 0.000 m
 pass · G4 197.3 ms pass · **G5 fail** — for the [0, 1, 2] profile. Not qualified. No scene on
 this host has passed all five gates.
+
+
+---
+
+## 2026-09-08 — Second and third real scenes: attempts kept, no scene admitted
+
+Selection rule and full candidate ranking: `work/SELECTION-RULE.md`, fixed before any gate ran
+(all four Alpamayo cameras present; lowest mean absolute heading rate; amended before any
+measurement to require path length >= 100 m after the top-ranked candidate turned out to cover
+23 m in 20 s, which would make G5 trivial). Both scenes fetched from the licensed catalogue
+with the dev credential onto product storage; neither committed.
+
+| Scene | selection rank | G1 worst camera | G2 | G3 | G4 | qualified |
+|---|---|---|---|---|---|---|
+| 007a5809 (first, pre-existing imported dir) | — | **22.89 dB** (profile [0,1,2]) | pass, 1.0 m | 0.000 m | 197.3 ms | no (G5 failed) |
+| clipgt-000a3a34 | 1st eligible after amendment | **16.18 dB** | pass | 0.000 m | **202.5 ms fail** | no |
+| clipgt-00064c58 | 2nd | **17.90 dB** | pass | 0.000 m | 199.9 ms | no |
+
+### G4 at the data's natural scale
+
+Track sampling is ~100 ms (000a3a34: p50 100.010 ms, p95 102.770 ms). The failures are not a
+low sampling rate — they are **isolated dropped detections**, one missing sample producing a
+single double-length gap, in 16 of 250 tracks. Three scenes land at 197.3 / 199.9 / 202.5 ms
+against a 200 ms bound, i.e. within ±1.5% of it.
+
+The bound is not being moved. But its derivation (interpolation error over a gap) puts it
+exactly at twice the data's native 100 ms track period, so real scenes scatter either side of
+it for reasons unrelated to replay fidelity. That is a genuine weakness in the gate's *choice of
+statistic* — a max over all gaps is dominated by single dropped detections — and it needs a
+principled re-derivation with evidence, not a nudge. Recorded as an open question; no scene was
+admitted by touching it.
+
+### G1: a confound in MY pipeline, not a conclusion about these scenes
+
+The first scene rendered from a **pre-existing imported scene directory** and scored 22.89 dB.
+The two new scenes rendered from directories **this module generated** (`scene-bundle.ts`,
+written for exactly this purpose) and scored 16.18 and 17.90 dB.
+
+That is a 5–7 dB gap that tracks *which scene directory produced the render*, not which scene
+was reconstructed. Until that is explained, **I am not claiming these two reconstructions are
+poor**. Candidate differences, none tested: the generated `background.json` carries no
+`sourcePatch` (the pre-existing one has authored region meshes), and the ego pose reaches the
+renderer by a different route (package `T_rig_worlds` here versus the original importer's
+`ego-reference.json` there).
+
+No G1 number from a generated scene directory should be trusted until this is resolved. Both
+numbers stay on the record either way.
+
+### Also corrected in this pass
+
+The packages DO publish a full capture timeline — `rig_trajectories[0].cameras_frame_timestamps_us`,
+599 frames per camera at ~30 Hz with a measured 30.56 ms exposure. An earlier version of this
+importer read timing from the four stored JPEGs and labelled a 20 s drive a four-frame
+recording. `cameras[].timing` is now the real timeline; the stored imagery is recorded
+separately as `cameras[].referenceFrames`, which is what G1 compares against.

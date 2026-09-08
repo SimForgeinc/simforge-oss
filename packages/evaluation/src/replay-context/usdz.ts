@@ -18,7 +18,10 @@
  * ZIP64 is handled because AV packages routinely exceed the 4 GiB / 65535-entry fields.
  */
 
-import { inflateRawSync } from 'node:zlib';
+import { createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
+import { createInflateRaw, inflateRawSync } from 'node:zlib';
 import { open, type FileHandle } from 'node:fs/promises';
 
 const EOCD_SIGNATURE = 0x06054b50;
@@ -218,4 +221,32 @@ export async function readZipJson(
   const entry = entries.find((candidate) => candidate.name === name);
   if (entry === undefined) return undefined;
   return JSON.parse((await readZipMember(archivePath, entry)).toString('utf8'));
+}
+
+
+/**
+ * sha256 of one member's uncompressed bytes, streamed.
+ *
+ * `readZipMember` buffers, which is right for the JSON sidecars and wrong for the Gaussian
+ * volume: `volume.nurec` is hundreds of megabytes and its digest is what pins a scene bundle to
+ * specific reconstruction bytes. Streaming keeps that check affordable.
+ */
+export async function hashZipMember(archivePath: string, entry: ZipEntry): Promise<string> {
+  const handle = await open(archivePath, 'r');
+  let payloadStart: number;
+  try {
+    const header = await readSlice(handle, entry.localHeaderOffset, 30);
+    if (header.readUInt32LE(0) !== 0x04034b50) {
+      throw new Error(`${archivePath}: member ${entry.name} has no local file header`);
+    }
+    payloadStart = entry.localHeaderOffset + 30 + header.readUInt16LE(26) + header.readUInt16LE(28);
+  } finally {
+    await handle.close();
+  }
+  const hash = createHash('sha256');
+  const source = createReadStream(archivePath, { start: payloadStart, end: payloadStart + entry.compressedSize - 1 });
+  if (entry.method === 0) await pipeline(source, hash);
+  else if (entry.method === 8) await pipeline(source, createInflateRaw(), hash);
+  else throw new Error(`${archivePath}: member ${entry.name} uses unsupported compression method ${entry.method}`);
+  return hash.digest('hex');
 }

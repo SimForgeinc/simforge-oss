@@ -33,6 +33,7 @@ import { importNurecPackage } from './importers/package.js';
 import { importNurecScene } from './importers/nurec.js';
 import { importUserBundle } from './importers/user-bundle.js';
 import { qualifyBundle, loadReplayContext, writeReplayContext } from './qualify.js';
+import { writeSceneBundleDir } from './scene-bundle.js';
 import { preflightReconstruction, reconstructClip } from './reconstruct.js';
 import { resolveEncoder } from './video.js';
 import { CapabilityError } from './capability.js';
@@ -200,6 +201,12 @@ async function runReconstruct(args: Args): Promise<Record<string, unknown>> {
   };
 }
 
+async function runSceneDir(args: Args): Promise<Record<string, unknown>> {
+  const bundle = await loadReplayContext(required(args, 'bundle'));
+  const result = await writeSceneBundleDir(bundle, required(args, 'scenes-root'));
+  return { ...result, sceneId: bundle.sceneId };
+}
+
 async function runAdmit(args: Args): Promise<Record<string, unknown>> {
   const admission = await loadEvalClip(required(args, 'clip'));
   return {
@@ -231,12 +238,15 @@ export async function main(argv: readonly string[]): Promise<number> {
       case 'reconstruct':
         result = await runReconstruct(args);
         break;
+      case 'scene-dir':
+        result = await runSceneDir(args);
+        break;
       case 'admit':
         result = await runAdmit(args);
         break;
       default:
         process.stderr.write(
-          `${JSON.stringify({ code: 'unknown_command', reason: `unknown command "${args.command}"`, detail: 'expected import | qualify | reconstruct | admit' })}\n`,
+          `${JSON.stringify({ code: 'unknown_command', reason: `unknown command "${args.command}"`, detail: 'expected import | scene-dir | qualify | reconstruct | admit' })}\n`,
         );
         return 1;
     }
