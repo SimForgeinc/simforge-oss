@@ -422,3 +422,53 @@ def test_bad_param_type_is_a_typed_refusal():
     assert response["ok"] is False
     assert response["error"]["code"] == "input_error"
     assert "params.num_traj_samples" in response["error"]["fields"]
+
+
+def test_bare_camera_id_list_is_a_typed_refusal_not_a_typeerror():
+    """The input a real caller actually sent.
+
+    `{"cameras": [0,1,2,3,5,6]}` is the natural first guess and it used to
+    surface as `TypeError: 'int' object is not subscriptable` from deep inside
+    the decoder, which tells the caller nothing about what an observation is.
+    """
+    from simforge_alpamayo.obs import ObservationError, decode_observation
+
+    with pytest.raises(ObservationError) as exc:
+        decode_observation(
+            {"cameras": [0, 1, 2, 3, 5, 6], "synthetic": True},
+            required_cameras=(0, 1, 2, 3, 5, 6),
+        )
+    assert exc.value.code == "input_error"
+    assert exc.value.fields == ["obs.cameras[0]"]
+    assert "minimal_observation" in str(exc.value)
+
+
+def test_minimal_observation_matches_each_family_camera_contract():
+    """The generator reads the family contract, so a caller cannot construct
+    a stale camera set by hand."""
+    from simforge_alpamayo.families import get_family
+    from simforge_alpamayo.obs import minimal_observation
+
+    for family, expected in (
+        ("alpamayo-1", [0, 1, 2, 6]),
+        ("alpamayo-2-super", [0, 1, 2, 3, 5, 6]),
+    ):
+        obs = minimal_observation(family)
+        assert [c["camera_id"] for c in obs["cameras"]] == expected
+        assert get_family(family).camera_contract("act")[0] == tuple(expected)
+        # Unscorable by construction: this proves a forward pass, not a score.
+        assert obs["synthetic"] is True
+        assert len(obs["cameras"][0]["frames"]) == 4
+        assert len(obs["ego_history_xyz"]) == 16
+
+
+def test_variable_camera_family_gets_its_documented_default():
+    """A1.5 declares no required set; the generator must use the documented
+    default rather than inventing one."""
+    from simforge_alpamayo.families import get_family
+    from simforge_alpamayo.obs import minimal_observation
+
+    obs = minimal_observation("alpamayo-1.5")
+    assert [c["camera_id"] for c in obs["cameras"]] == list(
+        get_family("alpamayo-1.5").cameras.default
+    )
