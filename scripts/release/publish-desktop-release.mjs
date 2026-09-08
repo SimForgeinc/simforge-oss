@@ -510,6 +510,23 @@ async function main() {
     join(outDir, RELEASE_FILE),
     join(outDir, NOTICES_FILE),
   ];
+  // Republishing the same label from a NEWER source must not leave a single
+  // byte of the older one attached. --clobber only replaces same-named files,
+  // so an asset whose name changed, or a platform dropped from the set, would
+  // otherwise survive and the release would be a mixture of two revisions
+  // described by one manifest. Anything not in the intended set is deleted
+  // first.
+  const intended = new Set(uploads.map((file) => {
+    const match = assets.find((candidate) => basename(candidate.sourcePath) === basename(file));
+    return match ? match.assetName : basename(file);
+  }));
+  const attached = JSON.parse(await gh(["api", "--paginate", `repos/${REPOSITORY}/releases`]))
+    .find((/** @type {any} */ release) => release.tag_name === tag)?.assets ?? [];
+  for (const asset of attached) {
+    if (intended.has(asset.name)) continue;
+    process.stdout.write(`${JSON.stringify({ component: "simforge-desktop-release", event: "asset.stale-removed", asset: asset.name })}\n`);
+    await gh(["api", "--method", "DELETE", `repos/${REPOSITORY}/releases/assets/${asset.id}`]);
+  }
   for (const file of uploads) {
     const asset = assets.find((candidate) => basename(candidate.sourcePath) === basename(file));
     // GitHub derives the asset name from the file name; upload under the
