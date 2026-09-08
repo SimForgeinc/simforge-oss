@@ -201,6 +201,8 @@ export async function deriveEpisodeOutcome(
           // Not zero: what this episode could not be assessed for at all.
           unavailable: score.unavailable,
           worstOffRoadM: score.worstOffRoadM,
+          // Per-sample containment accounting: offered / decided / undecidable.
+          offRoad: score.offRoad,
           drivingScore: score.drivingScore,
           routeCompletion: score.routeCompletion,
           penaltyProduct: score.penaltyProduct,
@@ -269,6 +271,7 @@ export async function deriveEpisodeOutcome(
           metricVersion: score.metricVersion,
           unavailableInfractions: score.unavailable,
           worstOffRoadM: score.worstOffRoadM,
+          offRoadSamples: score.offRoad,
           steps: score.steps,
           deadlineMisses: score.deadlineMisses,
           crossTrackM: outcome.summary['cross_track_m'] ?? null,

@@ -460,6 +460,37 @@ describe('off-road v2: footprint containment', () => {
     expect(score.unavailable).toContain('off-road');
   });
 
+  it('does not count a finding for a metric it declares unavailable', () => {
+    // Laundering guard: a speeding event while speeding is unevaluable would
+    // put an unsupported claim in the record.
+    const steps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) =>
+      mkStep(i, { speed: 30, ex: { x: 10, y: 0, headingRad: 0 } }),
+    );
+    const withAuthority = scoreEpisode(mkTrace(steps), V2);
+    expect(withAuthority.infractions['speeding']).toBe(1);
+    const withoutAuthority = scoreEpisode(mkTrace(steps), {
+      ...V2,
+      unavailableInfractions: ['speeding'],
+    });
+    expect(withoutAuthority.infractions['speeding']).toBe(0);
+    expect(withoutAuthority.events.some((e) => e.type === 'speeding')).toBe(false);
+    expect(withoutAuthority.unavailable).toContain('speeding');
+  });
+
+  it('keeps a partly-assessed episode assessed, and counts the undecidable samples', () => {
+    // One decision with no ego pose among decidable ones: per-sample
+    // unavailability must not discard the episode's off-road answer.
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1),
+      mkStep(2, { ex: { x: 12, y: 0, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), V2);
+    expect(score.unavailable).not.toContain('off-road');
+    expect(score.offRoad).toEqual({ offered: 3, assessed: 2, unavailableSamples: 1 });
+    expect(score.worstOffRoadM).toBe(0);
+  });
+
   it('carries declared unavailability through without counting it', () => {
     const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
     const score = scoreEpisode(mkTrace(steps), {

@@ -192,6 +192,12 @@ function episodeErrorClass(error: { code: string; message: string }): { code: Er
   return { code, message: error.message };
 }
 
+/** `v1` -> `simforge.eval-metrics/v1`; an already-qualified id is left alone. */
+function qualifiedMetricVersion(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0) return 'simforge.eval-metrics/v1';
+  return raw.includes('/') ? raw : `simforge.eval-metrics/${raw}`;
+}
+
 function stringOrNull(source: Record<string, unknown> | null, key: string): string | null {
   const value = source?.[key];
   return typeof value === 'string' ? value : null;
@@ -258,10 +264,11 @@ async function emitManifest(
       compute: null,
       // The scorer decides its own version per episode: a reconstructed scene
       // is scored under v2 (footprint containment), a synthetic one under v1.
-      metricVersion:
-        typeof parts.metrics['metricVersion'] === 'string'
-          ? `simforge.eval-metrics/${parts.metrics['metricVersion']}`
-          : 'simforge.eval-metrics/v1',
+      // The scorer may already name a fully-qualified instrument
+      // (`simforge.offroad/v3`); only the bare `v1`/`v2` shorthand gets the
+      // eval-metrics prefix, so a version never reads as
+      // `simforge.eval-metrics/simforge.offroad/v3`.
+      metricVersion: qualifiedMetricVersion(parts.metrics['metricVersion']),
       reprocessedFrom: parts.reprocessedFrom ?? null,
     },
     timing: {

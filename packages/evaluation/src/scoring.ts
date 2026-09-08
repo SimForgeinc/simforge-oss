@@ -330,6 +330,16 @@ export interface EpisodeScore {
   readonly unavailable: readonly InfractionType[];
   /** Worst footprint excursion beyond the drivable surface, metres; null when unassessed. */
   readonly worstOffRoadM: number | null;
+  /**
+   * Per-sample containment accounting: decisions offered, decided, and left
+   * undecidable. `assessed + unavailableSamples` need not equal `offered` when
+   * containment is not enabled at all.
+   */
+  readonly offRoad: {
+    readonly offered: number;
+    readonly assessed: number;
+    readonly unavailableSamples: number;
+  } | null;
 }
 
 const INFRACTION_TYPES: readonly InfractionType[] = [
@@ -415,6 +425,10 @@ export function scoreEpisode(
   ): void => {
     const sv = step.sv;
     const position = sv && sv.length >= 2 ? { x: sv[0]!, y: sv[1]! } : null;
+    // A metric declared unavailable cannot also produce a finding: counting a
+    // speeding event while reporting speeding as unevaluable would launder an
+    // unsupported claim into the record. The event is dropped with the claim.
+    if (severity === 'infraction' && unavailable.has(type as InfractionType)) return;
     events.push({ type, tick: step.step, tS: step.t, severity, position, ...(data ? { data } : {}) });
     if (severity === 'infraction') counts[type as InfractionType] += 1;
   };
@@ -432,6 +446,7 @@ export function scoreEpisode(
   const egoDims = ctx.egoDims ?? { lengthM: 4.5, widthM: 1.9 };
   const unavailable = new Set<InfractionType>(ctx.unavailableInfractions ?? []);
   let containmentAssessed = 0;
+  let containmentUnavailableSamples = 0;
   let worstOffRoadM: number | null = null;
 
   // Checker state.
@@ -498,7 +513,7 @@ export function scoreEpisode(
         tUs != null &&
         (tUs < drivableArea.timeSupportUs.startUs || tUs > drivableArea.timeSupportUs.endUs);
       if (!drivableArea || !pose || outsideSupport) {
-        unavailable.add('off-road');
+        containmentUnavailableSamples += 1;
       } else {
         // The replay-context module owns this geometry and its verdicts,
         // including that unavailability WINS over off-road: a corner past the
@@ -512,7 +527,7 @@ export function scoreEpisode(
           widthM: egoDims.widthM,
         });
         if (containment.unavailable) {
-          unavailable.add('off-road');
+          containmentUnavailableSamples += 1;
         } else {
           containmentAssessed += 1;
           // Assessed-and-clean is 0, not null: null means the question was
@@ -672,6 +687,9 @@ export function scoreEpisode(
   // An episode where NOTHING could be assessed for containment has no off-road
   // answer at all; one partly assessed keeps the events it did find and still
   // declares the gap.
+  // Unavailability is PER SAMPLE. A single undecidable decision - a corner past
+  // the labelled extent - does not discard an otherwise assessed episode; only
+  // an episode with nothing assessable has no off-road answer at all.
   if (containmentEnabled && containmentAssessed === 0) unavailable.add('off-road');
 
   return {
@@ -693,5 +711,12 @@ export function scoreEpisode(
     metricVersion,
     unavailable: [...unavailable].sort(),
     worstOffRoadM,
+    offRoad: containmentEnabled
+      ? {
+          offered: trace.steps.length,
+          assessed: containmentAssessed,
+          unavailableSamples: containmentUnavailableSamples,
+        }
+      : null,
   };
 }
