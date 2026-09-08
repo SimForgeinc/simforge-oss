@@ -67,9 +67,10 @@ from ..replay_envelope import (
     ReplayContextError,
     load_replay_context,
     require_model_episode_admission,
+    require_profile_coverage,
 )
 from .endpoint_policy import DecisionContext, EndpointPolicy, EndpointPolicyError, profile_camera_map
-from .policies import Policy, make_policy
+from .policies import Policy, make_policy, make_recorded_path_policy
 
 MODES = ("offline-simtime", "realtime")
 
@@ -384,8 +385,17 @@ def _make_policy(name: str, seed: int) -> Policy:
         ) from error
 
 
-def _build_policy(args: argparse.Namespace, env: SimForgeEnv) -> tuple[Policy, Any]:
+def _build_policy(
+    args: argparse.Namespace, env: SimForgeEnv, replay: ReplayContext | None = None
+) -> tuple[Policy, Any]:
     """Return the evaluated policy and any resource that must be closed."""
+    if args.policy == "recorded-path":
+        if replay is None:
+            raise ReplayContextError(
+                "replay_context_missing",
+                "--policy recorded-path is the stock replay of a bundle's recorded path; pass --replay-context",
+            )
+        return make_recorded_path_policy(replay.recorded_path, decision_hz=float(env.decision_hz)), None
     if args.policy != "endpoint":
         return _make_policy(args.policy, args.policy_seed), None
     if not args.endpoint_socket:
@@ -441,7 +451,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="simforge-oss-policy-runner")
     parser.add_argument("--spec", required=True, help="episode spec JSON")
     parser.add_argument("--session", type=int, default=0, help="episode index inside the spec")
-    parser.add_argument("--policy", choices=("scripted", "trajectory", "torch", "endpoint"), default="scripted")
+    parser.add_argument(
+        "--policy",
+        choices=("scripted", "trajectory", "torch", "endpoint", "recorded-path"),
+        default="scripted",
+        help="`recorded-path` is the G5 stock replay: it drives a replay-context bundle's own recorded ego path",
+    )
     parser.add_argument("--seed", default="42", help="episode seed (int or string)")
     parser.add_argument("--policy-seed", type=int, default=0, help="torch weight seed / endpoint sampling seed")
     parser.add_argument("--steps", type=int, default=30)
@@ -484,6 +499,7 @@ def main(argv: list[str] | None = None) -> int:
             replay = load_replay_context(args.replay_context)
             if args.policy == "endpoint":
                 require_model_episode_admission(replay)
+                require_profile_coverage(replay, profile_camera_map(args.camera_profile).values())
             monitor = EnvelopeMonitor(replay)
         warmup_policy = _make_policy(args.warmup_policy, args.policy_seed) if args.warmup_policy else None
         warmup_steps = int(args.warmup_steps)
@@ -493,7 +509,7 @@ def main(argv: list[str] | None = None) -> int:
             warmup_policy = _make_policy("scripted", args.policy_seed)
             warmup_steps = 16
         with SimForgeEnv(args.spec, session=args.session, decision_hz=args.decision_hz, maps_dir=args.maps_dir) as env:
-            policy, resource = _build_policy(args, env)
+            policy, resource = _build_policy(args, env, replay)
             endpoint_policy = policy if isinstance(policy, EndpointPolicy) else None
             summary = run_episode(
                 env,

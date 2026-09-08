@@ -26,7 +26,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 BUNDLE_FILENAME = "replay-context.json"
 STOCK_REPLAY_GATE = ("qualification", "stock-replay.json")
@@ -91,6 +91,11 @@ class ReplayContext:
     #: ``(t_s, x, y, heading_rad)`` recorded reference poses, ascending time.
     recorded_path: tuple[tuple[float, float, float, float], ...]
     camera_ids: tuple[int, ...]
+    #: Camera set the scene is qualified FOR (``validity.profileCameraIds``).
+    #: Qualification is per camera set: a scene can reconstruct well for wide
+    #: cameras and badly for a tele, so "the scene is qualified" is not
+    #: well-formed on its own.
+    profile_camera_ids: tuple[int, ...]
     gates: Mapping[str, Any]
     envelope_basis: Mapping[str, Any]
 
@@ -173,9 +178,29 @@ def load_replay_context(bundle: str | Path) -> ReplayContext:
         limits=limits,
         recorded_path=tuple(recorded),
         camera_ids=camera_ids,
+        profile_camera_ids=tuple(sorted(int(v) for v in document.get("validity", {}).get("profileCameraIds", []))),
         gates=dict(document.get("validity", {}).get("gates", {})),
         envelope_basis=dict(document.get("validity", {}).get("envelopeBasis", {})),
     )
+
+
+def require_profile_coverage(context: ReplayContext, camera_ids: Sequence[int]) -> None:
+    """Refuse a rig the scene is not qualified for.
+
+    ``validity.profileCameraIds`` names the camera set whose renders passed the
+    gates. Driving a preset that includes a camera outside it would score a
+    model against views nobody measured.
+    """
+    if not context.profile_camera_ids:
+        return
+    outside = sorted(set(int(c) for c in camera_ids) - set(context.profile_camera_ids))
+    if outside:
+        raise ReplayContextError(
+            "replay_context_profile_mismatch",
+            f"scene {context.scene_id} is qualified for cameras {list(context.profile_camera_ids)}; "
+            f"the requested rig adds {outside}",
+            {"qualifiedFor": list(context.profile_camera_ids), "outside": outside},
+        )
 
 
 def stock_replay_verdict(context: ReplayContext) -> dict[str, Any] | None:
@@ -198,11 +223,21 @@ def require_model_episode_admission(context: ReplayContext) -> None:
     not scoring it as a model failure.
     """
     if not context.qualified:
+        expected = ("G1", "G2", "G3", "G4", "G5")
         failed = [name for name, gate in context.gates.items() if not (isinstance(gate, Mapping) and gate.get("passed"))]
+        missing = [name for name in expected if name not in context.gates]
+        detail = ", ".join(
+            part
+            for part in (
+                f"failing: {failed}" if failed else "",
+                f"not recorded: {missing}" if missing else "",
+            )
+            if part
+        )
         raise ReplayContextError(
             "replay_context_unqualified",
-            f"scene {context.scene_id} is not qualified for model episodes (failing gates: {failed or 'unknown'})",
-            {"sceneId": context.scene_id, "failedGates": failed},
+            f"scene {context.scene_id} is not qualified for model episodes ({detail or 'reason not recorded in the bundle'})",
+            {"sceneId": context.scene_id, "failedGates": failed, "missingGates": missing},
         )
     verdict = stock_replay_verdict(context)
     if verdict is not None and not verdict.get("passed", False):
