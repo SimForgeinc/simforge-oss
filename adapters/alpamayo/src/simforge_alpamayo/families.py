@@ -229,13 +229,10 @@ ALPAMAYO_1 = Family(
         ),
         QuantOffer(
             quant="nf4",
-            status="qualification-pending",
-            min_vram_gib=None,
+            status="supported",
+            min_vram_gib=15.0,
             note=(
-                "bitsandbytes NF4 recipe is wired, but no measured A1 envelope "
-                "exists. The 1.5 measurement does not transfer: A1's backbone "
-                "is the Qwen3-VL-8B config, not Cosmos-Reason2. No VRAM number "
-                "is published until a run records one."
+                "bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned release runtime (upstream uv.lock at code commit 939f9a28, torch 2.8.0+cu128, SDPA) on an RTX 5080 15.46 GiB: 8.08 GiB resident after load, 8.95 GiB peak allocated and 15.08 GiB device-used at 4 cameras / 1 sample, act 5.1 s wall. Seed-deterministic across repeat calls on the same device. The envelope is camera-count and sample-count dependent; only the 4-camera 1-sample profile is measured. Quantization changes behaviour, not only numerics: never compare an NF4 score against a BF16 baseline without the quant label."
             ),
         ),
         QuantOffer(
