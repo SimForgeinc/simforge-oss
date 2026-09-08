@@ -23,7 +23,7 @@
 import { z } from 'zod';
 
 import type { TrajectoryMetrics } from './metrics.js';
-import { OpenloopInputSchema, type OpenloopParams } from './params.js';
+import { OpenloopInputSchema, REFUSAL_CODES, type OpenloopParams } from './params.js';
 
 export * from './params.js';
 
@@ -63,7 +63,7 @@ export const OpenloopItemSchema = z.object({
   reasoning: z.array(z.string().nullable()).default([]),
   text: z.string().nullable().default(null),
   fields: z.record(z.string(), z.unknown()).nullable().default(null),
-  reference: ReferenceSchema.default({ kind: 'none' }),
+  reference: ReferenceSchema.default({ kind: 'none', frame: 'ego@t0', convention: 'FLU', dtS: 0.1, points: [] }),
   projection: ProjectionSchema.nullable().default(null),
   metrics: z.record(z.string(), z.unknown()).nullable().default(null),
   latencyMs: z.number().nonnegative().nullable().default(null),
