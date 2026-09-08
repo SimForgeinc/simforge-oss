@@ -232,6 +232,7 @@ export {
 export {
   prepareRuntime,
   readRuntimeRecord,
+  resolveAdapterRoot,
   runtimeRecordPath,
   PrepareError,
   RUNTIME_SCHEMA,

@@ -57,6 +57,8 @@ export type RuntimeRecord = {
   readonly flashAttn: boolean;
   readonly preparedAt: string;
   readonly steps: readonly PrepareStep[];
+  /** Where the adapter source was installed from, for the distribution receipt. */
+  readonly adapterRoot: string;
 };
 
 export class PrepareError extends Error {
@@ -67,7 +69,8 @@ export class PrepareError extends Error {
       | "uv_missing"
       | "git_missing"
       | "command_failed"
-      | "unsupported_platform",
+      | "unsupported_platform"
+      | "adapter_root_unresolved",
     readonly step: PrepareStep | null,
     readonly detail: Record<string, unknown> = {},
   ) {
@@ -143,6 +146,47 @@ async function run(
     );
   }
   return result;
+}
+
+/**
+ * Where the Python adapter source lives.
+ *
+ * Resolution order: an explicit argument, then the development override, then
+ * the packaged copy staged beside the studio tree. If none resolves we refuse
+ * — a prepared runtime without `simforge_alpamayo` cannot run a model, and
+ * reporting success for one is a fake success.
+ *
+ * The override exists for development only. A packaged install must resolve
+ * the staged path, which is why the distribution receipt has to be taken
+ * without it set.
+ */
+export async function resolveAdapterRoot(explicit?: string): Promise<string> {
+  const candidates = [
+    explicit,
+    process.env.SIMFORGE_ALPAMAYO_ADAPTER_ROOT,
+    // Packaged: the studio tree is copied to resources/studio, and the
+    // adapter is staged as a sibling payload.
+    join(process.cwd(), "adapters", "alpamayo"),
+    join(process.cwd(), "..", "adapters", "alpamayo"),
+    join(process.cwd(), "..", "..", "adapters", "alpamayo"),
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    // Validate by content, not by existence: a directory that is not the
+    // adapter would fail later inside uv with a worse message.
+    const ok = await stat(join(candidate, "pyproject.toml"))
+      .then(() => stat(join(candidate, "src", "simforge_alpamayo", "__init__.py")))
+      .then(() => true, () => false);
+    if (ok) return candidate;
+  }
+  throw new PrepareError(
+    "cannot locate the simforge_alpamayo adapter source. A prepared runtime " +
+      "without it cannot run a model, so this is refused rather than reported " +
+      "as success. Checked: " + candidates.join(", "),
+    "adapter_root_unresolved",
+    "install-adapter",
+    { checked: candidates },
+  );
 }
 
 export function runtimeRecordPath(layout: InstallLayout): string {
@@ -280,8 +324,13 @@ export async function prepareRuntime(options: PrepareOptions): Promise<RuntimeRe
   });
   report("install-extras", extras.join(" "));
 
-  const adapterRoot = options.adapterRoot ?? process.env.SIMFORGE_ALPAMAYO_ADAPTER_ROOT;
-  if (adapterRoot) {
+  // The adapter is REQUIRED, not optional. Skipping it produced a fully built
+  // venv with no `simforge_alpamayo` in it and a prepare() that reported
+  // success, so the failure surfaced only when inference was attempted. A
+  // typed refusal here is the whole point: an environment that cannot run the
+  // model is not a prepared environment.
+  const adapterRoot = await resolveAdapterRoot(options.adapterRoot);
+  {
     // --no-deps: the adapter adds only numpy/msgpack, which the upstream lock
     // already pins. Resolving its dependencies would be free to move a
     // version the lock fixed.
@@ -308,6 +357,7 @@ export async function prepareRuntime(options: PrepareOptions): Promise<RuntimeRe
     codeCommit: entry.code.commit,
     upstreamLock: entry.code.lock,
     flashAttn: options.flashAttn ?? false,
+    adapterRoot,
     preparedAt: new Date().toISOString(),
     steps,
   };
