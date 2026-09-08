@@ -399,14 +399,16 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       status: 'supported',
       minVramGiB: 12,
       note:
-        'bitsandbytes NF4 + double quantization, bf16 compute. The 12 GiB ' +
-        'figure comes from a PRIOR runtime (RTX 5080 16 GiB, driver 595.84, ' +
-        'torch 2.8.0+cu128): 8.71 GiB peak at 2 cameras, 10.10 GiB at 7, one ' +
-        'sample. It is camera-count and sample-count dependent and has not been ' +
-        're-measured on the pinned release runtime, so a 16 GiB host is ' +
-        'qualified for the measured profiles, not for every profile. ' +
-        'Quantization changes behaviour, not only numerics: an NF4 score is ' +
-        'never comparable to a BF16 baseline without the quant label.',
+        'bitsandbytes NF4 + double quant, bf16 compute. RE-MEASURED on the pinned' +
+        ' release runtime (upstream uv.lock at code commit 24179cfa, torch 2.8.0+' +
+        'cu128, SDPA) on an RTX 5080 15.46 GiB: 8.08 GiB resident after load, 8.7' +
+        '1 GiB peak at 2 cameras and 9.27 GiB peak at 4 cameras, 1 sample, act 1.' +
+        '5-1.8 s. The 2-camera figure reproduces the prior runtime's measurement ' +
+        'exactly. Seed-deterministic across repeat calls on the same device. The ' +
+        'envelope is camera-count and sample-count dependent; the 2- and 4-camera' +
+        ' 1-sample profiles are measured and the 7-camera profile is not. Quantiz' +
+        'ation changes behaviour, not only numerics: never compare an NF4 score a' +
+        'gainst a BF16 baseline without the quant label.',
     },
     {
       quant: 'fp8',
