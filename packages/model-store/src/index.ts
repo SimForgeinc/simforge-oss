@@ -9,6 +9,7 @@ import {
 } from "./catalog";
 import { allInstallStates, stateGeneration, vaultStatus, type VaultStatus } from "./install";
 import { lockEntry } from "./lock";
+import { readRuntimeRecord, type RuntimeRecord } from "./prepare";
 import { endpointCommand, installLayout } from "./paths";
 import { observeHost, qualify, type ObservedHost } from "./preflight";
 
@@ -41,6 +42,20 @@ export type ModelReviewGate = {
   readonly note: string;
 };
 
+/**
+ * Whether a family's isolated Python runtime has been provisioned.
+ *
+ * Separate from install state on purpose: weights and runtime are installed
+ * by different steps and fail independently, so a family can be fully
+ * installed with no runtime at all. A local-execution offer must check THIS,
+ * not install state, or it will offer a run that cannot start.
+ */
+export type ModelRuntimeState = {
+  readonly family: ModelFamilyId;
+  readonly prepared: boolean;
+  readonly runtime: RuntimeRecord | null;
+};
+
 export type ModelStoreView = {
   readonly schema: typeof MODEL_STORE_VIEW_SCHEMA;
   readonly generation: number;
@@ -48,6 +63,7 @@ export type ModelStoreView = {
   readonly installs: readonly InstallStateEntry[];
   readonly eligibility: readonly ModelExecutionEligibility[];
   readonly observed: ObservedHost;
+  readonly runtimes: readonly ModelRuntimeState[];
   readonly vault: VaultStatus;
   readonly reviewGates: readonly ModelReviewGate[];
 };
@@ -86,9 +102,16 @@ export async function modelStoreView(): Promise<ModelStoreView> {
     }
   }
 
+  const runtimes: ModelRuntimeState[] = [];
+  for (const family of MODEL_FAMILIES) {
+    const runtime = await readRuntimeRecord(family);
+    runtimes.push({ family, prepared: runtime !== null, runtime });
+  }
+
   return {
     schema: MODEL_STORE_VIEW_SCHEMA,
     generation: stateGeneration(),
+    runtimes,
     catalog: MODEL_FAMILIES.map((family) => MODEL_CATALOG[family]),
     installs: await allInstallStates(),
     eligibility,
@@ -209,6 +232,7 @@ export {
 export {
   prepareRuntime,
   readRuntimeRecord,
+  resolveAdapterRoot,
   runtimeRecordPath,
   PrepareError,
   RUNTIME_SCHEMA,

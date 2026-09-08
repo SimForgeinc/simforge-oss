@@ -267,6 +267,18 @@ def verify_revision(
         shards.append(entry)
 
     record["shards"] = shards
+    # INTEGRITY LEVEL, stated rather than implied. The default check compares
+    # the shard set and sizes and derives the digest from PUBLISHED metadata;
+    # it does not read the weight bytes, so it cannot detect a corrupted or
+    # substituted shard whose length is unchanged. Only --deep streams every
+    # shard and recomputes its sha256. A provider-cached snapshot we have
+    # never hashed is "metadata-only" until it has been deep-verified once.
+    hashed = [s for s in shards if s.get("sha256") is not None]
+    record["integrity"] = (
+        "bytes-verified"
+        if deep and hashed and all(s.get("sha256Ok") for s in hashed)
+        else "metadata-only"
+    )
     if digest_pairs and len(digest_pairs) == len(names):
         record["digest_resolved"] = _digest_from_files(sorted(digest_pairs))
     elif not digest_pairs:
@@ -569,6 +581,10 @@ def main() -> None:
                         help="report host runtime qualification instead of identity")
     parser.add_argument("--reserve-renderer", action="store_true",
                         help="reserve renderer VRAM headroom (closed-loop co-residency)")
+    parser.add_argument("--receipt", default=None,
+                        help="write the identity record to this path; with --deep "
+                             "this is the durable bytes-verified receipt for an "
+                             "immutable snapshot, which later loads may trust")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -602,6 +618,20 @@ def main() -> None:
     except ModelRevisionMismatch as exc:
         emit({"ok": False, "error": {**exc.detail, "message": str(exc)}})
         raise SystemExit(3) from None
+    if args.receipt:
+        from datetime import datetime, timezone
+        receipt = {
+            **record,
+            "verifiedAt": datetime.now(timezone.utc).isoformat(),
+            "note": (
+                "integrity=bytes-verified means every shard was streamed and its "
+                "sha256 recomputed against the lock. integrity=metadata-only means "
+                "the shard set and sizes matched and the digest was derived from "
+                "published metadata WITHOUT reading the weight bytes."
+            ),
+        }
+        Path(args.receipt).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.receipt).write_text(json.dumps(receipt, indent=2) + "\n")
     emit({"ok": True, **record})
     raise SystemExit(0 if record["verified"] else 2)
 
