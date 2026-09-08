@@ -6,6 +6,7 @@ import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js'
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
 import { gateG2 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
+import { footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
 import { ReplayContextSchema, servesProfile, type GateVerdict } from '../schema.js';
 
@@ -340,5 +341,71 @@ describe('image-sequence integrity', () => {
     } finally {
       await rm(scratch, { recursive: true, force: true });
     }
+  });
+});
+
+describe('drivable-area containment (off-road v2)', () => {
+  // A 20 x 10 rectangle of road with a 4 x 2 island cut out of its middle.
+  const area: DrivableArea = {
+    source: 'clipgt',
+    frame: 'test-frame',
+    confidence: 'authoritative',
+    timeSupportUs: null,
+    polygons: [
+      { id: 'road', kind: 'drivable', ring: [[0, 0], [20, 0], [20, 10], [0, 10]] },
+      { id: 'island', kind: 'hole', ring: [[8, 4], [12, 4], [12, 6], [8, 6]] },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [20, 10] },
+  };
+  const car = { lengthM: 4, widthM: 2 };
+
+  it('accepts a footprint fully inside the drivable surface', () => {
+    const result = footprintContainment(area, { x: 4, y: 2, headingRad: 0, ...car });
+    expect(result.inside).toBe(true);
+    expect(result.cornersOutside).toBe(0);
+    expect(result.worstOutsideM).toBe(0);
+  });
+
+  it('rejects a footprint fully outside, and reports how far out', () => {
+    const result = footprintContainment(area, { x: 30, y: 5, headingRad: 0, ...car });
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBe(4);
+    // Nearest corner of the box is 8 m past the x=20 edge.
+    expect(result.worstOutsideM).toBeGreaterThan(9);
+  });
+
+  it('treats a hole as undrivable even though it lies inside the road', () => {
+    // Centre of the island: inside the road ring, inside the hole.
+    expect(pointIsDrivable(area, 10, 5)).toBe(false);
+    expect(pointIsDrivable(area, 10, 2)).toBe(true);
+    expect(footprintContainment(area, { x: 10, y: 5, headingRad: 0, ...car }).inside).toBe(false);
+  });
+
+  it('catches a footprint straddling the boundary that a centre test would pass', () => {
+    // Centre is on the road; the box overhangs the y=10 edge by 1 m.
+    expect(pointIsDrivable(area, 5, 9.5)).toBe(true);
+    const result = footprintContainment(area, { x: 5, y: 9.5, headingRad: 0, ...car });
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBe(2);
+    expect(result.worstOutsideM).toBeCloseTo(0.5, 6);
+  });
+
+  it('accounts for orientation: the same centre passes or fails with heading', () => {
+    // Lengthwise along a narrow strip fits; rotated 90 degrees it does not.
+    const narrow: DrivableArea = { ...area, polygons: [{ id: 'strip', kind: 'drivable', ring: [[0, 0], [20, 0], [20, 3], [0, 3]] }] };
+    expect(footprintContainment(narrow, { x: 10, y: 1.5, headingRad: 0, ...car }).inside).toBe(true);
+    expect(footprintContainment(narrow, { x: 10, y: 1.5, headingRad: Math.PI / 2, ...car }).inside).toBe(false);
+  });
+
+  it('scores a pose sequence and stamps the metric version', () => {
+    const poses = [
+      { tUs: 0, x: 4, y: 2, headingRad: 0 },
+      { tUs: 100_000, x: 10, y: 5, headingRad: 0 },  // on the island
+      { tUs: 200_000, x: 16, y: 2, headingRad: 0 },
+    ];
+    const result = scoreOffRoad(area, poses, car);
+    expect(result.metric).toBe('simforge.offroad/v2');
+    expect(result.samples).toBe(3);
+    expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
   });
 });

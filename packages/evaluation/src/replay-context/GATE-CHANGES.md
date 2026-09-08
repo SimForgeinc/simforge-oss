@@ -734,3 +734,68 @@ and clipgt-0009402a stands as NOT ADMITTED.
 
 Until 1 and 2 are settled, full admission is BLOCKED — not by scene sampling, which cannot
 help, and not by anything more GPU time would produce.
+
+
+---
+
+## 2026-09-08 — Off-road v2 implemented; its own control FAILS; v2 is NOT VALIDATED
+
+Implemented per the owner decision (footprint containment in authoritative drivable-area
+polygons) and per the plan pre-recorded at `7cc900ff` before any of it existed. The plan's
+primary acceptance check was: score the **recorded human drive** and require zero off-road
+events. It does not pass, so **v2 must not be used to score anything**, and no scene number is
+quoted from it.
+
+### Control result
+
+Scene clipgt-0009402a, recorded human drive, ego footprint 5.393 x 2.109 m from the package's
+own rig bbox, 202 samples:
+
+| | events | worst corner outside |
+|---|---|---|
+| v2, lane-ring membership | 13 | 0.099 m |
+| v2, after dissolving lanes into a union | 13 | 0.099 m |
+
+### Cause, measured
+
+Not a transform error — the geometry is plainly in the right frame (lane rails span
+x −209.9..869.2, the ego path x 0.0..662.9, and the worst excursion is 9.9 cm rather than
+metres). Instead:
+
+- **18 of 18 outside corners lie within 0.30 m of TWO adjacent lane polygons** — they are
+  between lanes, not off the road.
+- ClipGT lane rails **do not tile contiguously**: 339 non-touching adjacent lane pairs, gaps
+  p50 **0.200 m**, p90 0.250 m, max 0.300 m. Each lane's rails sit inset from the lane line, so
+  there is a ~20 cm strip at every lane boundary that belongs to no lane polygon.
+- A true union cannot close a real gap: dissolving 168 lane polygons yields 38 parts and changes
+  the control not at all. (Buffering each lane by 0.05 m collapses it to 6 parts, which confirms
+  the diagnosis and is *not* being adopted — see below.)
+
+So the ~20 cm strip is the painted lane marking, which is drivable road, and a vehicle
+straddling a lane line legitimately has corners in it.
+
+### What I did NOT do
+
+Buffering lanes by half the measured gap would make the control pass immediately. I did not do
+it: the buffer distance would have been chosen from the very gap it was introduced to close,
+which is a result-driven tolerance wearing the costume of a fix. Same reason no threshold moved
+anywhere else in this workstream.
+
+### Required input / explicit policy choice
+
+1. **Preferred, authoritative:** build the drivable outline from `clipgt/road_boundary.parquet`
+   (135 rows on this scene) — the annotated edge of the road, which by construction has no
+   inter-lane seams. It needs boundary assembly (left/right edges into closed rings), which is
+   real work and a decision, not a tweak.
+2. **Or an explicitly approved policy** that the lane-marking strip between adjacent lane rails
+   is drivable, with the inclusion rule stated in the metric definition rather than tuned per
+   scene.
+
+Until one of those exists, **v2 is implemented, tested on authored geometry (6 containment
+tests: inside, outside, hole, straddling, orientation-dependent, sequence scoring — all
+passing), and NOT VALIDATED against real data.** v1 verdicts are untouched, G5 stays failed,
+clipgt-0009402a stays not admitted, and full admission remains blocked.
+
+New ingestion dependency, declared: `shapely` and `pyarrow`, used only by
+`python/clipgt_drivable.py` at ingestion time. The scoring consumer receives plain polygon rings
+and needs no geometry library.
