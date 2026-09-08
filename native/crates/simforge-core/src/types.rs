@@ -418,14 +418,18 @@ pub struct TimedPoint {
     pub z: f64,
 }
 
-/// One engine tick of recorded actor state, scene frame. `heading_rad` is
-/// the body yaw and `speed_mps` is signed along it (negative = reversing), so
-/// the sample reproduces a stationary or reversing body exactly.
+/// One engine tick of recorded actor state, y-up scene frame. `heading_rad`
+/// is the body yaw and `speed_mps` is signed along it (negative = reversing),
+/// so the sample reproduces a stationary or reversing body exactly. `y` is
+/// the renderer's ground projection at `(x, z)` as captured; the planar engine
+/// has no height state, so replay reproduces it by driving the same `(x, z)`
+/// through the same ground projection. It is carried, never dropped.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordedSample {
     pub time_s: f64,
     pub x: f64,
+    pub y: f64,
     pub z: f64,
     pub heading_rad: f64,
     pub speed_mps: f64,
@@ -2460,12 +2464,14 @@ fn parse_route_spec_from(p: &mut Parser, m: &Map<String, Value>, kind: &str) -> 
                 let m = p.object(v)?;
                 let time_s = p.num_field(m, "timeS", Num::NON_NEG);
                 let x = p.num_field(m, "x", Num::FINITE);
+                let y = p.num_field(m, "y", Num::FINITE);
                 let z = p.num_field(m, "z", Num::FINITE);
                 let heading_rad = p.num_field(m, "headingRad", Num::FINITE);
                 let speed_mps = p.num_field(m, "speedMps", Num::FINITE);
                 Some(RecordedSample {
                     time_s: time_s?,
                     x: x?,
+                    y: y?,
                     z: z?,
                     heading_rad: heading_rad?,
                     speed_mps: speed_mps?,

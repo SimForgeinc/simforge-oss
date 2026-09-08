@@ -148,6 +148,8 @@ export const routeSpecSchema = z.discriminatedUnion('kind', [
     samples: z.array(z.object({
       timeS: nonNeg,
       x: finite,
+      /** Renderer ground projection at (x, z) as captured; carried verbatim. */
+      y: finite,
       z: finite,
       /** Body yaw, radians, CCW about `+Y` from `+X`. */
       headingRad: finite,

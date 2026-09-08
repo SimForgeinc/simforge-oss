@@ -451,6 +451,7 @@ mod tests {
         RecordedSample {
             time_s,
             x,
+            y: 0.0,
             z,
             heading_rad,
             speed_mps,
