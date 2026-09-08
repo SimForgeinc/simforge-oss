@@ -18,6 +18,14 @@ explicit, measured and enforced.
 
 Canonical bundle file: `<bundleDir>/replay-context.json`.
 
+### Qualification is per camera profile
+
+`validity.profileCameraIds` records the camera ids the gates were measured over. A rig is
+servable only if every one of its ids is in that array — `servesProfile(bundle, cameraIds)`
+does the check, and the schema rejects a bundle qualified over a camera the scene lacks or over
+none at all. A reconstruction can be faithful for wide cameras and not for a narrow tele, so
+"this scene is qualified" is not a statement a scene can make on its own.
+
 ### Cross-owner field contract (frozen)
 
 The Python episode runner reads the bundle directly, with no TypeScript import. These paths
@@ -27,6 +35,7 @@ are a breaking change if renamed:
 - `validity.qualified` — `false` means **refuse the model episode**
 - `ego.recordedPath[] = {tUs, x, y, headingRad}`, `ego.originUs`, `ego.endUs`
 - `cameras[].cameraId` (0..6, the inference-wire camera index)
+- `validity.profileCameraIds` — the camera set the verdict covers
 - `qualification/stock-replay.json` — the G5 verdict the campaign runner checks as a precondition
 
 ## What is refused, and why
@@ -64,6 +73,19 @@ passing*. A scene that fails at 0.5 m but passes at 1.5 m yields a zero-width en
 never be qualified — the schema rejects it.
 
 ## Reconstruction
+
+**Exercised end to end on 2026-09-08.** A product-owned 24-view pinhole capture
+(`python/make_calibration_capture.py` — authored here, no third-party asset, no dataset byte,
+exact poses, a 3,888-point seed cloud from real surfaces) became a COLMAP dataset, trained
+through upstream `train.py` at the pinned commit for 3000 iterations (test PSNR 36.10, SSIM
+0.981), and exported `export_last_nurec.usdz`.
+
+That run also confirmed the split this module is built around, by refusing: importing the
+export *directly* fails with `input_error` naming `rig_trajectories.json` and
+`sequence_tracks.json`, because a 3DGUT export is Gaussians and nothing else — no ego
+trajectory, no actor tracks, no rig calibration. A reconstruction is geometry; it is not a
+recording of a drive. Geometry comes from the export, the drive comes from the clip, and
+`reconstructClip` joins them.
 
 Real upstream tooling, driven not reimplemented:
 

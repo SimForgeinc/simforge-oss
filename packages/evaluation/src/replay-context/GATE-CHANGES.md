@@ -282,3 +282,54 @@ sim/executor/scoring chain on this world.
   remains unusable for A1 whatever happens with G5.
 - Alpamayo 1.5 accepts a variable camera set, so [0, 1, 2] is a contract-supported rig rather
   than an invented one.
+
+
+---
+
+## 2026-09-08 — Reconstruction pipeline exercised end to end
+
+Not a gate change; the result of running the reconstruction path for real.
+
+**Input, and why it is this one.** The only calibrated AV capture on this host is the gated
+PhysicalAI-AV scene; neither it nor a reconstruction of it may be committed or published, so
+it cannot serve as this path's evidence. `python/make_calibration_capture.py` generates a
+product-owned one instead — authored here, no third-party asset, no dataset byte, no captured
+content, Apache-2.0. 24 orbiting views at 640×480, one PINHOLE intrinsic used both to project
+the geometry and to write `cameras.txt`, exact authored poses in COLMAP world-to-camera
+convention, and a 3,888-point seed cloud sampled from the scene's actual surfaces. It refuses
+to seed from noise for the same reason `reconstructionRefusal` does.
+
+**Run.** `train.py --config-name apps/colmap_3dgut.yaml path=<capture> out_dir=<runs>
+experiment_name=sf-capture-v1 n_iterations=3000 export_usd.enabled=true
+export_usd.format=nurec`, in the pinned tier (3DGRUT `a37ef721…`, Kaolin 0.18.0, torch
+2.8.0+cu128, CUDA 12.8.1).
+
+**Result.** Training completed; test PSNR 36.10, SSIM 0.981, LPIPS 0.072 over 3 held-out
+frames. Exported `export_last_nurec.usdz`, 5,246,764 B, "1 camera(s) to NuRec USD from 21
+frames". So the documented upstream commands work at the pinned revision and produce the
+artifact the rest of the path consumes.
+
+### What this proved about the architecture, by refusing
+
+Importing that export directly through `importNurecPackage` **fails**, correctly:
+
+```
+{"error":{"code":"input_error","retryable":false,
+  "message":"… is not a NuRec scene package",
+  "fields":["rig_trajectories.json","sequence_tracks.json"]}}
+```
+
+A 3DGUT NuRec export contains `default.usda`, `export_last_nurec.nurec` and `gauss.usda` —
+Gaussians and nothing else. It has no rig trajectory, no dynamic-actor tracks and no camera
+calibration metadata, because a reconstruction is geometry and appearance; it is not a
+recording of a drive. A replayable scene needs both, and the missing half comes from the clip
+the reconstruction was built from.
+
+`reconstructClip` already routes this way — geometry from the export, calibration/ego/dynamics
+from the clip's own `simforge.eval-clip/v1`, joined by `importUserBundle`. The refusal above is
+that separation being enforced rather than assumed, and it is the reason a reconstructed bundle
+cannot quietly acquire an ego path nobody recorded.
+
+**Not qualified, and cannot be.** A bundle from this capture is `source.kind:
+synthetic-fixture`, which the schema structurally bars from ever being `qualified` or scored.
+It exercises the pipeline; it sets no product state.
