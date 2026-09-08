@@ -38,7 +38,7 @@ export const OBSERVATION_BUNDLE_SCHEMA = 'simforge.eval-observations/v1';
 
 /** Frames per camera and ego-history steps the Alpamayo families require. */
 export const FRAMES_PER_CAMERA = 4;
-export const OBSERVATION_OBSERVATION_EGO_HISTORY_STEPS = 16;
+export const OBSERVATION_EGO_HISTORY_STEPS = 16;
 export const HISTORY_DT_S = 0.1;
 
 const FrameSchema = z.object({
