@@ -467,3 +467,31 @@ Baseline subtraction still makes the *comparison* sound, but a gate that cannot 
 an enclosed scene is not measuring off-trajectory coverage there — it is measuring that the
 scene has no sky. Alongside the G4 statistic problem, that is the second gate whose choice of
 measure needs re-deriving with evidence. Neither was adjusted to admit anything.
+
+
+---
+
+## 2026-09-08 — Ego-hood hypothesis TESTED AND REFUTED; the G1 deficit is the upper frame
+
+Renders are produced with `--hood none` because we hold no AlpaSim hood overlay assets, while
+the recorded frames come from a real vehicle whose bonnet occupies a fixed bottom band. That is
+an obvious candidate for a systematic PSNR penalty, so it was measured per image region rather
+than assumed. Diagnostic only — no gate, no verdict, G1 untouched.
+
+PSNR by row band, on-trajectory renders against the matched recorded frame:
+
+| Scene / camera | full | excl. bottom 25% | rows 0–25% | 25–50% | 50–75% | 75–100% |
+|---|---|---|---|---|---|---|
+| 007a5809 front-wide | 22.89 | 23.83 | 27.32 | 34.49 | 19.91 | 20.89 |
+| 007a5809 cross-left | 24.07 | 23.43 | 23.94 | 30.99 | 20.56 | 26.86 |
+| 000a3a34 front-wide | 16.18 | **15.38** | 14.52 | 15.13 | 16.79 | **20.17** |
+| 000a3a34 cross-left | 16.72 | **15.58** | 17.69 | 13.84 | 16.07 | **26.66** |
+
+**Refuted.** On the weak scene the bottom band is the *best* region (20.17 and 26.66 dB) and
+excluding it makes the score *worse* (16.18 → 15.38, 16.72 → 15.58). A missing hood would do the
+opposite. The deficit sits in the upper and middle frame — sky and distant structure — which is
+where a Gaussian reconstruction is weakest and where this capture evidently is.
+
+So 000a3a34's 16.18 dB is genuine reconstruction quality in the far field, not an artifact of
+our render configuration. Third hypothesis raised about a failing G1 number, third one tested,
+third one refuted. The number stands.
