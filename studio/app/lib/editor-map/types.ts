@@ -59,6 +59,7 @@ export type ApproachRoad = {
 export type MapLocation = {
   id: string;
   source:
+    | "native_catalog"
     | "semantic_feature"
     | "semantic_approach"
     | "semantic_movement"

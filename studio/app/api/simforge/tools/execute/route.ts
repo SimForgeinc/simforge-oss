@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getAppContext } from "@/app/lib/db/app-context";
-import { getBridgedMapBundleByAssetId } from "@/app/lib/editor-map/bridged-map";
+import { getNativeMapBundle } from "@/app/lib/editor-map/native-map-bundle";
 import { executeEditorTool } from "@/app/lib/editor-tools/registry";
 import type { EditorToolId, EditorToolInput } from "@/app/lib/editor-tools/types";
 import type { MapLocation } from "@/app/lib/editor-map/types";
 
 type ExecuteBody = {
   mapAssetId?: string;
+  mapVersionId?: string;
   tool?: EditorToolId;
   input?: EditorToolInput;
   selectedRoadIds?: string[];
@@ -26,9 +27,10 @@ export async function POST(request: NextRequest) {
   }
   const body = rawBody as ExecuteBody;
   const mapAssetId = body.mapAssetId?.trim();
-  if (!mapAssetId) {
+  const mapVersionId = body.mapVersionId?.trim();
+  if (!mapAssetId || !mapVersionId) {
     return auth.apply(
-      NextResponse.json({ error: "mapAssetId is required." }, { status: 400 }),
+      NextResponse.json({ error: "mapAssetId and mapVersionId are required." }, { status: 400 }),
     );
   }
 
@@ -39,9 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const bundle = await getBridgedMapBundleByAssetId(mapAssetId, {
-      includeDerivedLocations: false,
-    });
+    const bundle = await getNativeMapBundle({ mapAssetId, mapVersionId });
 
     const execution = await executeEditorTool(body.tool, body.input ?? {}, {
       appContext: getAppContext(auth.session),

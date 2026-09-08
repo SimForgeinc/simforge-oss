@@ -3,6 +3,7 @@
 import {
   defaultDrivingSpeedKph,
   deterministicActorCatalog,
+  editorMapVersionId,
   editorSourceMapId,
   type EditorController,
   type EditorDocument,
@@ -195,6 +196,7 @@ export function AssistantChatSlot({
     const selection = selectionRef.current;
     const editorContext = {
       mapAssetId: editorSourceMapId(document.map),
+      mapVersionId: editorMapVersionId(document.map),
       mapLabel: document.map.label,
       mapName: document.map.label,
       selectedRoadIds: selection.selectedRoadIds,

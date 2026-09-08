@@ -3,7 +3,7 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import type { BridgedMapBundle } from "@/app/lib/editor-map/types";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { getBridgedMapBundleByAssetId } from "@/app/lib/editor-map/bridged-map";
+import { getNativeMapBundle } from "@/app/lib/editor-map/native-map-bundle";
 import {
   executeEditorTool,
 } from "@/app/lib/editor-tools/registry";
@@ -34,7 +34,10 @@ export type AssistantMessageParam = {
 
 export type EditorAssistantContext = {
   appContext?: AppContext;
+  /** `public.map_assets.id` of the source map the document names. */
   mapAssetId: string;
+  /** The immutable published map version the document is open on. */
+  mapVersionId: string;
   mapLabel: string;
   selectedRoadIds: string[];
   selectedLocation: MapLocation | null;
@@ -100,6 +103,7 @@ Editor context:
 ${JSON.stringify(
   {
     map_asset_id: context.mapAssetId,
+    map_version_id: context.mapVersionId,
     map_label: context.mapLabel,
     dataset_id: context.datasetId ?? null,
     scenario_id: context.scenarioId ?? null,
@@ -525,7 +529,10 @@ export async function streamEditorAssistant(
     options.disableTools
       ? null
       : (options.bundle ??
-          (await getBridgedMapBundleByAssetId(context.mapAssetId)));
+          (await getNativeMapBundle({
+            mapAssetId: context.mapAssetId,
+            mapVersionId: context.mapVersionId,
+          })));
   const traces: EditorAssistantToolTrace[] = [];
   const agent = createAgent({
     model: await createChatModel(),

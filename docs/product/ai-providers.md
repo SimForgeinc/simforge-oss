@@ -55,6 +55,28 @@ key's source and last four characters, never the key.
   before reference photos are uploaded; a rejected key or a Meshy balance below
   the floor are reported with their real cause.
 
+## Assistant map context
+
+The scene assistant runs its tools against the published native map the
+document is open on. The request names it twice —
+`editorContext.mapAssetId` (the source map, `public.map_assets.id`) and
+`editorContext.mapVersionId` (the immutable published map version) — and the
+service builds the tool bundle from that version's closure: the topology index
+for roads and lanes, the map-intel catalog (`derived/locations.json.gz`) for
+locations and selectors such as `tag:INTERSECTION`, and the derived topology
+for road names and junction arms. Every registered map version carries those
+members, so any map that opens in the editor has an assistant context: public,
+installed by the owner, or published to an account (which needs the SimCloud
+session that map access already needs). No CARLA runtime name or semantic
+publication is involved.
+
+A context the installation cannot serve is a JSON status before any stream
+starts: `400 assistant_context_missing_map` (either id absent),
+`404 map_asset_missing` / `map_version_not_found` / `map_version_mismatch`
+(the version does not belong to that map), `403 map_requires_cloud_connection`,
+and `502 map_member_invalid` when a closure member cannot be read or fails its
+schema.
+
 ## Status and settings API
 
 `GET /api/simforge/ai-providers` → `AiProviderSettingsStatus`

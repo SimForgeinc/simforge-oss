@@ -302,7 +302,7 @@ export async function getMapAssetEnrichmentManifest(
  * and the two heavy JSON blobs (overlay payload + candidate locations) from
  * S3 in parallel, then reassembles the canonical `MapAssetEnrichmentSnapshot`
  * shape. This is the path used by every server-side consumer that needs the
- * actual feature data (bridged-map, search-index builder, search-service).
+ * actual feature data (search-index builder, search-service).
  *
  * Returns `null` when the row is missing OR when the S3 URI columns are NULL
  * (legacy snapshot from before the 2026-05-11 migration). Server callers can

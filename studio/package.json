@@ -27,6 +27,7 @@
     "test:map-cache": "tsx --test app/lib/map-cache/__tests__/service.test.ts && node --test desktop/__tests__/map-cache.test.mjs",
     "test:eval": "tsx --test app/lib/evaluation/__tests__/eval-api.test.ts",
     "test:hifi-preview": "tsx --test app/lib/hifi-preview/__tests__/camera-roundtrip.test.ts worker/__tests__/native-ready-map.test.ts worker/__tests__/payload-framing.test.ts",
+    "test:native-assistant": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts app/lib/editor-map/__tests__/native-map-bundle.test.ts app/lib/editor-map/__tests__/native-map-bundle-loader.test.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

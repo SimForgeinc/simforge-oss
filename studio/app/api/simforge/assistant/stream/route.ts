@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
+import { MapAccessError } from "@/app/lib/cloud/access";
 import { getAppContext } from "@/app/lib/db/app-context";
+import { getNativeMapBundle, NativeMapBundleError } from "@/app/lib/editor-map/native-map-bundle";
 import {
   streamEditorAssistant,
   type AssistantMessageParam,
@@ -21,8 +23,9 @@ const SSE_HEADERS = {
  *
  * Events: `thinking` {text}, `delta` {text}, `tool_start` {name,input},
  * `tool_end` {name,result,uiActions}, `error` {message}, `done` {}.
- * A request that cannot start at all (no configured model, bad context)
- * is a JSON error status, never a stream that pretends to answer.
+ * A request that cannot start at all (no configured model, bad context, a
+ * map this installation cannot read) is a JSON error status, never a stream
+ * that pretends to answer.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireRouteSession(req);
@@ -35,9 +38,12 @@ export async function POST(req: NextRequest) {
   if (!body || !Array.isArray(body.messages)) {
     return NextResponse.json({ error: "invalid_assistant_request" }, { status: 400 });
   }
-  if (!body.editorContext?.mapAssetId) {
+  if (!body.editorContext?.mapAssetId || !body.editorContext.mapVersionId) {
     return NextResponse.json(
-      { error: "assistant_context_missing_map", message: "Assistant context is missing a map asset." },
+      {
+        error: "assistant_context_missing_map",
+        message: "Assistant context is missing the map asset and published map version.",
+      },
       { status: 400 },
     );
   }
@@ -55,6 +61,24 @@ export async function POST(req: NextRequest) {
     ...body.editorContext,
     appContext: getAppContext(auth.session),
   };
+
+  let bundle;
+  try {
+    bundle = await getNativeMapBundle({
+      mapAssetId: editorContext.mapAssetId,
+      mapVersionId: editorContext.mapVersionId,
+    });
+  } catch (error) {
+    if (error instanceof NativeMapBundleError) {
+      const status = error.code === "map_member_invalid" ? 502 : 404;
+      return NextResponse.json({ error: error.code, message: error.message }, { status });
+    }
+    if (error instanceof MapAccessError) {
+      const status = error.name === "NotAuthorized" ? 403 : error.name === "NotFound" ? 404 : 502;
+      return NextResponse.json({ error: error.code, message: error.message }, { status });
+    }
+    throw error;
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -81,7 +105,7 @@ export async function POST(req: NextRequest) {
               uiActions: trace.uiActions ?? [],
             });
           },
-        });
+        }, { bundle });
       } catch (error) {
         console.error("scenario assistant stream error:", error);
         enqueue("error", {
