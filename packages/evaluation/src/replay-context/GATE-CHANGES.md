@@ -856,3 +856,52 @@ have made v2 pass was measured, shown to work, and refused because its value cam
 Ingestion only, in `python/clipgt_drivable.py`: `pyarrow`, and `shapely` for the retained lane-union
 dissolve. The boundary path needs neither at scoring time — the consumer receives oriented polylines
 and island rings and does its own arithmetic.
+
+
+---
+
+## 2026-09-08 — Correction: G5 on clipgt-0009402a did NOT fail on deviation. I reported it wrong.
+
+I have written "G5 fails on lateral deviation" several times, including in a handoff. It is false
+against my own recorded receipt, and the numbers were in front of me each time.
+
+Under the declared settle rule, **both deviation criteria pass**:
+
+| criterion | measured | threshold | |
+|---|---|---|---|
+| max lateral (settled) | 0.3468 m | ≤ 0.35 m | PASS |
+| p95 lateral (settled) | 0.0973 m | ≤ 0.10 m | PASS |
+
+The unsettled pair (max 0.6845 m, p95 0.1175 m) is retained beside them and is **not** the
+statistic the bound is defined for. Quoting it as the failure was reporting a deviation failure
+against a different window than the rule declares — the precise error I spent this workstream
+refusing to make in the other direction.
+
+### What actually carried the failure
+
+`failureReasons` is now emitted by `gateG5` and lists every failing criterion, so a reader never
+has to infer the cause from the single `measured`/`threshold` pair a verdict can carry:
+
+1. `1 infraction(s) recorded`
+2. `speeding could not be evaluated: authoritative posted speed limits ...`
+3. `wrong-way could not be evaluated: authoritative lane directionality ...`
+
+No deviation entry appears. The verdict remains **failed** and the scene remains **not admitted**;
+nothing was relaxed and no value moved. The re-emitted receipt was checked field by field against
+the original — `measured`, `threshold`, `direction`, `unit` and `passed` are byte-identical, and
+the script refuses to write if any of them differ or if the verdict flips.
+
+Item 1 is the off-road infraction that v3 now scores as **0 events**. Re-scoring the record is the
+scoring owner's call, not mine; I am not editing his infraction count. Items 2 and 3 are unaffected
+by any of this work and block full G5 on their own.
+
+### Also corrected: unavailability no longer outranks a known excursion
+
+`footprintContainment` previously returned *unavailable* as soon as any corner fell past the
+labelled extent, even when another corner was known to be off the road. That is wrong: a corner
+that was decided stays decided, and an unknown elsewhere adds no doubt about it. Precedence is now
+known-excursion > unknown > clean, so unavailability cannot launder a real excursion into "no
+data" — while still refusing to invent one where nothing was decided. Both directions are pinned by
+tests (`keeps a KNOWN excursion an excursion even when another corner is unknown`, `reports
+unavailable only when nothing was decided against the vehicle`). Neither control moved: v3 still
+0 events / 201 assessed / 1 unavailable, v2 still 13 events / 0.099 m.
