@@ -157,6 +157,15 @@ of claiming to be current. GitHub's unauthenticated releases API is the
 primary source and the product site's committed `releases.json` is the
 fallback.
 
+That fallback document lives at `apps/web/public/download/releases.json` in
+the Cloud repository and is served verbatim at `/download/releases.json`. It
+is committed with empty channels so the URL is a valid 200 document before
+anything is published — which is what the update check needs in order to
+report "nothing available" rather than fail. Publication generates the file
+and overwrites it wholesale; its channels are tag pointers into a
+`releases` map keyed by tag, so a channel can never disagree with the release
+it names. Never hand-write its channel data.
+
 Automatic download (`electron-updater`) is deliberately absent: it requires a
 signed Windows build and a notarized macOS build, so it is gated on the same
 credentials as the stable channel.
