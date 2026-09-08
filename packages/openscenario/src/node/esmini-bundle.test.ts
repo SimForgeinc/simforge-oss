@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import {
   buildLaneGraph,
+  engine,
   parseSimScenarioInput,
   runSimulation,
   type TopologyIndex,
@@ -47,7 +48,7 @@ const input = parseSimScenarioInput({
     behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 20, z: 0 }] } },
   }],
 });
-const trace = runSimulation(input, { graph, guards: 'skip' }).trace;
+const trace = runSimulation(input, { graph }).trace;
 const resolver: MapDependencyResolver = {
   async resolveFullOpenDrive(mapId, expectedXodrSha256) {
     if (mapId !== input.mapId || expectedXodrSha256 !== roadDigest) throw new Error('dependency not found');
@@ -78,6 +79,7 @@ afterAll(async () => {
 describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
   it('authors a real 1.3 trajectory document and validates it against the pinned official XSD', async () => {
     const result = exportOpenScenarioXml13Esmini(input, {
+      engine: engine(),
       graph,
       roadFile: 'maps/map.xodr',
       esminiMode: 'deterministic-trajectory',
@@ -98,7 +100,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
         behavior: { route: { kind: 'polyline' as const, points: [{ x: 0, z: index * 3 }, { x: 20, z: index * 3 }] } },
       })),
     });
-    const categoryXml = exportOpenScenarioXml13Esmini(categoryInput, { graph }).content;
+    const categoryXml = exportOpenScenarioXml13Esmini(categoryInput, { engine: engine(), graph }).content;
     expect(categoryXml).toContain('vehicleCategory="truck"');
     expect(categoryXml).toContain('vehicleCategory="motorbike"');
     expect(categoryXml).not.toContain('heavyTruck');
@@ -108,6 +110,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
 
   it('keeps a separate fail-closed supported-actions profile for editable semantic interchange', async () => {
     const result = exportOpenScenarioXml13Esmini(input, {
+      engine: engine(),
       graph,
       roadFile: 'maps/map.xodr',
       esminiMode: 'supported-actions',
@@ -122,6 +125,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
       operationalConditions: { ...input.operationalConditions, weather: 'rain' },
     });
     expect(() => exportOpenScenarioXml13Esmini(nonDefaultWeather, {
+      engine: engine(),
       graph,
       esminiMode: 'supported-actions',
     })).toThrow(/unsupported/);
@@ -144,7 +148,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
       disposition: 'lowered',
       blocking: false,
     }));
-    const xml = exportOpenScenarioXml13Esmini(withIndicator, { graph }).content;
+    const xml = exportOpenScenarioXml13Esmini(withIndicator, { engine: engine(), graph }).content;
     expect(xml).toContain('indicatorLeft');
     expect((await validateOpenScenarioXml13(xml, officialXsd)).valid).toBe(true);
   });
@@ -169,6 +173,7 @@ describe('explicit esmini OpenSCENARIO 1.3.1 profile', () => {
       ],
     });
     const exported = exportOpenScenarioXml13Esmini(representative, {
+      engine: engine(),
       graph,
       roadFile: 'maps/map.xodr',
       esminiMode: 'supported-actions',
