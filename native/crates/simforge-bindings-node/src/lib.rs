@@ -278,6 +278,13 @@ impl JsRoute {
     pub fn project_point(&self, x: f64, y: f64) -> Float64Array {
         Float64Array::new(self.inner.project_point(x, y).to_vec())
     }
+    /// `[s, d]` with an explicit coarse scan step (0.5 m for stop-line-grade matching).
+    #[napi]
+    pub fn project_point_with_step(&self, x: f64, y: f64, step_m: f64) -> Result<Float64Array> {
+        Ok(Float64Array::new(
+            self.inner.project_point_with_step(x, y, step_m).js()?.to_vec(),
+        ))
+    }
     /// Lane width at arc length `s` (clamped).
     #[napi]
     pub fn width_at(&self, s: f64) -> f64 {
