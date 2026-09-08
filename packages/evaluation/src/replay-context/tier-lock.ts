@@ -115,6 +115,20 @@ export const BUILD_EVIDENCE: readonly BuildEvidenceItem[] = [
   },
   {
     item: 'one reconstruction of a calibrated sequence completing training and exporting a NuRec .usdz',
-    produced: false,
+    produced: true,
+    evidence:
+      'product-owned 24-view pinhole capture (make_calibration_capture.py) -> COLMAP dataset -> '
+      + '3DGUT train.py apps/colmap_3dgut.yaml, 3000 iterations, test PSNR 36.10 / SSIM 0.981 -> '
+      + 'export_last_nurec.usdz (5,246,764 B, 1 camera from 21 frames)',
   },
 ];
+
+/**
+ * Why `BUILD_VERIFIED` is still false with every item produced.
+ *
+ * The flag is a claim about **the image that will run the work**, and this evidence comes from
+ * the dev host. The worker image is built by the compute owner from the same pins; when the
+ * four items are reproduced there, the flag flips for that image. Reading host evidence as
+ * image verification is exactly the substitution the flag exists to prevent.
+ */
+export const HOST_EVIDENCE_DATE = '2026-09-08';
