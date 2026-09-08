@@ -239,7 +239,7 @@ class SharedKTX2Loader extends KTX2Loader {
     const sessionId = tracker.sessionId;
     const decoded = tracker.trackDecode();
     const signal = this.signal;
-    if (this.activeDownloads >= 8) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    if (this.activeDownloads >= 16) await new Promise<void>((resolve) => this.waiting.push(resolve));
     else this.activeDownloads++;
     try {
       signal?.throwIfAborted();
