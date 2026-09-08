@@ -157,7 +157,8 @@ hidden.
 | infraction | default factor | trigger (exact boundaries unit-tested) |
 |---|---|---|
 | collision-vehicle / -pedestrian / -static | 0.60 / 0.50 / 0.65 | terminal collision (shared rule with eval-server `col`); partner = nearest perceived object, typed by authored actor kind |
-| off-road | 0.75 | \|lateral offset\| > 3.0 m (strict), hysteresis clears at 2.5 m |
+| off-road | 0.75 | **v2**: the vehicle FOOTPRINT leaves the authoritative drivable-area polygons. **v1**: \|lateral offset\| > 3.0 m (strict), hysteresis clears at 2.5 m |
+| lane-departure | 0.75 | **v2 only**: \|lateral offset\| > 3.0 m (strict), hysteresis clears at 2.5 m — v1's off-road rule, under the name of what it measures |
 | wrong-way | 0.70 | ≥ 1.0 m cumulative reverse route-arc while speed > 0.5 m/s |
 | red-light | 0.70 | stop-line crossing while red (`sig` trace annotations; inert without signals) |
 | stuck | 0.80 | speed < 0.3 m/s for ≥ 8 s continuously |
@@ -168,6 +169,35 @@ goal termination forces 1. Reported without score impact: TTC minima over
 closing perceived objects (`ttc-critical` warnings below 1.5 s), comfort
 accel/jerk bound violations (3.5 m/s², 8 m/s³), and deadline misses.
 All thresholds and factors are per-scenario overridable (`suite[].scoring`).
+
+### Metric versions, and why off-road split in two
+
+The manifest stamps `provenance.metricVersion`. Results keep the version that
+scored them and are never re-scored under another: a v1 number is a v1 claim.
+
+- `simforge.eval-metrics/v1` — off-road is lane-relative lateral offset.
+- `simforge.eval-metrics/v2` — off-road is footprint containment in the
+  authoritative drivable-area polygons; the old rule survives as
+  `lane-departure`.
+
+v1's rule measured distance from a lane CENTRELINE, which is not the same
+question as "did the vehicle leave the road". On a reconstructed clip the
+recorded ground-truth drive — 0.16 m of tracking error against its own path —
+was reported as a 5.45 m lane error and therefore off-road, while never leaving
+the drivable surface. A metric that flags the ground truth is measuring the
+wrong thing, so v2 asks the containment question directly and keeps the
+centreline question as its own, separately named infraction. Both can fire; they
+are different claims.
+
+v2 evaluates the four corners of the actor's box at its pose (dims from the
+spec, yaw from the trace), not its centre, and reports the worst corner's
+outside-distance so a marginal exit is legible rather than binary.
+
+**Absent geometry is `unavailable`, never a pass.** With no drivable-area block,
+empty polygons, or a decision outside the polygons' time support, v2 reports
+off-road as unavailable and the factor does not apply — the episode is not
+scored as clean. A drivable-area frame that disagrees with the ego frame is a
+refusal (`drivable_area_frame_mismatch`), not a silent transform.
 
 SimForge driving scores are **our** metric definition, not an NVIDIA benchmark
 score: a number may only be called an AlpaSim (or any upstream) score if that
