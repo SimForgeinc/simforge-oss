@@ -49,7 +49,15 @@ export type ComputeJobKind =
   | "alpamayo.openloop"
   | "alpamayo.text"
   | "alpamayo.closedloop-episode"
-  | "reconstruct.nurec";
+  | "reconstruct.nurec"
+  /**
+   * Turning a render this product produced into an evaluation clip bundle.
+   * A job rather than an API call because the conversion needs the pinned
+   * decoder the worker image carries, and because one audited conversion with
+   * provenance and settlement serves both hosts - the alternative is a script
+   * on someone's machine producing a file nobody can trace.
+   */
+  | "ingest.render-clip";
 
 /**
  * Job lifecycle. `dispatch_unknown` is a real state, not an error: the
@@ -83,7 +91,9 @@ export type ComputeJobInputRole =
   | "video"
   | "scenario"
   | "replay-context"
-  | "clip-bundle";
+  | "clip-bundle"
+  /** Optional navigation raster alongside an open-loop clip bundle. */
+  | "nav-raster";
 
 export type ComputeJobModelRef = {
   family: ModelFamilyId;
@@ -165,7 +175,16 @@ export type ComputeJobSubmission = {
     model: ComputeJobModelRef;
     inputs: { role: ComputeJobInputRole; artifactId: string }[];
     /** Opaque to SimCloud: `simforge.openloop-params/v2`. */
-    params: unknown;
+    params?: unknown;
+    /**
+     * The render this evaluation's clip came from, when it came from one.
+     *
+     * A named field rather than something tucked into `params`: the control
+     * plane stores it on the job and on the artifact, params refuse anything
+     * path- or URL-shaped, and this is the link that makes the chain from
+     * authored scenario to scored result readable without reconstruction.
+     */
+    sourceRenderJobId?: string;
   };
 };
 
