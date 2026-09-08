@@ -541,3 +541,49 @@ set can, and that is a contract-supported rig rather than one invented to fit th
 
 The package's own `map.xodr` (276,237 B) is extracted and bound to the bundle, so the lane
 context G5 needs comes from the scene rather than from anywhere else.
+
+
+---
+
+## 2026-09-08 — G5 gains the settle window its own bound was defined with
+
+**A misapplication corrected, not a bar relaxed.** `docs/policy-step.md` — the document G5's
+0.35 m / 0.10 m bounds were taken from — states them as *"abs cross-track error (after 1 s
+settle) | p50 0.14 m, p95 0.24 m, max 0.29 m | <= 0.35 m"*. G5 applied those numbers without the
+window they were measured under. A pure-pursuit controller acquiring a path from its initial
+pose has a transient that belongs to the controller's initialisation, not to the scene under
+test, which is exactly why the source excludes it.
+
+`stockReplaySettleS: 1` is now part of the threshold set, and `StockReplayMeasurement` carries
+`unsettled` so the un-excluded statistics are recorded permanently beside the gated ones. No
+verdict already on the record is revised by this: 007a5809's G5 failure was a *systematic*
+0.6 m offset across the whole run (p50 0.5975 m), which no settle window touches.
+
+### clipgt-0009402a G5, measured
+
+| Reference | max | p50 | p95 |
+|---|---|---|---|
+| vehicle pose, whole run | 0.4251 | 0.0421 | 0.1090 |
+| rig pose, whole run | 0.6845 | 0.0480 | 0.1175 |
+| after 2 s (reported) | 0.111 | 0.041 | 0.080 |
+
+Every violation falls in steps 3–10 and the tail is inside both bounds — an acquisition
+transient at 31.4 m/s, not drift. The evaluation owner ruled out the obvious spec explanation
+by setting the initial lane reference to the recorded lateral offset (±0.352) and getting
+*exactly zero* change, because the engine spawns from the explicit recorded pose.
+
+**Caveat recorded against a future pass:** that executor envelope was measured at **8 m/s** on
+an S-curve. This drive is **31.4 m/s**, nearly four times faster. Whether the bound transfers
+to that speed is not established by anything we hold, so a pass after the settle window is a
+pass against a bound of unproven applicability at this speed, and will be reported that way.
+
+### Infractions still fail — not discounted
+
+off-road 1, wrong-way 1, speeding 1; zero required. The speeding infraction is computed against
+speed limits in a `map.xodr` nobody has verified, against a human who drove 113 km/h, and the
+lane binding is 1.101 m off nearest-lane (versus 0.50 m on 007a5809) — so these plausibly
+measure the map rather than the drive. Plausibly is not evidence. **The condition fails, the
+scene is not admitted, and making it pass needs an authoritative map rather than a judgement
+call.**
+
+State: six real scenes, one clears G1–G4, none admitted.

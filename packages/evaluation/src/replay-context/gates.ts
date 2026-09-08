@@ -64,6 +64,16 @@ export interface GateThresholds {
   readonly stockReplayMaxLateralM: number;
   /** G5: p95 lateral deviation (m) for the same replay. */
   readonly stockReplayP95LateralM: number;
+  /**
+   * G5: seconds excluded from the start of the replay before deviation is measured.
+   *
+   * Not a tolerance — it is part of the bound's own definition. `docs/policy-step.md` states
+   * its p95 <= 0.35 m executor envelope "after 1 s settle", because a pure-pursuit controller
+   * acquiring a path from its initial pose has a transient that is a property of the
+   * controller's initialisation, not of the scene under test. Applying the number without the
+   * window the number was measured under was a misapplication on our side.
+   */
+  readonly stockReplaySettleS: number;
 }
 
 /** Documented defaults; see the module docstring for the justification of each. */
@@ -76,6 +86,7 @@ export const DEFAULT_GATE_THRESHOLDS: GateThresholds = {
   trackSampleGapUs: 200_000,
   stockReplayMaxLateralM: 0.35,
   stockReplayP95LateralM: 0.10,
+  stockReplaySettleS: 1,
 };
 
 /** Lateral offsets (m) probed by G2. The largest passing one becomes the envelope. */
@@ -277,12 +288,17 @@ export function gateG4(consistency: DynamicsConsistency, thresholds: GateThresho
 /* ----------------------------------------------------------------------- G5 */
 
 export interface StockReplayMeasurement {
+  /** Measured AFTER `stockReplaySettleS`; see that field for why. */
   readonly maxLateralM: number;
   readonly p95LateralM: number;
   readonly infractions: number;
   readonly stepsCompared: number;
   /** Trace the measurement was taken from, for the persisted verdict. */
   readonly traceRef?: string;
+  /** Seconds excluded at the start; must equal the threshold's settle window. */
+  readonly settleS?: number;
+  /** The same statistics WITHOUT any exclusion, always recorded alongside. */
+  readonly unsettled?: { readonly maxLateralM: number; readonly p95LateralM: number };
 }
 
 /**
@@ -301,6 +317,8 @@ export function gateG5(
     p95ThresholdM: thresholds.stockReplayP95LateralM,
     infractions: measurement.infractions,
     stepsCompared: measurement.stepsCompared,
+    settleS: measurement.settleS ?? thresholds.stockReplaySettleS,
+    ...(measurement.unsettled === undefined ? {} : { withoutSettleWindow: measurement.unsettled }),
     ...(measurement.traceRef === undefined ? {} : { traceRef: measurement.traceRef }),
   });
   return {
