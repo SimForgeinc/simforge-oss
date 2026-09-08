@@ -44,7 +44,7 @@ function json(status: number, error: string, detail: string) {
 }
 
 export function proxy(request: NextRequest) {
-  if (EXEMPT_PATHS.has(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith("/api/local-objects/")) return NextResponse.next();
+  if (EXEMPT_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
   const controlToken = process.env[LOCAL_HOST_TOKEN_ENV];
   if (!controlToken) {
     return json(503, "host_unsupervised", "The Studio host is running without a supervisor control token; start it with `pnpm dev`, `pnpm start` or the desktop app.");
@@ -75,5 +75,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static/|favicon.ico$|icon.svg$).*)"],
+  // `/api/local-objects/**` is excluded from the matcher, not waved through
+  // inside the handler. A matched request has its body buffered by the
+  // framework before this function runs, capped at 10 MiB and TRUNCATED past
+  // it, which silently cut render uploads short and surfaced as a checksum
+  // mismatch. The route verifies its own expiring method/path/query signature
+  // on every verb and streams the body itself, so excluding it removes a
+  // buffer rather than a check.
+  matcher: ["/((?!_next/static/|favicon.ico$|icon.svg$|api/local-objects/).*)"],
 };
