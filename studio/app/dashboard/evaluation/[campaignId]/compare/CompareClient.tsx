@@ -42,6 +42,7 @@ const VERDICT_LABEL: Record<EvalComparabilityVerdict, string> = {
   matched: "Matched",
   "sensor-different": "Different cameras",
   "runtime-different": "Different runtime",
+  "incomplete-identity": "Identity incomplete",
   incomparable: "Not comparable",
 };
 
@@ -49,6 +50,7 @@ const VERDICT_CLASS: Record<EvalComparabilityVerdict, string> = {
   matched: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-transparent",
   "sensor-different": "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-transparent",
   "runtime-different": "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-transparent",
+  "incomplete-identity": "bg-muted text-muted-foreground border-transparent",
   incomparable: "bg-muted text-muted-foreground border-transparent",
 };
 
@@ -61,6 +63,7 @@ const UNRANKABLE_LABEL: Record<string, string> = {
   "metric-unavailable": "metric unavailable",
   "sensor-different": "different cameras",
   "runtime-different": "different runtime",
+  "incomplete-identity": "identity not fully recorded",
   incomparable: "not comparable",
 };
 
@@ -326,7 +329,9 @@ export function CompareClient({
             <CardDescription>
               A metric is ranked only over rows where every column matched the baseline and defined
               it. Where a run saw different cameras or ran on a different runtime, its numbers are
-              shown as readings and not ordered — the difference would not be the model&apos;s.
+              shown as readings and not ordered — the difference would not be the model&apos;s. A
+              run that did not record its full identity is never treated as matching another:
+              two unknowns are not an agreement.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">

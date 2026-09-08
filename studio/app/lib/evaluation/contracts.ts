@@ -278,6 +278,8 @@ export type EvalComparabilityVerdict =
   | 'matched'
   | 'sensor-different'
   | 'runtime-different'
+  /** A side did not record enough identity to decide; never a match. */
+  | 'incomplete-identity'
   | 'incomparable';
 
 /** A column's run for one row: its result, its identity, its gaps. */

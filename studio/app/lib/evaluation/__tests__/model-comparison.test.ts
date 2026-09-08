@@ -223,3 +223,42 @@ test("a column with no comparable rows reports null, never zero", () => {
 test("two columns of the same run are matched: a repeat is a control", () => {
   assert.equal(comparability(cell(), cell()).verdict, "matched");
 });
+
+test("two unknowns are never a match: absent identity is incomplete, not equal", () => {
+  // Both sides omit the rig profile version and the runtime addon digest. Every
+  // field they DID record agrees, so an equality-of-nulls rule would rank them.
+  const blind = (score: number) =>
+    cell({
+      metrics: { drivingScore: score },
+      identity: identity({
+        rig: rig({ profileVersion: null }),
+        runtime: { engineVersion: "0.1.0", abiVersion: 2, addonSha256: null, decisionHz: 10 },
+      }),
+    });
+  const detail = comparability(blind(0.6), blind(0.8));
+  assert.equal(detail.verdict, "incomplete-identity");
+  assert.ok(detail.differing.includes("rig.profileVersion"));
+  assert.ok(detail.differing.includes("runtime.addonSha256"));
+
+  // And it is not rankable: an unknown-identity row makes the metric a set of
+  // readings rather than an ordering.
+  const ranking = rankMetric(
+    [{ scenarioId: "s1", seed: 1, cells: [blind(0.6), blind(0.8)] }],
+    2,
+    "drivingScore",
+  );
+  assert.equal(ranking.orderable, false);
+  assert.equal(ranking.columns[0]!.mean, null);
+  assert.deepEqual(
+    ranking.excluded.map((entry) => entry.reason),
+    ["incomplete-identity"],
+  );
+});
+
+test("a completed run with a partial identity is not silently comparable", () => {
+  // The overclaim this guards: "these are completed runs, so nothing fake is
+  // possible". A completed artifact can still omit its scenario input digest.
+  const complete = cell();
+  const partial = cell({ scenarioInputDigest: null });
+  assert.equal(comparability(complete, partial).verdict, "incomplete-identity");
+});

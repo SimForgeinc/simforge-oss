@@ -389,6 +389,7 @@ async function comparisonCell(
   const runtime = (extra["runtime"] ?? {}) as Record<string, unknown>;
   const timeBase = (extra["timeBase"] ?? {}) as Record<string, unknown>;
   const scoreDoc = (score ?? {}) as Record<string, unknown>;
+  const canonicalTimeBase = normalizeTimeBase(timeBase);
   const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
   const num = (value: unknown): number | null => (typeof value === "number" ? value : null);
   const bool = (value: unknown): boolean | null => (typeof value === "boolean" ? value : null);
@@ -441,15 +442,10 @@ async function comparisonCell(
         extrinsicsSha256: text(rig["extrinsicsSha256"]),
         historyFrames: num(rig["framesPerCamera"]),
         historyDtS: num(rig["historyDtS"]),
-        cadenceHz: num(rig["cadenceHz"]) ?? num(timeBase["modelHz"]),
-        renderFps: num(timeBase["renderFps"]) ?? num(timeBase["render_fps"]),
-        // Both spellings: the converter writes snake_case and the renderer's
-        // provenance writes camelCase, and a run recorded by either must not
-        // read as "cadence unknown".
-        cadenceDividesExactly:
-          bool(timeBase["cadenceDividesExactly"]) ?? bool(timeBase["cadence_divides_exactly"]),
-        worstResampleErrorS:
-          num(timeBase["worstResampleErrorS"]) ?? num(timeBase["worst_resample_error_s"]),
+        cadenceHz: num(rig["cadenceHz"]) ?? canonicalTimeBase.modelHz,
+        renderFps: canonicalTimeBase.renderFps,
+        cadenceDividesExactly: canonicalTimeBase.cadenceDividesExactly,
+        worstResampleErrorS: canonicalTimeBase.worstResampleErrorS,
       },
       runtime: {
         engineVersion: text(runtime["engineVersion"]),
@@ -458,6 +454,36 @@ async function comparisonCell(
         decisionHz: num(extra["decisionHz"]),
       },
     },
+  };
+}
+
+/**
+ * THE time-base ingestion boundary.
+ *
+ * Two legitimate external producers write this block: the clip converter emits
+ * snake_case and the renderer's provenance emits camelCase. Both are normalised
+ * here, once, into the single internal shape the comparison speaks — so no
+ * downstream code carries a spelling fallback, and a producer that writes a
+ * third spelling shows up as absent identity (which is `incomplete-identity`,
+ * not `matched`) instead of being silently accommodated.
+ */
+type CanonicalTimeBase = {
+  readonly renderFps: number | null;
+  readonly modelHz: number | null;
+  readonly cadenceDividesExactly: boolean | null;
+  readonly worstResampleErrorS: number | null;
+};
+
+function normalizeTimeBase(raw: Record<string, unknown>): CanonicalTimeBase {
+  const num = (value: unknown): number | null => (typeof value === "number" ? value : null);
+  const bool = (value: unknown): boolean | null => (typeof value === "boolean" ? value : null);
+  return {
+    renderFps: num(raw["renderFps"]) ?? num(raw["render_fps"]),
+    modelHz: num(raw["modelHz"]) ?? num(raw["model_hz"]),
+    cadenceDividesExactly:
+      bool(raw["cadenceDividesExactly"]) ?? bool(raw["cadence_divides_exactly"]),
+    worstResampleErrorS:
+      num(raw["worstResampleErrorS"]) ?? num(raw["worst_resample_error_s"]),
   };
 }
 

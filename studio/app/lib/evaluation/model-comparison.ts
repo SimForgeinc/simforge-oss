@@ -39,11 +39,19 @@ export type ComparisonRig = {
   /** Human-facing preset name, e.g. `alpamayo-4cam`. */
   readonly profile: string | null;
   /**
-   * `modelRigProfileVersion(family)`, e.g. `alpamayo-1@ea8ec92ae4ae`: a digest
-   * over the model's camera order and input cadence TOGETHER with the rig's
-   * resolved sensor geometry. Equal implies an identical rig; unequal is at
-   * least sensor-different even when the profile NAME matches, which is the
-   * cheap exact test the long field list below cannot give on its own.
+   * `modelRigProfileVersion(family)` from '@simforge-oss/engine', shaped
+   * `family@12hex`: a digest over the model's camera order and input cadence
+   * TOGETHER with the rig's resolved sensor geometry. Equal implies an
+   * identical rig; unequal is at least sensor-different even when the profile
+   * NAME matches, which is the cheap exact test the long field list below
+   * cannot give on its own.
+   *
+   * READ AT RUNTIME, never pinned as a literal. The digest's input changed when
+   * the helper moved into the engine (JSON.stringify insertion order ->
+   * canonicalJson sorted keys), so any value quoted before that move is dead.
+   * Nothing here stores an expected value: the field is compared between two
+   * runs, so a scheme change degrades a pair to not-comparable rather than to a
+   * false match — which is the direction that cannot produce a wrong ranking.
    */
   readonly profileVersion: string | null;
   readonly profileSha256: string | null;
@@ -132,7 +140,21 @@ export type ComparisonCellResult = {
   readonly identity: ComparisonIdentity;
 };
 
-export type ComparabilityVerdict = 'matched' | 'sensor-different' | 'runtime-different' | 'incomparable';
+export type ComparabilityVerdict =
+  | 'matched'
+  | 'sensor-different'
+  | 'runtime-different'
+  | 'incomparable'
+  /**
+   * A side did not record enough of its identity to decide.
+   *
+   * Distinct from `incomparable`, which is a known difference. Two nulls are
+   * NOT a match: an artifact that omitted its rig geometry, cadence, revision,
+   * precision, seed or scenario input digest has not told us the runs were
+   * alike, and treating absent-equals-absent as equality is how an
+   * uncontrolled pair gets ranked.
+   */
+  | 'incomplete-identity';
 
 export type ComparabilityDetail = {
   readonly verdict: ComparabilityVerdict;
@@ -142,6 +164,35 @@ export type ComparabilityDetail = {
 
 const sameIds = (a: readonly number[], b: readonly number[]): boolean =>
   a.length === b.length && a.every((value, index) => value === b[index]);
+
+/**
+ * Identity a cell MUST record before any equality claim can be made about it.
+ *
+ * Absence is not agreement. If either side is missing one of these, the pair is
+ * `incomplete-identity` and never `matched`, however many other fields happen
+ * to be equal — which also means a comparison of completed runs is not
+ * automatically safe, because a completed artifact can still omit fields.
+ */
+function missingIdentity(cell: ComparisonCellResult): string[] {
+  const missing: string[] = [];
+  if (cell.scenarioInputDigest === null) missing.push('scenarioInputDigest');
+  if (cell.identity.revision === null) missing.push('revision');
+  if (cell.identity.quant === null) missing.push('quant');
+  if (cell.identity.checkpointDigest === null) missing.push('checkpointDigest');
+  if (cell.identity.policySeed === null) missing.push('policySeed');
+  const rig = cell.identity.rig;
+  if (rig.profileVersion === null) missing.push('rig.profileVersion');
+  if (rig.cameraIds.length === 0) missing.push('rig.cameraIds');
+  if (rig.resolution.width === null || rig.resolution.height === null) missing.push('rig.resolution');
+  if (rig.cadenceHz === null) missing.push('rig.cadenceHz');
+  if (rig.renderFps === null) missing.push('rig.renderFps');
+  if (rig.cadenceDividesExactly === null) missing.push('rig.cadenceDividesExactly');
+  const runtime = cell.identity.runtime;
+  if (runtime.engineVersion === null) missing.push('runtime.engineVersion');
+  if (runtime.addonSha256 === null) missing.push('runtime.addonSha256');
+  if (runtime.decisionHz === null) missing.push('runtime.decisionHz');
+  return missing;
+}
 
 function rigDifferences(a: ComparisonRig, b: ComparisonRig): string[] {
   // The profile version is a digest over camera order, input cadence and
@@ -200,6 +251,10 @@ export function comparability(
   ) {
     return { verdict: 'incomparable', differing: ['scenarioInputDigest'] };
   }
+  // Absence before equality: a field neither side recorded cannot make them
+  // alike, so an incomplete identity is reported as such rather than compared.
+  const missing = [...new Set([...missingIdentity(a), ...missingIdentity(b)])].sort();
+  if (missing.length > 0) return { verdict: 'incomplete-identity', differing: missing };
   if ((a.identity.policySeed ?? null) !== (b.identity.policySeed ?? null)) {
     return { verdict: 'runtime-different', differing: ['policySeed'] };
   }
@@ -316,7 +371,15 @@ export function rankMetric(
     }
     if (reason !== null) {
       excluded.push({ scenarioId: row.scenarioId, seed: row.seed, reason });
-      if (reason === 'sensor-different' || reason === 'runtime-different') orderable = false;
+      if (
+        reason === 'sensor-different' ||
+        reason === 'runtime-different' ||
+        reason === 'incomplete-identity'
+      ) {
+        // An unknown-identity row is not evidence the rest are controlled
+        // either: the metric is a set of readings, not an ordering.
+        orderable = false;
+      }
       continue;
     }
     for (let index = 0; index < columnCount; index += 1) {
