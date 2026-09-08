@@ -78,7 +78,7 @@ const flags = parseFlags(process.argv.slice(2));
 if (!flags.preset) {
   process.stderr.write(
     'usage: simforge-eval-rig --preset <rig id> --scene <scene.json> [--out rig.json] [--ego <actorId>] ' +
-      '[--actor-dims l,w,h] [--size WxH]\n' +
+      '[--actor-dims length,width,height] [--size WxH]\n' +
       `known rigs: ${BUILT_IN_SENSOR_RIGS.map((rig) => rig.id).join(', ')}\n`,
   );
   process.exit(2);
