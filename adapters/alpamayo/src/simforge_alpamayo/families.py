@@ -340,9 +340,24 @@ ALPAMAYO_2_SUPER = Family(
             status="supported",
             min_vram_gib=80.0,
             note=(
-                "NVIDIA measured 72,115 MiB device peak (7-cam, 1 sample, SDPA, "
-                "10 diffusion steps) on an H100 80GB. No smaller device is "
-                "validated."
+                "MEASURED on our own pinned runtime (torch 2.8.0+cu128, code "
+                "revision beb2977d9a7e, weights revision 00554695e729, SDPA) "
+                "on an H100 80GB (81,089 MiB = 79.19 GiB), 6 cameras / 1 "
+                "sample: load alone peaks at 68,309 MiB allocated (66.71 "
+                "GiB) with 69,582 MiB device-used (67.95 GiB); a forward "
+                "pass peaks at 70,752 MiB allocated (69.09 GiB) with 72,608 "
+                "MiB device-used (70.91 GiB), act latency 3,697 ms. The act "
+                "therefore adds roughly 2.4 GiB over the load. Figures are "
+                "in raw MiB with explicit conversions. Load TIME is not a "
+                "model property: the same snapshot loaded in 23.2 s warm and "
+                "171.4 s cold, which measures volume read state. This is a "
+                "load-and-forward-pass envelope ONLY: the observation was "
+                "synthetic with no recorded future, so scored is false and "
+                "minADE/minFDE are empty by construction. It says nothing "
+                "about accuracy and is not upstream parity. NVIDIA "
+                "separately report 72,115 MiB device peak at 7 cameras with "
+                "10 diffusion steps; ours is a 6-camera profile and the two "
+                "are not claimed to agree. No smaller device is validated."
             ),
         ),
         QuantOffer(
