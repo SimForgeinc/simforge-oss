@@ -24,7 +24,16 @@ const heavy = Chakra_Petch({
   display: "swap",
 });
 
-const SITE_URL = "https://simforge.ai";
+// The origin this build addresses, not the repository's production one. A
+// packaged desktop build is configured for its own Cloud origin, and every
+// absolute URL the pages resolve against metadataBase must follow it, or an
+// installed app emits and fetches production URLs it was never pointed at.
+// The production origin stays the default for the web deployment, which sets
+// neither variable.
+const SITE_URL =
+  process.env.SIMFORGE_CLOUD_ORIGIN?.trim() ||
+  process.env.SIMFORGE_DESKTOP_CLOUD_ORIGIN?.trim() ||
+  "https://simforge.ai";
 const SITE_TITLE = "SimForge — Data Infrastructure for Physical AI";
 const SITE_DESCRIPTION =
   "SimForge turns real-world streets into simulation-ready digital twins. Compose scenarios, render multi-sensor synthetic data, and validate autonomous systems in CARLA and Unreal Engine — all from the browser.";
