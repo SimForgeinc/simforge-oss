@@ -285,6 +285,12 @@ export async function renderProbe(
   const command = tier.splatCommand ?? ['simforge-oss-splat'];
   const env: NodeJS.ProcessEnv = { ...process.env };
   if (tier.threedgrutRoot !== undefined) env['THREEDGRUT_ROOT'] = tier.threedgrutRoot;
+  // The renderer shells out to siblings of its own entrypoint: `slangc`, the Slang compiler the
+  // 3DGUT tracer invokes at runtime, lives in the same venv bin directory. Invoking the console
+  // script by absolute path leaves that directory off PATH, so the tracer fails with ENOENT on
+  // slangc after the scene has already loaded. Prepend it.
+  const commandDir = path.dirname(path.resolve(command[0]!));
+  env['PATH'] = `${commandDir}${path.delimiter}${env['PATH'] ?? ''}`;
   const result = await run(command[0]!, [...command.slice(1), 'job', '--params', paramsPath, '--out-dir', outDir], env);
   if (result.code === 0) return outDir;
   const detail = result.stderr.trim() || result.stdout.trim();
