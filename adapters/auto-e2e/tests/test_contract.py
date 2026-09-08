@@ -393,3 +393,19 @@ def test_nav_encoder_widths_decompose_into_map_plus_route():
 def test_measured_mismatches_are_recorded():
     assert len(KNOWN_PLANNER_MISMATCHES) == 8
     assert "negative" in NO_KWARG_RECONCILIATION
+
+
+def test_public_usability_claim_matches_what_was_executed():
+    """Guards against the overclaim I made from reading docs alone: the
+    architecture demo running is not a trained-inference path."""
+    demo = contract.PUBLIC_DEMO_EXECUTION
+    assert demo["ran"] and demo["configs_completed"] == 1
+    assert demo["configs_attempted"] == 2          # one crashed at HEAD
+    assert not demo["documented_output_fully_reproduced"]
+    assert not contract.PUBLIC_DEMO_LOADS_WEIGHTS
+
+    statement = contract.PUBLIC_USABILITY_STATEMENT
+    assert "NOT ESTABLISHED" in statement
+    assert "TRAINED" in statement
+    # The retrievable-vs-loadable distinction must survive in the statement.
+    assert "do not load into the published code" in statement

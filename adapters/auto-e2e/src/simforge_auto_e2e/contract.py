@@ -425,3 +425,66 @@ def apply_history_masking(
             "an unmasked newest acceleration is off-distribution"
         ),
     }
+
+
+# -- what we actually EXECUTED of the public path ------------------------
+
+#: Upstream's documented consumer path is TRIAL.md: EC2 g5, clone, make
+#: setup, make test. Its documented expected output is SHAPES, and
+#: Model/inference/run_forward_pass.py feeds torch.randn/torch.rand for
+#: camera tiles, map context, route mask, visual history, egomotion and the
+#: projection matrix. It loads no checkpoint; there is no weight-download
+#: step in the guide.
+PUBLIC_DEMO_ENTRYPOINT = "Model/inference/run_forward_pass.py"
+PUBLIC_DEMO_LOADS_WEIGHTS = False
+
+#: EXECUTED, not read. Ran the entrypoint on CPU in an isolated env.
+#: Deviations from the documented environment are stated because they are
+#: the limits of this evidence: torch 2.14.0+cpu rather than the pinned
+#: 2.12 installed via `make setup`, and a local CPU rather than an EC2 g5.
+PUBLIC_DEMO_EXECUTION = {
+    "ran": True,
+    "device": "cpu",
+    "configs_attempted": 2,
+    "configs_completed": 1,
+    # First config (bezier planner) printed a real forward-pass result.
+    "completed": {
+        "planner_mode": "bezier",
+        "trajectory_shape": (2, 128),
+        "printed": "COMPLETE",
+    },
+    # Second config crashed. This is a rank bug, not a torch-version
+    # artifact: _project_bev calls bev_features.flatten(2) on a tensor that
+    # arrives rank-2, so the [B, C, H, W] contract it documents is not what
+    # it receives.
+    "failed": {
+        "planner_mode": "flow_matching",
+        "error": "IndexError: Dimension out of range (expected to be in "
+                 "range of [-2, 1], but got 2)",
+        "site": "trajectory_planning/flow_matching_planner.py:290 _project_bev",
+        "upstream_own_warning": (
+            "reactive_e2e.py already warns flow_matching is NOT correctly "
+            "trainable via the current train_il loop and says to use bezier"
+        ),
+    },
+    # The guide's documented output also lists a [14] visual feature and
+    # four [8,1440,7,7] future-feature tensors. Our run printed only the
+    # trajectory, so the documented output was NOT reproduced in full.
+    "documented_output_fully_reproduced": False,
+}
+
+#: The claim this evidence does and does not support. Kept explicit because
+#: I previously asserted the stronger version from reading the docs alone.
+PUBLIC_USABILITY_STATEMENT = (
+    "ESTABLISHED: the public architecture runs. Upstream's documented "
+    "demo entrypoint executed here and produced a (2, 128) trajectory from "
+    "random inputs under its default bezier planner, and older trained "
+    "checkpoints (registry versions 1-35) are retrievable through the "
+    "documented MLflow route. NOT ESTABLISHED: a public path to TRAINED "
+    "inference. The demo loads no weights, the retrievable checkpoints do "
+    "not load into the published code, and the guide's full documented "
+    "output was not reproduced - one of its two planner configurations "
+    "crashes at HEAD. No claim is made that an arbitrary user can complete "
+    "the documented flow on the documented environment, which we have not "
+    "run."
+)
