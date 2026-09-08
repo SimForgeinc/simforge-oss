@@ -280,7 +280,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
 
   const anyLive =
     view?.installs.some(
-      (entry) => entry.state === "downloading" || entry.state === "verifying",
+      (entry) => entry.state.state === "downloading" || entry.state.state === "verifying",
     ) ?? false;
 
   // The light poll: install progress is durable on disk, so polling is
