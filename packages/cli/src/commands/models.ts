@@ -334,7 +334,10 @@ export async function modelsPrepare(options: ModelsPrepareOptions): Promise<numb
         process.stderr.write(`${JSON.stringify(progress)}\n`);
       },
     });
-    emit({ schema: 'simforge.models-prepare/v1', ...record }, { pretty: options.pretty ?? false });
+    emit(
+      { schema: 'simforge.models-prepare/v1', family, quant, runtime: record },
+      { pretty: options.pretty ?? false },
+    );
     return 0;
   } catch (error) {
     const code =
