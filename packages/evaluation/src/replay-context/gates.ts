@@ -254,8 +254,10 @@ export interface DynamicsConsistency {
   readonly maxTrackSampleGapUs: number;
   readonly egoPathIntersections: number;
   readonly tracksChecked: number;
-  /** Published camera reference instants that fall outside the recorded window. */
+  /** Published camera reference instants outside the reconstruction's recorded time support. */
   readonly framesOutsideWindow: number;
+  /** Microseconds by which the episode's ego window runs past the reconstruction's support. */
+  readonly egoBeyondSupportUs: number;
 }
 
 /** G4 — actor tracks are time-aligned with the cameras and consistent with the recorded ego path. */
@@ -264,6 +266,7 @@ export function gateG4(consistency: DynamicsConsistency, thresholds: GateThresho
     egoPathIntersections: consistency.egoPathIntersections,
     tracksChecked: consistency.tracksChecked,
     framesOutsideWindow: consistency.framesOutsideWindow,
+    egoBeyondSupportUs: consistency.egoBeyondSupportUs,
   });
   return {
     ...base,

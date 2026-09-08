@@ -83,3 +83,202 @@ its tracks are genuinely sparser, not whether the threshold should move.
 
 G1, G2, G3 and G5 definitions and thresholds are untouched. G1/G2/G5 remain unmeasured: they
 need the renderer, which needs the 3DGRUT tracer build.
+
+
+---
+
+## 2026-09-07 — G4's frame-window check re-pointed at the reconstruction's time support
+
+**Status when changed:** still no renderer result; G1/G2/G5 unmeasured.
+
+**Same scene** as above, imported through the *scene-directory* path (sidecars +
+hash-verified package) rather than the package-only path.
+
+### Superseded measurement, retained
+
+| Metric | Measured | Verdict |
+|---|---|---|
+| published reference instants outside the **episode** window | **4 of 4** | FAIL |
+| published reference instants outside the **reconstruction's time support** | **0 of 4** | pass |
+
+### Why the first was wrong
+
+The two windows are not the same thing and the check was using the wrong one:
+
+- reconstruction time support (`background.metadata.timeRangeUs`): 7,109,278,000 – 7,129,278,000 µs
+- evaluated episode (`ego-reference.json`): 7,112,500,060 – 7,132,500,060 µs
+- the four published reference frames: 7,109,393,945 – 7,109,458,707 µs
+
+The frames sit **3.1 s before the episode starts** but comfortably inside the reconstruction.
+They are frames of the same drive; the episode is simply a 20 s window selected from a longer
+recording. Failing them said only that we had compared against the wrong interval. The check's
+purpose — "do the frames and the trajectory describe the same drive?" — is answered by the
+reconstruction's extent, so the bundle now carries `geometry.timeSupportUs` and G4 uses it.
+
+### A real finding this surfaced, kept rather than smoothed
+
+The episode's ego reference runs **3,222,060 µs (3.22 s) past the end of the reconstruction's
+support** (`egoBeyondSupportUs`). Those last 3.22 s cannot be rendered at all — the splat
+backend rejects a tick outside support — so an episode driven to the end of the ego reference
+would leave the renderable world before it ran out of trajectory.
+
+This is now enforced rather than merely reported: `createEnvelopeMonitor` clamps the
+enforceable window to the **intersection** of the episode and the reconstruction support, so
+an episode entering that tail truncates with `envelope_exceeded` / `time-support` instead of
+being rendered from geometry that does not exist. G4 reports the overhang in its detail so the
+scene's shortfall is visible in the bundle.
+
+
+---
+
+## 2026-09-08 — G2's unsupported-pixel test could never fire
+
+**Status when changed:** found by the first real render, and fixed before the coverage numbers
+it produces were used for anything. Both the vacuous and the corrected measurements are below.
+
+### The defect
+
+`_unsupported_mask` treated a pixel as having no surface when its depth was non-finite or
+non-positive. A splat render never produces either: sky and no-hit pixels come back as finite,
+positive depth in the hundreds to thousands of metres. Measured on the real renders, `<=0`
+pixels: **0 of 2,073,600** per frame; depth ranged 2.12 m – 19,011 m.
+
+So G2 measured **exactly zero newly-unsupported pixels at every offset** and passed
+unconditionally. A gate that cannot fail is worse than one that fails wrongly: it had already
+"passed" at ±1.5 m and 5°, which would have written a 1.5 m envelope licensing renders nobody
+had checked.
+
+### Corrected definition
+
+A pixel is unsupported when depth is non-finite, non-positive, **or at/beyond the camera's
+calibrated far plane** (`farM`, 1000 m for this rig) — the renderer's own statement of "no
+surface within range". Baseline subtraction against the on-trajectory render is unchanged, so
+a scene is not charged for its standing sky.
+
+### Superseded and corrected measurements, same renders
+
+| Probe | Vacuous mask | Corrected mask | vs 2% |
+|---|---|---|---|
+| lateral 0.5 m | 0.000 | **0.0084** | pass |
+| lateral 1.0 m | 0.000 | **0.0159** | pass |
+| lateral 1.5 m | 0.000 | **0.0215** | FAIL |
+| heading 5° | 0.000 | **0.0680** | FAIL |
+
+The corrected numbers rise monotonically with displacement, which is the behaviour the metric
+claims to have and the vacuous one could not exhibit.
+
+---
+
+## 2026-09-08 — First real G1/G2 measurement (result, not a change)
+
+Scene `007a5809`, package sha256 `36665d69…`, rendered through the provisioned tier: 3DGRUT at
+the pinned `a37ef721…`, Kaolin 0.18.0, torch 2.8.0+cu128, CUDA 12.8.1, `simforge-oss-splat`.
+Four cameras (ids 0, 1, 2, 6), 4 ticks per probe, 5 probes.
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 on-trajectory fidelity (worst camera) | **19.67 dB / 0.760 SSIM** | ≥ 22 dB / 0.75 | **FAIL** |
+| G2 off-trajectory coverage | largest passing offset **1.0 m lateral**, 5° heading fails | ≤ 2% | pass |
+| G3 ego-history parity | 0.000 m | ≤ 0.01 m | pass |
+| G4 dynamics | 197.3 ms | ≤ 200 ms | pass |
+
+**`validity.qualified` is false and the recorded envelope is zero-width.** G1 failed, so the
+1.0 m envelope G2 measured is deliberately *not* written into the bundle — an envelope is only
+meaningful on a scene whose on-trajectory renders were trustworthy in the first place.
+
+Per-camera G1, on trajectory:
+
+| Camera | PSNR | SSIM |
+|---|---|---|
+| cross-left 120° | 24.07 dB | 0.905 |
+| front-wide 120° | 22.89 dB | 0.872 |
+| cross-right 120° | 25.32 dB | 0.913 |
+| **front-tele 30°** | **19.67 dB** | **0.760** |
+
+Three of four cameras clear the bar; the 30° tele fails it. The threshold is **not** being
+lowered to accommodate this. Two candidate explanations are untested and are recorded as
+hypotheses, not conclusions:
+
+1. *Temporal quantisation.* Renders are placed on a 10 Hz tick grid while the ground-truth
+   frames sit at arbitrary instants; the tele frame is 19.3 ms from its nearest tick, ~0.19 m
+   of ego motion at this speed. A narrow-FoV camera is penalised far more than a 120° one by
+   the same longitudinal error, which is consistent with the tele being the only failure.
+2. *Genuine reconstruction quality.* Distant structure carries most of a tele frame, and it is
+   where a Gaussian reconstruction is weakest.
+
+Distinguishing them requires rendering at the frames' exact instants rather than on the tick
+grid. That is a change to *when* we sample, not to what passes, and if it is made the number
+above stays on the record alongside the new one.
+
+
+---
+
+## 2026-09-08 — Tick-quantisation hypothesis TESTED AND REFUTED
+
+The G1 result above listed two candidate explanations for the 30° tele camera failing. The
+first was testable, so it was tested rather than left as a caveat.
+
+**Method.** Each camera was re-rendered with the episode anchored so that a 10 Hz tick lands
+*exactly* on that camera's published frame instant — offset 0 ms instead of up to 50 ms. Four
+separate single-camera renders, same scene, same package, same tier, nothing else changed.
+
+| Camera | On the tick grid (up to 50 ms off) | At the exact frame instant (0 ms) | Δ |
+|---|---|---|---|
+| cross-left 120° | 24.07 dB / 0.905 | 23.95 dB / 0.901 | −0.12 dB |
+| front-wide 120° | 22.89 dB / 0.872 | 23.00 dB / 0.875 | +0.11 dB |
+| cross-right 120° | 25.32 dB / 0.913 | 25.02 dB / 0.905 | −0.30 dB |
+| **front-tele 30°** | **19.67 dB / 0.760** | **19.86 dB / 0.763** | **+0.19 dB** |
+
+**Conclusion.** Temporal quantisation is not the cause. Removing the tele frame's 19.3 ms
+offset entirely moved it 0.19 dB — nowhere near the 2.3 dB it needs to reach the bar, and
+within the scatter seen on the cameras that were already passing. The remaining explanation
+stands: **this reconstruction is genuinely weaker at the distances a 30° tele camera looks at.**
+
+**What that means for the product, stated rather than smoothed:** scene `007a5809` does not
+qualify for any rig preset that includes the tele camera — which is both `alpamayo-2cam`
+([1, 6]) and `alpamayo-4cam` ([0, 1, 2, 6]), i.e. every preset Alpamayo 1 can use. Its three
+120° cameras reconstruct well (22.9–25.3 dB); the tele does not. G1 stays at 22 dB and the
+scene stays unqualified.
+
+No threshold was moved at any point in this investigation.
+
+
+---
+
+## 2026-09-08 — Qualification made explicitly per camera profile
+
+**Not a threshold change.** No threshold moved; the failing 4-camera measurement above stands
+exactly as recorded.
+
+A reconstruction can be faithful for wide cameras and not for a narrow tele looking much
+further down the road, which is precisely what this scene showed. "Scene 007a5809 is
+qualified" was therefore never a well-formed statement: qualification is a property of a
+scene **and a camera set**.
+
+`validity.profileCameraIds` now records the camera ids the gates were measured over, the schema
+rejects a bundle qualified over cameras it does not have or over none at all, and
+`servesProfile(bundle, cameraIds)` refuses a rig needing any camera outside the qualified set.
+
+### Wide-camera profile [0, 1, 2], measured on the same renders
+
+| Gate | Measured | Threshold | Verdict |
+|---|---|---|---|
+| G1 | 22.89 dB / 0.872 SSIM (worst: front-wide) | ≥ 22 dB / 0.75 | pass |
+| G2 | 0.84% / 1.59% / 2.15% / 6.80% by probe | ≤ 2% | pass, largest passing 1.0 m |
+| G3 | 0.000 m | ≤ 0.01 m | pass |
+| G4 | 197.3 ms | ≤ 200 ms | pass |
+| **G5** | **not measured** | — | **outstanding** |
+
+`validity.qualified` is **still false**, because G5 has not run. Four of five gates passing is
+not qualification, and the envelope stays zero-width until the stock replay proves the
+sim/executor/scoring chain on this world.
+
+### What this does and does not license
+
+- It does **not** relabel the failed 4-camera result. Camera 6 was measured, failed, and is
+  excluded from the profile — not dropped to improve an average, and its number stays on the
+  record above.
+- Alpamayo 1 requires exactly [0, 1, 2, 6] and has no camera-count conditioning, so this scene
+  remains unusable for A1 whatever happens with G5.
+- Alpamayo 1.5 accepts a variable camera set, so [0, 1, 2] is a contract-supported rig rather
+  than an invented one.

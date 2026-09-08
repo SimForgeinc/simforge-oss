@@ -409,6 +409,8 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
       kind: 'nurec-usdz',
       sourcePackage: packagePath,
       sourcePackageSha256: digest,
+      // The recorded rig trajectory is the extent the reconstruction was built over.
+      timeSupportUs: { startUs: recordedPath[0]!.tUs, endUs: recordedPath[recordedPath.length - 1]!.tUs },
       renderer: 'nurec-splat-renderer',
     },
     // The package carries no lane graph; route context is whatever the scene itself implies
@@ -416,6 +418,8 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
     map: { source: 'derived-from-reconstruction', confidence: 'low' },
     validity: {
       qualified: false,
+      // No profile has been measured yet; qualification is always for a camera set.
+      profileCameraIds: [],
       envelope: { lateralM: 0, longitudinalS: 0, headingRad: 0 },
       gates: {},
       envelopeBasis: { offsetsTestedM: [], headingsTestedRad: [], largestPassingLateralM: 0, largestPassingHeadingRad: 0 },

@@ -7,7 +7,7 @@ import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } fr
 import { gateG2 } from '../gates.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
-import { ReplayContextSchema, type GateVerdict } from '../schema.js';
+import { ReplayContextSchema, servesProfile, type GateVerdict } from '../schema.js';
 
 const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url));
 
@@ -278,5 +278,42 @@ describe('G4 against real package shapes', () => {
 
     expect(measureDynamicsConsistency(strayFrame).framesOutsideWindow).toBe(1);
     expect(trajectoryGates(strayFrame).G4.passed).toBe(false);
+  });
+});
+
+describe('per-profile qualification', () => {
+  it('refuses a rig that needs a camera the scene was not qualified for', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    // The fixture declares camera 1 only; pretend it passed for that one camera.
+    const qualifiedForWide = {
+      ...bundle,
+      source: { ...bundle.source, kind: 'nurec' as const },
+      validity: { ...bundle.validity, qualified: true, profileCameraIds: [1] },
+    };
+
+    expect(servesProfile(qualifiedForWide, [1]).ok).toBe(true);
+    // alpamayo-2cam needs [1, 6]; camera 6 was never qualified here.
+    const verdict = servesProfile(qualifiedForWide, [1, 6]);
+    expect(verdict.ok).toBe(false);
+    expect(verdict.reason).toContain('6');
+  });
+
+  it('refuses any rig on an unqualified scene', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    expect(bundle.validity.qualified).toBe(false);
+    expect(servesProfile(bundle, [1]).ok).toBe(false);
+  });
+
+  it('rejects a bundle qualified over a camera it does not have, or over none', async () => {
+    const bundle = await loadReplayContext(fixture('straight-envelope'));
+    const base = { ...bundle, source: { ...bundle.source, kind: 'nurec' as const } };
+
+    const phantomCamera = { ...base, validity: { ...base.validity, profileCameraIds: [6] } };
+    expect(ReplayContextSchema.safeParse(phantomCamera).success).toBe(false);
+
+    const noProfile = { ...base, validity: { ...base.validity, qualified: true, profileCameraIds: [] } };
+    const parsed = ReplayContextSchema.safeParse(noProfile);
+    expect(parsed.success).toBe(false);
+    expect(JSON.stringify(parsed.error?.issues)).toContain('camera set');
   });
 });
