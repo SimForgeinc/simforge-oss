@@ -1132,3 +1132,55 @@ is a departure before availability means anything. That is his call, not a geome
 
 No threshold moved. No GPU, no scene sampling, no core change; both measurements above are CPU
 reads of artifacts already emitted.
+
+
+## 2026-09-08 — Final state: geometry available in scope, lane-departure unavailable on rule authority
+
+Per the owner decision: a lane-boundary crossing is a **lane transition**, a diagnostic event, not
+an infraction. Penalising one would fail a stock replay for driving the way the human drove — the
+same error as v1 flagging ground truth, one level up.
+
+### What is now available, and how narrowly
+
+`lane-context.authority` on the ClipGT rail geometry, and nothing beyond it:
+
+- `available: true`, `validatedFrame: nurec-source-z-up`, **`sourceSha256 019d4679…`** — these
+  exact bytes. A different package with the same scene id does not inherit this.
+- `supportScope`: the corridor the validation drive traversed, widened by half the measured road
+  width (11.80 m) so the ego footprint and adjacent lanes are inside the region actually checked.
+  `bindLane` returns **`out-of-support`** outside it rather than extrapolating, and
+  `summariseBinding` counts those separately. Ambiguous and out-of-support are both unavailable.
+- `evidence`: the stratified control, the cross-road transects, and this file.
+- `notCertified`, stated in the record itself: legality of any lane position; that a transition is
+  unsafe; travel direction and speed limits; any pose outside support or called ambiguous.
+
+That is a statement about geometry in a scope, not about the world.
+
+### Lane transitions as diagnostics
+
+`detectLaneTransitions` emits `lane-transition`, `segment-advance`, `entered-ambiguous` and
+`left-support`. None is an infraction and none is scored.
+
+Distinguishing the first two took two tests, and the naive one is wrong. ClipGT tiles a lane into
+~38 m segments, so the bound lane id changes every few seconds on a car going perfectly straight —
+a coverage test alone reported **17 lane changes** on a drive containing one. A transition is
+lateral when the old lane is still alongside and stopped containing the vehicle, **or** when the
+new lane is not the old one's longitudinal successor (its centreline does not start within half a
+lane width of where the old one ended). The second test is load-bearing here: the validation
+drive's lane change lands exactly where a segment ends, so coverage alone saw only a succession.
+
+On the recorded drive: **1 lane-transition** (index 46, lane-16 → lane-14), 16 segment advances,
+1 entered-ambiguous at index 44. That is the 3.7 m traverse the scoring owner measured
+independently from the boundary layer, found by a different route.
+
+### What is still blocked
+
+`lane-departure` stays **unavailable**, and the reason recorded in G5 is now the true one: it needs
+authoritative route, marking and traffic-rule context, which no reconstruction carries. Better
+rails do not fix it — the rails are good. `speeding` and `wrong-way` likewise remain unavailable.
+Full G5 is unchanged: three unevaluable categories, deviation passing under the declared settle
+rule, verdict failed, scene not admitted, and no old receipt retroactively passed.
+
+`metricAuthority.laneCentrelines` is deliberately **not** set. That flag is the scoring owner's
+gate for a metric; what I published is a geometry availability record. Keeping them separate is
+the point — the geometry being validated must not read as the metric being permitted.

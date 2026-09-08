@@ -37,9 +37,38 @@ export const LaneSchema = z.strictObject({
 });
 export type Lane = z.infer<typeof LaneSchema>;
 
+/**
+ * Scoped availability for the centreline geometry.
+ *
+ * This says one thing only: for these exact bytes, in this frame, over this support, the
+ * geometry was validated against a recorded drive. It is explicitly NOT a claim that a lane
+ * position is legal, that the world matches, or that any behaviour measured against it is safe —
+ * those need route, marking and rule context this source does not carry.
+ */
+export const LaneAuthoritySchema = z.strictObject({
+  available: z.boolean(),
+  /** Frame the validation was performed in; availability does not survive a reframe. */
+  validatedFrame: z.string().min(1),
+  /** Where the validation holds. Outside it the answer is unavailable, not extrapolated. */
+  supportScope: z.strictObject({
+    boundsMinXY: z.tuple([Finite, Finite]),
+    boundsMaxXY: z.tuple([Finite, Finite]),
+    note: z.string().min(1),
+  }),
+  /** What was actually run, so the claim can be re-checked rather than believed. */
+  evidence: z.array(z.string().min(1)).min(1),
+  /** Stated plainly so the record cannot be read as more than it is. */
+  notCertified: z.array(z.string().min(1)).min(1),
+});
+export type LaneAuthority = z.infer<typeof LaneAuthoritySchema>;
+
 export const LaneContextSchema = z.strictObject({
   schema: z.literal('simforge.lane-context/v1'),
   source: z.literal('clipgt-lane-rails'),
+  /** The exact bytes this geometry and its availability record describe. */
+  sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  /** Absent means the geometry ships unqualified and every binding is unavailable. */
+  authority: LaneAuthoritySchema.optional(),
   /** Must equal `ego.frame`; a mismatch is refused rather than transformed. */
   frame: z.string().min(1),
   timeSupportUs: z.strictObject({ startUs: z.number().int(), endUs: z.number().int() }).nullable(),
@@ -52,7 +81,7 @@ export const LaneContextSchema = z.strictObject({
 });
 export type LaneContext = z.infer<typeof LaneContextSchema>;
 
-export type LaneBindingKind = 'contained' | 'ambiguous' | 'outside';
+export type LaneBindingKind = 'contained' | 'ambiguous' | 'outside' | 'out-of-support';
 
 export interface LaneBinding {
   readonly kind: LaneBindingKind;
@@ -112,6 +141,17 @@ function signedOffset(line: readonly (readonly [number, number])[], x: number, y
  * silently picking one of two lanes.
  */
 export function bindLane(context: LaneContext, x: number, y: number): LaneBinding {
+  // Availability is scoped. Outside the region the geometry was validated over, the honest answer
+  // is that we do not know — extrapolating validation past its support is how a qualified input
+  // silently becomes an unqualified one.
+  const scope = context.authority?.supportScope;
+  if (scope !== undefined) {
+    const [minX, minY] = scope.boundsMinXY;
+    const [maxX, maxY] = scope.boundsMaxXY;
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      return { kind: 'out-of-support', laneId: null, lateralOffsetM: null, candidateLaneIds: [] };
+    }
+  }
   const candidates: string[] = [];
   let single: Lane | undefined;
   for (const lane of context.lanes) {
@@ -150,6 +190,7 @@ export interface LaneBindingSummary {
   readonly contained: number;
   readonly ambiguous: number;
   readonly outside: number;
+  readonly outOfSupport: number;
   /** Largest |offset| among contained samples, metres; `null` when none were contained. */
   readonly worstOffsetM: number | null;
   /** Largest |offset| as a fraction of the bound lane's width; `null` when none were contained. */
@@ -172,11 +213,13 @@ export function summariseBinding(
   let contained = 0;
   let ambiguous = 0;
   let outside = 0;
+  let outOfSupport = 0;
   let worst: number | null = null;
   let worstFraction: number | null = null;
   for (const pose of poses) {
     const binding = bindLane(context, pose.x, pose.y);
     if (binding.kind === 'ambiguous') ambiguous += 1;
+    else if (binding.kind === 'out-of-support') outOfSupport += 1;
     else if (binding.kind === 'outside') outside += 1;
     else {
       contained += 1;
@@ -189,5 +232,112 @@ export function summariseBinding(
       }
     }
   }
-  return { samples: poses.length, contained, ambiguous, outside, worstOffsetM: worst, worstOffsetFraction: worstFraction };
+  return { samples: poses.length, contained, ambiguous, outside, outOfSupport, worstOffsetM: worst, worstOffsetFraction: worstFraction };
+}
+
+
+export type LaneTransitionKind = 'lane-transition' | 'segment-advance' | 'entered-ambiguous' | 'left-support';
+
+/**
+ * Did the polyline still cover this point longitudinally, or had it ended?
+ *
+ * ClipGT tiles a lane into ~38 m segments, so driving straight changes the bound lane id every
+ * few seconds. That is a segment advance, not a lane change, and calling it one would report a
+ * manoeuvre roughly every 40 m on a car going perfectly straight. The discriminator is the same
+ * interior-versus-terminus test the boundary cuts use: if the old lane had run out beneath the
+ * vehicle it was succeeded; if it was still alongside and stopped containing the vehicle, the
+ * vehicle moved sideways.
+ */
+function stillCovers(line: readonly (readonly [number, number])[], x: number, y: number): boolean {
+  let best = Number.POSITIVE_INFINITY;
+  let atTerminus = true;
+  for (let i = 1; i < line.length; i += 1) {
+    const [x1, y1] = line[i - 1]!;
+    const [x2, y2] = line[i]!;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq === 0) continue;
+    const raw = ((x - x1) * dx + (y - y1) * dy) / lengthSq;
+    const t = Math.max(0, Math.min(1, raw));
+    const distance = Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
+    if (distance >= best) continue;
+    best = distance;
+    // Interior of the polyline: either a middle segment, or strictly inside the end segments.
+    atTerminus = (i === 1 && raw <= 0) || (i === line.length - 1 && raw >= 1);
+  }
+  return !atTerminus;
+}
+
+export interface LaneTransition {
+  readonly kind: LaneTransitionKind;
+  readonly atIndex: number;
+  readonly fromLaneId: string | null;
+  readonly toLaneId: string | null;
+}
+
+/**
+ * Lane transitions along a pose sequence, as DIAGNOSTICS.
+ *
+ * Crossing a lane boundary is a manoeuvre, not an offence. Deciding whether a given crossing was
+ * unsafe needs route intent, marking legality and traffic rules — none of which this geometry
+ * carries — so nothing here is an infraction and nothing here is scored. It exists so a consumer
+ * can *explain* a run: the 3.7 m traverse in the validation drive is one `lane-transition`, and
+ * the large lateral offsets that traverse produces are legible rather than mysterious.
+ *
+ * `entered-ambiguous` and `left-support` are emitted for the same reason: the samples they mark
+ * are unavailable, and a consumer should see why rather than find a gap.
+ */
+export function detectLaneTransitions(
+  context: LaneContext,
+  poses: readonly { x: number; y: number }[],
+): LaneTransition[] {
+  const transitions: LaneTransition[] = [];
+  let lastBound: string | null = null;
+  let pendingAmbiguous = false;
+  poses.forEach((pose, index) => {
+    const binding = bindLane(context, pose.x, pose.y);
+    if (binding.kind === 'outside' || binding.kind === 'out-of-support') {
+      if (lastBound !== null || !pendingAmbiguous) {
+        transitions.push({ kind: 'left-support', atIndex: index, fromLaneId: lastBound, toLaneId: null });
+      }
+      lastBound = null;
+      pendingAmbiguous = false;
+      return;
+    }
+    if (binding.kind === 'ambiguous') {
+      if (!pendingAmbiguous) {
+        transitions.push({ kind: 'entered-ambiguous', atIndex: index, fromLaneId: lastBound, toLaneId: null });
+        pendingAmbiguous = true;
+      }
+      return;
+    }
+    if (lastBound !== null && binding.laneId !== lastBound) {
+      const previous = context.lanes.find((lane) => lane.id === lastBound);
+      const next = context.lanes.find((lane) => lane.id === binding.laneId);
+      // Two ways to establish that the vehicle moved sideways rather than being handed to the
+      // next tile of its own lane. Either the old lane is still alongside and stopped containing
+      // it, or the new lane is not the old one's longitudinal successor. The second test matters
+      // because a lane change can happen to occur exactly where a segment ends — which is what
+      // the validation drive does — and then the first test alone sees only a succession.
+      const succeeds = previous !== undefined && next !== undefined
+        && Math.hypot(
+          next.centreline[0]![0] - previous.centreline.at(-1)![0],
+          next.centreline[0]![1] - previous.centreline.at(-1)![1],
+        // Scaled by the lane's own width: "continues the same lane" means the next tile starts
+        // where this one ended, not a lane over.
+        ) < next.widthM / 2;
+      const lateral = previous !== undefined
+        && (stillCovers(previous.centreline, pose.x, pose.y) || !succeeds);
+      transitions.push({
+        kind: lateral ? 'lane-transition' : 'segment-advance',
+        atIndex: index,
+        fromLaneId: lastBound,
+        toLaneId: binding.laneId,
+      });
+    }
+    lastBound = binding.laneId;
+    pendingAmbiguous = false;
+  });
+  return transitions;
 }

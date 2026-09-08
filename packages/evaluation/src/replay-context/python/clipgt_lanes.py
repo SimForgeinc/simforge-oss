@@ -28,6 +28,7 @@ points that are not opposite each other.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import math
@@ -97,6 +98,14 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
+    # The availability record below is scoped to exactly these bytes. A different package with the
+    # same scene id is a different geometry and does not inherit the validation.
+    digest = hashlib.sha256()
+    with open(args.package, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    source_sha256 = digest.hexdigest()
+
     import pyarrow.parquet as pq
 
     with zipfile.ZipFile(args.package) as archive:
@@ -121,6 +130,7 @@ def main() -> int:
     block = {
         "schema": "simforge.lane-context/v1",
         "source": "clipgt-lane-rails",
+        "sourceSha256": source_sha256,
         "frame": args.frame,
         # Static for the clip: ClipGT lane geometry carries no time dimension.
         "timeSupportUs": None,
@@ -138,7 +148,7 @@ def main() -> int:
     }
     with open(args.out, "w", encoding="utf-8") as handle:
         json.dump(block, handle)
-    summary = {k: block[k] for k in ("schema", "source", "frame", "coverage", "provenance")}
+    summary = {k: block[k] for k in ("schema", "source", "sourceSha256", "frame", "coverage", "provenance")}
     json.dump({**summary, "laneCount": len(lanes), "out": args.out}, sys.stdout, indent=2)
     print()
     return 0
