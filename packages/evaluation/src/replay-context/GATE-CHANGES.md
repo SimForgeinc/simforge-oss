@@ -905,3 +905,43 @@ data" — while still refusing to invent one where nothing was decided. Both dir
 tests (`keeps a KNOWN excursion an excursion even when another corner is unknown`, `reports
 unavailable only when nothing was decided against the vehicle`). Neither control moved: v3 still
 0 events / 201 assessed / 1 unavailable, v2 still 13 events / 0.099 m.
+
+
+---
+
+## 2026-09-08 — G5 re-emitted from the scoring owner's v3 record; the surviving infraction is named
+
+The scoring owner re-scored the stock replay under `simforge.offroad/v3` and produced a durable
+manifest (`evalexec/proof/g5b/v3/scored/`). G5 on clipgt-0009402a is re-emitted from **his**
+numbers, read from `score.json` rather than restated from a message. Deviation is not re-measured:
+`measured`, `threshold`, `direction` and `unit` are checked against the prior receipt and the
+script refuses to write if any differ or the verdict flips.
+
+| | before (v1-era) | after (v3 record) |
+|---|---|---|
+| off-road | 1 | **0** |
+| infraction count | 1 | 1 |
+| the infraction | off-road | **lane-departure** |
+| speeding / wrong-way | unavailable | unavailable |
+| verdict | failed | failed |
+
+The count did not move, but its identity did, and a bare `1 infraction(s) recorded` could not show
+that. `gateG5` now takes `infractionCategories` and names them, so the reason reads
+`1 infraction(s) recorded: lane-departure`. On a scene where a single artifact has already appeared
+under two different names, an unnamed count is not a usable receipt.
+
+### A caution the owner should weigh, not me
+
+The surviving `lane-departure` event reports `lateralOffsetM -5.454` at t = 0.2 s, on a trajectory
+that is 0.16 m from `ego.recordedPath`. That is the same nearest-lane binding — 1.101 m off at the
+start — that produced the off-road and wrong-way artifacts. Reporting it under its own name is
+right, and the claim is now at least *about* lane position rather than about road containment, but
+its magnitude still comes from the mis-bound lane. Whether that is admissible is the scoring
+owner's call; it is recorded here so the number is never read as 5.454 m of lane departure by a
+vehicle that drove where the human drove.
+
+### Still not admitted, and why exactly
+
+`speeding` and `wrong-way` remain unevaluable for want of an authoritative source. Those two block
+full G5 on their own and no geometry work can change them. No threshold moved, no value was
+relabelled, and every superseded measurement remains on the record above.
