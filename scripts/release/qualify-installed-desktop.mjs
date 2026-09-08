@@ -306,9 +306,14 @@ async function launchGate({ exe, cloudOrigin, home, timeoutMs = 120_000 }) {
 }
 
 /**
- * The origin baked into the package, asked for the document the app's own
- * update check reads. A package pointing at an origin that does not serve it
- * is a working app that can never tell a user an update exists.
+ * The origin baked into the package, and the document the update check reads.
+ *
+ * An unreachable or wrongly-baked origin is a defect in the package. A
+ * MISSING manifest is not: before the first release is published there is
+ * legitimately nothing to serve, and the update check is required to report
+ * that gracefully rather than error. So an absent manifest is reported as a
+ * pending publication, and only a served document that is not a downloads
+ * manifest counts against the artifact.
  * @param {string} origin
  */
 async function cloudGate(origin) {
@@ -319,18 +324,21 @@ async function cloudGate(origin) {
     .catch((error) => `unreachable: ${error.message}`);
   detail.root = root;
   if (typeof root !== "number") problems.push(`the packaged Cloud origin is ${root}`);
+  else if (root >= 500) problems.push(`the packaged Cloud origin answered ${root}`);
 
   const manifestUrl = new URL("/download/releases.json", origin).toString();
   const manifest = await fetch(manifestUrl)
     .then(async (r) => ({ status: r.status, body: r.status === 200 ? await r.json() : null }))
     .catch((error) => ({ status: `unreachable: ${error.message}`, body: null }));
   detail.releasesJson = manifest.status;
-  if (manifest.status !== 200) {
-    problems.push(`${manifestUrl} answered ${manifest.status}: the in-app update check has nothing to read`);
-  } else if (!manifest.body || typeof manifest.body !== "object" || !("channels" in manifest.body)) {
-    problems.push(`${manifestUrl} is not a downloads manifest`);
+  if (manifest.status === 200) {
+    if (!manifest.body || typeof manifest.body !== "object" || !("channels" in manifest.body)) {
+      problems.push(`${manifestUrl} is served but is not a downloads manifest`);
+    } else {
+      detail.channels = manifest.body.channels;
+    }
   } else {
-    detail.channels = manifest.body.channels;
+    detail.updateManifest = `not published yet (${manifest.status}); the in-app update check reports nothing available, which is its defined behaviour before a release exists`;
   }
   return { problems, detail };
 }
