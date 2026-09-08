@@ -215,6 +215,24 @@ can only miss an excursion, never invent one — the mitigation is denser island
 rings in the ingestion rather than edge sampling here, and a regression pins it
 so it cannot change silently.
 
+### Lane-departure needs centreline authority
+
+`lane-departure` is a claim about lane POSITION, so it requires an authoritative
+centreline: the bundle must declare `metricAuthority.laneCentrelines`. Without
+it the metric is unavailable, not a number.
+
+That is not a formality. On a reconstructed clip the derived lane graph was
+mis-bound by 1.10 m at the start and reported -5.454 m of lane departure for a
+trajectory 0.16 m from the recorded human path — the same artifact that made
+off-road v1 flag ground truth, surviving under a new name because renaming a
+metric does not give it a better lane. Rail-containment binding (per-pose,
+contained / ambiguous / outside, no offset reported for an unbound sample)
+reduced the worst case to 1.73 m and still did not qualify: on one continuous
+drive the worst per-segment offset ranges 0.09 m to 1.73 m, an eighteenfold
+variation that no rigid frame correction can explain, so a single global offset
+would fix some segments and break others. The metric stays unavailable until the
+ego-to-annotation correspondence is established independently.
+
 **Absent geometry is `unavailable`, never a pass.** With no drivable-area block,
 empty polygons, or a decision outside the polygons' time support, v2 reports
 off-road as unavailable and the factor does not apply — the episode is not
