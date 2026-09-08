@@ -76,6 +76,7 @@ describe('validateManualDriveRecording', () => {
     ['starts after t=0', take({ samples: take().samples.slice(1) }), 'samples.0.timeS'],
     ['was driven against another clip length', take({ clipSeconds: CLIP + 1 }), 'clipSeconds'],
     ['has a non-finite sample', take({ samples: take().samples.map((s, i) => (i === 7 ? { ...s, x: Number.NaN } : s)) }), 'samples.7.x'],
+    ['records a nonzero elevation', take({ samples: take().samples.map((s, i) => (i === 4 ? { ...s, y: 0.35 } : s)) }), 'samples.4.y'],
     ['has non-increasing times', take({ samples: take().samples.map((s, i) => (i === 5 ? { ...s, timeS: 0.08 } : s)) }), 'samples.5.timeS'],
     ['exceeds the sample budget', take({ samples: Array.from({ length: MANUAL_DRIVE_MAX_SAMPLES + 1 }, (_, k) => ({ ...take().samples[0]!, timeS: k * 1e-4 })) }), 'samples'],
   ])('rejects a take that %s', (_label, recording, path) => {
