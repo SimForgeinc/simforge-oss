@@ -22,7 +22,11 @@
       "steps": 300
     }
   ],
-  "seeds": [101, 202, 303],
+  "seeds": [
+    101,
+    202,
+    303
+  ],
   "policies": [
     {
       "policyId": "scripted",
@@ -32,12 +36,14 @@
       "fallback": "zero-control"
     },
     {
-      "policyId": "torch-mlp-realtime",
-      "runnerPolicy": "torch",
-      "policySeed": 7,
+      "policyId": "trajectory-realtime",
+      "runnerPolicy": "trajectory",
+      "policySeed": 0,
       "mode": "realtime",
       "deadlineMs": 50,
-      "forceMissAt": [9],
+      "forceMissAt": [
+        9
+      ],
       "fallback": "zero-control"
     }
   ]
