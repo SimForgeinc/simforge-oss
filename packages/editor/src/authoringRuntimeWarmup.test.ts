@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { EngineRuntime } from '@simforge-oss/engine';
 
 import {
   authoringRuntimeReady,
@@ -10,6 +11,17 @@ import {
 import { LaneIndex } from './laneIndex';
 import { TEST_MAP } from './map';
 
+/**
+ * The warmup only hands the engine to `LaneIndex.load`, which is mocked here,
+ * so a graph decode would mean the warmup bypassed the load it is meant to
+ * deduplicate.
+ */
+const engine: Pick<EngineRuntime, 'laneGraph'> = {
+  laneGraph: () => {
+    throw new Error('laneGraph must only be reached through the mocked LaneIndex.load');
+  },
+};
+
 afterEach(() => {
   resetAuthoringRuntimeWarmupForTests();
   vi.restoreAllMocks();
@@ -17,17 +29,20 @@ afterEach(() => {
 });
 
 describe('authoring runtime warmup', () => {
-  it('deduplicates the lane-index load and exposes readiness only after it resolves', async () => {
+  it('deduplicates the lane-index load over the awaited engine and exposes readiness only after it resolves', async () => {
     let resolve!: (index: LaneIndex) => void;
     const index = {} as LaneIndex;
     const pending = new Promise<LaneIndex>((done) => { resolve = done; });
     const load = vi.spyOn(LaneIndex, 'load').mockReturnValue(pending);
 
-    const first = warmAuthoringRuntime(TEST_MAP);
-    const second = warmAuthoringRuntime(TEST_MAP);
+    const first = warmAuthoringRuntime(TEST_MAP, Promise.resolve(engine));
+    const second = warmAuthoringRuntime(TEST_MAP, engine);
     expect(first).toBe(second);
+    // The engine promise has not been awaited yet, so nothing has loaded.
+    expect(load).not.toHaveBeenCalled();
+    await Promise.resolve();
     expect(load).toHaveBeenCalledOnce();
-    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl);
+    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl, { engine });
     expect(authoringRuntimeReady(TEST_MAP.mapVersionId)).toBe(false);
 
     resolve(index);
