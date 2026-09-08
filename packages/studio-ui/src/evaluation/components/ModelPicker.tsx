@@ -65,6 +65,14 @@ export function ModelPicker({
     runtime?.eligibility[key] ?? null,
   );
 
+  // The measured envelope is exclusive-use: the runtime's own requirement, or
+  // the catalog's if the probe did not report one.
+  const eligibility = runtime?.eligibility[key] ?? null;
+  const localVramGiB =
+    eligibility?.requires.vramGiB ??
+    entry.quants.find((offer) => offer.quant === selection.quant)?.minVramGiB ??
+    null;
+
   const quantOptions = entry.quants.map((offer) => ({
     value: offer.quant,
     label:
@@ -209,6 +217,13 @@ export function ModelPicker({
                 <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
                   {meta.description}
                 </span>
+                {offer.target === "local" && offer.available && localVramGiB !== null ? (
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    The measured profile needs about {localVramGiB} GiB of device memory with
+                    nothing else resident. Another process holding the GPU fails the run with an
+                    out-of-memory error rather than degrading it.
+                  </span>
+                ) : null}
                 {offer.reasons.length > 0 ? (
                   <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-amber-600 dark:text-amber-500">
                     {offer.reasons.map((reason) => (
