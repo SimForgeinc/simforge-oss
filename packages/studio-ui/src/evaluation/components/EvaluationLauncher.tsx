@@ -34,6 +34,7 @@ import {
   TEXT_TASK_LABELS,
   type OpenLoopItemKind,
   type TextTask,
+  pathShapedRefusal,
 } from "../params";
 
 /** Step numbering exists only so the copy can refer to it; the form is one page. */
@@ -116,12 +117,18 @@ export function EvaluationLauncher({
     return "user-clip";
   }, [prepared]);
 
+  // Input roles are a closed enum server-side: an open-loop batch is up to 32
+  // entries all with role `clip`, and a text run is exactly one `video`. The
+  // params items are emitted in the same order as `inputs`, which is what pairs
+  // an item with its artifact — a per-item role suffix would be rejected.
+  const inputRole = kind === "alpamayo.text" ? "video" : "clip";
+
   const params = useMemo(() => {
     if (!prepared) return null;
     return buildOpenLoopParams({
-      items: prepared.artifacts.map((_, index) => ({
+      items: prepared.artifacts.map(() => ({
         kind: itemKind,
-        role: prepared.artifacts.length === 1 ? "clip" : `clip-${index}`,
+        role: inputRole,
         cameraProfile: prepared.cameraProfile,
       })),
       reference: scoreWhenAvailable ? "auto" : "none",
@@ -142,6 +149,7 @@ export function EvaluationLauncher({
     entry.capabilities.nav,
     navText,
     kind,
+    inputRole,
     textTask,
     prompt,
     seed,
@@ -155,17 +163,13 @@ export function EvaluationLauncher({
         revision: entry.weightsRevision,
         quant: selection.quant,
       },
-      inputs: prepared.artifacts.map((artifact, index) => ({
-        role: (kind === "alpamayo.text"
-          ? "video"
-          : prepared.artifacts.length === 1
-            ? "clip"
-            : `clip-${index}`) as "clip" | "video",
+      inputs: prepared.artifacts.map((artifact) => ({
+        role: inputRole,
         artifactId: artifact.artifactId,
       })),
       params,
     };
-  }, [prepared, params, selection.family, selection.quant, entry.weightsRevision, kind]);
+  }, [prepared, params, selection.family, selection.quant, entry.weightsRevision, inputRole]);
 
   // Re-estimate whenever the priced shape of the run changes. The estimate is
   // also the affordability/concurrency check, so it must not go stale.
@@ -247,10 +251,16 @@ export function EvaluationLauncher({
 
   const blockedReason = activeOffer?.blocked ?? null;
   const textReady = kind !== "alpamayo.text" || prompt.trim().length > 0 || textTask !== "vqa";
+  // The control plane refuses any URL- or path-shaped string in params, and a
+  // question is free text, so say so here rather than after the upload.
+  const paramsRefusal =
+    (kind === "alpamayo.text" ? pathShapedRefusal("Your question", prompt) : null) ??
+    pathShapedRefusal("The navigation instruction", navText);
   const canSubmit =
     prepared !== null &&
     submissionInput !== null &&
     blockedReason === null &&
+    paramsRefusal === null &&
     textReady &&
     !submitting &&
     (selection.target === "local"
@@ -471,6 +481,10 @@ export function EvaluationLauncher({
             </p>
           )}
         </section>
+      ) : null}
+
+      {paramsRefusal ? (
+        <RefusalNotice title="This run cannot be submitted as written" reasons={[paramsRefusal]} />
       ) : null}
 
       {error ? <RefusalNotice title="Submission failed" reasons={[error]} /> : null}

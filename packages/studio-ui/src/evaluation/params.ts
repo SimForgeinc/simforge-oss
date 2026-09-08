@@ -139,3 +139,25 @@ export const TEXT_TASK_LABELS: Record<TextTask, string> = {
   autolabel: "Auto-label the scene",
   grounding: "Ground a referring expression",
 };
+
+/**
+ * A params value that IS a reference, which the control plane refuses.
+ *
+ * The worker dereferences nothing from customer params, so the control plane
+ * rejects a value that names a URL or a path. It is deliberately ANCHORED:
+ * prose that merely mentions a link ("what does the sign at https://… say") is
+ * legitimate content and is accepted, while a value that starts with a
+ * reference is not. This mirrors the server's probed behaviour exactly —
+ * matching a URL mid-sentence would refuse in the field a submission the server
+ * would have taken, which is a worse failure than the one it prevents.
+ *
+ * Checked here so the explanation lands next to the field instead of arriving
+ * as an opaque `invalid_job` after the upload and the estimate are paid for.
+ */
+const REFERENCE_SHAPED_VALUE =
+  /^(?:[a-z][a-z0-9+.-]*:\/\/|file:|\/|\\\\|[a-z]:\\|\.{1,2}\/|~\/)/i;
+
+export function pathShapedRefusal(field: string, value: string): string | null {
+  if (!REFERENCE_SHAPED_VALUE.test(value.trim())) return null;
+  return `${field} looks like a URL or a file path. Job parameters cannot contain either: the worker never fetches or opens anything named in them, so the run would be refused. Describe what you want in words instead.`;
+}
