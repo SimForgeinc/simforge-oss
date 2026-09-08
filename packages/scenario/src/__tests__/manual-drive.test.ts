@@ -21,7 +21,7 @@ function take(overrides: Partial<ManualDriveRecording> = {}): ManualDriveRecordi
     const timeS = Number((k * DT).toFixed(6));
     // stationary, then reversing, then forward — the recorded yaw stays put.
     const speedMps = timeS < 1 ? 0 : timeS < 2 ? -2 : 3;
-    samples.push({ timeS, x: 10 - (timeS < 1 ? 0 : timeS - 1), y: 0.2, z: -4, headingRad: Math.PI, speedMps });
+    samples.push({ timeS, x: 10 - (timeS < 1 ? 0 : timeS - 1), y: 0, z: -4, headingRad: Math.PI, speedMps });
   }
   return { version: 1, clipSeconds: CLIP, samples, ...overrides };
 }
