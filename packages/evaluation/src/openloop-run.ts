@@ -50,7 +50,21 @@ export interface OpenloopRunOptions {
   /** Local observation-bundle path for one item (job role, or a host path). */
   readonly resolveInput: (item: OpenloopParams['items'][number], index: number) => string;
   readonly signal: AbortSignal;
-  readonly fallbackModel?: { family: string; revision: string; quant: string };
+  /**
+   * Identity to fall back on for fields the loaded engine does not report.
+   *
+   * Every field optional, because the callers know different things: a cloud
+   * job carries the family/revision/quant it requested, while a desktop lease
+   * knows the family, the quant and the CHECKPOINT DIGEST it installed and has
+   * no revision at all. Requiring a revision here forced the desktop worker to
+   * either invent one or not pass its identity through.
+   */
+  readonly fallbackModel?: {
+    readonly family?: string | null;
+    readonly revision?: string | null;
+    readonly quant?: string | null;
+    readonly checkpointDigest?: string | null;
+  };
 }
 
 export interface OpenloopRunOutcome {
@@ -272,7 +286,7 @@ export async function executeOpenloop(options: OpenloopRunOptions): Promise<Open
     revision: health.revision ?? options.fallbackModel?.revision ?? null,
     quant: health.quant ?? options.fallbackModel?.quant ?? null,
     quantStatus: health.quant_status ?? null,
-    checkpointDigest: health.checkpoint_digest ?? null,
+    checkpointDigest: health.checkpoint_digest ?? options.fallbackModel?.checkpointDigest ?? null,
     cameraProfile: health.camera_profile ?? null,
     attn: health.attn ?? null,
     torch: health.torch ?? null,

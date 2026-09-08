@@ -45,6 +45,7 @@ import {
   executeOpenloop,
   isRetryableErrorCode,
   modelIdentityMismatch,
+  type ModelIdentity,
   writeResultManifest,
   type EndpointHealth,
   type EndpointTarget,
@@ -285,7 +286,12 @@ function targetOf(handle: EndpointHandle): EndpointTarget {
  */
 async function requireEngineIdentity(
   handle: EndpointHandle,
-  expected: { family: string; revision: string; quant: string } | null,
+  // `ModelIdentity`, not a fixed triple: a desktop lease pins the family, the
+  // quant and the installed CHECKPOINT DIGEST and has no HF revision, and the
+  // comparison only looks at the fields the caller actually supplies. Demanding
+  // a revision here is what made the host worker unable to pass its own
+  // identity through.
+  expected: ModelIdentity | null,
 ): Promise<EndpointHealth> {
   const health = await endpointHealth(targetOf(handle));
   if (!expected) return health;
@@ -393,6 +399,8 @@ export async function executeOpenloopRun(
         controller: {},
         compute: null,
         metricVersion: "simforge.eval-metrics/v1",
+        // A desktop run always executes; it never re-reads a retained trace.
+        reprocessedFrom: null,
       },
       timing: {
         startedAt,
@@ -443,6 +451,16 @@ export async function executePolicyEpisodeRun(
       "a model episode needs the endpoint's unix socket (msgpack policy wire); this descriptor has none",
     );
   }
+  // A host run resolves its inputs by path: there is no job input table to look
+  // a `specRole` up in, so a missing local spec is the submitter's error rather
+  // than something to substitute a default for.
+  const specPath = params.spec;
+  if (!specPath) {
+    throw new ModelRunFailure(
+      "invalid_episode_params",
+      "a host episode needs a local `spec` path (roles resolve only for cloud jobs)",
+    );
+  }
   const endpoint = needsEngine ? await startEndpoint(descriptor, options.signal) : null;
   try {
     const outcome = await executeEpisode({
@@ -453,7 +471,7 @@ export async function executePolicyEpisodeRun(
       expectedRouteM: params.expectedRouteM,
       speedLimitMps: params.speedLimitMps,
       runner: {
-        specPath: params.spec,
+        specPath,
         session: params.session,
         runnerPolicy: params.runnerPolicy,
         seed: params.seed,
@@ -510,7 +528,7 @@ export async function executePolicyEpisodeRun(
           : null,
         input: {
           kind: params.replayContext ? "replay-context" : "scenario",
-          ref: params.spec,
+          ref: specPath,
           digest: null,
           ood: [],
           replayContext: null,
@@ -519,6 +537,8 @@ export async function executePolicyEpisodeRun(
         controller: { execution: params.execution, decisionHz: params.decisionHz, fallback: params.fallback },
         compute: null,
         metricVersion: "simforge.eval-metrics/v1",
+        // A desktop run always executes; it never re-reads a retained trace.
+        reprocessedFrom: null,
       },
       timing: {
         startedAt,

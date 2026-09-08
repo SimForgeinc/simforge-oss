@@ -110,6 +110,13 @@ export type CreateModelEndpointInput = z.infer<typeof CreateModelEndpointSchema>
  * The `@simforge-oss/evaluation/params` subpath is dependency-free apart from
  * zod, so this module stays safe for the browser bundle.
  */
+// Imported, not only re-exported: the submission guard below VALIDATES with
+// these, and a re-export alone does not bring them into this module's scope.
+import {
+  OpenloopParamsSchema,
+  PolicyEpisodeParamsSchema,
+} from "@simforge-oss/evaluation/params";
+
 export {
   OpenloopParamsSchema,
   PolicyEpisodeParamsSchema as PolicyEpisodeRunParamsSchema,
@@ -147,7 +154,7 @@ export const CreateModelRunSchema = z.object({
     return;
   }
   if (value.kind === "policy_episode") {
-    const parsed = PolicyEpisodeRunParamsSchema.safeParse(value.params);
+    const parsed = PolicyEpisodeParamsSchema.safeParse(value.params);
     if (!parsed.success) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
