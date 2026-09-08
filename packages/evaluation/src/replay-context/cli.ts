@@ -113,6 +113,18 @@ async function runImport(args: Args): Promise<Record<string, unknown>> {
       packagePath: args.flags['package'],
       license: required(args, 'license'),
       ...(args.flags['scene'] === undefined ? {} : { sceneId: args.flags['scene'] }),
+      // `--map` binds lane/route context the package cannot carry. Confidence stays `low`
+      // unless the caller states the map came from the authoritative registry.
+      ...(args.flags['map'] === undefined
+        ? {}
+        : {
+            map: {
+              source: args.flags['map-source'] === 'map-registry' ? 'map-registry' as const : 'derived-from-reconstruction' as const,
+              path: args.flags['map'],
+              confidence: args.flags['map-source'] === 'map-registry' ? 'high' as const : 'low' as const,
+              ...(args.flags['map-id'] === undefined ? {} : { mapId: args.flags['map-id'] }),
+            },
+          }),
     });
   } else if (args.flags['clip'] !== undefined) {
     const admission = await loadEvalClip(args.flags['clip']);

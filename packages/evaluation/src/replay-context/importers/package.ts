@@ -55,6 +55,16 @@ export interface PackageImportOptions {
   /** Expected package digest. When given it is enforced; when absent it is computed and recorded. */
   readonly expectedSha256?: string;
   readonly source?: ReplayContext['source']['kind'];
+  /**
+   * Lane/route context to bind to the scene.
+   *
+   * A NuRec package carries no lane graph, so without this the bundle records
+   * `derived-from-reconstruction` with no path and a closed-loop consumer has no topology to
+   * instantiate. Supplying a map the scene was imported alongside is binding known context, not
+   * inventing it — which is why the caller must pass it explicitly rather than have the importer
+   * guess at a sibling directory.
+   */
+  readonly map?: ReplayContext['map'];
   readonly thresholds?: GateThresholds;
 }
 
@@ -415,7 +425,7 @@ export async function importNurecPackage(options: PackageImportOptions): Promise
     },
     // The package carries no lane graph; route context is whatever the scene itself implies
     // until a map bundle is bound to it, and that is recorded as low confidence.
-    map: { source: 'derived-from-reconstruction', confidence: 'low' },
+    map: options.map ?? { source: 'derived-from-reconstruction', confidence: 'low' },
     validity: {
       qualified: false,
       // No profile has been measured yet; qualification is always for a camera set.
