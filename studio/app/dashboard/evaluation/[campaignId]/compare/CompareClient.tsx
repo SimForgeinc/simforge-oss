@@ -44,6 +44,7 @@ const VERDICT_LABEL: Record<EvalComparabilityVerdict, string> = {
   "sensor-different": "Different cameras",
   "runtime-different": "Different runtime",
   "incomplete-identity": "Identity incomplete",
+  "identity-integrity": "Identity does not match its label",
   incomparable: "Not comparable",
 };
 
@@ -52,6 +53,7 @@ const VERDICT_CLASS: Record<EvalComparabilityVerdict, string> = {
   "sensor-different": "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-transparent",
   "runtime-different": "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-transparent",
   "incomplete-identity": "bg-muted text-muted-foreground border-transparent",
+  "identity-integrity": "bg-destructive/15 text-destructive border-transparent",
   incomparable: "bg-muted text-muted-foreground border-transparent",
 };
 
@@ -65,6 +67,7 @@ const UNRANKABLE_LABEL: Record<string, string> = {
   "sensor-different": "different cameras",
   "runtime-different": "different runtime",
   "incomplete-identity": "identity not fully recorded",
+  "identity-integrity": "one revision, two different checkpoints",
   incomparable: "not comparable",
 };
 

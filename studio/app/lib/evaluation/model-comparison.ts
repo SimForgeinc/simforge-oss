@@ -41,10 +41,20 @@ export type ComparisonRig = {
   /** Human-facing preset name, e.g. `alpamayo-4cam`. */
   readonly profile: string | null;
   /**
-   * `captureProfileVersion(rigId)` from '@simforge-oss/engine', shaped
-   * `rigId@12hex` (e.g. `alpamayo-4cam@5d56b3d837c8`): a digest over what was
-   * physically recorded — rig id, camera ids, sensor geometry, render size,
-   * cadence, frames per camera, history window, coordinate frame. NO family.
+   * `captureVersionFromSensors(...)` from '@simforge-oss/engine', shaped
+   * `capture@<12hex>`: a digest over what was ACTUALLY recorded — the resolved
+   * sensors (mount, rendered FOV, dims), the camera subset fed to the model,
+   * render size, frames per camera, history window and coordinate frame. NO
+   * family, and no rig NAME either.
+   *
+   * The tag matters as a guard, not decoration. Its sibling
+   * `expectedCaptureHash(rigId)` digests the unedited PRESET for a rig id and is
+   * tagged with that rig id; it is a recommendation of what a default fitting
+   * looks like, and it cannot identify a capture, because an author who widens a
+   * camera's FOV or moves a mount keeps the rig id. A value carrying a rig name
+   * instead of `capture@` is therefore treated as ABSENT identity here rather
+   * than compared: accepting it would match two genuinely different captures,
+   * which is the false match this field exists to prevent.
    *
    * This is the field that decides whether two runs saw the same world, and it
    * is deliberately NOT `modelRigProfileVersion(family)`. That value is
@@ -176,7 +186,13 @@ export type ComparabilityVerdict =
    * alike, and treating absent-equals-absent as equality is how an
    * uncontrolled pair gets ranked.
    */
-  | 'incomplete-identity';
+  | 'incomplete-identity'
+  /**
+   * A label does not describe what ran: one family and one revision, two
+   * different checkpoint digests. Not a difference to report but a reason to
+   * refuse — an intended weight change carries a different revision.
+   */
+  | 'identity-integrity';
 
 export type ComparabilityDetail = {
   readonly verdict: ComparabilityVerdict;
@@ -189,6 +205,12 @@ export type ComparabilityDetail = {
    * turn a model comparison into a sensor difference.
    */
   readonly metadata: readonly string[];
+  /**
+   * The model identity fields that differ — family, revision, checkpoint
+   * digest. This is what the comparison VARIES, so it never reduces
+   * comparability; it is what the reader came to see.
+   */
+  readonly model: readonly string[];
 };
 
 const sameIds = (a: readonly number[], b: readonly number[]): boolean =>
@@ -210,7 +232,11 @@ function missingIdentity(cell: ComparisonCellResult): string[] {
   if (cell.identity.checkpointDigest === null) missing.push('checkpointDigest');
   if (cell.identity.policySeed === null) missing.push('policySeed');
   const rig = cell.identity.rig;
-  if (rig.captureVersion === null) missing.push('rig.captureVersion');
+  // Present AND honest: a preset digest in this field is not a capture
+  // identity, so it counts as missing rather than as something to compare.
+  if (rig.captureVersion === null || !/^capture@[0-9a-f]{12,}$/.test(rig.captureVersion)) {
+    missing.push('rig.captureVersion');
+  }
   if (rig.intrinsicsSha256 === null) missing.push('rig.intrinsics');
   if (rig.extrinsicsSha256 === null) missing.push('rig.extrinsics');
   if (rig.cameraIds.length === 0) missing.push('rig.cameraIds');
@@ -281,7 +307,7 @@ export function comparability(
   b: ComparisonCellResult | null,
 ): ComparabilityDetail {
   if (!a || !b || !a.episodeId || !b.episodeId) {
-    return { verdict: 'incomparable', differing: ['episode'], metadata: [] };
+    return { verdict: 'incomparable', differing: ['episode'], metadata: [], model: [] };
   }
   // The scenario INPUT, not its label: a re-authored fixture keeps its id.
   if (
@@ -289,14 +315,14 @@ export function comparability(
     b.scenarioInputDigest !== null &&
     a.scenarioInputDigest !== b.scenarioInputDigest
   ) {
-    return { verdict: 'incomparable', differing: ['scenarioInputDigest'], metadata: [] };
+    return { verdict: 'incomparable', differing: ['scenarioInputDigest'], metadata: [], model: [] };
   }
   // Absence before equality: a field neither side recorded cannot make them
   // alike, so an incomplete identity is reported as such rather than compared.
   const missing = [...new Set([...missingIdentity(a), ...missingIdentity(b)])].sort();
-  if (missing.length > 0) return { verdict: 'incomplete-identity', differing: missing, metadata: [] };
+  if (missing.length > 0) return { verdict: 'incomplete-identity', differing: missing, metadata: [], model: [] };
   if ((a.identity.policySeed ?? null) !== (b.identity.policySeed ?? null)) {
-    return { verdict: 'runtime-different', differing: ['policySeed'], metadata: [] };
+    return { verdict: 'runtime-different', differing: ['policySeed'], metadata: [], model: [] };
   }
 
   const rig = rigDifferences(a.identity.rig, b.identity.rig);
@@ -310,13 +336,39 @@ export function comparability(
   ) {
     metadata.push('model.requirementVersion');
   }
+  // THE COMPARISON VARIABLE. Family, revision and checkpoint digest are what a
+  // model comparison varies on purpose; classifying them as confounds would
+  // mean no comparison of two models could ever be matched, which is the whole
+  // point of the page. They are reported as the model difference and never
+  // reduce comparability.
+  const model: string[] = [];
+  if ((a.identity.family ?? null) !== (b.identity.family ?? null)) model.push('family');
+  if ((a.identity.revision ?? null) !== (b.identity.revision ?? null)) model.push('revision');
+  if ((a.identity.checkpointDigest ?? null) !== (b.identity.checkpointDigest ?? null)) {
+    model.push('checkpointDigest');
+  }
+
+  // An INTEGRITY refusal, distinct from a difference: two runs claiming one
+  // family AND one revision must have loaded one set of weights. A digest
+  // mismatch there means a label does not describe what ran, and no ranking may
+  // rest on it — unlike an intended weight change, which is the variable.
+  if (
+    (a.identity.family ?? null) === (b.identity.family ?? null) &&
+    (a.identity.revision ?? null) === (b.identity.revision ?? null) &&
+    (a.identity.checkpointDigest ?? null) !== (b.identity.checkpointDigest ?? null)
+  ) {
+    return {
+      verdict: 'identity-integrity',
+      differing: ['checkpointDigest'],
+      metadata,
+      model,
+    };
+  }
+
+  // CONTROLS. Precision, engine, ABI, addon and decision rate must hold: they
+  // change what the same weights do, so a difference here is a confound.
   const runtime: string[] = [];
   if ((a.identity.quant ?? null) !== (b.identity.quant ?? null)) runtime.push('quant');
-  if ((a.identity.checkpointDigest ?? null) !== (b.identity.checkpointDigest ?? null)) {
-    // Same revision with a different checkpoint digest is a different set of
-    // weights, whatever the label says.
-    runtime.push('checkpointDigest');
-  }
   if ((a.identity.runtime.engineVersion ?? null) !== (b.identity.runtime.engineVersion ?? null)) {
     runtime.push('engineVersion');
   }
@@ -333,14 +385,17 @@ export function comparability(
   // Sensors first: a rig difference is the one a reader is most likely to
   // mistake for a model difference, so it is never hidden behind a runtime note.
   if (rig.sensor.length > 0) {
-    return { verdict: 'sensor-different', differing: [...rig.sensor, ...runtime], metadata };
+    return { verdict: 'sensor-different', differing: [...rig.sensor, ...runtime], metadata, model };
   }
-  if (runtime.length > 0) return { verdict: 'runtime-different', differing: runtime, metadata };
+  if (runtime.length > 0) return { verdict: 'runtime-different', differing: runtime, metadata, model };
   // Matched with metadata differing is the ordinary model comparison: two
   // different models, one identical capture. Two columns of the SAME model
   // differ in nothing at all, which is a repeat, and a repeat is the control a
   // reader may want.
-  return { verdict: 'matched', differing: [], metadata };
+  // Matched means the CONTROLS held, not that the runs are the same run. Two
+  // different models over one capture, one scenario, one seed and one runtime
+  // are matched and rankable, with `model` naming exactly what varied.
+  return { verdict: 'matched', differing: [], metadata, model };
 }
 
 /** Whether this cell produced a result at all, and if not, why. */
@@ -428,7 +483,8 @@ export function rankMetric(
       if (
         reason === 'sensor-different' ||
         reason === 'runtime-different' ||
-        reason === 'incomplete-identity'
+        reason === 'incomplete-identity' ||
+        reason === 'identity-integrity'
       ) {
         // An unknown-identity row is not evidence the rest are controlled
         // either: the metric is a set of readings, not an ordering.

@@ -280,6 +280,8 @@ export type EvalComparabilityVerdict =
   | 'runtime-different'
   /** A side did not record enough identity to decide; never a match. */
   | 'incomplete-identity'
+  /** One family and revision, two checkpoint digests: a label that lies. */
+  | 'identity-integrity'
   | 'incomparable';
 
 /** A column's run for one row: its result, its identity, its gaps. */

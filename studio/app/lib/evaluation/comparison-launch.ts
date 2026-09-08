@@ -61,6 +61,21 @@ export type ComparisonLaunchRequest = {
    * refused at submission rather than run against invented pixels.
    */
   readonly frameSource: string | null;
+  /**
+   * Cloud inputs, as ARTIFACT IDS by role — never paths.
+   *
+   * The compute params schema rejects anything path- or URL-shaped, because the
+   * worker dereferences nothing from params: a file reaches it only as an
+   * uploaded artifact bound to a role. So a local column runs from `spec` and
+   * `frameSource` on this machine, while a cloud column runs from these, and a
+   * cloud column requested without them is refused rather than submitted with a
+   * path the worker could not read.
+   *
+   * Closed loop takes scenario / scene / replay-context / nav-raster (0..1
+   * each); open loop takes 1..32 clip-bundle entries plus an optional
+   * nav-raster, and its params carry `items[]` naming those roles.
+   */
+  readonly cloudInputs?: readonly { readonly role: string; readonly artifactId: string }[];
 };
 
 export type ComparisonColumnRefusal = {
@@ -72,6 +87,7 @@ export type ComparisonColumnRefusal = {
     | 'kind_unsupported_on_target'
     | 'quant_unsupported_on_target'
     | 'compute_unavailable'
+    | 'cloud_inputs_required'
     | 'no_frame_source'
     | 'submission_failed';
   /** Written to be shown to the person who picked the column. */
@@ -182,25 +198,7 @@ export async function launchComparison(
   const launched: ComparisonColumnLaunched[] = [];
   const refused: ComparisonColumnRefusal[] = [];
   const versions = await listModelVersions(context);
-  // One refusal that applies to every column: without a frame source the
-  // endpoint policy cannot run at all, and the alternative is fabricated
-  // observations. Refuse the columns rather than submit runs that will fail.
-  if (!request.frameSource) {
-    return {
-      campaignId: request.campaignId,
-      kind: request.kind,
-      launched: [],
-      refused: request.columns.map((column) => ({
-        modelVersionId: column.modelVersionId,
-        target: column.target,
-        code: 'no_frame_source' as const,
-        reason:
-          'A model comparison needs a real frame source (`dir:<path>` or `bevy:<rig.json>`); camera views are never synthesized.',
-      })),
-    };
-  }
   const endpoints = await listModelEndpoints(context);
-
   for (const column of request.columns) {
     const version = versions.find((candidate) => candidate.id === column.modelVersionId);
     if (!version) {
@@ -214,6 +212,20 @@ export async function launchComparison(
     }
 
     if (column.target === 'local') {
+      // A local run reads frames from this machine, and without a source there
+      // is nothing to read: the alternative is fabricated observations, so the
+      // column is refused instead of submitted. Cloud columns are unaffected —
+      // they read uploaded artifacts, which is a different question.
+      if (!request.frameSource) {
+        refused.push({
+          modelVersionId: column.modelVersionId,
+          target: 'local',
+          code: 'no_frame_source',
+          reason:
+            'A local run needs a real frame source (`dir:<path>` or `bevy:<rig.json>`); camera views are never synthesized.',
+        });
+        continue;
+      }
       const endpoint = endpoints.find(
         (candidate) => candidate.modelVersionId === column.modelVersionId && candidate.enabled,
       );
@@ -337,6 +349,31 @@ export async function launchComparison(
       });
       continue;
     }
+    // Inputs must be artifact ids bound to roles. Closed loop needs at least
+    // one world to drive (scenario, scene or replay-context); open loop needs
+    // at least one clip bundle. Refuse here rather than let the control plane
+    // reject a job we could tell was unsubmittable.
+    const cloudInputs = request.cloudInputs ?? [];
+    const roles = new Set(cloudInputs.map((entry) => entry.role));
+    const clipBundles = cloudInputs.filter((entry) => entry.role.startsWith('clip-bundle'));
+    const missingInputs =
+      request.kind === 'openloop'
+        ? clipBundles.length === 0
+          ? 'at least one uploaded clip bundle'
+          : null
+        : roles.has('scenario') || roles.has('scene') || roles.has('replay-context')
+          ? null
+          : 'an uploaded scenario, scene or replay-context bundle';
+    if (missingInputs !== null) {
+      refused.push({
+        modelVersionId: column.modelVersionId,
+        target: 'cloud',
+        code: 'cloud_inputs_required',
+        reason: `A cloud run needs ${missingInputs}. Cloud workers read uploaded artifacts, never a path on this machine.`,
+      });
+      continue;
+    }
+
     const runIds: string[] = [];
     let submissionError: string | null = null;
     for (const seed of request.seeds) {
@@ -347,21 +384,31 @@ export async function launchComparison(
             // One idempotency key per (campaign, column, seed): a retried
             // submission joins the existing job instead of creating a rival.
             idempotencyKey: `${request.campaignId}:${column.modelVersionId}:${String(seed)}`,
-            model: {
-              family: version.family,
-              revision: family.pinnedRevision ?? null,
-              quant: column.quant,
-            },
+            // `model` and `inputs` live INSIDE `input`; everything else is
+            // `params`, and params carry no path or URL because the worker
+            // dereferences nothing from them.
             input: {
-              spec: request.spec,
-              seed,
-              steps: request.steps,
-              decisionHz: request.decisionHz,
-              mode: request.mode,
-              deadlineMs: request.deadlineMs,
-              frameSource: request.frameSource,
-              cameraProfile: column.rigProfile,
-              campaignId: request.campaignId,
+              model: {
+                family: version.family,
+                revision: family.pinnedRevision ?? null,
+                quant: column.quant,
+              },
+              inputs: cloudInputs.map((entry) => ({ role: entry.role, artifactId: entry.artifactId })),
+              params: {
+                seed,
+                steps: request.steps,
+                decisionHz: request.decisionHz,
+                mode: request.mode,
+                deadlineMs: request.deadlineMs,
+                cameraProfile: column.rigProfile,
+                campaignId: request.campaignId,
+                // Open loop binds each item to one of the submitted roles; the
+                // control plane validates the binding, so an unbound item is
+                // refused before a cold start rather than after it.
+                ...(request.kind === 'openloop'
+                  ? { items: clipBundles.map((entry) => ({ role: entry.role })) }
+                  : {}),
+              },
             },
           }),
         );

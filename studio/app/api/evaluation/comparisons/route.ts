@@ -27,6 +27,11 @@ const LaunchSchema = z
     mode: z.enum(["offline-simtime", "realtime"]).default("offline-simtime"),
     deadlineMs: z.number().positive().nullable().default(null),
     frameSource: z.string().min(1).nullable().default(null),
+    /** Cloud inputs are artifact ids by role; the worker reads nothing else. */
+    cloudInputs: z
+      .array(z.object({ role: z.string().min(1).max(64), artifactId: z.string().min(1).max(200) }))
+      .max(33)
+      .default([]),
     columns: z
       .array(
         z.object({
@@ -47,6 +52,14 @@ const LaunchSchema = z
         code: z.ZodIssueCode.custom,
         path: ["deadlineMs"],
         message: "realtime mode requires an explicit deadlineMs",
+      });
+    }
+    if (value.columns.some((column) => column.target === "local") && value.frameSource === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["frameSource"],
+        message:
+          "a local column needs a real frame source (`dir:<path>` or `bevy:<rig.json>`); camera views are never synthesized",
       });
     }
     if (value.mode === "offline-simtime" && value.deadlineMs !== null) {
@@ -149,6 +162,7 @@ export async function POST(request: Request) {
       mode: launchRequest.mode,
       deadlineMs: launchRequest.deadlineMs,
       frameSource: launchRequest.frameSource,
+      cloudInputs: launchRequest.cloudInputs ?? [],
     },
     columns: result.launched.map((column) => ({
       label: column.label,

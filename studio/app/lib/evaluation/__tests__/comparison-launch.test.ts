@@ -72,6 +72,7 @@ const request = (
   mode: "offline-simtime",
   deadlineMs: null,
   frameSource: "dir:/tmp/frames",
+  cloudInputs: [{ role: "scenario", artifactId: "art-scenario-1" }],
   columns: [
     { modelVersionId: installedVersionId, target: "local", rigProfile: "alpamayo-4cam", quant: "nf4" },
   ],
@@ -150,6 +151,7 @@ test("the same service accepts the open-loop kind it does serve", async () => {
     request({
       kind: "openloop",
       seeds: [9],
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
       columns: [
         { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
       ],
@@ -164,10 +166,25 @@ test("the same service accepts the open-loop kind it does serve", async () => {
   );
   assert.equal(result.refused.length, 0);
   assert.deepEqual(result.launched[0]!.runIds, ["job-1"]);
-  const job = submitted[0] as { kind: string; idempotencyKey: string; model: { revision: string | null } };
+  const job = submitted[0] as {
+    kind: string;
+    idempotencyKey: string;
+    input: {
+      model: { revision: string | null };
+      inputs: { role: string; artifactId: string }[];
+      params: Record<string, unknown>;
+    };
+  };
   assert.equal(job.kind, "alpamayo.openloop");
-  // The revision the service actually pins, not the one the request hoped for.
-  assert.equal(job.model.revision, "rev-777");
+  // `model` and `inputs` live INSIDE `input`; params carry no path or URL,
+  // because the compute worker dereferences nothing from params.
+  assert.equal(job.input.model.revision, "rev-777");
+  assert.deepEqual(job.input.inputs, [{ role: "clip-bundle", artifactId: "art-clip-1" }]);
+  assert.deepEqual(job.input.params["items"], [{ role: "clip-bundle" }]);
+  for (const [key, value] of Object.entries(job.input.params)) {
+    if (typeof value !== "string") continue;
+    assert.ok(!/^[a-z]+:|\//.test(value), `params.${key} must not be path- or URL-shaped: ${value}`);
+  }
   // One key per campaign/column/seed, so a retry joins instead of racing.
   assert.equal(job.idempotencyKey, `cmp-campaign:${endpointlessVersionId}:9`);
 });
@@ -177,6 +194,7 @@ test("an unserved quantization is refused with what the service does serve", asy
     context,
     request({
       kind: "openloop",
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
       columns: [
         { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "nf4" },
       ],
@@ -201,11 +219,56 @@ test("no compute service means no cloud column, with the reason carried through"
   assert.equal(result.refused[0]!.reason, "compute capabilities did not return JSON");
 });
 
-test("a missing frame source refuses every column instead of inventing pixels", async () => {
+test("a local column with no frame source is refused instead of inventing pixels", async () => {
   const result = await launchComparison(context, request({ frameSource: null }));
   assert.equal(result.launched.length, 0);
   assert.equal(result.refused[0]!.code, "no_frame_source");
   assert.match(result.refused[0]!.reason, /never synthesized/);
+});
+
+test("a cloud column needs uploaded artifacts, not a path on this machine", async () => {
+  // The compute params schema rejects path- and URL-shaped values because the
+  // worker dereferences nothing from params: a file arrives only as an artifact
+  // bound to a role. A cloud column asked for without one is refused here.
+  const result = await launchComparison(
+    context,
+    request({
+      kind: "openloop",
+      cloudInputs: [],
+      columns: [
+        { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
+      ],
+    }),
+    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-never" },
+  );
+  assert.equal(result.launched.length, 0);
+  assert.equal(result.refused[0]!.code, "cloud_inputs_required");
+  assert.match(result.refused[0]!.reason, /never a path on this machine/);
+});
+
+test("a cloud column runs while a local column lacking frames is refused", async () => {
+  // The two refusals are independent: a cloud-only comparison needs no local
+  // frame source, and a local column's missing frames does not sink the cloud.
+  const result = await launchComparison(
+    context,
+    request({
+      kind: "openloop",
+      seeds: [3],
+      frameSource: null,
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
+      columns: [
+        { modelVersionId: installedVersionId, target: "local", rigProfile: "alpamayo-4cam", quant: "nf4" },
+        { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
+      ],
+    }),
+    { capabilities: openloopOnlyCloud, submitComputeJob: async () => "job-y" },
+  );
+  assert.deepEqual(
+    result.refused.map((entry) => entry.code),
+    ["no_frame_source"],
+  );
+  assert.equal(result.launched.length, 1);
+  assert.equal(result.launched[0]!.target, "cloud");
 });
 
 test("a partly submitted column says how many runs already exist", async () => {
@@ -215,6 +278,7 @@ test("a partly submitted column says how many runs already exist", async () => {
     request({
       kind: "openloop",
       seeds: [1, 2, 3],
+      cloudInputs: [{ role: "clip-bundle", artifactId: "art-clip-1" }],
       columns: [
         { modelVersionId: endpointlessVersionId, target: "cloud", rigProfile: "alpamayo-4cam", quant: "fp16" },
       ],
@@ -295,6 +359,7 @@ test("the comparison record round-trips, and a path-shaped id cannot escape the 
       mode: "offline-simtime" as const,
       deadlineMs: null,
       frameSource: "dir:/tmp/frames",
+      cloudInputs: [{ role: "scenario", artifactId: "art-scenario-1" }],
     },
     columns: [
       {

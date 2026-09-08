@@ -12,7 +12,7 @@ import {
 
 const rig = (overrides: Partial<ComparisonIdentity["rig"]> = {}): ComparisonIdentity["rig"] => ({
   profile: "alpamayo-4cam",
-  captureVersion: "alpamayo-4cam@5d56b3d837c8",
+  captureVersion: "capture@5d56b3d837c8",
   cameraIds: [0, 1, 2, 6],
   resolution: { width: 512, height: 384 },
   intrinsicsSha256: "b".repeat(64),
@@ -69,16 +69,17 @@ test("only the model differing is matched; a different rig is sensor-different",
 
   // Same profile NAME, different resolved geometry: caught by the version.
   const reauthored = cell({
-    identity: identity({ rig: rig({ captureVersion: "alpamayo-1@ffffffffffff" }) }),
+    identity: identity({ rig: rig({ captureVersion: "capture@ffffffffffff" }) }),
   });
   assert.equal(comparability(baseline, reauthored).verdict, "sensor-different");
 });
 
-test("quant, checkpoint, engine and cadence differences are runtime-different, not matched", () => {
+test("control differences are runtime-different, not matched", () => {
+  // Checkpoint digest is deliberately NOT in this list: under one family and
+  // revision it is an integrity refusal, and across models it is the variable.
   const baseline = cell();
   for (const [label, other] of [
     ["quant", cell({ identity: identity({ quant: "bf16" }) })],
-    ["checkpointDigest", cell({ identity: identity({ checkpointDigest: "9".repeat(64) }) })],
     [
       "engineVersion",
       cell({
@@ -272,7 +273,7 @@ test("two models over one identical capture are matched: that is the comparison"
       family: "alpamayo-1",
       checkpointDigest: "a1checkpoint",
       modelRequirementVersion: "alpamayo-1@00e8e20863b4",
-      rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }),
+      rig: rig({ captureVersion: "capture@5d56b3d837c8" }),
     }),
   });
   const b = cell({
@@ -280,20 +281,19 @@ test("two models over one identical capture are matched: that is the comparison"
       family: "alpamayo-1.5",
       checkpointDigest: "a15checkpoint",
       modelRequirementVersion: "alpamayo-1.5@e1a393f5b1d7",
-      rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }),
+      rig: rig({ captureVersion: "capture@5d56b3d837c8" }),
     }),
   });
   const detail = comparability(a, b);
-  // Different weights are a runtime difference by checkpoint, NOT a sensor one:
-  // nothing about the imagery changed.
-  assert.equal(detail.verdict, "runtime-different");
-  assert.deepEqual(detail.differing, ["checkpointDigest"]);
+  // MATCHED. The controls held; the model is what varied, which is the point.
+  assert.equal(detail.verdict, "matched");
+  assert.deepEqual(detail.differing, []);
+  assert.deepEqual(detail.model, ["family", "checkpointDigest"]);
   assert.ok(detail.metadata.includes("model.requirementVersion"));
-  assert.ok(!detail.differing.includes("model.requirementVersion"));
 });
 
 test("a differing requirement version alone never makes runs sensor-different", () => {
-  const base = rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" });
+  const base = rig({ captureVersion: "capture@5d56b3d837c8" });
   const a = cell({ identity: identity({ modelRequirementVersion: "alpamayo-1@00e8e20863b4", rig: base }) });
   const b = cell({ identity: identity({ modelRequirementVersion: "alpamayo-2-super@ab9e93bced10", rig: base }) });
   const detail = comparability(a, b);
@@ -302,10 +302,10 @@ test("a differing requirement version alone never makes runs sensor-different", 
 });
 
 test("a genuinely different capture is still sensor-different", () => {
-  const a = cell({ identity: identity({ rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }) }) });
+  const a = cell({ identity: identity({ rig: rig({ captureVersion: "capture@5d56b3d837c8" }) }) });
   const b = cell({
     identity: identity({
-      rig: rig({ captureVersion: "alpamayo-6cam@3187a344fb6f", cameraIds: [0, 1, 2, 3, 4, 5] }),
+      rig: rig({ captureVersion: "capture@3187a344fb6f", cameraIds: [0, 1, 2, 3, 4, 5] }),
     }),
   });
   const detail = comparability(a, b);
@@ -320,4 +320,102 @@ test("the rig preset NAME is metadata, not evidence of a different capture", () 
   const detail = comparability(a, b);
   assert.equal(detail.verdict, "matched");
   assert.deepEqual(detail.metadata, ["rig.profile"]);
+});
+
+test("two different model checkpoints under one set of controls are matched and ranked", () => {
+  // Main's rule: model weights, revision and family are the comparison
+  // VARIABLE. If they were confounds, no model comparison could ever rank.
+  const controls = { rig: rig(), policySeed: 7, quant: "nf4" } as const;
+  const a = cell({
+    metrics: { drivingScore: 0.62 },
+    identity: identity({
+      ...controls,
+      family: "alpamayo-1",
+      revision: "rev-a",
+      checkpointDigest: "1".repeat(64),
+      modelRequirementVersion: "alpamayo-1@00e8e20863b4",
+    }),
+  });
+  const b = cell({
+    metrics: { drivingScore: 0.81 },
+    identity: identity({
+      ...controls,
+      family: "alpamayo-2-super",
+      revision: "rev-b",
+      checkpointDigest: "2".repeat(64),
+      modelRequirementVersion: "alpamayo-2-super@ab9e93bced10",
+    }),
+  });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "matched");
+  assert.deepEqual(detail.model, ["family", "revision", "checkpointDigest"]);
+
+  const ranking = rankMetric([{ scenarioId: "s1", seed: 1, cells: [a, b] }], 2, "drivingScore");
+  assert.equal(ranking.orderable, true);
+  assert.equal(ranking.excluded.length, 0);
+  assert.equal(ranking.columns[0]!.mean, 0.62);
+  assert.equal(ranking.columns[1]!.mean, 0.81);
+});
+
+test("one revision with two checkpoint digests is an integrity refusal, not a difference", () => {
+  // An intended weight change carries a different revision. The same claimed
+  // revision with different weights means the label does not describe what ran,
+  // so nothing may be ranked on it.
+  const a = cell({ identity: identity({ revision: "rev-a", checkpointDigest: "1".repeat(64) }) });
+  const b = cell({ identity: identity({ revision: "rev-a", checkpointDigest: "2".repeat(64) }) });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "identity-integrity");
+  assert.deepEqual(detail.differing, ["checkpointDigest"]);
+
+  const ranking = rankMetric([{ scenarioId: "s1", seed: 1, cells: [a, b] }], 2, "drivingScore");
+  assert.equal(ranking.orderable, false);
+  assert.deepEqual(
+    ranking.excluded.map((entry) => entry.reason),
+    ["identity-integrity"],
+  );
+});
+
+test("a control that moved is still a confound, whatever the models are", () => {
+  // Precision is a control: the same weights at nf4 and fp16 do different
+  // things, so a precision change is not the model difference being measured.
+  const a = cell({ identity: identity({ family: "alpamayo-1", quant: "nf4" }) });
+  const b = cell({ identity: identity({ family: "alpamayo-2-super", quant: "fp16" }) });
+  const detail = comparability(a, b);
+  assert.equal(detail.verdict, "runtime-different");
+  assert.deepEqual(detail.differing, ["quant"]);
+  assert.ok(detail.model.includes("family"));
+});
+
+test("an expected-preset digest in the capture field is absent identity, not a capture", () => {
+  // The false match Main caught upstream: expectedCaptureHash(rigId) digests
+  // the UNEDITED preset, so an author who widens a FOV keeps the rig id and the
+  // preset digest. Two different captures would have compared as one.
+  const preset = (score: number) =>
+    cell({
+      metrics: { drivingScore: score },
+      identity: identity({ rig: rig({ captureVersion: "alpamayo-4cam@5d56b3d837c8" }) }),
+    });
+  const detail = comparability(preset(0.6), preset(0.8));
+  assert.equal(detail.verdict, "incomplete-identity");
+  assert.ok(detail.differing.includes("rig.captureVersion"));
+  assert.equal(
+    rankMetric([{ scenarioId: "s1", seed: 1, cells: [preset(0.6), preset(0.8)] }], 2, "drivingScore")
+      .orderable,
+    false,
+  );
+});
+
+test("the same render consumed as two cameras is not the same capture as four", () => {
+  // The camera SUBSET fed to the model is in the digest upstream; here it is
+  // also in the field list, so a reader is told which part differs.
+  const four = cell({
+    identity: identity({ rig: rig({ captureVersion: "capture@aaaaaaaaaaaa", cameraIds: [0, 1, 2, 6] }) }),
+  });
+  const two = cell({
+    identity: identity({ rig: rig({ captureVersion: "capture@bbbbbbbbbbbb", cameraIds: [1, 6] }) }),
+  });
+  const detail = comparability(four, two);
+  assert.equal(detail.verdict, "sensor-different");
+  assert.ok(detail.differing.includes("rig.captureVersion"));
+  assert.ok(detail.differing.includes("rig.cameraIds"));
 });

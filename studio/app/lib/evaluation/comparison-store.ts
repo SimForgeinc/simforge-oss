@@ -66,6 +66,8 @@ export type ComparisonRecord = {
     readonly mode: 'offline-simtime' | 'realtime';
     readonly deadlineMs: number | null;
     readonly frameSource: string | null;
+    /** Artifact ids by role for cloud columns; empty for a local comparison. */
+    readonly cloudInputs: readonly { readonly role: string; readonly artifactId: string }[];
   };
   readonly columns: readonly ComparisonRecordColumn[];
   readonly refused: readonly ComparisonRecordRefusal[];
