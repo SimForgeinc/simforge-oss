@@ -17,7 +17,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useVisiblePolling } from "../lib/use-visible-polling";
 import type {
   ComputeJob,
-  ComputeJobResultArtifact,
   EvalArtifactRole,
   EvalResultManifest,
   FramesManifest,
@@ -46,10 +45,13 @@ export type JobResultBundle = {
   problems: string[];
 };
 
+/** A manifest-declared artifact joined to the id the control plane stored it under. */
+type StoredArtifact = { role: string; path: string; artifactId: string };
+
 async function grantUrl(
   gateway: EvaluationGateway,
   jobId: string,
-  artifact: ComputeJobResultArtifact,
+  artifact: StoredArtifact,
 ): Promise<string> {
   const grant = await gateway.artifactDownloadGrant(jobId, artifact.artifactId);
   return grant.url;
@@ -58,7 +60,7 @@ async function grantUrl(
 async function loadJson(
   gateway: EvaluationGateway,
   jobId: string,
-  artifact: ComputeJobResultArtifact,
+  artifact: StoredArtifact,
 ): Promise<unknown> {
   const url = await grantUrl(gateway, jobId, artifact);
   const response = await fetch(url, { cache: "no-store" });
@@ -114,11 +116,10 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
     const record = (problem: string) =>
       setProblems((current) => (current.includes(problem) ? current : [...current, problem]));
 
-    const byRole = (role: EvalArtifactRole) => artifacts.find((entry) => entry.role === role);
-
     const load = async () => {
+      let document: EvalResultManifest | null = null;
       try {
-        const document = await gateway.getJobResult(job.id);
+        document = await gateway.getJobResult(job.id);
         if (!cancelled) setManifest(document);
       } catch (cause) {
         if (!cancelled) {
@@ -127,8 +128,33 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
           );
         }
       }
+      if (cancelled || !document) return;
 
-      const openLoopArtifact = byRole("openloop-result");
+      /**
+       * The control plane derives its artifact roles from file extensions
+       * (`openloop.json` is `data`, `result.json` is `manifest`), so its DTO
+       * roles are not the evaluation package's roles and cannot be matched
+       * against them. The manifest names the real role and the path; the DTO
+       * carries the downloadable id. The digest is what joins them, and it is
+       * an exact join because both sides record the same content hash.
+       */
+      const idByDigest: Record<string, string | undefined> = {};
+      for (const entry of artifacts) idByDigest[entry.sha256] = entry.artifactId;
+
+      const resolve = (role: EvalArtifactRole) => {
+        const declared = document.artifacts.find((entry) => entry.role === role);
+        if (!declared) return null;
+        const artifactId = idByDigest[declared.sha256];
+        if (!artifactId) {
+          record(
+            `The run declares a ${role} artifact (${declared.path}) that the control plane did not store, so it cannot be shown.`,
+          );
+          return null;
+        }
+        return { ...declared, artifactId };
+      };
+
+      const openLoopArtifact = resolve("openloop-result");
       if (openLoopArtifact) {
         try {
           const parsed = readOpenLoopResult(await loadJson(gateway, job.id, openLoopArtifact));
@@ -138,29 +164,33 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
         } catch (cause) {
           if (!cancelled) record(cause instanceof ComputeApiError ? cause.message : String(cause));
         }
+      } else if (document.kind === "openloop" || document.kind === "text") {
+        record(
+          "This run stored no openloop.json, so there are no per-item results to show. The manifest's own status and provenance are above.",
+        );
       }
 
-      const trajectoriesArtifact = byRole("trajectories");
+      const trajectoriesArtifact = resolve("trajectories");
       if (trajectoriesArtifact) {
         try {
-          const document = (await loadJson(gateway, job.id, trajectoriesArtifact)) as TrajectoriesDocument;
-          if (!cancelled) setTrajectories(document);
+          const parsed = (await loadJson(gateway, job.id, trajectoriesArtifact)) as TrajectoriesDocument;
+          if (!cancelled) setTrajectories(parsed);
         } catch (cause) {
           if (!cancelled) record(cause instanceof ComputeApiError ? cause.message : String(cause));
         }
       }
 
-      const framesArtifact = byRole("frames");
-      if (framesArtifact && framesArtifact.mediaType === "application/json") {
+      const framesArtifact = resolve("frames");
+      if (framesArtifact && framesArtifact.path.endsWith(".json")) {
         try {
-          const document = (await loadJson(gateway, job.id, framesArtifact)) as FramesManifest;
-          if (!cancelled) setFrames(document);
+          const parsed = (await loadJson(gateway, job.id, framesArtifact)) as FramesManifest;
+          if (!cancelled) setFrames(parsed);
         } catch (cause) {
           if (!cancelled) record(cause instanceof ComputeApiError ? cause.message : String(cause));
         }
       }
 
-      const videoArtifact = byRole("video");
+      const videoArtifact = resolve("video");
       if (videoArtifact) {
         try {
           const url = await grantUrl(gateway, job.id, videoArtifact);
@@ -170,8 +200,8 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
         }
       }
 
-      const overlayArtifact = byRole("overlay-frames");
-      if (overlayArtifact && overlayArtifact.mediaType !== "application/json") {
+      const overlayArtifact = resolve("overlay-frames");
+      if (overlayArtifact && !overlayArtifact.path.endsWith(".json")) {
         try {
           const url = await grantUrl(gateway, job.id, overlayArtifact);
           if (!cancelled) setFrameUrls([url]);
