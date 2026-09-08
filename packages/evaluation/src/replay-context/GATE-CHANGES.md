@@ -427,3 +427,43 @@ The packages DO publish a full capture timeline — `rig_trajectories[0].cameras
 importer read timing from the four stored JPEGs and labelled a 20 s drive a four-frame
 recording. `cameras[].timing` is now the real timeline; the stored imagery is recorded
 separately as `cameras[].referenceFrames`, which is what G1 compares against.
+
+
+---
+
+## 2026-09-08 — The generated-scene-directory confound: TESTED AND REFUTED
+
+The previous entry withheld judgement on two scenes because their G1 came from scene
+directories this module generated, while the 22.89 dB scene came from a pre-existing imported
+one. That is a testable confound, so it was tested rather than left as a caveat.
+
+**Method.** Generate a directory with `scene scene-dir` for the SAME scene (007a5809), from the
+SAME package, and re-run G1/G2 against it. Only the directory differs.
+
+| Camera | pre-existing directory | generated directory |
+|---|---|---|
+| cross-left 120° | 24.07 dB | 24.07 dB |
+| front-wide 120° | 22.89 dB | 22.89 dB |
+| cross-right 120° | 25.32 dB | 25.32 dB |
+| front-tele 30° | 19.67 dB | 19.67 dB |
+
+Identical to two decimal places on every camera. **The generated directory is not a confound**,
+and `scene-bundle.ts` is validated: a directory derived from the package alone renders exactly
+as the one produced by the original import pipeline.
+
+**Therefore the earlier reservation is withdrawn and the numbers stand as scene quality.**
+clipgt-000a3a34 at 16.18 dB and clipgt-00064c58 at 17.90 dB are genuinely weaker
+reconstructions than 007a5809, whose three 120° cameras reach 22.9–25.3 dB. Three real scenes,
+and only one has any camera profile clearing G1.
+
+### A G2 weakness this exposed, recorded not patched
+
+On 007a5809 the on-trajectory baseline is 49.7% "unsupported" — that scene has a large far
+field, and sky sits beyond the 1000 m far plane. On both new scenes every probe reported
+**exactly 0.000**, including the baseline: those drives are enclosed, nothing is beyond the far
+plane, so the far-plane test has nothing to detect and G2 passes trivially at every offset.
+
+Baseline subtraction still makes the *comparison* sound, but a gate that cannot discriminate on
+an enclosed scene is not measuring off-trajectory coverage there — it is measuring that the
+scene has no sky. Alongside the G4 statistic problem, that is the second gate whose choice of
+measure needs re-deriving with evidence. Neither was adjusted to admit anything.
