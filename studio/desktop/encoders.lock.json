@@ -15,7 +15,13 @@
       "describes": "release/7.1 at tag n7.1.5",
       "tag": "n7.1.5",
       "license": "LGPL-2.1-or-later, GPL-2.0-or-later for the parts enabled by --enable-gpl; --enable-version3 upgrades to (L)GPL-3.0",
-      "licenseFiles": ["COPYING.GPLv3", "COPYING.LGPLv2.1", "COPYING.GPLv2", "COPYING.LGPLv3", "LICENSE.md"]
+      "licenseFiles": [
+        "COPYING.GPLv3",
+        "COPYING.LGPLv2.1",
+        "COPYING.GPLv2",
+        "COPYING.LGPLv3",
+        "LICENSE.md"
+      ]
     },
     {
       "id": "x264",
@@ -24,7 +30,9 @@
       "commit": "31e19f92f00c7003fa115047ce50978bc98c3a0d",
       "describes": "stable branch",
       "license": "GPL-2.0-or-later",
-      "licenseFiles": ["COPYING"]
+      "licenseFiles": [
+        "COPYING"
+      ]
     }
   ],
   "build": {
@@ -44,6 +52,7 @@
         "--enable-gpl",
         "--enable-version3",
         "--enable-libx264",
+        "--enable-zlib",
         "--disable-network",
         "--disable-doc",
         "--disable-debug",
@@ -51,15 +60,49 @@
         "--enable-ffmpeg",
         "--enable-ffprobe"
       ],
-      "note": "--disable-autodetect is the point of this list: no external library enters the binary because it happened to be installed on the build host, so the closure is exactly FFmpeg plus libx264 on every platform, the license outcome is identical everywhere and the corresponding source is complete with two projects. FFmpeg's own internal codecs, demuxers, muxers and filters stay at their defaults on purpose: the product must decode whatever calibrated clip a user uploads (H.264, HEVC, VP8/VP9, MJPEG, ProRes, AV1) and a hand-written allowlist would turn an unlisted input into a mystery extraction failure. --disable-network is kept because a bundled encoder should not be pointable at a URL; file and pipe protocols remain."
+      "note": "--disable-autodetect is the point of this list: no external library enters the binary because it happened to be installed on the build host, so the closure is exactly FFmpeg plus libx264 plus zlib on every platform, the licence outcome is identical everywhere and the corresponding source is complete. zlib is enabled explicitly because FFmpeg's EXR decoder requires it, and renderer/tools/prepare_sky_assets.py converts the pinned NASA starmap EXR through ffmpeg: without it the decoder is not built at all and the sky-plate step fails with exit 234, which is how this was found. zlib is a permissive System Library present on every build platform and does not change the GPL-3.0-or-later outcome. FFmpeg's own internal codecs, demuxers, muxers and filters stay at their defaults on purpose: the product must decode whatever calibrated clip a user uploads (H.264, HEVC, VP8/VP9, MJPEG, ProRes, AV1) and a hand-written allowlist would turn an unlisted input into a mystery extraction failure. --disable-network is kept because a bundled encoder should not be pointable at a URL; file and pipe protocols remain."
     },
     "toolchain": {
-      "linux-x64": { "shell": "bash", "requires": ["gcc", "make", "nasm", "git"], "install": "sudo apt-get install -y build-essential nasm git" },
-      "darwin-arm64": { "shell": "bash", "requires": ["clang", "make", "nasm", "git"], "install": "brew install nasm" },
-      "darwin-x64": { "shell": "bash", "requires": ["clang", "make", "nasm", "git"], "install": "brew install nasm" },
+      "linux-x64": {
+        "shell": "bash",
+        "requires": [
+          "gcc",
+          "make",
+          "nasm",
+          "git"
+        ],
+        "install": "sudo apt-get install -y build-essential nasm git"
+      },
+      "darwin-arm64": {
+        "shell": "bash",
+        "requires": [
+          "clang",
+          "make",
+          "nasm",
+          "git"
+        ],
+        "install": "brew install nasm"
+      },
+      "darwin-x64": {
+        "shell": "bash",
+        "requires": [
+          "clang",
+          "make",
+          "nasm",
+          "git"
+        ],
+        "install": "brew install nasm"
+      },
       "win32-x64": {
         "shell": "msys2 (mingw64)",
-        "requires": ["mingw-w64-x86_64-gcc", "make", "nasm", "git", "diffutils", "pkg-config"],
+        "requires": [
+          "mingw-w64-x86_64-gcc",
+          "make",
+          "nasm",
+          "git",
+          "diffutils",
+          "pkg-config"
+        ],
         "install": "msys2/setup-msys2@v2 with msystem MINGW64 and pacman -S --needed mingw-w64-x86_64-gcc make nasm git diffutils pkgconf",
         "note": "FFmpeg's configure needs a POSIX shell; the MSYS2 MINGW64 environment produces native Windows executables with no MSYS runtime dependency."
       }
