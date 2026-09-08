@@ -2,17 +2,17 @@
 
 import { Gamepad2 } from "lucide-react";
 import { useState } from "react";
-import { isUnrecordedManualDrive, type ManualDriveInteraction } from "@simforge-oss/editor";
+import type { ManualDriveInteraction } from "@simforge-oss/editor";
 
 import { EditorDetailsPanel } from "../inspector/EditorDetailsPanel";
 import { summarizeRecording } from "./authoring";
 import type { ManualDriveRecorder } from "./use-manual-drive-recorder";
 
 /**
- * Right-side details for a Manual drive. A drive is recorded, never typed, so
- * this surface shows the state of the take and offers exactly the recorder:
- * Record drive for a placeholder, Record again for a saved take, and while a
- * recorder tab is open, the fact that the editor is waiting on it.
+ * Right-side details for a saved Manual drive. A drive is recorded, never
+ * typed, so this surface shows the take and offers exactly the recorder:
+ * Record again replaces this take only after the new one is reviewed and
+ * saved, and while a recorder tab is open the editor says it is waiting.
  */
 export function ManualDriveDetailsPanel({
   interaction,
@@ -28,11 +28,10 @@ export function ManualDriveDetailsPanel({
   onDelete: () => void;
 }) {
   const [failure, setFailure] = useState<string | null>(null);
-  const unrecorded = isUnrecordedManualDrive(interaction);
   const recording = interaction.target.recording;
-  const clipMismatch = !unrecorded && Math.abs(recording.clipSeconds - clipSeconds) > 1e-6;
-  const summary = unrecorded ? null : summarizeRecording(recording);
-  const waiting = recorder?.inFlight?.interactionId === interaction.id ? recorder.inFlight : null;
+  const clipMismatch = Math.abs(recording.clipSeconds - clipSeconds) > 1e-6;
+  const summary = summarizeRecording(recording);
+  const waiting = recorder?.inFlight?.actorRoleId === interaction.actor ? recorder.inFlight : null;
 
   return (
     <EditorDetailsPanel
@@ -45,7 +44,7 @@ export function ManualDriveDetailsPanel({
           <Gamepad2 aria-hidden="true" className="size-9 text-[#E8E044]" />
           <strong className="text-xs font-medium text-white">Manual drive</strong>
           <span className="text-[9px] uppercase tracking-[0.16em] text-white/40" data-testid="manual-drive-status">
-            {unrecorded ? "Not recorded yet" : clipMismatch ? "Clip length changed" : "Recorded"}
+            {clipMismatch ? "Clip length changed" : "Recorded"}
           </span>
         </div>
       )}
@@ -53,9 +52,7 @@ export function ManualDriveDetailsPanel({
     >
       <div className="space-y-3" data-interaction-id={interaction.id} data-testid={`manual-drive-details-${interaction.id}`}>
         <p className="text-[10px] leading-4 text-white/55">
-          {unrecorded
-            ? `Holds the starting pose for the whole ${clipSeconds}s clip until you drive it.`
-            : `${recording.samples.length} poses over ${recording.clipSeconds}s · ${summary!.distanceM.toFixed(0)} m · peak ${summary!.maxSpeedKph.toFixed(0)} km/h.`}
+          {recording.samples.length} poses over {recording.clipSeconds}s · {summary.distanceM.toFixed(0)} m · peak {summary.maxSpeedKph.toFixed(0)} km/h.
         </p>
         {clipMismatch ? (
           <p className="text-[10px] leading-4 text-amber-200" data-testid="manual-drive-clip-mismatch" role="alert">
@@ -69,6 +66,7 @@ export function ManualDriveDetailsPanel({
           <div className="space-y-2" data-testid="manual-drive-waiting">
             <p className="text-[10px] leading-4 text-[#E8E044]">
               Recorder open in another tab. Finish the drive there; the take comes back here for review.
+              This recording stays until the new take is saved.
             </p>
             <button
               className="editor-motion flex h-8 w-full items-center justify-center rounded-lg border border-white/15 px-3 text-[10px] font-semibold text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
@@ -80,24 +78,24 @@ export function ManualDriveDetailsPanel({
             </button>
           </div>
         ) : (
-          <button
-            className="editor-motion flex h-10 w-full items-center justify-center rounded-lg border border-[#E8E044] bg-[#E8E044] px-3 text-xs font-semibold text-black hover:bg-[#f4ed5d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40"
-            data-testid={`manual-drive-record-${interaction.id}`}
-            disabled={!recorder}
-            onClick={() => setFailure(recorder ? recorder.startTake(interaction.id) : "The recorder is not available here.")}
-            type="button"
-          >
-            {unrecorded ? "Record drive" : "Record again"}
-          </button>
+          <>
+            <button
+              className="editor-motion flex h-10 w-full items-center justify-center rounded-lg border border-[#E8E044] bg-[#E8E044] px-3 text-xs font-semibold text-black hover:bg-[#f4ed5d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40"
+              data-testid={`manual-drive-record-${interaction.id}`}
+              disabled={!recorder}
+              onClick={() => setFailure(recorder ? recorder.startTake(interaction.actor) : "The recorder is not available here.")}
+              type="button"
+            >
+              Record again
+            </button>
+            <p className="text-[10px] leading-4 text-white/45">
+              Recording again replaces this take only after you review and save the new one.
+            </p>
+          </>
         )}
         {failure ? (
           <p className="text-[10px] leading-4 text-amber-200" data-testid="manual-drive-record-failure" role="alert">
             {failure}
-          </p>
-        ) : null}
-        {!unrecorded && !waiting ? (
-          <p className="text-[10px] leading-4 text-white/45">
-            Recording again replaces this take only after you review and save the new one.
           </p>
         ) : null}
       </div>

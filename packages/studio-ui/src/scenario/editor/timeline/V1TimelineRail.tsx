@@ -80,7 +80,7 @@ import { DynamicActorCatalogIcon, isDynamicActorCatalogId } from '../regions/Dyn
 import { cn } from "../../../lib/utils";
 import { isUnconfiguredSimpleTimedRoute } from "../simple-route-status";
 import { isCustomTimedRoute } from "../simple-timed-routes";
-import { addManualDrive, competingMotionRefusal } from "../manual-drive/authoring";
+import { competingMotionRefusal } from "../manual-drive/authoring";
 import { notifyScenario } from "../status";
 import { TimelineCarlaCompatibilityMarker } from "./TimelineCarlaCompatibilityMarker";
 import { TimelineRuler } from "./TimelineRuler";
@@ -159,6 +159,8 @@ export type V1TimelineRailProps = {
   onSelectInteraction?: (interactionId: string, actorId: string) => void;
   onClearSelection?: () => void;
   onSelectSignal?: (headId: string) => void;
+  /** Opens the take recorder for an actor; the document is untouched until a take is saved. */
+  onStartManualDrive?: (actorId: string) => string | null;
   disableInteractionCreation?: boolean;
   lockSimpleTimedRoutes?: boolean;
   readOnly?: boolean;
@@ -289,6 +291,7 @@ export function V1TimelineRail({
   onSelectInteraction,
   onClearSelection,
   onSelectSignal,
+  onStartManualDrive,
   disableInteractionCreation = false,
   lockSimpleTimedRoutes = false,
   readOnly = false,
@@ -528,11 +531,13 @@ export function V1TimelineRail({
     if (!definition) return;
     const actor = { id: role.id, label: actorLabels.get(role.id) ?? role.id };
     if (definition.id === MANUAL_DRIVE_ACTION_ID) {
-      const added = addManualDrive(document, actor);
-      if ("error" in added) {
-        notifyScenario({ severity: "warning", source: "authoring", message: "Manual drive not added", detail: added.error });
-      } else {
-        selectInteraction(added.interactionId, role.id);
+      // Nothing enters the document here: the recorder opens, and only a
+      // reviewed, saved take becomes the actor's Manual drive.
+      const failure = onStartManualDrive
+        ? onStartManualDrive(role.id)
+        : "Manual drive recording is not available in this editor.";
+      if (failure) {
+        notifyScenario({ severity: "warning", source: "authoring", message: "Manual drive not started", detail: failure });
       }
       setContextMenu(null);
       return;

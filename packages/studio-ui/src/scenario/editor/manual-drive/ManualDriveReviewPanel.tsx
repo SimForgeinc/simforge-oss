@@ -2,15 +2,14 @@
 
 import { AlertTriangle, Gauge, Route, Timer, X } from "lucide-react";
 import { useState } from "react";
-import { isUnrecordedManualDrive } from "@simforge-oss/editor";
 
 import { summarizeRecording } from "./authoring";
 import type { ManualDriveRecorder, ManualDriveTakeReview } from "./use-manual-drive-recorder";
 
 /**
  * The one place a finished take can enter the document. It says, before Save,
- * exactly what the take replaces: the placeholder or previous recording on the
- * actor, and any other motion the actor still carried. Lights, horn, existence
+ * exactly what the take replaces: the previous recording on the actor, if any,
+ * and any other motion the actor still carried. Lights, horn, existence
  * and every other actor are untouched, and the dialog says so rather than
  * leaving the author to guess.
  */
@@ -29,9 +28,7 @@ export function ManualDriveReviewPanel({
   const current = review.replaces.current;
   const replacing = current === null
     ? null
-    : isUnrecordedManualDrive(current)
-      ? "its unrecorded placeholder (the actor was holding its starting pose)"
-      : `its previous recording (${current.target.recording.samples.length} samples over ${current.target.recording.clipSeconds}s)`;
+    : `its previous recording (${current.target.recording.samples.length} samples over ${current.target.recording.clipSeconds}s)`;
 
   const run = (action: () => string | null) => {
     setFailure(action());
@@ -117,12 +114,13 @@ export function ManualDriveReviewPanel({
           ) : (
             <div className="border-t border-white/10 pt-3 text-sm leading-6 text-white/75" data-testid="manual-drive-review-replacement">
               <p>
-                Saving replaces {actorLabel}&rsquo;s motion for the whole clip
-                {replacing ? <> &mdash; {replacing}</> : null}.
+                {replacing
+                  ? <>Saving replaces {actorLabel}&rsquo;s motion for the whole clip &mdash; {replacing}.</>
+                  : <>Saving makes this take {actorLabel}&rsquo;s motion for the whole clip.</>}
               </p>
               {review.replaces.otherMotion.length > 0 ? (
                 <p className="mt-1">
-                  It also removes {review.replaces.otherMotion.length === 1 ? "one other motion action" : `${review.replaces.otherMotion.length} other motion actions`} on this actor:{" "}
+                  It {replacing ? "also " : ""}removes {review.replaces.otherMotion.length === 1 ? "one other motion action" : `${review.replaces.otherMotion.length} other motion actions`} on this actor:{" "}
                   <strong className="font-semibold text-white">
                     {review.replaces.otherMotion.map((interaction) => interaction.label ?? interaction.verb).join(", ")}
                   </strong>.

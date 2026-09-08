@@ -82,8 +82,8 @@ const target = <V extends Verb>(id: string, label: string, verb: V, value: Inter
 /**
  * Every target discriminant accepted by each of the seven verbs that can be
  * authored by hand. `route.manualDrive` is deliberately absent: its target is a
- * recorded take, produced by the simulator through `manualDrivePlaceholder`
- * and the take handoff rather than typed into a form.
+ * recorded take, produced by the simulator through the take handoff rather
+ * than typed into a form.
  */
 export const TARGET_VARIANTS = {
   speed: [target('speed.absolute', 'Absolute speed', 'speed', { mode: 'absolute', valueKph: 48 }), target('speed.delta', 'Speed delta', 'speed', { mode: 'delta', deltaKph: 10 }), target('speed.factor', 'Speed factor', 'speed', { mode: 'factor', factor: 1.1 }), target('speed.match', 'Match role speed', 'speed', { mode: 'match', role: OTHER_ROLE, offsetKph: 0 }), target('speed.stop', 'Stop', 'speed', { mode: 'stop' }), target('speed.resume', 'Resume', 'speed', { mode: 'resume' })],

@@ -1,5 +1,5 @@
 import type { Interaction } from '@simforge-oss/scenario';
-import { isManualDrive, isUnrecordedManualDrive } from './manual-drive';
+import { isManualDrive } from './manual-drive';
 
 export const SIMPLE_MODE_SUPPRESSED_ENGINE_ISSUE_CODES = [
   'traffic_control_route_unbound',
@@ -65,9 +65,8 @@ export function emptyTimedRouteIssues(
 }
 
 /**
- * Find manual drives that still hold their placeholder, or whose take was
- * recorded against a different clip length. Either way the scenario cannot
- * honestly replay a drive nobody has driven.
+ * Find manual drives whose take was recorded against a different clip length.
+ * The scenario cannot honestly replay a take over a clip it does not cover.
  */
 export function manualDriveIssues(
   interactions: readonly Interaction[],
@@ -76,25 +75,15 @@ export function manualDriveIssues(
 ): EditorAuthoringValidationIssue[] {
   const issues: EditorAuthoringValidationIssue[] = [];
   for (const interaction of interactions) {
-    if (!isManualDrive(interaction)) continue;
+    if (!isManualDrive(interaction) || Math.abs(interaction.target.recording.clipSeconds - clipSeconds) <= 1e-6) continue;
     const actorName = actorNames?.[interaction.actor] ?? interaction.actor;
-    if (isUnrecordedManualDrive(interaction)) {
-      issues.push({
-        id: `manual-drive-unrecorded:${interaction.id}`,
-        severity: 'warning',
-        title: 'Manual drive not recorded yet',
-        detail: `${actorName} holds its starting pose for the whole clip until a drive is recorded.`,
-        solution: 'Select the Manual drive on the timeline and choose Record drive.',
-      });
-    } else if (Math.abs(interaction.target.recording.clipSeconds - clipSeconds) > 1e-6) {
-      issues.push({
-        id: `manual-drive-clip-mismatch:${interaction.id}`,
-        severity: 'error',
-        title: 'Manual drive recorded for a different clip length',
-        detail: `${actorName}'s drive was recorded for ${interaction.target.recording.clipSeconds}s but the clip is now ${clipSeconds}s.`,
-        solution: 'Record the drive again, or restore the clip length it was recorded for.',
-      });
-    }
+    issues.push({
+      id: `manual-drive-clip-mismatch:${interaction.id}`,
+      severity: 'error',
+      title: 'Manual drive recorded for a different clip length',
+      detail: `${actorName}'s drive was recorded for ${interaction.target.recording.clipSeconds}s but the clip is now ${clipSeconds}s.`,
+      solution: 'Record the drive again, or restore the clip length it was recorded for.',
+    });
   }
   return issues;
 }

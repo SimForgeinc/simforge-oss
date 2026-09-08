@@ -7,7 +7,6 @@ import {
   decodeManualDriveTakeGuard,
   encodeManualDriveTakeGuard,
   isManualDrive,
-  isUnrecordedManualDrive,
   manualDriveTakeGuard,
   type EditorDocument,
   type ManualDriveInteraction,
@@ -16,7 +15,7 @@ import {
 } from "@simforge-oss/editor";
 import type { Interaction, ManualDriveRecording } from "@simforge-oss/scenario";
 
-import { notifyScenario } from "../status";
+import { notifyScenario, useScenarioNotification } from "../status";
 import {
   clearManualDriveTake,
   openManualDriveTake,
@@ -27,9 +26,13 @@ import {
   type ManualDriveTakeResult,
 } from "./take-handoff";
 
-/** A recorder tab is open (or was, before this editor reloaded) for one interaction. */
+/**
+ * A recorder tab is open (or was, before this editor reloaded) for one actor.
+ * Transient editor state only: the document carries nothing for a pending take.
+ */
 export interface ManualDriveTakeInFlight {
   readonly takeId: string;
+  /** The id the take will have once saved: the actor's existing drive, or its stable new id. */
   readonly interactionId: string;
   readonly actorRoleId: string;
 }
@@ -52,14 +55,18 @@ export interface ManualDriveTakeReview {
 export interface ManualDriveRecorder {
   readonly inFlight: ManualDriveTakeInFlight | null;
   readonly review: ManualDriveTakeReview | null;
-  /** Open the simulator for this Manual drive. Returns a message when it cannot. */
-  startTake(interactionId: string): string | null;
+  /**
+   * Open the simulator to record this actor: its first Manual drive, or a
+   * replacement for the one it has. The document is not touched. Returns a
+   * message when it cannot.
+   */
+  startTake(actorRoleId: string): string | null;
   /** Stop waiting on a recorder that will not report back. The document is untouched. */
   abandonTake(): void;
   /** Commit the reviewed take as one transaction. Returns a message when refused. */
   saveReview(): string | null;
   discardReview(): void;
-  /** Discard the reviewed take and open the recorder again for the same drive. */
+  /** Discard the reviewed take and open the recorder again for the same actor. */
   rerecord(): string | null;
 }
 
@@ -146,35 +153,34 @@ export function useManualDriveRecorder({
     return subscribeManualDriveTakeResult(inFlight.takeId, (result) => acceptResult(inFlight, result));
   }, [acceptResult, inFlight]);
 
-  const startTake = useCallback((interactionId: string): string | null => {
+  const startTake = useCallback((actorRoleId: string): string | null => {
     const current = documentRef.current;
     if (!current) return "The editor is still loading.";
     if (!documentId || !datasetId) return "The scenario has not been saved yet. Wait a moment for autosave, then try again.";
     if (inFlight) return "A recorder is already open for this scenario. Finish or cancel that take first.";
-    const interaction = current.data.choreography.interactions.find((candidate) => candidate.id === interactionId);
-    if (!interaction || !isManualDrive(interaction)) return "That interaction is not a Manual drive.";
-    const actor = current.actor(interaction.actor);
-    if (!actor) return "The driven actor has no resolved pose.";
-    if (actor.static) return "Static / parked actors cannot be driven.";
+    const actor = current.actor(actorRoleId);
+    if (!actor) return "The actor has no resolved pose to record from.";
+    if (actor.kind !== "vehicle") return "Only vehicles can be driven manually.";
+    if (actor.static) return "Static / parked actors cannot be driven. Turn off Static / parked first.";
     const guard = manualDriveTakeGuard({
       documentId,
       mapVersionId: map.versionId,
-      interaction,
+      actorRoleId,
       template: current.data,
     });
     const opened = openManualDriveTake({
       datasetId,
       documentId,
       mapVersionId: map.versionId,
-      interactionId: interaction.id,
-      actorRoleId: interaction.actor,
+      interactionId: guard.interactionId,
+      actorRoleId,
       clipSeconds: current.data.choreography.clipSeconds,
       revision: encodeManualDriveTakeGuard(guard),
       content: current.data,
       returnHref: window.location.href,
     });
     if ("error" in opened) return opened.error;
-    setInFlight({ takeId: opened.takeId, interactionId: interaction.id, actorRoleId: interaction.actor });
+    setInFlight({ takeId: opened.takeId, interactionId: guard.interactionId, actorRoleId });
     // A second tab keeps this editor, its undo history and its unsaved edits
     // alive while the take is driven. When pop-ups are blocked the recorder
     // takes over this tab and returns via the request's `returnHref`; the
@@ -189,6 +195,22 @@ export function useManualDriveRecorder({
     if (documentId) clearManualDriveTake(inFlight.takeId, documentId);
     setInFlight(null);
   }, [documentId, inFlight]);
+
+  // The pending take lives only here, never in the document, so the author is
+  // shown it as a held status card with the one action that ends it.
+  useScenarioNotification(
+    "manual-drive-take-pending",
+    inFlight
+      ? {
+          severity: "info",
+          source: "authoring",
+          message: `Recording a Manual drive for ${actorLabel(inFlight.actorRoleId)}`,
+          detail: "Drive the whole clip in the recorder tab. The take comes back here for review; nothing changes until you save it.",
+          ttlMs: null,
+          action: { label: "Stop waiting", run: abandonTake },
+        }
+      : null,
+  );
 
   const review = useMemo<ManualDriveTakeReview | null>(() => {
     if (!delivered || !document) return null;
@@ -248,14 +270,14 @@ export function useManualDriveRecorder({
         })
       : { ok: false, reason: "The recorder returned a take without a valid editor guard." };
     if (!check.ok) return check.reason;
-    const replaced = current.data.choreography.interactions.find((candidate) => candidate.id === delivered.interactionId);
+    const replaced = current.data.choreography.interactions.some((candidate) => candidate.id === delivered.interactionId);
     current.replaceActorMotion(check.interaction);
     if (documentId) clearManualDriveTake(delivered.takeId, documentId);
     setDelivered(null);
     notifyScenario({
       severity: "success",
       source: "authoring",
-      message: replaced && !isUnrecordedManualDrive(replaced) ? "Manual drive re-recorded" : "Manual drive recorded",
+      message: replaced ? "Manual drive re-recorded" : "Manual drive recorded",
       detail: `${actorLabel(delivered.actorRoleId)} now follows the take for the whole ${delivered.recording.clipSeconds}s clip. Undo restores the previous motion.`,
     });
     return null;
@@ -263,9 +285,9 @@ export function useManualDriveRecorder({
 
   const rerecord = useCallback((): string | null => {
     if (!delivered) return "There is no take to record again.";
-    const { interactionId } = delivered;
+    const { actorRoleId } = delivered;
     discardReview();
-    return startTake(interactionId);
+    return startTake(actorRoleId);
   }, [delivered, discardReview, startTake]);
 
   return useMemo(

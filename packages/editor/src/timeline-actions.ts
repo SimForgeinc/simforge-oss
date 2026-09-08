@@ -44,9 +44,10 @@ const customTimedRoute = (): ActionDefinition => ({
 });
 /**
  * Recorded by driving the vehicle in the simulator, so unlike every other
- * definition its target is never authored here: the editor seeds a whole-clip
- * hold on the actor and the recorder replaces it. Callers must route this id
- * through `manualDrivePlaceholder`, never `interactionForAction`.
+ * definition its target is never authored here and nothing is added to the
+ * document when it is chosen: choosing it opens the recorder, and only a
+ * reviewed, saved take becomes an interaction. Callers must route this id to
+ * the take recorder, never through `interactionForAction`.
  */
 const manualDrive = (): ActionDefinition => ({
   id: MANUAL_DRIVE_ACTION_ID,

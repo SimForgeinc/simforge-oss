@@ -1,13 +1,5 @@
-import {
-  competingMotionInteractions,
-  isMotionInteraction,
-  manualDriveFor,
-  manualDrivePlaceholder,
-  type EditorDocument,
-} from "@simforge-oss/editor";
+import { isMotionInteraction, manualDriveFor, type EditorDocument } from "@simforge-oss/editor";
 import type { Interaction } from "@simforge-oss/scenario";
-
-import { notifyScenario } from "../status";
 
 /**
  * Why a new motion instruction cannot be added to this actor, or `null`.
@@ -23,34 +15,6 @@ export function competingMotionRefusal(
 ): string | null {
   if (!isMotionInteraction(candidate) || !manualDriveFor(document.data, actor.id)) return null;
   return `${actor.label} is driven manually for the whole clip. Delete its Manual drive, or record it again, before adding other motion.`;
-}
-
-/**
- * Give the actor a whole-clip Manual drive that holds its current pose until a
- * take is recorded. Any other motion the actor had is removed in the same undo
- * step, and the author is told what went.
- */
-export function addManualDrive(
-  document: EditorDocument,
-  actor: { readonly id: string; readonly label: string },
-): { readonly interactionId: string } | { readonly error: string } {
-  const record = document.actor(actor.id);
-  if (!record) return { error: "The actor has no resolved pose to record from." };
-  if (record.static) return { error: "Static / parked actors cannot be driven. Turn off Static / parked first." };
-  const existing = manualDriveFor(document.data, actor.id);
-  if (existing) return { interactionId: existing.id };
-  const removed = competingMotionInteractions(document.data.choreography.interactions, actor.id);
-  const placeholder = manualDrivePlaceholder(record, document.data.choreography.clipSeconds);
-  document.replaceActorMotion(placeholder);
-  if (removed.length > 0) {
-    notifyScenario({
-      severity: "info",
-      source: "authoring",
-      message: `Manual drive now owns ${actor.label}'s motion`,
-      detail: `Removed ${removed.map((interaction) => interaction.label ?? interaction.verb).join(", ")}. Undo restores them.`,
-    });
-  }
-  return { interactionId: placeholder.id };
 }
 
 /** Distance along a recorded track and its peak speed, for the review and inspector. */

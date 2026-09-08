@@ -10,7 +10,7 @@ import {
 } from "@simforge-oss/editor";
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import type { Interaction } from "@simforge-oss/scenario";
-import { addManualDrive, competingMotionRefusal } from "../manual-drive/authoring";
+import { competingMotionRefusal } from "../manual-drive/authoring";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
 
 type Role = EditorDocument["data"]["roles"][number];
@@ -36,6 +36,7 @@ export function ActionPalette({
   interactions,
   time,
   onTimeChange,
+  onStartManualDrive,
 }: {
   document: EditorDocument;
   role: Role | null;
@@ -43,6 +44,8 @@ export function ActionPalette({
   interactions: readonly Interaction[];
   time: number;
   onTimeChange: (time: number) => void;
+  /** Opens the take recorder; the document is untouched until a take is saved. */
+  onStartManualDrive?: (actorId: string) => string | null;
 }) {
   const timeId = useId();
   const clipSeconds = document.data.choreography?.clipSeconds ?? 20;
@@ -92,8 +95,9 @@ export function ActionPalette({
   const addAction = (action: (typeof actions)[number]) => {
     if (!role || !actorRef) return;
     if (action.id === MANUAL_DRIVE_ACTION_ID) {
-      const added = addManualDrive(document, actorRef);
-      setRefusal("error" in added ? added.error : null);
+      setRefusal(onStartManualDrive
+        ? onStartManualDrive(role.id)
+        : "Manual drive recording is not available in this editor.");
       return;
     }
     const blocked = competingMotionRefusal(document, actorRef, action);

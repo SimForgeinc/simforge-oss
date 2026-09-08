@@ -3,14 +3,14 @@
  *
  * The canonical schema (`@simforge-oss/scenario`) owns the recording shape and
  * its validity rules; this module owns only how the editor authors around it:
- * the placeholder that holds the actor still until a take exists, the guard a
- * recorder must echo back before its take may replace the placeholder, and the
- * exclusivity rule that keeps a second motion instruction off a driven actor.
+ * the guard a recorder must echo back before its take may enter the document,
+ * and the exclusivity rule that keeps a second motion instruction off a driven
+ * actor. Nothing here ever fabricates a recording: until a take is reviewed
+ * and saved, the document holds exactly the motion it had before.
  */
 
 import { contentHash } from '@simforge-oss/engine';
 import {
-  MANUAL_DRIVE_RECORDING_VERSION,
   validateManualDriveRecording,
   type Interaction,
   type ManualDriveRecording,
@@ -52,39 +52,6 @@ export function manualDriveInteractionId(actorId: string): string {
   return `manual_drive_${actorId}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64);
 }
 
-/**
- * A placeholder is the two-sample hold the schema minimally accepts: the actor
- * stays at its authored pose from t=0 to clip end. A genuine take carries one
- * sample per simulation tick, so it can never have exactly two.
- */
-export function isUnrecordedManualDrive(interaction: Interaction): interaction is ManualDriveInteraction {
-  return isManualDrive(interaction) && interaction.target.recording.samples.length <= 2;
-}
-
-/** Hold the actor at its authored pose until a take replaces the placeholder. */
-export function manualDrivePlaceholder(
-  actor: Pick<ActorRecord, 'id' | 'x' | 'y' | 'z' | 'headingRad'>,
-  clipSeconds: number,
-): ManualDriveInteraction {
-  const pose = { x: actor.x, y: actor.y, z: actor.z, headingRad: actor.headingRad, speedMps: 0 };
-  return {
-    id: manualDriveInteractionId(actor.id),
-    actor: actor.id,
-    label: MANUAL_DRIVE_LABEL,
-    trigger: { kind: 'at', t: 0 },
-    until: { kind: 'at', t: clipSeconds },
-    verb: 'route',
-    target: {
-      mode: 'manualDrive',
-      recording: {
-        version: MANUAL_DRIVE_RECORDING_VERSION,
-        clipSeconds,
-        samples: [{ timeS: 0, ...pose }, { timeS: clipSeconds, ...pose }],
-      },
-    },
-  };
-}
-
 /** The actor's manual drive, if it has one. */
 export function manualDriveFor(
   template: Pick<ScenarioTemplateV2, 'choreography'>,
@@ -106,16 +73,20 @@ export function competingMotionInteractions(
   );
 }
 
-/** Replace the recording while keeping identity and the whole-clip window. */
+/** The interaction a saved take becomes: whole-clip, stable id, prior label kept. */
 export function recordedManualDrive(
-  existing: ManualDriveInteraction,
+  actorId: string,
   recording: ManualDriveRecording,
+  existing?: ManualDriveInteraction,
 ): ManualDriveInteraction {
   return {
     ...existing,
-    label: existing.label ?? MANUAL_DRIVE_LABEL,
+    id: existing?.id ?? manualDriveInteractionId(actorId),
+    actor: actorId,
+    label: existing?.label ?? MANUAL_DRIVE_LABEL,
     trigger: { kind: 'at', t: 0 },
     until: { kind: 'at', t: recording.clipSeconds },
+    verb: 'route',
     target: { mode: 'manualDrive', recording },
   };
 }
@@ -138,14 +109,14 @@ export interface ManualDriveTakeGuard {
 export function manualDriveTakeGuard(input: {
   readonly documentId: string;
   readonly mapVersionId: string;
-  readonly interaction: ManualDriveInteraction;
+  readonly actorRoleId: string;
   readonly template: ScenarioTemplateV2;
 }): ManualDriveTakeGuard {
   return {
     documentId: input.documentId,
     mapVersionId: input.mapVersionId,
-    actorRoleId: input.interaction.actor,
-    interactionId: input.interaction.id,
+    actorRoleId: input.actorRoleId,
+    interactionId: manualDriveFor(input.template, input.actorRoleId)?.id ?? manualDriveInteractionId(input.actorRoleId),
     clipSeconds: input.template.choreography.clipSeconds,
     contentHash: contentHash(input.template),
   };
@@ -188,9 +159,10 @@ export type ManualDriveTakeCheck =
   | { readonly ok: false; readonly reason: string };
 
 /**
- * Decide whether a completed take may replace the open document's placeholder
- * or previous recording. Every refusal leaves the document untouched; the
- * caller reports `reason` and keeps whatever motion the actor already had.
+ * Decide whether a completed take may enter the open document, as the actor's
+ * first Manual drive or as the replacement of its previous one. Every refusal
+ * leaves the document untouched; the caller reports `reason` and keeps
+ * whatever motion the actor already had.
  */
 export function checkManualDriveTake(input: {
   readonly template: ScenarioTemplateV2;
@@ -208,8 +180,8 @@ export function checkManualDriveTake(input: {
     return { ok: false, reason: 'This take was recorded on a different map version.' };
   }
   const existing = template.choreography.interactions.find((interaction) => interaction.id === guard.interactionId);
-  if (!existing || !isManualDrive(existing) || existing.actor !== guard.actorRoleId) {
-    return { ok: false, reason: 'The Manual drive this take belongs to no longer exists in the scenario.' };
+  if (existing && (!isManualDrive(existing) || existing.actor !== guard.actorRoleId)) {
+    return { ok: false, reason: 'The Manual drive this take belongs to was replaced by a different action.' };
   }
   if (!input.actor || input.actor.id !== guard.actorRoleId) {
     return { ok: false, reason: 'The driven actor was removed from the scenario while recording.' };
@@ -227,5 +199,5 @@ export function checkManualDriveTake(input: {
   if (!validity.ok) {
     return { ok: false, reason: `The recording is not usable (${validity.path}): ${validity.message}` };
   }
-  return { ok: true, interaction: recordedManualDrive(existing, input.recording) };
+  return { ok: true, interaction: recordedManualDrive(guard.actorRoleId, input.recording, existing) };
 }

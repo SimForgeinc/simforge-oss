@@ -1081,6 +1081,7 @@ export function ScenarioEditorSurface({
                 onFrameActor={frameActorAtPlayhead}
                 onFrameSignal={frameSignalHead}
                 onConfigureCustomRoute={configureCustomRoute}
+                onStartManualDrive={manualDrive.startTake}
               />
             </div>
           </div>
@@ -1301,6 +1302,7 @@ function EditorTimelineOverlayBridge({
   onFrameActor,
   onFrameSignal,
   onConfigureCustomRoute,
+  onStartManualDrive,
 }: {
   document: EditorDocument;
   state: EditorState | null;
@@ -1314,6 +1316,7 @@ function EditorTimelineOverlayBridge({
   onFrameActor: (actorId: string) => void;
   onFrameSignal: (headId: string) => void;
   onConfigureCustomRoute: (interactionId: string) => void;
+  onStartManualDrive: (actorId: string) => string | null;
 }) {
   const { selection, actions } = useEditorOverlay();
   const [tutorialRouteInteractionId, setTutorialRouteInteractionId] = useState<string | null>(null);
@@ -1575,6 +1578,7 @@ function EditorTimelineOverlayBridge({
       }}
       onClearSelection={actions.clear}
       onSelectSignal={takeSignalControl}
+      onStartManualDrive={onStartManualDrive}
       readOnly={false}
       />
     </>
