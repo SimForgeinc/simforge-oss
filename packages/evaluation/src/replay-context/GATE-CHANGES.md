@@ -587,3 +587,33 @@ scene is not admitted, and making it pass needs an authoritative map rather than
 call.**
 
 State: six real scenes, one clears G1–G4, none admitted.
+
+
+### clipgt-0009402a G5 verdict, all variants measured
+
+| variant | n | max | p50 | p95 |
+|---|---|---|---|---|
+| whole run, vehicle pose | 200 | 0.4251 | 0.0421 | 0.1090 |
+| whole run, rig pose | 200 | 0.6845 | 0.0480 | 0.1175 |
+| **after 1 s settle, rig pose (gated)** | 190 | **0.3468** | **0.0476** | **0.0973** |
+| after 2 s, rig pose | 180 | 0.1240 | 0.0473 | 0.0889 |
+
+Deviation **passes** after the settle window the bound defines — but three things are recorded
+against reading that as a clean result:
+
+1. **The max clears by 4 mm** (0.3468 vs 0.3500) and comes entirely from decision 10, the first
+   step after the excluded window. At 2 s the same figure is 0.124. That is a boundary effect of
+   where the window ends, not a property of the drive: a 0.9 s or 1.1 s window would move the max
+   materially while p50/p95 barely change. Passing-but-marginal.
+2. **The bound's applicability at this speed is unproven.** It was measured at 8 m/s on an
+   S-curve; this drive is 31.4 m/s. The 0.425 m acquisition transient is itself evidence the
+   controller behaves differently here, since at 8 m/s it would not need that distance to
+   converge. "Passes after the settle window" is true; "passes a bound of established
+   applicability" is not.
+3. **Infractions fail: off-road 1, wrong-way 1, speeding 1, against zero required.** Not
+   discounted. The speeding infraction is computed against unverified `map.xodr` limits with a
+   1.101 m lane-binding offset, so it plausibly measures the map rather than the drive — and
+   plausibly is not evidence.
+
+**G5 FAILS. clipgt-0009402a is NOT ADMITTED.** Six real scenes; one clears G1–G4; none is
+qualified. Admitting this scene needs an authoritative map, not a judgement call.
