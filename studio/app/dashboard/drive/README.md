@@ -1,14 +1,18 @@
 # Drive
 
-A real in-memory scenario editor whose compiled 20-second scenario can be driven
-interactively. Drive reuses the scenario editor's document, controller, actor
-library, inspector, header, and timeline rather than maintaining parallel UI.
+A real in-memory scenario editor whose compiled scenario can be driven
+interactively on a map prepared on this computer. Drive reuses the scenario
+editor's document, controller, actor library, inspector, header, and timeline
+rather than maintaining parallel UI, and the same native live `WorldSession`
+the rest of Studio simulates with; there is no second physics.
 
 ## Shape
 
 ```
-page.tsx ─ requireAppContext, then DriveClient
-DriveClient.tsx ─ composes the real editor regions:
+page.tsx ─ requireAppContext, listLocalMapCatalog, then DriveClient
+DriveClient.tsx ─ map choice, then the surface:
+   DriveMapChooser       explicit catalog choice + LocalMapPreparationPanel
+   DrivingControls       keyboard / wheel+pedals owner (input/), always mounted
    EditorHeader          shared authoring header and viewport settings
    ActorLibraryRail      controller-backed actor and environment placement
    EditorOverlayHost     selected-actor details
@@ -17,6 +21,19 @@ DriveClient.tsx ─ composes the real editor regions:
 cameras/PoleCameraGrid.tsx ─ real feed beside a twin render, per pole camera
 pole-cameras.ts ─ resolves rigs + map signal features
 ```
+
+## Choosing a map
+
+Drive never picks a map on its own. The page lists the same catalog as the
+Maps app (`listLocalMapCatalog`: registered local maps plus what the current
+SimCloud authorization publishes) with each map's local state, and mounts the
+shared `LocalMapPreparationPanel` so a missing browser closure is downloaded
+or a locked account map is connected right there. **Drive this map** resolves
+the choice through `studioHost.artifacts.listMaps`, which is the server's
+decision that the closure is installed and authorized; the map is remembered
+as `?map=<mapVersionId>`. If a catalog refresh (SimCloud session change) no
+longer allows the active map, the world is disposed and the chooser returns
+with a notice.
 
 `useEditorRuntime` opens a genuine blank `EditorDocument` in memory and binds an
 `EditorController` to the viewer, lane index, and indexed ground sampler. The
@@ -38,7 +55,8 @@ publication pipeline:
   &twin=1                           # optional: attach to a twin on this host
 ```
 
-With no `manifest`, Drive uses the first published map (preferring Richmond).
+With no `manifest`, Drive shows the map chooser. `?map=<mapVersionId>` opens a
+prepared map directly through the same gate.
 Env equivalents: `NEXT_PUBLIC_DRIVE_MAP_MANIFEST_URL`,
 `NEXT_PUBLIC_DRIVE_MAP_LANES_URL`, `NEXT_PUBLIC_DRIVE_CAMERA_RIGS_URL`,
 `NEXT_PUBLIC_DRIVE_TWIN_URL`. Camera feeds are proxied same-origin through
@@ -118,16 +136,51 @@ configuration, which is the only durable home for calibration.
 
 ## Drive is camera and input ownership
 
-Selecting **Enter drive** designates the selected authored vehicle (or the first
-authored vehicle) as ego, starts the document's compiled transport, attaches the
-camera through `followCameraPose`, and routes keys to `control` at 20 Hz. Exiting
-releases the camera, clears ego ownership, and stops transmitting controls while
-the authored scenario keeps playing. Authoring chrome is hidden and the timeline
-is read-only only while that ownership is active.
+**Free drive** designates the selected authored vehicle (or the best authored
+runway) as ego, starts the document's compiled transport, attaches the camera
+through `followCameraPose`, and hands the ego to `DrivingControls`. The native
+world runs in live mode and is unbounded; while a free-driving ego owns it the
+worker does not stop at the document's `clipSeconds`, so the operator can keep
+driving around the map. **Drive clip** is the same ownership with the authored
+boundary kept: the world parks at the clip end (`Clip ended · Drive again`).
+Exiting sends neutral controls, releases the camera and ego ownership, and
+stops transmitting while the authored scenario keeps playing; a free drive
+that already passed the clip end parks as `Scenario complete` on exit.
+Authoring chrome is hidden and the timeline is read-only only while that
+ownership is active (and for the whole session of an editor take).
 
-The keyboard effect depends only on stable identities (`source`, `actorId`).
-Depending on an object rebuilt per frame can tear down the listener between
-keydown and keyup and leave the zero-order-held throttle active.
+Camera: **Chase** and **Dash** follow the ego; **Free** returns the orbit
+camera to the operator while controls stay live. **Restart** rebuilds the
+world at t = 0 and keeps driving. A world error, a closed source or a map
+that stops serving assets releases the ego immediately so controls go neutral.
+
+`DrivingControls` (`input/`) owns keyboard and wheel/pedal selection,
+calibration and the 50 ms control loop. It stays mounted for the life of the
+page (device choice survives map changes) and transmits only with the active
+ego's `actorId`; it neutralises and disengages on blur, hidden tab, actor or
+source change, wheel disconnect, or a rejected command.
+
+## Manual drive takes
+
+The scenario editor opens `/dashboard/drive?manualDriveTake=<id>` for a
+"Manual drive" interaction. The take session (owned by the editor's
+`take-handoff` mailbox) carries the exact in-memory document, the map version,
+the role to drive, an opaque `revision` guard and `onSave`/`onCancel`. Drive
+loads that content read-only, binds the ego to the role (refusing if it is not
+a controllable, non-static vehicle), and **Start take** asks the worker to
+`begin-take`: rebuild the world at t = 0 and read the ego back from the native
+truth stream, one sample per engine tick on the simulation clock, through the
+clip end inclusive. Samples are `{ timeS, x, y, z, headingRad, speedMps }` in
+the scene frame (`speedMps` signed by the commanded gear); the t = 0 sample
+comes from the rebuilt world's snapshot because frames are published after
+each tick. A dropped truth frame, a missing ego or an incomplete span fails the
+take loudly instead of gapping it. Losing focus pauses the world (the clock is
+the sim's, so nothing is lost) and **Resume take** continues it.
+
+At the clip end the operator reviews: **Save take** calls `onSave(recording,
+revision)` once — never if the document was recompiled since the take ran —
+**Drive again** records a new take, **Discard** calls `onCancel`. Drive
+persists nothing itself.
 
 ## Cameras on poles
 

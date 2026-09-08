@@ -121,10 +121,13 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
   const [opening, setOpening] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [controlTarget, setControlTarget] = useState<ControlTarget>(NO_CONTROL_TARGET);
-  const requestedMapId = useMemo(
-    () => take?.mapVersionId ?? (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(MAP_QUERY)),
-    [take?.mapVersionId],
-  );
+  // Read after hydration: the server render has no query string, and a
+  // pre-selected map in the chooser must not differ between the two.
+  const [requestedMapId, setRequestedMapId] = useState<string | null>(take?.mapVersionId ?? null);
+  useEffect(() => {
+    if (take) return;
+    setRequestedMapId(new URLSearchParams(window.location.search).get(MAP_QUERY));
+  }, [take]);
 
   // A direct bundle bypasses the catalog entirely (un-ingested maps, see README).
   useEffect(() => {
@@ -251,7 +254,7 @@ export function DriveClient({ maps, take = null }: { maps: LocalMapDescriptor[];
       <div
         className={cn(
           "pointer-events-none z-20 w-80 shrink-0",
-          surfaceMap ? "absolute bottom-4 right-4 top-16" : "border-l border-white/10 bg-[#07100d] p-3",
+          surfaceMap ? "absolute bottom-4 right-4 max-h-[calc(100%-6rem)] overflow-auto" : "border-l border-white/10 bg-[#07100d] p-3",
         )}
         data-testid="driving-controls-dock"
       >
@@ -577,6 +580,29 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
     });
   }, [authoredSource, take]);
 
+  // The input owner neutralises and disengages whenever the window loses
+  // focus or the tab is hidden. A take must not keep recording a coasting
+  // ego through that, so the world pauses too (the sim clock is
+  // authoritative, so pausing loses nothing) and the operator resumes explicitly.
+  const takeRecording = Boolean(take) && takePhase.kind === "recording";
+  useEffect(() => {
+    if (!takeRecording || !authoredSource) return;
+    const pause = () => {
+      if (authoredSource.transport.playing) authoredSource.transport.stop();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") pause();
+    };
+    window.addEventListener("blur", pause);
+    window.addEventListener("pagehide", pause);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("blur", pause);
+      window.removeEventListener("pagehide", pause);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [authoredSource, takeRecording]);
+
   const saveTake = useCallback(async () => {
     if (!take || takePhase.kind !== "review") return;
     // The document was edited or recompiled since this take ran: its samples
@@ -821,8 +847,14 @@ function DriveSurface({ map, record, take, onLeave, onControlTarget }: {
                   <span className="text-editor-text">{egoActorLabel ? `Driving ${egoActorLabel}` : "Driving"}</span>
                   <span className="text-editor-text tabular-nums">{driveSpeedKph.toFixed(1)} km/h</span>
                   <span className="tabular-nums">{driveTime}</span>
-                  {take && takePhase.kind === "recording" ? <span className="text-red-400">● Recording</span> : null}
-                  {!transport?.playing && !clipEnded ? <span>Paused</span> : null}
+                  {takeRecording ? <span className="text-red-400">● Recording</span> : null}
+                  {!transport?.playing && !clipEnded ? (
+                    takeRecording ? (
+                      <Button type="button" size="sm" variant="outline" className="pointer-events-auto" onClick={() => transport?.play()} title="Re-engage your controls first, then continue the take from where it paused">
+                        Resume take
+                      </Button>
+                    ) : <span>Paused</span>
+                  ) : null}
                 </ScenarioEditorReadout>
               ) : null}
               {view === "world" && cameraNotice ? (

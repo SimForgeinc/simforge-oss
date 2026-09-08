@@ -40,8 +40,8 @@ export function DriveMapChooser({
 }) {
   const cloudState = useStudioCloudStatus().status?.state;
   const sorted = useMemo(() => [...maps].sort((left, right) => left.label.localeCompare(right.label)), [maps]);
-  const [selectedId, setSelectedId] = useState<string | null>(initialMapVersionId);
-  const selected = sorted.find((map) => map.mapVersionId === selectedId) ?? sorted[0] ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = sorted.find((map) => map.mapVersionId === (selectedId ?? initialMapVersionId)) ?? sorted[0] ?? null;
   const usable = selected ? driveMapUsable(selected, cloudState) : false;
 
   return (

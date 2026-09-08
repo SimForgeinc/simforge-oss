@@ -195,6 +195,26 @@ export interface ManualDriveRecording {
 }
 
 /**
+ * The take's first sample. The native truth stream publishes a frame after
+ * each tick, so the initial state at t = 0 comes from the world snapshot,
+ * which carries the same scene xz / heading / speed the frames do (the
+ * native frame has no height channel: `position[1]` is 0, matched here).
+ */
+export function initialTakeSample(world: WorldSession, egoActorId: string, motionDirection: 1 | -1): ManualDriveSample {
+  const snapshot = world.snapshot();
+  const ego = snapshot.actors.find((actor) => actor.id === egoActorId);
+  if (!ego || !ego.present) throw new Error(`Take aborted: ego ${egoActorId} is not present at t=${snapshot.tS.toFixed(3)} s`);
+  return {
+    timeS: snapshot.tS,
+    x: ego.x,
+    y: 0,
+    z: ego.z,
+    headingRad: ego.headingRad,
+    speedMps: motionDirection * Math.abs(ego.speedMps),
+  };
+}
+
+/**
  * Append the ego's state from every truth frame. Frames are the native
  * session's own per-tick scene-state (already y-up scene frame), so this is
  * a projection, not a conversion. `speedMps` is signed longitudinal speed:

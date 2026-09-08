@@ -30,6 +30,7 @@ import {
   authoredWorldUnbounded,
   createAuthoredWorldSession,
   finishTakeRecording,
+  initialTakeSample,
   type AuthoredDriveMode,
   type ManualDriveSample,
 } from '../app/lib/live-world/authored-world-session';
@@ -340,8 +341,8 @@ function beginTake(): void {
   // Every take starts from the document's own initial state so its samples
   // are the clip from t = 0, not a continuation of whatever played before.
   rebuildAuthoredWorld();
-  take = { samples: [], decoder: new TruthStreamClient() };
   egoMotionDirection = 1;
+  take = { samples: [initialTakeSample(world, egoActorId, egoMotionDirection)], decoder: new TruthStreamClient() };
   playing = true;
   inspecting = false;
   beginAuthoredClock();
