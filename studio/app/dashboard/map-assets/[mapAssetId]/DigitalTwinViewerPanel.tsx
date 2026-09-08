@@ -38,16 +38,6 @@ export interface ProximityArrow3D {
   highlight?: boolean;
 }
 
-export interface ActorTrajectory3D extends ViewerPath {}
-
-export interface ActorSpawn3D {
-  id: string;
-  kind: "vehicle" | "walker" | "prop";
-  color: string;
-  yawRad: number | null;
-  point: ViewerPoint3;
-}
-
 interface Props {
   asset: MapAsset;
   focusTarget?: DigitalTwinFocusTarget | null;
@@ -55,9 +45,6 @@ interface Props {
   searchResultMarkers?: SearchResultMarker[];
   hoveredSearchResultId?: string | null;
   proximityArrows?: ProximityArrow3D[];
-  actorTrajectories?: ActorTrajectory3D[];
-  collisionMarker?: ViewerPoint3 | null;
-  actorSpawns?: ActorSpawn3D[] | null;
 }
 
 /** The map-detail 3D surface, backed by the same packaged viewer as the editor. */
@@ -68,9 +55,6 @@ export function DigitalTwinViewerPanel({
   searchResultMarkers,
   hoveredSearchResultId,
   proximityArrows,
-  actorTrajectories,
-  collisionMarker,
-  actorSpawns,
 }: Props) {
   const manifestUrl = `/api/map-assets/${asset.map_asset_id}/3d-asset/manifest.json`;
   const hasArtifact = asset.artifacts?.some(
@@ -109,35 +93,17 @@ export function DigitalTwinViewerPanel({
         position: marker.scenePosition!,
         highlighted: marker.id === hoveredSearchResultId,
       }));
-    const paths: ViewerPath[] = [
-      ...(proximityArrows ?? []).map((path) => ({
-        ...path,
-        highlighted: path.highlight,
-        arrow: true,
-      })),
-      ...(actorTrajectories ?? []),
-    ];
+    const paths: ViewerPath[] = (proximityArrows ?? []).map((path) => ({
+      ...path,
+      highlighted: path.highlight,
+      arrow: true,
+    }));
     const markers: ViewerMarker[] = [];
     if (focusTarget) {
       markers.push({ id: "location-focus", position: focusTarget.position, color: "#f97316" });
     }
-    if (collisionMarker) {
-      markers.push({ id: "collision", position: collisionMarker, color: "#ef4444", shape: "cross" });
-    }
-    for (const spawn of actorSpawns ?? []) {
-      markers.push({
-        id: `spawn:${spawn.id}`,
-        position: spawn.point,
-        color: spawn.color,
-        shape: spawn.kind === "vehicle" ? "box" : spawn.kind === "walker" ? "capsule" : "sphere",
-        yawRad: spawn.yawRad,
-      });
-    }
     return { pins, paths, markers };
   }, [
-    actorSpawns,
-    actorTrajectories,
-    collisionMarker,
     focusTarget,
     hoveredSearchResultId,
     proximityArrows,

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UpdateAiProviderSettingsSchema } from "@/app/lib/ai-providers/contracts";
-import {
-  AssistantWorkspaceSelectionError,
-  getAiProviderSettingsStatus,
-  updateAiProviderSettings,
-} from "@/app/lib/ai-providers/settings";
+import { getAiProviderSettingsStatus, updateAiProviderSettings } from "@/app/lib/ai-providers/settings";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { readJson, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
 
@@ -17,7 +13,7 @@ export async function GET(request: NextRequest) {
   return auth.apply(NextResponse.json(await getAiProviderSettingsStatus(), { headers: NO_STORE }));
 }
 
-/** Store/clear provider keys in the OS vault and update non-secret preferences. */
+/** Store/clear provider keys in the OS vault. */
 export async function PATCH(request: NextRequest) {
   const originError = requireScenarioMutationOrigin(request);
   if (originError) return originError;
@@ -33,14 +29,5 @@ export async function PATCH(request: NextRequest) {
       ),
     );
   }
-  try {
-    return auth.apply(NextResponse.json(await updateAiProviderSettings(parsed.data), { headers: NO_STORE }));
-  } catch (error) {
-    if (error instanceof AssistantWorkspaceSelectionError) {
-      return auth.apply(
-        NextResponse.json({ error: error.code, message: error.message }, { status: 409, headers: NO_STORE }),
-      );
-    }
-    throw error;
-  }
+  return auth.apply(NextResponse.json(await updateAiProviderSettings(parsed.data), { headers: NO_STORE }));
 }

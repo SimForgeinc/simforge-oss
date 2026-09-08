@@ -40,8 +40,7 @@ export function SettingsPageClient() {
               AI providers
             </h2>
             <p className="mt-2 text-sm leading-6 text-white/55">
-              Keys for the scenario assistant, AI map search and 3D asset generation. Configure your own provider or
-              an explicitly chosen SimCloud provider; nothing is set by default.
+              Key for 3D asset generation. Bring your own provider; nothing is set by default.
             </p>
             <Button asChild className="mt-4 h-10 gap-2 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5" variant="outline">
               <Link href="/dashboard/settings/ai-providers">

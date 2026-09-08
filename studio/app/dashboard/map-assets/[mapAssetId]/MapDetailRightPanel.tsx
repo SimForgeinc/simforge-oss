@@ -10,7 +10,6 @@ import { LayersTab } from "./detail-tabs/LayersTab";
 import { AnalyticsTab } from "./detail-tabs/AnalyticsTab";
 import { InsightsTab } from "./detail-tabs/InsightsTab";
 import type { MapDetailData } from "@/app/lib/maps/frontend/use-map-asset-detail-data";
-import type { useScenarioOverlayState } from "./useScenarioOverlayState";
 import type { useMapAssetOperations } from "./useMapAssetOperations";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
 
@@ -34,7 +33,6 @@ interface MapDetailRightPanelProps {
   handleSelectCandidateFromPanel: (id: string | null) => void;
   setActiveMedia: (info: { proxyUrl: string; label?: string } | null) => void;
   runs: ScenarioSummary[];
-  scenarioOverlay: ReturnType<typeof useScenarioOverlayState>;
   manualHighlightedFeatureIds: number[];
   setManualHighlightedFeatureIds: (ids: number[]) => void;
   handleHighlightGuid: (guid: string) => void;
@@ -60,7 +58,6 @@ export function MapDetailRightPanel({
   handleSelectCandidateFromPanel,
   setActiveMedia,
   runs,
-  scenarioOverlay: _scenarioOverlay,
   setManualHighlightedFeatureIds,
   handleHighlightGuid,
   handleSelectGuid,

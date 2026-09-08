@@ -26,8 +26,7 @@ interface CopyJsonButtonProps {
 
 /**
  * Icon button that serialises `payload` to pretty-printed JSON and writes it
- * to the clipboard on click. Shared by the keyword search results header and
- * the AI chat assistant bubbles so the two panels behave identically.
+ * to the clipboard on click. Used by the keyword search results header.
  *
  * The Async Clipboard API is unavailable in non-secure contexts and older
  * browsers; both the presence check and the call itself are guarded so a

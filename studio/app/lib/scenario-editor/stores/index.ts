@@ -18,5 +18,4 @@ export {
   type MapViewMode,
 } from "./mapViewModeStore";
 export { usePlacementBandStore, placementClampEnabled } from "./placementBandStore";
-export { useAssistantChatStore } from "./assistantChatStore";
 export { useNotificationStore } from "./notificationStore";

@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ScenarioEditorActorDraft } from "@simforge-oss/studio-shared";
 import type { BridgedMapBundle, MapLocation } from "@/app/lib/editor-map/types";
-import type { EditorToolId as SharedEditorToolId } from "@/app/lib/editor-tools/types";
 import type {
   RuntimeJobRecord,
   RecordingInfo,
@@ -13,8 +12,7 @@ import type { NormalizedScenarioDraft } from "@/app/lib/scenario-editor/draft-no
 import type { HistoricalGalleryPreview as ScenarioRuntimeGalleryPreview } from "@/app/lib/scenario/render/gallery-preview-compat";
 
 export type WorkspaceTab = "datasets" | "editor" | "render";
-export type SidebarMode = "manual" | "assistant" | "tools";
-export type EditorToolId = SharedEditorToolId;
+export type SidebarMode = "manual";
 export type SlidePanelMode = "json" | "settings" | "templates" | null;
 export type SceneObjectType = "actor" | "prop" | "camera";
 export type CameraPlacementMode = "overhead" | "street";
@@ -69,12 +67,6 @@ export type LocationSummary = {
   related_road_names?: string[];
   description?: string;
   bridge?: MapLocation["bridge"] | null;
-};
-
-export type AssistantMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
 };
 
 export type ActorPaletteCategory =

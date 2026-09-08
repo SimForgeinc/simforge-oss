@@ -49,8 +49,21 @@ import type {
   ScenarioEditorRoadAnchor,
 } from "@simforge-oss/studio-shared";
 import type { RuntimeMapResponse } from "@/app/lib/runtime/runtime-types";
-import { ScenarioDraftBridgeError } from "@/app/lib/scenario-editor/draft-generator";
 import { worldAnchorAtFraction } from "@/app/lib/scenario-editor/batch-scenario-generator/routing";
+
+/** A generated placement the runtime road network cannot host. */
+export class RuntimeRoadSnapError extends Error {
+  constructor(
+    readonly code:
+      | "location_off_runtime_road"
+      | "runtime_road_anchor_missing_identity"
+      | "runtime_road_data_missing",
+    message: string,
+  ) {
+    super(message);
+    this.name = "RuntimeRoadSnapError";
+  }
+}
 
 export type RuntimeRoadSegment = NonNullable<
   RuntimeMapResponse["road_segments"]
@@ -294,7 +307,7 @@ class SnapSession {
   ): NearestResult {
     const nearest = nearestVertex(this.index, point, allowed);
     if (!nearest) {
-      throw new ScenarioDraftBridgeError(
+      throw new RuntimeRoadSnapError(
         "location_off_runtime_road",
         `The map CARLA loads has no ${[...allowed].join("/")} lane to place the ${actorNoun(
           actor,
@@ -302,7 +315,7 @@ class SnapSession {
       );
     }
     if (nearest.distanceM > this.thresholdM) {
-      throw new ScenarioDraftBridgeError(
+      throw new RuntimeRoadSnapError(
         "location_off_runtime_road",
         `The generated ${actorNoun(actor)} ${label} is ~${nearest.distanceM.toFixed(
           0,
@@ -454,7 +467,7 @@ function validateRoadModeActor(
     anchor.section_id == null ||
     anchor.lane_id == null
   ) {
-    throw new ScenarioDraftBridgeError(
+    throw new RuntimeRoadSnapError(
       "runtime_road_anchor_missing_identity",
       `The ${actorNoun(actor)} road anchor must include exact road_id, section_id, and lane_id from runtime.road_segments before it can be simulated.`,
     );
@@ -468,7 +481,7 @@ function validateRoadModeActor(
   // Only vehicles reach here (walkers are never snapped), so a road-mode
   // anchor must reference a drivable lane.
   if (!exact || !DRIVABLE_LANE_TYPES.has(exact.lane_type)) {
-    throw new ScenarioDraftBridgeError(
+    throw new RuntimeRoadSnapError(
       "location_off_runtime_road",
       `The ${actorNoun(actor)} road anchor ${anchor.road_id}:${anchor.section_id}:${anchor.lane_id} is not an exact valid runtime lane for this map. Actor road anchors must come from runtime.road_segments, not GeoJSON/generated map data.`,
     );
@@ -487,7 +500,7 @@ function validateRoadModeActor(
 /**
  * Snap every actor in `actors` onto CARLA's runtime road network in place.
  *
- * Throws `ScenarioDraftBridgeError("location_off_runtime_road")` when a
+ * Throws `RuntimeRoadSnapError("location_off_runtime_road")` when a
  * required spawn / path point is farther than the threshold from any valid
  * runtime lane — the LLM service surfaces this so the agent picks a
  * different location. Returns a summary for the draft notes.
@@ -503,14 +516,14 @@ export function snapDraftActorsToRuntimeRoads(
 ): SnapDraftSummary {
   const thresholdM = resolveMaxSnapDistanceM(options);
   if (roadSegments.length === 0) {
-    throw new ScenarioDraftBridgeError(
+    throw new RuntimeRoadSnapError(
       "runtime_road_data_missing",
       "CARLA runtime road data is missing for this map. Generated actor spawns and routes must be validated against runtime.road_segments before simulation.",
     );
   }
   const index = buildRuntimeRoadIndex(roadSegments);
   if (index.vertices.length === 0) {
-    throw new ScenarioDraftBridgeError(
+    throw new RuntimeRoadSnapError(
       "runtime_road_data_missing",
       "CARLA runtime road data for this map has no usable lane vertices. Generated actor spawns and routes must be validated against runtime.road_segments before simulation.",
     );

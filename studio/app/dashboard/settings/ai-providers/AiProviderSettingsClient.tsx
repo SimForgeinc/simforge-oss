@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Boxes, Cloud, KeyRound, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { Boxes, KeyRound, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -9,13 +9,10 @@ import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type {
   AiProviderKeyStatus,
   AiProviderSettingsStatus,
-  AssistantBackend,
   UpdateAiProviderSettings,
 } from "@/app/lib/ai-providers/contracts";
-import type { StudioCloudWorkspace } from "@simforge-oss/studio-host";
 
 const SETTINGS_URL = "/api/simforge/ai-providers";
-const WORKSPACES_URL = "/api/simforge/cloud/workspaces";
 
 type StatusResult = { status: AiProviderSettingsStatus | null; error: string | null };
 
@@ -26,83 +23,6 @@ async function readStatusResponse(response: Response): Promise<StatusResult> {
     status: null,
     error: body?.message ?? body?.error ?? `AI provider settings request failed (${response.status}).`,
   };
-}
-
-/**
- * The workspace the managed assistant runs in. Cloud attributes every
- * assistant call to this workspace and refuses calls that name none, so the
- * choice is explicit and visible here rather than inferred.
- */
-function WorkspacePicker({
-  selected,
-  busy,
-  onSelect,
-}: {
-  selected: { workspaceId: string; workspaceName: string } | null;
-  busy: boolean;
-  onSelect: (workspace: { workspaceId: string; workspaceName: string } | null) => Promise<void>;
-}) {
-  const selectId = useId();
-  const [workspaces, setWorkspaces] = useState<StudioCloudWorkspace[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(WORKSPACES_URL, { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          const body = (await response.json().catch(() => null)) as { message?: string; error?: string } | null;
-          throw new Error(body?.message ?? body?.error ?? `Workspaces could not be loaded (${response.status}).`);
-        }
-        const body = (await response.json()) as { workspaces: StudioCloudWorkspace[] };
-        setWorkspaces(body.workspaces);
-        setLoadError(null);
-      })
-      .catch((reason) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setLoadError(reason instanceof Error ? reason.message : "Workspaces could not be loaded.");
-      });
-    return () => controller.abort();
-  }, []);
-
-  const selectedIsMember = selected !== null && (workspaces?.some((workspace) => workspace.id === selected.workspaceId) ?? true);
-
-  return (
-    <div className="space-y-2">
-      <label htmlFor={selectId} className="text-xs font-medium text-white/60">
-        Assistant workspace
-      </label>
-      <select
-        id={selectId}
-        value={selectedIsMember && selected ? selected.workspaceId : ""}
-        disabled={busy || workspaces === null}
-        onChange={(event) => {
-          const workspace = workspaces?.find((candidate) => candidate.id === event.target.value) ?? null;
-          void onSelect(workspace ? { workspaceId: workspace.id, workspaceName: workspace.name } : null);
-        }}
-        className="block w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white disabled:opacity-60"
-      >
-        <option value="">{workspaces === null && !loadError ? "Loading workspaces…" : "Choose a workspace"}</option>
-        {(workspaces ?? []).map((workspace) => (
-          <option key={workspace.id} value={workspace.id}>
-            {workspace.name} ({workspace.role})
-          </option>
-        ))}
-      </select>
-      {loadError ? (
-        <p role="alert" className="text-[11px] leading-4 text-red-200">{loadError}</p>
-      ) : selected && !selectedIsMember ? (
-        <p role="alert" className="text-[11px] leading-4 text-amber-200/90">
-          Your account is no longer a member of {selected.workspaceName}. Choose another workspace.
-        </p>
-      ) : (
-        <p className="text-[11px] leading-4 text-white/40">
-          Assistant requests run in this SimCloud workspace and count against it. Import, publish and
-          uploads still ask for a workspace each time.
-        </p>
-      )}
-    </div>
-  );
 }
 
 function sourceLabel(status: AiProviderKeyStatus): string {
@@ -182,7 +102,6 @@ export function AiProviderSettingsClient() {
   const [status, setStatus] = useState<AiProviderSettingsStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [modelDraft, setModelDraft] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -220,17 +139,12 @@ export function AiProviderSettingsClient() {
     }
   }, []);
 
-  const setBackend = (backend: AssistantBackend) => {
-    if (status && status.assistant.backend !== backend) void patch({ assistantBackend: backend });
-  };
-
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8 text-white">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">AI providers</h1>
         <p className="mt-1 text-sm text-white/50">
-          The assistant, AI map search and 3D asset generation call external AI services. SimForge ships
-          no keys: bring your own, or use your SimCloud account for the assistant.
+          3D asset generation calls an external AI service. SimForge ships no keys: bring your own.
         </p>
         <p className="mt-2 text-xs text-white/40">
           <Link href="/dashboard/settings" className="underline underline-offset-2">
@@ -258,133 +172,6 @@ export function AiProviderSettingsClient() {
               ? "Keys you enter are kept in this computer's secure credential vault."
               : "This computer has no usable credential vault: keys you enter are kept in memory only and must be re-entered after the app restarts."}
           </p>
-
-          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-            <h2 className="flex items-center gap-2 text-base font-medium">
-              <Bot className="size-4 text-[#E8E044]" aria-hidden="true" />
-              Assistant and AI map search
-            </h2>
-            <p
-              className={cn(
-                "mt-2 text-xs",
-                status.assistant.available ? "text-emerald-200/80" : "text-amber-200/90",
-              )}
-              aria-live="polite"
-            >
-              {status.assistant.available
-                ? `Ready: ${
-                    status.assistant.backend === "simcloud"
-                      ? `SimCloud assistant as ${status.assistant.simcloud.user ?? "your account"} in ${
-                          status.assistant.simcloud.workspace?.workspaceName ?? "the selected workspace"
-                        }`
-                      : `your Anthropic key, model ${status.assistant.anthropic.model}`
-                  }.`
-                : status.assistant.reason}
-            </p>
-
-            <fieldset className="mt-4 grid gap-2 sm:grid-cols-2" disabled={busy}>
-              <legend className="mb-2 text-xs font-medium text-white/60">Model backend</legend>
-              {(
-                [
-                  {
-                    value: "anthropic",
-                    title: "My Anthropic API key",
-                    detail: "Requests go directly from this computer to Anthropic with your key.",
-                    icon: KeyRound,
-                  },
-                  {
-                    value: "simcloud",
-                    title: "SimCloud assistant",
-                    detail: status.assistant.simcloud.connected
-                      ? `Uses your SimCloud account (${status.assistant.simcloud.user ?? "connected"}); no key needed here.`
-                      : "Connect SimCloud in settings to use the managed assistant.",
-                    icon: Cloud,
-                  },
-                ] as const
-              ).map((option) => {
-                const selected = status.assistant.backend === option.value;
-                const Icon = option.icon;
-                return (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      "flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors",
-                      selected ? "border-[#E8E044]/60 bg-[#E8E044]/[0.06]" : "border-white/10 hover:border-white/20",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="assistant-backend"
-                      value={option.value}
-                      checked={selected}
-                      onChange={() => setBackend(option.value)}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        <Icon className="size-4" aria-hidden="true" />
-                        {option.title}
-                      </span>
-                      <span className="mt-1 block text-[11px] leading-4 text-white/45">{option.detail}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </fieldset>
-
-            {status.assistant.backend === "anthropic" ? (
-            <div className="mt-5 space-y-4">
-              <KeyField
-                label="Anthropic API key"
-                status={status.assistant.anthropic}
-                placeholder="sk-ant-…"
-                busy={busy}
-                onSave={(key) => patch({ anthropicApiKey: key })}
-                onClear={() => patch({ anthropicApiKey: null })}
-              />
-              <form
-                className="space-y-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const value = (modelDraft ?? "").trim();
-                  void patch({ anthropicModel: value ? value : null }).then(() => setModelDraft(null));
-                }}
-              >
-                <label className="text-xs font-medium text-white/60">
-                  Model
-                  <div className="mt-2 flex items-center gap-2">
-                    <Input
-                      value={modelDraft ?? status.assistant.anthropic.model}
-                      onChange={(event) => setModelDraft(event.target.value)}
-                      disabled={busy}
-                      className="font-mono"
-                    />
-                    <Button type="submit" variant="outline" disabled={busy || modelDraft === null}>
-                      Apply
-                    </Button>
-                  </div>
-                </label>
-                <p className="text-[11px] leading-4 text-white/40">
-                  Anthropic model id for your API key. Clear the field to return to the default.
-                </p>
-              </form>
-            </div>
-            ) : (
-              <div className="mt-5 space-y-4">
-                {status.assistant.simcloud.connected ? (
-                  <WorkspacePicker
-                    selected={status.assistant.simcloud.workspace}
-                    busy={busy}
-                    onSelect={(workspace) => patch({ simcloudWorkspace: workspace })}
-                  />
-                ) : null}
-                <p className="text-xs text-white/50">
-                  SimCloud selects its managed model. Your Anthropic key and model settings are used only
-                  when you choose My Anthropic API key.
-                </p>
-              </div>
-            )}
-          </section>
 
           <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
             <h2 className="flex items-center gap-2 text-base font-medium">

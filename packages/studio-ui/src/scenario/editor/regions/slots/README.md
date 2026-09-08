@@ -10,7 +10,6 @@ nothing else — not the surface layout, not the region that hosts it.
 | `NotificationDockSlot` | `ScenarioEditorSurface` | 166-168 | Product workspace notices and scenario activity |
 | Traffic-light authoring | `ScenarioTimelineDock` (anchored to the selected light lane) | 6.x | One selected reference light controls the junction cycle; the domain layer lives in `app/lib/scenario/signals/**` |
 | `TimelineDockSlot` | `EditorDockRegion` (below the timeline, in flow) | 5.x, 7.x | Product playback and timeline extensions |
-| `AssistantChatSlot` | `ScenarioEditorSurface` (right overlay) | 11.x | Scene assistant chat streaming `/api/simforge/assistant/stream`; edits go through the controller/document |
 | `TutorialOverlaySlot` | `ScenarioEditorSurface` (above everything) | 14.x | Product tutorial overlay and spotlight styling |
 
 ## Rules

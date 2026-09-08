@@ -69,11 +69,7 @@ import { SceneLoadingTransition } from "../scene/SceneLoadingTransition";
 import { EditorHeader } from "./regions/EditorHeader";
 import { EditorModeBanner } from "./regions/EditorModeBanner";
 import { PlacementCursorHint } from "./regions/PlacementCursorHint";
-import {
-  AssistantChatSlot,
-  NotificationDockSlot,
-  TutorialOverlaySlot,
-} from "./regions/slots";
+import { NotificationDockSlot, TutorialOverlaySlot } from "./regions/slots";
 import { ScenarioEditorShell } from "./shell";
 import { ScenarioTimelineDock } from "./ScenarioTimelineDock";
 import {
@@ -1082,12 +1078,6 @@ export function ScenarioEditorSurface({
         document={editorDocument}
         onConfigureCustomRoute={configureCustomRoute}
         showActorMotionControls={experience === "advanced"}
-      />
-      <AssistantChatSlot
-        controller={controller}
-        document={editorDocument}
-        documentId={record?.id ?? null}
-        datasetId={datasetId}
       />
       <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />

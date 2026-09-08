@@ -2,7 +2,7 @@
  * Per-actor color resolution shared by the 2D map and the 3D city viewer.
  *
  * Why a shared helper: the 2D actor markers (`RuntimeActorLayers`) and the
- * 3D actor trajectories (`actor-trajectory`/`scenario-trajectories`) used to
+ * 3D actor trajectories used to
  * derive color independently, with both falling back to a single accent for
  * unauthored actors. In diagnostic flows (auto-scenario builder output),
  * every traffic actor came out the same orange/cyan, which made multi-NPC
@@ -25,7 +25,7 @@ const STATIC_COLOR_HEX = "#4a4a4a";
  * Each wedge is `[centerDeg, halfWidthDeg]`.
  */
 const RESERVED_HUE_WEDGES: Array<[number, number]> = [
-  [0, 18], // red — collision marker
+  [0, 18], // red — kept for error highlights
   [50, 14], // yellow — subject
 ];
 
@@ -160,14 +160,6 @@ export function deriveActorColor(input: DeriveActorColorInput): string {
   const lightness = input.kind === "walker" ? 0.62 : 0.55;
   return hslToHex(hue, 0.7, lightness);
 }
-
-/**
- * Color reserved for the AI-validated collision-point marker. Exported so
- * the rendering layers (2D MapLibre and 3D Three.js) reference one source
- * of truth and the `RESERVED_HUE_WEDGES` red wedge above stays in sync
- * with what's actually drawn on screen.
- */
-export const COLLISION_MARKER_COLOR_HEX = "#ef4444";
 
 // Re-exports for callers that need the canonical role-specific defaults.
 export const SUBJECT_ACTOR_COLOR_HEX = SUBJECT_COLOR_HEX;

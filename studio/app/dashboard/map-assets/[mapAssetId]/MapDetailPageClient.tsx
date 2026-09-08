@@ -17,10 +17,9 @@ import { isSimulationReady } from "@/app/dashboard/map-assets/catalog/map-card-d
 import { useMapAssetDetailData } from "@/app/lib/maps/frontend/use-map-asset-detail-data";
 import { countOvertureCrosswalkSurvivors } from "@/app/lib/maps/frontend/signal-overlay";
 import { resolvePlaceHighlight } from "@/app/lib/maps/frontend/place-highlight";
-import { SearchPanelTabs } from "./detail-tabs/SearchPanelTabs";
+import { SearchResultsTab } from "./detail-tabs/SearchResultsTab";
 import type { SearchResultMarker as SearchResultMarkerSpec } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
 import { useMapSearchServer } from "@/app/lib/maps/frontend/use-map-search-server";
-import { useMapSearchLlm } from "@/app/lib/maps/frontend/use-map-search-llm";
 import type { MapSearchResult } from "@/app/lib/maps/search/map-search";
 import { Home, Loader2, PanelLeftClose, Search, X } from "lucide-react";
 import type { SelectedGeoJSONFeaturePayload } from "@/app/lib/maps/frontend/feature-inspection-types";
@@ -28,7 +27,6 @@ import type { MapTemplateScenarioRow } from "@/app/lib/db/scenario-query-store";
 import { GEOJSON_FEATURE_ID_PROP } from "@/app/lib/maps/frontend/feature-inspection-types";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
 import { useProximityArrows } from "./useProximityArrows";
-import { useScenarioOverlayState } from "./useScenarioOverlayState";
 import { useMapAssetOperations } from "./useMapAssetOperations";
 import { MapDetailRightPanel } from "./MapDetailRightPanel";
 import { DigitalTwinViewerPanel } from "./DigitalTwinViewerPanel";
@@ -176,25 +174,6 @@ export function MapDetailPageClient({
     data.enrichmentVersion,
   );
 
-  // LLM-driven candidate search
-  const aiSearch = useMapSearchLlm(currentAsset.map_asset_id);
-
-  // Flatten candidates across the entire AI chat thread
-  const aiChatCandidates = useMemo(() => {
-    const out: MapSearchResult[] = [];
-    for (const message of aiSearch.messages) {
-      if (message.role === "assistant") out.push(...message.candidates);
-    }
-    return out;
-  }, [aiSearch.messages]);
-
-  // Scenario overlay state (extracted hook)
-  const scenarioOverlay = useScenarioOverlayState({
-    currentAsset,
-    aiSearchMessages: aiSearch.messages,
-    viewMode,
-  });
-
   // Map asset operations (extracted hook)
   function refreshMapAssets() {
     router.refresh();
@@ -211,8 +190,6 @@ export function MapDetailPageClient({
     if (selectedSearchResultId) {
       const fromKeyword = searchState.results.find((r) => r.id === selectedSearchResultId);
       if (fromKeyword?.geometryReference) return fromKeyword.geometryReference;
-      const fromAi = aiChatCandidates.find((r) => r.id === selectedSearchResultId);
-      if (fromAi?.geometryReference) return fromAi.geometryReference;
     }
     if (data.selectedCandidateLocationId) {
       return { kind: "candidate" as const, candidateId: data.selectedCandidateLocationId };
@@ -221,7 +198,6 @@ export function MapDetailPageClient({
   }, [
     selectedSearchResultId,
     searchState.results,
-    aiChatCandidates,
     data.selectedCandidateLocationId,
   ]);
 
@@ -275,11 +251,9 @@ export function MapDetailPageClient({
       });
     };
     for (const result of searchState.results) pushMarker(result);
-    for (const candidate of aiChatCandidates) pushMarker(candidate);
     return markers;
   }, [
     searchState.results,
-    aiChatCandidates,
     data.candidateLocations,
     data.selectedGeoJSON,
     data.selectedEnrichment,
@@ -314,7 +288,6 @@ export function MapDetailPageClient({
     placeHighlight,
     highlightedRelatedObjectId,
     searchResults: searchState.results,
-    aiChatCandidates,
     viewMode,
     currentAsset,
     ctx: {
@@ -333,15 +306,14 @@ export function MapDetailPageClient({
       return;
     }
     const isKnown = (id: string) =>
-      searchState.results.some((result) => result.id === id) ||
-      aiChatCandidates.some((candidate) => candidate.id === id);
+      searchState.results.some((result) => result.id === id);
     setSelectedSearchResultId((current) =>
       current && isKnown(current) ? current : null,
     );
     setHoveredSearchResultId((current) =>
       current && isKnown(current) ? current : null,
     );
-  }, [searchState.results, aiChatCandidates, searchQuery]);
+  }, [searchState.results, searchQuery]);
 
   useEffect(() => {
     if (highlightedRelatedObjectId == null) return;
@@ -350,8 +322,7 @@ export function MapDetailPageClient({
       return;
     }
     const result =
-      searchState.results.find((r) => r.id === selectedSearchResultId) ??
-      aiChatCandidates.find((r) => r.id === selectedSearchResultId);
+      searchState.results.find((r) => r.id === selectedSearchResultId);
     if (!result) {
       setHighlightedRelatedObjectId(null);
       return;
@@ -366,7 +337,6 @@ export function MapDetailPageClient({
   }, [
     selectedSearchResultId,
     searchState.results,
-    aiChatCandidates,
     highlightedRelatedObjectId,
   ]);
 
@@ -627,39 +597,24 @@ export function MapDetailPageClient({
         {searchPanelOpen && !editMode ? (
           <div className="relative w-[30rem] shrink-0 min-h-0">
             <div className="absolute inset-0 overflow-hidden flex flex-col border-r border-border bg-background">
-              <SearchPanelTabs
+              <SearchResultsTab
                 key={searchPanelOpenNonce}
-                keyword={{
-                  draftQuery: searchDraft,
-                  query: searchQuery,
-                  chips: searchState.chips,
-                  results: searchState.results,
-                  freeText: searchState.freeText,
-                  selectedResultId: selectedSearchResultId,
-                  highlightedRelatedObjectId: highlightedRelatedObjectId,
-                  loading: searchLoading,
-                  onDraftQueryChange: setSearchDraft,
-                  onSubmitSearch: handleSubmitSearch,
-                  onSelectResult: handleToggleSelectSearchResult,
-                  onZoomToResult: handleZoomToSearchResult,
-                  onUseInScenario: handleUseSearchResultInScenario,
-                  onHoverResult: setHoveredSearchResultId,
-                  onToggleHighlightRelated: handleToggleHighlightRelated,
-                  autoFocus: searchPanelOpenNonce > 0,
-                }}
-                ai={{
-                  search: aiSearch,
-                  selectedResultId: selectedSearchResultId,
-                  highlightedRelatedObjectId: highlightedRelatedObjectId,
-                  onSelectResult: handleToggleSelectSearchResult,
-                  onZoomToResult: handleZoomToSearchResult,
-                  onUseInScenario: handleUseSearchResultInScenario,
-                  onHoverResult: setHoveredSearchResultId,
-                  onToggleHighlightRelated: handleToggleHighlightRelated,
-                  selectedScenarioId: scenarioOverlay.selectedScenarioId,
-                  onSelectScenario: scenarioOverlay.handleSelectScenario,
-                  validation: scenarioOverlay.validation,
-                }}
+                draftQuery={searchDraft}
+                query={searchQuery}
+                chips={searchState.chips}
+                results={searchState.results}
+                freeText={searchState.freeText}
+                selectedResultId={selectedSearchResultId}
+                highlightedRelatedObjectId={highlightedRelatedObjectId}
+                loading={searchLoading}
+                onDraftQueryChange={setSearchDraft}
+                onSubmitSearch={handleSubmitSearch}
+                onSelectResult={handleToggleSelectSearchResult}
+                onZoomToResult={handleZoomToSearchResult}
+                onUseInScenario={handleUseSearchResultInScenario}
+                onHoverResult={setHoveredSearchResultId}
+                onToggleHighlightRelated={handleToggleHighlightRelated}
+                autoFocus={searchPanelOpenNonce > 0}
               />
             </div>
             <button
@@ -733,16 +688,11 @@ export function MapDetailPageClient({
             {viewMode === "3d" ? (
               <DigitalTwinViewerPanel
                 asset={currentAsset}
-                focusTarget={
-                  scenarioOverlay.scenarioFocusTarget3D ?? placeHighlight.focusTarget
-                }
+                focusTarget={placeHighlight.focusTarget}
                 resetViewNonce={resetViewNonce}
                 searchResultMarkers={searchResultMarkers}
                 hoveredSearchResultId={hoveredSearchResultId}
                 proximityArrows={proximityArrows3D}
-                actorTrajectories={scenarioOverlay.actorTrajectories3D}
-                collisionMarker={scenarioOverlay.collisionMarker3D}
-                actorSpawns={scenarioOverlay.actorSpawns3D}
               />
             ) : (
               <MapAssetsMapDynamic
@@ -782,11 +732,7 @@ export function MapDetailPageClient({
                   relatedCandidateIds={relatedHighlights.candidateIds}
                   proximityArrows={proximityArrowGeoJSON}
                   topologyPaths={topologyPathGeoJSON}
-                  actorTrajectoryOverlay={scenarioOverlay.actorTrajectoryOverlay}
-                  esminiTrajectoryOverlay={scenarioOverlay.esminiTrajectoryOverlay}
-                  actorSpawnOverlay={scenarioOverlay.actorSpawnOverlay}
-                  collisionPointOverlay={scenarioOverlay.collisionPointOverlay}
-                  focusBounds={scenarioOverlay.scenarioFocusBounds?.bounds ?? placeHighlight.bounds}
+                  focusBounds={placeHighlight.bounds}
                   searchResultMarkers={searchResultMarkers}
                   hoveredSearchResultId={hoveredSearchResultId}
                   selectedSearchResultId={selectedSearchResultId}
@@ -831,7 +777,6 @@ export function MapDetailPageClient({
           handleSelectCandidateFromPanel={handleSelectCandidateFromPanel}
           setActiveMedia={setActiveMedia}
           runs={runs}
-          scenarioOverlay={scenarioOverlay}
           manualHighlightedFeatureIds={manualHighlightedFeatureIds}
           setManualHighlightedFeatureIds={setManualHighlightedFeatureIds}
           handleHighlightGuid={handleHighlightGuid}

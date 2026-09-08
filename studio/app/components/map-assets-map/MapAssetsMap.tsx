@@ -79,9 +79,7 @@ import {
   SelectedOverlayHighlight,
   RelatedOverlayHighlights,
   PlacementAnchorLayers,
-  ActorTrajectoryLayers,
   BehaviorTriggerLayers,
-  EsminiTrajectoryLayers,
   TimedPointHighlightLayers,
   DerivedRunwayLayers,
   ScheduleLagLayers,
@@ -104,14 +102,8 @@ import {
 import { SemanticSiteQueryLayers } from "./layers/SemanticSiteQueryLayers";
 import { SemanticScenarioProofLayers } from "./layers/SemanticScenarioProofLayers";
 import type { RuntimeActorMarker } from "./layers/RuntimeActorLayers";
-import {
-  CollisionPointMarker,
-  type CollisionPointOverlay,
-} from "./layers/CollisionPointMarker";
-import { ActorSpawnLayer } from "./layers/ActorSpawnLayer";
 import { SpeedLimitLayers } from "./layers/SpeedLimitLayers";
 import { SPEED_SIGN_OVERTURE_ICON, SPEED_SIGN_XODR_ICON } from "./map-icons";
-import type { ActorSpawn2D } from "@/app/lib/maps/frontend/scenario-actor-spawns";
 import type { SearchResultMarker } from "./layers/SearchResultMarkersLayer";
 import type {
   EnrichmentLayerStyle,
@@ -244,14 +236,6 @@ export type MapAssetsMapProps = {
   /** Trigger geometry for the selected behavior clip (dashed radius rings and
    *  actor-to-actor link lines). Absent (null) whenever no clip is selected. */
   behaviorTriggerOverlay?: object | null;
-  /** Planned actor trajectories for an AI-proposed scenario draft (GeoJSON
-   *  LineStrings + start points). Rendered solid, distinct from the dashed
-   *  placement-anchor overlay. */
-  actorTrajectoryOverlay?: object | null;
-  /** Actual esmini-simulated trajectories (GeoJSON) for the highlighted
-   *  scenario — the ground-truth paths + collision points from a validation
-   *  run, overlaid on the planned trajectories for comparison. */
-  esminiTrajectoryOverlay?: object | null;
   /** Per-actor paths the local/CARLA simulation produced (GeoJSON
    *  LineStrings), drawn dashed and translucent under the ghost markers so a
    *  parameter tweak visibly bends the path without playing the scene back. */
@@ -278,17 +262,6 @@ export type MapAssetsMapProps = {
    *  drivable — outer edge is flat-out acceleration, inner edge is maximum
    *  braking. Drawn only while placement or a point drag is live. */
   placementBandOverlay?: object | null;
-  /** Diagnostic collision-point marker — a single red X at the closest-
-   *  approach point between two actor trajectories. Absent (null) when no
-   *  draft is proposed, or when no pair came within the diagnostic
-   *  threshold. Derived client-side from the draft actors; see
-   *  `deriveCollisionPoint` in `scenario-collision-point.ts`. */
-  collisionPointOverlay?: CollisionPointOverlay | null;
-  /** Per-actor spawn markers for the highlighted AI-proposed scenario.
-   *  Empty/absent when no scenario is highlighted. Renders the editor's
-   *  `ActorIcon` SVGs tinted per-actor so the marker, the trajectory
-   *  line, and the heading arrowhead all share the same color. */
-  actorSpawnOverlay?: ActorSpawn2D[] | null;
   highlightedFeatureIds?: number[];
   /**
    * Subtle-tier feature ids — render with a muted blue instead of the bright
@@ -528,14 +501,10 @@ export default function MapAssetsMap({
   selectedOverlayGeometry = null,
   placementAnchorOverlay = null,
   behaviorTriggerOverlay = null,
-  actorTrajectoryOverlay = null,
-  esminiTrajectoryOverlay = null,
   timedPointHighlightOverlay = null,
   derivedRunwayOverlay = null,
   scheduleLagOverlay = null,
   placementBandOverlay = null,
-  collisionPointOverlay = null,
-  actorSpawnOverlay = null,
   highlightedFeatureIds = [],
   relatedHighlightedFeatureIds = [],
   relatedOverlayCoords = [],
@@ -1690,16 +1659,8 @@ export default function MapAssetsMap({
           <PlacementAnchorLayers data={placementAnchorOverlay} />
         )}
 
-        {actorTrajectoryOverlay && (
-          <ActorTrajectoryLayers data={actorTrajectoryOverlay} />
-        )}
-
         {behaviorTriggerOverlay && (
           <BehaviorTriggerLayers data={behaviorTriggerOverlay} />
-        )}
-
-        {esminiTrajectoryOverlay && (
-          <EsminiTrajectoryLayers data={esminiTrajectoryOverlay} />
         )}
 
 
@@ -1710,12 +1671,6 @@ export default function MapAssetsMap({
         {scheduleLagOverlay && <ScheduleLagLayers data={scheduleLagOverlay} />}
 
         {placementBandOverlay && <PlacementBandLayers data={placementBandOverlay} />}
-
-        {actorSpawnOverlay && actorSpawnOverlay.length > 0 && (
-          <ActorSpawnLayer spawns={actorSpawnOverlay} />
-        )}
-
-        <CollisionPointMarker overlay={collisionPointOverlay} />
 
         {/* The two actor renderers are never both on. `mapViewMode` gates each
             and that is the whole mechanism — no zoom crossover, no cross-fade,

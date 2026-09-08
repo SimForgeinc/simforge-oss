@@ -41,7 +41,6 @@ interface UseProximityArrowsInput {
   placeHighlight: Pick<PlaceHighlight, "overlayCoords" | "bounds" | "focusTarget" | "highlightedFeatureIds" | "candidateId" | "overlayCoords">;
   highlightedRelatedObjectId: string | null;
   searchResults: MapSearchResult[];
-  aiChatCandidates: MapSearchResult[];
   viewMode: "2d" | "3d";
   currentAsset: MapAsset;
   /** Context for resolving related-ref geometry (candidates, road network, enrichment, coordRef). */
@@ -62,7 +61,6 @@ export function useProximityArrows({
   placeHighlight,
   highlightedRelatedObjectId,
   searchResults,
-  aiChatCandidates,
   viewMode,
   currentAsset,
   ctx,
@@ -71,8 +69,7 @@ export function useProximityArrows({
   const resolvedRelatedRefs = useMemo(() => {
     if (!selectedSearchResultId) return [];
     const result =
-      searchResults.find((r) => r.id === selectedSearchResultId) ??
-      aiChatCandidates.find((r) => r.id === selectedSearchResultId);
+      searchResults.find((r) => r.id === selectedSearchResultId);
     const refs = result?.relatedObjectRefs;
     if (!refs || refs.length === 0) return [];
     return refs.map((ref) => {
@@ -93,7 +90,6 @@ export function useProximityArrows({
   }, [
     selectedSearchResultId,
     searchResults,
-    aiChatCandidates,
     ctx,
   ]);
 
@@ -143,8 +139,7 @@ export function useProximityArrows({
   const proximityArrowGeoJSON = useMemo(() => {
     if (!selectedSearchResultId || resolvedRelatedRefs.length === 0) return null;
     const result =
-      searchResults.find((r) => r.id === selectedSearchResultId) ??
-      aiChatCandidates.find((r) => r.id === selectedSearchResultId);
+      searchResults.find((r) => r.id === selectedSearchResultId);
     if (!result) return null;
 
     let subLng: number | undefined;
@@ -245,7 +240,6 @@ export function useProximityArrows({
   }, [
     selectedSearchResultId,
     searchResults,
-    aiChatCandidates,
     resolvedRelatedRefs,
     placeHighlight.overlayCoords,
     placeHighlight.bounds,
@@ -257,8 +251,7 @@ export function useProximityArrows({
   const topologyPathGeoJSON = useMemo(() => {
     if (!selectedSearchResultId || resolvedRelatedRefs.length === 0) return null;
     const result =
-      searchResults.find((r) => r.id === selectedSearchResultId) ??
-      aiChatCandidates.find((r) => r.id === selectedSearchResultId);
+      searchResults.find((r) => r.id === selectedSearchResultId);
     if (!result) return null;
 
     let subLng: number | undefined;
@@ -382,7 +375,6 @@ export function useProximityArrows({
   }, [
     selectedSearchResultId,
     searchResults,
-    aiChatCandidates,
     resolvedRelatedRefs,
     placeHighlight.overlayCoords,
     placeHighlight.bounds,

@@ -1,87 +1,40 @@
 # AI providers in SimForge Studio
 
-SimForge Studio ships without any AI credentials. Three features call external
-AI services and are switched off — with an explicit, actionable message — until
+SimForge Studio ships without any AI credentials. One feature calls an external
+AI service and is switched off — with an explicit, actionable message — until
 the user configures a provider under **Settings → AI providers**
 (`/dashboard/settings/ai-providers`):
 
 | Feature | Where | Provider |
 |---|---|---|
-| Scene assistant (editor right overlay) | `AssistantChatSlot` → `POST /api/simforge/assistant/stream` | Anthropic key **or** SimCloud assistant |
-| AI map search / scenario drafting (map detail page) | `POST /api/map-assets/:id/search/llm` | Anthropic key **or** SimCloud assistant |
 | 3D asset generation from photos (Assets → Generate model) | `/api/asset-gallery/generations/**` | Meshy key |
 
-Everything else — local project authoring, keyword map search, rendering,
-imports, exports — works without any provider and without a SimCloud account.
+Everything else — local project authoring, keyword map search, scenario
+editing, rendering, imports, exports — works without any provider and without
+a SimCloud account. There is no language-model assistant or AI map search in
+the product: scenario authoring is manual and deterministic.
 
-## Backends
+## Backend
 
-- **My Anthropic API key** (default). The key is stored by the local service in
-  the OS credential vault (`simforge-studio` / `ai-provider:anthropic`). When no
-  vault is usable the service keeps it in process memory only and says so; there
-  is no plaintext file fallback. Requests go directly from the user's machine
-  to Anthropic.
-- **SimCloud assistant**. Available only while the app is connected to
-  SimCloud **and** an assistant workspace is chosen. The local service keeps
-  running the assistant's tools against local maps and documents; only the
-  Anthropic Messages call is reverse-proxied by Cloud at
-  `POST /api/desktop/ai/anthropic/v1/messages` under the user's native session
-  bearer, with `X-SimForge-Workspace-Id` naming the chosen workspace. Cloud
-  re-checks membership on every call and attributes the call to that
-  workspace; a call without a workspace is refused `400 workspace_required`
-  and a workspace the account no longer belongs to is refused
-  `403 workspace_forbidden`, both in the Anthropic error envelope. The
-  selection is stored per signed-in account, so connecting as a different
-  account starts with no workspace rather than inheriting someone else's. The
-  desktop never receives or sends a model key; the Cloud route forwards only
-  that one endpoint, only `claude-*` models, and answers
-  `503 managed_assistant_unavailable` on a deployment without a managed model.
-- **Meshy** for asset generation is always bring-your-own. Generated GLBs are
-  imported, measured and published into the local asset library exactly like an
-  uploaded model.
+- **Meshy** for asset generation is bring-your-own. The key is stored by the
+  local service in the OS credential vault (`simforge-studio` /
+  `ai-provider:meshy`). When no vault is usable the service keeps it in process
+  memory only and says so; there is no plaintext file fallback. Generated GLBs
+  are imported, measured and published into the local asset library exactly
+  like an uploaded model.
 
-`ANTHROPIC_API_KEY` / `MESHY_API_KEY` in the service environment are honoured as
-a lower-priority source (developer shells, CI); the settings page reports the
-key's source and last four characters, never the key.
+`MESHY_API_KEY` in the service environment is honoured as a lower-priority
+source (developer shells, CI); the settings page reports the key's source and
+last four characters, never the key.
 
 ## Behaviour without a provider
 
-- The assistant stream returns `503 {error:"assistant_unavailable", message}`
-  before any streaming starts; the editor panel shows the message with a link
-  to settings. There is no echo or placeholder reply.
-- AI map search returns `503 {error:"llm_unavailable", message}`; the panel
-  shows the message and keyword search stays usable.
 - Asset generation returns `503 {error:"gallery_generation_unavailable", message}`
   before reference photos are uploaded; a rejected key or a Meshy balance below
   the floor are reported with their real cause.
 
-## Assistant map context
-
-The scene assistant runs its tools against the published native map the
-document is open on. The request names it twice —
-`editorContext.mapAssetId` (the source map, `public.map_assets.id`) and
-`editorContext.mapVersionId` (the immutable published map version) — and the
-service builds the tool bundle from that version's closure: the topology index
-for roads and lanes, the map-intel catalog (`derived/locations.json.gz`) for
-locations and selectors such as `tag:INTERSECTION`, and the derived topology
-for road names and junction arms. Every registered map version carries those
-members, so any map that opens in the editor has an assistant context: public,
-installed by the owner, or published to an account (which needs the SimCloud
-session that map access already needs). No CARLA runtime name or semantic
-publication is involved.
-
-A context the installation cannot serve is a JSON status before any stream
-starts: `400 assistant_context_missing_map` (either id absent),
-`404 map_asset_missing` / `map_version_not_found` / `map_version_mismatch`
-(the version does not belong to that map), `403 map_requires_cloud_connection`,
-and `502 map_member_invalid` when a closure member cannot be read or fails its
-schema.
-
 ## Status and settings API
 
 `GET /api/simforge/ai-providers` → `AiProviderSettingsStatus`
-(`studio/app/lib/ai-providers/contracts.ts`). `PATCH` with any of
-`assistantBackend`, `anthropicApiKey`, `anthropicModel`, `meshyApiKey`,
-`simcloudWorkspace` (`{ workspaceId, workspaceName }`, or `null` to clear; refused
-`409 cloud_disconnected` when no account is connected to bind it to); a `null`
-key clears it. Keys are write-only.
+(`studio/app/lib/ai-providers/contracts.ts`). `PATCH` with `meshyApiKey`; a
+`null` key clears it. Keys are write-only.
