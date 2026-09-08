@@ -45,6 +45,12 @@ export type ClipManifestProbe = {
    */
   sourceKind: string | null;
   qualified: boolean | null;
+  /**
+   * The camera set the bundle's validity gates were actually MEASURED over. A
+   * rig is servable only if every one of its cameras appears here — a bundle
+   * qualified over three cameras says nothing about a fourth.
+   */
+  profileCameraIds: number[] | null;
   durationS: number | null;
   itemCount: number;
 };
@@ -137,11 +143,20 @@ export function probeClipManifest(document: unknown): ClipManifestProbe | null {
       ? ((validity as Record<string, unknown>).qualified as boolean)
       : null;
 
+  const profileCameraIds =
+    typeof validity === "object" && validity !== null &&
+    Array.isArray((validity as Record<string, unknown>).profileCameraIds)
+      ? ((validity as Record<string, unknown>).profileCameraIds as unknown[]).filter(
+          (id): id is number => typeof id === "number",
+        )
+      : null;
+
   const items = record.items;
   return {
     schema,
     sourceKind,
     qualified,
+    profileCameraIds,
     cameraIds,
     hasCalibration,
     hasFrameTimestamps: timestampsPresent,
@@ -219,6 +234,23 @@ function classifyProbe(probe: ClipManifestProbe, model: ModelCatalogEntry): Eval
 
   const required = model.cameras.required;
   const modelMismatch: string[] = [];
+
+  // A measured profile bounds what the bundle can serve, independently of what
+  // cameras it happens to contain: the gates were run over these cameras and
+  // no others.
+  const profile = probe.profileCameraIds;
+  if (profile && profile.length > 0) {
+    const wanted = required ?? model.cameras.default;
+    const unmeasured = wanted.filter((id) => !profile.includes(id));
+    if (unmeasured.length > 0) {
+      modelMismatch.push(
+        `This bundle's validity gates were measured over cameras [${profile.join(", ")}] only. ${model.displayName} needs [${wanted.join(", ")}], so camera${
+          unmeasured.length === 1 ? "" : "s"
+        } [${unmeasured.join(", ")}] would be unqualified for it.`,
+      );
+    }
+  }
+
   if (required) {
     const absent = required.filter((id) => !probe.cameraIds.includes(id));
     if (absent.length > 0) {
