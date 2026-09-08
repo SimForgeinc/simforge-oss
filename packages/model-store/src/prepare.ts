@@ -266,8 +266,12 @@ export async function prepareRuntime(options: PrepareOptions): Promise<RuntimeRe
   const quantized = catalog.quants.some(
     (offer) => offer.quant !== "bf16" && offer.status !== "unsupported",
   );
+  // `accelerate` is required by the quantized load path: passing `device_map`
+  // to `from_pretrained` makes transformers demand it. Upstream's lockfile
+  // omits it because upstream loads bf16 without a device map, so this is our
+  // recipe's requirement to declare, not a gap in theirs.
   const extras = quantized
-    ? ["bitsandbytes==0.49.2", "torchao==0.12.0", "msgpack"]
+    ? ["bitsandbytes==0.49.2", "torchao==0.12.0", "accelerate>=1.0", "msgpack"]
     : ["msgpack"];
   await run("uv", ["pip", "install", ...extras], {
     cwd: layout.code,

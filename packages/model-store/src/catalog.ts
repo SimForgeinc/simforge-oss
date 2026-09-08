@@ -317,13 +317,18 @@ const ALPAMAYO_1: ModelCatalogEntry = {
     },
     {
       quant: 'nf4',
-      status: 'qualification-pending',
-      minVramGiB: null,
+      status: 'supported',
+      minVramGiB: 15,
       note:
-        'bitsandbytes NF4 recipe is wired, but no measured Alpamayo 1 envelope ' +
-        'exists. The 1.5 measurement does not transfer: this backbone is the ' +
-        'Qwen3-VL-8B config, not Cosmos-Reason2. No VRAM number is published ' +
-        'until a run records one.',
+        'bitsandbytes NF4 + double quantization, bf16 compute. MEASURED on the ' +
+        'pinned release runtime (upstream uv.lock at code commit 939f9a28, torch ' +
+        '2.8.0+cu128, SDPA) on an RTX 5080 15.46 GiB: 8.08 GiB resident after ' +
+        'load, 8.95 GiB peak allocated and 15.08 GiB device-used at 4 cameras / ' +
+        '1 sample, act 5.1 s wall. Seed-deterministic across repeat calls on the ' +
+        'same device. The envelope is camera-count and sample-count dependent; ' +
+        'only the 4-camera 1-sample profile is measured. Quantization changes ' +
+        'behaviour, not only numerics: an NF4 score is never comparable to a ' +
+        'BF16 baseline without the quant label.',
     },
     {
       quant: 'fp8',

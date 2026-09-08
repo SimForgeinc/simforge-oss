@@ -84,7 +84,7 @@ VIRTUAL_ENV="$PWD/.venv" uv sync --active --locked --no-install-package flash-at
 if [ "$FAMILY" = "alpamayo-2-super" ]; then
   VIRTUAL_ENV="$PWD/.venv" uv pip install msgpack
 elif [ "$QUANT_EXTRAS" = "1" ]; then
-  VIRTUAL_ENV="$PWD/.venv" uv pip install bitsandbytes==0.49.2 torchao==0.12.0 msgpack
+  VIRTUAL_ENV="$PWD/.venv" uv pip install bitsandbytes==0.49.2 torchao==0.12.0 accelerate>=1.0 msgpack
 else
   VIRTUAL_ENV="$PWD/.venv" uv pip install msgpack
 fi
