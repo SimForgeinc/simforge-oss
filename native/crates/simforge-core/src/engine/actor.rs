@@ -239,6 +239,9 @@ pub struct ActorRuntime {
     pub remaining_turns: Vec<TurnRelation>,
 
     pub speed_mps: f64,
+    /// Actual velocity along the body yaw, signed: negative while the body
+    /// is physically moving backwards, whatever gear is engaged or requested.
+    pub longitudinal_velocity_mps: f64,
     pub accel_mps2: f64,
     /// Measured body offset from the active route.
     pub lateral_offset_m: f64,
