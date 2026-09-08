@@ -155,9 +155,7 @@ export async function executeEpisode(options: EpisodeRunOptions): Promise<Episod
           ? 'cancelled'
           : runnerStatus === 'terminated'
             ? 'terminated'
-            : runnerStatus === 'truncated'
-              ? 'truncated'
-              : null,
+            : null,
     score,
     metrics: score
       ? {
