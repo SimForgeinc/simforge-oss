@@ -72,6 +72,8 @@ function trace(documentInput = input()): SimTrace {
       frame: 'xodr-local',
       actorIds: ['bus', 'ego'],
       metricSubject: 'ego',
+      // An engine-produced trace: the native sensor-limited ego controller ran it.
+      ego: { controllerProfile: 'sensor-limited' },
       operationalConditions: documentInput.operationalConditions,
       physics: { mode: 'kinematic-v1', solver: 'uniscenarios-sim-engine', solverVersion: '0.1.0', substepS: 0.2, vehicleProfileDigest: null },
     },
