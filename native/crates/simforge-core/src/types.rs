@@ -421,9 +421,8 @@ pub struct TimedPoint {
 /// One engine tick of recorded actor state, y-up scene frame. `heading_rad`
 /// is the body yaw and `speed_mps` is signed along it (negative = reversing),
 /// so the sample reproduces a stationary or reversing body exactly. `y` is
-/// the renderer's ground projection at `(x, z)` as captured; the planar engine
-/// has no height state, so replay reproduces it by driving the same `(x, z)`
-/// through the same ground projection. It is carried, never dropped.
+/// the physics height as captured from the truth stream; the planar engine
+/// has none, so it is always 0 (display ground lift is not physics state).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordedSample {
