@@ -115,7 +115,7 @@ const policySchema = z
   .object({
     policyId: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
     /** Runner policy name (`--policy`). `endpoint` drives a real model. */
-    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint']),
+    runnerPolicy: z.enum(['scripted', 'trajectory', 'torch', 'endpoint', 'recorded-path']),
     policySeed: z.number().int().nonnegative().default(0),
     /** Closed-loop timing mode; a run carries exactly one. */
     mode: z.enum(['offline-simtime', 'realtime']).default('offline-simtime'),

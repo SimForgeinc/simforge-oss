@@ -36,7 +36,7 @@ export const FINAL_EPISODE_STATUSES: Record<string, boolean> = {
 export interface EpisodeRunnerOptions {
   readonly specPath: string;
   readonly session: number;
-  readonly runnerPolicy: 'scripted' | 'trajectory' | 'torch' | 'endpoint';
+  readonly runnerPolicy: 'scripted' | 'trajectory' | 'torch' | 'endpoint' | 'recorded-path';
   readonly seed: number | string;
   readonly policySeed: number;
   readonly steps: number;

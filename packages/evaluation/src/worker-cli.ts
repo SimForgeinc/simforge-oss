@@ -374,8 +374,11 @@ async function main(): Promise<number> {
       kind: 'closedloop-episode',
       status: outcome.status,
       scored: outcome.scored,
-      // Truncated, unscored and cancelled episodes never promote a model.
-      promotable: outcome.scored && outcome.status === 'succeeded',
+      // Truncated, unscored and cancelled episodes never promote a model, and
+      // neither does a run with no model in the loop: a reference policy or the
+      // stock replay of a recorded path scores a SCENE, not a model.
+      promotable:
+        outcome.scored && outcome.status === 'succeeded' && params.runnerPolicy === 'endpoint',
       mode: params.mode,
       truncation: outcome.truncation,
       metrics: outcome.metrics,
