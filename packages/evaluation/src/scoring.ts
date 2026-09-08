@@ -28,8 +28,9 @@
 
 import {
   footprintContainment,
+  offRoadMetricVersion,
   type DrivableArea,
-} from './drivable-area.js';
+} from './replay-context/drivable.js';
 
 /** Perception object row on the wire: [id, rangeM, bearingRad, rangeRateMps, lineOfSight]. */
 export type TraceObj = readonly [string, number, number, number, number];
@@ -309,8 +310,17 @@ export interface EpisodeScore {
   readonly steps: number;
   readonly deadlineMisses: number;
   readonly events: readonly ScoreEvent[];
-  /** Which metric definition produced this score. */
-  readonly metricVersion: 'v1' | 'v2';
+  /**
+   * Which metric definition produced this score.
+   *
+   * `v1` is the lane-relative centreline rule. Anything else is the off-road
+   * instrument the bundle's own geometry identifies (`simforge.offroad/v2` for
+   * the lane-union ingestion whose ground-truth control failed and which is
+   * retained for reproducibility, `simforge.offroad/v3` for the authoritative
+   * road-boundary outline), so a score record names the instrument that
+   * produced it and two ingestions are never conflated.
+   */
+  readonly metricVersion: string;
   /**
    * Infractions this episode could not be assessed for, sorted.
    *
@@ -412,8 +422,12 @@ export function scoreEpisode(
   // Route-completion baseline: the reset record's route arc when present.
   const s0 = trace.reset?.sv?.[8] ?? trace.steps[0]?.sv?.[8] ?? null;
 
-  const metricVersion = ctx.metricVersion ?? 'v1';
-  const drivableArea = metricVersion === 'v2' ? (ctx.drivableArea ?? null) : null;
+  const requested = ctx.metricVersion ?? 'v1';
+  const drivableArea = requested === 'v2' ? (ctx.drivableArea ?? null) : null;
+  // The instrument names itself from the geometry it was handed; with none, the
+  // score is the v1 centreline definition and says so.
+  const metricVersion: string = drivableArea ? offRoadMetricVersion(drivableArea) : requested;
+  const containmentEnabled = requested === 'v2';
   // DEFAULT_ACTOR_DIMS' car: the spec's own dims when the caller supplies them.
   const egoDims = ctx.egoDims ?? { lengthM: 4.5, widthM: 1.9 };
   const unavailable = new Set<InfractionType>(ctx.unavailableInfractions ?? []);
@@ -461,7 +475,7 @@ export function scoreEpisode(
 
     // The centreline rule. Under v1 it IS off-road; under v2 it is
     // lane-departure, and off-road is the containment question below.
-    const centrelineType: InfractionType = metricVersion === 'v2' ? 'lane-departure' : 'off-road';
+    const centrelineType: InfractionType = containmentEnabled ? 'lane-departure' : 'off-road';
     if (!laneDepartureActive && Math.abs(latOff) > cfg.offRoadLateralM) {
       laneDepartureActive = true;
       push(centrelineType, step, 'infraction', { lateralOffsetM: latOff });
@@ -472,28 +486,49 @@ export function scoreEpisode(
     // v2 off-road: did the FOOTPRINT leave the drivable surface. A decision
     // whose containment cannot be decided leaves the metric unavailable rather
     // than contributing a pass.
-    if (metricVersion === 'v2') {
-      const pose = step.ex ? { x: step.ex.x, y: step.ex.y, headingRad: step.ex.headingRad } : null;
+    if (containmentEnabled) {
+      const pose = step.ex ?? null;
+      // Time support is this layer's check, not the geometry's: the decision
+      // clock lives here. Static geometry (timeSupportUs null) applies to the
+      // whole clip, which is what ClipGT lane geometry is.
       const tUs =
         ctx.originUs != null && Number.isFinite(step.t) ? Math.round(ctx.originUs + step.t * 1e6) : null;
-      const verdict = footprintContainment(drivableArea, pose, egoDims, tUs);
-      if ('unavailable' in verdict) {
+      const outsideSupport =
+        drivableArea?.timeSupportUs != null &&
+        tUs != null &&
+        (tUs < drivableArea.timeSupportUs.startUs || tUs > drivableArea.timeSupportUs.endUs);
+      if (!drivableArea || !pose || outsideSupport) {
         unavailable.add('off-road');
       } else {
-        containmentAssessed += 1;
-        // Assessed-and-clean is 0, not null: null means the question was never
-        // asked, and a consumer must be able to tell those apart.
-        worstOffRoadM = Math.max(worstOffRoadM ?? 0, verdict.outsideM);
-        if (!offRoadActive && !verdict.inside) {
-          offRoadActive = true;
-          push('off-road', step, 'infraction', {
-            outsideM: verdict.outsideM,
-            worstCorner: verdict.worstCorner,
-          });
-        } else if (offRoadActive && verdict.inside) {
-          // No hysteresis band: containment is a geometric fact, not a
-          // thresholded proxy, so re-entry is re-entry.
-          offRoadActive = false;
+        // The replay-context module owns this geometry and its verdicts,
+        // including that unavailability WINS over off-road: a corner past the
+        // labelled extent makes the sample unknown, because a kerb strike and
+        // the end of annotation are indistinguishable there.
+        const containment = footprintContainment(drivableArea, {
+          x: pose.x,
+          y: pose.y,
+          headingRad: pose.headingRad,
+          lengthM: egoDims.lengthM,
+          widthM: egoDims.widthM,
+        });
+        if (containment.unavailable) {
+          unavailable.add('off-road');
+        } else {
+          containmentAssessed += 1;
+          // Assessed-and-clean is 0, not null: null means the question was
+          // never asked, and a consumer must be able to tell those apart.
+          worstOffRoadM = Math.max(worstOffRoadM ?? 0, containment.worstOutsideM);
+          if (!offRoadActive && !containment.inside) {
+            offRoadActive = true;
+            push('off-road', step, 'infraction', {
+              cornersOutside: containment.cornersOutside,
+              worstOutsideM: containment.worstOutsideM,
+            });
+          } else if (offRoadActive && containment.inside) {
+            // No hysteresis band: containment is a geometric fact, not a
+            // thresholded proxy, so re-entry is re-entry.
+            offRoadActive = false;
+          }
         }
       }
     }
@@ -637,7 +672,7 @@ export function scoreEpisode(
   // An episode where NOTHING could be assessed for containment has no off-road
   // answer at all; one partly assessed keeps the events it did find and still
   // declares the gap.
-  if (metricVersion === 'v2' && containmentAssessed === 0) unavailable.add('off-road');
+  if (containmentEnabled && containmentAssessed === 0) unavailable.add('off-road');
 
   return {
     drivingScore: routeCompletion * penaltyProduct,

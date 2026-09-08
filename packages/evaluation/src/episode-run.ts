@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { fixtureFacts } from './campaign.js';
 import { FINAL_EPISODE_STATUSES, runEpisodeAsync, type EpisodeRunnerOptions } from './episode-runner.js';
 import { describeArtifact, type EvalArtifact, type ResultManifest, type ResultStatus } from './protocol/manifest.js';
-import { acceptDrivableArea, type DrivableArea } from './drivable-area.js';
+import { DrivableAreaSchema, type DrivableArea } from './replay-context/drivable.js';
 import {
   parseTraceJsonl,
   scoreEpisode,
@@ -92,25 +92,25 @@ async function replaySceneScoring(bundleDir: string | null): Promise<{
   }
   const ego = (document['ego'] ?? {}) as Record<string, unknown>;
   const egoFrame = typeof ego['frame'] === 'string' ? ego['frame'] : '';
-  const accepted = acceptDrivableArea(document['drivableArea'] ?? null, egoFrame);
-  if (!accepted.ok) {
-    // A frame disagreement or an empty block is a defect in the bundle, not a
-    // clean episode: the metric goes unavailable and the reason is on the wire.
-    return {
-      drivableArea: null,
-      originUs: typeof ego['originUs'] === 'number' ? ego['originUs'] : null,
-      unavailable: ['off-road', 'speeding', 'wrong-way'],
-    };
+  const originUs = typeof ego['originUs'] === 'number' ? ego['originUs'] : null;
+  const raw = document['drivableArea'] ?? null;
+  let area: DrivableArea | null = null;
+  if (raw !== null && raw !== undefined) {
+    const parsed = DrivableAreaSchema.safeParse(raw);
+    // A malformed block or one authored in another frame is a defect in the
+    // bundle, not a clean episode: nothing here transforms coordinates, so the
+    // metric goes unavailable rather than being scored against the wrong world.
+    if (!parsed.success || parsed.data.frame !== egoFrame) {
+      return { drivableArea: null, originUs, unavailable: ['off-road', 'speeding', 'wrong-way'] };
+    }
+    area = parsed.data;
   }
   const authority = (document['metricAuthority'] ?? {}) as Record<string, unknown>;
   const unavailable: InfractionType[] = [];
   if (authority['speedLimits'] !== true) unavailable.push('speeding');
   if (authority['travelDirection'] !== true) unavailable.push('wrong-way');
-  return {
-    drivableArea: accepted.area,
-    originUs: typeof ego['originUs'] === 'number' ? ego['originUs'] : null,
-    unavailable,
-  };
+  if (!area) unavailable.push('off-road');
+  return { drivableArea: area, originUs, unavailable };
 }
 
 export async function executeEpisode(options: EpisodeRunOptions): Promise<EpisodeRunOutcome> {

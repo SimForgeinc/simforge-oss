@@ -365,10 +365,11 @@ describe('parseTraceJsonl', () => {
 describe('off-road v2: footprint containment', () => {
   /** A 40 m x 8 m straight corridor centred on y = 0, plus a 2 m island at x 20. */
   const AREA = {
-    schema: 'simforge.drivable-area/v1' as const,
-    source: 'clipgt',
+    source: 'clipgt-lane-union' as const,
+    geometry: 'polygons' as const,
     frame: 'nurec-source-z-up',
     confidence: 'authoritative' as const,
+    boundaries: [],
     polygons: [
       {
         id: 'lane',
@@ -392,7 +393,7 @@ describe('off-road v2: footprint containment', () => {
       },
     ],
     timeSupportUs: null,
-    coverage: null,
+    coverage: { boundsMinXY: [0, -4] as [number, number], boundsMaxXY: [40, 4] as [number, number] },
   };
   const V2: ScenarioScoringContext = {
     ...CTX,
@@ -423,9 +424,28 @@ describe('off-road v2: footprint containment', () => {
     expect(score.worstOffRoadM).toBeCloseTo(0.5, 6);
   });
 
-  it('flags a footprint over a hole even though it is inside the outer ring', () => {
-    const steps = [mkStep(0, { ex: { x: 20, y: 0, headingRad: 0 } })];
+  it('flags a corner inside an island exclusion', () => {
+    // Corner at (21.5, 0.5) sits in the 19..21 x -1..1 hole once the box is
+    // shifted onto it.
+    const steps = [mkStep(0, { ex: { x: 18.2, y: 0, headingRad: 0 } })];
     expect(scoreEpisode(mkTrace(steps), V2).infractions['off-road']).toBe(1);
+  });
+
+  it('does NOT flag an island narrower than the car that the box straddles', () => {
+    // Documented limit of corner sampling, pinned so it cannot change
+    // silently: corners at x 18 and 22 clear the 19..21 island, so no corner is
+    // inside it. It is a conservative gap - it can only miss an excursion,
+    // never invent one - and the mitigation is denser island rings in the
+    // ingestion rather than edge sampling in the scorer.
+    const steps = [mkStep(0, { ex: { x: 20, y: 0, headingRad: 0 } })];
+    expect(scoreEpisode(mkTrace(steps), V2).infractions['off-road']).toBe(0);
+  });
+
+  it('reports unavailable for a decision outside the geometry time support', () => {
+    const bounded = { ...AREA, timeSupportUs: { startUs: 1_000_000, endUs: 2_000_000 } };
+    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: bounded, originUs: 9_000_000 });
+    expect(score.unavailable).toContain('off-road');
   });
 
   it('reports unavailable rather than clean when the geometry is absent', () => {
@@ -440,13 +460,6 @@ describe('off-road v2: footprint containment', () => {
     expect(score.unavailable).toContain('off-road');
   });
 
-  it('reports unavailable for a decision outside the polygons\' time support', () => {
-    const bounded = { ...AREA, timeSupportUs: { startUs: 1_000_000, endUs: 2_000_000 } };
-    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
-    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: bounded, originUs: 9_000_000 });
-    expect(score.unavailable).toContain('off-road');
-  });
-
   it('carries declared unavailability through without counting it', () => {
     const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
     const score = scoreEpisode(mkTrace(steps), {
@@ -455,7 +468,9 @@ describe('off-road v2: footprint containment', () => {
     });
     expect(score.unavailable).toEqual(['speeding', 'wrong-way']);
     expect(score.infractions['speeding']).toBe(0);
-    expect(score.metricVersion).toBe('v2');
+    // The instrument names the ingestion that produced the geometry, so the
+    // lane-union control and the road-boundary outline stay separable.
+    expect(score.metricVersion).toBe('simforge.offroad/v2');
   });
 
   it('leaves v1 scoring unchanged and emits no lane-departure', () => {
