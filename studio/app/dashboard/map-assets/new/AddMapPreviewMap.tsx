@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import Map, { Source, Layer, type MapRef } from "react-map-gl/maplibre";
+import type { FeatureCollection } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   ROAD_NETWORK_FEATURE_TYPES,
@@ -96,12 +97,12 @@ export default function AddMapPreviewMap({ geojson, bbox, onThumbnailReady }: Pr
       initialViewState={{ longitude: 0, latitude: 20, zoom: 1 }}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       attributionControl={false}
-      preserveDrawingBuffer
+      canvasContextAttributes={{ preserveDrawingBuffer: true }}
       onLoad={handleMapLoad}
       onIdle={handleIdle}
     >
       {geojson && (
-        <Source id="preview-geojson" type="geojson" data={geojson as GeoJSON.FeatureCollection}>
+        <Source id="preview-geojson" type="geojson" data={geojson as FeatureCollection}>
           {enabledTypes.flatMap((ft) =>
             ft.geometryRendering === "fill"
               ? [

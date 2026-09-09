@@ -5,6 +5,7 @@ import { Camera, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { toast } from "sonner";
 import type { MapAsset } from "@simforge-oss/studio-shared";
+import type { FeatureCollection } from "geojson";
 
 type Props = {
   asset: MapAsset;
@@ -204,7 +205,7 @@ async function renderThumbnailOffscreen(
       ],
       fitBoundsOptions: { padding: 60 },
       attributionControl: false,
-      preserveDrawingBuffer: true,
+      canvasContextAttributes: { preserveDrawingBuffer: true },
       interactive: false,
     });
 
@@ -216,7 +217,7 @@ async function renderThumbnailOffscreen(
     map.on("load", () => {
       map.addSource("thumb-geojson", {
         type: "geojson",
-        data: geojson as GeoJSON.FeatureCollection,
+        data: geojson as FeatureCollection,
       });
 
       const enabledTypes = ROAD_NETWORK_FEATURE_TYPES.filter((ft) =>

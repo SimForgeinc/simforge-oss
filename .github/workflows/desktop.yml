@@ -146,6 +146,9 @@ jobs:
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
         working-directory: .
+      - name: Audit critical dependency advisories
+        run: pnpm audit --audit-level critical
+        working-directory: .
       - name: Build workspace packages and the N-API addon
         run: |
           pnpm -r --filter './packages/**' build

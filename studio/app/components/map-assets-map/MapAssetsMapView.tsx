@@ -510,8 +510,7 @@ export function MapAssetsMapView({
         }}
         cursor={cursor}
         renderWorldCopies={false}
-        preserveDrawingBuffer={enableSnapshotCapture}
-        antialias={antialias}
+        canvasContextAttributes={{ preserveDrawingBuffer: enableSnapshotCapture, antialias }}
       >
         {children}
       </Map>
