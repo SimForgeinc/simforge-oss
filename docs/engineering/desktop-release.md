@@ -99,6 +99,13 @@ platform, the license that actually applies and the obligations that follow;
 `scripts/release/audit-bundled-licenses.mjs` turns it into a receipt and the
 `THIRD_PARTY_NOTICES.md` a download must carry.
 
+`studio/scripts/sync-studio-assets.mjs` copies browser runtime assets from
+installed dependencies into `studio/public/`; desktop staging carries that
+directory into the installed server. MapLibre 6's module worker, sibling shared
+module, and license must stay together under `/maplibre/`. Every map constructor
+sets that worker URL explicitly: Next's bundled `import.meta.url` is not a
+usable worker location. Keep these files from the same pinned MapLibre release.
+
 ```sh
 node scripts/release/audit-bundled-licenses.mjs --out artifacts/release/audit
 ```

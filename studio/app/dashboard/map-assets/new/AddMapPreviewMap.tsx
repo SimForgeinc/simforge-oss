@@ -93,6 +93,7 @@ export default function AddMapPreviewMap({ geojson, bbox, onThumbnailReady }: Pr
   return (
     <Map
       ref={mapRef}
+      workerUrl="/maplibre/maplibre-gl-worker.mjs"
       mapStyle={DARK_BASEMAP}
       initialViewState={{ longitude: 0, latitude: 20, zoom: 1 }}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}

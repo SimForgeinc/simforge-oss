@@ -19,6 +19,16 @@ await Promise.all(["basis_transcoder.js", "basis_transcoder.wasm"].map((file) =>
   cp(join(basisSource, file), join(basisDestination, file)),
 ));
 
+// MapLibre's module worker and its sibling import must remain together. Its
+// import.meta.url fallback is a build-time file URL under Next's bundler.
+const maplibreSource = join(dirname(require.resolve("maplibre-gl/package.json")), "dist");
+const maplibreDestination = join(publicDir, "maplibre");
+await mkdir(maplibreDestination, { recursive: true });
+await Promise.all(["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"].map((file) =>
+  cp(join(maplibreSource, file), join(maplibreDestination, file)),
+));
+await cp(join(maplibreSource, "../LICENSE.txt"), join(maplibreDestination, "LICENSE.txt"));
+
 // Product-owned UI art the shared Studio surface references by absolute URL
 // (driver-behavior icons, the CARLA mark, render-quality previews) ships in
 // @simforge-oss/studio-ui/public with the same layout it needs under `/`.

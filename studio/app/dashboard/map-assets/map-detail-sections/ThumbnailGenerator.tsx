@@ -191,6 +191,7 @@ async function renderThumbnailOffscreen(
 ): Promise<Blob> {
   // Dynamic import to avoid SSR issues
   const maplibregl = await import("maplibre-gl");
+  maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
   const { ROAD_NETWORK_FEATURE_TYPES, DEFAULT_ENABLED_FEATURE_TYPE_IDS } = await import(
     "@/app/lib/maps/frontend/road-network-feature-types"
   );

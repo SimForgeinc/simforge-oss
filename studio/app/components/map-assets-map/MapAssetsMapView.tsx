@@ -473,6 +473,7 @@ export function MapAssetsMapView({
 
       <Map
         ref={mapRef}
+        workerUrl="/maplibre/maplibre-gl-worker.mjs"
         mapStyle={resolvedMapStyle as never}
         dragPan={!interactionLocked && !horizonSafePan}
         doubleClickZoom={false}

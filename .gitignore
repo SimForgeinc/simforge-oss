@@ -63,8 +63,9 @@ renderer/target-*/
 renderer/vendor/bevy_gltf/target/
 
 # Static assets studio/scripts/sync-studio-assets.mjs copies from installed
-# packages (three's Basis transcoder, @simforge-oss/studio-ui/public).
+# packages (Three's Basis transcoder, MapLibre's worker, studio-ui public assets).
 studio/public/basis/
+studio/public/maplibre/
 studio/public/render-selection/
 studio/public/scenario-editor/carla-mark.png
 studio/public/scenario-editor/driver-behaviors/
