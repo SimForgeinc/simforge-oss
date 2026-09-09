@@ -106,6 +106,11 @@ module, and license must stay together under `/maplibre/`. Every map constructor
 sets that worker URL explicitly: Next's bundled `import.meta.url` is not a
 usable worker location. Keep these files from the same pinned MapLibre release.
 
+Native actor and scattered-map inputs use hard links where permitted, and copy
+on cross-filesystem or protected-hardlink failures. A root-owned installed
+asset can be readable while Linux rejects a hard link with `EPERM`; the job
+must not require writable installation files. Closure verification is unchanged.
+
 ```sh
 node scripts/release/audit-bundled-licenses.mjs --out artifacts/release/audit
 ```

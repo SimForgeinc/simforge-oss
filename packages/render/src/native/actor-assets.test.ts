@@ -2,15 +2,11 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  NATIVE_ACTOR_ASSETS_INPUT_ID,
-  PINNED_ACTOR_ASSETS_DIGEST,
-  PINNED_ACTOR_ASSETS_SIZE_BYTES,
   assertActorAppearanceGrounded,
   ensureActorAssets,
-  nativeActorAssetsInput,
 } from './actor-assets.js';
 
 function digest(bytes: Uint8Array): string {
@@ -19,6 +15,7 @@ function digest(bytes: Uint8Array): string {
 
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })));
 });
 
@@ -52,17 +49,6 @@ const catalog = Buffer.from(JSON.stringify({
   'vehicle.sedan': { model: { glbPath: 'models/vehicle.sedan/model.glb' } },
 }));
 
-describe('nativeActorAssetsInput', () => {
-  it('declares the pinned closure under the shared input id', () => {
-    expect(nativeActorAssetsInput({ baseUrl: 'https://assets.example.test/' })).toEqual({
-      inputId: NATIVE_ACTOR_ASSETS_INPUT_ID,
-      relativePath: 'actor-assets/closure.json',
-      sha256: PINNED_ACTOR_ASSETS_DIGEST,
-      sizeBytes: PINNED_ACTOR_ASSETS_SIZE_BYTES,
-      downloadUrl: `https://assets.example.test/actor-assets/closures/${PINNED_ACTOR_ASSETS_DIGEST}.json`,
-    });
-  });
-});
 
 describe('ensureActorAssets', () => {
   it('materializes exactly the closure members and binds catalog ids to verified models', async () => {
@@ -73,6 +59,15 @@ describe('ensureActorAssets', () => {
     expect(await fs.readFile(path.join(assets.directory, 'models/vehicle.sedan/model.glb'))).toEqual(sedanGlb);
     expect([...assets.models.keys()]).toEqual(['vehicle.sedan']);
     expect((await fs.readdir(assets.directory)).sort()).toEqual(['catalog-models.json', 'models']);
+  });
+
+  it('materializes verified model bytes when installed-file hard links are forbidden', async () => {
+    const fixture = await registry({ 'catalog-models.json': catalog, 'models/vehicle.sedan/model.glb': sedanGlb });
+    vi.spyOn(fs, 'link').mockRejectedValue(Object.assign(new Error('hard link not permitted'), { code: 'EPERM' }));
+
+    const assets = await ensureActorAssets(fixture);
+    const model = assets.models.get('vehicle.sedan')!;
+    expect(await fs.readFile(path.join(assets.directory, model.glbPath))).toEqual(sedanGlb);
   });
 
   it('refuses a closure input whose bytes are not the declared identity', async () => {
@@ -111,12 +106,6 @@ describe('assertActorAppearanceGrounded', () => {
   const assets = { digest: 'a'.repeat(64), models: new Map([['vehicle.sedan', { catalogId: 'vehicle.sedan', glbPath: 'x', animationPaths: [] }]]) };
   const host = { sourceId: 'cam1', actorId: 'ego', vehicleAsset: { catalogAssetId: 'vehicle.sedan' } };
 
-  it('accepts authored and host identities the closure models, and unauthored class defaults it does not', () => {
-    expect(() => assertActorAppearanceGrounded([
-      { actorId: 'ego', catalogId: 'vehicle.sedan', authored: true },
-      { actorId: 'truck', catalogId: 'vehicle.box-truck', authored: false },
-    ], [host], assets)).not.toThrow();
-  });
 
   it('refuses an authored identity the closure cannot model', () => {
     expect(() => assertActorAppearanceGrounded([

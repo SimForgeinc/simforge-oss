@@ -22,7 +22,7 @@ import { lowerOpenScenarioToNative } from './lowering.js';
 import { createNativeCameraSchedule } from './camera-schedule.js';
 import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { startNativeRenderService, terminateProcess } from './service-process.js';
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets } from './actor-assets.js';
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, linkOrCopy } from './actor-assets.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
@@ -95,14 +95,7 @@ async function materializeMapRoot(workspace: string, closure: NativeMapClosure<R
   const mapRoot = path.join(workspace, 'map');
   await fs.rm(mapRoot, { recursive: true, force: true });
   for (const [member, input] of closure.members) {
-    const destination = path.join(mapRoot, member);
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    try {
-      await fs.link(input.path, destination);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
-      await fs.copyFile(input.path, destination);
-    }
+    await linkOrCopy(input.path, path.join(mapRoot, member));
   }
   return mapRoot;
 }

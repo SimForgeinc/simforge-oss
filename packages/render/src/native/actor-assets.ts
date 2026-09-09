@@ -265,12 +265,14 @@ function verifiedBlob(baseUrl: string, member: ActorClosureMember, destination: 
   return work;
 }
 
-async function linkOrCopy(source: string, target: string): Promise<void> {
+/** Installed immutable inputs can be readable without permitting hard links. */
+export async function linkOrCopy(source: string, target: string): Promise<void> {
   await fs.mkdir(path.dirname(target), { recursive: true });
   try {
     await fs.link(source, target);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'EXDEV' && code !== 'EPERM') throw error;
     await fs.copyFile(source, target);
   }
 }
