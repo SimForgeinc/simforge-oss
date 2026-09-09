@@ -184,13 +184,13 @@ export function EvaluationPageClient() {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <PageHeader
-        title="Evaluation"
-        description="Open-loop runs on this machine or in the cloud, closed-loop campaigns, episode playback and promotion gates."
+        title="Video prediction"
+        description="Upload one driving video or synchronized camera views for an unscored AlpaMayo trajectory and reasoning overlay."
       />
       <Tabs defaultValue="runs" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="mx-5 mt-5 self-start sm:mx-6">
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="runs">Video prediction</TabsTrigger>
+          <TabsTrigger value="campaigns">Research campaigns</TabsTrigger>
         </TabsList>
 
         <TabsContent value="runs" className="px-5 py-5 sm:px-6">

@@ -14,12 +14,12 @@
  * - An `authored` or `reference-policy` reference is never called ground truth.
  */
 
-import { AlertTriangle, Ban, Loader2 } from "lucide-react";
+import { AlertTriangle, Ban, Download, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import type { HorizonMetrics, OpenLoopItem, TrajectoryProjection } from "../contracts";
-import { horizonMetrics, overlayProjection } from "../contracts";
+import type { HorizonMetrics, OpenLoopItem, TrajectoryProjection, UploadedVideoProvenance } from "../contracts";
+import { horizonMetrics, overlayProjection, readUploadedVideoProvenance } from "../contracts";
 import type { EvaluationGateway } from "../gateway";
 import { formatBytes, formatCents, formatSeconds, jobStatusPresentation } from "../presentation";
 import { useJobResult } from "../useJobResult";
@@ -94,26 +94,31 @@ function ItemCard({
   videoUrl,
   frameUrls,
   projection,
+  uploadedVideo,
 }: {
   item: OpenLoopItem;
   videoUrl: string | null;
   frameUrls: string[];
   projection: TrajectoryProjection | null;
+  uploadedVideo: boolean;
 }) {
   const referenceKind = item.reference.kind;
   const recordedHuman = RECORDED_HUMAN_REFERENCE_KINDS.includes(referenceKind);
-  // `metrics` is a free-form record on the wire: which buckets exist depends on
-  // the run, so each is read and shape-checked rather than assumed.
-  const minADE = horizonMetrics(item.metrics, "minADE_k");
-  const minFDE = horizonMetrics(item.metrics, "minFDE_k");
-  // One entry per sampled trajectory; nulls are samples that produced none.
+  const minADE = uploadedVideo ? null : horizonMetrics(item.metrics, "minADE_k");
+  const minFDE = uploadedVideo ? null : horizonMetrics(item.metrics, "minFDE_k");
   const reasoning = item.reasoning.filter((entry): entry is string => Boolean(entry));
+  const predictionSeconds =
+    item.input.t0Us === null || item.input.t0Us === undefined ? null : item.input.t0Us / 1_000_000;
 
   return (
     <Card data-testid={`result-item-${item.itemId}`}>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-mono">{item.itemId}</span>
+          <span className="font-mono">
+            {uploadedVideo && predictionSeconds !== null
+              ? `Prediction at ${predictionSeconds.toFixed(3)} s`
+              : item.itemId}
+          </span>
           {item.status === "ok" ? null : (
             <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-500">
               {item.status}
@@ -121,7 +126,7 @@ function ItemCard({
           )}
           {item.latencyMs !== null && item.latencyMs !== undefined ? (
             <span className="text-xs font-normal text-muted-foreground">
-              {Math.round(item.latencyMs)} ms
+              {Math.round(item.latencyMs)} ms inference
             </span>
           ) : null}
         </CardTitle>
@@ -152,9 +157,9 @@ function ItemCard({
         ) : null}
 
         {item.status === "ok" && item.points.length > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className={uploadedVideo ? "max-w-2xl" : "grid gap-6 lg:grid-cols-2"}>
             <TrajectoryPlot item={item} />
-            {projection && (videoUrl || frameUrls.length > 0) ? (
+            {!uploadedVideo && projection && (videoUrl || frameUrls.length > 0) ? (
               <FrameOverlay
                 item={item}
                 projection={projection}
@@ -164,7 +169,7 @@ function ItemCard({
                     : { kind: "video", url: videoUrl as string }
                 }
               />
-            ) : videoUrl || frameUrls.length > 0 ? (
+            ) : !uploadedVideo && (videoUrl || frameUrls.length > 0) ? (
               <div className="space-y-3">
                 <video src={videoUrl ?? frameUrls[0]} controls playsInline className="w-full bg-black" />
                 <p className="text-xs leading-5 text-muted-foreground">
@@ -179,46 +184,136 @@ function ItemCard({
 
         {minADE || minFDE ? (
           <div className="flex flex-wrap gap-8">
-            {minADE ? (
-              <HorizonTable label={`minADE (k=${item.points.length})`} metrics={minADE} />
-            ) : null}
-            {minFDE ? (
-              <HorizonTable label={`minFDE (k=${item.points.length})`} metrics={minFDE} />
-            ) : null}
+            {minADE ? <HorizonTable label={`minADE (k=${item.points.length})`} metrics={minADE} /> : null}
+            {minFDE ? <HorizonTable label={`minFDE (k=${item.points.length})`} metrics={minFDE} /> : null}
           </div>
         ) : null}
 
         <p className="text-xs leading-5 text-muted-foreground">
-          Reference: {referenceKind}
-          {referenceKind === "none"
-            ? " — prediction only, not scored."
-            : recordedHuman
-              ? " — a recorded future."
-              : " — a generated reference, not human ground truth."}
-          {item.convention ? ` · ${item.convention} frame` : ""}
-          {item.dtS ? ` · ${item.dtS}s step` : ""}
-          {item.horizonS ? ` · ${item.horizonS}s horizon` : ""}
+          {uploadedVideo
+            ? `Unscored exploratory prediction${item.convention ? ` · ${item.convention} frame` : ""}${item.dtS ? ` · ${item.dtS}s trajectory step` : ""}${item.horizonS ? ` · ${item.horizonS}s horizon` : ""}.`
+            : `Reference: ${referenceKind}${
+                referenceKind === "none"
+                  ? " — prediction only, not scored."
+                  : recordedHuman
+                    ? " — a recorded future."
+                    : " — a generated reference, not human ground truth."
+              }${item.convention ? ` · ${item.convention} frame` : ""}${item.dtS ? ` · ${item.dtS}s step` : ""}${item.horizonS ? ` · ${item.horizonS}s horizon` : ""}`}
         </p>
 
         {reasoning.length > 0 ? (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-xs uppercase tracking-wide text-muted-foreground">
-              Model reasoning ({reasoning.length === 1 ? "1 sample" : `${reasoning.length} samples`})
-            </summary>
-            <ol className="mt-2 space-y-2">
+          <div className="space-y-2 text-sm">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Model reasoning
+              {predictionSeconds !== null ? ` at ${predictionSeconds.toFixed(3)} s` : ""}
+            </p>
+            <ol className="space-y-2">
               {reasoning.map((entry, index) => (
-                <li key={index} className="whitespace-pre-wrap leading-6 text-muted-foreground">
+                <li key={index} className="whitespace-pre-wrap leading-6 text-foreground">
                   {reasoning.length > 1 ? (
-                    <span className="mr-2 text-xs text-muted-foreground/70">#{index + 1}</span>
+                    <span className="mr-2 text-xs text-muted-foreground">Sample {index + 1}</span>
                   ) : null}
                   {entry}
                 </li>
               ))}
             </ol>
-          </details>
+          </div>
+        ) : item.status === "ok" && uploadedVideo ? (
+          <p className="text-xs text-muted-foreground">The model returned no reasoning text at this timestamp.</p>
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function UploadedVideoResult({
+  overlayVideoUrl,
+  provenance,
+}: {
+  overlayVideoUrl: string | null;
+  provenance: UploadedVideoProvenance;
+}) {
+  const assumptions = provenance.assumptions;
+  return (
+    <section className="space-y-4" data-testid="uploaded-video-result">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Prediction and reasoning overlay</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            The rendered trajectory changes only at the model inference timestamps shown below.
+          </p>
+        </div>
+        {overlayVideoUrl ? (
+          <a
+            href={overlayVideoUrl}
+            download="prediction-overlay.mp4"
+            className="inline-flex h-9 items-center gap-2 border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            Download overlay video
+          </a>
+        ) : null}
+      </div>
+      {overlayVideoUrl ? (
+        <video
+          src={overlayVideoUrl}
+          controls
+          playsInline
+          preload="metadata"
+          className="aspect-video w-full bg-black"
+          aria-label="Predicted trajectory and model reasoning overlay"
+        />
+      ) : (
+        <RefusalNotice
+          tone="warn"
+          title="The overlay video is unavailable"
+          reasons={[
+            "The prediction document is retained below, but this run did not store a playable overlay-video artifact.",
+          ]}
+        />
+      )}
+      <div className="border border-border bg-muted/10 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Approximate input assumptions
+        </p>
+        <p className="mt-2 text-sm leading-6 text-foreground">
+          Pinhole camera · {assumptions.horizontalFovDeg}° horizontal FOV ·{" "}
+          {assumptions.cameraHeightM} m camera height · constant-speed straight ego history at{" "}
+          {assumptions.egoSpeedMps} m/s. Camera starts were{" "}
+          {assumptions.synchronizedStarts ? "declared synchronized" : "aligned with the offsets below"}.
+        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          These are declared approximations, not measured calibration or vehicle telemetry. This
+          exploratory output is unscored and has no reference trajectory.
+        </p>
+      </div>
+      <details className="border border-border">
+        <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Source cameras and inference timestamps
+        </summary>
+        <div className="space-y-4 border-t border-border p-4 text-xs">
+          <ul className="space-y-1 text-muted-foreground">
+            {provenance.sources.map((source) => (
+              <li key={source.inputIndex}>
+                Input {source.inputIndex + 1} → camera {source.cameraId} · {source.width}×
+                {source.height} · {source.durationSeconds.toFixed(3)} s · offset{" "}
+                {source.offsetSeconds.toFixed(3)} s
+              </li>
+            ))}
+          </ul>
+          <div>
+            <p className="uppercase tracking-wide text-muted-foreground">
+              Inference timestamps ({provenance.inferenceTimestampsUs.length})
+            </p>
+            <p className="mt-1 break-words font-mono leading-5 text-foreground">
+              {provenance.inferenceTimestampsUs
+                .map((timestampUs) => `${(timestampUs / 1_000_000).toFixed(3)}s`)
+                .join(", ") || "none"}
+            </p>
+          </div>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -231,8 +326,17 @@ export function JobDetail({
   jobId: string;
   className?: string;
 }) {
-  const { job, manifest, openLoop, trajectories, videoUrl, frameUrls, loading, problems } =
-    useJobResult(gateway, jobId);
+  const {
+    job,
+    manifest,
+    openLoop,
+    trajectories,
+    videoUrl,
+    overlayVideoUrl,
+    frameUrls,
+    loading,
+    problems,
+  } = useJobResult(gateway, jobId);
 
   if (loading && !job) {
     return (
@@ -265,6 +369,10 @@ export function JobDetail({
   const provenanceRuntime =
     runtimeEntries && Object.keys(runtimeEntries).length > 0 ? runtimeEntries : null;
   const unqualifiedRuntime = unqualifiedRuntimeStamp(provenanceRuntime);
+  const videoProvenanceCandidate = openLoop?.provenance.video;
+  const videoProvenanceRead = readUploadedVideoProvenance(videoProvenanceCandidate);
+  const uploadedVideoProvenance = videoProvenanceRead.ok ? videoProvenanceRead.value : null;
+  const uploadedVideo = videoProvenanceCandidate !== undefined || overlayVideoUrl !== null;
 
   return (
     <div className={cn("space-y-6", className)} data-testid="job-detail">
@@ -356,7 +464,45 @@ export function JobDetail({
         />
       ) : null}
 
-      {aggregate ? (
+      {uploadedVideoProvenance ? (
+        <UploadedVideoResult
+          overlayVideoUrl={overlayVideoUrl}
+          provenance={uploadedVideoProvenance}
+        />
+      ) : null}
+      {overlayVideoUrl && !uploadedVideoProvenance ? (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Prediction and reasoning overlay
+            </h2>
+            <a
+              href={overlayVideoUrl}
+              download="prediction-overlay.mp4"
+              className="inline-flex h-9 items-center gap-2 border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              <Download aria-hidden="true" className="size-4" />
+              Download overlay video
+            </a>
+          </div>
+          <video
+            src={overlayVideoUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="aspect-video w-full bg-black"
+            aria-label="Predicted trajectory and model reasoning overlay"
+          />
+          <RefusalNotice
+            tone="warn"
+            title="Video assumptions could not be read"
+            reasons={[videoProvenanceRead.ok ? "" : videoProvenanceRead.reason]}
+          />
+        </section>
+      ) : null}
+
+
+      {aggregate && !uploadedVideo ? (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Aggregate</h2>
           <div className="flex flex-wrap gap-8">
@@ -451,7 +597,7 @@ export function JobDetail({
       {openLoop ? (
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">
-            Items ({openLoop.items.length})
+            {uploadedVideo ? "Timestamped predictions" : "Items"} ({openLoop.items.length})
           </h2>
           <div className="space-y-4">
             {openLoop.items.map((item) => (
@@ -461,6 +607,7 @@ export function JobDetail({
                 videoUrl={videoUrl}
                 frameUrls={frameUrls}
                 projection={overlayProjection(item, trajectories)}
+                uploadedVideo={uploadedVideo}
               />
             ))}
           </div>

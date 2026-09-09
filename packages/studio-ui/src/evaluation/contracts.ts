@@ -20,7 +20,7 @@
  */
 
 import type {
-  ArtifactRole,
+  ArtifactRole as ProtocolArtifactRole,
   EpisodeMode,
   EvalArtifact,
   InputKind,
@@ -236,7 +236,7 @@ export type UploadCompletion = {
  * drift. Runtime validation stays local (see {@link readEvalResultManifest}),
  * because a UI should degrade on an older document rather than throw.
  */
-export type EvalArtifactRole = ArtifactRole;
+export type EvalArtifactRole = ProtocolArtifactRole | "overlay-video";
 export type EvalManifestArtifact = EvalArtifact;
 export type EvalModelProvenance = ModelProvenance;
 export type EvalInputProvenance = InputProvenance;
@@ -288,6 +288,40 @@ export type TrajectoriesDocument = {
 
 export type FramesManifest = {
   frames: { cameraId: number; index: number; tUs: number; path: string }[];
+};
+
+export type UploadedVideoSourceProvenance = {
+  inputIndex: number;
+  cameraId: number;
+  offsetSeconds: number;
+  width: number;
+  height: number;
+  durationSeconds: number;
+  firstTimestampSeconds: number;
+  lastTimestampSeconds: number;
+  sha256: string;
+  inferenceWindows: {
+    inferenceT0Us: number;
+    sourceT0Us: number;
+    decodedFrameTimestampsUs: number[];
+  }[];
+};
+
+export type UploadedVideoProvenance = {
+  mode: "uploaded-video";
+  sources: UploadedVideoSourceProvenance[];
+  primaryCameraId: number;
+  inferenceTimestampsUs: number[];
+  windowOffsetsSeconds: number[];
+  assumptions: {
+    intrinsics: "approximated-pinhole";
+    horizontalFovDeg: number;
+    cameraHeightM: number;
+    egoHistory: "constant-speed-straight";
+    egoSpeedMps: number;
+    synchronizedStarts: boolean;
+  };
+  encoder: unknown;
 };
 
 /**
@@ -375,6 +409,67 @@ export function readOpenLoopResult(value: unknown): ContractReadResult<OpenLoopR
   // Structurally identical to the producer's type; the discriminating fields
   // above are exactly what distinguishes this document from another.
   return { ok: true, value: value as unknown as OpenLoopResult };
+}
+
+/**
+ * Reads the uploaded-video producer metadata without trusting arbitrary
+ * provenance records. This metadata is the source of displayed timestamps and
+ * assumptions; the UI never reconstructs either from frame position.
+ */
+export function readUploadedVideoProvenance(
+  value: unknown,
+): ContractReadResult<UploadedVideoProvenance> {
+  if (!isRecord(value) || value.mode !== "uploaded-video") {
+    return { ok: false, reason: "video provenance does not declare uploaded-video mode" };
+  }
+  if (!Array.isArray(value.sources) || !Array.isArray(value.inferenceTimestampsUs)) {
+    return { ok: false, reason: "video provenance carries no sources or inference timestamps" };
+  }
+  if (!Array.isArray(value.windowOffsetsSeconds) || !isRecord(value.assumptions)) {
+    return { ok: false, reason: "video provenance carries no inference window or assumptions" };
+  }
+  const sources = value.sources.filter(isRecord);
+  const assumptions = value.assumptions;
+  const validSources =
+    sources.length === value.sources.length &&
+    sources.every(
+      (source) =>
+        Number.isInteger(source.inputIndex) &&
+        Number.isInteger(source.cameraId) &&
+        typeof source.offsetSeconds === "number" &&
+        typeof source.width === "number" &&
+        typeof source.height === "number" &&
+        typeof source.durationSeconds === "number" &&
+        typeof source.firstTimestampSeconds === "number" &&
+        typeof source.lastTimestampSeconds === "number" &&
+        typeof source.sha256 === "string" &&
+        Array.isArray(source.inferenceWindows) &&
+        source.inferenceWindows.every(
+          (window) =>
+            isRecord(window) &&
+            typeof window.inferenceT0Us === "number" &&
+            typeof window.sourceT0Us === "number" &&
+            Array.isArray(window.decodedFrameTimestampsUs) &&
+            window.decodedFrameTimestampsUs.every((timestamp) => typeof timestamp === "number"),
+        ),
+    );
+  const validAssumptions =
+    assumptions.intrinsics === "approximated-pinhole" &&
+    assumptions.egoHistory === "constant-speed-straight" &&
+    typeof assumptions.horizontalFovDeg === "number" &&
+    typeof assumptions.cameraHeightM === "number" &&
+    typeof assumptions.egoSpeedMps === "number" &&
+    typeof assumptions.synchronizedStarts === "boolean";
+  if (
+    !validSources ||
+    !Number.isInteger(value.primaryCameraId) ||
+    !value.inferenceTimestampsUs.every((entry) => typeof entry === "number") ||
+    !value.windowOffsetsSeconds.every((entry) => typeof entry === "number") ||
+    !validAssumptions
+  ) {
+    return { ok: false, reason: "video provenance has invalid source, timing or assumption fields" };
+  }
+  return { ok: true, value: value as unknown as UploadedVideoProvenance };
 }
 
 /**

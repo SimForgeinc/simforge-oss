@@ -1,81 +1,36 @@
 "use client";
 
 /**
- * Step 1 — choose an input, classify it honestly, upload it directly.
- *
- * The classification is shown *before* anything is uploaded, because the user
- * needs to know that a bare video buys a text analysis and not a driving score.
- * Bytes go from the browser to storage using an exact-object grant; they are
- * never proxied through the web server.
+ * Selects one ordinary video or a synchronized set of camera recordings and
+ * uploads every selected file exactly once. Camera identity and timing are
+ * configured after the verified uploads, without transferring the bytes again.
  */
 
 import { useCallback, useRef, useState } from "react";
 import { CheckCircle2, FileVideo, Loader2, Upload, X } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
 import { RefusalNotice } from "./RefusalNotice";
 import type { EvaluationGateway } from "../gateway";
 import { ComputeApiError } from "../gateway";
-import type { UploadedArtifact, UploadProgress } from "../upload";
-import { uploadEvaluationInput } from "../upload";
 import { classifyEvaluationInput, type EvaluationInputClass } from "../input-kinds";
 import type { ModelCatalogEntry } from "../model-catalog";
 import { formatBytes } from "../presentation";
 import type { ExecutionTarget } from "../presentation";
+import type { UploadedArtifact, UploadProgress } from "../upload";
+import { uploadEvaluationInput } from "../upload";
 
 export type PreparedInput = {
   /** Empty for a local run: nothing is uploaded, so no artifact exists. */
   artifacts: UploadedArtifact[];
   classification: EvaluationInputClass;
   cameraProfile: string | null;
-  /** Files, in the order their artifacts were produced. */
+  /** Files in exactly the same order as artifacts and the submitted inputs. */
   files: { name: string; bytes: number }[];
-  /**
-   * The selected files themselves, which a local run needs: the local executor
-   * reads a path on disk, so the host has to stage these rather than upload
-   * them. Retained for both targets so switching target does not force a
-   * re-pick.
-   */
   sourceFiles: File[];
 };
 
-const MANIFEST_NAME_PATTERN = /(^|[.\/])((clip|scene|replay-context|manifest)\.json)$/i;
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024 * 1024;
-
-function classificationSummary(classification: EvaluationInputClass): {
-  headline: string;
-  body: string;
-} {
-  switch (classification.kind) {
-    case "driving-clip":
-      return classification.scoreable
-        ? {
-            headline: "Driving clip with a reference future",
-            body: "Open-loop prediction can be scored against the recorded future. ADE/FDE will be reported with the horizon, sample count and coordinate convention.",
-          }
-        : {
-            headline: "Driving clip without a reference future",
-            body: "Open-loop prediction can run, but there is nothing to score it against. The result will be a prediction, explicitly unscored.",
-          };
-    case "bundle-unverified":
-      return {
-        headline: "Bundle — contents verified on the server",
-        body: classification.reason,
-      };
-    case "video-only":
-      return {
-        headline: "Video only",
-        body: "A video supports the model's text analysis tasks. It is not a driving input, so no trajectory score is possible from it.",
-      };
-    case "incomplete":
-      return {
-        headline: "Incomplete driving input",
-        body: "This bundle does not carry everything an open-loop run needs.",
-      };
-    case "unsupported":
-      return { headline: "Unsupported input", body: classification.reason };
-  }
-}
+const MAX_CAMERAS = 7;
 
 export function InputPicker({
   gateway,
@@ -84,11 +39,6 @@ export function InputPicker({
   onPrepared,
   onCleared,
   disabled = false,
-  /**
-   * A local run never uploads: the executor reads the file from disk. Sending
-   * it to cloud storage first would cost the user a multi-gigabyte transfer for
-   * bytes the run will not read, and would need a workspace it does not use.
-   */
   execution = "runpod",
 }: {
   gateway: EvaluationGateway;
@@ -102,90 +52,95 @@ export function InputPicker({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [manifest, setManifest] = useState<unknown>(undefined);
   const [classification, setClassification] = useState<EvaluationInputClass | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const [uploadingName, setUploadingName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const select = useCallback(
-    async (selected: File[]) => {
+    (selected: File[]) => {
       setError(null);
       setProgress(null);
+      setUploadingName(null);
       onCleared();
 
-      const manifestFile = selected.find((file) => MANIFEST_NAME_PATTERN.test(file.name));
-      const payloadFiles = selected.filter((file) => file !== manifestFile);
-      let manifestDocument: unknown = undefined;
-      if (manifestFile) {
-        try {
-          manifestDocument = JSON.parse(await manifestFile.text());
-        } catch {
-          setError(
-            `${manifestFile.name} is not valid JSON, so this input cannot be classified. Fix the manifest or select the bundle archive instead.`,
-          );
-          return;
-        }
+      if (selected.length === 0) {
+        setFiles([]);
+        setClassification(null);
+        return;
+      }
+      if (selected.length > MAX_CAMERAS) {
+        setFiles([]);
+        setClassification(null);
+        setError(`Select at most ${MAX_CAMERAS} synchronized camera videos.`);
+        return;
       }
 
-      const primary = payloadFiles[0] ?? manifestFile;
-      if (!primary) return;
-      const oversized = payloadFiles.find((file) => file.size > MAX_UPLOAD_BYTES);
+      const oversized = selected.find((file) => file.size > MAX_UPLOAD_BYTES);
       if (oversized) {
+        setFiles([]);
+        setClassification(null);
         setError(
-          `${oversized.name} is ${formatBytes(oversized.size)}. The upload limit for a single object is ${formatBytes(MAX_UPLOAD_BYTES)}.`,
+          `${oversized.name} is ${formatBytes(oversized.size)}. The upload limit for each video is ${formatBytes(MAX_UPLOAD_BYTES)}.`,
         );
         return;
       }
 
-      setFiles(payloadFiles.length > 0 ? payloadFiles : [primary]);
-      setManifest(manifestDocument);
-      setClassification(classifyEvaluationInput(primary, model, manifestDocument));
+      const classifications = selected.map((file) => classifyEvaluationInput(file, model));
+      const unsupportedIndex = classifications.findIndex((entry) => entry.kind !== "video-only");
+      if (unsupportedIndex >= 0) {
+        const rejected = selected[unsupportedIndex]!;
+        setFiles([]);
+        setClassification(null);
+        setError(
+          `${rejected.name} is not a supported video. Choose MP4, MOV, WebM or MKV recordings only; bundles and manifests belong to the separate research workflow.`,
+        );
+        return;
+      }
+
+      setFiles(selected);
+      setClassification(classifications[0]!);
     },
     [model, onCleared],
   );
 
-  const useWithoutUpload = useCallback(() => {
-    if (files.length === 0 || !classification) return;
-    const cameraProfile =
-      classification.kind === "driving-clip"
-        ? `cameras:${classification.probe.cameraIds.join(",")}`
-        : null;
-    onPrepared({
-      artifacts: [],
-      classification,
-      cameraProfile,
-      files: files.map((file) => ({ name: file.name, bytes: file.size })),
-      sourceFiles: files,
-    });
-  }, [files, classification, onPrepared]);
+  const prepare = useCallback(
+    (artifacts: UploadedArtifact[]) => {
+      if (!classification) return;
+      onPrepared({
+        artifacts,
+        classification,
+        cameraProfile: "uploaded-video",
+        files: files.map((file) => ({ name: file.name, bytes: file.size })),
+        sourceFiles: files,
+      });
+    },
+    [classification, files, onPrepared],
+  );
+
+  const useWithoutUpload = useCallback(() => prepare([]), [prepare]);
 
   const upload = useCallback(async () => {
     if (files.length === 0 || !classification) return;
     const controller = new AbortController();
     abortRef.current = controller;
     setError(null);
+    setUploading(true);
 
     try {
       const artifacts: UploadedArtifact[] = [];
       for (const file of files) {
-        const artifact = await uploadEvaluationInput(gateway, file, {
-          purpose: classification.kind === "video-only" ? "video" : "eval-clip",
-          signal: controller.signal,
-          onProgress: setProgress,
-        });
-        artifacts.push(artifact);
+        setUploadingName(file.name);
+        artifacts.push(
+          await uploadEvaluationInput(gateway, file, {
+            purpose: "video",
+            signal: controller.signal,
+            onProgress: setProgress,
+          }),
+        );
       }
-      const cameraProfile =
-        classification.kind === "driving-clip"
-          ? `cameras:${classification.probe.cameraIds.join(",")}`
-          : null;
-      onPrepared({
-        artifacts,
-        classification,
-        cameraProfile,
-        files: files.map((file) => ({ name: file.name, bytes: file.size })),
-        sourceFiles: files,
-      });
+      prepare(artifacts);
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") {
         setProgress(null);
@@ -198,22 +153,22 @@ export function InputPicker({
       );
     } finally {
       abortRef.current = null;
+      setUploadingName(null);
+      setUploading(false);
     }
-  }, [files, classification, gateway, onPrepared]);
+  }, [classification, files, gateway, prepare]);
 
   const clear = () => {
     abortRef.current?.abort();
     setFiles([]);
-    setManifest(undefined);
     setClassification(null);
     setProgress(null);
+    setUploadingName(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     onCleared();
   };
 
-  const summary = classification ? classificationSummary(classification) : null;
-  const uploading = progress !== null && progress.phase !== "done" && prepared === null;
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
   return (
@@ -223,9 +178,9 @@ export function InputPicker({
           ref={fileInputRef}
           type="file"
           multiple
-          accept="video/*,.zip,.tar,.tgz,.json"
+          accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,.webm,.mkv"
           className="hidden"
-          onChange={(event) => void select(Array.from(event.target.files ?? []))}
+          onChange={(event) => select(Array.from(event.target.files ?? []))}
           data-testid="evaluation-file-input"
         />
         <Button
@@ -235,110 +190,60 @@ export function InputPicker({
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload aria-hidden="true" />
-          {files.length > 0 ? "Choose different files" : "Choose clip or video"}
+          {files.length > 0 ? "Choose different videos" : "Choose camera videos"}
         </Button>
         {files.length > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={clear}>
+          <Button type="button" variant="ghost" size="sm" disabled={uploading} onClick={clear}>
             <X aria-hidden="true" />
             Clear
           </Button>
         ) : (
           <p className="text-sm text-muted-foreground">
-            A clip bundle plus its manifest, or a plain video. Select the manifest together with the
-            media to have the clip classified before upload.
+            Select one video, or up to seven synchronized camera recordings together.
           </p>
         )}
       </div>
 
       {files.length > 0 ? (
-        <ul className="divide-y divide-border border border-border" data-testid="evaluation-file-list">
-          {files.map((file) => (
-            <li key={file.name} className="flex items-center gap-3 px-3 py-2 text-sm">
-              <FileVideo aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{file.name}</span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {formatBytes(file.size)}
-              </span>
-            </li>
-          ))}
-          {manifest !== undefined ? (
-            <li className="px-3 py-2 text-xs text-muted-foreground">
-              Manifest read locally; the server re-validates the bundle before the run.
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-
-      {summary && classification ? (
-        <div
-          className={cn(
-            "border p-4",
-            classification.kind === "driving-clip" && classification.scoreable
-              ? "border-border bg-muted/20"
-              : "border-border bg-muted/10",
-          )}
-          data-testid="evaluation-input-classification"
-        >
-          <p className="text-sm font-semibold text-foreground">{summary.headline}</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{summary.body}</p>
-          {classification.kind === "driving-clip" ? (
-            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-4">
-              <div>
-                <dt className="uppercase tracking-wide">Cameras</dt>
-                <dd className="text-foreground">[{classification.probe.cameraIds.join(", ")}]</dd>
-              </div>
-              <div>
-                <dt className="uppercase tracking-wide">Calibration</dt>
-                <dd className="text-foreground">present</dd>
-              </div>
-              <div>
-                <dt className="uppercase tracking-wide">Reference</dt>
-                <dd className="text-foreground">
-                  {classification.scoreable ? "recorded future" : "none"}
-                </dd>
-              </div>
-              <div>
-                <dt className="uppercase tracking-wide">Items</dt>
-                <dd className="text-foreground">{classification.probe.itemCount}</dd>
-              </div>
-            </dl>
-          ) : null}
+        <div className="space-y-2">
+          <p className="text-xs leading-5 text-muted-foreground">
+            File order is preserved through upload and submission. You will map each file to its
+            real camera position after the upload.
+          </p>
+          <ul className="divide-y divide-border border border-border" data-testid="evaluation-file-list">
+            {files.map((file, index) => (
+              <li key={`${file.name}-${index}`} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <FileVideo aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                <span className="w-14 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                  Input {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">{formatBytes(file.size)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
-      {classification?.kind === "incomplete" ? (
-        <RefusalNotice
-          title="This input cannot be scored as a driving clip"
-          missing={classification.missing}
-        />
-      ) : null}
-      {classification?.kind === "driving-clip" && classification.modelMismatch.length > 0 ? (
-        <RefusalNotice
-          tone="warn"
-          title={`Camera set does not match ${model.displayName}`}
-          reasons={classification.modelMismatch}
-        />
-      ) : null}
-      {classification?.kind === "unsupported" ? (
-        <RefusalNotice title="Unsupported input" reasons={[classification.reason]} />
-      ) : null}
-      {error ? <RefusalNotice title="Upload failed" reasons={[error]} /> : null}
+      {error ? <RefusalNotice title="Video selection failed" reasons={[error]} /> : null}
 
       {progress && progress.phase !== "done" ? (
         <div className="space-y-2" data-testid="evaluation-upload-progress">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
-              {progress.phase === "hashing"
-                ? "Checksumming locally"
-                : progress.phase === "reserving"
-                  ? "Requesting a storage grant"
-                  : progress.phase === "completing"
-                    ? "Server verifying stored bytes"
-                    : "Uploading to storage"}
-              {progress.parts ? ` · part ${progress.parts.done + 1}/${progress.parts.total}` : ""}
+          <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <Loader2 aria-hidden="true" className="size-3.5 shrink-0 animate-spin" />
+              <span className="truncate">
+                {progress.phase === "hashing"
+                  ? "Checksumming"
+                  : progress.phase === "reserving"
+                    ? "Requesting storage"
+                    : progress.phase === "completing"
+                      ? "Verifying stored bytes"
+                      : "Uploading"}
+                {uploadingName ? ` ${uploadingName}` : ""}
+              </span>
             </span>
-            <span className="tabular-nums">
+            <span className="shrink-0 tabular-nums">
               {formatBytes(progress.bytesDone)} / {formatBytes(progress.bytesTotal)}
             </span>
           </div>
@@ -354,14 +259,11 @@ export function InputPicker({
       ) : null}
 
       {prepared ? (
-        <p
-          className="inline-flex items-center gap-2 text-sm text-foreground"
-          data-testid="evaluation-input-ready"
-        >
+        <p className="inline-flex items-center gap-2 text-sm text-foreground" data-testid="evaluation-input-ready">
           <CheckCircle2 aria-hidden="true" className="size-4 text-primary" />
           {prepared.artifacts.length === 0
-            ? `${prepared.files.length} file${prepared.files.length === 1 ? "" : "s"} ready to run on this machine — nothing is uploaded.`
-            : `${prepared.artifacts.length} object${prepared.artifacts.length === 1 ? "" : "s"} stored and verified${
+            ? `${prepared.files.length} video${prepared.files.length === 1 ? "" : "s"} ready for local execution — nothing was uploaded.`
+            : `${prepared.artifacts.length} video${prepared.artifacts.length === 1 ? "" : "s"} stored and verified${
                 prepared.artifacts.some((artifact) => artifact.deduplicated)
                   ? " (already held by this workspace)"
                   : ""
@@ -370,20 +272,14 @@ export function InputPicker({
       ) : (
         <Button
           type="button"
-          disabled={
-            disabled ||
-            uploading ||
-            files.length === 0 ||
-            classification === null ||
-            classification.kind === "unsupported"
-          }
+          disabled={disabled || uploading || files.length === 0 || classification === null}
           onClick={execution === "local" ? useWithoutUpload : () => void upload()}
           data-testid="evaluation-upload-button"
         >
           {uploading ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
           {execution === "local"
-            ? `Use ${files.length > 1 ? `${files.length} files` : "this input"}`
-            : `Upload ${files.length > 1 ? `${files.length} objects` : "input"}`}
+            ? `Use ${files.length === 1 ? "this video" : `${files.length} videos`}`
+            : `Upload ${files.length === 1 ? "video" : `${files.length} videos`}`}
           {totalBytes > 0 ? ` (${formatBytes(totalBytes)})` : ""}
         </Button>
       )}

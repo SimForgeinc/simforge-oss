@@ -41,6 +41,24 @@ export type OpenLoopSampling = {
   navText?: string;
 };
 
+export type UploadedVideoCamera = {
+  /** Alpamayo inference-wire camera index (0..6). */
+  cameraId: number;
+  /** Index into the job's inputs array. */
+  inputIndex: number;
+  /** Positive means this recording starts later than the primary recording. */
+  offsetSeconds: number;
+};
+
+export type UploadedVideoParams = {
+  cameras: UploadedVideoCamera[];
+  primaryCameraId: number;
+  horizontalFovDeg: number;
+  cameraHeightM: number;
+  egoSpeedMps: number;
+  predictionHz: number;
+};
+
 export type OpenLoopItemKind =
   | "scenario"
   | "dataset-clip"
@@ -76,8 +94,10 @@ export type BuildParamsInput = {
   ood?: {
     exploratory?: boolean;
     assumedStationaryEgo?: boolean;
-    assumedIntrinsics?: boolean;
+    assumedIntrinsics?: Record<string, unknown> | null;
   };
+  /** Present only for ordinary uploaded-video exploratory prediction. */
+  video?: UploadedVideoParams;
 };
 
 /**
@@ -115,8 +135,20 @@ export function buildOpenLoopParams(input: BuildParamsInput): Record<string, unk
     ood: {
       exploratory: input.ood?.exploratory ?? false,
       assumedStationaryEgo: input.ood?.assumedStationaryEgo ?? false,
-      assumedIntrinsics: input.ood?.assumedIntrinsics ?? false,
+      assumedIntrinsics: input.ood?.assumedIntrinsics ?? null,
     },
+    ...(input.video
+      ? {
+          video: {
+            cameras: input.video.cameras.map((camera) => ({ ...camera })),
+            primaryCameraId: input.video.primaryCameraId,
+            horizontalFovDeg: input.video.horizontalFovDeg,
+            cameraHeightM: input.video.cameraHeightM,
+            egoSpeedMps: input.video.egoSpeedMps,
+            predictionHz: input.video.predictionHz,
+          },
+        }
+      : {}),
   };
 }
 

@@ -68,6 +68,8 @@ export interface InvokeObservation {
   readonly ego_history_rot?: readonly (readonly (readonly number[])[])[];
   readonly ego_history_t_s?: readonly number[];
   readonly nav_text?: string | null;
+  /** Explicit opt-in for ordinary uploaded camera videos; false/absent keeps strict rig validation. */
+  readonly exploratory_video?: boolean;
 }
 
 export interface InvokeRequest {
@@ -148,7 +150,9 @@ async function requestJson(
   method: 'GET' | 'POST',
   routePath: string,
   body: unknown,
+  signal?: AbortSignal,
 ): Promise<{ status: number; text: string }> {
+  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error('cancelled');
   const { socketPath, origin, basePath } = parseTarget(target.url);
   const timeoutMs = target.timeoutMs ?? 600_000;
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -167,6 +171,8 @@ async function requestJson(
         });
       },
     );
+    const abort = () => clientRequest.destroy(signal?.reason instanceof Error ? signal.reason : new Error('cancelled'));
+    signal?.addEventListener('abort', abort, { once: true });
     clientRequest.once('timeout', () => {
       clientRequest.destroy(new EndpointTransportError('endpoint_invoke_timeout', `invoke exceeded ${timeoutMs}ms`));
     });
@@ -178,7 +184,7 @@ async function requestJson(
       );
     });
     clientRequest.end(payload);
-    return promise;
+    return promise.finally(() => signal?.removeEventListener('abort', abort));
   }
 
   let response: Response;
@@ -187,7 +193,7 @@ async function requestJson(
       method,
       headers,
       body: payload,
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -198,8 +204,8 @@ async function requestJson(
 }
 
 /** `GET /healthz`; the identity gate before any GPU second is spent. */
-export async function endpointHealth(target: EndpointTarget): Promise<EndpointHealth> {
-  const { status, text } = await requestJson(target, 'GET', '/healthz', undefined);
+export async function endpointHealth(target: EndpointTarget, signal?: AbortSignal): Promise<EndpointHealth> {
+  const { status, text } = await requestJson(target, 'GET', '/healthz', undefined, signal);
   if (status >= 400) {
     throw new EndpointTransportError('endpoint_unhealthy', `healthz returned ${status}: ${text.slice(0, 500)}`);
   }
@@ -216,8 +222,12 @@ export async function endpointHealth(target: EndpointTarget): Promise<EndpointHe
  * A typed refusal is returned (not thrown) whether the engine sent it with
  * HTTP 200 or 400 — the wire allows both and it is the same verdict.
  */
-export async function endpointInvoke(target: EndpointTarget, body: InvokeRequest): Promise<InvokeResponse> {
-  const { status, text } = await requestJson(target, 'POST', '/invoke', body);
+export async function endpointInvoke(
+  target: EndpointTarget,
+  body: InvokeRequest,
+  signal?: AbortSignal,
+): Promise<InvokeResponse> {
+  const { status, text } = await requestJson(target, 'POST', '/invoke', body, signal);
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

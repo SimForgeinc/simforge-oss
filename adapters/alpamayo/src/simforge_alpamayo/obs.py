@@ -208,6 +208,12 @@ def validate_history_times(
             f"ego_history_t_s must be ({NUM_HISTORY_STEPS},), got {tuple(times.shape)}",
             fields=["obs.ego_history_t_s"],
         )
+    if not np.all(np.isfinite(times)):
+        raise ObservationError(
+            "input_error",
+            "ego_history_t_s contains non-finite values",
+            fields=["obs.ego_history_t_s"],
+        )
     deltas = np.diff(times)
     if np.any(deltas <= 0.0):
         raise ObservationError(
@@ -260,7 +266,19 @@ def decode_observation(
         ego_history_rot: float32 (1, 1, 16, 3, 3)
         nav_text: str | None
         time_base: provenance record from :func:`validate_history_times`
+        exploratory_video: validated caller opt-in to unscored uploaded-video mode
     """
+    exploratory_video = obs.get("exploratory_video", False)
+    if not isinstance(exploratory_video, bool):
+        raise ObservationError(
+            "input_error",
+            "exploratory_video must be a boolean",
+            fields=["obs.exploratory_video"],
+        )
+    if exploratory_video and task == "act":
+        required_cameras = None
+        variable_cameras = True
+
     import torch
 
     cameras = obs.get("cameras")
@@ -347,6 +365,12 @@ def decode_observation(
                 f"{tuple(hist_rot_arr.shape)}",
                 fields=["obs.ego_history_rot"],
             )
+        if not np.all(np.isfinite(hist_rot_arr)):
+            raise ObservationError(
+                "input_error",
+                "ego_history_rot contains non-finite values",
+                fields=["obs.ego_history_rot"],
+            )
 
     time_base = validate_history_times(
         obs.get("ego_history_t_s"), obs.get("ego_history_rate_hz")
@@ -363,6 +387,7 @@ def decode_observation(
         "nav_text": obs.get("nav_text"),
         "history_t_s": obs.get("ego_history_t_s"),
         "time_base": time_base,
+        "exploratory_video": exploratory_video,
     }
 
 

@@ -115,8 +115,13 @@ function parseFlags(argv: readonly string[]): Flags {
 }
 
 /** Local path of the input named by `role`, or the literal `ref`. */
-function inputPath(job: ComputeJobInput, ref: string | undefined | null, role: string | undefined | null): string {
-  if (role) return resolveJobInput(job, role).localPath;
+function inputPath(
+  job: ComputeJobInput,
+  ref: string | undefined | null,
+  role: string | undefined | null,
+  occurrence = 0,
+): string {
+  if (role) return resolveJobInput(job, role, occurrence).localPath;
   if (ref) return ref;
   throw new JobFailure('input_error', 'input has neither `role` nor `ref`');
 }
@@ -134,10 +139,10 @@ function endpointTarget(job: ComputeJobInput): EndpointTarget {
  * Numbers attributed to the wrong revision are worse than no numbers, and the
  * check costs one HTTP round trip against an already-loaded engine.
  */
-async function requireModel(job: ComputeJobInput): Promise<EndpointHealth> {
+async function requireModel(job: ComputeJobInput, signal?: AbortSignal): Promise<EndpointHealth> {
   let health: EndpointHealth;
   try {
-    health = await endpointHealth(endpointTarget(job));
+    health = await endpointHealth(endpointTarget(job), signal);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new JobFailure(error instanceof EndpointTransportError ? 'internal' : 'capability_error', message);
@@ -417,7 +422,7 @@ async function main(): Promise<number> {
 
     if (command === 'openloop') {
       const params = openloopParamsOf(job);
-      const health = await requireModel(job);
+      const health = await requireModel(job, controller.signal);
       if (params.task === 'text' && !(health.supports ?? ['act']).includes('text')) {
         throw new JobFailure('capability_error', `${String(health.family)} does not support text tasks`);
       }
@@ -428,8 +433,15 @@ async function main(): Promise<number> {
         target: endpointTarget(job),
         health,
         outDir,
-        resolveInput: (item) => inputPath(job, item.ref, item.role),
+        resolveInput: (item, index) => {
+          const occurrence = item.role
+            ? params.items.slice(0, index).filter((candidate) => candidate.role === item.role).length
+            : 0;
+          return inputPath(job, item.ref, item.role, occurrence);
+        },
         signal: controller.signal,
+        maxPredictionCount: job.limits.maxItems,
+        maxVideoSeconds: job.limits.maxSimSeconds,
         fallbackModel: job.model,
       });
       await emitManifest(job, outDir, startedAt, {
@@ -444,7 +456,7 @@ async function main(): Promise<number> {
         artifacts: outcome.artifacts,
         model: outcome.model,
         inputKind: outcome.inputKind,
-        ood: [],
+        ood: params.video ? ['uploaded_video', 'approximated_intrinsics', 'assumed_ego_history'] : [],
         inputDigest: outcome.inputDigest,
         replayContext: null,
         error: null,

@@ -70,11 +70,18 @@ export const ComputeJobInputSchema = z.object({
 });
 export type ComputeJobInput = z.infer<typeof ComputeJobInputSchema>;
 
-/** Resolve `role` against the job's inputs; throws with the known roles. */
-export function resolveJobInput(job: ComputeJobInput, role: string): JobInput {
-  const found = job.inputs.find((input) => input.role === role);
+/** Resolve the Nth occurrence of `role`; repeated roles preserve upload order. */
+export function resolveJobInput(job: ComputeJobInput, role: string, occurrence = 0): JobInput {
+  if (!Number.isInteger(occurrence) || occurrence < 0) {
+    throw new Error(`input occurrence must be a non-negative integer (received ${occurrence})`);
+  }
+  const found = job.inputs.filter((input) => input.role === role)[occurrence];
   if (!found) {
-    throw new Error(`job ${job.jobId} has no input with role ${role} (have: ${job.inputs.map((i) => i.role).join(', ') || 'none'})`);
+    const count = job.inputs.filter((input) => input.role === role).length;
+    throw new Error(
+      `job ${job.jobId} has no occurrence ${occurrence} of input role ${role} `
+      + `(matching inputs: ${count}; have: ${job.inputs.map((input) => input.role).join(', ') || 'none'})`,
+    );
   }
   return found;
 }
@@ -114,7 +121,7 @@ export async function verifyJobInputs(job: ComputeJobInput): Promise<string[]> {
 /** Openloop params carried by a job, with the job's item cap applied. */
 export function openloopParamsOf(job: ComputeJobInput): OpenloopParams {
   const params = OpenloopParamsSchema.parse(job.params);
-  if (params.items.length > job.limits.maxItems) {
+  if (!params.video && params.items.length > job.limits.maxItems) {
     throw new Error(`job ${job.jobId} carries ${params.items.length} items, limit is ${job.limits.maxItems}`);
   }
   return params;

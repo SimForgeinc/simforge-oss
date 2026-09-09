@@ -257,7 +257,7 @@ class BaseEngine:
     def decode(self, obs: dict[str, Any], task: str = "act") -> dict[str, Any]:
         """Validate and decode one observation against this family's contract."""
         required, variable = self.spec.camera_contract(task)
-        return decode_observation(
+        decoded = decode_observation(
             obs,
             required_cameras=required,
             variable_cameras=variable,
@@ -265,6 +265,9 @@ class BaseEngine:
             task=task,
             max_cameras=self.spec.cameras.max_cameras,
         )
+        if decoded["exploratory_video"] and task == "act":
+            decoded["selection"] = "exploratory-uploaded-cameras"
+        return decoded
 
     def act(
         self,
@@ -319,6 +322,16 @@ class BaseEngine:
             torch.cuda.synchronize()
         timings["inference_ms"] = (time.monotonic() - t_infer) * 1e3
         timings["total_ms"] = (time.monotonic() - t_start) * 1e3
+        provenance = self.rng_provenance(
+            seed, steps, num_traj_samples, decoded["time_base"]
+        )
+        selection = decoded.get("selection")
+        if selection is not None:
+            provenance["input_selection"] = selection
+        if decoded["exploratory_video"]:
+            provenance["exploratory_video"] = True
+            provenance["supplied_camera_ids"] = list(decoded["camera_ids"])
+
 
         return {
             "trajectories": traj,
@@ -332,10 +345,11 @@ class BaseEngine:
             "seed": seed,
             "timings": timings,
             "vram": self.vram(),
-            "rng_provenance": self.rng_provenance(
-                seed, steps, num_traj_samples, decoded["time_base"]
+            "rng_provenance": provenance,
+            "model": self.model_identity(
+                decoded["camera_ids"],
+                exploratory_video=decoded["exploratory_video"],
             ),
-            "model": self.model_identity(decoded["camera_ids"]),
             "cameras": decoded["camera_ids"],
             "frame_size": decoded["frame_size"],
             "time_base": decoded["time_base"],
@@ -409,13 +423,22 @@ class BaseEngine:
             record.update(time_base)
         return record
 
-    def model_identity(self, camera_ids: list[int] | None = None) -> dict[str, Any]:
+    def model_identity(
+        self,
+        camera_ids: list[int] | None = None,
+        *,
+        exploratory_video: bool = False,
+    ) -> dict[str, Any]:
         from simforge_alpamayo.bridge import profile_for_camera_ids
 
         profile = (
-            profile_for_camera_ids(tuple(camera_ids))
-            if camera_ids
-            else self.camera_profile()
+            None
+            if exploratory_video
+            else (
+                profile_for_camera_ids(tuple(camera_ids))
+                if camera_ids
+                else self.camera_profile()
+            )
         )
         return {
             "family": self.family,

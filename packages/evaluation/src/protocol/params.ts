@@ -89,21 +89,89 @@ export const OpenloopOodSchema = z.object({
   assumedIntrinsics: z.record(z.string(), z.unknown()).nullable().default(null),
 });
 
-export const OpenloopParamsSchema = z.object({
-  schema: z.literal(OPENLOOP_PARAMS_SCHEMA).default(OPENLOOP_PARAMS_SCHEMA),
-  /** One job carries N items so a cold start amortises. */
-  items: z.array(OpenloopInputSchema).min(1).max(1_000),
-  sampling: OpenloopSamplingSchema.default({ numTrajSamples: 1, topP: 0.98, temperature: 0.6, diffusionSteps: null, navText: null }),
-  /** `auto` scores when the input carries a reference future; `none` never scores. */
-  reference: z.enum(['auto', 'none']).default('auto'),
-  /** `act` = trajectory prediction, `text` = VQA/meta-actions/auto-labelling. */
-  task: z.enum(['act', 'text']).default('act'),
-  textTask: z.enum(['vqa', 'meta_actions', 'autolabel', 'grounding']).nullable().default(null),
-  prompt: z.string().max(8_000).nullable().default(null),
-  horizonsS: z.array(z.number().positive()).default([...OPENLOOP_HORIZONS_S]),
-  seed: z.number().int().nonnegative().default(0),
-  ood: OpenloopOodSchema.default({ exploratory: false, assumedStationaryEgo: false, assumedIntrinsics: null }),
-});
+export const UploadedVideoSchema = z
+  .object({
+    cameras: z
+      .array(
+        z.object({
+          cameraId: z.number().int().min(0).max(6),
+          inputIndex: z.number().int().nonnegative(),
+          /** Positive means this recording begins after the common timeline begins. */
+          offsetSeconds: z.number().finite().default(0),
+        }),
+      )
+      .min(1)
+      .max(7),
+    primaryCameraId: z.number().int().min(0).max(6).default(1),
+    horizontalFovDeg: z.number().min(20).max(170).default(90),
+    cameraHeightM: z.number().min(0.1).max(10).default(1.5),
+    egoSpeedMps: z.number().min(0).max(80).default(0),
+    predictionHz: z.number().min(0.1).max(2).default(1),
+  })
+  .superRefine((value, ctx) => {
+    const cameraIds = value.cameras.map((camera) => camera.cameraId);
+    const inputIndices = value.cameras.map((camera) => camera.inputIndex);
+    if (new Set(cameraIds).size !== cameraIds.length) {
+      ctx.addIssue({ code: 'custom', path: ['cameras'], message: 'camera ids must be unique' });
+    }
+    if (new Set(inputIndices).size !== inputIndices.length) {
+      ctx.addIssue({ code: 'custom', path: ['cameras'], message: 'input indices must be unique' });
+    }
+    if (!cameraIds.includes(value.primaryCameraId)) {
+      ctx.addIssue({ code: 'custom', path: ['primaryCameraId'], message: 'primary camera must be present in cameras' });
+    }
+  });
+export type UploadedVideo = z.infer<typeof UploadedVideoSchema>;
+
+
+export const OpenloopParamsSchema = z
+  .object({
+    schema: z.literal(OPENLOOP_PARAMS_SCHEMA).default(OPENLOOP_PARAMS_SCHEMA),
+    /** One job carries N items so a cold start amortises. */
+    items: z.array(OpenloopInputSchema).min(1).max(1_000),
+    sampling: OpenloopSamplingSchema.default({ numTrajSamples: 1, topP: 0.98, temperature: 0.6, diffusionSteps: null, navText: null }),
+    /** `auto` scores when the input carries a reference future; `none` never scores. */
+    reference: z.enum(['auto', 'none']).default('auto'),
+    /** `act` = trajectory prediction, `text` = VQA/meta-actions/auto-labelling. */
+    task: z.enum(['act', 'text']).default('act'),
+    textTask: z.enum(['vqa', 'meta_actions', 'autolabel', 'grounding']).nullable().default(null),
+    prompt: z.string().max(8_000).nullable().default(null),
+    horizonsS: z.array(z.number().positive()).default([...OPENLOOP_HORIZONS_S]),
+    seed: z.number().int().nonnegative().default(0),
+    ood: OpenloopOodSchema.default({ exploratory: false, assumedStationaryEgo: false, assumedIntrinsics: null }),
+    video: UploadedVideoSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.video) return;
+    if (value.task !== 'act') {
+      ctx.addIssue({ code: 'custom', path: ['task'], message: 'uploaded-video mode requires task=act' });
+    }
+    if (value.reference !== 'none') {
+      ctx.addIssue({ code: 'custom', path: ['reference'], message: 'uploaded-video mode requires reference=none' });
+    }
+    if (!value.ood.exploratory) {
+      ctx.addIssue({ code: 'custom', path: ['ood', 'exploratory'], message: 'uploaded-video mode requires ood.exploratory=true' });
+    }
+    if (value.video.cameras.some((camera) => camera.inputIndex >= value.items.length)) {
+      ctx.addIssue({ code: 'custom', path: ['video', 'cameras'], message: 'camera inputIndex must reference params.items' });
+    }
+    if (value.video.cameras.length !== value.items.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['video', 'cameras'],
+        message: 'uploaded-video mode requires exactly one camera mapping per item',
+      });
+    }
+    value.items.forEach((item, index) => {
+      if (item.kind !== 'user-clip' || item.role !== 'video' || item.cameraProfile !== 'uploaded-video') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'uploaded-video items must be kind=user-clip, role=video, cameraProfile=uploaded-video',
+        });
+      }
+    });
+  });
 export type OpenloopParams = z.infer<typeof OpenloopParamsSchema>;
 
 /**

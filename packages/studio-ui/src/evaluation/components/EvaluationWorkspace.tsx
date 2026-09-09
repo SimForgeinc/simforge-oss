@@ -45,11 +45,13 @@ export function EvaluationWorkspace({
 
       <section className="space-y-5">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">New run</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Predict from uploaded video
+          </h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Upload a clip, choose a model, confirm the cost bound and submit. Open-loop prediction
-            is scored only against a reference future that the input actually contains; a plain
-            video supports the model&apos;s text analysis instead.
+            Upload one driving video or synchronized camera views, then run AlpaMayo 1.5 or 2
+            Super. The durable result includes a playable trajectory and reasoning overlay plus
+            timestamped model output. This exploratory workflow is approximate and unscored.
           </p>
         </div>
         <EvaluationLauncher

@@ -10,14 +10,16 @@
  *   false unless at least one item was scored against a real reference.
  * - A reference trajectory produced by an authored scenario or a reference
  *   policy is labelled as such and never as human ground truth.
- * - Missing driving inputs produce a typed refusal listing exactly which
- *   fields were required. Nothing is fabricated: no synthetic camera views,
- *   no assumed ego history, no invented calibration.
+ * - Missing strict-bundle driving inputs produce a typed refusal listing
+ *   exactly which fields were required. Synthetic camera views are never
+ *   created. Uploaded-video mode is a separate exploratory contract whose
+ *   declared pinhole calibration and constant-speed ego history are preserved
+ *   as assumptions in provenance.
  * - `exploratory: true` runs (user-typed assumptions) can never carry metrics
  *   and can never be promoted or compared.
  * - Every trajectory is self-describing: `frame`, `convention`, `dtS`,
- *   `horizonS`. Image-space projection is a presentation concern and requires
- *   real calibration, which lives in `projection`.
+ *   `horizonS`. Image-space projection carries either measured calibration or
+ *   the explicitly labelled uploaded-video approximation.
  */
 
 import { z } from 'zod';
@@ -46,6 +48,55 @@ export const ProjectionSchema = z.object({
   imageSize: z.tuple([z.number().int().positive(), z.number().int().positive()]),
   timestampsUs: z.array(z.number()).default([]),
 });
+
+export const UploadedVideoProvenanceSchema = z.object({
+  mode: z.literal('uploaded-video'),
+  sources: z.array(z.object({
+    cameraId: z.number().int().min(0).max(6),
+    inputIndex: z.number().int().nonnegative(),
+    offsetSeconds: z.number(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    encodedWidth: z.number().int().positive(),
+    encodedHeight: z.number().int().positive(),
+    rotationDegrees: z.number(),
+    durationSeconds: z.number().nonnegative(),
+    firstTimestampSeconds: z.number(),
+    lastTimestampSeconds: z.number(),
+    containerStartPtsSeconds: z.number(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    inferenceWindows: z.array(z.object({
+      inferenceT0Us: z.number().int().nonnegative(),
+      sourceT0Us: z.number().int().nonnegative(),
+      decodedFrameTimestampsUs: z.array(z.number().int()).length(4),
+      decodedFrameContainerPtsUs: z.array(z.number().int()).length(4),
+    })),
+  })).min(1).max(7),
+  primaryCameraId: z.number().int().min(0).max(6),
+  inferenceTimestampsUs: z.array(z.number().int().nonnegative()),
+  windowOffsetsSeconds: z.tuple([z.literal(-0.3), z.literal(-0.2), z.literal(-0.1), z.literal(0)]),
+  inferenceImage: z.object({
+    width: z.literal(512),
+    height: z.literal(384),
+    resize: z.literal('aspect-preserving-letterbox'),
+  }),
+  assumptions: z.object({
+    intrinsics: z.literal('approximated-pinhole'),
+    horizontalFovDeg: z.number().min(20).max(170),
+    cameraHeightM: z.number().min(0.1).max(10),
+    primaryYawDeg: z.number(),
+    egoHistory: z.literal('constant-speed-straight'),
+    egoSpeedMps: z.number().min(0).max(80),
+    synchronizedStarts: z.boolean(),
+  }),
+  encoder: z.object({
+    origin: z.string().min(1),
+    version: z.string().nullable(),
+    bytesVerified: z.boolean(),
+  }),
+});
+export type UploadedVideoProvenance = z.infer<typeof UploadedVideoProvenanceSchema>;
+
 
 export const OpenloopItemSchema = z.object({
   index: z.number().int().nonnegative(),
@@ -106,7 +157,7 @@ export const OpenloopResultSchema = z.object({
     sampleCounts: z.array(z.number().int()).default([]),
     latencyMs: z.object({ p50: z.number(), p95: z.number(), max: z.number() }).nullable().default(null),
   }),
-  provenance: z.record(z.string(), z.unknown()),
+  provenance: z.object({ video: UploadedVideoProvenanceSchema.optional() }).passthrough(),
 });
 export type OpenloopResult = z.infer<typeof OpenloopResultSchema>;
 

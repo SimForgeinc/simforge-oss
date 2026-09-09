@@ -40,6 +40,7 @@ export const ARTIFACT_ROLES = [
   'result-manifest',
   'openloop-result',
   'video',
+  'overlay-video',
   'frames',
   'overlay-frames',
   'trajectories',

@@ -37,6 +37,7 @@ import {
   type OpenloopParams,
   type OpenloopResult,
 } from './protocol/openloop.js';
+import { executeUploadedVideoOpenloop } from './uploaded-video-run.js';
 
 const EMPTY_REFERENCE = { kind: 'none', frame: 'ego@t0', convention: 'FLU', dtS: 0.1, points: [] } as const;
 
@@ -50,6 +51,9 @@ export interface OpenloopRunOptions {
   /** Local observation-bundle path for one item (job role, or a host path). */
   readonly resolveInput: (item: OpenloopParams['items'][number], index: number) => string;
   readonly signal: AbortSignal;
+  /** Uploaded-video predictions and synchronized duration are rejected, never truncated, at these limits. */
+  readonly maxPredictionCount?: number;
+  readonly maxVideoSeconds?: number;
   /**
    * Identity to fall back on for fields the loaded engine does not report.
    *
@@ -114,6 +118,13 @@ function refusedItem(
 }
 
 export async function executeOpenloop(options: OpenloopRunOptions): Promise<OpenloopRunOutcome> {
+  if (options.params.video) {
+    return executeUploadedVideoOpenloop({
+      ...options,
+      maxPredictionCount: options.maxPredictionCount ?? 120,
+      maxVideoSeconds: options.maxVideoSeconds ?? 60,
+    });
+  }
   const { params, health, target, outDir, signal } = options;
   const requiredCameras = health.capabilities?.cameras?.required;
   const items: OpenloopItem[] = [];
@@ -198,7 +209,7 @@ export async function executeOpenloop(options: OpenloopRunOptions): Promise<Open
         prompt: params.prompt,
         text_task: params.textTask,
       },
-    });
+    }, signal);
     const latencyMs = Date.now() - startedAt;
 
     if (!response.ok) {

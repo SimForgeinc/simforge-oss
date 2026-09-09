@@ -1,50 +1,51 @@
 "use client";
 
-/**
- * The submit path, identical in the browser and on the desktop:
- * upload → validate → choose model → estimate → confirm → submit.
- *
- * Two rules shape it. First, the estimate is a *bound* and is labelled as one:
- * until real cold/warm benchmarks exist the server reports
- * `basis: 'unbenchmarked'` and this screen says so instead of printing a price.
- * Second, the submission carries an idempotency key derived from the prepared
- * inputs, so a lost response or a double click cannot produce a second charged
- * run — the server returns the same job.
- */
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Play, RefreshCw } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SelectMenu } from "../../components/ui/select-menu";
-import { Textarea } from "../../components/ui/textarea";
-import { RefusalNotice } from "./RefusalNotice";
 import { InputPicker, type PreparedInput } from "./InputPicker";
 import { ModelPicker, type ModelSelection } from "./ModelPicker";
+import { RefusalNotice } from "./RefusalNotice";
 import type {
   ComputeEstimate,
   ComputeJob,
-  ComputeJobInputRole,
   ComputeJobKind,
   ComputeJobModelRef,
   ComputeJobSubmission,
 } from "../contracts";
 import type { EvaluationGateway } from "../gateway";
 import { ComputeApiError } from "../gateway";
-import { MODEL_CATALOG } from "../model-catalog";
-import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
-import { formatCentsRange, preferredSelection, submissionIdempotencyKey } from "../presentation";
-import { offerableJobKinds } from "../input-kinds";
+import { MODEL_CATALOG, type ModelFamilyId } from "../model-catalog";
 import {
-  availableTextTasks,
   buildOpenLoopParams,
-  TEXT_TASK_LABELS,
-  type OpenLoopItemKind,
-  type TextTask,
-  pathShapedRefusal,
+  type UploadedVideoCamera,
 } from "../params";
+import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
+import { formatCentsRange, submissionIdempotencyKey } from "../presentation";
 
-/** Step numbering exists only so the copy can refer to it; the form is one page. */
+const VIDEO_MODEL_FAMILIES = ["alpamayo-1.5", "alpamayo-2-super"] as const satisfies readonly ModelFamilyId[];
+const CAMERA_OPTIONS = [
+  { value: "0", label: "0 · Cross-left wide (120°)" },
+  { value: "1", label: "1 · Front-wide (120°)" },
+  { value: "2", label: "2 · Cross-right wide (120°)" },
+  { value: "3", label: "3 · Rear-left (70°)" },
+  { value: "4", label: "4 · Rear tele (30°)" },
+  { value: "5", label: "5 · Rear-right (70°)" },
+  { value: "6", label: "6 · Front tele (30°)" },
+] as const;
+const MULTI_CAMERA_DEFAULT_ORDER = [0, 1, 2, 3, 5, 6, 4] as const;
+
+function defaultSelection(): ModelSelection {
+  return { family: "alpamayo-1.5", quant: "bf16", target: "runpod" };
+}
+
+function defaultCameraMappings(count: number): UploadedVideoCamera[] {
+  const ids = count === 1 ? [1] : MULTI_CAMERA_DEFAULT_ORDER.slice(0, count);
+  return ids.map((cameraId, inputIndex) => ({ cameraId, inputIndex, offsetSeconds: 0 }));
+}
+
 function StepHeading({ index, title, hint }: { index: number; title: string; hint?: string }) {
   return (
     <div className="space-y-1">
@@ -69,7 +70,6 @@ export function EvaluationLauncher({
   host,
   runtime,
   onSubmitted,
-  /** Desktop only: starts the run on this machine instead of the cloud. */
   onRunLocally,
 }: {
   gateway: EvaluationGateway;
@@ -78,92 +78,75 @@ export function EvaluationLauncher({
   onSubmitted: (job: ComputeJob) => void;
   onRunLocally?: LocalRunLauncher;
 }) {
-  const [selection, setSelection] = useState<ModelSelection>(() =>
-    preferredSelection(host, runtime),
-  );
-  // A derived default must not fight the user: once they choose, the
-  // eligibility-derived preference stops applying.
-  const [selectionChosen, setSelectionChosen] = useState(false);
+  const [selection, setSelection] = useState<ModelSelection>(defaultSelection);
   const [prepared, setPrepared] = useState<PreparedInput | null>(null);
-  const [kind, setKind] = useState<ComputeJobKind>("alpamayo.openloop");
-  const [numTrajSamples, setNumTrajSamples] = useState(4);
-  const [navText, setNavText] = useState("");
-  const [textTask, setTextTask] = useState<TextTask>("vqa");
-  const [prompt, setPrompt] = useState("");
+  const [cameras, setCameras] = useState<UploadedVideoCamera[]>([]);
+  const [primaryCameraId, setPrimaryCameraId] = useState(1);
+  const [horizontalFovDeg, setHorizontalFovDeg] = useState(90);
+  const [cameraHeightM, setCameraHeightM] = useState(1.5);
+  const [egoSpeedMps, setEgoSpeedMps] = useState(0);
+  const [predictionHz, setPredictionHz] = useState(1);
   const [seed, setSeed] = useState(1);
-  const [scoreWhenAvailable, setScoreWhenAvailable] = useState(true);
   const [estimate, setEstimate] = useState<ComputeEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attemptNonce, setAttemptNonce] = useState(() => Math.random().toString(36).slice(2, 10));
 
-  // The host's capability report and the model store arrive after first paint,
-  // so the derived default is applied again when they land — but never over a
-  // choice the user has already made.
-  useEffect(() => {
-    if (selectionChosen) return;
-    setSelection(preferredSelection(host, runtime));
-  }, [selectionChosen, host, runtime]);
 
   const entry = MODEL_CATALOG[selection.family];
-  const textTasks = availableTextTasks(entry);
+  const kind: ComputeJobKind = "alpamayo.openloop";
 
-  const offers = useMemo(
-    () => (prepared ? offerableJobKinds(prepared.classification, entry) : []),
-    [prepared, entry],
-  );
-  const activeOffer = offers.find((offer) => offer.kind === kind) ?? null;
+  const acceptPrepared = useCallback((next: PreparedInput) => {
+    const mappings = defaultCameraMappings(next.files.length);
+    setPrepared(next);
+    setCameras(mappings);
+    setPrimaryCameraId(mappings.find((camera) => camera.cameraId === 1)?.cameraId ?? mappings[0]?.cameraId ?? 1);
+    setEstimate(null);
+  }, []);
 
-  const itemKind: OpenLoopItemKind = useMemo(() => {
-    const classification = prepared?.classification;
-    if (!classification) return "user-clip";
-    if (classification.kind === "driving-clip" && classification.probe.schema?.includes("replay-context")) {
-      return "replay-context";
-    }
-    return "user-clip";
-  }, [prepared]);
-
-  // Input roles are a closed enum server-side: an open-loop batch is up to 32
-  // entries all with role `clip`, and a text run is exactly one `video`. The
-  // params items are emitted in the same order as `inputs`, which is what pairs
-  // an item with its artifact — a per-item role suffix would be rejected.
-  const inputRole: ComputeJobInputRole = kind === "alpamayo.text" ? "video" : "clip";
+  const clearPrepared = useCallback(() => {
+    setPrepared(null);
+    setCameras([]);
+    setEstimate(null);
+  }, []);
 
   const params = useMemo(() => {
-    if (!prepared) return null;
+    if (!prepared || cameras.length !== prepared.files.length) return null;
     return buildOpenLoopParams({
-      items: prepared.artifacts.map(() => ({
-        kind: itemKind,
-        role: inputRole,
-        cameraProfile: prepared.cameraProfile,
+      items: prepared.files.map(() => ({
+        kind: "user-clip",
+        role: "video",
+        cameraProfile: "uploaded-video",
       })),
-      reference: scoreWhenAvailable ? "auto" : "none",
-      sampling: {
-        numTrajSamples,
-        ...(entry.capabilities.nav && navText.trim() ? { navText: navText.trim() } : {}),
-      },
-      task: kind === "alpamayo.text" ? "text" : "act",
-      textTask: kind === "alpamayo.text" ? textTask : null,
-      prompt: kind === "alpamayo.text" ? prompt.trim() : null,
+      reference: "none",
+      sampling: { numTrajSamples: 4 },
+      task: "act",
       seed,
+      ood: {
+        exploratory: true,
+        assumedStationaryEgo: egoSpeedMps === 0,
+        assumedIntrinsics: {
+          model: "pinhole",
+          horizontalFovDeg,
+          cameraHeightM,
+        },
+      },
+      video: {
+        cameras: cameras.map((camera) =>
+          camera.cameraId === primaryCameraId ? { ...camera, offsetSeconds: 0 } : camera,
+        ),
+        primaryCameraId,
+        horizontalFovDeg,
+        cameraHeightM,
+        egoSpeedMps,
+        predictionHz,
+      },
     });
-  }, [
-    prepared,
-    itemKind,
-    scoreWhenAvailable,
-    numTrajSamples,
-    entry.capabilities.nav,
-    navText,
-    kind,
-    inputRole,
-    textTask,
-    prompt,
-    seed,
-  ]);
+  }, [prepared, cameras, seed, egoSpeedMps, primaryCameraId, horizontalFovDeg, cameraHeightM, predictionHz]);
 
   const submissionInput = useMemo<ComputeJobSubmission["input"] | null>(() => {
-    if (!prepared || !params) return null;
+    if (!prepared || !params || prepared.artifacts.length !== prepared.files.length) return null;
     const model: ComputeJobModelRef = {
       family: selection.family,
       revision: entry.weightsRevision,
@@ -171,16 +154,11 @@ export function EvaluationLauncher({
     };
     return {
       model,
-      inputs: prepared.artifacts.map((artifact) => ({
-        role: inputRole,
-        artifactId: artifact.artifactId,
-      })),
+      inputs: prepared.artifacts.map((artifact) => ({ role: "video" as const, artifactId: artifact.artifactId })),
       params,
     };
-  }, [prepared, params, selection.family, selection.quant, entry.weightsRevision, inputRole]);
+  }, [prepared, params, selection.family, selection.quant, entry.weightsRevision]);
 
-  // Re-estimate whenever the priced shape of the run changes. The estimate is
-  // also the affordability/concurrency check, so it must not go stale.
   useEffect(() => {
     if (!submissionInput || selection.target !== "runpod") {
       setEstimate(null);
@@ -195,9 +173,7 @@ export function EvaluationLauncher({
         if (controller.signal.aborted) return;
         setEstimate(null);
         setError(
-          cause instanceof ComputeApiError
-            ? cause.message
-            : "The cost estimate could not be retrieved.",
+          cause instanceof ComputeApiError ? cause.message : "The cost estimate could not be retrieved.",
         );
       })
       .finally(() => {
@@ -207,18 +183,16 @@ export function EvaluationLauncher({
   }, [gateway, kind, submissionInput, selection.target]);
 
   const submit = useCallback(async () => {
-    if (!submissionInput || !prepared || !params) return;
+    if (!prepared || !params) return;
     setError(null);
     setSubmitting(true);
     try {
       if (selection.target === "local") {
-        if (!onRunLocally) {
-          setError("This host cannot start local runs.");
-          return;
-        }
+        if (!onRunLocally) throw new Error("This host cannot start local runs.");
         await onRunLocally({ selection, prepared, params, kind });
         return;
       }
+      if (!submissionInput) return;
       const job = await gateway.submitJob({
         kind,
         idempotencyKey: submissionIdempotencyKey({
@@ -231,213 +205,198 @@ export function EvaluationLauncher({
         }),
         input: submissionInput,
       });
-      setPrepared(null);
-      setEstimate(null);
+      clearPrepared();
       setAttemptNonce(Math.random().toString(36).slice(2, 10));
       onSubmitted(job);
     } catch (cause) {
       setError(
         cause instanceof ComputeApiError
           ? cause.message
-          : `The job could not be submitted: ${String(cause)}`,
+          : `The job could not be submitted: ${cause instanceof Error ? cause.message : String(cause)}`,
       );
     } finally {
       setSubmitting(false);
     }
-  }, [
-    submissionInput,
-    prepared,
-    params,
-    selection,
-    kind,
-    gateway,
-    entry.weightsRevision,
-    attemptNonce,
-    onSubmitted,
-    onRunLocally,
-  ]);
+  }, [prepared, params, selection, onRunLocally, submissionInput, gateway, entry.weightsRevision, attemptNonce, clearPrepared, onSubmitted]);
 
-  const blockedReason = activeOffer?.blocked ?? null;
-  const textReady = kind !== "alpamayo.text" || prompt.trim().length > 0 || textTask !== "vqa";
-  // The control plane refuses any URL- or path-shaped string in params, and a
-  // question is free text, so say so here rather than after the upload.
-  const paramsRefusal =
-    (kind === "alpamayo.text" ? pathShapedRefusal("Your question", prompt) : null) ??
-    pathShapedRefusal("The navigation instruction", navText);
+  const selectedIds = new Set(cameras.map((camera) => camera.cameraId));
   const localUnavailable =
     selection.target === "local" && onRunLocally === undefined
       ? "This host cannot start local runs. Choose cloud execution, or run this from the desktop app."
       : null;
   const canSubmit =
     prepared !== null &&
-    submissionInput !== null &&
-    blockedReason === null &&
-    paramsRefusal === null &&
+    params !== null &&
+    cameras.length > 0 &&
+    selectedIds.size === cameras.length &&
     localUnavailable === null &&
-    textReady &&
     !submitting &&
-    (selection.target === "local"
-      ? onRunLocally !== undefined
-      : estimate !== null && estimate.allowed);
+    (selection.target === "local" ? onRunLocally !== undefined : submissionInput !== null && estimate !== null && estimate.allowed);
+
+  const updateCameraId = (inputIndex: number, nextId: number) => {
+    const previousId = cameras.find((camera) => camera.inputIndex === inputIndex)?.cameraId;
+    const remainsPrimary = previousId === primaryCameraId;
+    setCameras((current) =>
+      current.map((camera) =>
+        camera.inputIndex === inputIndex
+          ? { ...camera, cameraId: nextId, ...(remainsPrimary ? { offsetSeconds: 0 } : {}) }
+          : camera,
+      ),
+    );
+    if (remainsPrimary) setPrimaryCameraId(nextId);
+  };
 
   return (
     <div className="space-y-8" data-testid="evaluation-launcher">
       <section className="space-y-3">
         <StepHeading
           index={1}
-          title="Input"
-          hint="Uploaded straight to storage with a checksum; the server verifies the stored bytes before the artifact can be used."
+          title="Camera videos"
+          hint="Choose one ordinary video or all synchronized camera recordings together. Their overlapping usable interval must contain at least 0.4 seconds of real footage and may be at most 60 seconds."
         />
         <InputPicker
           gateway={gateway}
           model={entry}
           prepared={prepared}
-          onPrepared={setPrepared}
-          onCleared={() => {
-            setPrepared(null);
-            setEstimate(null);
-          }}
+          onPrepared={acceptPrepared}
+          onCleared={clearPrepared}
           disabled={submitting}
           execution={selection.target}
         />
       </section>
 
       <section className="space-y-3">
-        <StepHeading index={2} title="Model" hint="All three families are listed; where each can run depends on this machine and your workspace." />
+        <StepHeading
+          index={2}
+          title="Model"
+          hint="This upload workflow supports AlpaMayo 1.5 and AlpaMayo 2 Super. It produces predictions and reasoning, never a score."
+        />
         <ModelPicker
           host={host}
           runtime={runtime}
           selection={selection}
-          onChange={(next) => {
-            setSelectionChosen(true);
-            setSelection(next);
-          }}
+          onChange={setSelection}
           disabled={submitting}
+          families={VIDEO_MODEL_FAMILIES}
+          uploadedVideo
+          cloudOnly
         />
       </section>
 
       {prepared ? (
-        <section className="space-y-4">
-          <StepHeading index={3} title="Run" />
+        <section className="space-y-4" data-testid="video-camera-mapping">
+          <StepHeading
+            index={3}
+            title="Map cameras and timing"
+            hint="Identify the physical view in each file. Input order remains exactly as uploaded; this mapping tells the model which real camera each input contains."
+          />
+          <div className="divide-y divide-border border border-border">
+            {prepared.files.map((file, inputIndex) => {
+              const camera = cameras.find((entry) => entry.inputIndex === inputIndex);
+              if (!camera) return null;
+              return (
+                <div key={`${file.name}-${inputIndex}`} className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,1fr)_9rem] sm:items-end">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+                    <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="radio"
+                        name="primary-camera"
+                        checked={primaryCameraId === camera.cameraId}
+                        disabled={submitting}
+                        onChange={() => {
+                          setPrimaryCameraId(camera.cameraId);
+                          setCameras((current) =>
+                            current.map((entry) =>
+                              entry.inputIndex === inputIndex
+                                ? { ...entry, offsetSeconds: 0 }
+                                : entry,
+                            ),
+                          );
+                        }}
+                      />
+                      Primary view for the overlay
+                    </label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Camera position</span>
+                    <SelectMenu
+                      label={`Camera position for ${file.name}`}
+                      value={String(camera.cameraId)}
+                      disabled={submitting}
+                      options={CAMERA_OPTIONS.map((option) => ({
+                        ...option,
+                        disabled: option.value !== String(camera.cameraId) && selectedIds.has(Number(option.value)),
+                      }))}
+                      onChange={(value) => updateCameraId(inputIndex, Number(value))}
+                    />
+                  </div>
+                  <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                    Offset (seconds)
+                    <Input
+                      type="number"
+                      step={0.01}
+                      value={camera.offsetSeconds}
+                      disabled={submitting || primaryCameraId === camera.cameraId}
+                      aria-label={`Temporal offset for ${file.name} in seconds`}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setCameras((current) =>
+                          current.map((entry) =>
+                            entry.inputIndex === inputIndex
+                              ? { ...entry, offsetSeconds: Number.isFinite(value) ? value : 0 }
+                              : entry,
+                          ),
+                        );
+                      }}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">
+            The primary camera defines time zero, so its offset is fixed at 0. For every other
+            camera, a positive offset means its recording starts later than the primary timeline;
+            use a negative value when it starts earlier. No missing camera view is duplicated or
+            invented.
+          </p>
 
-          <fieldset className="space-y-2">
-            <legend className="text-xs uppercase tracking-wide text-muted-foreground">Task</legend>
-            {offers.map((offer) => (
-              <label
-                key={offer.kind}
-                className="flex cursor-pointer items-start gap-3 border border-border p-3"
-              >
-                <input
-                  type="radio"
-                  name="job-kind"
-                  className="mt-1"
-                  checked={kind === offer.kind}
-                  disabled={submitting}
-                  onChange={() => setKind(offer.kind)}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">
-                    {offer.kind === "alpamayo.openloop"
-                      ? offer.scoreable
-                        ? "Open-loop evaluation (scored)"
-                        : "Open-loop prediction (not scored)"
-                      : "Text analysis"}
-                  </span>
-                  <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                    {offer.kind === "alpamayo.openloop"
-                      ? "Predicts future ego trajectories. Scored only if the uploaded bundle contains a reference future (future.jsonl)."
-                      : "Answers questions about the pixels. Text analysis is not a trajectory evaluation and produces no ADE/FDE."}
-                  </span>
-                  {offer.blocked ? (
-                    <span className="mt-1 block text-xs leading-5 text-amber-600 dark:text-amber-500">
-                      {offer.blocked}
-                    </span>
-                  ) : null}
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          {kind === "alpamayo.openloop" ? (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                Trajectory samples
-                <Input
-                  type="number"
-                  min={1}
-                  max={32}
-                  value={numTrajSamples}
-                  disabled={submitting}
-                  onChange={(event) =>
-                    setNumTrajSamples(Math.max(1, Math.min(32, Number(event.target.value) || 1)))
-                  }
-                />
-              </label>
-              <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                Seed
-                <Input
-                  type="number"
-                  min={0}
-                  value={seed}
-                  disabled={submitting}
-                  onChange={(event) => setSeed(Math.max(0, Number(event.target.value) || 0))}
-                />
-              </label>
-              {entry.capabilities.nav ? (
+          <details className="border border-border bg-muted/10">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">
+              Advanced assumptions
+            </summary>
+            <div className="space-y-4 border-t border-border p-4">
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                Ordinary video does not include measured camera calibration or vehicle motion. The
+                overlay therefore uses an approximate pinhole camera and a constant-speed,
+                straight-ahead ego history. Edit these values when you know them. The result is an
+                approximate, exploratory prediction and is never scored against ground truth.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                  Navigation instruction
-                  <Input
-                    value={navText}
-                    placeholder="optional"
-                    disabled={submitting}
-                    onChange={(event) => setNavText(event.target.value)}
-                  />
+                  Horizontal FOV (degrees)
+                  <Input type="number" min={20} max={170} step={1} value={horizontalFovDeg} disabled={submitting} onChange={(event) => setHorizontalFovDeg(Math.max(20, Math.min(170, Number(event.target.value) || 20)))} />
                 </label>
-              ) : null}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="max-w-sm space-y-1.5">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Text task
-                </span>
-                <SelectMenu
-                  label="Text task"
-                  value={textTask}
-                  disabled={submitting || textTasks.length === 0}
-                  options={textTasks.map((task) => ({ value: task, label: TEXT_TASK_LABELS[task] }))}
-                  onChange={(value) => setTextTask(value as TextTask)}
-                />
+                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  Camera height (m)
+                  <Input type="number" min={0.1} max={10} step={0.1} value={cameraHeightM} disabled={submitting} onChange={(event) => setCameraHeightM(Math.max(0.1, Math.min(10, Number(event.target.value) || 0.1)))} />
+                </label>
+                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  Ego speed (m/s)
+                  <Input type="number" min={0} max={80} step={0.1} value={egoSpeedMps} disabled={submitting} onChange={(event) => setEgoSpeedMps(Math.max(0, Math.min(80, Number(event.target.value) || 0)))} />
+                </label>
+                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  Predictions / second
+                  <Input type="number" min={0.1} max={2} step={0.1} value={predictionHz} disabled={submitting} onChange={(event) => setPredictionHz(Math.max(0.1, Math.min(2, Number(event.target.value) || 0.1)))} />
+                </label>
+                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  Seed
+                  <Input type="number" min={0} step={1} value={seed} disabled={submitting} onChange={(event) => setSeed(Math.max(0, Math.floor(Number(event.target.value) || 0)))} />
+                </label>
               </div>
-              {textTask === "vqa" || textTask === "grounding" ? (
-                <label className="block space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                  {textTask === "vqa" ? "Question" : "Referring expression"}
-                  <Textarea
-                    value={prompt}
-                    rows={3}
-                    disabled={submitting}
-                    onChange={(event) => setPrompt(event.target.value)}
-                  />
-                </label>
-              ) : null}
             </div>
-          )}
-
-          {kind === "alpamayo.openloop" ? (
-            <label className="flex items-start gap-3 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={scoreWhenAvailable}
-                disabled={submitting}
-                onChange={(event) => setScoreWhenAvailable(event.target.checked)}
-              />
-              <span>
-                Score against the bundle&apos;s reference future when one is present. Unchecked, the
-                run returns a prediction only. No reference is ever derived or synthesized.
-              </span>
-            </label>
-          ) : null}
+          </details>
         </section>
       ) : null}
 
@@ -453,83 +412,42 @@ export function EvaluationLauncher({
             <div className="space-y-3">
               <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Estimated cost
-                  </dt>
-                  <dd className="text-foreground">
-                    {formatCentsRange(estimate.estimate.lowCents, estimate.estimate.highCents)}
-                  </dd>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Estimated cost</dt>
+                  <dd className="text-foreground">{formatCentsRange(estimate.estimate.lowCents, estimate.estimate.highCents)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Workspace credit
-                  </dt>
-                  <dd className="text-foreground">
-                    {formatCentsRange(estimate.availableCreditsCents, estimate.availableCreditsCents)}
-                  </dd>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Workspace credit</dt>
+                  <dd className="text-foreground">{formatCentsRange(estimate.availableCreditsCents, estimate.availableCreditsCents)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Concurrent runs
-                  </dt>
-                  <dd className="text-foreground">
-                    {estimate.concurrency.active} / {estimate.concurrency.limit}
-                  </dd>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Concurrent runs</dt>
+                  <dd className="text-foreground">{estimate.concurrency.active} / {estimate.concurrency.limit}</dd>
                 </div>
               </dl>
               <p className="text-xs leading-5 text-muted-foreground">
-                {estimate.estimate.basis === "unbenchmarked"
-                  ? "This is a bound, not a price: no measured cold/warm benchmark exists for this configuration yet. The charge settles from the provider's actual accounting, which includes startup and idle time."
-                  : "Bound derived from measured runs. The charge settles from the provider's actual accounting, which includes startup and idle time."}
+                This is a cost bound. Settlement uses the provider&apos;s actual accounting, including startup and idle time.
               </p>
-              {estimate.refusal ? (
-                <RefusalNotice
-                  title="This run cannot be submitted yet"
-                  reasons={[estimate.refusal.message]}
-                />
-              ) : null}
+              {estimate.refusal ? <RefusalNotice title="This run cannot be submitted yet" reasons={[estimate.refusal.message]} /> : null}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              An estimate appears once an input and model are chosen.
-            </p>
+            <p className="text-sm text-muted-foreground">An estimate appears once the videos are uploaded and mapped.</p>
           )}
         </section>
       ) : null}
 
-      {localUnavailable ? (
-        <RefusalNotice title="Local execution is not available here" reasons={[localUnavailable]} />
-      ) : null}
-
-      {paramsRefusal ? (
-        <RefusalNotice title="This run cannot be submitted as written" reasons={[paramsRefusal]} />
-      ) : null}
-
+      {localUnavailable ? <RefusalNotice title="Local execution is not available here" reasons={[localUnavailable]} /> : null}
       {error ? <RefusalNotice title="Submission failed" reasons={[error]} /> : null}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
         <Button type="button" disabled={!canSubmit} onClick={() => void submit()} data-testid="evaluation-submit">
-          {submitting ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : (
-            <Play aria-hidden="true" />
-          )}
-          {selection.target === "local" ? "Run on this machine" : "Submit cloud run"}
+          {submitting ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Play aria-hidden="true" />}
+          {selection.target === "local" ? "Run prediction on this machine" : "Submit prediction"}
         </Button>
         {prepared ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={submitting || estimating}
-            onClick={() => setAttemptNonce(Math.random().toString(36).slice(2, 10))}
-          >
+          <Button type="button" variant="ghost" size="sm" disabled={submitting || estimating} onClick={() => setAttemptNonce(Math.random().toString(36).slice(2, 10))}>
             <RefreshCw aria-hidden="true" />
             New submission identity
           </Button>
-        ) : null}
-        {blockedReason ? (
-          <p className="text-xs leading-5 text-amber-600 dark:text-amber-500">{blockedReason}</p>
         ) : null}
       </div>
     </div>

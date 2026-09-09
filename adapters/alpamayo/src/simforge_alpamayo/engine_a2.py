@@ -7,17 +7,15 @@ differences instead of pretending the families are interchangeable:
   the repo, so there is no sidecar and no gated dependency. The processor is
   loaded from the checkpoint with ``fix_mistral_regex``, via upstream
   ``helper.get_processor``.
-* Inputs go through ``input_profiles``. The trajectory/meta-action/auto-label
-  profile is cameras ``[0, 1, 2, 3, 5, 6]``; VQA is ``[0, 1, 2, 3, 4, 5]``.
-  Upstream validates the ordered camera contract, and we call that validator
-  rather than reimplementing it.
-* Two accepted input shapes, both real:
-  1. the exact task profile (6 cameras) — we build the already-selected
-     payload and assert it with upstream ``assert_task_input``;
-  2. the full canonical 7-camera ring — we build a source payload with the
-     timing fields and let upstream ``select_task_input`` do the selection,
-     which is the true parity path.
-  Which one ran is recorded in provenance as ``input_selection``.
+* Strict inputs go through ``input_profiles``. The trajectory/meta-action/
+  auto-label profile is cameras ``[0, 1, 2, 3, 5, 6]``; VQA is
+  ``[0, 1, 2, 3, 4, 5]``. Exact profiles are asserted upstream, while a full
+  canonical 7-camera ring is reduced with upstream ``select_task_input``.
+* An explicit unscored ``obs.exploratory_video`` act may instead contain any
+  1..7 unique supplied camera ids. Only exact profile admission is bypassed:
+  native ``helper.prepare_model_inputs`` builds the conversation from those
+  camera ids and their corresponding images, with no duplicated or fake view.
+  The chosen path is recorded truthfully as ``input_selection``.
 * Trajectory entrypoint ``Alpamayo2Super.sample_trajectories_from_data``
   returns a 4-tuple with ``return_extra=True`` (A1/A1.5 return 3), so the
   call cannot be shared.
@@ -100,7 +98,17 @@ class Alpamayo2SuperEngine(BaseEngine):
     # -- input handling -----------------------------------------------------
 
     def decode(self, obs: dict[str, Any], task: str = "act") -> dict[str, Any]:
-        """Accept either the exact task profile or the full 7-camera ring."""
+        """Decode strict task profiles or exploratory supplied act cameras."""
+        exploratory_video = obs.get("exploratory_video", False)
+        if exploratory_video is not False:
+            decoded = super().decode(obs, task=task)
+            decoded["selection"] = (
+                "exploratory-uploaded-cameras"
+                if decoded["exploratory_video"] and task == "act"
+                else "direct-task-profile"
+            )
+            return decoded
+
         cameras = obs.get("cameras")
         if not cameras:
             raise ObservationError(
@@ -135,21 +143,15 @@ class Alpamayo2SuperEngine(BaseEngine):
             ) from None
 
     def _source_data(self, decoded: dict[str, Any], upstream_task: str) -> dict[str, Any]:
-        """Build the upstream ``data`` payload for one task.
+        """Build native A2 data without inventing or duplicating camera views.
 
-        For the 7-camera ring this is a *source* payload with the full timing
-        fields, handed to upstream ``select_task_input``. For the exact task
-        profile it is the *selected* payload, validated by upstream
-        ``assert_task_input``.
+        Strict inputs retain the exact upstream profile selection/assertion.
+        Exploratory uploaded-video inputs bypass only that admission step; the
+        native ``helper.prepare_model_inputs`` still builds the conversation
+        from these supplied ``camera_indices`` and corresponding real images.
         """
         import torch
         from alpamayo2_super.common.constants import CAMERA_INDICES_TO_NAMES
-        from alpamayo2_super.input_profiles import (
-            TASK_INPUT_PROFILES,
-            assert_task_input,
-            input_profile_record,
-            select_task_input,
-        )
 
         frames = decoded["frames"]  # (n_cams, n_frames, 3, H, W)
         camera_ids = decoded["camera_ids"]
@@ -185,6 +187,20 @@ class Alpamayo2SuperEngine(BaseEngine):
         }
         if decoded.get("nav_text"):
             data["nav_instruction"] = decoded["nav_text"]
+        if decoded["exploratory_video"]:
+            data["camera_tmin"] = int(absolute_us.min().item())
+            data["ego_t0_relative"] = (
+                data["ego_t0"].float() - float(data["camera_tmin"])
+            ) * 1e-6
+            return data
+
+        from alpamayo2_super.input_profiles import (
+            TASK_INPUT_PROFILES,
+            assert_task_input,
+            input_profile_record,
+            select_task_input,
+        )
+
 
         if decoded.get("selection") == "upstream-select_task_input":
             return select_task_input(data, upstream_task)

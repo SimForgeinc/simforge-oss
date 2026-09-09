@@ -38,6 +38,8 @@ export type JobResultBundle = {
   frames: FramesManifest | null;
   /** Grant URL for the source clip, when the run retained one. */
   videoUrl: string | null;
+  /** Grant URL for the rendered prediction/reasoning video. */
+  overlayVideoUrl: string | null;
   /** Grant URLs for rendered frames, in manifest order. */
   frameUrls: string[];
   loading: boolean;
@@ -82,6 +84,7 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
   const [trajectories, setTrajectories] = useState<TrajectoriesDocument | null>(null);
   const [frames, setFrames] = useState<FramesManifest | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [overlayVideoUrl, setOverlayVideoUrl] = useState<string | null>(null);
   const [frameUrls, setFrameUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [problems, setProblems] = useState<string[]>([]);
@@ -200,6 +203,16 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
         }
       }
 
+      const overlayVideoArtifact = resolve("overlay-video");
+      if (overlayVideoArtifact) {
+        try {
+          const url = await grantUrl(gateway, job.id, overlayVideoArtifact);
+          if (!cancelled) setOverlayVideoUrl(url);
+        } catch (cause) {
+          if (!cancelled) record(cause instanceof ComputeApiError ? cause.message : String(cause));
+        }
+      }
+
       const overlayArtifact = resolve("overlay-frames");
       if (overlayArtifact && !overlayArtifact.path.endsWith(".json")) {
         try {
@@ -224,6 +237,7 @@ export function useJobResult(gateway: EvaluationGateway, jobId: string): JobResu
     trajectories,
     frames,
     videoUrl,
+    overlayVideoUrl,
     frameUrls,
     loading,
     problems,

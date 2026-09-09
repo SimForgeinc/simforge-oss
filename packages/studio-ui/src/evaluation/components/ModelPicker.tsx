@@ -3,10 +3,10 @@
 /**
  * Step 2 — choose a model, a precision and where it runs.
  *
- * All three families are always listed. A family the machine cannot execute is
- * shown with the runtime probe's own reasons and remains selectable for cloud
- * execution, because downloading a model and being able to run it are separate
- * questions and pretending otherwise hides the actual product.
+ * Callers may show the complete model-store catalog or a focused subset. A
+ * family the machine cannot execute is shown with the runtime probe's own
+ * reasons and remains selectable for cloud execution, because downloading a
+ * model and being able to run it are separate questions.
  *
  * The backend is the authority: a family the workspace is not entitled to is
  * refused at submit with `model_not_available_for_workspace`, and that refusal
@@ -48,6 +48,9 @@ export function ModelPicker({
   selection,
   onChange,
   disabled = false,
+  families = MODEL_FAMILIES,
+  uploadedVideo = false,
+  cloudOnly = false,
 }: {
   host: HostExecutionSnapshot;
   /** Desktop only. Null in the browser portal, which has no local model store. */
@@ -55,10 +58,14 @@ export function ModelPicker({
   selection: ModelSelection;
   onChange: (selection: ModelSelection) => void;
   disabled?: boolean;
+  /** Restricts this picker without changing the shared model-store catalog. */
+  families?: readonly ModelFamilyId[];
+  uploadedVideo?: boolean;
+  cloudOnly?: boolean;
 }) {
   const entry = MODEL_CATALOG[selection.family];
   const key = runtimeKey(selection.family, selection.quant);
-  const offers = executionOffers(
+  const allOffers = executionOffers(
     host,
     entry,
     selection.quant,
@@ -66,6 +73,7 @@ export function ModelPicker({
     runtime?.eligibility[key] ?? null,
     runtime ? runtime.prepared[selection.family] ?? null : null,
   );
+  const offers = cloudOnly ? allOffers.filter((offer) => offer.target === "runpod") : allOffers;
 
   // The measured envelope is exclusive-use: the runtime's own requirement, or
   // the catalog's if the probe did not report one.
@@ -75,7 +83,7 @@ export function ModelPicker({
     entry.quants.find((offer) => offer.quant === selection.quant)?.minVramGiB ??
     null;
 
-  const quantOptions = entry.quants.map((offer) => ({
+  const quantOptions = entry.quants.filter((offer) => !cloudOnly || offer.quant === "bf16").map((offer) => ({
     value: offer.quant,
     label:
       offer.status === "supported"
@@ -86,8 +94,8 @@ export function ModelPicker({
 
   return (
     <section className="space-y-5" data-testid="evaluation-model-step">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {MODEL_FAMILIES.map((family) => {
+      <div className={cn("grid gap-3", families.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+        {families.map((family) => {
           const candidate = MODEL_CATALOG[family];
           const active = family === selection.family;
           return (
@@ -99,8 +107,8 @@ export function ModelPicker({
               onClick={() =>
                 onChange({
                   family,
-                  quant: highestOfferedQuant(family),
-                  target: candidate.remoteOnly ? "runpod" : selection.target,
+                  quant: cloudOnly ? "bf16" : highestOfferedQuant(family),
+                  target: cloudOnly || candidate.remoteOnly ? "runpod" : selection.target,
                 })
               }
               className={cn(
@@ -115,15 +123,15 @@ export function ModelPicker({
               <span className="text-sm font-semibold text-foreground">{candidate.displayName}</span>
               <span className="text-xs text-muted-foreground">
                 {formatBytes(candidate.approxWeightsBytes)} weights ·{" "}
-                {candidate.capabilities.vqa ? "trajectory + text" : "trajectory only"}
+                {uploadedVideo ? "trajectory + reasoning" : candidate.capabilities.vqa ? "trajectory + text" : "trajectory only"}
               </span>
               <span className="flex flex-wrap gap-1.5">
-                {candidate.remoteOnly ? (
+                {cloudOnly || candidate.remoteOnly ? (
                   <Badge variant="secondary">Cloud execution</Badge>
                 ) : (
                   <Badge variant="outline">Local or cloud</Badge>
                 )}
-                {candidate.requiresUserHfToken ? (
+                {candidate.requiresUserHfToken && !cloudOnly ? (
                   <Badge variant="outline">Needs your HF token</Badge>
                 ) : null}
               </span>
@@ -146,7 +154,9 @@ export function ModelPicker({
             onChange={(value) => onChange({ ...selection, quant: value as ModelQuant })}
           />
           <p className="text-xs text-muted-foreground">
-            {entry.quants.find((offer) => offer.quant === selection.quant)?.note}
+            {cloudOnly
+              ? "Runs on a managed GPU. No local model download or Hugging Face token is required."
+              : entry.quants.find((offer) => offer.quant === selection.quant)?.note}
           </p>
         </div>
 
@@ -158,9 +168,11 @@ export function ModelPicker({
           <div className="flex gap-2">
             <dt className="w-24 shrink-0 uppercase tracking-wide">Cameras</dt>
             <dd className="text-foreground">
-              {entry.cameras.required
-                ? `exactly [${entry.cameras.required.join(", ")}]`
-                : `variable, default [${entry.cameras.default.join(", ")}]`}
+              {uploadedVideo
+                ? "1–7 uploaded views, mapped below"
+                : entry.cameras.required
+                  ? `exactly [${entry.cameras.required.join(", ")}]`
+                  : `variable, default [${entry.cameras.default.join(", ")}]`}
             </dd>
           </div>
           <div className="flex gap-2">
