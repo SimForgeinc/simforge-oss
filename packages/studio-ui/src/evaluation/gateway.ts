@@ -178,11 +178,11 @@ export function createHttpEvaluationGateway(
     },
 
     async getJobResult(jobId, signal) {
-      const payload = await request<unknown>(`/jobs/${encodeURIComponent(jobId)}/result`, {
+      const payload = await request<{ manifest: unknown }>(`/jobs/${encodeURIComponent(jobId)}/result`, {
         method: "GET",
         signal,
       });
-      const manifest = readEvalResultManifest(payload);
+      const manifest = readEvalResultManifest(payload?.manifest);
       if (!manifest.ok) {
         throw new ComputeApiError(
           200,

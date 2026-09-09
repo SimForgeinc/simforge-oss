@@ -331,9 +331,9 @@ export function formatModelRef(family: ModelFamilyId, revision: string, quant: s
  *
  * It must be stable for one user intent so a retried submit cannot charge
  * twice, and distinct across intents so two genuine runs are not collapsed
- * into one. Derived from the inputs and model rather than the clock.
+ * into one. Hashing the ordered identity keeps it within the API's 200-character limit.
  */
-export function submissionIdempotencyKey(parts: {
+export async function submissionIdempotencyKey(parts: {
   kind: string;
   artifactIds: string[];
   family: string;
@@ -341,13 +341,17 @@ export function submissionIdempotencyKey(parts: {
   revision: string;
   /** A nonce the form generates once per prepared submission. */
   attempt: string;
-}): string {
-  return [
+}): Promise<string> {
+  const identity = JSON.stringify([
     parts.kind,
     parts.family,
     parts.quant,
-    parts.revision.slice(0, 12),
-    ...parts.artifactIds,
+    parts.revision,
+    parts.artifactIds,
     parts.attempt,
-  ].join(":");
+  ]);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity)));
+  let hex = "";
+  for (const byte of digest) hex += byte.toString(16).padStart(2, "0");
+  return `evaluation:${hex}`;
 }

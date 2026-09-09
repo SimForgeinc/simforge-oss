@@ -59,6 +59,29 @@ export type UploadedVideoParams = {
   predictionHz: number;
 };
 
+/** Swap occupied slots without changing which recording is the primary view. */
+export function remapUploadedCamera(
+  cameras: UploadedVideoCamera[],
+  primaryCameraId: number,
+  inputIndex: number,
+  nextId: number,
+): { cameras: UploadedVideoCamera[]; primaryCameraId: number } {
+  const previousId = cameras.find((camera) => camera.inputIndex === inputIndex)?.cameraId;
+  if (previousId === undefined || previousId === nextId) return { cameras, primaryCameraId };
+  return {
+    cameras: cameras.map((camera) =>
+      camera.inputIndex === inputIndex
+        ? { ...camera, cameraId: nextId }
+        : camera.cameraId === nextId
+          ? { ...camera, cameraId: previousId }
+          : camera,
+    ),
+    primaryCameraId: primaryCameraId === previousId
+      ? nextId
+      : primaryCameraId === nextId ? previousId : primaryCameraId,
+  };
+}
+
 export type OpenLoopItemKind =
   | "scenario"
   | "dataset-clip"

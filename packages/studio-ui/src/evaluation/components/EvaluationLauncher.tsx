@@ -20,6 +20,7 @@ import { ComputeApiError } from "../gateway";
 import { MODEL_CATALOG, type ModelFamilyId } from "../model-catalog";
 import {
   buildOpenLoopParams,
+  remapUploadedCamera,
   type UploadedVideoCamera,
 } from "../params";
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
@@ -195,7 +196,7 @@ export function EvaluationLauncher({
       if (!submissionInput) return;
       const job = await gateway.submitJob({
         kind,
-        idempotencyKey: submissionIdempotencyKey({
+        idempotencyKey: await submissionIdempotencyKey({
           kind,
           artifactIds: prepared.artifacts.map((artifact) => artifact.artifactId),
           family: selection.family,
@@ -234,16 +235,9 @@ export function EvaluationLauncher({
     (selection.target === "local" ? onRunLocally !== undefined : submissionInput !== null && estimate !== null && estimate.allowed);
 
   const updateCameraId = (inputIndex: number, nextId: number) => {
-    const previousId = cameras.find((camera) => camera.inputIndex === inputIndex)?.cameraId;
-    const remainsPrimary = previousId === primaryCameraId;
-    setCameras((current) =>
-      current.map((camera) =>
-        camera.inputIndex === inputIndex
-          ? { ...camera, cameraId: nextId, ...(remainsPrimary ? { offsetSeconds: 0 } : {}) }
-          : camera,
-      ),
-    );
-    if (remainsPrimary) setPrimaryCameraId(nextId);
+    const next = remapUploadedCamera(cameras, primaryCameraId, inputIndex, nextId);
+    setCameras(next.cameras);
+    setPrimaryCameraId(next.primaryCameraId);
   };
 
   return (
@@ -324,10 +318,7 @@ export function EvaluationLauncher({
                       label={`Camera position for ${file.name}`}
                       value={String(camera.cameraId)}
                       disabled={submitting}
-                      options={CAMERA_OPTIONS.map((option) => ({
-                        ...option,
-                        disabled: option.value !== String(camera.cameraId) && selectedIds.has(Number(option.value)),
-                      }))}
+                      options={CAMERA_OPTIONS}
                       onChange={(value) => updateCameraId(inputIndex, Number(value))}
                     />
                   </div>

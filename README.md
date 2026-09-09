@@ -39,10 +39,12 @@ Debian packages use the normal package manager. Ordinary use does not require
 disabling Electron's sandbox.
 
 Use **Connect** in the app switcher for optional SimCloud access. Connecting does
-not move the workspace into the cloud: projects, jobs, and render outputs remain
-on this computer, and Cloud Storage transfers are explicit. Credentials use the
-operating-system vault when available; otherwise the app reports session-only
-storage rather than writing plaintext credentials.
+not move local projects, simulation jobs, or render outputs off this computer.
+Cloud Storage transfers and managed inference submissions are explicit. Cloud
+inference runs and results belong to the selected workspace and continue after
+the app closes. Credentials use the operating-system vault when available;
+otherwise the app reports session-only storage rather than writing plaintext
+credentials.
 
 Current desktop CI previews target **SimCloud staging**, with its separate
 accounts and storage, while the restored production deployment remains unchanged.
@@ -61,6 +63,17 @@ For a camera recording, author the scenario, attach a dash camera, and select
 **New render → Native**. Keep Studio open until the local job completes.
 **High-fidelity preview** renders the current editor view through the same
 Bevy service, preparing and verifying the map's native profile when needed.
+
+### Uploaded-video predictions
+
+In **Evaluation → Video prediction**, connect to SimCloud and select one driving
+video or up to seven synchronized camera recordings together. Review camera
+mapping, timing offsets, the primary view, and the motion/calibration assumptions
+before submitting. The cameras must share 0.4–60 seconds of usable footage.
+AlpaMayo 1.5 and AlpaMayo 2 Super run on managed GPUs and return a playable
+trajectory/reasoning overlay plus timestamped model output. These predictions
+are approximate and **unscored**: this workflow does not compute ground-truth
+metrics, train a model, drive a closed-loop simulation, or generate scenarios.
 
 ## Quickstart
 
