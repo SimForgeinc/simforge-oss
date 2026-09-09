@@ -1,9 +1,10 @@
 import { Layer, Source } from "react-map-gl/maplibre";
+import type { FeatureCollection, Point } from "geojson";
 import { C } from "../map-layer-constants";
 
 /** Props for the AssetClusterLayers component. */
 type AssetClusterLayersProps = {
-  data: object;
+  data: FeatureCollection<Point>;
   selectedAssetId: string | null;
 };
 

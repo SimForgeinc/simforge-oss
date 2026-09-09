@@ -1,8 +1,9 @@
 import { Layer, Source } from "react-map-gl/maplibre";
+import type { FeatureCollection, LineString, Polygon } from "geojson";
 
 /** Props for the CandidateLocationLayers component. */
 type CandidateLocationLayersProps = {
-  data: object;
+  data: FeatureCollection<LineString | Polygon>;
 };
 
 /** Render dashed polygon outline for a selected candidate location. */

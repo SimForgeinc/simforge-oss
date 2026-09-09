@@ -1,9 +1,10 @@
 import { Layer, Source } from "react-map-gl/maplibre";
+import type { FeatureCollection, Polygon } from "geojson";
 import { C } from "../map-layer-constants";
 
 /** Props for the AssetPolygonLayers component. */
 type AssetPolygonLayersProps = {
-  data: object;
+  data: FeatureCollection<Polygon>;
   selectedAssetId: string | null;
   hasSelectedGeoJSON: boolean;
 };

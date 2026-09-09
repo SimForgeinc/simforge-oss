@@ -153,6 +153,12 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
+      - name: Typecheck Studio before native packaging
+        env:
+          SIMFORGE_DESKTOP_BUILD: "1"
+        run: |
+          pnpm exec next typegen
+          pnpm exec tsc --noEmit --incremental false
       - name: Build the bundled encoders from the pinned sources
         # ffmpeg/ffprobe are built here from the Git commits pinned in
         # desktop/encoders.lock.json, together with the corresponding-source
