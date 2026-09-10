@@ -150,7 +150,13 @@ export function convertDocumentToSimpleTimedRoutes(
       continue;
     }
 
-    for (const interaction of existingMotion) document.removeInteraction(interaction.id);
+    // A lane-bound road actor already has a topology-owned route. The compiler
+    // follows its laneRef through OpenDRIVE successors; replacing that route
+    // with screen-space timed points makes a short/freehand polyline override
+    // the connected lane graph and can send the actor off-road. Simple mode
+    // means "follow the connected road" for anchored actors. Explicit route
+    // interactions remain untouched above and are the opt-in escape hatch.
+    if (role.kind === "scene_absolute" && role.laneRef) continue;
     const authored = document.actor(role.id);
     const pose = authored
       ?? (role.kind === "scene_absolute" ? { x: role.pose.position.x, z: role.pose.position.z } : null);

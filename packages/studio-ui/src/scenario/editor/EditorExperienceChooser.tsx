@@ -13,7 +13,7 @@ export function EditorExperienceChooser({ onChoose }: { onChoose: (mode: EditorE
           <button className="rounded-xl border border-[#E8E044]/50 bg-[#E8E044]/8 p-4 text-left hover:bg-[#E8E044]/12" onClick={() => onChoose("simple")} type="button">
             <Clock3 className="size-6 text-[#E8E044]" />
             <strong className="mt-3 block text-sm text-white">Simple</strong>
-            <span className="mt-1 block text-xs leading-5 text-white/55">Every movable actor gets one custom timed route. After its final authored point, the actor brakes under physics; the timeline stays visible but locked.</span>
+            <span className="mt-1 block text-xs leading-5 text-white/55">Road-bound actors follow connected OpenDRIVE lanes automatically. Actors placed off-road get one custom timed route; after its final point, the actor brakes under physics.</span>
           </button>
           <button className="rounded-xl border border-white/15 bg-white/[0.03] p-4 text-left hover:bg-white/[0.06]" onClick={() => onChoose("advanced")} type="button">
             <SlidersHorizontal className="size-6 text-white/70" />

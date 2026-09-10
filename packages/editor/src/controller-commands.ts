@@ -702,30 +702,42 @@ export abstract class EditorControllerCommands {
   }
 
   /**
+   * Project route authoring onto the directed lane graph. The old tool stored
+   * the raw ground-ray hit, so a click a few pixels off asphalt became an
+   * arbitrary world-space segment. That bypassed OpenDRIVE successors and made
+   * a vehicle appear to turn into scenery. Route authoring is for movable road
+   * actors; keep every point on a usable lane and preserve the graph's travel
+   * direction.
+   */
+  protected routePoint(point: Vector3): Vector3 | null {
+    const draft = this.customRouteDraft;
+    const interaction = draft
+      ? this.doc.data.choreography.interactions.find((item) => item.id === draft.interactionId)
+      : null;
+    const actor = interaction ? this.doc.actor(interaction.actor) : null;
+    if (!actor || actor.static) return point;
+    const hit = this.laneIndex.nearestForVehiclePlacement(point.x, point.z, 30);
+    if (!hit) return null;
+    const pose = this.laneIndex.poseAt(hit.lane, hit.s);
+    return new Vector3(pose.x, this.sampleHeight(pose.x, pose.z) ?? point.y, pose.z);
+  }
+
+  /**
    * Place one drawn route point at the end of the path.
    *
    * Drawing only ever appends. Measuring the click against every existing
-   * segment and splicing it in when it landed within a metre or so of one
-   * cannot work: that distance is computed from a projection clamped to the
-   * segment's ends, and past the final vertex it is just the stride length, so
-   * every stride shorter than the radius reads as a mid-path click. A straight
-   * path's segments are collinear and the earliest wins the tie, so each new
-   * point lands behind the first and the path draws itself backwards — worst on
-   * walkers, whose strides are shorter than the radius. A point in the wrong
-   * place is moved by dragging its handle, which acts on the point itself
-   * instead of guessing intent from proximity.
-   *
-   * ## Clicking the last point again is a wait, on timed routes only
-   *
-   * Two keyframes on one spot is how an author writes a dwell, so a click
-   * within a few pixels of the last point's screen position repeats that point
-   * exactly rather than sampling the ground under the cursor. The test is in
-   * screen space on purpose: at a grazing camera angle the ground point a few
-   * pixels away is tens of metres away, so a world-space radius would either
-   * miss the gesture or swallow deliberate nearby steps. An untimed route has
-   * no time axis and therefore no dwell to express, so it never snaps.
+   * segment and splicing it in when it landed within a metre or so cannot work:
+   * that distance is computed from a projection clamped to the segment's ends,
+   * and a straight path's segments are collinear. A point in the wrong place is
+   * moved by dragging its handle, which acts on the point itself.
    */
   protected addCustomRoutePoint(point: Vector3, event?: { clientX: number; clientY: number }): void {
+    const snapped = this.routePoint(point);
+    if (!snapped) {
+      this.flash("Route points must stay on a connected driving lane");
+      return;
+    }
+    point = snapped;
     const draft = this.customRouteDraft;
     if (!draft || draft.points.length >= 128) return;
     const latest = draft.points.at(-1);
