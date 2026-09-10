@@ -16,6 +16,7 @@
 
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
+import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { app } from "electron";
@@ -35,6 +36,18 @@ function processAlive(pid) {
   } catch {
     return false;
   }
+}
+
+/** Ask the OS for a loopback port before handing it to the supervisor. */
+function availableLoopbackPort() {
+  return new Promise((resolve, reject) => {
+    const reservation = createServer();
+    reservation.once("error", reject);
+    reservation.listen(0, "127.0.0.1", () => {
+      const address = /** @type {import("node:net").AddressInfo} */ (reservation.address());
+      reservation.close((error) => error ? reject(error) : resolve(address.port));
+    });
+  });
 }
 
 /**
@@ -84,6 +97,7 @@ async function checkContract(baseUrl, controlToken) {
  *   `dataRoot` becomes `SIMFORGE_CLOUD_ROOT` for the host; `env` carries the
  *   other overrides the shell decides. `onExit` fires only for a supervisor
  *   this shell started.
+ *   Port zero selects an available loopback port; an explicit port is preserved.
  */
 export function createLocalHost({ port, dataRoot, env, onExit }) {
   const hostEnv = { ...process.env, ...env, SIMFORGE_CLOUD_ROOT: dataRoot };
@@ -110,7 +124,7 @@ export function createLocalHost({ port, dataRoot, env, onExit }) {
       }
     }
     const { args, cwd } = await supervisorCommand();
-    const baseUrl = `http://127.0.0.1:${port}`;
+    const selectedPort = port === 0 ? await availableLoopbackPort() : port;
     supervisor = spawn(process.execPath, args, {
       cwd,
       stdio: "inherit",
@@ -118,7 +132,8 @@ export function createLocalHost({ port, dataRoot, env, onExit }) {
       env: {
         ...hostEnv,
         ELECTRON_RUN_AS_NODE: "1",
-        PORT: String(port),
+        PORT: String(selectedPort),
+        SIMFORGE_API_BASE_URL: hostEnv.SIMFORGE_API_BASE_URL?.trim() || `http://127.0.0.1:${selectedPort}`,
         HOSTNAME: "127.0.0.1",
         SIMFORGE_LOCAL_WORKER: hostEnv.SIMFORGE_LOCAL_WORKER ?? "1",
       },

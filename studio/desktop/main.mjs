@@ -374,7 +374,7 @@ if (!app.requestSingleInstanceLock()) {
         cloudOrigin ||= metadata.simforgeCloudOrigin;
       }
       localHost = createLocalHost({
-        port: Number(process.env.PORT ?? "5199"),
+        port: Number(process.env.PORT ?? (app.isPackaged ? "0" : "5199")),
         dataRoot,
         env: cloudOrigin ? { SIMFORGE_CLOUD_ORIGIN: cloudOrigin } : {},
         onExit: (code) => {
