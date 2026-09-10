@@ -38,6 +38,12 @@ the AppImage executable; `--appimage-extract-and-run` launches it without FUSE.
 Debian packages use the normal package manager. Ordinary use does not require
 disabling Electron's sandbox.
 
+On macOS, local data lives in `~/Library/Application Support/SimForge Studio`.
+Studio 0.1.7 fixes startup for data paths containing spaces, URL-reserved
+characters, or Unicode. If 0.1.6 reports that the local host did not publish
+its record, upgrade rather than deleting the data folder: this path-handling
+failure does not require a database reset.
+
 Use **Connect** in the app switcher for optional SimCloud access. Connecting does
 not move local projects, simulation jobs, or render outputs off this computer.
 Cloud Storage transfers and managed inference submissions are explicit. Cloud

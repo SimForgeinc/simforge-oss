@@ -1,5 +1,4 @@
 import { mkdir } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool, type PoolClient } from "pg";
 import { LOCAL_DATABASE_DIR } from "./config";
@@ -62,7 +61,8 @@ async function getPGlite(): Promise<PGlite> {
   if (!state.pglitePromise) {
     state.pglitePromise = (async () => {
       await mkdir(LOCAL_DATABASE_DIR, { recursive: true });
-      const db = new PGlite(pathToFileURL(LOCAL_DATABASE_DIR).href, {
+      // PGlite takes a native path; its file:// shorthand does not decode URL escapes.
+      const db = new PGlite(LOCAL_DATABASE_DIR, {
         relaxedDurability: false,
       });
       try {

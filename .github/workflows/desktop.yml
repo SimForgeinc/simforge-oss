@@ -153,6 +153,8 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
+      - name: Verify fresh local database under native filesystem paths
+        run: pnpm test:fresh-schema
       - name: Typecheck Studio before native packaging
         env:
           SIMFORGE_DESKTOP_BUILD: "1"
