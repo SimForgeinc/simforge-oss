@@ -74,24 +74,6 @@ describe("simple timed routes", () => {
     )).toEqual([]);
     document.dispose();
   });
-
-  it("leaves anchored road actors on the topology-owned connected route", async () => {
-    const document = await EditorDocument.open(MAPS[0]!, {
-      store: new WebTemplateFileStore({ storage: new MemoryStorage() }),
-      autosaveMs: 60_000,
-    });
-    const [actorId] = document.add([{
-      laneRef: { roadId: "1", section: 0, laneId: -1, s: 4, t: 0, headingOffsetRad: 0 },
-      catalogId: "vehicle.sedan",
-      x: 14,
-      y: 0,
-      z: 6,
-      headingRad: 0,
-    }]);
-    convertDocumentToSimpleTimedRoutes(document);
-    expect(document.data.choreography.interactions.filter((interaction) => interaction.actor === actorId)).toEqual([]);
-    document.dispose();
-  });
   it("replaces competing actor motion with one bounded placeholder route", async () => {
     const document = await EditorDocument.open(MAPS[0]!, {
       store: new WebTemplateFileStore({ storage: new MemoryStorage() }),

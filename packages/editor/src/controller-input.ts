@@ -425,19 +425,17 @@ export abstract class EditorControllerInput extends EditorControllerCommands {
           event.stopPropagation();
           const ground = this.groundPoint(event);
           const pointIndex = this.customRouteDraft.draggingPointIndex;
-          const snapped = ground ? this.routePoint(ground) : null;
-          if (snapped) {
+          if (ground && pointIndex !== null && this.customRouteDraft.points[pointIndex]) {
             this.customRouteDraft.points[pointIndex] = {
               ...this.customRouteDraft.points[pointIndex],
-              x: Number(snapped.x.toFixed(3)),
-              z: Number(snapped.z.toFixed(3)),
+              x: Number(ground.x.toFixed(3)),
+              z: Number(ground.z.toFixed(3)),
             };
             this.syncCustomRouteDraft();
             this.notify();
           }
         } else if (this.customRouteDraft?.tool === 'add') {
-          const ground = this.groundPoint(event);
-          this.updateCustomRouteCursor(ground ? this.routePoint(ground) : null);
+          this.updateCustomRouteCursor(this.groundPoint(event));
         }
         return;
       case 'placing': {
