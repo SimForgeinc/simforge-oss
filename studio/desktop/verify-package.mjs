@@ -228,6 +228,17 @@ for (const rel of archives) {
   if (runtimeManifest && !(runtimeManifest.supportTiers ?? []).some((tier) => tier.tier === "bevy-sensor-render")) {
     problems.push(`${rel}: native runtime carries no bevy-sensor-render tier; local Bevy rendering would be unavailable`);
   }
+  if (platform === process.platform && expectedArch === process.arch) {
+    try {
+      const runtime = JSON.parse(execFileSync(join(stage, manifest.nativeRunner), ["runtime", "show"], {
+        encoding: "utf8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, SIMFORGE_RUNTIME_MANIFEST: join(stage, manifest.nativeRuntimeRoot, "bin", "runtime-manifest.json") },
+      }));
+      if (runtime.schema !== "simforge.native-runtime/v1" || runtime.target !== target.triple) throw new Error("Unexpected native runtime identity");
+    } catch (error) {
+      problems.push(`${rel}: packaged native runner failed runtime show: ${String(error.stderr ?? error.message).trim()}`);
+    }
+  }
   for (const problem of await verifyNativeClosure(stage, manifest)) problems.push(`${rel}: ${problem}`);
 }
 

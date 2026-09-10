@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { unsignedMachO } from "./stage-manifest.mjs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { prepareRuntimeSeal } from "./sign-mac.mjs";
 
 function unsignedImage() {
   const bytes = Buffer.alloc(4120);
@@ -61,4 +66,38 @@ test("code and link-edit table mutations cannot hide behind a replacement signat
 test("data after a declared signature is rejected rather than excluded from integrity", () => {
   const modified = Buffer.concat([withSignature(unsignedImage(), 64), Buffer.from([1])]);
   assert.throws(() => unsignedMachO(modified), Error);
+});
+
+test("signed runtime manifests describe final executable bytes and reject code mutation", () => {
+  const root = mkdtempSync(join(tmpdir(), "runtime-signing-"));
+  const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+  try {
+    mkdirSync(join(root, "bin"));
+    const original = unsignedImage();
+    const binary = join(root, "bin", "simforge-runner");
+    const manifestPath = join(root, "bin", "runtime-manifest.json");
+    writeFileSync(binary, original);
+    writeFileSync(manifestPath, JSON.stringify({
+      schema: "simforge.native-runtime/v1",
+      binary: { name: "simforge-runner", sha256: hash(original), sizeBytes: original.length },
+      components: [],
+    }));
+    writeFileSync(join(root, "SHA256SUMS"),
+      `${hash(original)}  bin/simforge-runner\n${hash(readFileSync(manifestPath))}  bin/runtime-manifest.json\n`);
+    const seal = prepareRuntimeSeal(root);
+    const signed = withSignature(original, 176);
+    writeFileSync(binary, signed);
+    seal();
+    const final = JSON.parse(readFileSync(manifestPath, "utf8"));
+    assert.equal(final.binary.sha256, hash(signed));
+    assert.equal(final.binary.sizeBytes, signed.length);
+    const sealedManifest = readFileSync(manifestPath);
+    const tampered = Buffer.from(signed);
+    tampered[2048] ^= 1;
+    writeFileSync(binary, tampered);
+    assert.throws(seal, /changed runtime code/);
+    assert.deepEqual(readFileSync(manifestPath), sealedManifest);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

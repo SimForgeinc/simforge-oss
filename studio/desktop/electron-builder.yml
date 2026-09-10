@@ -71,6 +71,7 @@ nsis:
   artifactName: "SimForge-Studio-Setup-${version}-${arch}.${ext}"
 
 mac:
+  sign: desktop/sign-mac.mjs
   target:
     - dmg
     - zip
