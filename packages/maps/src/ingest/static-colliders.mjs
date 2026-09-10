@@ -5,6 +5,14 @@ const SOLID_CATEGORIES = new Set(['building']);
 const TRAVEL_LANE_TYPES = new Set(['driving', 'biking', 'parking', 'shoulder']);
 const ROAD_INDEX_CELL_M = 20;
 const COLLIDER_CLASSES = ['building', 'wall', 'barrier', 'prop', 'road-boundary'];
+/**
+ * A kerb or guardrail is a strip; its OBB stands in for it only while the strip
+ * is thin. Authoring exports (RoadRunner, Unreal) also emit one merged
+ * `Roads_Curb` mesh for the whole map, whose bounding box is the map itself:
+ * that OBB would be a solid slab every vehicle spawns inside, so a
+ * road-boundary node thicker than this is not a collider at all.
+ */
+const ROAD_BOUNDARY_MAX_THICKNESS_M = 2;
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
 export function extractGlbColliders(buffer, tileId) {
@@ -24,7 +32,8 @@ function extractJsonColliders(json, tileId) {
     const bounds = node.mesh === undefined ? null : meshBounds(json, node.mesh);
     if (collisionClass && bounds) {
       const obb = projectedObb(bounds, world);
-      if (obb.lengthM >= 0.08 && obb.widthM >= 0.08 && Number.isFinite(obb.center.x + obb.center.z)) colliders.push({ id: `${tileId}/${index}`, class: collisionClass, obb });
+      const thin = collisionClass !== 'road-boundary' || Math.min(obb.lengthM, obb.widthM) <= ROAD_BOUNDARY_MAX_THICKNESS_M;
+      if (thin && obb.lengthM >= 0.08 && obb.widthM >= 0.08 && Number.isFinite(obb.center.x + obb.center.z)) colliders.push({ id: `${tileId}/${index}`, class: collisionClass, obb });
       else ignored += 1;
     } else if (node.mesh !== undefined) ignored += 1;
     for (const child of node.children ?? []) visit(child, world);

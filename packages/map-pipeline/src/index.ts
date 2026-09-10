@@ -303,7 +303,7 @@ async function webRuntimeStage(master: MasterStageResult, geometry: WebStageResu
   const topologyMember = master.closure.members['topology-index.json.gz'];
   const masterMember = master.closure.members['master.gltf'];
   if (!topologyMember || !masterMember) throw new Error('Scenario-ready web maps require canonical geometry and topology');
-  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0canonical-static-colliders-v1`);
+  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0canonical-static-colliders-v2`);
   const inputDigest = sha256(canonicalJson({ mapId: options.name, geometry: geometry.closureDigest, master: masterMember.sha256, topology: topologyMember.sha256 }));
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'web-runtime', cacheKey);

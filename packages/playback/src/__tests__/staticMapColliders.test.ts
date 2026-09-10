@@ -67,6 +67,27 @@ describe('precomputed static map colliders', () => {
     expect(calls.every((url) => !url.endsWith('.glb'))).toBe(true);
   });
 
+  it('drops a map-wide road-boundary slab from an already-published artifact', async () => {
+    resetStaticColliderCacheForTests();
+    const slab = {
+      id: 'canonical-master/2426', class: 'road-boundary',
+      obb: { center: { x: 171.5, z: -115.9 }, lengthM: 429.7, widthM: 452.1, headingRad: 0 },
+    };
+    const kerb = {
+      id: 'canonical-master/7', class: 'road-boundary',
+      obb: { center: { x: 40, z: -20 }, lengthM: 12, widthM: 0.2, headingRad: 0.3 },
+    };
+    const building = { id: 'canonical-master/2518', class: 'building', obb: { center: { x: 259, z: -252 }, lengthM: 5.5, widthM: 4.8, headingRad: 0.58 } };
+    const fetcher = fixtureFetcher(artifact({
+      sources: [{ id: 'canonical-master', file: 'master.gltf', declaredBytes: 1 }],
+      colliders: [slab, building, kerb],
+      statistics: { sourceTiles: 1, accepted: 3, rejectedRoadOverlap: 0, ignored: 981, classes: { building: 1, wall: 0, barrier: 0, prop: 0, 'road-boundary': 2 } },
+    }), []);
+    const result = await loadStaticMapColliders('/dev-assets/rfs/3d/manifest.json', fetcher);
+    expect(result.colliders).toEqual([building, kerb]);
+    expect(result.diagnostics).toMatchObject({ status: 'ready', accepted: 2, ignored: 982, classes: { building: 1, 'road-boundary': 1 } });
+  });
+
   it('fails immediately with diagnostics when the derivative is absent', async () => {
     resetStaticColliderCacheForTests();
     const result = await loadStaticMapColliders('/dev-assets/missing/3d/manifest.json', (async () => new Response('', { status: 404 })) as typeof fetch);

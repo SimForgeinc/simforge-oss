@@ -2,6 +2,16 @@ import { sha256Bytes, type StaticColliderClass, type StaticMapCollider } from '@
 
 const SCHEMA = 'simforge.static-map-colliders/v1';
 const CLASSES = new Set<StaticColliderClass>(['building', 'wall', 'barrier', 'prop', 'road-boundary']);
+/**
+ * Same rule as `ROAD_BOUNDARY_MAX_THICKNESS_M` in the artifact builder
+ * (`@simforge-oss/maps` ingest/static-colliders): a kerb or guardrail OBB is
+ * only a strip. Artifacts published before the builder enforced it carry the
+ * map-wide merged `Roads_Curb` mesh as a road-boundary slab the size of the
+ * map, which every vehicle spawns inside. Published closures are immutable, so
+ * the loader drops those here rather than waiting for every map to be
+ * republished.
+ */
+const ROAD_BOUNDARY_MAX_THICKNESS_M = 2;
 
 interface DerivativeManifest {
   readonly sourceManifestSha256?: string;
@@ -103,9 +113,20 @@ async function loadArtifact(manifestUrl: string, fetcher: typeof fetch): Promise
   if (await sha256Hex(bytes) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
   const artifact = JSON.parse(new TextDecoder().decode(bytes)) as StaticColliderArtifact;
   validateArtifact(artifact, manifest, variant.digest);
+  const colliders = artifact.colliders.filter(
+    (collider) => collider.class !== 'road-boundary' || Math.min(collider.obb.lengthM, collider.obb.widthM) <= ROAD_BOUNDARY_MAX_THICKNESS_M,
+  );
+  const dropped = artifact.colliders.length - colliders.length;
   return {
-    colliders: artifact.colliders,
-    diagnostics: { digest: artifact.digest, status: 'ready', ...artifact.statistics },
+    colliders,
+    diagnostics: {
+      digest: artifact.digest,
+      status: 'ready',
+      ...artifact.statistics,
+      accepted: colliders.length,
+      ignored: artifact.statistics.ignored + dropped,
+      classes: { ...artifact.statistics.classes, 'road-boundary': artifact.statistics.classes['road-boundary'] - dropped },
+    },
   };
 }
 
