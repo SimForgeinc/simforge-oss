@@ -44,9 +44,10 @@ characters, or Unicode. If 0.1.6 reports that the local host did not publish
 its record, upgrade rather than deleting the data folder: this path-handling
 failure does not require a database reset.
 
-Packaged Studio 0.1.8 chooses an available private loopback port instead of
-claiming a development server's port. An explicit `PORT` still wins; source
-development keeps its default port `5199`.
+Packaged Studio 0.1.8 remembers an available private loopback port between
+launches, preserving browser-local UI settings. If that port is occupied, it
+chooses another without stopping the other service. An explicit `PORT` still
+wins; source development keeps its default port `5199`.
 
 Use **Connect** in the app switcher for optional SimCloud access. Connecting does
 not move local projects, simulation jobs, or render outputs off this computer.

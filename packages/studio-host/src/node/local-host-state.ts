@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 export const LOCAL_HOST_STATE_FILE = "host.json";
+const LOCAL_HOST_PORT_FILE = "host-port.json";
 
 /**
  * Environment variable the supervisor sets for the processes it owns (the
@@ -82,9 +83,21 @@ export async function readLocalHostState(env: NodeJS.ProcessEnv = process.env): 
   }
 }
 
+/** Retain the renderer's origin after the per-start control record is removed. */
+export async function readLocalHostPort(env: NodeJS.ProcessEnv = process.env): Promise<number | null> {
+  try {
+    const port: unknown = JSON.parse(await readFile(join(localHostStateDir(env), LOCAL_HOST_PORT_FILE), "utf8"));
+    return typeof port === "number" && Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function writeLocalHostState(state: LocalHostState, env: NodeJS.ProcessEnv = process.env): Promise<string> {
   const path = join(localHostStateDir(env), LOCAL_HOST_STATE_FILE);
   await mkdir(dirname(path), { recursive: true });
+  // Only the port survives shutdown; never retain the expired control token.
+  await writeFile(join(localHostStateDir(env), LOCAL_HOST_PORT_FILE), `${state.port}\n`, { mode: 0o600 });
   await writeFile(path, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
   return path;
 }

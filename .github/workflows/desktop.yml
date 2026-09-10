@@ -153,6 +153,9 @@ jobs:
         run: |
           pnpm -r --filter './packages/**' build
         working-directory: .
+      - name: Verify retained local-host endpoint
+        run: pnpm --filter @simforge-oss/studio-host test src/local-host-state.test.ts
+        working-directory: .
       - name: Verify fresh local database under native filesystem paths
         run: pnpm test:fresh-schema
       - name: Typecheck Studio before native packaging

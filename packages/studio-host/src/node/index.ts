@@ -11,6 +11,7 @@ export {
   localHostSessionToken,
   localHostStateDir,
   readLocalHostState,
+  readLocalHostPort,
   writeLocalHostState,
   removeLocalHostState,
   secretsEqual,

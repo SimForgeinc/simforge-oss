@@ -23,6 +23,7 @@ import { app } from "electron";
 import {
   localHostSessionToken,
   readLocalHostState,
+  readLocalHostPort,
   waitForLocalHostReady,
 } from "@simforge-oss/studio-host/node";
 import { assertStagePlatform, readStageManifest } from "./stage-manifest.mjs";
@@ -38,12 +39,15 @@ function processAlive(pid) {
   }
 }
 
-/** Ask the OS for a loopback port before handing it to the supervisor. */
-function availableLoopbackPort() {
+/** Keep the previous renderer origin when free, otherwise choose another loopback port. */
+function availableLoopbackPort(preferredPort = 0) {
   return new Promise((resolve, reject) => {
     const reservation = createServer();
-    reservation.once("error", reject);
-    reservation.listen(0, "127.0.0.1", () => {
+    reservation.once("error", (error) => {
+      if (preferredPort !== 0 && error.code === "EADDRINUSE") resolve(availableLoopbackPort());
+      else reject(error);
+    });
+    reservation.listen(preferredPort, "127.0.0.1", () => {
       const address = /** @type {import("node:net").AddressInfo} */ (reservation.address());
       reservation.close((error) => error ? reject(error) : resolve(address.port));
     });
@@ -124,7 +128,9 @@ export function createLocalHost({ port, dataRoot, env, onExit }) {
       }
     }
     const { args, cwd } = await supervisorCommand();
-    const selectedPort = port === 0 ? await availableLoopbackPort() : port;
+    const selectedPort = port === 0
+      ? await availableLoopbackPort(await readLocalHostPort(hostEnv) ?? existing?.port ?? 0)
+      : port;
     supervisor = spawn(process.execPath, args, {
       cwd,
       stdio: "inherit",
