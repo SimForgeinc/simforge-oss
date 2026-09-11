@@ -12,6 +12,7 @@
     "host:stop": "tsx scripts/stop-local-host.ts",
     "host:open": "tsx scripts/open-local-host.ts",
     "desktop": "electron .",
+    "desktop:dev": "node desktop/dev.mjs",
     "desktop:stage": "node desktop/stage.mjs",
     "desktop:encoders": "node desktop/build-encoders.mjs",
     "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --publish never",

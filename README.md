@@ -98,6 +98,23 @@ pnpm dev
 
 SimForge Studio is then available at <http://localhost:5199>.
 
+Everything is live from source. `pnpm dev` runs Next in development, and the
+workspace packages resolve to their `src/` through the `development` export
+condition, so an edit in `packages/editor` or `packages/viewer` hot-reloads the
+open editor without a package build (about 2 s; edits under `studio/app` take
+about 4 s because the server bundle rebuilds too). For the desktop shell, run
+it beside the same dev host:
+
+```sh
+pnpm --filter @simforge-oss/studio desktop:dev
+```
+
+The shell attaches to the host on port 5199 instead of starting its own, so the
+window hot-reloads exactly like the browser tab; the main process itself loads
+workspace packages from `src/` as well (tsx + the `development` condition), so
+a stale `dist/` never gets in the way. A change to `studio/desktop/*.mjs` needs
+a shell restart: those files are the Electron main process.
+
 On first boot, development Studio discovers complete map installations from
 `${SIMFORGE_MAPS_CACHE_ROOT:-${XDG_DATA_HOME:-~/.local/share}/simforge/maps}`,
 populated by `simforge maps pull`. A registry map is published only when its

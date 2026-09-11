@@ -16,7 +16,10 @@
 //     writes the matching files), so a build cannot be pointed at a foreign feed.
 
 import { app } from "electron";
-import { autoUpdater } from "electron-updater";
+import electronUpdater from "electron-updater";
+
+// CommonJS package: the named form only works when Node's CJS lexer sees it, not under a loader (dev).
+const { autoUpdater } = electronUpdater;
 import { CHANNELS } from "./release-identity.mjs";
 
 /** Owner/repository the versioned releases and the channel feeds live under. */
