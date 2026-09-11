@@ -14,11 +14,11 @@
 //   tag                 `studio-<label>`. It names the immutable Git commit
 //                       the publication was built from.
 //
-// The first preview publishes binaries whose embedded version is 0.1.0 under
-// the label "preview.1": relabelling those bytes 0.1.0-preview.1 would claim
-// a build that was never made. Every later build sets the embedded version
-// equal to its label, and `assertLabelMatchesBuild` enforces that once a
-// label is a version rather than a preview name.
+// The first previews published binaries whose embedded version was 0.1.0 under
+// labels like "preview.1"; those tags stay readable (parseReleaseTag). Every
+// publication since sets the label equal to the embedded version, previews as
+// prerelease semver ("0.1.10-preview.1"), because the background updater orders
+// releases by semver and cannot place a generation name.
 //
 // The tag namespace matters operationally: `.github/workflows/publish.yml`
 // triggers on `v*` and publishes the npm/PyPI stack. A desktop tag must
@@ -76,22 +76,19 @@ export function parseReleaseTag(tag) {
 const VERSION_LABEL = /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9a-z.-]+)?$/;
 
 /**
- * Refuse a publication whose label claims a version the bytes do not carry.
- * A non-version label ("preview.1") is free to differ from the embedded
- * version and is recorded alongside it; a version label must be exactly the
- * embedded version, so `studio-0.1.1` can only ever hold 0.1.1 binaries.
+ * Refuse a publication whose label is not the version the bytes carry. Labels
+ * are semver (prerelease for previews), so `studio-0.1.1` can only ever hold
+ * 0.1.1 binaries and the updater can order what a channel offers.
  * @param {{ label: string; embeddedVersion: string }} identity
  */
 export function assertLabelMatchesBuild({ label, embeddedVersion }) {
   assertLabel(label);
-  if (typeof embeddedVersion !== "string" || embeddedVersion.length === 0) {
-    throw new Error("embeddedVersion is required");
+  if (typeof embeddedVersion !== "string" || embeddedVersion.length === 0) throw new Error("embeddedVersion is required");
+  if (!VERSION_LABEL.test(label)) {
+    throw new Error(`distribution label ${label} must be a semver version (preview labels use e.g. 0.1.10-preview.1)`);
   }
-  if (VERSION_LABEL.test(label) && label !== embeddedVersion) {
-    throw new Error(
-      `label ${label} names a version but the binaries embed ${embeddedVersion}; ` +
-        "publish under a non-version label or rebuild with studio/package.json set to the label",
-    );
+  if (label !== embeddedVersion) {
+    throw new Error(`label ${label} names a version but the binaries embed ${embeddedVersion}; rebuild with studio/package.json set to the label`);
   }
 }
 

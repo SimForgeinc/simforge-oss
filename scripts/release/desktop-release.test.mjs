@@ -23,9 +23,11 @@ import {
 } from "../../studio/desktop/release-identity.mjs";
 import {
   buildDownloadsManifest,
+  channelFeedTag,
   collectInstallers,
   embeddedVersionFromAssetName,
   embeddedVersionOf,
+  feedFilesFor,
   formatSums,
   parseSums,
 } from "./desktop-release-lib.mjs";
@@ -53,15 +55,43 @@ test("the release list reader ignores stack tags and malformed desktop tags", ()
   assert.equal(parseReleaseTag(undefined), null);
 });
 
-test("a version label may only name the version the binaries carry", () => {
-  // The first preview ships 0.1.0 bytes under a preview name: allowed, and
-  // both identities are recorded.
-  assertLabelMatchesBuild({ label: "preview.1", embeddedVersion: "0.1.0" });
+test("a label is the version the binaries carry; previews are prerelease semver", () => {
   assertLabelMatchesBuild({ label: "0.1.1", embeddedVersion: "0.1.1" });
+  assertLabelMatchesBuild({ label: "0.1.10-preview.1", embeddedVersion: "0.1.10-preview.1" });
   assert.throws(
     () => assertLabelMatchesBuild({ label: "0.1.2", embeddedVersion: "0.1.0" }),
     /names a version but the binaries embed 0\.1\.0/,
   );
+  // The updater orders releases by semver; a generation name cannot be placed.
+  assert.throws(() => assertLabelMatchesBuild({ label: "preview.9", embeddedVersion: "0.1.9" }), /must be a semver version/);
+  // Historical preview tags stay readable even though they can no longer be published.
+  assert.equal(parseReleaseTag("studio-preview.8"), "preview.8");
+});
+
+test("channel feed files point every entry at the versioned release and take the channel's name", () => {
+  const assets = [
+    { assetName: "SimForge-Studio-Setup-0.1.10-preview.1-x64.exe", originalFilename: "SimForge Studio-Setup-0.1.10-preview.1-x64.exe" },
+    { assetName: "SimForge-Studio-0.1.10-preview.1-linux-x64.AppImage", originalFilename: "SimForge-Studio-0.1.10-preview.1-linux-x64.AppImage" },
+  ];
+  const files = [
+    { name: "preview.yml", text: "version: 0.1.10-preview.1\nfiles:\n  - url: SimForge Studio-Setup-0.1.10-preview.1-x64.exe\n    sha512: abc\n    size: 1\npath: SimForge Studio-Setup-0.1.10-preview.1-x64.exe\nsha512: abc\nreleaseDate: '2026-09-10T00:00:00.000Z'\n" },
+    { name: "preview-linux.yml", text: "version: 0.1.10-preview.1\nfiles:\n  - url: SimForge-Studio-0.1.10-preview.1-linux-x64.AppImage\n    sha512: def\n    size: 2\npath: SimForge-Studio-0.1.10-preview.1-linux-x64.AppImage\nsha512: def\n" },
+  ];
+  const feed = feedFilesFor(assets, { label: "0.1.10-preview.1", channel: "preview", files });
+  const base = "https://github.com/SimForgeinc/simforge-oss/releases/download/studio-0.1.10-preview.1/";
+  assert.deepEqual(feed.map((file) => file.name), ["preview.yml", "preview-linux.yml"]);
+  assert.match(feed[0].text, new RegExp(`- url: ${base}SimForge-Studio-Setup-0.1.10-preview.1-x64.exe\\n`));
+  assert.match(feed[0].text, new RegExp(`^path: ${base}SimForge-Studio-Setup-0.1.10-preview.1-x64.exe$`, "m"));
+  // Digests describe the installer bytes and are never rewritten.
+  assert.match(feed[0].text, /sha512: abc\n    size: 1\n/);
+  assert.deepEqual(feed[1].references, ["SimForge-Studio-0.1.10-preview.1-linux-x64.AppImage"]);
+  // Stable is what electron-updater calls "latest".
+  const stable = feedFilesFor(assets, { label: "0.1.10-preview.1", channel: "stable", files: [files[1]] });
+  assert.equal(stable[0].name, "latest-linux.yml");
+  assert.equal(channelFeedTag("stable"), "studio-channel-stable");
+  // A feed may not describe another version, or an installer the release lacks.
+  assert.throws(() => feedFilesFor(assets, { label: "0.1.11", channel: "preview", files: [files[0]] }), /describes 0\.1\.10-preview\.1, not 0\.1\.11/);
+  assert.throws(() => feedFilesFor([assets[0]], { label: "0.1.10-preview.1", channel: "preview", files: [files[1]] }), /not an asset of studio-0\.1\.10-preview\.1/);
 });
 
 test("asset names lose spaces and nothing else", () => {

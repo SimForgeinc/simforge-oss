@@ -50,8 +50,12 @@ import {
   SUMS_FILE,
   buildDownloadsManifest,
   buildReleaseRecord,
+  channelFeedTag,
+  collectBlockmaps,
   collectInstallers,
   collectSumsFiles,
+  feedFilesFor,
+  readBuilderFeedFiles,
   embeddedVersionOf,
   assetUrl,
   formatSums,
@@ -290,6 +294,15 @@ async function main() {
     );
   }
   const platforms = [...new Set(assets.map((asset) => asset.platform))].sort();
+  // The update feed: electron-builder's update-info files rewritten to point at
+  // this release's immutable assets, plus the blockmaps the differential
+  // updater fetches beside each installer. Both are proven against the asset
+  // set here, before anything is uploaded.
+  const blockmaps = await collectBlockmaps(installersDir, assets);
+  const feedFiles = feedFilesFor(assets, { label, channel, files: await readBuilderFeedFiles(installersDir) });
+  if (feedFiles.length === 0 && publish !== "none") {
+    throw new Error("publishing requires electron-builder's update-info files (<channel>*.yml) beside the installers");
+  }
   if (declaredPlatforms !== null) {
     // The declaration is checked against the bytes in both directions, so
     // --platforms can neither hide a platform that is present nor promise one
@@ -441,6 +454,9 @@ async function main() {
   await writeFile(join(outDir, AUDIT_FILE), `${JSON.stringify(audit, null, 2)}\n`);
   await writeFile(join(outDir, DOWNLOADS_FILE), `${JSON.stringify(downloads, null, 2)}\n`);
   if (gates) await writeFile(join(outDir, GATES_FILE), `${JSON.stringify(gates, null, 2)}\n`);
+  const feedDir = join(outDir, "feed");
+  await mkdir(feedDir, { recursive: true });
+  for (const file of feedFiles) await writeFile(join(feedDir, file.name), file.text);
 
   const plan = {
     component: "simforge-desktop-release",
@@ -452,6 +468,8 @@ async function main() {
     sourceRevision,
     platforms,
     assets: record.assets.length,
+    blockmaps: blockmaps.map((entry) => entry.assetName),
+    feed: { tag: channelFeedTag(channel), files: feedFiles.map((file) => ({ name: file.name, references: file.references })) },
     licenseAudit: audit.publicRedistribution,
     correspondingSource: encoderReceipts.verified,
     encoderReceiptProblems: encoderReceipts.problems,
@@ -505,21 +523,21 @@ async function main() {
 
   const uploads = [
     ...assets.map((asset) => join(installersDir, asset.sourcePath)),
+    ...blockmaps.map((entry) => join(installersDir, entry.sourcePath)),
     ...correspondingSource.map((entry) => entry.path),
     join(outDir, SUMS_FILE),
     join(outDir, RELEASE_FILE),
     join(outDir, NOTICES_FILE),
   ];
+  const uploadNameOf = (/** @type {string} */ file) =>
+    [...assets, ...blockmaps].find((candidate) => basename(candidate.sourcePath) === basename(file))?.assetName ?? basename(file);
   // Republishing the same label from a NEWER source must not leave a single
   // byte of the older one attached. --clobber only replaces same-named files,
   // so an asset whose name changed, or a platform dropped from the set, would
   // otherwise survive and the release would be a mixture of two revisions
   // described by one manifest. Anything not in the intended set is deleted
   // first.
-  const intended = new Set(uploads.map((file) => {
-    const match = assets.find((candidate) => basename(candidate.sourcePath) === basename(file));
-    return match ? match.assetName : basename(file);
-  }));
+  const intended = new Set(uploads.map(uploadNameOf));
   const attached = JSON.parse(await gh(["api", "--paginate", `repos/${REPOSITORY}/releases`]))
     .find((/** @type {any} */ release) => release.tag_name === tag)?.assets ?? [];
   for (const asset of attached) {
@@ -528,11 +546,9 @@ async function main() {
     await gh(["api", "--method", "DELETE", `repos/${REPOSITORY}/releases/assets/${asset.id}`]);
   }
   for (const file of uploads) {
-    const asset = assets.find((candidate) => basename(candidate.sourcePath) === basename(file));
     // GitHub derives the asset name from the file name; upload under the
     // normalized name so the checksum file and the URLs match what we wrote.
-    const uploadName = asset ? asset.assetName : basename(file);
-    await gh(["release", "upload", tag, `${file}#${uploadName}`, "--repo", REPOSITORY, "--clobber"]);
+    await gh(["release", "upload", tag, `${file}#${uploadNameOf(file)}`, "--repo", REPOSITORY, "--clobber"]);
   }
 
   // Everything uploaded is verified, documents included: a truncated
@@ -561,6 +577,12 @@ async function main() {
       `--prerelease=${CHANNEL_PRERELEASE[channel]}`,
       `--latest=${channel === "stable"}`,
     ]);
+    // Only now, with the bytes public, does the channel start offering them.
+    // The channel release is a rolling pointer: it carries the feed files and
+    // nothing else, and every file in it names immutable assets of a
+    // versioned release. Repointing = clobbering these same names; rolling
+    // back = republishing the previous label's feed/ directory.
+    await publishChannelFeed(channelFeedTag(channel), feedDir, feedFiles);
   }
 
   process.stdout.write(`${JSON.stringify({
@@ -573,6 +595,35 @@ async function main() {
     assetsVerified: record.assets.length + documents.length,
   }, null, 2)}\n`);
   return 0;
+}
+
+/**
+ * @param {string} feedTag
+ * @param {string} feedDir
+ * @param {readonly { name: string; version: string }[]} feedFiles
+ */
+async function publishChannelFeed(feedTag, feedDir, feedFiles) {
+  const existing = await gh(["release", "view", feedTag, "--repo", REPOSITORY, "--json", "id"]).catch(() => null);
+  if (existing === null) {
+    await gh([
+      "release", "create", feedTag,
+      "--repo", REPOSITORY,
+      "--title", `SimForge Studio update channel: ${feedTag.slice(feedTag.lastIndexOf("-") + 1)}`,
+      "--notes", "Rolling update feed consumed by installed SimForge Studio. Not a download page: see the versioned studio-* releases.",
+      "--prerelease",
+      "--latest=false",
+    ]);
+  }
+  for (const file of feedFiles) {
+    await gh(["release", "upload", feedTag, join(feedDir, file.name), "--repo", REPOSITORY, "--clobber"]);
+  }
+  process.stdout.write(`${JSON.stringify({
+    component: "simforge-desktop-release",
+    event: "feed.published",
+    tag: feedTag,
+    files: feedFiles.map((file) => file.name),
+    version: feedFiles[0]?.version ?? null,
+  })}\n`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

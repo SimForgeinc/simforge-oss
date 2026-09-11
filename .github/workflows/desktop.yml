@@ -325,6 +325,7 @@ jobs:
             studio/dist/desktop/out/*.AppImage
             studio/dist/desktop/out/*.deb
             studio/dist/desktop/out/*.blockmap
+            studio/dist/desktop/out/*.yml
             studio/dist/desktop/out/SHA256SUMS
             studio/dist/desktop-tools/*/tools-manifest.json
             studio/dist/desktop-tools/*/corresponding-source/*.tar.gz

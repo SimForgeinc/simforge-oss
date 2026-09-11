@@ -15,6 +15,7 @@ import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, join, relative } from "node:path";
 import {
+  TAG_PREFIX,
   CHANNEL_PRERELEASE,
   REQUIRED_PLATFORMS,
   assertLabel,
@@ -31,8 +32,97 @@ export const SUMS_FILE = "SHA256SUMS";
 export const RELEASE_FILE = "RELEASE.json";
 export const NOTICES_FILE = "THIRD_PARTY_NOTICES.md";
 
-/** Files that are installers. `.blockmap` is emitted by electron-builder and unused without an update feed. */
+/** Files that are installers. `.blockmap` sits beside each and is required by the update feed. */
 const INSTALLER_EXTENSIONS = [".exe", ".dmg", ".zip", ".appimage", ".deb"];
+
+/** electron-builder names update-info files `<channel>[-mac|-linux].yml` (`latest*` for the default channel). */
+const FEED_FILE_NAME = /^[a-z0-9-]+?(-mac|-linux)?\.yml$/;
+
+/** The tag of the rolling per-channel release that carries only the feed files. */
+export function channelFeedTag(channel) {
+  if (!Object.hasOwn(CHANNEL_PRERELEASE, channel)) throw new Error(`unknown channel ${channel}`);
+  return `${TAG_PREFIX}channel-${channel}`;
+}
+
+/**
+ * Rewrite electron-builder's update-info files so a rolling channel release
+ * can point at immutable bytes. The builder writes `latest*.yml` with
+ * release-relative `url`/`path` entries; the feed on `studio-channel-<c>` is
+ * a different release, so every reference becomes the absolute asset URL on
+ * the versioned release `studio-<label>`, and the file is renamed to the name
+ * electron-updater requests for that channel (`<channel>*.yml`; `latest*.yml`
+ * for stable). Digests and sizes are the builder's and are not touched: they
+ * describe the installer bytes, which this never rewrites.
+ *
+ * Only names that appear in `assets` may be referenced, so a feed can never
+ * point at an installer the release does not carry.
+ *
+ * @param {readonly { assetName: string; originalFilename: string }[]} assets
+ * @param {{ label: string; channel: string; files: readonly { name: string; text: string }[] }} input
+ * @returns {{ name: string; text: string; version: string; references: string[] }[]}
+ */
+export function feedFilesFor(assets, { label, channel, files }) {
+  const tag = releaseTag(label);
+  if (!Object.hasOwn(CHANNEL_PRERELEASE, channel)) throw new Error(`unknown channel ${channel}`);
+  const byOriginal = new Map(assets.map((asset) => [asset.originalFilename, asset.assetName]));
+  const prefix = channel === "stable" ? "latest" : channel;
+  return files.map(({ name, text }) => {
+    const match = FEED_FILE_NAME.exec(name);
+    if (!match) throw new Error(`${name} is not an electron-builder update-info file`);
+    const suffix = match[1] ?? "";
+    const references = new Set();
+    const resolveRef = (reference) => {
+      const original = reference.trim();
+      const assetName = byOriginal.get(original) ?? byOriginal.get(safeAssetName(original));
+      if (!assetName) throw new Error(`${name} references ${original}, which is not an asset of ${tag}`);
+      references.add(assetName);
+      return assetUrl(tag, assetName);
+    };
+    const rewritten = text
+      .replace(/^(\s*-\s*url:\s*)(.+)$/gm, (_, head, ref) => `${head}${resolveRef(ref)}`)
+      .replace(/^(path:\s*)(.+)$/gm, (_, head, ref) => `${head}${resolveRef(ref)}`);
+    const version = /^version:\s*(.+)$/m.exec(text)?.[1]?.trim();
+    if (!version) throw new Error(`${name} carries no version`);
+    if (version !== label) throw new Error(`${name} describes ${version}, not ${label}`);
+    if (references.size === 0) throw new Error(`${name} references no installer`);
+    return { name: `${prefix}${suffix}.yml`, text: rewritten, version, references: [...references] };
+  });
+}
+
+/**
+ * The `.blockmap` electron-builder writes beside each installer, which the
+ * differential updater fetches at `<installer url>.blockmap`. Companions of
+ * the installers, uploaded under the installer's asset name; not release
+ * assets in their own right (not in RELEASE.json or SHA256SUMS), so a missing
+ * one degrades an update to a full download instead of blocking a release.
+ * @param {string} dir
+ * @param {readonly { assetName: string; sourcePath: string }[]} assets
+ * @returns {Promise<{ assetName: string; sourcePath: string }[]>}
+ */
+export async function collectBlockmaps(dir, assets) {
+  const found = [];
+  for (const asset of assets) {
+    const sourcePath = `${asset.sourcePath}.blockmap`;
+    if (await stat(join(dir, sourcePath)).then((s) => s.isFile(), () => false)) {
+      found.push({ assetName: `${asset.assetName}.blockmap`, sourcePath });
+    }
+  }
+  return found;
+}
+
+/**
+ * The update-info files electron-builder wrote into a set of installers.
+ * @param {string} dir
+ * @returns {Promise<{ name: string; text: string }[]>}
+ */
+export async function readBuilderFeedFiles(dir) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true, recursive: true })) {
+    if (!entry.isFile() || !FEED_FILE_NAME.test(entry.name) || entry.name === "builder-debug.yml") continue;
+    files.push({ name: entry.name, text: await readFile(join(entry.parentPath ?? dir, entry.name), "utf8") });
+  }
+  return files.sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /** What a platform's binaries were signed with. Anything else is a lie about trust. */
 // "not-published" is the only honest state for a platform this publication

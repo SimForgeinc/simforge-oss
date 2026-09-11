@@ -55,6 +55,16 @@ afterPack: desktop/after-pack.mjs
 # above); only the file names are hyphenated, and they are hyphenated here at
 # source rather than renamed after the fact.
 artifactName: "SimForge-Studio-${version}-${os}-${arch}.${ext}"
+# Never used to upload (every invocation passes --publish never); present so
+# electron-builder writes the update-info files (<channel>[-mac|-linux].yml)
+# and blockmaps that desktop/auto-updater.mjs consumes. The URL here is a
+# placeholder: scripts/release/publish-desktop-release.mjs rewrites every
+# entry to the immutable asset URL of the versioned release and names the
+# file for the build's real channel before anything is published.
+publish:
+  provider: generic
+  url: "https://github.com/SimForgeinc/simforge-oss/releases/download/studio-channel-preview/"
+  channel: preview
 
 win:
   target:

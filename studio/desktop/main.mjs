@@ -28,6 +28,7 @@ import { createLocalHost } from "./local-host.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
 import { readDistributionIdentity } from "./release-identity.mjs";
 import { checkForUpdates, describeUpdate } from "./update-check.mjs";
+import { configureAutoUpdater } from "./auto-updater.mjs";
 
 /** Static pages and the preload ship beside this file (asar when packaged). */
 const pagesDir = app.isPackaged ? app.getAppPath() : dirname(fileURLToPath(import.meta.url));
@@ -264,33 +265,59 @@ async function packagedMetadata() {
 }
 
 /**
- * Help › Check for Updates…. A user action, in the main process, that reads
- * the public release list and shows what it found; it downloads and installs
- * nothing (see desktop/update-check.mjs).
+ * The shell's updater, once configured (see desktop/auto-updater.mjs). Its
+ * state drives the Help menu; Electron menus are immutable once built, so a
+ * state change rebuilds the menu rather than mutating a label.
+ * @type {{ enabled: boolean; state?: string; detail?: string; check?: () => Promise<unknown>; install?: () => void; timer?: NodeJS.Timeout } | null}
  */
-const updateMenuItem = {
-  label: "Check for Updates…",
-  click: menuAction(async () => {
-    const metadata = await packagedMetadata();
-    const result = await checkForUpdates({
-      identity: readDistributionIdentity(metadata?.simforgeDistribution),
-      cloudOrigin: typeof metadata?.simforgeCloudOrigin === "string" ? metadata.simforgeCloudOrigin : null,
-      userAgent: `${PRODUCT.packageName}/${app.getVersion()} (+https://github.com/SimForgeinc/simforge-oss)`,
-    });
-    const { message, detail, url } = describeUpdate(result);
-    const buttons = url ? ["Open release page", "Close"] : ["Close"];
-    const { response } = await dialog.showMessageBox({
-      type: result.state === "update-available" ? "info" : "none",
-      title: "SimForge Studio updates",
-      message,
-      detail,
-      buttons,
-      defaultId: url ? 1 : 0,
-      cancelId: buttons.length - 1,
-    });
-    if (url && response === 0) openExternal(url);
-  }),
-};
+let shellUpdater = null;
+
+/**
+ * Help › Check for Updates…. With the updater enabled (packaged Windows or
+ * Linux build with a distribution identity) this checks, downloads and,
+ * once a version is ready, restarts into it. Otherwise (unpackaged, unlabelled,
+ * or macOS without a signing identity) it stays the manual read-only check
+ * of desktop/update-check.mjs: a release name and a page to open.
+ */
+function updateMenuItem() {
+  const updater = shellUpdater;
+  if (updater?.enabled) {
+    const label = updater.state === "checking" ? "Checking for Updates…"
+      : updater.state === "downloading" ? `Downloading update ${updater.detail ?? ""}`.trim()
+      : updater.state === "ready" ? `Restart to update to ${updater.detail}`
+      : updater.state === "current" ? "Up to date — check again"
+      : updater.state === "error" ? "Update check failed — retry"
+      : "Check for Updates…";
+    return {
+      label,
+      enabled: updater.state !== "checking" && updater.state !== "downloading",
+      click: () => { if (updater.state === "ready") updater.install?.(); else void updater.check?.(); },
+    };
+  }
+  return {
+    label: "Check for Updates…",
+    click: menuAction(async () => {
+      const metadata = await packagedMetadata();
+      const result = await checkForUpdates({
+        identity: readDistributionIdentity(metadata?.simforgeDistribution),
+        cloudOrigin: typeof metadata?.simforgeCloudOrigin === "string" ? metadata.simforgeCloudOrigin : null,
+        userAgent: `${PRODUCT.packageName}/${app.getVersion()} (+https://github.com/SimForgeinc/simforge-oss)`,
+      });
+      const { message, detail, url } = describeUpdate(result);
+      const buttons = url ? ["Open release page", "Close"] : ["Close"];
+      const { response } = await dialog.showMessageBox({
+        type: result.state === "update-available" ? "info" : "none",
+        title: "SimForge Studio updates",
+        message,
+        detail,
+        buttons,
+        defaultId: url ? 1 : 0,
+        cancelId: buttons.length - 1,
+      });
+      if (url && response === 0) openExternal(url);
+    }),
+  };
+}
 
 /** @param {ReturnType<typeof createLocalHost>} localHost */
 function installMenu(localHost) {
@@ -305,7 +332,7 @@ function installMenu(localHost) {
     {
       role: "help",
       submenu: [
-        updateMenuItem,
+        updateMenuItem(),
         { type: "separator" },
         { label: "Open data folder", click: () => void shell.openPath(localHost.dataRoot) },
         {
@@ -397,6 +424,26 @@ if (!app.requestSingleInstanceLock()) {
         sameSite: "strict",
         secure: false,
       });
+      // Background updates: only a packaged build with a distribution identity
+      // knows its channel; the first check waits for the window to be on
+      // screen and the local host to be serving, so a slow update feed never
+      // delays startup.
+      const distribution = readDistributionIdentity((await packagedMetadata())?.simforgeDistribution);
+      shellUpdater = configureAutoUpdater({
+        channel: distribution?.channel ?? null,
+        onState: (state, detail) => {
+          if (!shellUpdater) return;
+          shellUpdater.state = state;
+          shellUpdater.detail = detail;
+          if (localHost) installMenu(localHost);
+        },
+      });
+      if (shellUpdater.enabled) {
+        const check = () => void shellUpdater?.check?.().catch(() => undefined);
+        setTimeout(check, 15_000).unref();
+        shellUpdater.timer = setInterval(check, 4 * 60 * 60 * 1000);
+        shellUpdater.timer.unref();
+      }
       mapCache = await installDesktopMapCache({
         ipcMain,
         window: win,
@@ -417,6 +464,7 @@ if (!app.requestSingleInstanceLock()) {
   });
   let quitting = false;
   app.on("before-quit", (event) => {
+    if (shellUpdater?.timer) clearInterval(shellUpdater.timer);
     if (quitting || !localHost || (!mapCache && !localHost.owned())) return;
     event.preventDefault();
     quitting = true;
