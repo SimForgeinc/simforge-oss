@@ -34,6 +34,12 @@ const PROBE_TIMEOUT_MS = 30_000;
 /** Socket inactivity before a transfer counts as stalled. */
 const SOCKET_IDLE_MS = 60_000;
 const MAX_REDIRECTS = 5;
+/**
+ * Pauses before re-attempting a transfer that failed on the network. A map
+ * closure has thousands of members, so one reset socket or stalled CDN edge
+ * would otherwise fail the whole install; each attempt resumes the `.part`.
+ */
+const RETRY_DELAYS_MS = [500, 2_000, 5_000];
 /** Headers that carry credentials and never cross an origin boundary on redirect. */
 const CREDENTIAL_HEADERS = ["authorization", "cookie", "x-simforge-workspace-id"];
 
@@ -190,10 +196,32 @@ type TransferArgs = {
  * tiles aborted on camera moves) only within this process, and only under
  * `If-Range` with the validator the interrupted response carried, so a
  * changed object can never be stitched onto an old prefix.
+ *
+ * Network failures (reset, stall, 5xx) are retried a bounded number of times;
+ * integrity, quota, gone-object and cancellation errors are final.
  */
 export async function transferIntoStore(args: TransferArgs): Promise<Transferred> {
   if ("path" in args.source) return copyFileIntoStore(args, args.source.path);
-  return downloadIntoStore(args, new URL(args.source.url), args.source.headers ?? {});
+  const url = new URL(args.source.url);
+  const headers = args.source.headers ?? {};
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await downloadIntoStore(args, url, headers);
+    } catch (error) {
+      const delay = RETRY_DELAYS_MS[attempt];
+      if (delay === undefined || !(error instanceof MapCacheError) || error.name !== "NetworkError" || args.signal.aborted) throw error;
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(done, delay);
+        args.signal.addEventListener("abort", done, { once: true });
+        function done() {
+          clearTimeout(timer);
+          args.signal.removeEventListener("abort", done);
+          resolve();
+        }
+      });
+      if (args.signal.aborted) throw abortError(`Download of ${assetName(args.canonicalUrl)} was cancelled`);
+    }
+  }
 }
 
 async function copyFileIntoStore({ store, canonicalUrl, expectedSha256, partKey, sizeBytes, signal }: TransferArgs, sourcePath: string): Promise<Transferred> {

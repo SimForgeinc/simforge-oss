@@ -310,19 +310,23 @@ describe("local map cache service", () => {
     );
     assert.deepEqual(await readdir(join(root, "objects")), [], "nothing published");
 
-    origin.truncate(`${MAP}/fox.bin`, 10);
-    await assert.rejects(
-      service.ensure({ requestId: "cut", url: `${MAP}/fox.bin`, sha256: digest, sizeBytes: bytes.length }),
-      (error: Error) => error.name === "NetworkError",
-    );
-    assert.equal(await service.has({ url: `${MAP}/fox.bin`, sha256: digest }), false);
+    // One reset socket in a thousand-member closure must not fail the install:
+    // the transfer retries and resumes the prefix it kept.
+    const hen = Buffer.from("the slow red hen crosses the quiet road at dawn");
+    origin.assets.set(`${MAP}/hen.bin`, { bytes: hen });
+    origin.truncate(`${MAP}/hen.bin`, 10);
+    let before = origin.requests.length;
+    const healed = await service.ensure({ requestId: "cut", url: `${MAP}/hen.bin`, sha256: sha256(hen), sizeBytes: hen.length });
+    assert.equal(healed.sizeBytes, hen.length);
+    assert.equal(origin.gets(before).length, 2, "one retry after the reset");
+    assert.equal(Buffer.from(await (await serve(service, healed.url)).arrayBuffer()).toString(), hen.toString());
     // A TCP reset may discard every buffered body byte. Establish a durable
     // partial download explicitly, then prove restart resumes that exact prefix.
     await service.dispose();
     await writeFile(join(root, "incomplete", `${digest}.part`), bytes.subarray(0, 10));
     const restarted = await open(root, policy.access);
 
-    const before = origin.requests.length;
+    before = origin.requests.length;
     const resumed = await restarted.ensure({ requestId: "resume", url: `${MAP}/fox.bin`, sha256: digest, sizeBytes: bytes.length });
     assert.equal(resumed.cacheHit, false);
     assert.equal(resumed.sizeBytes, bytes.length);
