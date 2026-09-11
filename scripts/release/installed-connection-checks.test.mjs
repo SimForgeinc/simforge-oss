@@ -105,6 +105,7 @@ test("private host record authenticates actual HTTP while disconnected Cloud rea
   assert.ok(f.cloudRequests.every((request) => request.authorization === undefined && request.cookie === undefined));
   assert.ok(f.requests.every((request) => request.method === "GET"));
   assert.equal(check(checks, "host.capabilities").details.nativeRuntime, "unavailable");
+  assert.equal(check(checks, "host.native-runtime").status, "failed", "A valid host response cannot hide an unusable native runner");
   noSecrets(checks, f);
 });
 

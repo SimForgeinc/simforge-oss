@@ -8,9 +8,13 @@ import { runInstalledMapChecks } from './installed-map-checks.mjs';
 const digest = value => createHash('sha256').update(value).digest('hex');
 const mapId = 'mapv_qualification';
 const root = `/api/simforge/maps/${mapId}`;
-async function fixture(t, { corrupt = false, cached = true, registered = cached, installFails = false, external = false } = {}) {
+async function fixture(t, { corrupt = false, cached = true, registered = cached, installFails = false, external = false, textureMode } = {}) {
   const browser = Buffer.from(JSON.stringify({ schema: 'qualification-fixture', members: [] }));
-  const master = Buffer.from(JSON.stringify({ asset: { version: '2.0' }, meshes: [{ primitives: [] }], buffers: [{ uri: 'mesh.bin', byteLength: 4 }] }));
+  const master = Buffer.from(JSON.stringify({
+    asset: { version: '2.0' }, meshes: [{ primitives: [] }], buffers: [{ uri: 'mesh.bin', byteLength: 4 }],
+    ...(textureMode ? { images: [{ uri: 'missing.png' }, { uri: 'mesh.bin' }],
+      textures: [{ source: 0, ...(textureMode === 'basisu' ? { extensions: { KHR_texture_basisu: { source: 1 } } } : {}) }] } : {}),
+  }));
   const mesh = Buffer.from([1, 2, 3, 4]);
   const assets = new Map([[`${root}/browser-assets/manifest.json`, browser], [`${root}/semantic-assets/master.gltf`, master], [`${root}/semantic-assets/mesh.bin`, mesh]]);
   const calls = [];
@@ -112,4 +116,18 @@ test('stale installed metadata cannot cause read-only asset GETs on cache misses
   assert.equal(named(checks, 'map-semantic-bytes').status, 'blocked');
   assert.ok(host.calls.some(call => call.path.endsWith('/has')));
   assert.equal(host.calls.some(call => call.path.includes('-assets/') || call.path.endsWith('/ensure') || call.path.endsWith('/install')), false);
+});
+
+test('native BasisU selection verifies the required image without requesting unused PNG fallbacks', async t => {
+  const host = await fixture(t, { textureMode: 'basisu' });
+  const checks = await runInstalledMapChecks({ ...host, allowMapDownload: true });
+  assert.equal(named(checks, 'map-semantic-bytes').status, 'passed');
+  assert.equal(host.calls.some(call => call.path.endsWith('/missing.png')), false);
+});
+
+test('a missing selected texture is still a semantic verification failure', async t => {
+  const host = await fixture(t, { textureMode: 'png' });
+  const checks = await runInstalledMapChecks({ ...host, allowMapDownload: true });
+  assert.equal(named(checks, 'map-semantic-bytes').status, 'failed');
+  assert.equal(named(checks, 'map-cache-reuse').status, 'blocked');
 });

@@ -235,7 +235,13 @@ export async function runInstalledMapChecks({
       requireValue(master.asset?.version === "2.0" && Array.isArray(master.meshes) && master.meshes.length > 0,
         "Semantic master is not a glTF 2 mesh scene");
       const resources = new Set();
-      for (const resource of [...(master.buffers ?? []), ...(master.images ?? [])]) {
+      // Match packages/render/src/native/engine.ts: BasisU replaces the optional PNG fallback.
+      const imageIndices = new Set((master.textures ?? []).map(texture => texture.extensions?.KHR_texture_basisu?.source ?? texture.source).filter(index => index !== undefined));
+      const selectedImages = [...imageIndices].map(index => {
+        requireValue(Number.isInteger(index) && index >= 0 && master.images?.[index], "Native texture references a missing image");
+        return master.images[index];
+      });
+      for (const resource of [...(master.buffers ?? []), ...selectedImages]) {
         if (resource.uri === undefined) continue;
         requireValue(typeof resource.uri === "string", "Invalid glTF resource URI");
         if (resource.uri.startsWith("data:")) continue;
@@ -245,7 +251,7 @@ export async function runInstalledMapChecks({
       for (const path of [...resources].sort()) await readAsset("semantic", path);
       const members = [...verified.values()].filter((member) => member.profile === "semantic");
       return { members: members.length, bytes: members.reduce((sum, member) => sum + member.byteLength, 0),
-        scope: "master.gltf and every external buffer/image URI; digests and sizes from installed registry response headers, not a full native inventory" };
+        scope: "master.gltf, every buffer and each texture image selected by the native renderer (BasisU preferred); optional unused fallback images excluded" };
     });
     const repeated = await check("map-repeat-install", async () => {
       if (allowMapDownload !== true) throw new Blocked("Repeated install requires explicit allowMapDownload authorization.");
