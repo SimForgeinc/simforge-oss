@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio",
-  "version": "0.1.10-preview.1",
+  "version": "0.1.10-preview.2",
   "private": true,
   "type": "module",
   "main": "desktop/main.mjs",
