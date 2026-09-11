@@ -684,6 +684,9 @@ importers:
       three:
         specifier: ^0.185.0
         version: 0.185.1
+      unicornstudio-react:
+        specifier: ^2.1.9
+        version: 2.2.10(next@16.3.4(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -1031,6 +1034,9 @@ importers:
       esbuild:
         specifier: ^0.28.0
         version: 0.28.2
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1(@noble/hashes@2.4.0)
       postcss:
         specifier: ^8.4.31
         version: 8.5.26
@@ -6037,6 +6043,17 @@ packages:
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
+
+  unicornstudio-react@2.2.10:
+    resolution: {integrity: sha512-QHfRCdwFAu4hZY4QdLixnA8CdGChPcTwtfU1kmInLafSQHdZnuwYYFYkMfukjoV333VH+osPkSpOI81eSsywKw==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      next: '*'
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+    peerDependenciesMeta:
+      next:
+        optional: true
 
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
@@ -11401,6 +11418,13 @@ snapshots:
   undici@7.29.1: {}
 
   unicorn-magic@0.3.0: {}
+
+  unicornstudio-react@2.2.10(next@16.3.4(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+    optionalDependencies:
+      next: 16.3.4(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   unified@11.0.5:
     dependencies:
