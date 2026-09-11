@@ -59,6 +59,8 @@ export type LocalMapDescriptor = ScenarioMapDescriptorDto & {
   /** A registered account map while this installation has no active session. */
   locked: boolean;
   installed: { browser: boolean; semantic: boolean };
+  /** Download size of each profile's closure, or null while the upstream plan is unknown. */
+  closureBytes: { browser: number; semantic: number } | null;
 };
 
 export type LocalMapInstallState = {
@@ -212,6 +214,32 @@ function localizeDescriptor(map: UpstreamDescriptor): ScenarioMapDescriptorDto {
 }
 
 /**
+ * Total download size per profile, from the upstream cache plans this module
+ * already fetches and caches for installs, so a selection screen can show
+ * sizes before anything is downloaded. Absent when the plans cannot be read
+ * (offline, or an account map without a session): a missing size is not an
+ * error, it is simply unknown.
+ */
+async function closureBytesByMap(signal?: AbortSignal): Promise<Map<string, { browser: number; semantic: number }>> {
+  const sizes = new Map<string, { browser: number; semantic: number }>();
+  for (const profile of ["browser", "semantic"] as const) {
+    let plans: UpstreamPlanMap[];
+    try {
+      plans = await fetchUpstreamPlan(profile, signal);
+    } catch (error) {
+      if (error instanceof CloudConnectionError) continue;
+      throw error;
+    }
+    for (const plan of plans) {
+      const entry = sizes.get(plan.mapVersionId) ?? { browser: 0, semantic: 0 };
+      entry[profile] = plan.assets.reduce((total, asset) => total + asset.byteLength, 0);
+      sizes.set(plan.mapVersionId, entry);
+    }
+  }
+  return sizes;
+}
+
+/**
  * Every map this installation can show: registered local maps first, then
  * upstream maps not yet installed. Upstream unreachable is not an error here —
  * the local catalog stands on its own; the connection status says why.
@@ -220,6 +248,7 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
   await primeCloudSession();
   const session = cloudSessionScope();
   const local = await listScenarioMapDescriptors(localContext());
+  const closureBytes = await closureBytesByMap(signal);
   const result: LocalMapDescriptor[] = [];
   const seen = new Set<string>();
   for (const descriptor of local) {
@@ -231,6 +260,7 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access,
       locked: access === "cloud" && !session.active,
       installed: { browser: true, semantic: (registered?.semantic.size ?? 0) > 0 },
+      closureBytes: closureBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
   let upstream: UpstreamDescriptor[] = [];
@@ -247,6 +277,7 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       access: accessOf(map),
       locked: false,
       installed: { browser: false, semantic: false },
+      closureBytes: closureBytes.get(map.mapVersionId) ?? null,
     });
   }
   return result;
