@@ -384,6 +384,19 @@ async function downloadClosure(
   await Promise.all(workers);
 }
 
+/**
+ * Whether every member's verified object is in the cache. A registration
+ * outlives its objects when the user clears the map cache; the closure then
+ * needs (an incremental) download again, not trust.
+ */
+async function closureCached(members: Map<string, RegistryMember>): Promise<boolean> {
+  for (const member of members.values()) {
+    const cached = await resolveCachedMapAsset(member.sha256);
+    if (!cached || cached.sizeBytes !== member.byteLength) return false;
+  }
+  return true;
+}
+
 async function storedMembers(members: Map<string, RegistryMember>): Promise<StoredMember[]> {
   const stored: StoredMember[] = [];
   for (const [relativePath, member] of members) {
@@ -508,8 +521,9 @@ async function ensureLocalMapUncounted(
   let registered = await getRegisteredMap(mapVersionId);
   if (registered) assertMapUsable(registered);
 
-  const needsBrowser = !registered || registered.browser.size === 0;
-  const needsNative = profile === "semantic" && (!registered || registered.semantic.size === 0);
+  const needsBrowser = !registered || registered.browser.size === 0 || !(await closureCached(registered.browser));
+  const needsNative = profile === "semantic"
+    && (!registered || registered.semantic.size === 0 || !(await closureCached(registered.semantic)));
   if (needsBrowser || needsNative) {
     if (registered?.access === "local") {
       // An owner-installed release is complete by construction; there is no upstream to fill a missing profile from.
