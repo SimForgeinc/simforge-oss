@@ -59,6 +59,7 @@ import { firstOverlap, type Footprint } from './obb';
 import { authoringRoutes } from './routeOverlay';
 import { resolveVehicleDrop, DROP_SNAP_RADIUS_M, type DropOutcome } from './drop-resolver';
 import { resolveFreeGroupPlacement } from './group-placement';
+import { pickHeightField } from './ground-pick';
 import { actorIdsInRect, applySelectionOp, selectionOpForModifiers, type ScreenRect, type SelectionOp } from './marquee';
 
 export type EditorMode = 'idle' | 'placing' | 'grab' | 'rotate' | 'drawingRoute';
@@ -156,8 +157,6 @@ const DIRECT_MOVE_LIFT_M = 0.42;
 const MESSAGE_MS = 2600;
 
 const _ndc = new Vector2();
-const _origin = new Vector3();
-const _direction = new Vector3();
 
 import { EditorControllerInput } from "./controller-input";
 
@@ -800,36 +799,15 @@ export class EditorController extends EditorControllerInput {
   }
 
   /**
-   * Where the cursor meets the ground.
-   *
-   * Not a raycast against the scene: the ground is a height *field*, so the
-   * cheap answer is to intersect a horizontal plane and then iterate — sample
-   * the terrain there, move the plane to that height, repeat. Three passes
-   * converge to millimetres on real city grades, at ~0.2 µs a sample through
-   * `GroundIndex`, and it never touches the scene graph.
+   * Where the cursor meets the ground: the first crossing of the camera ray
+   * with the height field (see {@link pickHeightField}); never touches the
+   * scene graph.
    */
   protected groundPoint(event: { clientX: number; clientY: number }): Vector3 | null {
     this.setRay(event);
-    _origin.copy(this.raycaster.ray.origin);
-    _direction.copy(this.raycaster.ray.direction);
-    if (_direction.y >= -1e-6) return null; // looking at or above the horizon
-
-    let y = this.lastGroundY;
-    const point = new Vector3();
-    for (let i = 0; i < 4; i++) {
-      const t = (y - _origin.y) / _direction.y;
-      if (!(t > 0) || t > 1e5) return null;
-      point.copy(_direction).multiplyScalar(t).add(_origin);
-      const sampled = this.sampleHeight(point.x, point.z);
-      if (sampled === null) break;
-      if (Math.abs(sampled - y) < 0.01) {
-        y = sampled;
-        break;
-      }
-      y = sampled;
-    }
-    point.y = y;
-    this.lastGroundY = y;
+    const point = pickHeightField(this.raycaster.ray.origin, this.raycaster.ray.direction, this.sampleHeight, new Vector3());
+    if (!point) return null;
+    this.lastGroundY = point.y;
     this.lastGround = point;
     return point;
   }
