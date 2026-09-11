@@ -62,7 +62,11 @@ export function EditorEmptyState({
   );
 }
 
-/** First-run choice of streaming budget. Persisted on the document once saved. */
+/**
+ * Choice of streaming budget, the Settings surface for it. First-run setup has
+ * its own screens (`onboarding/MapSelectionScreen`); this one is reachable any
+ * time and never redirects anywhere.
+ */
 export function QualityChooser({
   onChoose,
   titleId,
@@ -85,7 +89,7 @@ export function QualityChooser({
       >
         <div className="text-center">
           <p className="font-meta text-[10px] font-bold uppercase tracking-[0.22em] text-[#E8E044]">
-            First-time setup
+            Rendering
           </p>
           <h1
             id={titleId}
@@ -94,7 +98,7 @@ export function QualityChooser({
             Render Selection
           </h1>
           <p id={descriptionId} className="mt-2 text-sm text-white/50">
-            Find the best experience for this device.
+            Find the best experience for this device. You can change this any time.
           </p>
         </div>
         {benchmark}

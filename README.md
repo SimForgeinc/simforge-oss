@@ -49,6 +49,17 @@ launches, preserving browser-local UI settings. If that port is occupied, it
 chooses another without stopping the other service. An explicit `PORT` still
 wins; source development keeps its default port `5199`.
 
+The first launch of a new installation opens setup: a welcome screen offering
+**Sign in to SimCloud** or **Continue locally**, then a map selection showing
+each available map with its download size and the free space on the map cache
+volume. Richmond Field Station needs no account; the rest of the library
+appears once signed in. The graphics level chosen there is what the viewer
+keeps in memory — every level downloads the same content-addressed map files.
+Setup completion is recorded in the installation's data root, so it runs once
+per installation rather than once per browser profile, and downloads continue
+as host jobs if the window closes mid-way. **Settings → Render Settings**
+changes the level and prepares more maps later.
+
 Use **Connect** in the app switcher for optional SimCloud access. Connecting does
 not move local projects, simulation jobs, or render outputs off this computer.
 Cloud Storage transfers and managed inference submissions are explicit. Cloud

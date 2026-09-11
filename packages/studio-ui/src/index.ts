@@ -21,3 +21,19 @@ export {
   ScenarioReviewLoading,
   ScenarioSegmentError,
 } from "./scenario/route-states";
+
+/**
+ * First-run onboarding, which a host mounts outside the dashboard. Also
+ * reachable as `@simforge-oss/studio-ui/onboarding` for a host that wants the
+ * screens without the editor in its module graph.
+ */
+export {
+  evaluateMapDownloadGuard,
+  HeroBackdrop,
+  MAP_DOWNLOAD_DISK_RESERVE_BYTES,
+  MapSelectionScreen,
+  WelcomeScreen,
+  type MapDownloadGuard,
+  type OnboardingMapOption,
+  type OnboardingPreparation,
+} from "./onboarding";

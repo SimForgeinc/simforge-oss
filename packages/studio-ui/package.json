@@ -129,6 +129,14 @@
         "types": "./dist/components/ui/tooltip.d.ts",
         "default": "./dist/components/ui/tooltip.js"
       },
+      "./drive": {
+        "types": "./dist/drive/index.d.ts",
+        "default": "./dist/drive/index.js"
+      },
+      "./drive/telemetry": {
+        "types": "./dist/drive/telemetry.d.ts",
+        "default": "./dist/drive/telemetry.js"
+      },
       "./host": {
         "types": "./dist/host.d.ts",
         "default": "./dist/host.js"
@@ -252,6 +260,10 @@
       "./lib/utils": {
         "types": "./dist/lib/utils.d.ts",
         "default": "./dist/lib/utils.js"
+      },
+      "./onboarding": {
+        "types": "./dist/onboarding/index.d.ts",
+        "default": "./dist/onboarding/index.js"
       },
       "./scenario/ScenarioDatasetsClient": {
         "types": "./dist/scenario/ScenarioDatasetsClient.d.ts",
@@ -517,6 +529,16 @@
       "types": "./dist/components/ui/tooltip.d.ts",
       "default": "./dist/components/ui/tooltip.js"
     },
+    "./drive": {
+      "development": "./src/drive/index.ts",
+      "types": "./dist/drive/index.d.ts",
+      "default": "./dist/drive/index.js"
+    },
+    "./drive/telemetry": {
+      "development": "./src/drive/telemetry.ts",
+      "types": "./dist/drive/telemetry.d.ts",
+      "default": "./dist/drive/telemetry.js"
+    },
     "./host": {
       "development": "./src/host.tsx",
       "types": "./dist/host.d.ts",
@@ -671,6 +693,11 @@
       "development": "./src/lib/utils.ts",
       "types": "./dist/lib/utils.d.ts",
       "default": "./dist/lib/utils.js"
+    },
+    "./onboarding": {
+      "development": "./src/onboarding/index.ts",
+      "types": "./dist/onboarding/index.d.ts",
+      "default": "./dist/onboarding/index.js"
     },
     "./scenario/ScenarioDatasetsClient": {
       "development": "./src/scenario/ScenarioDatasetsClient.tsx",
@@ -833,6 +860,7 @@
     "lucide-react": "^0.577.0",
     "tailwind-merge": "^3.5.0",
     "three": "^0.185.0",
+    "unicornstudio-react": "^2.1.9",
     "zod": "^3.25.76",
     "zustand": "^5.0.12"
   },
