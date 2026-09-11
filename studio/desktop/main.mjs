@@ -291,7 +291,8 @@ function updateMenuItem() {
     return {
       label,
       enabled: updater.state !== "checking" && updater.state !== "downloading",
-      click: () => { if (updater.state === "ready") updater.install?.(); else void updater.check?.(); },
+      // Failures already reach the menu through the updater's error event.
+      click: () => { if (updater.state === "ready") updater.install?.(); else void updater.check?.().catch(() => undefined); },
     };
   }
   return {
