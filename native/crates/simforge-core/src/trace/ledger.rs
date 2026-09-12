@@ -15,7 +15,9 @@ use crate::hash::content_hash_of;
 use crate::map::Route;
 use crate::math::{quantize, sin_cos};
 use crate::physics::MotionDirection;
-use crate::types::{Interaction, MotionPhysicsMode, SimScenarioInput, Trigger, Verb};
+use crate::types::{Interaction, SimScenarioInput, Trigger, Verb};
+
+use super::RecordedPhysicsMode;
 
 use super::events::SimEvent;
 use super::metrics::{CollisionRecord, EpisodeMetrics};
@@ -786,8 +788,8 @@ pub fn build_semantic_ledger(options: &BuildSemanticLedgerOptions<'_>) -> Semant
             dt: header.dt,
             clip_seconds: header.clip_seconds,
             motion_authority: match header.physics.mode {
-                MotionPhysicsMode::DynamicV1 => MotionAuthority::SimforgePhysics,
-                MotionPhysicsMode::KinematicV1 => MotionAuthority::KinematicReplay,
+                RecordedPhysicsMode::DynamicV1 => MotionAuthority::SimforgePhysics,
+                RecordedPhysicsMode::KinematicV1 => MotionAuthority::KinematicReplay,
             },
             complete: options.complete,
         },

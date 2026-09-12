@@ -60,7 +60,7 @@ export function scenario(
     warmupSeconds: 5,
     dt: 0.02,
     seed: 'fixture',
-    physics: { mode: 'kinematic-v1' },
+    physics: { mode: 'dynamic-v1' },
     ...partial,
   });
 }

@@ -17,6 +17,7 @@ use super::collision::{
     ContactPose, ContactRef, PlanarCollisionBody, PlanarContactSolver, PlanarStaticCollider,
     DEFAULT_CONTACT_FRICTION, DEFAULT_CONTACT_RESTITUTION,
 };
+use super::gearbox::{gearbox_for, GearDemand, GEAR_NEUTRAL, GEAR_REVERSE};
 use super::motion::{
     BodyIndex, MotionActorInitialization, MotionBackend, MotionIntent, MotionStepResult,
     PhysicsError, PhysicsTelemetrySample, VehicleControl, VehicleMotionState,
@@ -63,6 +64,12 @@ struct VehicleEntry {
     previous: ContactPose,
     telemetry: PhysicsTelemetrySample,
     commanded_acceleration_mps2: f64,
+    /// Engaged gear: `0` neutral, `1..=n` forward, `-1` reverse.
+    #[serde(default)]
+    gear: i32,
+    /// Remaining torque cut of the shift in progress, seconds.
+    #[serde(default)]
+    shift_cut_remaining_s: f64,
     length_m: f64,
     width_m: f64,
 }
@@ -76,11 +83,15 @@ fn zero_telemetry(substep_s: f64) -> PhysicsTelemetrySample {
 }
 
 /// Setpoint controller: speed/acceleration tracking plus pure-pursuit steering
-/// toward the preview point with a heading correction.
+/// toward the preview point with a heading correction. `drive_capacity_n` is
+/// the tractive force a fully open throttle delivers in the engaged gear, so
+/// the pedal the controller asks for means the same force the integrator will
+/// produce.
 fn control_for(
     state: &VehicleMotionState,
     profile: &ResolvedVehiclePhysicsProfile,
     intent: &MotionIntent,
+    drive_capacity_n: f64,
 ) -> VehicleControl {
     let direction = intent.motion_direction.sign();
     let travel_speed = direction * state.longitudinal_velocity_mps;
@@ -94,7 +105,7 @@ fn control_for(
     let resistance = profile.drag_coefficient_n_per_mps2 * (travel_speed * travel_speed)
         + profile.rolling_resistance_coefficient * profile.mass_kg * G;
     let requested_force = profile.mass_kg * desired_accel + resistance;
-    let throttle = clamp(requested_force / profile.max_drive_force_n, 0.0, 1.0);
+    let throttle = clamp(requested_force / drive_capacity_n, 0.0, 1.0);
     let brake = clamp(-requested_force / profile.max_brake_force_n, 0.0, 1.0);
 
     let dx = intent.preview_point.x - state.x;
@@ -121,6 +132,7 @@ fn control_for(
         throttle,
         brake,
         steer: steer_rad / profile.max_steer_rad,
+        handbrake: false,
     }
 }
 
@@ -165,13 +177,20 @@ fn bounded_intent(entry: &mut VehicleEntry, intent: &MotionIntent, h: f64) -> Mo
 /// folded into one longitudinal force request, rate-limited by the same jerk
 /// budget the setpoint path uses, then split back into unit-range pedals;
 /// steer is clamped to the unit range (the integrate step applies the profile
-/// clamp plus rate/lag on top).
-fn bounded_control(entry: &mut VehicleEntry, control: &VehicleControl, h: f64) -> VehicleControl {
+/// clamp plus rate/lag on top). The handbrake is deliberately *not* folded
+/// in: it is a mechanical rear-axle brake, not a pedal request, and passes
+/// through unrate-limited.
+fn bounded_control(
+    entry: &mut VehicleEntry,
+    control: &VehicleControl,
+    h: f64,
+    drive_capacity_n: f64,
+) -> VehicleControl {
     let p = &entry.profile;
     let throttle = clamp(control.throttle, 0.0, 1.0);
     let brake = clamp(control.brake, 0.0, 1.0);
     let steer = clamp(control.steer, -1.0, 1.0);
-    let requested_ax = (throttle * p.max_drive_force_n - brake * p.max_brake_force_n) / p.mass_kg;
+    let requested_ax = (throttle * drive_capacity_n - brake * p.max_brake_force_n) / p.mass_kg;
     let bounded_ax = clamp(
         requested_ax,
         -p.max_longitudinal_decel_mps2,
@@ -186,16 +205,103 @@ fn bounded_control(entry: &mut VehicleEntry, control: &VehicleControl, h: f64) -
     let force_n = entry.commanded_acceleration_mps2 * p.mass_kg;
     if force_n >= 0.0 {
         VehicleControl {
-            throttle: clamp(force_n / p.max_drive_force_n, 0.0, 1.0),
+            throttle: clamp(force_n / drive_capacity_n, 0.0, 1.0),
             brake: 0.0,
             steer,
+            handbrake: control.handbrake,
         }
     } else {
         VehicleControl {
             throttle: 0.0,
             brake: clamp(-force_n / p.max_brake_force_n, 0.0, 1.0),
             steer,
+            handbrake: control.handbrake,
         }
+    }
+}
+
+/// Drivetrain state for one substep: the engaged gear, its engine speed, the
+/// tractive force a fully open throttle delivers through it, and whether a
+/// shift is currently cutting torque.
+struct Driveline {
+    gear: i32,
+    rpm: f64,
+    drive_capacity_n: f64,
+    cutting: bool,
+}
+
+/// Run the automatic's shift schedule for one *tick*.
+///
+/// Deliberately per tick rather than per substep: a transmission controller
+/// runs at the control rate, and tying the shift instant to the integrator's
+/// substep would make a discrete event move with the substep size, so two
+/// substep resolutions of the same scenario would diverge at every shift.
+fn engage_gear(entry: &mut VehicleEntry, intent: &MotionIntent, dt_s: f64) {
+    let Some(gearbox) = gearbox_for(entry.profile.kind) else {
+        return;
+    };
+    entry.shift_cut_remaining_s = (entry.shift_cut_remaining_s - dt_s).max(0.0);
+    // The pedals this tick, not last tick's: a body launching from rest must
+    // engage first gear on the tick the throttle opens, not one tick later.
+    let demand = match &intent.control {
+        Some(raw) => GearDemand::Pedals {
+            throttle: clamp(raw.throttle, 0.0, 1.0),
+            brake: clamp(raw.brake, 0.0, 1.0),
+        },
+        None => {
+            let travel = intent.motion_direction.sign() * entry.state.longitudinal_velocity_mps;
+            let wants_drive = intent.target_speed_mps > travel + 1e-9
+                || intent.target_acceleration_mps2 > 0.0;
+            GearDemand::Authored {
+                reverse: intent.motion_direction.sign() < 0.0,
+                throttle: if wants_drive { 1.0 } else { 0.0 },
+            }
+        }
+    };
+    let (gear, shifted) = gearbox.select(
+        entry.gear,
+        entry.state.longitudinal_velocity_mps,
+        entry.state.wheel_angular_speed_radps,
+        demand,
+    );
+    if shifted && gear != entry.gear {
+        entry.shift_cut_remaining_s = gearbox.shift_time_s;
+        // The pedal envelope rate-limits acceleration *in the engaged gear*.
+        // Taking reverse (or leaving it) reverses what that number means, so
+        // carrying it across would spend the jerk budget unwinding the old
+        // direction — a car that just engaged drive would sit there braking.
+        // The drivetrain is disconnected for the torque cut anyway: there is
+        // no acceleration in progress to ramp from.
+        if (gear < GEAR_NEUTRAL) != (entry.gear < GEAR_NEUTRAL) {
+            entry.commanded_acceleration_mps2 = 0.0;
+        }
+    }
+    entry.gear = gear;
+}
+
+/// Engine speed and available tractive force in the engaged gear. Continuous
+/// in the body's wheel speed, so it is safe to evaluate every substep.
+fn driveline(entry: &VehicleEntry) -> Driveline {
+    let Some(gearbox) = gearbox_for(entry.profile.kind) else {
+        return Driveline {
+            gear: GEAR_NEUTRAL,
+            rpm: 0.0,
+            drive_capacity_n: entry.profile.max_drive_force_n,
+            cutting: false,
+        };
+    };
+    let gear = entry.gear;
+    let rpm = gearbox.engine_rpm(gear, entry.state.wheel_angular_speed_radps);
+    // Neutral has no drive path, but the pedal maps divide by this value;
+    // quote the lowest gear's capacity so a pedal keeps its meaning, and let
+    // `cutting` be what actually withholds the force.
+    let force_gear = if gear == GEAR_NEUTRAL { 1 } else { gear };
+    Driveline {
+        gear,
+        rpm,
+        drive_capacity_n: entry.profile.max_drive_force_n
+            * gearbox.drive_force_factor(force_gear, rpm),
+        cutting: entry.shift_cut_remaining_s > 0.0 || gear == GEAR_NEUTRAL,
     }
 }
 
@@ -212,19 +318,52 @@ fn integrate(
             integrate_pedestrian(entry, intent, h, friction_scale)
         };
     }
+    let drive = driveline(entry);
+    // Which way the drivetrain is allowed to push. An authored actor states
+    // its travel direction outright and its gear mirrors it. A pedal-driven
+    // body takes it from the engaged gear: the command carries no gear lever,
+    // so reverse is reached the way an automatic reaches it — stopped, on the
+    // brake — and the gear is then what makes the car actually go backwards.
+    let travel_sign = match &intent.control {
+        Some(_) if drive.gear == GEAR_REVERSE => -1.0,
+        Some(_) => 1.0,
+        None => intent.motion_direction.sign(),
+    };
     // A raw actuator request bypasses the setpoint controller but not the
     // physical envelope: steer still passes through the clamp/rate/lag block
     // below, and the implied longitudinal acceleration is jerk-limited so a
     // passthrough caller cannot step the drivetrain harder than a setpoint
     // caller could.
     let control = match &intent.control {
-        Some(raw) => bounded_control(entry, raw, h),
+        Some(raw) => {
+            // In reverse the two pedals swap roles: the brake pedal is the
+            // one asking the car to move, and the throttle is the service
+            // brake. Normalising here means everything downstream — the jerk
+            // envelope, the force split, the telemetry — reads one pair,
+            // (drive demand, braking demand) in the engaged gear.
+            let demand = if travel_sign < 0.0 {
+                VehicleControl {
+                    throttle: raw.brake,
+                    brake: raw.throttle,
+                    ..*raw
+                }
+            } else {
+                *raw
+            };
+            bounded_control(entry, &demand, h, drive.drive_capacity_n)
+        }
         None => {
             let bounded = bounded_intent(entry, intent, h);
-            control_for(&entry.state, &entry.profile, &bounded)
+            control_for(
+                &entry.state,
+                &entry.profile,
+                &bounded,
+                drive.drive_capacity_n,
+            )
         }
     };
     let p = entry.profile;
+    let width_m = entry.width_m;
     let s = &mut entry.state;
 
     let steer_target = control.steer * p.max_steer_rad;
@@ -239,20 +378,32 @@ fn integrate(
         p.max_steer_rad,
     );
 
-    let motion_direction = intent.motion_direction.sign();
-    let drive_n = motion_direction * control.throttle * p.max_drive_force_n;
+    // A clutch-less shift cuts torque for the duration of the change, which
+    // is what makes an upshift a felt event rather than a number swap.
+    let drive_n = if drive.cutting {
+        0.0
+    } else {
+        travel_sign * control.throttle * drive.drive_capacity_n
+    };
     let brake_n = control.brake * p.max_brake_force_n;
+    // The rear axle carries 40% of the service-brake capacity, so that is
+    // what a rear-only parking brake can apply.
+    let handbrake_n = if control.handbrake {
+        p.max_brake_force_n * 0.4
+    } else {
+        0.0
+    };
     let direction = if s.longitudinal_velocity_mps.abs() > 0.05 {
         s.longitudinal_velocity_mps.signum()
     } else {
-        motion_direction
+        travel_sign
     };
     let drag_n = p.drag_coefficient_n_per_mps2
         * s.longitudinal_velocity_mps
         * s.longitudinal_velocity_mps.abs();
     let rolling_n =
         p.rolling_resistance_coefficient * p.mass_kg * G * tanh(s.longitudinal_velocity_mps / 0.1);
-    let requested_fx = drive_n - direction * brake_n - drag_n - rolling_n;
+    let requested_fx = drive_n - direction * (brake_n + handbrake_n) - drag_n - rolling_n;
     let requested_ax = requested_fx / p.mass_kg;
 
     let lf = p.cg_to_front_m;
@@ -328,7 +479,9 @@ fn integrate(
     let old_yaw_rate = s.yaw_rate_radps;
     let old_yaw = s.yaw_rad;
     s.longitudinal_velocity_mps += u_dot * h;
-    if motion_direction * s.longitudinal_velocity_mps < 0.0 {
+    // Braking stops the body; it never drags it through zero into the other
+    // direction. Reversing is a gear change, not a negative brake.
+    if travel_sign * s.longitudinal_velocity_mps < 0.0 {
         s.longitudinal_velocity_mps = 0.0;
     }
     s.lateral_velocity_mps += v_dot * h;
@@ -354,7 +507,7 @@ fn integrate(
     let wheel_tau_s = if control.brake > 0.0 { 0.035 } else { 0.08 };
     s.wheel_angular_speed_radps +=
         (rolling_omega - s.wheel_angular_speed_radps) * (h / wheel_tau_s);
-    if s.longitudinal_velocity_mps == 0.0 && control.brake > 0.0 {
+    if s.longitudinal_velocity_mps == 0.0 && (control.brake > 0.0 || control.handbrake) {
         s.wheel_angular_speed_radps = 0.0;
     }
 
@@ -366,11 +519,48 @@ fn integrate(
         front_normal_force_n: front_normal,
         rear_normal_force_n: rear_normal,
         tire_utilization: front.utilization.max(rear.utilization),
+        front_tire_utilization: front.utilization,
+        rear_tire_utilization: rear.utilization,
+        engine_rpm: drive.rpm,
+        gear: drive.gear,
+        wheel_speeds_radps: corner_wheel_speeds(s, &p, width_m),
+        lateral_acceleration_mps2: (rear_fy + front_fy * cos_steer + front_fx * sin_steer)
+            / p.mass_kg,
         substeps: 1,
         substep_s: h,
         collision_impulse_ns: 0.0,
         collision_count: 0,
     }
+}
+
+/// Per-corner wheel angular speeds `[fl, fr, rl, rr]` for a single-track
+/// body. The model carries one driven-wheel speed, so the corners are the
+/// rigid-body reconstruction of it: the yaw rate spreads left from right
+/// across the track, and the steered front wheels roll along their own plane
+/// rather than the body's. Renderers spin wheels from these; nothing in the
+/// solver reads them back.
+fn corner_wheel_speeds(
+    s: &VehicleMotionState,
+    p: &ResolvedVehiclePhysicsProfile,
+    width_m: f64,
+) -> [f64; 4] {
+    // Track is inset from the body's widest point by the tyre and bodywork.
+    let half_track = (width_m * 0.85 / 2.0).max(0.05);
+    let lf = p.cg_to_front_m;
+    let (sin_steer, cos_steer) = sin_cos(s.steer_rad);
+    // Driven (rear) wheels carry the relaxed wheel speed, which is what
+    // spins up under wheelspin and locks under braking.
+    let rear = s.wheel_angular_speed_radps;
+    let rear_bias = s.yaw_rate_radps * half_track / p.wheel_radius_m;
+    let front_long = s.longitudinal_velocity_mps;
+    let front_lat = s.lateral_velocity_mps + lf * s.yaw_rate_radps;
+    let front_plane = |long: f64| (long * cos_steer + front_lat * sin_steer) / p.wheel_radius_m;
+    [
+        front_plane(front_long - s.yaw_rate_radps * half_track),
+        front_plane(front_long + s.yaw_rate_radps * half_track),
+        rear - rear_bias,
+        rear + rear_bias,
+    ]
 }
 
 /// A body that is off its feet. It has no gait and no route: whatever the
@@ -419,11 +609,12 @@ fn integrate_downed(
         rear_lateral_force_n: 0.0,
         front_normal_force_n: p.mass_kg * G,
         rear_normal_force_n: 0.0,
+        // A body on the ground has no axles, no driveline and no corners:
+        // every wheel/gear channel stays at its zero.
         tire_utilization: 0.0,
         substeps: 1,
         substep_s: h,
-        collision_impulse_ns: 0.0,
-        collision_count: 0,
+        ..PhysicsTelemetrySample::default()
     }
 }
 
@@ -477,17 +668,18 @@ fn integrate_pedestrian(
                 0.0
             },
             steer: yaw_rate / p.max_yaw_rate_radps,
+            handbrake: false,
         },
         longitudinal_force_n: accel * p.mass_kg,
         front_lateral_force_n: 0.0,
         rear_lateral_force_n: 0.0,
         front_normal_force_n: p.mass_kg * G,
         rear_normal_force_n: 0.0,
+        // A walker has no axles, driveline or wheels to report.
         tire_utilization: 0.0,
         substeps: 1,
         substep_s: h,
-        collision_impulse_ns: 0.0,
-        collision_count: 0,
+        ..PhysicsTelemetrySample::default()
     }
 }
 
@@ -924,6 +1116,16 @@ impl MotionBackend for DynamicV1Backend {
             },
             telemetry: zero_telemetry(self.substep_s),
             commanded_acceleration_mps2: init.longitudinal_acceleration_mps2.unwrap_or(0.0),
+            // A body registered already moving is in whichever gear its wheel
+            // speed puts it in; the schedule settles it on the first substep.
+            gear: if u == 0.0 {
+                GEAR_NEUTRAL
+            } else if u < 0.0 {
+                GEAR_REVERSE
+            } else {
+                1
+            },
+            shift_cut_remaining_s: 0.0,
             length_m,
             width_m,
         };
@@ -981,6 +1183,7 @@ impl MotionBackend for DynamicV1Backend {
             y: entry.state.y,
             yaw_rad: entry.state.yaw_rad,
         };
+        engage_gear(entry, intent, dt_s);
         let mut telemetry = zero_telemetry(h);
         for _ in 0..count {
             telemetry = integrate(entry, intent, h, friction_scale);

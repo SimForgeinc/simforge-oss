@@ -28,7 +28,7 @@ from typing import Any
 from simforge_oss_gym.native import LaneGraph, ScenarioInput
 
 _REPO = Path(__file__).resolve().parents[3]
-_FIXTURE = _REPO / "adapters" / "gym" / "tests" / "fixtures" / "synthetic-episode-dynamic.json"
+_FIXTURE = _REPO / "adapters" / "gym" / "tests" / "fixtures" / "synthetic-episode.json"
 _START_RSL = "1:0:-1"
 
 

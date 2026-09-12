@@ -48,7 +48,7 @@ async function instanceFile(): Promise<string> {
     manifest: { instanceId: 'fixture#0', replayKey: { mapId: 'fixture-map', engineGraphDigest: 'fixture-digest' } },
     input: {
       schemaVersion: 1, mapId: 'fixture-map', clipSeconds: 20, warmupSeconds: 0,
-      physics: { mode: 'kinematic-v1' },
+      physics: { mode: 'dynamic-v1' },
       actors: [{
         id: 'ego', kind: 'vehicle', dims: { l: 4.5, w: 1.8, h: 1.5 },
         initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 0 },

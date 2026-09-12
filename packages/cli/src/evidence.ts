@@ -8,7 +8,7 @@
  * different scenario and the cell must not be accepted or promoted.
  */
 
-import { contentHash, resolvePhysicsConfig, type MotionPhysicsMode, type SimTrace } from '@simforge-oss/engine';
+import { contentHash, resolvePhysicsConfig, type RecordedPhysicsMode, type SimTrace } from '@simforge-oss/engine';
 
 import type { InstanceFile } from '@simforge-oss/compiler/node';
 
@@ -49,7 +49,8 @@ export interface EvidenceHashReport {
   readonly matcherIndexDigest: string | null;
   readonly manifestEngineGraphDigest: string | null;
   readonly traceEngineGraphDigest: string | null;
-  readonly physicsMode?: MotionPhysicsMode | null;
+  /** Mode the trace recorded, which may be the removed `kinematic-v1`. */
+  readonly physicsMode?: RecordedPhysicsMode | null;
   readonly physicsProvenance?: 'matched' | 'mismatch';
   readonly issues: EvidenceHashIssue[];
 }
@@ -96,7 +97,7 @@ export function verifyEvidenceHashes(instance: InstanceFile, trace: SimTrace): E
   const inputOperationalConditions = instance.input.operationalConditions;
   const traceOperationalConditions = trace.header?.operationalConditions;
   const expectedPhysicsMode = resolvePhysicsConfig(instance.input).mode;
-  const physicsMode: MotionPhysicsMode | null = trace.header?.physics?.mode ?? null;
+  const physicsMode: RecordedPhysicsMode | null = trace.header?.physics?.mode ?? null;
   const physicsProvenance: EvidenceHashReport['physicsProvenance'] =
     physicsMode === expectedPhysicsMode ? 'matched' : 'mismatch';
   const issues: EvidenceHashIssue[] = [];

@@ -73,6 +73,9 @@ function trace(documentInput = input()): SimTrace {
       actorIds: ['bus', 'ego'],
       metricSubject: 'ego',
       operationalConditions: documentInput.operationalConditions,
+      ego: { controllerProfile: 'sensor-limited' },
+      // An archived trace recorded under the removed choreography backend:
+      // playback reads it from provenance, so it still replays.
       physics: { mode: 'kinematic-v1', solver: 'uniscenarios-sim-engine', solverVersion: '0.1.0', substepS: 0.2, vehicleProfileDigest: null },
     },
     ticks: {

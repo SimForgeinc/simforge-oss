@@ -24,7 +24,7 @@ function fixture() {
     clipSeconds: 1,
     warmupSeconds: 0,
     dt: 0.1,
-    physics: { mode: 'kinematic-v1' },
+    physics: { mode: 'dynamic-v1' },
     metricSubject: 'ego/authored-id',
     operationalConditions: {
       weather: 'rain',

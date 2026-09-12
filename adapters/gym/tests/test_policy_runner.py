@@ -33,11 +33,11 @@ def _trace_records(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def test_offline_mode_has_no_deadline_and_reproduces_its_digest(dynamic_spec: str, tmp_path: Path) -> None:
+def test_offline_mode_has_no_deadline_and_reproduces_its_digest(spec: str, tmp_path: Path) -> None:
     digests = []
     for run in range(2):
         trace = tmp_path / f"offline-{run}.jsonl"
-        with SimForgeEnv(dynamic_spec, session=0, decision_hz=10) as env:
+        with SimForgeEnv(spec, session=0, decision_hz=10) as env:
             summary = run_episode(
                 env,
                 make_policy("scripted"),
@@ -58,9 +58,9 @@ def test_offline_mode_has_no_deadline_and_reproduces_its_digest(dynamic_spec: st
     assert digests[0] == digests[1], "same seed and policy must reproduce the chained digest"
 
 
-def test_realtime_mode_applies_the_fallback_on_a_forced_miss(dynamic_spec: str, tmp_path: Path) -> None:
+def test_realtime_mode_applies_the_fallback_on_a_forced_miss(spec: str, tmp_path: Path) -> None:
     trace = tmp_path / "realtime.jsonl"
-    with SimForgeEnv(dynamic_spec, session=0, decision_hz=10) as env:
+    with SimForgeEnv(spec, session=0, decision_hz=10) as env:
         summary = run_episode(
             env,
             make_policy("scripted"),
@@ -79,18 +79,18 @@ def test_realtime_mode_applies_the_fallback_on_a_forced_miss(dynamic_spec: str, 
     assert missed[0]["applied"] == "zero-control"
 
 
-def test_realtime_requires_a_deadline_and_offline_refuses_forced_misses(dynamic_spec: str) -> None:
-    with SimForgeEnv(dynamic_spec, session=0) as env:
+def test_realtime_requires_a_deadline_and_offline_refuses_forced_misses(spec: str) -> None:
+    with SimForgeEnv(spec, session=0) as env:
         with pytest.raises(ValueError, match="realtime mode requires"):
             run_episode(env, make_policy("scripted"), seed=1, mode="realtime", max_steps=1)
-    with SimForgeEnv(dynamic_spec, session=0) as env:
+    with SimForgeEnv(spec, session=0) as env:
         with pytest.raises(ValueError, match="force_miss_at is meaningless"):
             run_episode(env, make_policy("scripted"), seed=1, mode="offline-simtime", max_steps=1, force_miss_at=(1,))
 
 
-def test_warmup_steps_are_labelled_and_not_counted_as_model_decisions(dynamic_spec: str, tmp_path: Path) -> None:
+def test_warmup_steps_are_labelled_and_not_counted_as_model_decisions(spec: str, tmp_path: Path) -> None:
     trace = tmp_path / "warmup.jsonl"
-    with SimForgeEnv(dynamic_spec, session=0, decision_hz=10) as env:
+    with SimForgeEnv(spec, session=0, decision_hz=10) as env:
         summary = run_episode(
             env,
             make_policy("trajectory"),
@@ -173,14 +173,14 @@ def test_envelope_breaches_past_the_recorded_time_support(tmp_path: Path) -> Non
     assert "time-support" in verdict["breached"]
 
 
-def test_endpoint_policy_refuses_without_a_real_frame_source(dynamic_spec: str) -> None:
+def test_endpoint_policy_refuses_without_a_real_frame_source(spec: str) -> None:
     proc = subprocess.run(
         [
             sys.executable,
             "-m",
             "simforge_oss_gym.tools.policy_runner",
             "--spec",
-            dynamic_spec,
+            spec,
             "--policy",
             "endpoint",
             "--endpoint-socket",

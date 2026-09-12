@@ -1,8 +1,8 @@
 """Profile identity for the articulated physics extension.
 
 ``articulated-mujoco-v1`` is a new, separately versioned physical model. It is
-not an extension of the planar ``dynamic-v1`` / ``kinematic-v1`` roadway
-profiles and never runs inside them: a scenario is executed by exactly one
+not an extension of the planar ``dynamic-v1`` roadway profile and never runs
+inside it: a scenario is executed by exactly one
 profile, and the profile id is recorded on every snapshot, export and
 qualification report this package produces.
 """

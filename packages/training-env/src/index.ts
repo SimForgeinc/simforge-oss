@@ -65,6 +65,7 @@ export type {
   AdvanceResult,
   BatchOp,
   CommandOutcome,
+  DriverCommand,
   ReplayResult,
   SpawnRequest,
   WorldActorState,
@@ -76,4 +77,4 @@ export type {
 } from './world-session.js';
 
 export { encodeTruthFrame, TruthStreamClient, WORLD_TRUTH_QUEUE_CAPACITY } from './truth-stream.js';
-export type { TruthActor, TruthActorCatalogEntry, TruthFrame, TruthSubscriptionStats } from './truth-stream.js';
+export type { TruthActor, TruthActorCatalogEntry, TruthFrame, TruthSubscriptionStats, VehicleTelemetry } from './truth-stream.js';

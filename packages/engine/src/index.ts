@@ -148,6 +148,7 @@ export type {
   SimTrace,
   TraceHeader,
   PhysicsTraceProvenance,
+  RecordedPhysicsMode,
 } from './trace/trace.js';
 export { decodeTraceGz, encodeTraceGz, gunzipBytes, gzipBytes, isGzipBytes } from './trace/gzip.js';
 export { DEFAULT_MAX_DECEL_MPS2, DEFAULT_TRIVIAL_PET_S, DEFAULT_TRIVIAL_TTC_S } from './trace/evaluate.js';

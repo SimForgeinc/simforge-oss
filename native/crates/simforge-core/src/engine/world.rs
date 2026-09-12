@@ -28,16 +28,16 @@ use crate::math::{
     angle_delta, atan2, hypot, normalize_angle, obb_corners, obb_overlap, sin_cos, Obb, Vec2,
 };
 use crate::physics::{
-    swept_obb_time_of_impact, DynamicV1Backend, MotionActorInitialization, MotionBackend,
-    MotionDirection, MotionInitialState, PhysicsTelemetrySample, VehicleControl,
-    DYNAMIC_V1_DEFAULT_SUBSTEP_S,
+    swept_obb_time_of_impact, AxleUtilization, DynamicV1Backend, MotionActorInitialization,
+    MotionBackend, MotionDirection, MotionInitialState, PhysicsTelemetrySample, VehicleControl,
+    VehicleTelemetry, DYNAMIC_V1_DEFAULT_SUBSTEP_S, STANDARD_GRAVITY_MPS2,
 };
 use crate::rng::Rng;
 use crate::trace::metrics::{CollisionRecord, MetricAccumulator};
 use crate::trace::perception::PerceptionAccumulator;
 use crate::trace::{SimEvent, SimTrace, TraceCapture, TraceRecorder};
 use crate::types::{
-    ActorKind, Condition, ControlIndication, Interaction, MotionPhysicsMode, PhysicsConfig,
+    ActorKind, Condition, ControlIndication, Interaction, PhysicsConfig,
     PropAttachment, RouteSpec, SetValue, SimActor, SimScenarioInput, VehiclePhysicsProfile,
 };
 
@@ -203,6 +203,10 @@ pub struct ActorSnapshot {
     /// Lane the current route station resolves to; `None` when freeform.
     #[serde(skip)]
     pub lane: Option<LaneId>,
+    /// Per-frame driving telemetry; absent for bodies the backend does not
+    /// own (static actors and props).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<VehicleTelemetry>,
 }
 
 /// Running episode minima for one monitored pair.
@@ -339,7 +343,8 @@ pub struct Simulation {
     pub(super) metrics: MetricAccumulator,
     pub(super) rng: Rng,
     pub(super) physics_config: PhysicsConfig,
-    pub(super) physics: Option<DynamicV1Backend>,
+    /// The one motion backend. Every non-static actor is a body in it.
+    pub(super) physics: DynamicV1Backend,
     pub(super) telemetry: Vec<Option<PhysicsTelemetrySample>>,
     pub(super) arrival: Vec<ArrivalSolution>,
     /// Live-mode actors added after construction, in registration order.
@@ -502,17 +507,12 @@ impl Simulation {
             |rsl| graph.lane_id(rsl),
         );
         let physics_config = input.resolved_physics();
-        let physics = match physics_config.mode {
-            MotionPhysicsMode::DynamicV1 => Some(
-                DynamicV1Backend::new(
-                    physics_config
-                        .substep_s
-                        .unwrap_or(DYNAMIC_V1_DEFAULT_SUBSTEP_S),
-                )
-                .map_err(|e| engine_error(e.to_string()))?,
-            ),
-            MotionPhysicsMode::KinematicV1 => None,
-        };
+        let physics = DynamicV1Backend::new(
+            physics_config
+                .substep_s
+                .unwrap_or(DYNAMIC_V1_DEFAULT_SUBSTEP_S),
+        )
+        .map_err(|e| engine_error(e.to_string()))?;
         let attached_occluder_ids: Vec<String> = input
             .props
             .iter()
@@ -561,16 +561,12 @@ impl Simulation {
             ambient_actor_ids.iter().map(String::as_str),
         );
 
-        let physics_actor_ids: Vec<&str> = if physics.is_some() {
-            input
-                .actors
-                .iter()
-                .filter(|a| !a.is_static && a.kind != ActorKind::StaticObject)
-                .map(|a| a.id.as_str())
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let physics_actor_ids: Vec<&str> = input
+            .actors
+            .iter()
+            .filter(|a| !a.is_static && a.kind != ActorKind::StaticObject)
+            .map(|a| a.id.as_str())
+            .collect();
         let recorder = TraceRecorder::new(
             input.actors.iter().map(|a| a.id.as_str()),
             signals.ids(),
@@ -706,12 +702,10 @@ impl Simulation {
             let pass = PerceptionPass::new(&config, &observers, &sim.actors);
             sim.perception = Some(PerceptionRuntime { pass, accumulator });
         }
-        if let Some(backend) = &mut sim.physics {
-            backend.reserve(
-                sim.actors.len(),
-                sim.statics.shapes().len() + sim.actors.len(),
-            );
-        }
+        sim.physics.reserve(
+            sim.actors.len(),
+            sim.statics.shapes().len() + sim.actors.len(),
+        );
         Ok(sim)
     }
 
@@ -734,7 +728,7 @@ impl Simulation {
     pub(super) fn register_actor(&mut self, spec: &SimActor) -> EngineResult<ActorIndex> {
         let index = ActorIndex(self.actors.len() as u32);
         let mut rt = self.build_actor(spec, index)?;
-        if self.physics.is_some() && !rt.is_static && rt.kind != ActorKind::StaticObject {
+        if !rt.is_static && rt.kind != ActorKind::StaticObject {
             let init = MotionActorInitialization {
                 actor_id: rt.id.clone(),
                 kind: rt.kind,
@@ -750,8 +744,6 @@ impl Simulation {
             };
             let body = self
                 .physics
-                .as_mut()
-                .expect("backend")
                 .register(&init)
                 .map_err(|e| engine_error(e.to_string()))?;
             rt.body = Some(body);
@@ -1124,7 +1116,56 @@ impl Simulation {
             lateral_rate_mps: a.lateral_rate_mps,
             s: a.route_s,
             lane: a.route.pose_at(a.route_s).lane,
+            telemetry: self.vehicle_telemetry(index),
         }
+    }
+
+    /// Per-frame driving telemetry for one actor: the published contract a
+    /// live client's HUD and audio render from. `None` for actors with no
+    /// body (static actors and props), which have nothing to report.
+    pub fn vehicle_telemetry(&self, index: ActorIndex) -> Option<VehicleTelemetry> {
+        let a = &self.actors[index.index()];
+        let body = a.body?;
+        let state = self.physics.state(body)?;
+        let sample = self.telemetry[index.index()]
+            .or_else(|| self.physics.telemetry(body))
+            .unwrap_or_default();
+        let profile = self.physics.profile(body)?;
+        Some(VehicleTelemetry {
+            speed_mps: a.speed_mps,
+            rpm: sample.engine_rpm,
+            gear: sample.gear,
+            throttle: sample.control.throttle,
+            brake: sample.control.brake,
+            steer: state.steer_rad / profile.max_steer_rad,
+            steer_rad: state.steer_rad,
+            wheel_speeds: sample.wheel_speeds_radps,
+            tyre_utilization: AxleUtilization {
+                front: sample.front_tire_utilization,
+                rear: sample.rear_tire_utilization,
+            },
+            longitudinal_g: state.longitudinal_acceleration_mps2 / STANDARD_GRAVITY_MPS2,
+            lateral_g: sample.lateral_acceleration_mps2 / STANDARD_GRAVITY_MPS2,
+            off_road: self.is_off_road(index),
+            collision_impulse_ns: sample.collision_impulse_ns,
+        })
+    }
+
+    /// Is the body's footprint centre off every drivable lane? Resolved
+    /// against the lane graph rather than the actor's route, so a car that
+    /// has left its route — or never had one, like a free-driven player car
+    /// — is judged by where it actually is.
+    fn is_off_road(&self, index: ActorIndex) -> bool {
+        let a = &self.actors[index.index()];
+        self.graph
+            .nearest_lane(
+                a.position,
+                crate::map::NearestLaneQuery {
+                    max_dist_m: a.dims.w.max(1.5),
+                    ..Default::default()
+                },
+            )
+            .is_none()
     }
 
     fn fill_actor_snapshots(&self, out: &mut Vec<ActorSnapshot>) {

@@ -816,7 +816,7 @@ impl Simulation {
             a.heading_rad = normalize_angle(
                 a.route.pose_at(a.route_s).heading_rad + if next.is_reverse() { PI } else { 0.0 },
             );
-            if a.body.is_some() && self.physics.is_some() {
+            if a.body.is_some() {
                 let profile = self.physics_profile_for_actor(actor);
                 let a = &self.actors[actor.index()];
                 let init = MotionActorInitialization {
@@ -834,8 +834,6 @@ impl Simulation {
                 };
                 let body = self
                     .physics
-                    .as_mut()
-                    .expect("backend")
                     .register(&init)
                     .map_err(|e| crate::error::SimEngineError::new(e.to_string(), Vec::new()))?;
                 self.actors[actor.index()].body = Some(body);

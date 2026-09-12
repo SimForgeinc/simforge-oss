@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use simforge_core::physics::VehicleControl;
 use simforge_session::{
     replay_world_session_log, TruthFrame, TruthSubscription, WorldCheckpoint, WorldCommand,
     WorldMode, WorldSession, WorldSessionLog, WorldSessionOptions, WorldSnapshot,
@@ -184,6 +185,37 @@ impl World {
         let command: WorldCommand = serde_json::from_str(command_json)
             .map_err(|e| BindingError::argument(format!("world command: {e}")))?;
         let outcome = self.session.apply_command(client_id, seq, &command)?;
+        Ok(serde_json::to_string(&outcome)?)
+    }
+
+    /// Hold one actor's pedals and wheel until replaced; `None` releases the
+    /// actor back to its scenario controller.
+    ///
+    /// Typed rather than JSON because a driver client calls this on every
+    /// render frame, and parsing a command document 60 times a second to
+    /// carry four numbers is pure overhead.
+    pub fn set_driver_command(
+        &mut self,
+        client_id: &str,
+        seq: u64,
+        actor_id: &str,
+        command: Option<VehicleControl>,
+    ) -> Result<String> {
+        if let Some(c) = command {
+            if !(0.0..=1.0).contains(&c.throttle)
+                || !(0.0..=1.0).contains(&c.brake)
+                || !(-1.0..=1.0).contains(&c.steer)
+            {
+                return Err(BindingError::argument(format!(
+                    "driver command out of range: throttle {} and brake {} must be in [0, 1], steer {} in [-1, 1]",
+                    c.throttle, c.brake, c.steer
+                ))
+                .into());
+            }
+        }
+        let outcome = self
+            .session
+            .set_driver_command(client_id, seq, actor_id, command)?;
         Ok(serde_json::to_string(&outcome)?)
     }
 

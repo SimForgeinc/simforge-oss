@@ -10,7 +10,7 @@
     "dt": 0.02,
     "seed": "fixture",
     "physics": {
-     "mode": "kinematic-v1"
+     "mode": "dynamic-v1"
     },
     "operationalConditions": {
      "weather": "clear",
@@ -891,7 +891,7 @@
     "dt": 0.02,
     "seed": "fixture",
     "physics": {
-     "mode": "kinematic-v1"
+     "mode": "dynamic-v1"
     },
     "operationalConditions": {
      "weather": "clear",
@@ -1772,7 +1772,7 @@
     "dt": 0.02,
     "seed": "fixture",
     "physics": {
-     "mode": "kinematic-v1"
+     "mode": "dynamic-v1"
     },
     "operationalConditions": {
      "weather": "clear",
@@ -2653,7 +2653,7 @@
     "dt": 0.02,
     "seed": "fixture",
     "physics": {
-     "mode": "kinematic-v1"
+     "mode": "dynamic-v1"
     },
     "operationalConditions": {
      "weather": "clear",

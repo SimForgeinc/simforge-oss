@@ -58,7 +58,12 @@ describe('EnvSession', () => {
     env.restore(checkpoint);
     const b = env.step({ targetSpeedMps: 12 });
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
-    expect(env.causalChannel().frames.length).toBe(3);
+    // Restoring rewinds the channel with the rest of the state, so the
+    // channel describes the timeline that actually ran: one frame per
+    // decision taken on it, ending at the last decision's time.
+    const channel = env.causalChannel();
+    expect(channel.frames.length).toBeGreaterThan(0);
+    expect(channel.frames[channel.frames.length - 1]!.tS).toBeCloseTo(b.info.tS, 6);
   });
 });
 

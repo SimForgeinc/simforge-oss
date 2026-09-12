@@ -30,6 +30,7 @@ use simforge_core::engine::{
 use simforge_core::error::SimIssue;
 use simforge_core::hash::{js_number_to_string, sha256};
 use simforge_core::map::{DirectedLane, LaneGraph, NearestLaneQuery};
+use simforge_core::physics::{VehicleControl, VehicleTelemetry};
 use simforge_core::math::{
     local_from_scene, obb_overlap, scene_heading, to_scene_xz, Obb, SceneXZ, Vec2,
 };
@@ -137,6 +138,15 @@ pub enum WorldCommand {
     Act {
         actor_id: String,
         action: Option<ActionOverride>,
+    },
+    /// A live driver's pedals and wheel for one actor, held until replaced.
+    /// `None` hands the actor back to its scenario controller. This is the
+    /// same zero-order hold as `Act`, named for the thing a game client
+    /// sends every render frame.
+    #[serde(rename_all = "camelCase")]
+    DriverCommand {
+        actor_id: String,
+        command: Option<VehicleControl>,
     },
 }
 
@@ -253,6 +263,11 @@ pub struct TruthActor {
     pub dims: Dims,
     /// XODR-local world-plane acceleration in m/s².
     pub accel: TruthAccel,
+    /// Per-frame driving telemetry: speed, drivetrain, pedals, tyre load,
+    /// g-forces and contact. Absent for actors the motion backend does not
+    /// own (static actors and props).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<VehicleTelemetry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -426,6 +441,13 @@ impl WorldTruthPublisher {
                     ax: tick.acceleration[0],
                     ay: -tick.acceleration[2],
                 },
+                // The scene frame carries only pose and presence; the
+                // driving telemetry comes from the same tick's observation.
+                telemetry: obs
+                    .actors
+                    .iter()
+                    .find(|a| ids[a.index.index()] == tick.id)
+                    .and_then(|a| a.telemetry),
             });
         }
         let frame = Arc::new(TruthFrame {
@@ -817,12 +839,36 @@ impl WorldSession {
                 self.apply_structural(ops)
             }
             WorldCommand::Act { actor_id, action } => Ok(self.apply_act(actor_id, *action)),
+            WorldCommand::DriverCommand { actor_id, command } => {
+                let action = command.map(|control| ActionOverride {
+                    control: Some(control),
+                    ..ActionOverride::default()
+                });
+                Ok(self.apply_act(actor_id, action))
+            }
         }
     }
 
     fn apply_act(&mut self, actor_id: &str, action: Option<ActionOverride>) -> CommandOutcome {
         if !self.input.actors.iter().any(|a| a.id == actor_id) {
             return CommandOutcome::reject(format!("act: unknown actor {actor_id}"));
+        }
+        // A driver client sends a command every render frame, most of them
+        // identical to the last. An epoch that repeats the actor's standing
+        // action changes nothing at any time, so dropping it keeps the
+        // timeline (and the replayable log's cost to walk it) proportional to
+        // real input changes rather than to frame rate.
+        let standing = self
+            .timeline
+            .iter()
+            .rev()
+            .find(|e| e.actor_id == actor_id)
+            .map(|e| e.action);
+        if standing == Some(action) {
+            return CommandOutcome {
+                ok: true,
+                ..CommandOutcome::default()
+            };
         }
         self.timeline.push(ActionEpoch {
             from_t_s: self.sim.t_s(),
@@ -833,6 +879,26 @@ impl WorldSession {
             ok: true,
             ..CommandOutcome::default()
         }
+    }
+
+    /// Hold `command` as the actor's pedals/wheel until it is replaced or
+    /// released with `None`. Logged like any other command, so a session
+    /// replays a drive exactly.
+    pub fn set_driver_command(
+        &mut self,
+        client_id: &str,
+        seq: u64,
+        actor_id: &str,
+        command: Option<VehicleControl>,
+    ) -> Result<CommandOutcome> {
+        self.apply_command(
+            client_id,
+            seq,
+            &WorldCommand::DriverCommand {
+                actor_id: actor_id.to_owned(),
+                command,
+            },
+        )
     }
 
     /// Atomic structural mutation: resolve and validate every op against a

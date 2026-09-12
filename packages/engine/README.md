@@ -1,11 +1,10 @@
 # @simforge-oss/engine
 
-The default for new and regenerated simulation is the force-based `dynamic-v1`
-backend. The deterministic `kinematic-v1` choreography model remains available
-explicitly and remains the recorded mode for immutable legacy trace replay.
-Both carry explicit trace provenance. Validation scope,
-performance gates, and current non-claims are documented in
-[`../../docs/physics-validation.md`](../../docs/physics-validation.md).
+All simulation runs the force-based `dynamic-v1` backend; it is the only
+motion backend. `kinematic-v1`, the choreography model it replaced, survives
+only as a recorded mode so immutable legacy traces still replay. Validation
+scope, performance gates, and current non-claims are documented in
+[`../../docs/engineering/physics-validation.md`](../../docs/engineering/physics-validation.md).
 
 Layer 3 of `docs/agent-authoring-architecture.md`: the deterministic scenario
 simulation engine. This package is the **host-neutral contract** of that engine:
@@ -170,24 +169,22 @@ preview path tracker turn those targets into throttle, brake and steering.
 This is one calibrated generic passenger-car model, not vehicle-specific
 parameter identification and not a CARLA-equivalence claim. It has planar body
 dynamics, actuator lag, aerodynamic/rolling resistance, quasi-static
-longitudinal axle load transfer and combined-slip axle friction circles. It
-does not yet model suspension, pitch/roll/heave, individual wheels, powertrain
-gears, ABS/ESC, road grade or collision impulses. Collision detection and event
-timing remain active, but contact does not alter velocity in this slice.
+longitudinal axle load transfer, combined-slip axle friction circles, a
+per-class automatic gearbox with a torque curve, and rigid collision impulses.
+It does not model suspension, pitch/roll/heave, individual wheels, ABS/ESC or
+road grade.
 
-Omitting `physics` resolves to `dynamic-v1` from engine 0.3.0 onward. New and
-regenerated editable products write that selection explicitly. Existing
-verified evidence is replayed from its recorded provenance; `physics: {
-mode: 'kinematic-v1' }` remains the explicit legacy pin, and its established
-motion tracks do not pass through the dynamic backend.
+`dynamic-v1` is the only motion backend. Omitting `physics` resolves to it,
+and a document that pinned the removed `kinematic-v1` choreography model
+migrates to it when parsed — no feature is lost, since authored routes and
+freehand timed polylines are executed as the path tracker's targets and speed
+profile. Existing verified evidence is still replayed from its recorded
+provenance, which is where `kinematic-v1` survives as a recorded mode.
 
 ## Deliberate simplifications
 
 Stated plainly, because they bound what a metric from this engine means:
 
-- **Kinematic-v1 has no tyre physics.** Vehicles are path followers with a bicycle-ish body slip
-  (`heading = pathHeading + atan2(lateralRate, v)`) and per-class acceleration
-  clamps. No yaw inertia, no load transfer, no friction circle.
 - **TTC is the closing-speed form** (`gap / closing speed along the line of
   centres`) using circumscribed radii, not OBBs. Exact for rear-end and head-on
   geometries; conservative and slightly under-reporting for crossing ones. A

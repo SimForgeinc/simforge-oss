@@ -7,7 +7,7 @@ actions/observations, finite-step episodes, complete snapshot/restore and
 canonical `simforge.scene-state.v1` export.
 
 This is a new, separately versioned physical model. It does not touch the
-planar `dynamic-v1`/`kinematic-v1` roadway profiles, and it does not claim
+planar `dynamic-v1` roadway profile, and it does not claim
 real-world validity beyond the analytic and identity gates in
 `simforge_oss_physics.qualification`.
 

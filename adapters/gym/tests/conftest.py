@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode.json"
-DYNAMIC_SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode-dynamic.json"
 TRAJECTORY_SPEC_PATH = Path(__file__).parent / "fixtures" / "synthetic-episode-trajectory.json"
 
 # `find_spec` imports the parent package, so a missing runtime dependency
@@ -32,11 +31,6 @@ if _unavailable:  # pragma: no cover - environment guard
 def spec() -> str:
     assert SPEC_PATH.exists(), f"missing episode spec fixture {SPEC_PATH}"
     return str(SPEC_PATH)
-
-
-@pytest.fixture(scope="session")
-def dynamic_spec() -> str:
-    return str(DYNAMIC_SPEC_PATH)
 
 
 @pytest.fixture(scope="session")

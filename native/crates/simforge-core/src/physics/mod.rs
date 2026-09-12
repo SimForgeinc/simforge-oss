@@ -20,6 +20,7 @@
 
 mod collision;
 mod dynamic_v1;
+mod gearbox;
 mod handoff;
 mod motion;
 mod profile;
@@ -40,10 +41,11 @@ pub use handoff::{
     HandoffActor, HandoffBody, HandoffOrigin, TrafficHandoffWorld, HANDOFF_MIN_IMPACT_SPEED_MPS,
     HANDOFF_RESTITUTION,
 };
+pub use gearbox::{gearbox_for, Gearbox, GEAR_NEUTRAL, GEAR_REVERSE};
 pub use motion::{
-    BodyIndex, MotionActorInitialization, MotionBackend, MotionDirection, MotionInitialState,
-    MotionIntent, MotionStepResult, PhysicsError, PhysicsTelemetrySample, VehicleControl,
-    VehicleMotionState,
+    AxleUtilization, BodyIndex, MotionActorInitialization, MotionBackend, MotionDirection,
+    MotionInitialState, MotionIntent, MotionStepResult, PhysicsError, PhysicsTelemetrySample,
+    VehicleControl, VehicleMotionState, VehicleTelemetry,
 };
 pub use profile::{
     actor_physics_profile, actor_physics_profiles, child_pedestrian_physics_profile,

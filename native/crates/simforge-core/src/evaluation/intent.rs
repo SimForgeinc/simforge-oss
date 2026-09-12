@@ -1949,11 +1949,12 @@ mod tests {
         PairMinDistance,
     };
     use crate::trace::{
-        ActorTrack, EgoControllerProfile, EgoProvenance, PhysicsTraceProvenance, SignalTrack,
+        ActorTrack, EgoControllerProfile, EgoProvenance, PhysicsTraceProvenance, RecordedPhysicsMode,
+        SignalTrack,
         SimEvent, SimTrace, TraceActorMetadata, TraceFrame, TraceHeader, TraceSolver, TraceTicks,
     };
     use crate::types::{
-        ActorKind, ControlIndication, Dims, MotionPhysicsMode, OperationalConditions,
+        ActorKind, ControlIndication, Dims, OperationalConditions,
     };
 
     fn track(x: &[f64], speed: &[f64], lane: &str) -> ActorTrack {
@@ -2013,7 +2014,9 @@ mod tests {
             },
             operational_conditions: OperationalConditions::default(),
             physics: PhysicsTraceProvenance {
-                mode: MotionPhysicsMode::KinematicV1,
+                // A trace recorded under the removed choreography backend
+                // must still parse and evaluate.
+                mode: RecordedPhysicsMode::KinematicV1,
                 solver: TraceSolver::UniscenariosSimEngine,
                 solver_version: "test".into(),
                 substep_s: 1.0,

@@ -252,6 +252,21 @@ export interface NativeWorldSession {
   readonly digest: string;
   /** Apply one `WorldCommand` JSON; returns the `CommandOutcome` JSON. */
   command(commandJson: string, clientId?: string | null, seq?: number | null): string;
+  /**
+   * Hold one actor's pedals and wheel; pass `null` for `throttle`, `brake`
+   * and `steer` together to release the actor back to its scenario
+   * controller. Typed rather than JSON because a driving client calls it on
+   * every render frame. Returns the `CommandOutcome` JSON.
+   */
+  setDriverCommand(
+    actorId: string,
+    throttle?: number | null,
+    brake?: number | null,
+    steer?: number | null,
+    handbrake?: boolean | null,
+    clientId?: string | null,
+    seq?: number | null,
+  ): string;
   /** Advance engine ticks; returns the `AdvanceResult` JSON. */
   advance(ticks: number): string;
   snapshot(): NativeWorldSnapshot;

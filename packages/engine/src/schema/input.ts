@@ -108,10 +108,12 @@ export type TurnRelation = z.infer<typeof turnRelationSchema>;
  * - `polyline` — an explicit ground path in scene coordinates. The pedestrian
  *   escape hatch (crossings, jaywalk diagonals); vehicles may use it too but
  *   then have no lane identity in the trace.
- * - `timedPolyline` — exact scene-space position constraints. Time, rather
- *   than cruise speed, owns the actor through the final authored timestamp;
- *   normal physics takes over and brakes immediately afterward (or on
- *   material contact).
+ * - `timedPolyline` — a drawn path plus the times the actor should reach its
+ *   points. The drawn path is the route and the schedule is the speed profile
+ *   the force-based backend drives it at (with a station correction when the
+ *   body lags), so the actor really drives to its waypoints rather than being
+ *   placed on them. After the final authored timestamp it is released onto a
+ *   freeform runway and brakes naturally (or on material contact).
  */
 export const routeSpecSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -791,13 +793,25 @@ export type OperationalConditions = z.infer<typeof operationalConditionsSchema>;
 
 /**
  * Motion semantics are named and versioned independently of the engine build.
- * `kinematic-v1` is the established route-following/choreography model.
- * `dynamic-v1` is the default for new/regenerated simulation. Immutable trace
- * replay uses the mode recorded in the trace rather than resolving this input.
+ * `dynamic-v1`, the force-based vehicle solver, is the only motion backend;
+ * the former `kinematic-v1` route-choreography model was removed. Immutable
+ * trace replay uses the mode recorded in the trace rather than resolving this
+ * input, so archived `kinematic-v1` evidence still replays — see
+ * `RecordedPhysicsMode` in `trace/trace.ts`.
  */
-export const MOTION_PHYSICS_MODES = ['kinematic-v1', 'dynamic-v1'] as const;
-export const motionPhysicsModeSchema = z.enum(MOTION_PHYSICS_MODES);
-export type MotionPhysicsMode = z.infer<typeof motionPhysicsModeSchema>;
+export const MOTION_PHYSICS_MODES = ['dynamic-v1'] as const;
+/**
+ * The removed choreography mode. A document that pinned it still loads: the
+ * value migrates to `dynamic-v1` rather than failing validation, because the
+ * features that made such documents worth keeping — authored routes, timed
+ * polylines, interactions — are all still executed, now under forces.
+ */
+export const LEGACY_KINEMATIC_PHYSICS_MODE = 'kinematic-v1';
+export const motionPhysicsModeSchema = z.preprocess(
+  (value) => (value === LEGACY_KINEMATIC_PHYSICS_MODE ? 'dynamic-v1' : value),
+  z.enum(MOTION_PHYSICS_MODES),
+);
+export type MotionPhysicsMode = (typeof MOTION_PHYSICS_MODES)[number];
 export const DEFAULT_MOTION_PHYSICS_MODE: MotionPhysicsMode = 'dynamic-v1';
 /**
  * Integration substep the native `dynamic-v1` backend uses when
@@ -843,7 +857,7 @@ export type VehiclePhysicsProfile = z.infer<typeof vehiclePhysicsProfileSchema>;
 
 export const physicsConfigSchema = z.object({
   mode: motionPhysicsModeSchema,
-  /** Dynamic solver substep. Kinematic-v1 uses the scenario dt. */
+  /** Dynamic solver substep; omitted uses `DYNAMIC_V1_DEFAULT_SUBSTEP_S`. */
   substepS: positive.max(0.2).optional(),
   /** Per-actor physical-parameter overrides; omitted values use solver defaults. */
   vehicleProfiles: z.record(idSchema, vehiclePhysicsProfileSchema).optional(),
@@ -858,11 +872,12 @@ export interface ResolvedPhysicsConfig {
 
 /**
  * Resolve the effective physics configuration without mutating hash-covered
- * input. An explicit selection — `kinematic-v1` or `dynamic-v1` — is honored
- * exactly, per the truth contract in `docs/physics-validation.md`: a trace for
- * an explicitly selected mode must match that mode, so no resolution step may
- * silently relabel it. Omitted physics resolves to the current default
- * (`dynamic-v1`); the evidence validator requires the trace to match it.
+ * input, per the truth contract in `docs/engineering/physics-validation.md`:
+ * a trace must match the mode its document selected, so no resolution step
+ * may silently relabel it. With one backend left that is simply `dynamic-v1`
+ * — either as the document's own selection (a legacy `kinematic-v1` pin
+ * having migrated to it at parse time) or as the default for a document that
+ * omitted physics entirely.
  */
 export function resolvePhysicsConfig(input: Pick<SimScenarioInput, 'physics'>): ResolvedPhysicsConfig {
   return input.physics ?? { mode: DEFAULT_MOTION_PHYSICS_MODE };

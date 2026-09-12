@@ -5,7 +5,7 @@
   "suite": [
     {
       "scenarioId": "synthetic-dynamic",
-      "spec": "../../../adapters/gym/tests/fixtures/synthetic-episode-dynamic.json",
+      "spec": "../../../adapters/gym/tests/fixtures/synthetic-episode.json",
       "session": 0,
       "steps": 40
     },

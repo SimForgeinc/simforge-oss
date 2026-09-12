@@ -140,6 +140,9 @@ ACTOR_PHYSICS_PROFILES: dict[str, dict[str, float]] = {
 }
 CHILD_PEDESTRIAN_PHYSICS_PROFILE = dict(massKg=32, yawInertiaKgM2=3.2, cgHeightM=0.58, maxDriveForceN=145, maxBrakeForceN=205)
 DYNAMIC_V1_DEFAULT_SUBSTEP_S = 0.005
+#: The removed choreography mode. Documents that pinned it migrate to
+#: ``dynamic-v1`` on admission, matching the engine's own parse migration.
+LEGACY_KINEMATIC_PHYSICS_MODE = "kinematic-v1"
 
 DEFAULT_REWARD = dict(collisionPenalty=-10.0, goalBonus=10.0, progressWeight=0.05, proximityWeight=0.02,
                       proximityRangeM=15.0, comfortAccelWeight=0.005)
@@ -262,8 +265,13 @@ class _Compiler:
         clip_seconds = float(self.episode.clip_seconds if self.episode.clip_seconds is not None else doc.get("clipSeconds", 20))
         warmup_seconds = float(doc.get("warmupSeconds", 5))
         physics = doc.get("physics") or {"mode": "dynamic-v1"}
-        if physics.get("mode", "dynamic-v1") != "dynamic-v1":
-            self.issue("unsupported_physics", "physics.mode", f"{physics.get('mode')} is not the force-based device profile")
+        # ``dynamic-v1`` is the only motion backend. A document that pinned the
+        # removed ``kinematic-v1`` choreography model migrates to it here, the
+        # same way the engine migrates it on load, so a document the studio
+        # opens is never a document this device profile refuses.
+        mode = physics.get("mode", "dynamic-v1")
+        if mode not in ("dynamic-v1", LEGACY_KINEMATIC_PHYSICS_MODE):
+            self.issue("unsupported_physics", "physics.mode", f"{mode} is not the force-based device profile")
         substep = float(physics.get("substepS") or DYNAMIC_V1_DEFAULT_SUBSTEP_S)
         if not substep > 0:
             self.issue("invalid_substep", "physics.substepS", "must be positive")

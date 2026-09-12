@@ -34,7 +34,7 @@ Deadline misses are also exercised deterministically in ``realtime``:
 ``force_miss_at`` steps report a fixed elapsed time of 4x the deadline instead
 of the measured one, so the fallback path is part of the digested dynamics.
 
-    simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode-dynamic.json \
+    simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode.json \
         --policy torch --seed 42 --policy-seed 7 --steps 30 --mode realtime \
         --deadline-ms 50 --fallback zero-control --force-miss-at 9 --out /tmp/trace.jsonl
 

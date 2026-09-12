@@ -1,12 +1,19 @@
-//! Timed routes: exact absolute-time world keyframes.
+//! Timed routes: the authored schedule of a drawn route.
 //!
-//! A `timedPolyline` route hands pose ownership to time rather than cruise
-//! speed through its final authored timestamp. Between keyframes the path is a
+//! A `timedPolyline` route says where the body should be at a given absolute
+//! time, through its final authored timestamp. Between keyframes the path is a
 //! cubic Hermite spline whose tangents are the per-segment velocities (blended
 //! at interior waypoints with the harmonic mean of the adjacent speeds so a
-//! corner is rounded without skipping the waypoint). Once the last keyframe has
-//! passed the actor is released onto a straight freeform runway
-//! ([`TimedRoute::released_route`]) so the motion backend can brake naturally.
+//! corner is rounded without skipping the waypoint). Once the last keyframe
+//! has passed the actor is released onto a straight freeform runway
+//! ([`TimedRoute::released_route`]) so it brakes naturally.
+//!
+//! Under `dynamic-v1` the schedule is a target, not a teleport: the drawn
+//! polyline is the actor's route, so the path tracker steers along it while
+//! this sampler supplies the speed the body should be doing — plus a station
+//! correction when it lags the schedule. The body therefore drives to its
+//! waypoints under tyre and drivetrain limits instead of being placed on
+//! them.
 //!
 //! Keyframes are stored in the engine frame; the scene-frame flip happens once
 //! in [`TimedRoute::from_scene_points`].

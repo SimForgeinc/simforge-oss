@@ -59,7 +59,7 @@ const laneGraph = buildLaneGraph({
 function mappedLaneChangeFixture(count = 1, durationS = 1) {
   return parseSimScenarioInput({
     mapId: 'lane-export-fixture', clipSeconds: 12, warmupSeconds: 0, dt: 0.02,
-    physics: { mode: 'kinematic-v1' }, metricSubject: 'ego',
+    physics: { mode: 'dynamic-v1' }, metricSubject: 'ego',
     actors: [{
       id: 'ego', kind: 'vehicle', dims: { l: 4.5, w: 1.9, h: 1.5 },
       initial: { laneRef: { rsl: '1:0:-2', s: 10, tFrac: 0 }, pose: { x: 10, z: 3.5, headingRad: 0 }, speedMps: 5 },
@@ -77,7 +77,7 @@ function fixture() {
     mapId: 'fixture-map',
     clipSeconds: 12,
     warmupSeconds: 0,
-    physics: { mode: 'kinematic-v1' },
+    physics: { mode: 'dynamic-v1' },
     metricSubject: 'ego',
     nearMissCriteria: [],
     actors: [
@@ -401,8 +401,8 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
       path: 'interactions',
     }));
     expect(result.content).toContain('name="uniscenarios.export.intent" value="trajectory-replay"');
-    expect(result.content).toContain('name="uniscenarios.physics.mode" value="kinematic-v1"');
-    expect(result.content).toContain('name="uniscenarios.trajectoryReplay.physics.mode" value="kinematic-v1"');
+    expect(result.content).toContain('name="uniscenarios.physics.mode" value="dynamic-v1"');
+    expect(result.content).toContain('name="uniscenarios.trajectoryReplay.physics.mode" value="dynamic-v1"');
   });
 
   it('exports the omitted-input dynamic default with its actual 5 ms substep', () => {
@@ -484,8 +484,8 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
     }).content;
     expect(content).toContain('<Property name="uniscenarios.provenance.templateDigest" value="abc123"/>');
     expect(content).toContain('<Property name="uniscenarios.provenance.drawIndex" value="7"/>');
-    expect(content).toContain('<Property name="uniscenarios.physics.actorBackends" value="ego:kinematic-v1:selected:vehicle"/>');
-    expect(content).toContain('<Property name="uniscenarios.trajectoryReplay.physics.actorBackends" value="ego:kinematic-v1:selected:vehicle"/>');
+    expect(content).toContain('<Property name="uniscenarios.physics.actorBackends" value="ego:dynamic-v1:selected:vehicle"/>');
+    expect(content).toContain('<Property name="uniscenarios.trajectoryReplay.physics.actorBackends" value="ego:dynamic-v1:selected:vehicle"/>');
   });
 
   it('binds signal conditions to the logical scenario controller', () => {
@@ -608,7 +608,7 @@ describe('ASAM OpenSCENARIO DSL 2.2.0 export', () => {
     }));
     expect(result.content).toContain('import osc.standard');
     expect(result.content).toContain('scenario uniscenarios_instance:');
-    expect(result.content).toContain('# uniscenarios.physics.actorBackends=ego:kinematic-v1:selected:vehicle');
+    expect(result.content).toContain('# uniscenarios.physics.actorBackends=ego:dynamic-v1:selected:vehicle');
     expect(result.content).toContain('actor_ego: vehicle with:');
     expect(result.content).toContain('route_ego_pose_0: pose_3d with:');
     expect(result.content).toContain('route_ego: path = map_ref.create_path(points: [route_ego_pose_0');
@@ -686,7 +686,7 @@ describe('honest unsupported-feature failures', () => {
   it('bakes static road-control outcomes into XML 1.4 trajectory replay', () => {
     const input = parseSimScenarioInput({
       mapId: 'lane-export-fixture', clipSeconds: 12, warmupSeconds: 0, dt: 0.02,
-      physics: { mode: 'kinematic-v1' }, metricSubject: 'ego',
+      physics: { mode: 'dynamic-v1' }, metricSubject: 'ego',
       actors: [{
         id: 'ego', kind: 'vehicle', dims: { l: 4.5, w: 1.9, h: 1.5 },
         initial: { laneRef: { rsl: '1:0:-1', s: 10, tFrac: 0 }, pose: { x: 10, z: 0, headingRad: 0 }, speedMps: 5 },

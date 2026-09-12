@@ -15,6 +15,7 @@ use simforge_bindings_common::runtime::{
     Scenario, Sim, Site, StepView, Trace, World,
 };
 use simforge_bindings_common::{action, BindingError};
+use simforge_core::physics::VehicleControl;
 use simforge_core::rng::Seed;
 
 fn to_js(err: BindingError) -> JsValue {
@@ -1155,6 +1156,38 @@ impl WasmWorldSession {
                 client_id.as_deref().unwrap_or("browser"),
                 seq.unwrap_or(0.0).max(0.0) as u64,
                 command_json,
+            )
+            .js()
+    }
+    /// Hold one actor's pedals and wheel until replaced; pass `null` for
+    /// `throttle`, `brake` and `steer` together to release the actor back to
+    /// its scenario controller. Returns the `CommandOutcome` JSON.
+    #[wasm_bindgen(js_name = "setDriverCommand")]
+    pub fn set_driver_command(
+        &mut self,
+        actor_id: &str,
+        throttle: Option<f64>,
+        brake: Option<f64>,
+        steer: Option<f64>,
+        handbrake: Option<bool>,
+        client_id: Option<String>,
+        seq: Option<f64>,
+    ) -> Result<String, JsValue> {
+        let command = match (throttle, brake, steer) {
+            (None, None, None) => None,
+            (throttle, brake, steer) => Some(VehicleControl {
+                throttle: throttle.unwrap_or(0.0),
+                brake: brake.unwrap_or(0.0),
+                steer: steer.unwrap_or(0.0),
+                handbrake: handbrake.unwrap_or(false),
+            }),
+        };
+        self.inner
+            .set_driver_command(
+                client_id.as_deref().unwrap_or("browser"),
+                seq.unwrap_or(0.0).max(0.0) as u64,
+                actor_id,
+                command,
             )
             .js()
     }

@@ -18,6 +18,37 @@ import type { ActorClass, SceneFrame } from '@simforge-oss/engine/scene-state';
 
 /* ------------------------------------------------ world-session truth v1 */
 
+/**
+ * Per-frame driving telemetry for one body, straight off the `dynamic-v1`
+ * integrator: what a HUD renders and what an engine-audio graph is driven
+ * by. Absent for actors the motion backend does not own (explicit static
+ * actors and props), which have nothing to report.
+ */
+export interface VehicleTelemetry {
+  /** Forward speed magnitude, m/s. */
+  readonly speedMps: number;
+  readonly rpm: number;
+  /** `0` neutral, `1..=n` forward, `-1` reverse. */
+  readonly gear: number;
+  readonly throttle: number;
+  readonly brake: number;
+  /** Steering as a fraction of the class's steering lock, `[-1, 1]`. */
+  readonly steer: number;
+  /** Road-wheel angle in radians; `steer` scaled by the class lock. */
+  readonly steerRad: number;
+  /** Wheel angular speeds in rad/s, `[fl, fr, rl, rr]`. */
+  readonly wheelSpeeds: readonly [number, number, number, number];
+  readonly tyreUtilization: { readonly front: number; readonly rear: number };
+  /** Longitudinal acceleration in g (positive forward). */
+  readonly longitudinalG: number;
+  /** Lateral acceleration in g (positive left). */
+  readonly lateralG: number;
+  /** The body is not on a drivable lane. */
+  readonly offRoad: boolean;
+  /** Summed normal collision impulse applied on this tick, N·s. */
+  readonly collisionImpulseNs: number;
+}
+
 /** Static actor identity carried beside the frozen scene-state.v1 frame. */
 export interface TruthActor {
   readonly id: string;
@@ -25,6 +56,7 @@ export interface TruthActor {
   readonly dims: { readonly l: number; readonly w: number; readonly h: number };
   /** XODR-local world-plane acceleration in m/s². */
   readonly accel: { readonly ax: number; readonly ay: number };
+  readonly telemetry?: VehicleTelemetry;
 }
 
 /**

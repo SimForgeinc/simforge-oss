@@ -13,7 +13,8 @@
 //!   `Arc` across every world that uses the map.
 //! - [`Route`] is an immutable arc-length parameterisation bound to a graph;
 //!   [`RouteSnapshot`] is its persisted form.
-//! - [`TimedRoute`] owns pose by absolute time for `timedPolyline` actors.
+//! - [`TimedRoute`] is the authored schedule of a `timedPolyline` actor: the
+//!   speed profile the force-based backend drives the drawn route at.
 
 pub mod lane_graph;
 pub mod route;

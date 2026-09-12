@@ -80,7 +80,7 @@ eval worker both spawn.
 # reference policy, offline simulation time (default): the engine pauses at
 # every inference barrier, so no deadline exists and slow hardware costs wall
 # time rather than validity
-simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode-dynamic.json \
+simforge-oss-policy-runner --spec tests/fixtures/synthetic-episode.json \
     --policy trajectory --seed 42 --steps 40 --out trace.jsonl
 
 # latency-aware real time: explicit deadline, measured latency, fallback on a

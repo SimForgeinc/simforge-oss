@@ -183,10 +183,16 @@ str_enum! {
 
 str_enum! {
     /// Motion semantics are named and versioned independently of the engine
-    /// build. `kinematic-v1` is the route-following/choreography model;
-    /// `dynamic-v1` is the default for new simulation.
-    MotionPhysicsMode { KinematicV1 = "kinematic-v1", DynamicV1 = "dynamic-v1" }
+    /// build. `dynamic-v1` is the only motion backend; the former
+    /// `kinematic-v1` choreography model was removed, and documents that
+    /// pinned it load as `dynamic-v1`.
+    MotionPhysicsMode { DynamicV1 = "dynamic-v1" }
 }
+
+/// The removed choreography mode. Still accepted on input — where it migrates
+/// to `dynamic-v1` — and still parseable in recorded trace provenance so old
+/// traces replay.
+pub const LEGACY_KINEMATIC_PHYSICS_MODE: &str = "kinematic-v1";
 
 str_enum! {
     /// What is on the road. Names, not numbers, so a renderer and an exporter
@@ -1408,7 +1414,7 @@ impl VehiclePhysicsProfile {
 #[serde(rename_all = "camelCase")]
 pub struct PhysicsConfig {
     pub mode: MotionPhysicsMode,
-    /// Dynamic solver substep. Kinematic-v1 uses the scenario dt.
+    /// Dynamic solver substep.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub substep_s: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3780,7 +3786,14 @@ fn parse_vehicle_profile(p: &mut Parser, v: &Value) -> Option<VehiclePhysicsProf
 
 fn parse_physics(p: &mut Parser, v: &Value) -> Option<PhysicsConfig> {
     let m = p.object(v)?;
-    let mode = p.enum_field::<MotionPhysicsMode>(m, "mode");
+    // A document that pinned the removed choreography mode still loads: it
+    // migrates to the one remaining backend rather than failing validation.
+    let mode = match m.get("mode") {
+        Some(Value::String(s)) if s == LEGACY_KINEMATIC_PHYSICS_MODE => {
+            Some(MotionPhysicsMode::DynamicV1)
+        }
+        _ => p.enum_field::<MotionPhysicsMode>(m, "mode"),
+    };
     let substep_s = p.num_opt(m, "substepS", Num::POSITIVE.max(0.2));
     let vehicle_profiles = p.opt(m, "vehicleProfiles", |p, v| {
         let m = p.object(v)?;

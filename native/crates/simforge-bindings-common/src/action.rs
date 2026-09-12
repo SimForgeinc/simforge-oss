@@ -92,6 +92,9 @@ pub fn decode_action(row: &[f64]) -> Result<ActionOverride> {
                 throttle,
                 brake,
                 steer,
+                // The batched action row has no handbrake column; a driver
+                // command carries it through its own entry point.
+                handbrake: false,
             })
         }
         _ => {

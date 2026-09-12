@@ -1,29 +1,34 @@
 # Motion and physics truth contract
 
-SimForge identifies executed motion semantics explicitly. New and
-regenerated simulations with no `physics` field run `dynamic-v1`; omission
-still preserves older input JSON and its content hash. Authors may explicitly
-pin `kinematic-v1`, and an explicit selection is honored exactly:
-`resolvePhysicsConfig` never rewrites a declared mode, so an input pinned to
-`kinematic-v1` executes the route choreography and records `kinematic-v1`
-provenance — no silent migration in either direction. Trace format v3 records the selected mode,
-actual substep, engine build, and the digest of any per-actor vehicle-profile
-overrides, plus per-tick collision impulse/count telemetry. OpenSCENARIO
-exports retain the same provenance in SimForge properties/comments.
+SimForge identifies executed motion semantics explicitly. `dynamic-v1` is the
+only motion backend: every moving actor is a body in the planar force-based
+solver. A document with no `physics` field runs it, which preserves older
+input JSON and its content hash; a document that explicitly pinned the
+removed `kinematic-v1` choreography model migrates to `dynamic-v1` when it is
+parsed, and the migration is the only rewrite `resolvePhysicsConfig` ever
+sees — it never relabels anything else. Trace format v3 records the selected
+mode, actual substep, engine build, and the digest of any per-actor
+vehicle-profile overrides, plus per-tick collision impulse/count telemetry.
+OpenSCENARIO exports retain the same provenance in SimForge
+properties/comments.
 
 ## Claims
 
-`kinematic-v1` is deterministic route choreography. It supports scenario
-timing, interactions, traffic controls, lane motion, criticality metrics, and
-collision detection. It is not a force-based driving model and must not be
-described as CARLA-like vehicle physics.
+`dynamic-v1` denotes the planar force-based backend: actuator lag, aero and
+rolling road load, longitudinal load transfer, combined-slip axle friction
+circles, an automatic gearbox with a torque curve, and rigid contact
+impulses, integrated at 5 ms substeps. Everything the removed choreography
+model used to serve is still executed, now under forces: authored routes and
+freehand timed polylines are the path tracker's targets and its speed
+profile, and scenario timing, interactions, traffic controls, lane motion,
+criticality metrics and collision detection are unchanged.
 
-`dynamic-v1` denotes the default planar force-based backend. The mode name alone
-does not establish CARLA parity. Claims are limited to the maneuvers that pass
-the versioned golden suite in `fixtures/physics/golden-maneuvers.v1.json`.
-Suspension, grade/camber, deformable damage, externally validated crash loads,
-powertrain detail, and CARLA engine-level parity remain out of scope until each
-has a reference-backed validation gate.
+The mode name alone does not establish CARLA parity. Claims are limited to
+the maneuvers that pass the versioned golden suite in
+`fixtures/physics/golden-maneuvers.v2.json`. Suspension, grade/camber,
+deformable damage, externally validated crash loads, powertrain detail beyond
+the gearbox/torque map, and CARLA engine-level parity remain out of scope
+until each has a reference-backed validation gate.
 
 ## Acceptance gates
 
@@ -77,12 +82,19 @@ so its input hash stays stable. Regenerating it under engine 0.3.0 or newer uses
 the current `dynamic-v1` default and records that fact. Immutable traces from
 before 0.3.0 remain `kinematic-v1` on replay; validators accept that historical
 pair only when the input omitted physics and the recorded solver predates the
-migration. They report it as `legacy-kinematic`, never as dynamic. A new trace,
-or any trace for an explicitly selected mode, must match exactly. This prevents
-default changes from silently relabeling old evidence.
+migration. They report it as `legacy-kinematic`, never as dynamic. A new trace
+must match exactly. This prevents default changes from silently relabeling old
+evidence.
+
+A document that explicitly pinned `kinematic-v1` is a different case: the pin
+migrates to `dynamic-v1` when the document is parsed, and since the mode is
+hash-covered the migrated document hashes differently from the original. Such
+a document keeps every feature and simulates again immediately; its archived
+evidence keeps replaying from the recorded trace, but it no longer
+hash-verifies against a re-parse of its own input, because the motion that
+produced it is no longer available to reproduce. This is the deliberate cost
+of removing the backend, recorded here rather than hidden behind a relabel.
 
 Engine 0.4.0 / trace format v3 is the collision-response provenance boundary.
-Kinematic fallback actors are infinite-mass contact bodies: their authored
-surface velocity affects dynamic actors, but contacts never displace them.
-Static actors, props, and `map:*` collision proxies use the same policy with
-zero surface velocity.
+Explicit static actors, props, and `map:*` collision proxies are infinite-mass
+contact bodies: they affect dynamic actors, but contacts never displace them.

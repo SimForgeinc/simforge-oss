@@ -30,7 +30,7 @@ use crate::trace::{
     SimTrace, TraceActorMetadata, TraceFrame, TraceHeader, TraceRecorder, TraceSolver,
 };
 use crate::types::{
-    parse_scenario_input_value, ActorKind, ActorRules, Dynamics, MotionPhysicsMode, SetValue,
+    parse_scenario_input_value, ActorKind, ActorRules, Dynamics, SetValue,
     SimActor, TurnRelation,
 };
 
@@ -91,10 +91,7 @@ impl Simulation {
                     }
                 } else {
                     ActorPhysicsBackendProvenance {
-                        mode: match self.physics_config.mode {
-                            MotionPhysicsMode::DynamicV1 => ActorBackendMode::DynamicV1,
-                            MotionPhysicsMode::KinematicV1 => ActorBackendMode::KinematicV1,
-                        },
+                        mode: self.physics_config.mode.into(),
                         reason: ActorBackendReason::Selected,
                         profile: ActorBackendProfile::Kind(a.kind),
                     }
@@ -162,10 +159,10 @@ impl Simulation {
             },
             operational_conditions: input.operational_conditions.clone(),
             physics: PhysicsTraceProvenance {
-                mode: self.physics_config.mode,
+                mode: self.physics_config.mode.into(),
                 solver: TraceSolver::UniscenariosSimEngine,
                 solver_version: crate::ENGINE_VERSION.to_owned(),
-                substep_s: self.physics.as_ref().map_or(self.dt, |b| b.substep_s()),
+                substep_s: self.physics.substep_s(),
                 vehicle_profile_digest: match &self.physics_config.vehicle_profiles {
                     Some(p) => Some(
                         content_hash_of(p)
@@ -386,7 +383,7 @@ pub struct SimulationCheckpoint {
     pub route_refs: Vec<String>,
     pub initial_route_ref: Vec<u32>,
     pub metrics: MetricAccumulator,
-    pub physics: Option<DynamicV1Backend>,
+    pub physics: DynamicV1Backend,
     pub telemetry: Vec<Option<PhysicsTelemetrySample>>,
     pub perception: Option<PerceptionAccumulator>,
     pub signal_overrides: Vec<Option<crate::types::ControlIndication>>,
@@ -507,7 +504,7 @@ impl Simulation {
             route_refs: self.route_refs.entries().to_vec(),
             initial_route_ref: self.initial_route_ref.clone(),
             metrics: self.metrics.clone(),
-            physics: self.physics.as_ref().map(|b| b.clone()),
+            physics: self.physics.clone(),
             telemetry: self.telemetry.clone(),
             perception: self.perception.as_ref().map(|p| p.accumulator.clone()),
             signal_overrides: self.signals.overrides().to_vec(),
@@ -696,13 +693,11 @@ impl Simulation {
         sim.route_refs = RouteRefTable::from_entries(ckpt.route_refs.clone());
         sim.initial_route_ref = ckpt.initial_route_ref.clone();
         sim.metrics = ckpt.metrics.clone();
-        sim.physics = ckpt.physics.as_ref().map(|b| b.clone());
-        if let Some(backend) = &mut sim.physics {
-            backend.reserve(
-                sim.actors.len(),
-                sim.statics.shapes().len() + sim.actors.len(),
-            );
-        }
+        sim.physics = ckpt.physics.clone();
+        sim.physics.reserve(
+            sim.actors.len(),
+            sim.statics.shapes().len() + sim.actors.len(),
+        );
         sim.telemetry = ckpt.telemetry.clone();
         if let (Some(p), Some(acc)) = (&mut sim.perception, &ckpt.perception) {
             p.accumulator = acc.clone();

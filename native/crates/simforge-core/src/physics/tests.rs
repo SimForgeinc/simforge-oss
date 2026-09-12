@@ -263,6 +263,7 @@ fn raw_control_stays_inside_the_jerk_and_steer_envelope() {
             throttle: 1.0,
             brake: 0.0,
             steer: 1.0,
+            handbrake: false,
         }),
         ..straight()
     };
@@ -790,4 +791,316 @@ fn every_moving_kind_has_a_plant_and_re_registration_keeps_the_index() {
     let mut sorted = ids.clone();
     sorted.sort_unstable();
     assert_eq!(ids, sorted);
+}
+
+/* ----------------------------------------------- golden maneuver parity */
+
+/// Straight-line full-throttle run: seconds from rest to 100 km/h, and the
+/// gears it passed through.
+fn zero_to_100_kmh() -> (f64, Vec<i32>) {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 0.0, None)).unwrap();
+    let dt = 0.02;
+    let mut t = 0.0;
+    let mut gears = Vec::new();
+    while t < 30.0 {
+        let result = value
+            .step(body, &FULL_THROTTLE, dt, 1.0)
+            .expect("full-throttle step");
+        t += dt;
+        if gears.last() != Some(&result.telemetry.gear) {
+            gears.push(result.telemetry.gear);
+        }
+        if result.state.longitudinal_velocity_mps >= 100.0 / 3.6 {
+            return (t, gears);
+        }
+    }
+    panic!("never reached 100 km/h");
+}
+
+/// Full-throttle maneuver intent: an unreachable speed target so the
+/// controller keeps the pedal down for the whole run.
+const FULL_THROTTLE: MotionIntent = MotionIntent {
+    motion_direction: MotionDirection::Forward,
+    target_speed_mps: 200.0,
+    target_acceleration_mps2: 50.0,
+    preview_point: Vec2 {
+        x: 100_000.0,
+        y: 0.0,
+    },
+    preview_heading_rad: 0.0,
+    downed: false,
+    control: None,
+};
+
+/// The published parity bands from `fixtures/physics/golden-maneuvers.v2.json`
+/// and the table in `docs/engineering/physics-provenance.md`. Both reference
+/// rows of a maneuver are asserted, so the effective band is their
+/// intersection. These numbers are external measurements (CARLA 0.9.16) and
+/// published figures — never fitted from this engine — so the gearbox has to
+/// come to them rather than the other way round.
+#[test]
+fn golden_maneuvers_stay_inside_the_published_parity_bands() {
+    let (zero_to_100_s, gears) = zero_to_100_kmh();
+    // measured-carla 7.3 s ±12% and published 8.5 s ±10%.
+    assert!(
+        (7.3 * 0.88..=7.3 * 1.12).contains(&zero_to_100_s),
+        "0-100 km/h {zero_to_100_s} s outside the CARLA band"
+    );
+    assert!(
+        (8.5 * 0.90..=8.5 * 1.10).contains(&zero_to_100_s),
+        "0-100 km/h {zero_to_100_s} s outside the published band"
+    );
+    // The run is a real gearbox run, not a single-ratio one: first gear is
+    // engaged on the tick the throttle opens, and it reaches 100 km/h in third.
+    assert_eq!(gears, vec![1, 2, 3], "gears traversed during the run");
+
+    // Coastdown at 80 km/h, pedals released: SAE J1263 ≈ 0.25 m/s² ±15%.
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value
+        .register(&car(0.0, 0.0, 0.0, 80.0 / 3.6, None))
+        .unwrap();
+    let coast = MotionIntent {
+        target_speed_mps: 0.0,
+        target_acceleration_mps2: 0.0,
+        control: Some(VehicleControl::ZERO),
+        ..FULL_THROTTLE
+    };
+    let before = value.state(body).unwrap().longitudinal_velocity_mps;
+    let coasted = value.step(body, &coast, 0.02, 1.0).unwrap();
+    let coastdown = (before - coasted.state.longitudinal_velocity_mps) / 0.02;
+    assert!(
+        (0.25 * 0.85..=0.25 * 1.15).contains(&coastdown),
+        "coastdown {coastdown} m/s2 outside the published band"
+    );
+
+    // Braking 100 -> 0: measured-carla 54.1 m ±15%, published 48.2 m ±10%,
+    // FMVSS 135 ceiling 70.1 m.
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value
+        .register(&car(0.0, 0.0, 0.0, 100.0 / 3.6, None))
+        .unwrap();
+    let brake = MotionIntent {
+        target_speed_mps: 0.0,
+        target_acceleration_mps2: -20.0,
+        ..FULL_THROTTLE
+    };
+    let mut t = 0.0;
+    while t < 20.0 {
+        let result = value.step(body, &brake, 0.02, 1.0).unwrap();
+        t += 0.02;
+        if result.state.longitudinal_velocity_mps <= 1e-6 {
+            break;
+        }
+    }
+    let distance = value.state(body).unwrap().x;
+    assert!(
+        (54.1 * 0.85..=54.1 * 1.15).contains(&distance),
+        "stopping distance {distance} m outside the CARLA band"
+    );
+    assert!(
+        (48.2 * 0.90..=48.2 * 1.10).contains(&distance),
+        "stopping distance {distance} m outside the published band"
+    );
+    assert!(distance <= 70.1, "over the FMVSS 135 ceiling");
+}
+
+/// The handbrake is a rear-axle brake, not a pedal: it stops a coasting car
+/// without any brake pedal input, and it locks the rear wheels doing it.
+#[test]
+fn handbrake_locks_the_rear_axle_and_stops_a_coasting_car() {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 15.0, None)).unwrap();
+    let pulled = MotionIntent {
+        target_speed_mps: 15.0,
+        target_acceleration_mps2: 0.0,
+        control: Some(VehicleControl {
+            handbrake: true,
+            ..VehicleControl::ZERO
+        }),
+        ..FULL_THROTTLE
+    };
+    let mut t = 0.0;
+    while t < 20.0 && value.state(body).unwrap().longitudinal_velocity_mps > 0.05 {
+        value.step(body, &pulled, 0.02, 1.0).unwrap();
+        t += 0.02;
+    }
+    assert!(t < 12.0, "handbrake took {t} s to stop a 15 m/s coast");
+    let rear = value.telemetry(body).unwrap().wheel_speeds_radps;
+    assert!(
+        rear[2].abs() < 1.0 && rear[3].abs() < 1.0,
+        "rear wheels should be stopped, got {rear:?}"
+    );
+}
+
+/// Per-corner wheel speeds are a rigid-body reconstruction: straight ahead
+/// all four match the rolling speed, and in a turn the outside wheels turn
+/// faster than the inside ones.
+#[test]
+fn corner_wheel_speeds_split_across_the_track_in_a_turn() {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 12.0, None)).unwrap();
+    let straight_ahead = MotionIntent {
+        target_speed_mps: 12.0,
+        target_acceleration_mps2: 0.0,
+        ..FULL_THROTTLE
+    };
+    let rolled = value.step(body, &straight_ahead, 0.05, 1.0).unwrap();
+    let w = rolled.telemetry.wheel_speeds_radps;
+    let rolling = 12.0 / GENERIC_PASSENGER_CAR_PROFILE.wheel_radius_m;
+    for speed in w {
+        assert!((speed - rolling).abs() < 1.0, "{w:?} vs rolling {rolling}");
+    }
+
+    let turning = MotionIntent {
+        target_speed_mps: 12.0,
+        target_acceleration_mps2: 0.0,
+        preview_point: Vec2 { x: 30.0, y: 30.0 },
+        ..FULL_THROTTLE
+    };
+    let mut turned = rolled;
+    for _ in 0..40 {
+        turned = value.step(body, &turning, 0.05, 1.0).unwrap();
+    }
+    let w = turned.telemetry.wheel_speeds_radps;
+    assert!(turned.state.yaw_rate_radps > 0.05, "should be turning left");
+    // Turning left: the right-hand wheels are on the outside of the arc.
+    assert!(w[1] > w[0] && w[3] > w[2], "outside wheels lead: {w:?}");
+}
+
+/* ------------------------------------------------------- driver commands */
+
+/// A live driver's command: an intent whose pedals are held by the caller.
+/// The preview point is far ahead so the steer channel is the only thing the
+/// command controls.
+fn driven(throttle: f64, brake: f64, steer: f64, handbrake: bool) -> MotionIntent {
+    MotionIntent {
+        control: Some(VehicleControl {
+            throttle,
+            brake,
+            steer,
+            handbrake,
+        }),
+        ..FULL_THROTTLE
+    }
+}
+
+fn drive_for(
+    value: &mut DynamicV1Backend,
+    body: BodyIndex,
+    intent: &MotionIntent,
+    seconds: f64,
+) -> MotionStepResult {
+    let dt = 0.02;
+    let mut result = value.step(body, intent, dt, 1.0).expect("driven step");
+    let mut t = dt;
+    while t < seconds {
+        result = value.step(body, intent, dt, 1.0).expect("driven step");
+        t += dt;
+    }
+    result
+}
+
+/// The command contract a driving client relies on: the throttle accelerates
+/// and runs up through the gears, the brake brings the body to a stop, and
+/// the published telemetry says so.
+#[test]
+fn a_held_driver_command_accelerates_through_the_gears_and_stops_on_the_brake() {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 0.0, None)).unwrap();
+
+    let launched = drive_for(&mut value, body, &driven(1.0, 0.0, 0.0, false), 0.2);
+    assert_eq!(launched.telemetry.gear, 1, "a launch engages first gear");
+
+    let accelerated = drive_for(&mut value, body, &driven(1.0, 0.0, 0.0, false), 8.0);
+    assert!(
+        accelerated.state.longitudinal_velocity_mps > 25.0,
+        "8 s of throttle should pass 25 m/s, got {}",
+        accelerated.state.longitudinal_velocity_mps
+    );
+    assert!(
+        accelerated.telemetry.gear > 1,
+        "should have upshifted, still in {}",
+        accelerated.telemetry.gear
+    );
+    assert!(
+        accelerated.telemetry.engine_rpm > 1_000.0,
+        "engine speed should follow the wheels: {}",
+        accelerated.telemetry.engine_rpm
+    );
+
+    // The brake decelerates to a standstill and stops there: the body must
+    // not be dragged through zero into the other direction by a pedal.
+    let brake = driven(0.0, 1.0, 0.0, false);
+    let mut t = 0.0;
+    let entry_speed = accelerated.state.longitudinal_velocity_mps;
+    while t < 10.0 {
+        let result = value.step(body, &brake, 0.02, 1.0).unwrap();
+        t += 0.02;
+        assert!(
+            result.state.longitudinal_velocity_mps >= 0.0,
+            "braking must not push the body backwards while it is still \
+             rolling forwards: {} m/s at t={t}",
+            result.state.longitudinal_velocity_mps
+        );
+        if result.state.longitudinal_velocity_mps == 0.0 {
+            break;
+        }
+    }
+    assert!(
+        t < entry_speed / 5.0,
+        "stopping from {entry_speed} m/s took {t} s"
+    );
+}
+
+/// A driving client sends pedals, not a gear lever. Reverse is reached the
+/// way an automatic reaches it — stopped, on the brake — and the throttle
+/// takes drive again from a standstill.
+#[test]
+fn pedals_alone_reverse_the_body_and_take_drive_again() {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 0.0, None)).unwrap();
+
+    let reversing = drive_for(&mut value, body, &driven(0.0, 1.0, 0.0, false), 2.0);
+    assert_eq!(reversing.telemetry.gear, GEAR_REVERSE);
+    assert!(
+        reversing.state.longitudinal_velocity_mps < -1.0,
+        "holding the brake from rest should back the body up, got {}",
+        reversing.state.longitudinal_velocity_mps
+    );
+    assert!(
+        reversing.state.x < -0.5,
+        "should have moved back: {}",
+        reversing.state.x
+    );
+
+    // The throttle is the service brake while reversing, and once stopped it
+    // is the request to pull away forwards again.
+    let forward = drive_for(&mut value, body, &driven(1.0, 0.0, 0.0, false), 3.0);
+    assert!(forward.telemetry.gear > 0, "gear {}", forward.telemetry.gear);
+    assert!(
+        forward.state.longitudinal_velocity_mps > 1.0,
+        "should be driving forwards, got {}",
+        forward.state.longitudinal_velocity_mps
+    );
+}
+
+/// The handbrake is the way a driver parks: pedals released, it holds a
+/// stopped body still instead of letting the brake pedal take reverse. It is
+/// a 40% rear-axle brake, so it does not pretend to beat a full throttle.
+#[test]
+fn the_handbrake_parks_a_stopped_body_with_the_pedals_released() {
+    let mut value = DynamicV1Backend::new(DYNAMIC_V1_DEFAULT_SUBSTEP_S).unwrap();
+    let body = value.register(&car(0.0, 0.0, 0.0, 0.0, None)).unwrap();
+    let held = drive_for(&mut value, body, &driven(0.0, 0.0, 0.0, true), 6.0);
+    assert_eq!(
+        held.state.longitudinal_velocity_mps, 0.0,
+        "the parking brake should hold it at rest"
+    );
+    assert!(
+        held.state.x.abs() < 1e-9,
+        "should not have crept: {}",
+        held.state.x
+    );
+    assert_eq!(held.telemetry.gear, GEAR_NEUTRAL, "parked, so no gear");
 }

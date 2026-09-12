@@ -140,7 +140,8 @@ pub struct ActorTrack {
     pub s: Vec<f64>,
     /// 1 while the actor exists in the world, 0 before spawn / after despawn.
     pub present: Vec<u8>,
-    /// Force-based backend telemetry; absent for kinematic-v1.
+    /// Force-based backend telemetry. Absent on archived traces recorded by
+    /// the removed choreography backend, and for bodies with no plant.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub physics: Option<ActorPhysicsTrack>,
     /// Clip time at which this body was knocked off its feet, absent while it
@@ -349,6 +350,9 @@ pub struct TraceActorMetadata {
     pub tags: Vec<String>,
 }
 
+/// Motion backend an actor track was produced by. `kinematic-v1` names the
+/// removed choreography backend: nothing records it any more, but archived
+/// traces must keep parsing so they still replay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActorBackendMode {
     #[serde(rename = "kinematic-v1")]
@@ -359,11 +363,29 @@ pub enum ActorBackendMode {
     FixedStaticV1,
 }
 
+/// Motion semantics a trace header was recorded under. Distinct from
+/// [`MotionPhysicsMode`], which is the *input* selection and no longer has a
+/// kinematic value; provenance keeps the legacy string readable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecordedPhysicsMode {
+    #[serde(rename = "kinematic-v1")]
+    KinematicV1,
+    #[serde(rename = "dynamic-v1")]
+    DynamicV1,
+}
+
 impl From<MotionPhysicsMode> for ActorBackendMode {
     fn from(mode: MotionPhysicsMode) -> Self {
         match mode {
-            MotionPhysicsMode::KinematicV1 => ActorBackendMode::KinematicV1,
             MotionPhysicsMode::DynamicV1 => ActorBackendMode::DynamicV1,
+        }
+    }
+}
+
+impl From<MotionPhysicsMode> for RecordedPhysicsMode {
+    fn from(mode: MotionPhysicsMode) -> Self {
+        match mode {
+            MotionPhysicsMode::DynamicV1 => RecordedPhysicsMode::DynamicV1,
         }
     }
 }
@@ -455,7 +477,7 @@ pub enum TraceSolver {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhysicsTraceProvenance {
-    pub mode: MotionPhysicsMode,
+    pub mode: RecordedPhysicsMode,
     pub solver: TraceSolver,
     pub solver_version: String,
     /// Actual integration/substep interval used by the selected solver.

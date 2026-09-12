@@ -10,7 +10,7 @@ use crate::error::{SimIssue, SimIssueCode};
 use crate::map::LaneId;
 use crate::math::{angle_delta, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
-    BodyIndex, MotionBackend, MotionIntent, VehicleMotionState, WorldContactRef,
+    BodyIndex, MotionBackend, MotionIntent, WorldContactRef,
     WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
 };
 use crate::trace::metrics::StaticShape;
@@ -36,7 +36,14 @@ use super::world::{
     DYNAMIC_LATERAL_SETTLE_RATE_MPS, FREEFORM_LANE_REBIND_M, LOOKAHEAD_M, REACTIVE_GRID_CELL_M,
     REACTIVE_MAX_RANGE_M2, REACTIVE_SCAN_RADIUS_M, ROUTE_END_SLACK_M,
 };
+use crate::solve::guards::timed_route_speed_envelope_mps;
 use crate::trace::pairs::along_route_gap_m;
+
+/// How hard a timed-route body chases its authored station, in `1/s`: a
+/// one-metre lag asks for this much extra speed. Deliberately gentle — the
+/// authored schedule is a target, and overdriving it would make a drawn
+/// route oscillate instead of flow.
+const TIMED_STATION_GAIN_PER_S: f64 = 0.6;
 
 /// One actor's planned next state.
 #[derive(Debug, Clone, Default)]
@@ -465,7 +472,10 @@ impl Simulation {
         if !a.is_live() {
             return Ok(plan);
         }
-        if a.is_static {
+        // Static actors and props have no plant: the motion backend refuses
+        // to register them, so there is nothing to integrate and they hold
+        // the pose they were placed at. Every other actor is a body.
+        if a.is_static || a.body.is_none() {
             plan.speed = 0.0;
             plan.lateral_rate = 0.0;
             plan.lateral_accel = 0.0;
@@ -480,7 +490,8 @@ impl Simulation {
                 (limits_for(a).brake_hard * friction_scale).min((a.speed_mps / dt).max(0.0));
             plan.accel = -emergency;
             plan.speed = (a.speed_mps - emergency * dt).max(0.0);
-            if let (Some(backend), Some(body)) = (&mut self.physics, a.body) {
+            if let Some(body) = a.body {
+                let backend = &mut self.physics;
                 let intent = Self::intent_with_override(
                     MotionIntent {
                         motion_direction: a.motion_direction,
@@ -518,28 +529,32 @@ impl Simulation {
             return Ok(plan);
         }
 
-        // Exact-time authored trajectory owns motion until its last keyframe.
+        // A freehand timed route is a speed profile over an authored path,
+        // not a choreography: `a.route` already *is* the drawn polyline, so
+        // the path tracker steers along it while the keyframes say how fast
+        // the body should be at each moment. The body gets to its waypoints
+        // by driving there under tyre and drivetrain limits. A station error
+        // against the authored schedule is corrected through the speed
+        // target, which is the only channel a force-based body has.
+        let mut schedule_active = false;
         if let Some(timed) = &a.timed_route {
             let end = timed.end_time_s();
-            if timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9) {
+            schedule_active = timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9);
+            if schedule_active {
                 let sample_at = (t + dt).min(self.input.clip_seconds);
                 let sample = timed.sample(sample_at, a.heading_rad);
-                let projected = a.route.project_point(sample.position);
-                plan.position = sample.position;
-                plan.heading = normalize_angle(sample.heading_rad);
-                plan.speed = sample.speed_mps;
-                plan.accel = (sample.speed_mps - a.speed_mps) / dt;
-                plan.route_s = projected.s;
-                plan.lateral_offset = a.route.lateral_offset_at(projected.s, sample.position);
-                plan.lateral_rate = 0.0;
-                plan.lateral_accel = 0.0;
-                plan.lateral_reference_offset = plan.lateral_offset;
-                plan.lateral_reference_rate = 0.0;
-                plan.lateral_reference_accel = 0.0;
-                return Ok(plan);
+                let scheduled_s = a.route.project_point(sample.position).s;
+                let station_error = scheduled_s - a.route_s;
+                let target = (sample.speed_mps + TIMED_STATION_GAIN_PER_S * station_error)
+                    .clamp(0.0, timed_route_speed_envelope_mps(a.kind));
+                let a = &mut self.actors[index.index()];
+                a.cruise_override_mps = Some(target);
+                a.cruise_speed_mps = target;
             }
         }
-        if self.actors[index.index()].timed_route.is_some() {
+        // The schedule has run out: release the body onto a freeform runway
+        // and let it brake. Only once — the route is taken here.
+        if !schedule_active && self.actors[index.index()].timed_route.is_some() {
             // Hand-off to physics-controlled braking, not an implicit cruise.
             let a = &mut self.actors[index.index()];
             let released = a
@@ -590,10 +605,7 @@ impl Simulation {
 
         let a = &self.actors[index.index()];
         let lim = limits_for(a);
-        let dynamic_profile = match (&self.physics, a.body) {
-            (Some(backend), Some(body)) => backend.profile(body).cloned(),
-            _ => None,
-        };
+        let dynamic_profile = a.body.and_then(|body| self.physics.profile(body).cloned());
         let desired_speed = match &a.long_cmd {
             Some(cmd) if cmd.kind == LongitudinalKind::Speed => cmd.target,
             _ => cruise_speed(a, lane_speed_limit),
@@ -776,17 +788,8 @@ impl Simulation {
         plan.lateral_reference_rate = lat.rate;
         plan.lateral_reference_accel = lat.accel;
         plan.lateral_complete = lat.complete;
-        let dynamic = a.body.is_some() && self.physics.is_some();
-        if !dynamic {
-            if let Some(cmd) = &a.lat_cmd {
-                if cmd.kind == LateralKind::ChangeLane && lat.complete && !cmd.done {
-                    plan.swap = cmd.pending.clone();
-                }
-            }
-        }
-
-        if dynamic {
-            let body = a.body.expect("body");
+        {
+            let body = a.body.expect("every planned actor is a body");
             let short_lookahead = match &dynamic_profile {
                 Some(p) => (p.wheelbase_m * 0.85).max(a.speed_mps.abs() * 0.25),
                 None => 5.0f64.max(a.speed_mps.abs() * 0.8),
@@ -851,7 +854,7 @@ impl Simulation {
                 },
                 action.as_ref(),
             );
-            let backend = self.physics.as_mut().expect("backend");
+            let backend = &mut self.physics;
             let result = backend
                 .step(body, &intent, dt, friction_scale)
                 .map_err(engine_err)?;
@@ -950,17 +953,6 @@ impl Simulation {
             );
         }
 
-        if !dynamic {
-            plan.lateral_offset = plan.lateral_reference_offset;
-            plan.lateral_rate = plan.lateral_reference_rate;
-            plan.lateral_accel = plan.lateral_reference_accel;
-            let pose = a.route.pose_at(plan.route_s);
-            plan.position = a.route.point_with_offset(plan.route_s, plan.lateral_offset);
-            plan.heading = normalize_angle(
-                heading_with_slip(pose.heading_rad, plan.lateral_rate, plan.speed)
-                    + if a.is_reverse() { PI } else { 0.0 },
-            );
-        }
         self.finish_plan_scratch(index, nearby, caches, cache);
         Ok(plan)
     }
@@ -999,29 +991,6 @@ impl Simulation {
                 a.lateral_reference_accel_mps2 = plan.lateral_reference_accel;
                 a.position = plan.position;
                 a.heading_rad = plan.heading;
-                if a.timed_route.is_some() && a.crash.is_none() {
-                    if let (Some(backend), Some(body)) = (&mut self.physics, a.body) {
-                        let current = backend.state(body);
-                        let sign = a.direction_sign();
-                        backend
-                            .set_state(
-                                body,
-                                VehicleMotionState {
-                                    x: plan.position.x,
-                                    y: plan.position.y,
-                                    yaw_rad: plan.heading,
-                                    longitudinal_velocity_mps: plan.speed * sign,
-                                    lateral_velocity_mps: 0.0,
-                                    yaw_rate_radps: 0.0,
-                                    steer_rad: current.map_or(0.0, |c| c.steer_rad),
-                                    wheel_angular_speed_radps: current
-                                        .map_or(0.0, |c| c.wheel_angular_speed_radps),
-                                    longitudinal_acceleration_mps2: plan.accel * sign,
-                                },
-                            )
-                            .map_err(engine_err)?;
-                    }
-                }
                 if t >= 0.0 {
                     a.required_decel_max = a.required_decel_max.max(plan.required_decel);
                 }
@@ -1159,9 +1128,6 @@ impl Simulation {
     /// Resolve all moving bodies together. Only explicit fixed/static actors,
     /// props, and map proxies have infinite mass.
     fn resolve_dynamic_contacts(&mut self, t: f64) -> EngineResult<()> {
-        if self.physics.is_none() {
-            return Ok(());
-        }
         let dt = self.dt;
         let mut active: Vec<BodyIndex> = Vec::new();
         let mut speed_before: Vec<(ActorIndex, f64)> = Vec::new();
@@ -1175,7 +1141,7 @@ impl Simulation {
             }
             active.push(body);
             if a.kind.is_knockdown_vulnerable() {
-                if let Some(st) = self.physics.as_ref().expect("backend").state(body) {
+                if let Some(st) = self.physics.state(body) {
                     speed_before.push((
                         a.index,
                         hypot(st.longitudinal_velocity_mps, st.lateral_velocity_mps),
@@ -1220,7 +1186,7 @@ impl Simulation {
                 angular_velocity: 0.0,
             });
         }
-        let backend = self.physics.as_mut().expect("backend");
+        let backend = &mut self.physics;
         backend
             .step_world(&active, &colliders, dt)
             .map_err(engine_err)?;
@@ -1260,11 +1226,7 @@ impl Simulation {
             let Some(&(_, before)) = speed_before.iter().find(|e| e.0 == actor) else {
                 continue;
             };
-            let Some(st) = self
-                .physics
-                .as_ref()
-                .expect("backend")
-                .state(a.body.expect("body"))
+            let Some(st) = self.physics.state(a.body.expect("body"))
             else {
                 continue;
             };
@@ -1292,7 +1254,7 @@ impl Simulation {
                 normal_impulse_ns: impulse_ns,
             });
         }
-        let backend = self.physics.as_ref().expect("backend");
+        let backend = &self.physics;
         for a in &mut self.actors {
             let Some(body) = a.body else { continue };
             if !a.is_live() {
@@ -1384,7 +1346,7 @@ impl Simulation {
             });
         }
         {
-            let backend = self.physics.as_ref();
+            let backend = &self.physics;
             let frames: Vec<ActorFrame<'_>> = self
                 .actors
                 .iter()
@@ -1398,9 +1360,9 @@ impl Simulation {
                         }
                     });
                     let physics = a.body.map(|body| {
-                        let st = backend.and_then(|b| b.state(body));
+                        let st = backend.state(body);
                         let telemetry = self.telemetry[a.index.index()]
-                            .or_else(|| backend.and_then(|b| b.telemetry(body)));
+                            .or_else(|| backend.telemetry(body));
                         PhysicsFrame {
                             vx_body_mps: st.map_or(0.0, |s| s.longitudinal_velocity_mps),
                             vy_body_mps: st.map_or(0.0, |s| s.lateral_velocity_mps),

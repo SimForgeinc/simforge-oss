@@ -55,8 +55,8 @@ between ticks the newest wins and the rest count as
   nonzero, else a P loop `speed_kp * (drive.speed − current_speed)`, mapped to
   normalized throttle/brake via `max_accel_mps2` / `max_decel_mps2`. Action
   `{throttle, brake, steer}` — the engine applies it verbatim inside its
-  steer clamp/rate/lag and jerk envelope. **Requires `physics.mode:
-  "dynamic-v1"`** in the scenario; kinematic-v1 ignores raw control.
+  steer clamp/rate/lag and jerk envelope. `dynamic-v1` is the only motion
+  backend, so raw control always reaches the solver.
   Sign convention verified against dynamic-v1: positive steer = left = +yaw,
   so Ackermann's positive-left `steering_angle` maps with `steer_sign: 1.0`.
 - `setpoint`: `drive.speed → target_speed_mps`, nonzero `drive.acceleration →

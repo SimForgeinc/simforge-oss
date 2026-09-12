@@ -173,6 +173,8 @@ pub fn speed_setpoint_override(action: &PolicyAction) -> ActionOverride {
                 throttle: *throttle,
                 brake: *brake,
                 steer: *steer,
+                // A policy step has no parking-brake channel.
+                handbrake: false,
             }),
             ..ActionOverride::default()
         },

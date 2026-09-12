@@ -7,7 +7,7 @@ describe('canonical native authoring preview', () => {
   it('runs the complete fixed-step episode and reuses the exact hash-cached result', () => {
     const graph = engine().laneGraph({ schemaVersion: 1, mapName: 'preview', source: { xodrSha256: 'preview' }, lanes: {}, gates: [], junctions: {} });
     const input = parseSimScenarioInput({
-      mapId: 'preview', clipSeconds: 3, warmupSeconds: 0, dt: .02, physics: { mode: 'kinematic-v1' },
+      mapId: 'preview', clipSeconds: 3, warmupSeconds: 0, dt: .02, physics: { mode: 'dynamic-v1' },
       actors: [{
         id: 'ego', kind: 'car', initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 2 },
         behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 20, z: 0 }] }, cruiseSpeedMps: 2 },

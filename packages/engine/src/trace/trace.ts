@@ -339,8 +339,18 @@ export interface TraceHeader {
   readonly physics: PhysicsTraceProvenance;
 }
 
+/**
+ * Motion semantics a trace was recorded under. Distinct from
+ * {@link MotionPhysicsMode}, which is the *input* selection and no longer
+ * has a kinematic value: `kinematic-v1` names the removed choreography
+ * backend, and also the externally authored trajectories an imported replay
+ * bundle carries. Nothing simulates it any more, but archived evidence must
+ * keep parsing so it still replays and still evaluates.
+ */
+export type RecordedPhysicsMode = MotionPhysicsMode | 'kinematic-v1';
+
 export interface PhysicsTraceProvenance {
-  readonly mode: MotionPhysicsMode;
+  readonly mode: RecordedPhysicsMode;
   readonly solver: 'uniscenarios-sim-engine';
   readonly solverVersion: string;
   /** Actual integration/substep interval used by the selected solver. */
@@ -356,7 +366,7 @@ export interface PhysicsTraceProvenance {
 }
 
 export interface ActorPhysicsBackendProvenance {
-  readonly mode: MotionPhysicsMode | 'fixed-static-v1';
+  readonly mode: RecordedPhysicsMode | 'fixed-static-v1';
   readonly reason: 'selected' | 'static-actor';
   /** Exact class-native dynamics profile used by the moving solver. */
   readonly profile: ActorKind | 'fixed-static';

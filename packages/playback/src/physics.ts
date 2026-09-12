@@ -19,7 +19,6 @@ export interface PhysicsDisplaySummary {
   readonly mode: MotionPhysicsMode;
   readonly actors: readonly ActorPhysicsDisplay[];
   readonly dynamicCount: number;
-  readonly fallbackCount: number;
   readonly staticCount: number;
   readonly unknownCount: number;
 }
@@ -42,34 +41,24 @@ export function physicsReasonLabel(reason: PhysicsDisplayReason): string {
   }
 }
 
-function summarize(mode: MotionPhysicsMode, actors: readonly ActorPhysicsDisplay[]): PhysicsDisplaySummary {
-  return {
-    mode,
-    actors,
-    dynamicCount: actors.filter((actor) => actor.mode === 'dynamic-v1').length,
-    fallbackCount: actors.filter((actor) => actor.mode === 'kinematic-v1' && actor.reason !== 'selected').length,
-    staticCount: actors.filter((actor) => actor.mode === 'fixed-static-v1').length,
-    unknownCount: actors.filter((actor) => actor.mode === null).length,
-  };
-}
-
 /** Preview provenance, computed without mutating or materializing authored data. */
 export function physicsSummaryForAuthoredActors(actors: readonly {
   readonly id: string;
   readonly label?: string | undefined;
   readonly simulationKind: string;
   readonly static: boolean;
-  readonly reverse: boolean;
 }[]): PhysicsDisplaySummary {
   const displays = actors.map((actor): ActorPhysicsDisplay => {
-    const backend = actorPhysicsBackend({
-      kind: actor.simulationKind as never,
-      static: actor.static,
-      tags: actor.reverse ? ['motion:reverse'] : [],
-    }, { mode: 'dynamic-v1' });
+    const backend = actorPhysicsBackend({ kind: actor.simulationKind as never, static: actor.static });
     return { id: actor.id, label: actor.label || actor.id, ...backend };
   });
-  return summarize('dynamic-v1', displays);
+  return {
+    mode: 'dynamic-v1',
+    actors: displays,
+    dynamicCount: displays.filter((actor) => actor.mode === 'dynamic-v1').length,
+    staticCount: displays.filter((actor) => actor.mode === 'fixed-static-v1').length,
+    unknownCount: displays.filter((actor) => actor.mode === null).length,
+  };
 }
 
 export function physicsForActor(summary: PhysicsDisplaySummary, actorId: string): ActorPhysicsDisplay | null {

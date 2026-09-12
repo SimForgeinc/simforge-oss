@@ -95,13 +95,20 @@ impl TryFrom<i8> for MotionDirection {
 }
 
 /// Normalised actuator requests: throttle/brake in `[0, 1]`, steer in
-/// `[-1, 1]` as a fraction of the profile's steering lock.
+/// `[-1, 1]` as a fraction of the profile's steering lock. This is also the
+/// driver-command contract a live client sends through
+/// `WorldSession::set_driver_command`.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VehicleControl {
     pub throttle: f64,
     pub brake: f64,
     pub steer: f64,
+    /// Rear-axle parking brake. Independent of the brake pedal: it bypasses
+    /// the jerk-limited pedal path, so it locks the rear wheels immediately
+    /// the way a yanked handbrake does.
+    #[serde(default)]
+    pub handbrake: bool,
 }
 
 impl VehicleControl {
@@ -109,6 +116,7 @@ impl VehicleControl {
         throttle: 0.0,
         brake: 0.0,
         steer: 0.0,
+        handbrake: false,
     };
 }
 
@@ -183,7 +191,8 @@ impl VehicleMotionState {
     }
 }
 
-/// Diagnostic sample of the last integration step for one body.
+/// Diagnostic sample of the last integration step for one body. Also the
+/// source of the per-frame driving telemetry published on truth frames.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhysicsTelemetrySample {
@@ -193,7 +202,20 @@ pub struct PhysicsTelemetrySample {
     pub rear_lateral_force_n: f64,
     pub front_normal_force_n: f64,
     pub rear_normal_force_n: f64,
+    /// Peak of the two axles, retained as the single-number summary the trace
+    /// channel and the engine's existing consumers read.
     pub tire_utilization: f64,
+    pub front_tire_utilization: f64,
+    pub rear_tire_utilization: f64,
+    /// Engine speed implied by the driveline in the engaged gear; the idle
+    /// speed while stopped, and zero for classes with no driveline.
+    pub engine_rpm: f64,
+    /// `0` neutral, `1..=n` forward, `-1` reverse.
+    pub gear: i32,
+    /// Wheel angular speeds in rad/s, `[fl, fr, rl, rr]`.
+    pub wheel_speeds_radps: [f64; 4],
+    /// Body-frame lateral acceleration of the last substep.
+    pub lateral_acceleration_mps2: f64,
     pub substeps: u32,
     pub substep_s: f64,
     /// Sum of normal contact impulses applied during the last world step.
@@ -207,6 +229,45 @@ pub struct PhysicsTelemetrySample {
 pub struct MotionStepResult {
     pub state: VehicleMotionState,
     pub telemetry: PhysicsTelemetrySample,
+}
+
+/// Front/rear split of the friction-circle utilisation.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AxleUtilization {
+    pub front: f64,
+    pub rear: f64,
+}
+
+/// Per-frame driving telemetry for one body: the published contract the live
+/// truth stream carries and HUD/audio clients render. Derived entirely from
+/// the body's integrated state plus the tick's collision result — it adds no
+/// state of its own, so two identical runs publish identical telemetry.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VehicleTelemetry {
+    /// Forward speed magnitude, m/s.
+    pub speed_mps: f64,
+    pub rpm: f64,
+    /// `0` neutral, `1..=n` forward, `-1` reverse.
+    pub gear: i32,
+    pub throttle: f64,
+    pub brake: f64,
+    /// Steering as a fraction of the class's steering lock, `[-1, 1]`.
+    pub steer: f64,
+    /// Road-wheel angle in radians; `steer` scaled by the class lock.
+    pub steer_rad: f64,
+    /// Wheel angular speeds, rad/s, `[fl, fr, rl, rr]`.
+    pub wheel_speeds: [f64; 4],
+    pub tyre_utilization: AxleUtilization,
+    /// Longitudinal acceleration in g (positive forward).
+    pub longitudinal_g: f64,
+    /// Lateral acceleration in g (positive left).
+    pub lateral_g: f64,
+    /// The body is not on a drivable lane.
+    pub off_road: bool,
+    /// Summed normal collision impulse applied on this tick, N·s.
+    pub collision_impulse_ns: f64,
 }
 
 /// Initial pose/speed for registration. Pose and longitudinal speed are

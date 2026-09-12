@@ -51,13 +51,29 @@ export type BatchOp =
   | { readonly kind: 'spawn'; readonly spawn: SpawnRequest }
   | { readonly kind: 'despawn'; readonly actorId: string };
 
+/**
+ * A live driver's pedals and wheel: exactly what a game client sends, and
+ * what the `dynamic-v1` integrator applies at every substep while it is
+ * held. Throttle and brake are `[0, 1]`, steer is `[-1, 1]` as a fraction of
+ * the class's steering lock, and the handbrake is the rear-axle parking
+ * brake — independent of the brake pedal.
+ */
+export interface DriverCommand {
+  readonly throttle: number;
+  readonly brake: number;
+  readonly steer: number;
+  readonly handbrake?: boolean;
+}
+
 export type WorldCommand =
   | { readonly kind: 'spawn'; readonly spawn: SpawnRequest }
   | { readonly kind: 'despawn'; readonly actorId: string }
   /** Atomic: every op applies, or none does and the world is untouched. */
   | { readonly kind: 'batch'; readonly ops: readonly BatchOp[] }
   /** Zero-order-hold action override for one actor; `null` releases it. */
-  | { readonly kind: 'act'; readonly actorId: string; readonly action: EnvAction | null };
+  | { readonly kind: 'act'; readonly actorId: string; readonly action: EnvAction | null }
+  /** Zero-order-hold driver command for one actor; `null` releases it. */
+  | { readonly kind: 'driverCommand'; readonly actorId: string; readonly command: DriverCommand | null };
 
 export interface CommandOutcome {
   readonly ok: boolean;
@@ -233,6 +249,25 @@ export class WorldSession {
   /** Apply one command for `clientId`/`seq`; the outcome (including rejections) is logged. */
   applyCommand(clientId: string, seq: number, command: WorldCommand): CommandOutcome {
     return JSON.parse(guard(() => this.native.command(JSON.stringify(command), clientId, seq))) as CommandOutcome;
+  }
+
+  /**
+   * Hold one actor's pedals and wheel until replaced; `null` releases the
+   * actor back to its scenario controller. Called once per render frame by a
+   * driving client, so it goes through the typed native entry point instead
+   * of a JSON command document — same `clientId`/`seq` bookkeeping and same
+   * replayable log entry as {@link applyCommand}.
+   */
+  setDriverCommand(clientId: string, seq: number, actorId: string, command: DriverCommand | null): CommandOutcome {
+    return JSON.parse(guard(() => this.native.setDriverCommand(
+      actorId,
+      command?.throttle ?? null,
+      command?.brake ?? null,
+      command?.steer ?? null,
+      command?.handbrake ?? null,
+      clientId,
+      seq,
+    ))) as CommandOutcome;
   }
 
   /** Advance the engine by `ticks`, hashing every frame into the digest. */

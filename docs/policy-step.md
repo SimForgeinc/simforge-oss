@@ -116,8 +116,8 @@ Tagged unions; compact wire forms in parentheses:
   consecutive 10 Hz waypoints). Execution depends on the server's
   `trajExec` mode — see "Trajectory execution" below.
 - **control** (`{k: 'c', c: [throttle, brake, steer]}`) — low-level
-  passthrough into the force-based vehicle backend (`dynamic-v1` physics;
-  inert under `kinematic-v1`).
+  passthrough into the force-based vehicle backend, applied at every
+  `dynamic-v1` substep the way a live driver command is.
 
 ## Trajectory execution
 

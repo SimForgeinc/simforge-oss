@@ -80,8 +80,9 @@ CAPACITIES: dict[str, int] = {
 #: ``rejected`` value fails admission with the reason recorded here.
 CAPABILITIES: dict[str, dict[str, object]] = {
     "physics": {
-        "supported": {"mode": ["dynamic-v1"], "substepS": "any positive", "vehicleProfiles": "per-actor overrides"},
-        "rejected": {"mode kinematic-v1": "route-kinematic bodies are not part of the force-based device profile"},
+        "supported": {"mode": ["dynamic-v1", "kinematic-v1 (migrates to dynamic-v1)"],
+                      "substepS": "any positive", "vehicleProfiles": "per-actor overrides"},
+        "rejected": {"mode <unknown>": "dynamic-v1 is the only motion backend"},
     },
     "timing": {
         "supported": {"dt": REFERENCE_DT_S, "decisionHz": "positive integer dividing 50", "warmupSeconds": "any", "clipSeconds": "any"},

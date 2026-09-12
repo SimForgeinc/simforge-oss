@@ -24,7 +24,7 @@ is approximated or dropped. In short:
 
 | supported | rejected |
 |---|---|
-| `physics.mode = dynamic-v1` (substep, per-actor `vehicleProfiles`, child pedestrian tag) | `kinematic-v1` |
+| `physics.mode = dynamic-v1` (substep, per-actor `vehicleProfiles`, child pedestrian tag), a legacy `kinematic-v1` pin migrating to it | any other `physics.mode` |
 | all actor kinds, `static` actors as infinite-mass bodies, `presentAtStart` + `exist` | `ambient` tag, sensors |
 | `lanePath` routes, `rules`, `drivingProfile`, `cruiseSpeedMps`, `motion:reverse` | `follow`, `polyline`, `timedPolyline` routes |
 | verbs `speed` (all modes), `gap`, `exist`; triggers `at`, `after`, `when`; `window`, `until`, all `dynamics` | `changeLane`, `laneOffset`, `route`, `set`; `arrival` |

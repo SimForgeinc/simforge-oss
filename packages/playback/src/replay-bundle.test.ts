@@ -26,7 +26,7 @@ function planFixture() {
     clipSeconds: 2,
     warmupSeconds: 0.5,
     dt: 0.1,
-    physics: { mode: 'kinematic-v1' },
+    physics: { mode: 'dynamic-v1' },
     operationalConditions: {
       weather: 'clear',
       timeOfDay: 'day',

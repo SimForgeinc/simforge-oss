@@ -15,6 +15,7 @@ use simforge_bindings_common::runtime::{
     Scenario, Sim, Site, StepView, Trace, World,
 };
 use simforge_bindings_common::{action, BindingError, ErrorKind};
+use simforge_core::physics::VehicleControl;
 use simforge_core::rng::Seed;
 
 fn to_napi(err: BindingError) -> Error {
@@ -1187,6 +1188,39 @@ impl JsWorldSession {
                 client_id.as_deref().unwrap_or("node"),
                 seq.unwrap_or(0).max(0) as u64,
                 &command_json,
+            )
+            .js()
+    }
+    /// Hold one actor's pedals and wheel until replaced. Omit `throttle`,
+    /// `brake` and `steer` — pass `null` for the whole command — to release
+    /// the actor back to its scenario controller. Returns the
+    /// `CommandOutcome` JSON.
+    #[napi(js_name = "setDriverCommand")]
+    pub fn set_driver_command(
+        &mut self,
+        actor_id: String,
+        throttle: Option<f64>,
+        brake: Option<f64>,
+        steer: Option<f64>,
+        handbrake: Option<bool>,
+        client_id: Option<String>,
+        seq: Option<i64>,
+    ) -> Result<String> {
+        let command = match (throttle, brake, steer) {
+            (None, None, None) => None,
+            (throttle, brake, steer) => Some(VehicleControl {
+                throttle: throttle.unwrap_or(0.0),
+                brake: brake.unwrap_or(0.0),
+                steer: steer.unwrap_or(0.0),
+                handbrake: handbrake.unwrap_or(false),
+            }),
+        };
+        self.inner
+            .set_driver_command(
+                client_id.as_deref().unwrap_or("node"),
+                seq.unwrap_or(0).max(0) as u64,
+                &actor_id,
+                command,
             )
             .js()
     }

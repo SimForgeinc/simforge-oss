@@ -1243,7 +1243,7 @@ export function exportOpenScenarioXml14(
 
   const date = options.headerDate ?? '1970-01-01T00:00:00.000Z';
   const physics = resolvePhysicsConfig(input);
-  const inputActorBackends = actorPhysicsBackends(input.actors, physics);
+  const inputActorBackends = actorPhysicsBackends(input.actors);
   const replaySignalTracks = replayTrace ? compactSignalTracks(input, replayTrace) : null;
   const headerProperties = [
     `<Property name="uniscenarios.executionMode" value="${executionMode}"/>`,
@@ -1252,7 +1252,7 @@ export function exportOpenScenarioXml14(
     `<Property name="uniscenarios.input.schemaVersion" value="${input.schemaVersion}"/>`,
     `<Property name="uniscenarios.input.seed" value="${xml(String(input.seed))}"/>`,
     `<Property name="uniscenarios.physics.mode" value="${physics.mode}"/>`,
-    `<Property name="uniscenarios.physics.substepS" value="${finite(physics.substepS ?? (physics.mode === 'dynamic-v1' ? DYNAMIC_V1_DEFAULT_SUBSTEP_S : input.dt))}"/>`,
+    `<Property name="uniscenarios.physics.substepS" value="${finite(physics.substepS ?? DYNAMIC_V1_DEFAULT_SUBSTEP_S)}"/>`,
     `<Property name="uniscenarios.physics.actorBackends" value="${xml(Object.entries(inputActorBackends).sort(([a], [b]) => a.localeCompare(b)).map(([actorId, backend]) => `${actorId}:${backend.mode}:${backend.reason}:${backend.profile}`).join(','))}"/>`,
     `<Property name="uniscenarios.export.constructCapabilities.v1" value="${xml(JSON.stringify(capabilities.report.constructs ?? []))}"/>`,
     ...(replayTrace ? [
