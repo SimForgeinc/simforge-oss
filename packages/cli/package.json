@@ -56,7 +56,6 @@
     "@simforge-oss/openscenario": "workspace:*",
     "@simforge-oss/render": "workspace:*",
     "@simforge-oss/scenario": "workspace:*",
-    "@simforge-oss/studio-host": "workspace:*",
     "meshoptimizer": "^1.2.0",
     "sharp": "0.34.5"
   },

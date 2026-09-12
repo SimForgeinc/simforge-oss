@@ -1,9 +1,23 @@
+import { homedir } from 'node:os';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { URL } from 'node:url';
-import { readLocalHostState } from '@simforge-oss/studio-host/node';
 import { CliError, EXIT } from '../errors.js';
 import { emit } from '../output.js';
 
 const CLOUD_ROOT = '/api/simforge/cloud';
+type LocalHostState = { schema: 'simforge.local-host-state/v1'; baseUrl: string; controlToken: string };
+
+async function readHostState(dataRoot?: string): Promise<LocalHostState | null> {
+  const root = dataRoot?.trim() || process.env.SIMFORGE_CLOUD_ROOT?.trim() || join(homedir(), '.simforge', 'cloud');
+  try {
+    const value = JSON.parse(await readFile(join(root, 'host.json'), 'utf8')) as Partial<LocalHostState>;
+    if (value.schema !== 'simforge.local-host-state/v1' || typeof value.baseUrl !== 'string' || typeof value.controlToken !== 'string') return null;
+    return value as LocalHostState;
+  } catch {
+    return null;
+  }
+}
 
 type CloudOptions = { pretty: boolean; dataRoot?: string; origin?: string; workspaceId?: string };
 
@@ -16,13 +30,13 @@ function requireLoopback(origin: string): URL {
 }
 
 async function localRequest<T>(path: string, options: CloudOptions, init: RequestInit = {}): Promise<T> {
-  const state = await readLocalHostState(options.dataRoot ? { SIMFORGE_CLOUD_ROOT: options.dataRoot } : process.env);
+  const state = await readHostState(options.dataRoot);
   if (!state) {
     throw new CliError('host_unavailable', 'No running local Studio host was found. Start SimForge Studio first.', {
       detail: { dataRoot: options.dataRoot ?? null },
     });
   }
-  const base = requireLoopback(options.origin ?? state.baseUrl);
+  const base = requireLoopback(state.baseUrl);
   const response = await fetch(new URL(`${CLOUD_ROOT}${path}`, base), {
     ...init,
     redirect: 'error',
