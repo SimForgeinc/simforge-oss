@@ -52,7 +52,6 @@ import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
-import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
 import { cloudCommand } from './commands/cloud.js';
 
 const COMMANDS = [
