@@ -1,6 +1,10 @@
 "use client";
 
 import { CircleAlert, LoaderCircle, MapPin } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
+
+import { driveChrome } from "./chrome";
+import { driveColors, driveRadius, driveText } from "./drive.stylex";
 
 /** One installed map offered as a place to drive. */
 export interface DriveMapOption {
@@ -9,6 +13,200 @@ export interface DriveMapOption {
   locality: string | null;
   thumbnailUrl: string | null;
 }
+
+/** The loader's turn. One revolution per second, as Tailwind's `animate-spin` was. */
+const spin = stylex.keyframes({
+  from: { transform: "rotate(0deg)" },
+  to: { transform: "rotate(360deg)" },
+});
+
+const styles = stylex.create({
+  /** The screen's own gutters: the chrome supplies the field, this the frame. */
+  screen: {
+    paddingInline: { default: "1.5rem", "@media (min-width: 640px)": "2.5rem" },
+    paddingBlock: "3rem",
+  },
+  column: {
+    marginInline: "auto",
+    width: "100%",
+    maxWidth: "64rem",
+  },
+
+  /** The game's name, in the accent, above the ask. */
+  eyebrow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.625rem",
+    fontFamily: driveText.fontMeta,
+    fontSize: driveText.sizeMicro,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: driveText.trackTitle,
+    color: driveColors.accent,
+  },
+  /** The installed count, sitting off the eyebrow as an instrument reading. */
+  eyebrowCount: {
+    fontVariantNumeric: "tabular-nums",
+    color: driveColors.textDim,
+  },
+  title: {
+    marginTop: "0.5rem",
+    fontFamily: driveText.fontDisplay,
+    fontSize: { default: "2.25rem", "@media (min-width: 640px)": "3rem" },
+    lineHeight: 1.05,
+    fontWeight: 600,
+    letterSpacing: "-0.025em",
+  },
+  lede: {
+    marginTop: "0.5rem",
+    maxWidth: "36rem",
+    fontSize: "0.875rem",
+    lineHeight: "1.5rem",
+    color: driveColors.textMeta,
+  },
+
+  /** Every non-card state — failed, loading, empty — occupies the same slot. */
+  state: {
+    marginTop: "2rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontSize: "0.875rem",
+  },
+  stateError: { color: driveColors.danger },
+  stateLoading: { color: driveColors.textDim },
+  stateEmpty: { color: driveColors.textMeta },
+  icon: {
+    width: "1rem",
+    height: "1rem",
+    flexShrink: 0,
+  },
+  spinner: {
+    animationName: { default: spin, "@media (prefers-reduced-motion: reduce)": "none" },
+    animationDuration: "1s",
+    animationIterationCount: "infinite",
+    animationTimingFunction: "linear",
+  },
+
+  grid: {
+    marginBlock: 0,
+    marginTop: "2rem",
+    display: "grid",
+    gap: "1rem",
+    listStyle: "none",
+    paddingInline: 0,
+    gridTemplateColumns: {
+      default: null,
+      "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
+      "@media (min-width: 1024px)": "repeat(3, minmax(0, 1fr))",
+    },
+  },
+
+  /**
+   * A map card.
+   *
+   * Nothing is selected on this screen — a click starts the next one — so the
+   * only state a card carries is hover, and it lights the same accent edge a
+   * selected row would elsewhere in Drive. `focusVisible` gets the same ring so
+   * a keyboard walk through the grid reads exactly like a mouse hover.
+   */
+  card: {
+    display: "flex",
+    height: "100%",
+    width: "100%",
+    flexDirection: "column",
+    overflow: "hidden",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: {
+      default: driveColors.lineFaint,
+      ":hover": driveColors.accentBorder,
+    },
+    borderRadius: driveRadius.card,
+    backgroundColor: {
+      default: driveColors.glassCard,
+      ":hover": driveColors.accentWashHover,
+    },
+    padding: 0,
+    textAlign: "left",
+    color: driveColors.textPrimary,
+    cursor: "pointer",
+    transitionProperty: "color, background-color, border-color",
+    transitionDuration: "150ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: "2px",
+    outlineColor: driveColors.accent,
+    outlineOffset: "2px",
+  },
+  /** The thumbnail well: a fixed 16:9 so a missing image costs no layout. */
+  well: {
+    position: "relative",
+    display: "block",
+    aspectRatio: "16 / 9",
+    overflow: "hidden",
+    backgroundColor: driveColors.panelWell,
+  },
+  thumbnail: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  wellPlaceholder: {
+    display: "grid",
+    width: "100%",
+    height: "100%",
+    placeItems: "center",
+    color: driveColors.textPlaceholder,
+  },
+  placeholderIcon: {
+    width: "2rem",
+    height: "2rem",
+  },
+
+  caption: {
+    display: "flex",
+    flexDirection: "column",
+    paddingInline: "1rem",
+    paddingBlock: "0.75rem",
+  },
+  cardTitle: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontFamily: driveText.fontDisplay,
+    fontSize: "1rem",
+    lineHeight: "1.5rem",
+    fontWeight: 500,
+    color: driveColors.textTitle,
+  },
+  /** Locality and the build this map came from — what a player checks twice. */
+  cardMeta: {
+    marginTop: "0.25rem",
+    display: "flex",
+    alignItems: "baseline",
+    gap: "0.5rem",
+  },
+  locality: {
+    minWidth: 0,
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "0.75rem",
+    lineHeight: "1rem",
+    color: driveColors.textFaint,
+  },
+  version: {
+    flexShrink: 0,
+    fontFamily: driveText.fontMono,
+    fontSize: driveText.sizeTag,
+    textTransform: "uppercase",
+    letterSpacing: driveText.trackTag,
+    fontVariantNumeric: "tabular-nums",
+    color: driveColors.textPlaceholder,
+  },
+});
 
 /**
  * First screen: where to drive.
@@ -25,54 +223,68 @@ export function MapPickerScreen({ maps, loading, error, onPick }: {
 }) {
   return (
     <main
-      className="relative min-h-svh overflow-hidden bg-[#050607] bg-[radial-gradient(120%_90%_at_78%_-10%,#153c4e_0%,#0b1a24_45%,#050607_100%)] px-6 py-12 text-white sm:px-10"
+      {...stylex.props(driveChrome.screen, styles.screen)}
       data-testid="drive-map-picker"
     >
-      <div className="mx-auto w-full max-w-5xl">
-        <p className="font-meta text-[10px] font-bold uppercase tracking-[0.22em] text-[#E8E044]">Drive</p>
-        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">Pick a map</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
+      <div {...stylex.props(styles.column)}>
+        <p {...stylex.props(styles.eyebrow)}>
+          Drive
+          {!loading && !error && maps.length > 0 ? (
+            <span {...stylex.props(styles.eyebrowCount)}>
+              {maps.length} installed
+            </span>
+          ) : null}
+        </p>
+        <h1 {...stylex.props(styles.title)}>Pick a map</h1>
+        <p {...stylex.props(styles.lede)}>
           Installed maps only. Download more from the map gallery and they show up here.
         </p>
 
         {error ? (
-          <p className="mt-8 flex items-center gap-2 text-sm text-red-300" role="alert">
-            <CircleAlert className="size-4" aria-hidden="true" />
+          <p {...stylex.props(styles.state, styles.stateError)} role="alert">
+            <CircleAlert {...stylex.props(styles.icon)} aria-hidden="true" />
             {error}
           </p>
         ) : loading ? (
-          <p className="mt-8 flex items-center gap-2 text-sm text-white/45" role="status">
-            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+          <p {...stylex.props(styles.state, styles.stateLoading)} role="status">
+            <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} aria-hidden="true" />
             Loading installed maps…
           </p>
         ) : maps.length === 0 ? (
-          <p className="mt-8 text-sm text-white/55" role="status">
+          <p {...stylex.props(styles.state, styles.stateEmpty)} role="status">
             No maps are installed on this machine yet.
           </p>
         ) : (
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul {...stylex.props(styles.grid)}>
             {maps.map((map) => (
               <li key={map.mapVersionId}>
                 <button
-                  className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left transition-colors hover:border-[#E8E044]/70 hover:bg-[#E8E044]/[0.06]"
+                  {...stylex.props(styles.card)}
                   data-map-version-id={map.mapVersionId}
                   data-testid="drive-map-card"
                   onClick={() => onPick(map.mapVersionId)}
                   type="button"
                 >
-                  <span className="relative block aspect-[16/9] overflow-hidden bg-black/40">
+                  <span {...stylex.props(styles.well)}>
                     {map.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- host-served thumbnail, no loader needed
-                      <img alt="" className="size-full object-cover" src={map.thumbnailUrl} />
+                      <img {...stylex.props(styles.thumbnail)} alt="" src={map.thumbnailUrl} />
                     ) : (
-                      <span className="grid size-full place-items-center text-white/20">
-                        <MapPin className="size-8" aria-hidden="true" />
+                      <span {...stylex.props(styles.wellPlaceholder)}>
+                        <MapPin {...stylex.props(styles.placeholderIcon)} aria-hidden="true" />
                       </span>
                     )}
                   </span>
-                  <span className="flex flex-col px-4 py-3">
-                    <span className="truncate font-display text-base font-medium text-white/90">{map.label}</span>
-                    <span className="mt-0.5 truncate text-xs text-white/40">{map.locality ?? "Unknown locality"}</span>
+                  <span {...stylex.props(styles.caption)}>
+                    <span {...stylex.props(styles.cardTitle)}>{map.label}</span>
+                    <span {...stylex.props(styles.cardMeta)}>
+                      <span {...stylex.props(styles.locality)}>
+                        {map.locality ?? "Unknown locality"}
+                      </span>
+                      <span {...stylex.props(styles.version)}>
+                        {map.mapVersionId.slice(0, 8)}
+                      </span>
+                    </span>
                   </span>
                 </button>
               </li>

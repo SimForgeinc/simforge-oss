@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useEffect, useState } from "react";
 import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
@@ -50,17 +52,17 @@ export function MapElementInspector({
 
   if (selectedFeatures.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-muted-foreground">
-        <MapPin className="size-8 opacity-50" />
-        <p className="text-xs">Click a feature on the map to inspect it.</p>
+      <div className={stylex.props(styles.s_480).className}>
+        <MapPin className={stylex.props(styles.s_481).className} />
+        <p className={stylex.props(styles.s_948).className}>Click a feature on the map to inspect it.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2" data-testid="map-element-inspector">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-muted-foreground">
+    <div className={stylex.props(styles.s_960).className} data-testid="map-element-inspector">
+      <div className={stylex.props(styles.s_484).className}>
+        <p className={stylex.props(styles.s_485).className}>
           Selected Features ({selectedFeatures.length})
         </p>
         {onClearSelection && (
@@ -68,25 +70,20 @@ export function MapElementInspector({
             type="button"
             onClick={onClearSelection}
             title="Clear selection"
-            className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            className={stylex.props(styles.s_486).className}
           >
-            <X className="size-3.5" />
+            <X className={stylex.props(styles.s_991).className} />
           </button>
         )}
       </div>
-      <div className="space-y-1">
+      <div className={stylex.props(styles.s_879).className}>
         {selectedFeatures.map((f) => {
           const isSelected = f.id === selectedFeatureId;
           const isExpanded = f.id === expandedFeatureId;
           return (
             <div
               key={f.id}
-              className={cn(
-                "rounded-md border text-left transition-colors",
-                isSelected
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-muted/20 hover:bg-muted/40"
-              )}
+              className={stylex.props(styles.u_954, styles.u_903, styles.u_965, styles.u_970).className}
             >
               <button
                 type="button"
@@ -98,20 +95,20 @@ export function MapElementInspector({
                     onSelectFeatureId?.(f.id);
                   }
                 }}
-                className="flex w-full items-center gap-1.5 px-2.5 py-2 text-xs font-medium text-foreground"
+                className={stylex.props(styles.s_489).className}
               >
                 <ChevronRight
                   className={cn("size-3.5 shrink-0 transition-transform duration-150", isExpanded && "rotate-90")}
                 />
-                <span className="min-w-0 truncate" data-testid="selected-feature-summary">
+                <span className={stylex.props(styles.s_490).className} data-testid="selected-feature-summary">
                   {f.summary}
                 </span>
               </button>
               {isExpanded && (
-                <div className="border-t border-border px-2.5 py-2">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-muted-foreground">
-                      Geometry: <span className="font-medium text-foreground">{f.geometryType}</span>
+                <div className={stylex.props(styles.s_491).className}>
+                  <div className={stylex.props(styles.s_492).className}>
+                    <p className={stylex.props(styles.s_955).className}>
+                      Geometry: <span className={stylex.props(styles.s_517).className}>{f.geometryType}</span>
                     </p>
                     <button
                       type="button"
@@ -127,12 +124,12 @@ export function MapElementInspector({
                         }).catch(() => {});
                       }}
                       title="Copy feature as GeoJSON"
-                      className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                      className={stylex.props(styles.s_495).className}
                     >
                       {copiedFeatureId === f.id ? (
-                        <Check className="size-3 text-green-500" />
+                        <Check className={stylex.props(styles.s_496).className} />
                       ) : (
-                        <Copy className="size-3" />
+                        <Copy className={stylex.props(styles.s_927).className} />
                       )}
                       Copy GeoJSON
                     </button>
@@ -145,36 +142,36 @@ export function MapElementInspector({
                     const street = streetFactsByFeatureId?.get(f.id);
                     if (!street) return null;
                     return (
-                      <div className="mb-2 space-y-1" data-testid="street-facts">
-                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <div className={stylex.props(styles.s_498).className} data-testid="street-facts">
+                        <h3 className={stylex.props(styles.s_499).className}>
                           Street facts
                         </h3>
-                        <div className="flex items-baseline gap-2 text-xs">
-                          <span className="shrink-0 text-muted-foreground">Street</span>
-                          <span className="font-medium text-foreground">{street.streetName}</span>
+                        <div className={stylex.props(styles.s_518).className}>
+                          <span className={stylex.props(styles.s_931).className}>Street</span>
+                          <span className={stylex.props(styles.s_517).className}>{street.streetName}</span>
                         </div>
                         {street.roadClass && (
-                          <div className="flex items-baseline gap-2 text-xs">
-                            <span className="shrink-0 text-muted-foreground">Road class</span>
-                            <span className="font-medium text-foreground">{street.roadClass}</span>
+                          <div className={stylex.props(styles.s_518).className}>
+                            <span className={stylex.props(styles.s_931).className}>Road class</span>
+                            <span className={stylex.props(styles.s_517).className}>{street.roadClass}</span>
                           </div>
                         )}
                         {street.overtureSpeedLimitMph != null && (
-                          <div className="flex items-baseline gap-2 text-xs">
-                            <span className="shrink-0 text-muted-foreground">Posted limit</span>
-                            <span className="font-medium text-foreground">
+                          <div className={stylex.props(styles.s_518).className}>
+                            <span className={stylex.props(styles.s_931).className}>Posted limit</span>
+                            <span className={stylex.props(styles.s_517).className}>
                               {street.overtureSpeedLimitMph} mph
-                              <span className="ml-1 font-normal text-muted-foreground">(Overture)</span>
+                              <span className={stylex.props(styles.s_509).className}>(Overture)</span>
                             </span>
                           </div>
                         )}
                         {street.laneCount != null && (
-                          <div className="flex items-baseline gap-2 text-xs">
-                            <span className="shrink-0 text-muted-foreground">Lanes</span>
-                            <span className="font-medium text-foreground">{street.laneCount}</span>
+                          <div className={stylex.props(styles.s_518).className}>
+                            <span className={stylex.props(styles.s_931).className}>Lanes</span>
+                            <span className={stylex.props(styles.s_517).className}>{street.laneCount}</span>
                           </div>
                         )}
-                        <div className="border-b border-border/50 pt-1" />
+                        <div className={stylex.props(styles.s_521).className} />
                       </div>
                     );
                   })()}
@@ -191,25 +188,25 @@ export function MapElementInspector({
                     return (
                       <>
                         {(id != null || type != null) && (
-                          <div className="space-y-1 mb-2">
+                          <div className={stylex.props(styles.s_514).className}>
                             {type != null && (
-                              <div className="flex items-baseline gap-2 text-xs">
-                                <span className="shrink-0 text-muted-foreground">Type</span>
-                                <span className="font-medium text-foreground">{String(type)}</span>
+                              <div className={stylex.props(styles.s_518).className}>
+                                <span className={stylex.props(styles.s_931).className}>Type</span>
+                                <span className={stylex.props(styles.s_517).className}>{String(type)}</span>
                               </div>
                             )}
                             {id != null && (
-                              <div className="flex items-baseline gap-2 text-xs">
-                                <span className="shrink-0 text-muted-foreground">Id</span>
-                                <span className="font-mono text-foreground/80 text-[10px] break-all">
+                              <div className={stylex.props(styles.s_518).className}>
+                                <span className={stylex.props(styles.s_931).className}>Id</span>
+                                <span className={stylex.props(styles.s_520).className}>
                                   {String(id).replace(/^\{|\}$/g, "")}
                                 </span>
                               </div>
                             )}
-                            <div className="border-b border-border/50 pt-1" />
+                            <div className={stylex.props(styles.s_521).className} />
                           </div>
                         )}
-                        <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <h3 className={stylex.props(styles.s_522).className}>
                           Properties
                         </h3>
                         <JsonTreeView

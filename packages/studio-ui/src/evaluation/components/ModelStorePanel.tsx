@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import {
   CheckCircle2,
   Download,
@@ -30,10 +31,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { cn } from "../../lib/utils";
+import { Button } from "../../components/ui/button";
+import { styles as s } from "./evaluation-components.stylex";
 import { Input } from "../../components/ui/input";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
 import type {
@@ -65,21 +67,15 @@ function InstallProgress({ state }: { state: ModelInstallState }) {
           : null;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-2">
-          {state.state === "downloading" || state.state === "verifying" ? (
-            <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
-          ) : null}
+    <div {...stylex.props(s.section1)}>
+      <div {...stylex.props(s.rowBetween, s.textXs, s.textMuted)}>
+        <span {...stylex.props(s.rowTight)}>
+          {state.state === "downloading" || state.state === "verifying" ? <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} /> : null}
           {installLabel(state)}
         </span>
-        {detail ? <span className="tabular-nums">{detail}</span> : null}
+        {detail ? <span {...stylex.props(s.tabular)}>{detail}</span> : null}
       </div>
-      {fraction !== null ? (
-        <div className="h-1.5 w-full bg-muted">
-          <div className="h-full bg-primary transition-[width]" style={{ width: `${fraction * 100}%` }} />
-        </div>
-      ) : null}
+      {fraction !== null ? <div {...stylex.props(s.progressTrack)}><div {...stylex.props(s.progressFill)} style={{ width: `${fraction * 100}%` }} /></div> : null}
     </div>
   );
 }
@@ -120,10 +116,10 @@ function QuantRow({
     offer.status !== "unsupported" && (eligibility?.downloadEligible ?? true) && !tokenMissing;
 
   return (
-    <div className="space-y-3 border-t border-border py-4 first:border-t-0" data-testid={`quant-row-${entry.family}-${quant}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm text-foreground">{quant}</span>
+    <div {...stylex.props(s.quantRow)} data-testid={`quant-row-${entry.family}-${quant}`}>
+      <div {...stylex.props(s.rowBetween)}>
+        <div {...stylex.props(s.flexCenterGap2)}>
+          <span {...stylex.props(s.mono, s.textSm, s.textFg)}>{quant}</span>
           {offer.status === "supported" ? (
             offer.minVramGiB ? (
               <Badge variant="outline">{offer.minVramGiB} GiB VRAM</Badge>
@@ -135,16 +131,16 @@ function QuantRow({
           )}
           {state === "installed" ? (
             <Badge variant="secondary">
-              <CheckCircle2 aria-hidden="true" className="mr-1 size-3" />
+              <CheckCircle2 aria-hidden="true" {...stylex.props(s.iconTiny)} />
               Installed
             </Badge>
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1">
+        <div {...stylex.props(s.flexCenterGap2)}>
           {state === "not_installed" || state === "error" ? (
             <Button type="button" size="sm" variant="outline" disabled={busy || !downloadable} onClick={onInstall}>
-              {busy ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Download aria-hidden="true" />}
+              {busy ? <Loader2 aria-hidden="true" {...stylex.props(s.icon)} /> : <Download aria-hidden="true" />}
               Download
             </Button>
           ) : null}
@@ -187,19 +183,17 @@ function QuantRow({
         </div>
       </div>
 
-      <p className="text-xs leading-5 text-muted-foreground">{offer.note}</p>
+      <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>{offer.note}</p>
 
       {install && install.state !== "not_installed" && install.state !== "installed" ? (
         <InstallProgress state={install} />
       ) : null}
 
       {install?.state === "installed" ? (
-        <p className="text-xs text-muted-foreground">
-          {formatBytes(install.bytesOnDisk)} on disk · revision {install.revision.slice(0, 12)}
-          {install.digestVerifiedAt
-            ? ` · digests verified ${new Date(install.digestVerifiedAt).toLocaleString()}`
-            : " · digests not verified yet — run Verify"}
-        </p>
+        <p {...stylex.props(s.textXs, s.textMuted)}>{formatBytes(install.bytesOnDisk)} on disk · revision {install.revision.slice(0, 12)}
+        {install.digestVerifiedAt
+          ? ` · digests verified ${new Date(install.digestVerifiedAt).toLocaleString()}`
+          : " · digests not verified yet — run Verify"}</p>
       ) : null}
       {install?.state === "error" ? (
         <RefusalNotice
@@ -225,28 +219,28 @@ function QuantRow({
       ) : null}
 
       {eligibility ? (
-        <div className="space-y-1 text-xs leading-5">
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Local execution:</span>{" "}
+        <div {...stylex.props(s.eligibility)}>
+          <p {...stylex.props(s.textMuted)}>
+            <span {...stylex.props(s.fontMedium, s.textFg)}>Local execution:</span>{" "}
             {eligibility.executionEligible
               ? `available (${eligibility.tier ?? "measured profile"})`
               : `not available on this machine (${eligibility.qualification})`}
           </p>
           {!eligibility.executionEligible && eligibility.reasons.length > 0 ? (
-            <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
+            <ul {...stylex.props(s.bulletList, s.spaceY1)}>
               {eligibility.reasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
           ) : null}
           {!eligibility.executionEligible && eligibility.downloadEligible ? (
-            <p className="text-muted-foreground">
+            <p {...stylex.props(s.textMuted)}>
               You can still download it, and you can run this model in the cloud without downloading
               anything.
             </p>
           ) : null}
           {!eligibility.downloadEligible && eligibility.downloadBlockedReasons.length > 0 ? (
-            <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
+            <ul {...stylex.props(s.bulletList, s.spaceY1)}>
               {eligibility.downloadBlockedReasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
@@ -328,10 +322,10 @@ export function ModelStorePanel({ className }: { className?: string }) {
 
   if (!view) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn(stylex.props(s.section4).className, className)}>
         {error ? <RefusalNotice title="Model store" reasons={[error]} /> : (
-          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
+            <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
             Reading the model store…
           </p>
         )}
@@ -342,7 +336,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
   const snapshot = toRuntimeSnapshot(view);
 
   return (
-    <div className={cn("space-y-6", className)} data-testid="model-store-panel">
+    <div className={cn(stylex.props(s.section6).className, className)} data-testid="model-store-panel">
       {error ? <RefusalNotice title="Model store" reasons={[error]} /> : null}
       {(view.reviewGates ?? []).length > 0 ? (
         <RefusalNotice
@@ -352,7 +346,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
             (gate) => `${gate.family} — ${gate.kind}: ${gate.note}`,
           )}
         >
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p {...stylex.props(s.textSm, s.leading6, s.textMuted)}>
             Recorded as unresolved and not markable from here. Downloading and running a model
             locally is unaffected; commercial use is not.
           </p>
@@ -374,13 +368,13 @@ export function ModelStorePanel({ className }: { className?: string }) {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-3 border border-border p-4">
-        <div className="min-w-64 flex-1 space-y-1.5">
+      <div {...stylex.props(s.flexEndGap3, s.borderP4)}>
+        <div {...stylex.props(s.minW64, s.flex1, s.spaceY1)}>
           <label
             htmlFor="hf-token"
-            className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground"
+            {...stylex.props(s.labelToken)}
           >
-            <KeyRound aria-hidden="true" className="size-3.5" />
+            <KeyRound aria-hidden="true" {...stylex.props(s.iconSm)} />
             Hugging Face token
           </label>
           <Input
@@ -395,7 +389,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
             value={hfToken}
             onChange={(event) => setHfToken(event.target.value)}
           />
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
             Needed only for gated sidecars. Kept in{" "}
             {view.vault.persistence === "os-vault"
               ? "this machine's credential vault"
@@ -410,12 +404,12 @@ export function ModelStorePanel({ className }: { className?: string }) {
         return (
           <Card key={family} data-testid={`model-card-${family}`}>
             <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2">
-                <HardDriveDownload aria-hidden="true" className="size-4 text-muted-foreground" />
+              <CardTitle {...stylex.props(s.cardTitleStore)}>
+                <HardDriveDownload aria-hidden="true" {...stylex.props(s.mutedIcon)} />
                 {entry.displayName}
                 {entry.remoteOnly ? <Badge variant="secondary">Cloud execution</Badge> : null}
               </CardTitle>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p {...stylex.props(s.mt1, s.textXs, s.leading5, s.textMuted)}>
                 {entry.weightsRepo} @ {entry.weightsRevision.slice(0, 12)} ·{" "}
                 {formatBytes(entry.approxWeightsBytes)} weights, about{" "}
                 {formatBytes(entry.approxDiskBytes)} installed ·{" "}
@@ -423,7 +417,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
                   ? `cameras [${entry.cameras.required.join(", ")}]`
                   : `cameras variable, default [${entry.cameras.default.join(", ")}]`}
               </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p {...stylex.props(s.mt1, s.textXs, s.leading5, s.textMuted)}>
                 {entry.license.id}
                 {entry.license.commercialUseReviewRequired
                   ? " · commercial use requires a recorded license review"
@@ -476,7 +470,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
         );
       })}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+      <div {...stylex.props(s.flexCenterGap3, s.borderTop, s.pt4)}>
         <Button
           type="button"
           variant="outline"
@@ -491,7 +485,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
         >
           Reclaim shared download cache
         </Button>
-        <p className="text-xs text-muted-foreground">
+        <p {...stylex.props(s.textXs, s.textMuted)}>
           Frees cached shards no installed model references. Registry entries with recorded runs are
           retired rather than deleted, so past results keep their provenance.
         </p>

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,11 +25,11 @@ export function MapCatalogMapView({ assets }: MapCatalogMapViewProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className={stylex.props(styles.s_168).className}>
       {/* Left: compact list */}
-      <div className="w-80 shrink-0 border-r border-border overflow-y-auto">
+      <div className={stylex.props(styles.s_169).className}>
         {assets.length === 0 ? (
-          <p className="px-4 py-8 text-xs text-muted-foreground text-center">No maps found.</p>
+          <p className={stylex.props(styles.s_170).className}>No maps found.</p>
         ) : (
           assets.map((asset) => {
             const stats = getCardStats(asset).slice(0, MAX_RAIL_STATS);
@@ -46,35 +48,32 @@ export function MapCatalogMapView({ assets }: MapCatalogMapViewProps) {
               <Link
                 key={asset.map_asset_id}
                 href={`/dashboard/map-assets/${asset.map_asset_id}`}
-                className={cn(
-                  "block border-b border-border px-4 py-3 transition-colors hover:bg-muted/50",
-                  hoveredId === asset.map_asset_id && "bg-muted/30",
-                )}
+                className={stylex.props(styles.u_902, styles.u_904, styles.u_905, styles.u_940, styles.u_946, styles.u_970, styles.u_923).className}
                 onMouseEnter={() => setHoveredId(asset.map_asset_id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
-                <p className="text-sm font-medium truncate">{asset.name}</p>
+                <p className={stylex.props(styles.s_171).className}>{asset.name}</p>
                 {locationStr && (
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{locationStr}</p>
+                  <p className={stylex.props(styles.s_172).className}>{locationStr}</p>
                 )}
-                <div className="mt-1.5">
+                <div className={stylex.props(styles.s_174).className}>
                   <CapabilityHints caps={caps} size="sm" />
                 </div>
-                <div className="mt-1.5">
+                <div className={stylex.props(styles.s_174).className}>
                   <CardStatsRow stats={stats} size="sm" />
                 </div>
                 {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
+                  <div className={stylex.props(styles.s_175).className}>
                     {tags.map((tagId) => (
                       <span
                         key={tagId}
-                        className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary border border-primary/20"
+                        className={stylex.props(styles.s_176).className}
                       >
                         {humanizeTag(tagId)}
                       </span>
                     ))}
                     {remainingTags > 0 && (
-                      <span className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-[9px] text-muted-foreground">
+                      <span className={stylex.props(styles.s_177).className}>
                         +{remainingTags}
                       </span>
                     )}
@@ -87,8 +86,8 @@ export function MapCatalogMapView({ assets }: MapCatalogMapViewProps) {
       </div>
 
       {/* Right: MapLibre in catalog/cluster mode */}
-      <div className="flex-1 relative">
-        <div className="absolute inset-0">
+      <div className={stylex.props(styles.s_792).className}>
+        <div className={stylex.props(styles.s_801).className}>
           <MapAssetsMapDynamic
             assets={assets}
             selectedAssetId={null}

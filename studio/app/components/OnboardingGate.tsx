@@ -1,5 +1,6 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -14,7 +15,7 @@ import {
 } from "@/app/lib/scenario/contracts";
 import { decideOnboardingGate } from "@/app/lib/host/onboarding-gate";
 import { completeStudioSetup, readStudioSetup } from "@/app/lib/host/setup";
-
+import { setup } from "./setup-preparation.stylex";
 installMapAssetFetchGateway();
 
 const WELCOME_PATH = "/onboarding/welcome";
@@ -64,8 +65,8 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
 
   return (
     <div
+      {...stylex.props(setup.gate, !ready && setup.gateHidden)}
       aria-hidden={!ready || undefined}
-      className={`h-full min-h-0 ${ready ? "" : "invisible"}`}
       data-testid="onboarding-gate-content"
       inert={!ready || undefined}
     >

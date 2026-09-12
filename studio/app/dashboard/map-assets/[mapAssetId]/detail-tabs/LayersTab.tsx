@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useState } from "react";
 import type {
@@ -181,10 +183,10 @@ export function LayersTab({
   const hasSelectedFeatures = selectedFeatures.length > 0;
 
   return (
-    <div className="space-y-5">
+    <div className={stylex.props(styles.s_993).className}>
       {/* Inspector sub-panel — slides in at top when features are selected */}
       {hasSelectedFeatures && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <div className={stylex.props(styles.s_994).className}>
           <MapElementInspector
             selectedFeatures={selectedFeatures}
             selectedFeatureId={selectedFeatureId}

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -40,11 +42,11 @@ export function EnrichmentSection({
   const attribution = enrichment?.summary?.attribution;
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -60,17 +62,17 @@ export function EnrichmentSection({
                   type="button"
                   onClick={onEnrich}
                   disabled={enrichBusy}
-                  className="flex size-5 items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                  className={stylex.props(styles.s_440).className}
                   aria-label="Run 3rd-party enrichment"
                 >
                   {enrichBusy ? (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Loader2 className={stylex.props(styles.s_972).className} />
                   ) : (
-                    <Sparkles className="size-3" />
+                    <Sparkles className={stylex.props(styles.s_927).className} />
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs">
+              <TooltipContent side="left" className={stylex.props(styles.s_948).className}>
                 {enrichment ? "Re-run 3rd-party enrichment (replaces existing)" : "Run 3rd-party enrichment (1–2 min)"}
               </TooltipContent>
             </Tooltip>
@@ -78,13 +80,13 @@ export function EnrichmentSection({
         )}
       </div>
       {open && (
-        <div className="mt-2 space-y-3">
+        <div className={stylex.props(styles.s_663).className}>
           {enrichmentLoading && (
-            <p className="text-xs text-muted-foreground">Loading saved snapshot…</p>
+            <p className={stylex.props(styles.s_973).className}>Loading saved snapshot…</p>
           )}
           {!enrichmentLoading && !enrichment && (
-            <div className="space-y-2">
-              <p className="text-xs leading-relaxed text-muted-foreground">
+            <div className={stylex.props(styles.s_960).className}>
+              <p className={stylex.props(styles.s_881).className}>
                 No enrichment snapshot yet. Run 3rd-party enrichment to pull bus stops,
                 schools, hospitals, and named road segments for this map.
               </p>
@@ -93,34 +95,34 @@ export function EnrichmentSection({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="w-full"
+                  className={stylex.props(styles.s_708).className}
                   disabled={enrichBusy}
                   onClick={onEnrich}
                 >
                   {enrichBusy ? (
                     <>
-                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      <Loader2 className={stylex.props(styles.s_709).className} />
                       Enriching… (1–2 min)
                     </>
                   ) : (
                     <>
-                      <Sparkles className="mr-1.5 size-3.5" />
+                      <Sparkles className={stylex.props(styles.s_596).className} />
                       Run 3rd-party enrichment
                     </>
                   )}
                 </Button>
               )}
-              {enrichErr && <p className="text-xs text-destructive">{enrichErr}</p>}
+              {enrichErr && <p className={stylex.props(styles.s_451).className}>{enrichErr}</p>}
             </div>
           )}
           {enrichment && (
             <>
-              <p className="text-xs text-muted-foreground">
-                Enrichment data loaded. See <span className="text-foreground/80">Map Provenance</span> for source details.
+              <p className={stylex.props(styles.s_973).className}>
+                Enrichment data loaded. See <span className={stylex.props(styles.s_665).className}>Map Provenance</span> for source details.
               </p>
-              {enrichErr && <p className="mt-1.5 text-xs text-destructive">{enrichErr}</p>}
+              {enrichErr && <p className={stylex.props(styles.s_710).className}>{enrichErr}</p>}
               {attribution && (
-                <p className="text-[10px] leading-snug text-muted-foreground">
+                <p className={stylex.props(styles.s_455).className}>
                   {attribution}
                 </p>
               )}

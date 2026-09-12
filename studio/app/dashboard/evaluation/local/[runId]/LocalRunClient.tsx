@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 /**
  * One run executed on this machine.
@@ -22,6 +23,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
+import { styles } from "../../route-residuals.stylex";
 
 type LocalRun = {
   id: string;
@@ -60,9 +62,10 @@ export function LocalRunClient({ runId }: { runId: string }) {
           return;
         }
         if (!response.ok) throw new Error(`status ${response.status}`);
-        // POST /api/models/runs and this GET both return the run row itself,
-        // not a wrapper.
-        const row = (await response.json()) as LocalRun;
+        // The model-run endpoint returns the run together with attempts and
+        // lifecycle events; this screen renders the run row.
+        const payload = (await response.json()) as { run: LocalRun };
+        const row = payload.run;
         setRun(row);
         setError(null);
 
@@ -100,7 +103,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
   useVisiblePolling(refresh, POLL_MS, live, runId);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)} >
       <PageHeader
         title="Local run"
         description="Executed on this machine by the local model-run worker, using the same result contract as a cloud run."
@@ -113,7 +116,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
           </Button>
         }
       />
-      <div className="space-y-6 px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.content6)} >
         {error ? <RefusalNotice title="Local run" reasons={[error]} /> : null}
         {manifestProblem ? (
           <RefusalNotice tone="warn" title="Result document" reasons={[manifestProblem]} />
@@ -121,7 +124,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
 
         {run ? (
           <>
-            <div className="flex flex-wrap items-center gap-3">
+            <div {...stylex.props(styles.flexWrap)} >
               <Badge variant="outline">{run.status}</Badge>
               <Badge variant="outline">on this machine</Badge>
               {manifest ? <Badge variant="outline">{manifest.mode}</Badge> : null}
@@ -129,30 +132,30 @@ export function LocalRunClient({ runId }: { runId: string }) {
               {manifest?.truncation ? (
                 <Badge variant="outline">truncated: {manifest.truncation}</Badge>
               ) : null}
-              <span className="font-mono text-xs text-muted-foreground">{run.id}</span>
+              <span {...stylex.props(styles.monoSmall, styles.muted)} >{run.id}</span>
               {live ? (
-                <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
               ) : null}
             </div>
 
-            <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
+            <dl {...stylex.props(styles.dlRun)} >
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Kind</dt>
-                <dd className="text-foreground">{run.kind}</dd>
+                <dt {...stylex.props(styles.label)} >Kind</dt>
+                <dd>{run.kind}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Attempts</dt>
-                <dd className="text-foreground">
+                <dt {...stylex.props(styles.label)} >Attempts</dt>
+                <dd>
                   {run.attemptCount} of {run.maxAttempts}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Seed</dt>
-                <dd className="text-foreground">{run.seed}</dd>
+                <dt {...stylex.props(styles.label)} >Seed</dt>
+                <dd>{run.seed}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Model version</dt>
-                <dd className="min-w-0 truncate font-mono text-xs text-foreground">
+                <dt {...stylex.props(styles.label)} >Model version</dt>
+                <dd {...stylex.props(styles.monoSmall)} >
                   {run.modelVersionId}
                 </dd>
               </div>
@@ -168,19 +171,19 @@ export function LocalRunClient({ runId }: { runId: string }) {
             ) : null}
 
             {manifest ? (
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-foreground">Result</h2>
-                <dl className="grid gap-x-8 gap-y-1 text-xs sm:grid-cols-3">
+              <section {...stylex.props(styles.section)} >
+                <h2 {...stylex.props(styles.cardTitleSmall)} >Result</h2>
+                <dl {...stylex.props(styles.dlMetrics)} >
                   {Object.entries(manifest.metrics).map(([field, value]) => (
                     <div key={field}>
-                      <dt className="uppercase tracking-wide text-muted-foreground">{field}</dt>
-                      <dd className="min-w-0 truncate font-mono text-foreground">
+                      <dt {...stylex.props(styles.label)} >{field}</dt>
+                      <dd {...stylex.props(styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>
                   ))}
                 </dl>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p {...stylex.props(styles.tinyMuted)} >
                   {manifest.scored
                     ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or AlpaSim benchmark number."
                     : "This run is not scored: no reference future was available, so the numbers above are not a driving score."}
@@ -189,13 +192,13 @@ export function LocalRunClient({ runId }: { runId: string }) {
             ) : null}
 
             {!manifest && run.metrics && Object.keys(run.metrics).length > 0 ? (
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-foreground">Metrics (run summary)</h2>
-                <dl className="grid gap-x-8 gap-y-1 text-xs sm:grid-cols-3">
+              <section {...stylex.props(styles.section)} >
+                <h2 {...stylex.props(styles.cardTitleSmall)} >Metrics (run summary)</h2>
+                <dl {...stylex.props(styles.dlMetrics)} >
                   {Object.entries(run.metrics).map(([field, value]) => (
                     <div key={field}>
-                      <dt className="uppercase tracking-wide text-muted-foreground">{field}</dt>
-                      <dd className="min-w-0 truncate font-mono text-foreground">
+                      <dt {...stylex.props(styles.label)} >{field}</dt>
+                      <dd {...stylex.props(styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>
@@ -205,31 +208,31 @@ export function LocalRunClient({ runId }: { runId: string }) {
             ) : null}
 
             {run.outputRefs.length > 0 ? (
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold text-foreground">Output on this machine</h2>
-                <ul className="divide-y divide-border border border-border text-xs">
+              <section {...stylex.props(styles.section)} >
+                <h2 {...stylex.props(styles.cardTitleSmall)} >Output on this machine</h2>
+                <ul {...stylex.props(styles.outputList)} >
                   {run.outputRefs.map((ref, index) => (
-                    <li key={index} className="px-3 py-2 font-mono text-muted-foreground">
+                    <li key={index} {...stylex.props(styles.outputItem)} >
                       {typeof ref === "string" ? ref : JSON.stringify(ref)}
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p {...stylex.props(styles.tinyMuted)} >
                   The run writes `result.json` (simforge.eval-result-manifest/v1) last, as its
                   completion marker — the same document a cloud run produces.
                 </p>
               </section>
             ) : live ? (
-              <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+              <p {...stylex.props(styles.controls, styles.muted)} >
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
                 Waiting for the local worker to lease and execute this run. Closing this page does
                 not stop it.
               </p>
             ) : null}
           </>
         ) : error === null ? (
-          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          <p {...stylex.props(styles.controls, styles.muted)} >
+            <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
             Loading run…
           </p>
         ) : null}

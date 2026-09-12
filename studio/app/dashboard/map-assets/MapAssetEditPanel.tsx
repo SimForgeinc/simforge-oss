@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./map-assets.stylex";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,7 +27,7 @@ import {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h3 className={stylex.props(styles.s_0).className}>
       {children}
     </h3>
   );
@@ -466,61 +468,61 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
   );
 
   return (
-    <div className="animate-in slide-in-from-right-2 duration-200 ease-out absolute right-0 top-0 z-20 flex h-full w-80 flex-col border-l border-border bg-background shadow-xl">
+    <div className={stylex.props(styles.s_1).className}>
 
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
+      <div className={stylex.props(styles.s_2).className}>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className={stylex.props(styles.s_132).className}
           onClick={onBack}
           aria-label="Back to details"
           title="Back to map details"
         >
-          <ArrowLeft className="size-3.5" />
+          <ArrowLeft className={stylex.props(styles.s_991).className} />
         </Button>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">Editing</p>
-          <p className="truncate text-sm font-semibold leading-snug">{asset.name}</p>
+        <div className={stylex.props(styles.s_761).className}>
+          <p className={stylex.props(styles.s_973).className}>Editing</p>
+          <p className={stylex.props(styles.s_7).className}>{asset.name}</p>
         </div>
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 space-y-5 overflow-y-auto p-3">
+      <div className={stylex.props(styles.s_8).className}>
 
         {/* Place context */}
         <section>
           <SectionHeading>Location</SectionHeading>
-          <p className="mb-2 text-[11px] text-muted-foreground">
+          <p className={stylex.props(styles.s_117).className}>
             Auto-filled from map coordinates. Override to correct the nearest-city result.
           </p>
-          <div className="space-y-2">
+          <div className={stylex.props(styles.s_960).className}>
             <div>
-              <label className="mb-0.5 block text-[11px] text-muted-foreground">City</label>
+              <label className={stylex.props(styles.s_37).className}>City</label>
               <Input
                 value={placeCity}
                 onChange={(e) => setPlaceCity(e.target.value)}
                 placeholder={asset.place_context?.city ?? "e.g. San Jose"}
-                className="h-7 text-xs"
+                className={stylex.props(styles.s_288).className}
               />
             </div>
             <div>
-              <label className="mb-0.5 block text-[11px] text-muted-foreground">State / Region</label>
+              <label className={stylex.props(styles.s_37).className}>State / Region</label>
               <Input
                 value={placeState}
                 onChange={(e) => setPlaceState(e.target.value)}
                 placeholder={asset.place_context?.state ?? "e.g. California"}
-                className="h-7 text-xs"
+                className={stylex.props(styles.s_288).className}
               />
             </div>
             <div>
-              <label className="mb-0.5 block text-[11px] text-muted-foreground">Country</label>
+              <label className={stylex.props(styles.s_37).className}>Country</label>
               <Input
                 value={placeCountry}
                 onChange={(e) => setPlaceCountry(e.target.value)}
                 placeholder={asset.place_context?.country ?? "e.g. United States"}
-                className="h-7 text-xs"
+                className={stylex.props(styles.s_288).className}
               />
             </div>
           </div>
@@ -529,51 +531,51 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         {/* CARLA map name */}
         <section>
           <SectionHeading>CARLA map name</SectionHeading>
-          <p className="mb-2 text-[11px] text-muted-foreground">
+          <p className={stylex.props(styles.s_117).className}>
             Identifier used by the CARLA simulator for this map.
           </p>
-          <label htmlFor="carla-map-name" className="sr-only">CARLA map name</label>
+          <label htmlFor="carla-map-name" className={stylex.props(styles.s_997).className}>CARLA map name</label>
           <Input
             id="carla-map-name"
             value={carlaMapName}
             onChange={(e) => setCarlaMapName(e.target.value)}
             placeholder="e.g. Belmont_Office_Park_Belmont_CA"
-            className="h-7 font-mono text-xs"
+            className={stylex.props(styles.s_38).className}
           />
         </section>
 
         {/* Satellite imagery */}
         <section>
           <SectionHeading>Satellite imagery</SectionHeading>
-          <p className="mb-2 text-[11px] text-muted-foreground">
+          <p className={stylex.props(styles.s_117).className}>
             SimScene image services serving this map&apos;s ortho imagery. Add one per tileset
             (with its RGB layer); a map can need several to cover its full extent. They stack
             top-to-bottom in the order listed. Leave empty for no satellite basemap.
           </p>
-          <div className="space-y-2">
+          <div className={stylex.props(styles.s_960).className}>
             {imageryTilesets.length === 0 ? (
-              <p className="text-[11px] italic text-muted-foreground">No image services configured.</p>
+              <p className={stylex.props(styles.s_22).className}>No image services configured.</p>
             ) : (
               imageryTilesets.map((row, index) => (
-                <div key={index} className="rounded-md border border-border p-2">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-muted-foreground">
+                <div key={index} className={stylex.props(styles.s_23).className}>
+                  <div className={stylex.props(styles.s_24).className}>
+                    <span className={stylex.props(styles.s_25).className}>
                       Image service {index + 1}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeImageryRow(index)}
-                      className="text-[11px] text-muted-foreground hover:text-destructive"
+                      className={stylex.props(styles.s_26).className}
                       aria-label={`Remove image service ${index + 1}`}
                     >
                       Remove
                     </button>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className={stylex.props(styles.s_986).className}>
                     <div>
                       <label
                         htmlFor={`imagery-tileset-id-${index}`}
-                        className="mb-0.5 block text-[11px] text-muted-foreground"
+                        className={stylex.props(styles.s_37).className}
                       >
                         Tileset ID
                       </label>
@@ -582,13 +584,13 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                         value={row.tileset_id}
                         onChange={(e) => updateImageryRow(index, "tileset_id", e.target.value)}
                         placeholder="e.g. 019f1d21-97c7-7326-b542-e3566870c679"
-                        className="h-7 font-mono text-xs"
+                        className={stylex.props(styles.s_38).className}
                       />
                     </div>
                     <div>
                       <label
                         htmlFor={`imagery-layer-id-${index}`}
-                        className="mb-0.5 block text-[11px] text-muted-foreground"
+                        className={stylex.props(styles.s_37).className}
                       >
                         Layer ID
                       </label>
@@ -597,7 +599,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                         value={row.layer_id}
                         onChange={(e) => updateImageryRow(index, "layer_id", e.target.value)}
                         placeholder="e.g. a92b15c6-b541-4074-8455-dcdecc7ec193"
-                        className="h-7 font-mono text-xs"
+                        className={stylex.props(styles.s_38).className}
                       />
                     </div>
                   </div>
@@ -607,7 +609,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             <button
               type="button"
               onClick={addImageryRow}
-              className="text-[11px] font-medium text-primary hover:underline"
+              className={stylex.props(styles.s_32).className}
             >
               + Add image service
             </button>
@@ -617,28 +619,28 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         {/* Editor alignment */}
         <section>
           <SectionHeading>Editor alignment</SectionHeading>
-          <p className="mb-2 text-[11px] text-muted-foreground">
+          <p className={stylex.props(styles.s_117).className}>
             Meter offset added to this map&apos;s projected coordinates before drawing Simcloud overlays in the scenario editor.
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={stylex.props(styles.s_857).className}>
             <div>
-              <label className="mb-0.5 block text-[11px] text-muted-foreground">X offset (m)</label>
+              <label className={stylex.props(styles.s_37).className}>X offset (m)</label>
               <Input
                 value={editorOffsetX}
                 onChange={(e) => setEditorOffsetX(e.target.value)}
                 inputMode="decimal"
                 placeholder="0"
-                className="h-7 font-mono text-xs"
+                className={stylex.props(styles.s_38).className}
               />
             </div>
             <div>
-              <label className="mb-0.5 block text-[11px] text-muted-foreground">Y offset (m)</label>
+              <label className={stylex.props(styles.s_37).className}>Y offset (m)</label>
               <Input
                 value={editorOffsetY}
                 onChange={(e) => setEditorOffsetY(e.target.value)}
                 inputMode="decimal"
                 placeholder="0"
-                className="h-7 font-mono text-xs"
+                className={stylex.props(styles.s_38).className}
               />
             </div>
           </div>
@@ -648,7 +650,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         <section>
           <SectionHeading>
             Scenario tags{tags.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-yellow-950/60 px-1.5 py-px text-[10px] font-semibold text-yellow-300">
+              <span className={stylex.props(styles.s_39).className}>
                 {tags.length}
               </span>
             )}
@@ -656,23 +658,23 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
 
           {/* Selected chips */}
           {tags.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1">
+            <div className={stylex.props(styles.s_40).className}>
               {tags.map((id) => {
                 const descriptor = getMapAssetDescriptorTag(id);
                 return (
                   <span
                     key={id}
                     title={descriptor?.shortDefinition}
-                    className="inline-flex items-center gap-1 rounded border border-yellow-500/40 bg-yellow-500/10 px-1.5 py-0.5 font-mono text-xs text-yellow-400"
+                    className={stylex.props(styles.s_41).className}
                   >
                     {displayTag(id)}
                     <button
                       type="button"
                       onClick={() => removeTag(id)}
                       aria-label={`Remove ${id}`}
-                      className="text-yellow-400/60 transition-colors hover:text-yellow-400"
+                      className={stylex.props(styles.s_42).className}
                     >
-                      <X className="size-2.5" />
+                      <X className={stylex.props(styles.s_967).className} />
                     </button>
                   </span>
                 );
@@ -681,30 +683,30 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           )}
 
           {/* Add tag button + searchable dropdown */}
-          <div className="relative mb-2" ref={tagDropdownRef}>
+          <div className={stylex.props(styles.s_44).className} ref={tagDropdownRef}>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className={stylex.props(styles.s_288).className}
               onClick={() => { setTagDropdownOpen((o) => !o); setTagSearch(""); }}
             >
               + Add tag
             </Button>
             {tagDropdownOpen && (
-              <div className="absolute left-0 top-8 z-20 w-72 rounded-md border border-border bg-background shadow-lg">
-                <div className="p-2">
+              <div className={stylex.props(styles.s_46).className}>
+                <div className={stylex.props(styles.s_276).className}>
                   <Input
                     value={tagSearch}
                     onChange={(e) => setTagSearch(e.target.value)}
                     placeholder="Search tags..."
-                    className="h-7 text-xs"
+                    className={stylex.props(styles.s_288).className}
                     autoFocus
                   />
                 </div>
-                <ul className="max-h-48 overflow-y-auto">
+                <ul className={stylex.props(styles.s_278).className}>
                   {filteredDropdownTags.length === 0 && (
-                    <li className="px-3 py-2 text-xs text-muted-foreground">No matching tags</li>
+                    <li className={stylex.props(styles.s_279).className}>No matching tags</li>
                   )}
                   {filteredDropdownTags.map((tagId) => {
                     const descriptor = getMapAssetDescriptorTag(tagId);
@@ -712,7 +714,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                       <li key={tagId}>
                         <button
                           type="button"
-                          className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-muted/50"
+                          className={stylex.props(styles.s_280).className}
                           onClick={() => {
                             setTags((prev) =>
                               prev.includes(tagId) ? prev : [...prev, tagId],
@@ -721,9 +723,9 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                             setTagSearch("");
                           }}
                         >
-                          <span className="shrink-0 font-mono font-medium text-foreground">{displayTag(tagId)}</span>
+                          <span className={stylex.props(styles.s_281).className}>{displayTag(tagId)}</span>
                           {descriptor?.shortDefinition && (
-                            <span className="text-muted-foreground">{descriptor.shortDefinition}</span>
+                            <span className={stylex.props(styles.s_1005).className}>{descriptor.shortDefinition}</span>
                           )}
                         </button>
                       </li>
@@ -735,11 +737,11 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           </div>
 
           {/* CSV paste — secondary escape hatch */}
-          <div className="mt-2">
+          <div className={stylex.props(styles.s_716).className}>
             <button
               type="button"
               onClick={() => setCsvOpen((o) => !o)}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className={stylex.props(styles.s_351).className}
             >
               <ChevronDown
                 className={cn("size-3 shrink-0 transition-transform", !csvOpen && "-rotate-90")}
@@ -747,7 +749,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               Bulk-add via CSV
             </button>
             {csvOpen && (
-              <div className="mt-2 space-y-1.5">
+              <div className={stylex.props(styles.s_819).className}>
                 <textarea
                   value={csvInput}
                   onChange={(e) => { setCsvInput(e.target.value); setCsvErrors([]); }}
@@ -757,19 +759,19 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                   placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
                   spellCheck={false}
                   rows={3}
-                  className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className={stylex.props(styles.s_285).className}
                 />
                 {csvErrors.length > 0 && (
-                  <p className="text-xs text-destructive">
+                  <p className={stylex.props(styles.s_451).className}>
                     Unrecognised (ignored):{" "}
-                    <span className="font-mono">{csvErrors.join(", ")}</span>
+                    <span className={stylex.props(styles.s_940).className}>{csvErrors.join(", ")}</span>
                   </p>
                 )}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs"
+                  className={stylex.props(styles.s_288).className}
                   disabled={!csvInput.trim()}
                   onClick={applyCSV}
                 >
@@ -785,24 +787,24 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           <SectionHeading>Fly-by videos</SectionHeading>
 
           {existingVideos.length > 0 && (
-            <ul className="mb-2 space-y-1">
+            <ul className={stylex.props(styles.s_498).className}>
               {existingVideos.map((v) => (
-                <li key={v.uri} className="flex items-center gap-1.5 rounded border border-border px-2 py-1">
-                  <Film className="size-3 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                <li key={v.uri} className={stylex.props(styles.s_79).className}>
+                  <Film className={stylex.props(styles.s_929).className} />
+                  <span className={stylex.props(styles.s_81).className}>
                     {v.label ? (
-                      <><span className="font-medium text-foreground">{v.label}</span> — </>
+                      <><span className={stylex.props(styles.s_517).className}>{v.label}</span> — </>
                     ) : null}
                     {v.uri.split("/").pop()}
                   </span>
                   <button
                     type="button"
                     onClick={() => markArtifactForDeletion(v.uri)}
-                    className="shrink-0 text-muted-foreground/60 transition-colors hover:text-destructive"
+                    className={stylex.props(styles.s_83).className}
                     title="Remove this video"
                     aria-label="Remove this video"
                   >
-                    <X className="size-3" />
+                    <X className={stylex.props(styles.s_927).className} />
                   </button>
                 </li>
               ))}
@@ -814,38 +816,38 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             type="file"
             accept=".mp4,video/mp4"
             multiple
-            className="hidden"
+            className={stylex.props(styles.s_373).className}
             onChange={(e) => addFiles(e, setVideoEntries)}
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
+            className={stylex.props(styles.s_288).className}
             onClick={() => videoInputRef.current?.click()}
           >
-            <Film className="mr-1.5 size-3" />
+            <Film className={stylex.props(styles.s_121).className} />
             Add videos
           </Button>
 
           {videoEntries.length > 0 && (
-            <div className="mt-2 space-y-1.5">
+            <div className={stylex.props(styles.s_819).className}>
               {videoEntries.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-1.5 rounded border border-border px-2 py-1.5">
-                  <Film className="size-3 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-xs">{entry.file.name}</span>
+                <div key={entry.id} className={stylex.props(styles.s_89).className}>
+                  <Film className={stylex.props(styles.s_929).className} />
+                  <span className={stylex.props(styles.s_91).className}>{entry.file.name}</span>
                   <Input
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setVideoEntries)}
                     placeholder="Label"
-                    className="h-6 w-20 shrink-0 px-1.5 text-xs"
+                    className={stylex.props(styles.s_92).className}
                   />
                   <button
                     type="button"
                     onClick={() => removeEntry(entry.id, setVideoEntries)}
-                    className="shrink-0 text-muted-foreground/60 transition-colors hover:text-foreground"
+                    className={stylex.props(styles.s_110).className}
                   >
-                    <X className="size-3" />
+                    <X className={stylex.props(styles.s_927).className} />
                   </button>
                 </div>
               ))}
@@ -858,24 +860,24 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           <SectionHeading>Thumbnail images</SectionHeading>
 
           {existingImages.length > 0 && (
-            <ul className="mb-2 space-y-1">
+            <ul className={stylex.props(styles.s_498).className}>
               {existingImages.map((img) => (
-                <li key={img.uri} className="flex items-center gap-1.5 rounded border border-border px-2 py-1">
-                  <ImageIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                <li key={img.uri} className={stylex.props(styles.s_79).className}>
+                  <ImageIcon className={stylex.props(styles.s_929).className} aria-hidden />
+                  <span className={stylex.props(styles.s_81).className}>
                     {img.label ? (
-                      <><span className="font-medium text-foreground">{img.label}</span> — </>
+                      <><span className={stylex.props(styles.s_517).className}>{img.label}</span> — </>
                     ) : null}
                     {img.uri.split("/").pop()}
                   </span>
                   <button
                     type="button"
                     onClick={() => markArtifactForDeletion(img.uri)}
-                    className="shrink-0 text-muted-foreground/60 transition-colors hover:text-destructive"
+                    className={stylex.props(styles.s_83).className}
                     title="Remove this image"
                     aria-label="Remove this image"
                   >
-                    <X className="size-3" />
+                    <X className={stylex.props(styles.s_927).className} />
                   </button>
                 </li>
               ))}
@@ -887,38 +889,38 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             type="file"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
             multiple
-            className="hidden"
+            className={stylex.props(styles.s_373).className}
             onChange={(e) => addFiles(e, setImageEntries)}
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
+            className={stylex.props(styles.s_288).className}
             onClick={() => imageInputRef.current?.click()}
           >
-            <ImageIcon className="mr-1.5 size-3" aria-hidden />
+            <ImageIcon className={stylex.props(styles.s_121).className} aria-hidden />
             Add images
           </Button>
 
           {imageEntries.length > 0 && (
-            <div className="mt-2 space-y-1.5">
+            <div className={stylex.props(styles.s_819).className}>
               {imageEntries.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-1.5 rounded border border-border px-2 py-1.5">
-                  <ImageIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-xs">{entry.file.name}</span>
+                <div key={entry.id} className={stylex.props(styles.s_89).className}>
+                  <ImageIcon className={stylex.props(styles.s_929).className} aria-hidden />
+                  <span className={stylex.props(styles.s_91).className}>{entry.file.name}</span>
                   <Input
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setImageEntries)}
                     placeholder="Label"
-                    className="h-6 w-20 shrink-0 px-1.5 text-xs"
+                    className={stylex.props(styles.s_92).className}
                   />
                   <button
                     type="button"
                     onClick={() => removeEntry(entry.id, setImageEntries)}
-                    className="shrink-0 text-muted-foreground/60 transition-colors hover:text-foreground"
+                    className={stylex.props(styles.s_110).className}
                   >
-                    <X className="size-3" />
+                    <X className={stylex.props(styles.s_927).className} />
                   </button>
                 </div>
               ))}
@@ -931,75 +933,75 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
           <SectionHeading>3D Digital Twin</SectionHeading>
 
           {has3D && (
-            <div className="mb-2 flex items-center gap-2 rounded border border-emerald-500/30 bg-emerald-500/5 px-2 py-1.5">
-              <Box className="size-3.5 shrink-0 text-emerald-500" />
-              <span className="flex-1 text-xs text-emerald-400">3D assets available</span>
+            <div className={stylex.props(styles.s_95).className}>
+              <Box className={stylex.props(styles.s_96).className} />
+              <span className={stylex.props(styles.s_97).className}>3D assets available</span>
               <button
                 type="button"
                 onClick={handleDelete3D}
-                className="shrink-0 text-xs text-muted-foreground/60 transition-colors hover:text-destructive"
+                className={stylex.props(styles.s_98).className}
                 title="Delete 3D assets"
               >
-                <Trash2 className="size-3" />
+                <Trash2 className={stylex.props(styles.s_927).className} />
               </button>
             </div>
           )}
 
           {delete3D && (
-            <div className="mb-2 flex items-center gap-2 rounded border border-amber-500/30 bg-amber-500/5 px-2 py-1.5">
-              <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
-              <span className="flex-1 text-xs text-amber-400">3D assets marked for removal</span>
+            <div className={stylex.props(styles.s_100).className}>
+              <AlertTriangle className={stylex.props(styles.s_101).className} />
+              <span className={stylex.props(styles.s_102).className}>3D assets marked for removal</span>
               <button
                 type="button"
                 onClick={handleUndelete3D}
-                className="shrink-0 text-muted-foreground/60 transition-colors hover:text-foreground"
+                className={stylex.props(styles.s_110).className}
                 title="Undo removal"
               >
-                <Undo2 className="size-3" />
+                <Undo2 className={stylex.props(styles.s_927).className} />
               </button>
             </div>
           )}
 
           {threeDFiles.length > 0 && (
-            <div className="mb-2 flex items-center gap-2 rounded border border-border px-2 py-1.5">
-              <FolderUp className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="flex-1 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{threeDFiles.length}</span> files from{" "}
-                <span className="font-mono text-foreground">
+            <div className={stylex.props(styles.s_105).className}>
+              <FolderUp className={stylex.props(styles.s_909).className} />
+              <span className={stylex.props(styles.s_107).className}>
+                <span className={stylex.props(styles.s_517).className}>{threeDFiles.length}</span> files from{" "}
+                <span className={stylex.props(styles.s_109).className}>
                   {threeDFiles[0]?.webkitRelativePath.split("/")[0] ?? "folder"}
                 </span>
               </span>
               <button
                 type="button"
                 onClick={() => setThreeDFiles([])}
-                className="shrink-0 text-muted-foreground/60 transition-colors hover:text-foreground"
+                className={stylex.props(styles.s_110).className}
                 title="Clear selection"
               >
-                <X className="size-3" />
+                <X className={stylex.props(styles.s_927).className} />
               </button>
             </div>
           )}
 
           {threeDUploadProgress && (
-            <div className="mb-2 space-y-1">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className={stylex.props(styles.s_498).className}>
+              <div className={stylex.props(styles.s_113).className}>
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-200"
+                  className={stylex.props(styles.s_114).className}
                   style={{ width: `${Math.round((threeDUploadProgress.completed / threeDUploadProgress.total) * 100)}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground">
+              <p className={stylex.props(styles.s_539).className}>
                 {threeDUploadProgress.completed}/{threeDUploadProgress.total} files
                 {threeDUploadProgress.currentFile && (
-                  <> — <span className="font-mono">{threeDUploadProgress.currentFile}</span></>
+                  <> — <span className={stylex.props(styles.s_940).className}>{threeDUploadProgress.currentFile}</span></>
                 )}
               </p>
             </div>
           )}
 
           {!has3D && !delete3D && threeDFiles.length === 0 && !threeDUploadProgress && (
-            <p className="mb-2 text-[11px] text-muted-foreground">
-              No 3D digital twin assets. Upload a folder containing a <span className="font-mono">manifest.json</span> and tile files.
+            <p className={stylex.props(styles.s_117).className}>
+              No 3D digital twin assets. Upload a folder containing a <span className={stylex.props(styles.s_940).className}>manifest.json</span> and tile files.
             </p>
           )}
 
@@ -1009,7 +1011,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             // @ts-expect-error -- webkitdirectory is a non-standard attribute
             webkitdirectory=""
             directory=""
-            className="hidden"
+            className={stylex.props(styles.s_373).className}
             onChange={handleThreeDFolderSelect}
           />
           {!delete3D && !threeDUploadProgress && (
@@ -1017,10 +1019,10 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className={stylex.props(styles.s_288).className}
               onClick={() => threeDInputRef.current?.click()}
             >
-              <FolderUp className="mr-1.5 size-3" />
+              <FolderUp className={stylex.props(styles.s_121).className} />
               {has3D || threeDFiles.length > 0 ? "Replace 3D Folder" : "Upload 3D Folder"}
             </Button>
           )}
@@ -1044,15 +1046,15 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
       </div>
 
       {/* Sticky footer */}
-      <div className="shrink-0 space-y-2 border-t border-border p-3">
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex gap-2">
+      <div className={stylex.props(styles.s_122).className}>
+        {error && <p className={stylex.props(styles.s_451).className}>{error}</p>}
+        <div className={stylex.props(styles.s_124).className}>
           <Button
             type="button"
             size="sm"
             disabled={submitting}
             onClick={handleSave}
-            className="flex-1"
+            className={stylex.props(styles.s_436).className}
           >
             {submitting ? "Saving…" : "Save changes"}
           </Button>

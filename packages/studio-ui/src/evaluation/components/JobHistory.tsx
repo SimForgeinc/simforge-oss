@@ -13,11 +13,12 @@
  */
 
 import { useCallback, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Ban, ExternalLink, Loader2 } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { EmptyState } from "../../components/ui/empty-state";
+import { styles as s } from "./evaluation-components.stylex";
+import type { XStyle } from "../../components/stylex/surface";
 import {
   Table,
   TableBody,
@@ -26,6 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { EmptyState } from "../../components/ui/empty-state";
+import { cn } from "../../lib/utils";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
 import type { ComputeJob } from "../contracts";
 import type { EvaluationGateway } from "../gateway";
@@ -41,24 +44,22 @@ import { RefusalNotice } from "./RefusalNotice";
 
 const POLL_INTERVAL_MS = 4000;
 
-const TONE_CLASSES: Record<JobStatusTone, string> = {
-  neutral: "border-border text-muted-foreground",
-  active: "border-primary/50 text-primary",
-  good: "border-emerald-500/50 text-emerald-600 dark:text-emerald-400",
-  warn: "border-amber-500/50 text-amber-600 dark:text-amber-500",
-  bad: "border-destructive/50 text-destructive",
+const TONE_STYLES: Record<JobStatusTone, XStyle> = {
+  neutral: s.toneNeutral,
+  active: s.toneActive,
+  good: s.toneGood,
+  warn: s.toneWarn,
+  bad: s.toneBad,
 };
 
 export function JobStatusBadge({ job }: { job: ComputeJob }) {
   const presentation = jobStatusPresentation(job.status);
   return (
-    <span className="inline-flex items-center gap-2">
-      <Badge variant="outline" className={TONE_CLASSES[presentation.tone]}>
+    <span {...stylex.props(s.rowTight)}>
+      <Badge variant="outline" xstyle={TONE_STYLES[presentation.tone]}>
         {presentation.label}
       </Badge>
-      {presentation.live ? (
-        <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
-      ) : null}
+      {presentation.live ? <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} /> : null}
     </span>
   );
 }
@@ -133,17 +134,15 @@ export function JobHistory({
 
   if (jobs === null) {
     return (
-      <p className={cn("inline-flex items-center gap-2 text-sm text-muted-foreground", className)}>
-        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-        Loading runs…
+      <p className={cn(stylex.props(s.rowTight, s.textSm, s.textMuted).className, className)} style={stylex.props(s.rowTight, s.textSm, s.textMuted).style}>
+        <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />Loading runs…
       </p>
     );
   }
 
   return (
-    <div className={cn("space-y-4", className)} data-testid="job-history">
+    <div className={cn(stylex.props(s.section4).className, className)} data-testid="job-history">
       {error ? <RefusalNotice tone="warn" title="Job list" reasons={[error]} /> : null}
-
       {jobs.length === 0 ? (
         <EmptyState
           title="No runs yet"
@@ -157,8 +156,8 @@ export function JobHistory({
               <TableHead>Model</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
-              <TableHead className="w-px" />
+              <TableHead {...stylex.props(s.tableRight)}>Cost</TableHead>
+              <TableHead {...stylex.props(s.shrink0)} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,63 +166,63 @@ export function JobHistory({
               const elapsed = elapsedSeconds(job.startedAt, job.finishedAt);
               return (
                 <TableRow key={job.id} data-testid={`job-row-${job.id}`}>
-                  <TableCell className="align-top">
+                  <TableCell {...stylex.props(s.tableTop)}>
                     <button
                       type="button"
                       onClick={() => onOpenJob(job.id)}
-                      className="text-left font-medium text-foreground underline-offset-4 hover:underline"
+                      {...stylex.props(s.linkButton)}
                     >
                       {job.kind === "alpamayo.text" ? "Text analysis" : "Open loop"}
-                      <span className="ml-2 font-mono text-xs text-muted-foreground">
+                      <span {...stylex.props(s.mono, s.textXs, s.textMuted, s.ml2)}>
                         {job.id.slice(0, 8)}
                       </span>
                     </button>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <div {...stylex.props(s.mt1, s.flexCenterGap2, s.textXs, s.textMuted)}>
                       <Badge variant="outline">{job.origin}</Badge>
                       {job.scored === false ? <Badge variant="outline">not scored</Badge> : null}
                       {job.inputs.length > 1 ? <span>{job.inputs.length} inputs</span> : null}
                     </div>
                   </TableCell>
-                  <TableCell className="align-top text-sm">
-                    <div className="text-foreground">{job.model.family}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                    <div {...stylex.props(s.textFg)}>{job.model.family}</div>
+                    <div {...stylex.props(s.textXs, s.textMuted)}>
                       {job.model.quant} · {job.model.revision.slice(0, 12)}
                     </div>
                   </TableCell>
-                  <TableCell className="align-top">
+                  <TableCell {...stylex.props(s.tableTop)}>
                     <JobStatusBadge job={job} />
                     {presentation.detail ? (
-                      <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+                      <p {...stylex.props(s.mt1, s.maxXs, s.textXs, s.leading5, s.textMuted)}>
                         {presentation.detail}
                       </p>
                     ) : null}
                     {job.error ? (
-                      <p className="mt-1 max-w-xs text-xs leading-5 text-destructive">
+                      <p {...stylex.props(s.mt1, s.maxXs, s.textXs, s.leading5, s.textDestructive)}>
                         {job.error.message}
                       </p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="align-top text-sm">
-                    <div className="text-foreground">
+                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                    <div {...stylex.props(s.textFg)}>
                       {new Date(job.createdAt).toLocaleString()}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div {...stylex.props(s.textXs, s.textMuted)}>
                       {job.submittedByEmail ?? job.submittedByUserId}
                       {elapsed !== null ? ` · ${formatSeconds(elapsed)}` : ""}
                     </div>
                   </TableCell>
-                  <TableCell className="align-top text-right text-sm tabular-nums">
-                    <div className="text-foreground">
+                  <TableCell {...stylex.props(s.justifyEndSm)}>
+                    <div {...stylex.props(s.textFg)}>
                       {job.settledCents !== null
                         ? formatCents(job.settledCents)
                         : formatCents(job.reservedCents)}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div {...stylex.props(s.textXs, s.textMuted)}>
                       {job.settledCents !== null ? "settled" : "reserved"}
                     </div>
                   </TableCell>
-                  <TableCell className="align-top">
-                    <div className="flex items-center gap-1">
+                  <TableCell {...stylex.props(s.tableTop)}>
+                    <div {...stylex.props(s.flexGap1)}>
                       {job.cancellable ? (
                         <Button
                           type="button"
@@ -234,7 +233,7 @@ export function JobHistory({
                           aria-label={`Cancel run ${job.id}`}
                         >
                           {cancelling === job.id ? (
-                            <Loader2 aria-hidden="true" className="animate-spin" />
+                            <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />
                           ) : (
                             <Ban aria-hidden="true" />
                           )}

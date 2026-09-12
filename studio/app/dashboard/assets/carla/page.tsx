@@ -2,6 +2,8 @@ import catalogFile from "@/app/generated/carla-object-catalog.json";
 import { connection } from "next/server";
 import { requireAppContext } from "@/app/lib/db/app-context";
 import type { CarlaCompatibility } from "@simforge-oss/studio-ui/lib/scenario/carla-compatibility";
+import * as stylex from "@stylexjs/stylex";
+import { carla } from "../asset-gallery.stylex";
 import { AssetsTabs } from "../AssetsTabs";
 import {
   CarlaCompatibilityTable,
@@ -106,18 +108,18 @@ export default async function CarlaAssetsPage() {
   const rows = buildRows(catalog);
 
   return (
-    <div className="min-h-full bg-[#090b0e] text-white">
+    <div {...stylex.props(carla.page)}>
       <AssetsTabs />
-      <header className="border-b border-white/[0.07] px-5 py-6 sm:px-8">
-        <div className="mx-auto max-w-[1500px]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#E8E044]">Runtime support matrix</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">CARLA compatibility</h1>
-          <p className="mt-2 text-sm text-white/50">
+      <header {...stylex.props(carla.header)}>
+        <div {...stylex.props(carla.measure)}>
+          <p {...stylex.props(carla.eyebrow)}>Runtime support matrix</p>
+          <h1 {...stylex.props(carla.title)}>CARLA compatibility</h1>
+          <p {...stylex.props(carla.summary)}>
             {catalog.counts.objects.toLocaleString()} CARLA objects · {catalog.counts.equivalents.toLocaleString()} bound catalog ids · {catalog.counts.unavailable.toLocaleString()} fail-closed · probed CARLA {catalog.carlaVersion}
           </p>
         </div>
       </header>
-      <main className="mx-auto max-w-[1500px] px-5 py-6 sm:px-8">
+      <main {...stylex.props(carla.main)}>
         <CarlaCompatibilityTable rows={rows} />
       </main>
     </div>

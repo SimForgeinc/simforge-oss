@@ -17,6 +17,8 @@ import {
   type EditorController,
   type EditorState,
 } from "@simforge-oss/editor";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./multi-selection.stylex";
 
 export function MultiSelectionPanel({
   controller,
@@ -37,15 +39,14 @@ export function MultiSelectionPanel({
   if (count < 2) return null;
   return (
     <div
-      className="pointer-events-auto flex items-center gap-2 rounded-lg border border-border/70 bg-black/85 px-3 py-1.5 text-xs text-white shadow-lg backdrop-blur-md"
+      {...stylex.props(styles.panel)}
       data-testid="multi-selection-panel"
     >
-      <span className="font-semibold" data-testid="multi-selection-count">
+      <span {...stylex.props(styles.count)} data-testid="multi-selection-count">
         {count} selected
       </span>
-      {unanchored.length > 0 ? (
         <Button
-          className="h-7 border-amber-300/70 text-amber-200 hover:text-amber-100"
+          className={stylex.props(styles.button).className}
           data-testid="multi-selection-resnap"
           onClick={() => controller?.resnapToLane(unanchored.map((actor) => actor.id))}
           size="sm"
@@ -55,7 +56,7 @@ export function MultiSelectionPanel({
         </Button>
       ) : null}
       <Button
-        className="h-7"
+        className={stylex.props(styles.button).className}
         data-testid="multi-selection-duplicate"
         onClick={() => controller?.duplicateSelection()}
         size="sm"
@@ -65,7 +66,7 @@ export function MultiSelectionPanel({
         Duplicate
       </Button>
       <Button
-        className="h-7"
+        className={stylex.props(styles.button).className}
         data-testid="multi-selection-delete"
         onClick={() => controller?.deleteSelection()}
         size="sm"
@@ -76,7 +77,7 @@ export function MultiSelectionPanel({
       </Button>
       <Button
         aria-label="Clear selection"
-        className="h-7 w-7 p-0"
+        className={stylex.props(styles.clear).className}
         data-testid="multi-selection-clear"
         onClick={() => controller?.setSelection([])}
         size="sm"

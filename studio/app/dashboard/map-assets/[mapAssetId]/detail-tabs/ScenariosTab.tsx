@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import type { MapTemplateScenarioRow } from "@/app/lib/db/scenario-query-store";
 
@@ -18,14 +20,14 @@ export function ScenariosTab({
   templateCreateId = null,
 }: ScenariosTabProps) {
   return (
-    <div className="space-y-3">
-      <section className="rounded border border-border p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-xs font-medium text-foreground">
+    <div className={stylex.props(styles.s_810).className}>
+      <section className={stylex.props(styles.s_811).className}>
+        <div className={stylex.props(styles.s_812).className}>
+          <div className={stylex.props(styles.s_919).className}>
+            <h3 className={stylex.props(styles.s_814).className}>
               New Scenario
             </h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+            <p className={stylex.props(styles.s_815).className}>
               Starts from this map in your default dataset.
             </p>
           </div>
@@ -33,7 +35,7 @@ export function ScenariosTab({
             type="button"
             onClick={onCreateBlankScenario}
             disabled={!onCreateBlankScenario || createBlankBusy}
-            className="shrink-0 rounded border border-border px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className={stylex.props(styles.s_824).className}
           >
             {createBlankBusy ? "Creating..." : "Create Scenario"}
           </button>
@@ -41,28 +43,28 @@ export function ScenariosTab({
       </section>
 
       <section>
-        <h3 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <h3 className={stylex.props(styles.s_849).className}>
           Template Scenarios
         </h3>
         {templateScenarios.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className={stylex.props(styles.s_818).className}>
             No template scenarios for this map yet.
           </p>
         ) : (
-          <ul className="mt-2 space-y-1.5">
+          <ul className={stylex.props(styles.s_819).className}>
             {templateScenarios.map((scenario) => {
               const actorCount = scenario.actor_count ?? 0;
               const busy = templateCreateId === scenario.id;
               return (
                 <li
                   key={scenario.id}
-                  className="flex items-center justify-between gap-3 rounded border border-border p-2"
+                  className={stylex.props(styles.s_820).className}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground">
+                  <div className={stylex.props(styles.s_919).className}>
+                    <p className={stylex.props(styles.s_861).className}>
                       {scenario.display_name ?? "Untitled Template"}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className={stylex.props(styles.s_955).className}>
                       {actorCount} actor{actorCount === 1 ? "" : "s"}
                     </p>
                   </div>
@@ -70,7 +72,7 @@ export function ScenariosTab({
                     type="button"
                     onClick={() => onUseTemplate?.(scenario.id)}
                     disabled={busy}
-                    className="shrink-0 rounded border border-border px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                    className={stylex.props(styles.s_824).className}
                   >
                     {busy ? "Creating..." : "Use Template"}
                   </button>

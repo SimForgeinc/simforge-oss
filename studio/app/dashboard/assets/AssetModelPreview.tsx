@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import {
   AmbientLight,
   AnimationMixer,
@@ -19,6 +20,7 @@ import {
 } from "three";
 import type { Material, Object3D } from "three";
 import type { GalleryCatalogEntryDto } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
+import { preview } from "./asset-surfaces.stylex";
 
 function disposeMaterial(material: Material) {
   for (const value of Object.values(material)) {
@@ -142,18 +144,17 @@ export default function AssetModelPreview({ catalogId }: { catalogId: string }) 
   }, [catalogId]);
 
   return (
-    <div
-      className="relative h-72 overflow-hidden rounded-xl border border-white/10 bg-[#101317]"
+    <div {...stylex.props(preview.root)}
       aria-label="Interactive model preview"
     >
-      <div ref={hostRef} className="absolute inset-0" />
+      <div ref={hostRef} {...stylex.props(preview.host)} />
       {!error && !loaded ? (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-white/35">
+        <div {...stylex.props(preview.loading)}>
           Loading model…
         </div>
       ) : null}
       {error ? (
-        <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-red-300">
+        <div {...stylex.props(preview.error)}>
           {error}
         </div>
       ) : null}

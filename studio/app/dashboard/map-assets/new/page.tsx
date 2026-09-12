@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { requireAppContext } from "@/app/lib/db/app-context";
@@ -17,11 +19,11 @@ async function AddMapFormGate() {
 export default function AddMapPage() {
   // The heading strip stays outside the boundary so it prerenders into the shell.
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-11 shrink-0 items-center border-b border-border px-6">
-        <h1 className="text-sm font-semibold">Add new map</h1>
+    <div className={stylex.props(styles.s_353).className}>
+      <div className={stylex.props(styles.s_354).className}>
+        <h1 className={stylex.props(styles.s_355).className}>Add new map</h1>
       </div>
-      <div className="flex min-h-0 flex-1">
+      <div className={stylex.props(styles.s_356).className}>
         <Suspense fallback={null}>
           <AddMapFormGate />
         </Suspense>

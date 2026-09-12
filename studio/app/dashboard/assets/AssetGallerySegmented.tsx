@@ -1,7 +1,12 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import {
+  mergeStyleProps,
+  type XStyle,
+} from "@simforge-oss/studio-ui/components/stylex";
+import { segmented } from "./asset-gallery.stylex";
 
 /**
  * The page's two either/or switches — Models vs Maps, and All vs Mine.
@@ -20,18 +25,22 @@ export function AssetGallerySegmented<Value extends string>({
   options,
   onChange,
   className,
+  xstyle,
 }: {
   label: string;
   value: Value;
   options: readonly { value: Value; label: string; icon?: LucideIcon }[];
   onChange: (value: Value) => void;
+  /** Tailwind classes from a caller that has not migrated. Applied last. */
   className?: string;
+  /** Placement styles from a StyleX caller. */
+  xstyle?: XStyle;
 }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className={cn("inline-flex items-center gap-0.5 rounded-md border border-border bg-muted/30 p-0.5", className)}
+      {...mergeStyleProps(stylex.props(segmented.group, xstyle), className)}
     >
       {options.map((option) => {
         const Icon = option.icon;
@@ -42,14 +51,12 @@ export function AssetGallerySegmented<Value extends string>({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(option.value)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-              active
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+            {...stylex.props(
+              segmented.option,
+              active ? segmented.optionActive : segmented.optionIdle,
             )}
           >
-            {Icon ? <Icon aria-hidden="true" className="size-3.5" /> : null}
+            {Icon ? <Icon aria-hidden="true" {...stylex.props(segmented.icon)} /> : null}
             {option.label}
           </button>
         );

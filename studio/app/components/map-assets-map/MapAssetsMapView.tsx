@@ -1,5 +1,6 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import Map from "react-map-gl/maplibre";
 import type { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +26,7 @@ import { AssetHoverTooltip, ClusterSelectionPopover, FeatureHoverTooltip } from 
 import SatelliteBasemapToggle from "./SatelliteBasemapToggle";
 import MeasureToolButton from "./MeasureToolButton";
 import { MapViewModeToggle } from "./MapViewModeToggle";
+import { styles } from "./map-canvas.stylex";
 
 const MAP_LOAD_WATCHDOG_MS = 8000;
 // Actor coordinates are marker centers. A 15% center inset leaves roughly 10%
@@ -407,7 +409,7 @@ export function MapAssetsMapView({
       data-placement-layer-above-runtime-road={
         placementLayerAboveRuntimeRoad ? "true" : "false"
       }
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      {...stylex.props(styles.fullscreen)}
     >
       {selectedAssetId && assetsLength > 1 && (
         <button
@@ -480,7 +482,7 @@ export function MapAssetsMapView({
         initialViewState={initialViewState}
         maxZoom={maxZoom ?? MAX_MAP_ZOOM}
         minZoom={minZoom}
-        style={{ width: "100%", height: "100%" }}
+        {...stylex.props(styles.map)}
         onLoad={(evt) => {
           mapLoadedRef.current = true;
           logMapLoadDiagnostics(evt.target);

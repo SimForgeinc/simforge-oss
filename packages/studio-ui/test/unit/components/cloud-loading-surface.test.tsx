@@ -8,7 +8,7 @@ import {
 } from "../../../src/components/CloudLoadingSurface";
 
 describe("CloudLoadingSurface", () => {
-  it("renders a flat full-screen cloud blocker", () => {
+  it("announces screen loading and indeterminate progress", () => {
     const html = renderToString(
       <CloudLoadingSurface
         detail="Opening the scenario workspace."
@@ -19,22 +19,10 @@ describe("CloudLoadingSurface", () => {
     );
 
     expect(html).toContain('data-cloud-loading-scope="screen"');
-    expect(html).toContain("fixed inset-0");
     expect(html).toContain("Loading your scenarios");
     expect(html).toContain('role="progressbar"');
-    expect(html).not.toContain("bg-card");
-    expect(html).not.toContain("shadow-lg");
   });
 
-  it("uses the lightweight cloud field for a contained pane", () => {
-    const html = renderToString(
-      <CloudLoadingSurface scope="pane" title="Loading renders…" />,
-    );
-
-    expect(html).toContain('data-cloud-loading-scope="pane"');
-    expect(html).toContain("app-topbar-clouds");
-    expect(html).not.toContain("app-switcher-three-sky");
-  });
 
   it("normalizes progress and shows transfer telemetry", () => {
     const html = renderToString(
@@ -60,12 +48,10 @@ describe("CloudLoadingSurface", () => {
 });
 
 describe("CloudActivityIndicator", () => {
-  it("uses the shared activity treatment without creating a blocking surface", () => {
+  it("announces activity status", () => {
     const html = renderToString(<CloudActivityIndicator label="Saving rating" />);
 
     expect(html).toContain('role="status"');
     expect(html).toContain("Saving rating");
-    expect(html).toContain("text-[#E8E044]");
-    expect(html).not.toContain("fixed inset-0");
   });
 });

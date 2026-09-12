@@ -1,13 +1,15 @@
 "use client";
 
 import { Check, Cpu, Download, ExternalLink, Globe, LoaderCircle, Lock } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { LocalMapDescriptor, LocalMapInstallState } from "@/app/lib/cloud/maps";
 import { followMapInstall, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
+import { setup } from "./setup-preparation.stylex";
 
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
 
@@ -102,63 +104,27 @@ function ProfileRow({
     : progress && progress.members > 0
       ? Math.min(100, Math.round((progress.completedMembers / progress.members) * 100))
       : null;
-
   return (
-    <div className="flex flex-wrap items-center gap-3 py-2" data-testid={`map-install-${label.toLowerCase().replace(/\s+/g, "-")}`} data-install-state={ready ? "ready" : status?.state ?? "loading"}>
-      <span className="grid size-7 shrink-0 place-items-center text-[#E8E044]">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-xs font-semibold text-white/85">
+    <div {...stylex.props(setup.row)} data-testid={`map-install-${label.toLowerCase().replace(/\s+/g, "-")}`} data-install-state={ready ? "ready" : status?.state ?? "loading"}>
+      <span {...stylex.props(setup.rowIcon)}>{icon}</span>
+      <div {...stylex.props(setup.rowBody)}>
+        <p {...stylex.props(setup.rowTitle)}>
           {label}
-          <span
-            className={cn(
-              "rounded-full border px-2 py-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.13em]",
-              ready ? "border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]" : "border-white/10 text-white/45",
-            )}
-          >
-            {status === null
-              ? "Checking"
-              : ready
-                ? "On this computer"
-                : running
-                  ? percent === null ? "Downloading" : `${percent}%`
-                  : locked || requiresConnection
-                    ? "Needs account"
-                    : status.state === "error"
-                      ? "Failed"
-                      : "Not downloaded"}
+          <span {...stylex.props(setup.pill, ready && setup.pillReady)}>
+            {status === null ? "Checking" : ready ? "On this computer" : running ? percent === null ? "Downloading" : `${percent}%` : locked || requiresConnection ? "Needs account" : status.state === "error" ? "Failed" : "Not downloaded"}
           </span>
         </p>
-        <p className="mt-0.5 text-[11px] leading-4 text-white/45">
-          {running && progress
-            ? `${formatBytes(progress.completedBytes)} of ${formatBytes(progress.bytes)} · ${progress.completedMembers} / ${progress.members} files`
-            : ready && status.directory
-              ? status.directory
-              : status?.state === "error" && !requiresConnection
-                ? status.message ?? "The local service reported an error."
-                : error ?? detail}
+        <p {...stylex.props(setup.rowDetail)}>
+          {running && progress ? `${formatBytes(progress.completedBytes)} of ${formatBytes(progress.bytes)} · ${progress.completedMembers} / ${progress.members} files` : ready && status.directory ? status.directory : status?.state === "error" && !requiresConnection ? status.message ?? "The local service reported an error." : error ?? detail}
         </p>
-        {running ? (
-          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined} aria-label={`${label} download`}>
-            <div className="h-full rounded-full bg-[#E8E044] transition-[width] duration-500" style={{ width: `${percent ?? 0}%` }} />
-          </div>
-        ) : null}
+        {running ? <div {...stylex.props(setup.track)} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined} aria-label={`${label} download`}><div {...stylex.props(setup.fill)} style={{ "--map-install-progress": `${percent ?? 0}%` } as CSSProperties} /></div> : null}
       </div>
       {!ready && !running && !locked && !requiresConnection && status !== null ? (
-        <Button
-          className="h-8 gap-1.5 rounded-full border-white/15 bg-transparent px-3 text-[11px] text-white/80 hover:bg-white/5 hover:text-white"
-          disabled={starting}
-          onClick={() => void start()}
-          type="button"
-          variant="outline"
-        >
-          {starting ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <Download className="size-3.5" aria-hidden="true" />}
+        <Button xstyle={setup.compactButton} disabled={starting} onClick={() => void start()} type="button" variant="outline">
+          {starting ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : <Download {...stylex.props(setup.iconSmall)} aria-hidden="true" />}
           {status.state === "error" ? "Retry" : actionLabel}
         </Button>
-      ) : ready ? (
-        <Check className="size-4 text-[#E8E044]" aria-hidden="true" />
-      ) : running ? (
-        <LoaderCircle className="size-4 animate-spin text-white/45" aria-hidden="true" />
-      ) : null}
+      ) : ready ? <Check {...stylex.props(setup.iconSmall)} aria-hidden="true" /> : running ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : null}
     </div>
   );
 }
@@ -184,58 +150,30 @@ export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDesc
 
   return (
     <div
-      className={cn("pointer-events-auto max-w-xl border-t border-white/15 pt-3", className)}
+      {...mergeStyleProps(stylex.props(setup.panel), className)}
       data-testid="local-map-preparation"
       data-map-access={map.access}
       data-map-locked={String(locked)}
     >
-      <p className="font-meta text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">On this computer</p>
+      <p {...stylex.props(setup.panelLabel)}>On this computer</p>
       {locked ? (
-        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-md">
-          <Lock className="size-4 shrink-0 text-[#E8E044]" aria-hidden="true" />
-          <p className="min-w-0 flex-1 text-xs leading-5 text-white/65">
-            {cloud.status?.state === "expired"
-              ? "Your SimCloud session expired. Connect again to use this map on this computer."
-              : cloud.status?.state === "connecting"
-                ? "Waiting for SimCloud approval in your browser…"
-                : "This map needs a SimCloud account. Connect to download and render it on this computer."}
+        <div {...stylex.props(setup.locked)}>
+          <Lock {...stylex.props(setup.lockedIcon)} aria-hidden="true" />
+          <p {...stylex.props(setup.lockedText)}>
+            {cloud.status?.state === "expired" ? "Your SimCloud session expired. Connect again to use this map on this computer." : cloud.status?.state === "connecting" ? "Waiting for SimCloud approval in your browser…" : "This map needs a SimCloud account. Connect to download and render it on this computer."}
           </p>
-          {cloud.status?.state === "connecting" ? (
-            <LoaderCircle className="size-4 animate-spin text-white/45" aria-hidden="true" />
-          ) : (
-            <Button
-              className="h-8 gap-1.5 rounded-full border-[#E8E044]/30 bg-[#E8E044]/10 px-3 text-[11px] text-[#E8E044] hover:bg-[#E8E044]/20"
-              disabled={cloud.loading || cloud.status === null}
-              onClick={() => void cloud.connect()}
-              type="button"
-              variant="outline"
-            >
-              <ExternalLink className="size-3.5" aria-hidden="true" />
+          {cloud.status?.state === "connecting" ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : (
+            <Button xstyle={setup.compactButton} disabled={cloud.loading || cloud.status === null} onClick={() => void cloud.connect()} type="button" variant="outline">
+              <ExternalLink {...stylex.props(setup.iconSmall)} aria-hidden="true" />
               {cloud.status?.state === "expired" || cloud.status?.state === "error" ? "Connect again" : "Connect to SimCloud"}
             </Button>
           )}
-          {cloud.error ? <p className="w-full text-[11px] text-amber-300/90" role="alert">{cloud.error}</p> : null}
+          {cloud.error ? <p {...stylex.props(setup.alert)} role="alert">{cloud.error}</p> : null}
         </div>
       ) : (
-        <div className="mt-1 divide-y divide-white/10">
-          <ProfileRow
-            actionLabel="Download for preview"
-            detail="Viewport assets for browsing and authoring on this map."
-            icon={<Globe className="size-4" aria-hidden="true" />}
-            install={browser}
-            installed={map.installed.browser}
-            label="Browser preview"
-            locked={locked}
-          />
-          <ProfileRow
-            actionLabel="Prepare for local render"
-            detail="Full semantic closure the local Bevy renderer reads directly from disk."
-            icon={<Cpu className="size-4" aria-hidden="true" />}
-            install={semantic}
-            installed={map.installed.semantic}
-            label="Local render"
-            locked={locked}
-          />
+        <div {...stylex.props(setup.rows)}>
+          <ProfileRow actionLabel="Download for preview" detail="Viewport assets for browsing and authoring on this map." icon={<Globe {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={browser} installed={map.installed.browser} label="Browser preview" locked={locked} />
+          <ProfileRow actionLabel="Prepare for local render" detail="Full semantic closure the local Bevy renderer reads directly from disk." icon={<Cpu {...stylex.props(setup.iconSmall)} aria-hidden="true" />} install={semantic} installed={map.installed.semantic} label="Local render" locked={locked} />
         </div>
       )}
     </div>

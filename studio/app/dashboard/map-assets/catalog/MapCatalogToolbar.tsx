@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { Search, LayoutGrid, Map, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
@@ -41,37 +43,37 @@ export function MapCatalogToolbar({
   return (
     <Toolbar>
       {/* Search */}
-      <div className="relative flex-1 max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className={stylex.props(styles.s_153).className}>
+        <Search className={stylex.props(styles.s_154).className} />
         <Input
           type="search"
           placeholder="Search maps by name, city, tag..."
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          className="h-9 pl-9 text-sm"
+          className={stylex.props(styles.s_155).className}
         />
         {query && (
           <button
             type="button"
             onClick={() => onQueryChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className={stylex.props(styles.s_156).className}
           >
-            <X className="size-3.5" />
+            <X className={stylex.props(styles.s_991).className} />
           </button>
         )}
       </div>
 
       {/* Result count */}
-      <span className="text-xs text-muted-foreground shrink-0">
+      <span className={stylex.props(styles.s_158).className}>
         {resultCount} {resultCount === 1 ? "map" : "maps"}
       </span>
 
-      <ToolbarGroup className="ml-auto">
+      <ToolbarGroup className={stylex.props(styles.s_159).className}>
         {/* Sort */}
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
-            <ArrowUpDown className="size-3.5" />
+          <Button variant="outline" size="sm" className={stylex.props(styles.s_160).className}>
+            <ArrowUpDown className={stylex.props(styles.s_991).className} />
             {SORT_LABELS[sort]}
           </Button>
         </DropdownMenuTrigger>
@@ -83,33 +85,23 @@ export function MapCatalogToolbar({
         </DropdownMenu>
 
       {/* View toggle */}
-        <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
+        <div className={stylex.props(styles.s_162).className}>
         <button
           type="button"
           onClick={() => onViewChange("grid")}
-          className={cn(
-            "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-            view === "grid"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
+          className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_951, styles.u_937, styles.u_943, styles.u_970).className}
           title="Grid view"
         >
-          <LayoutGrid className="size-3.5" />
+          <LayoutGrid className={stylex.props(styles.s_991).className} />
           Grid
         </button>
         <button
           type="button"
           onClick={() => onViewChange("map")}
-          className={cn(
-            "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-            view === "map"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
+          className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_951, styles.u_937, styles.u_943, styles.u_970).className}
           title="Map view"
         >
-          <Map className="size-3.5" />
+          <Map className={stylex.props(styles.s_991).className} />
           Map
         </button>
         </div>

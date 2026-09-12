@@ -20,3 +20,9 @@ function walk(dir) {
   }
 }
 walk(src);
+
+// The harness keeps a long-lived process-exit hook installed for workspace
+// commands. This synchronous copier has no asynchronous cleanup to await, so
+// terminate explicitly after the copy to avoid that hook converting success to
+// SIGABRT in the isolated build runner.
+process.exit(0);

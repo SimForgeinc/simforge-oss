@@ -1,105 +1,45 @@
 import * as React from "react";
+import * as stylex from "@stylexjs/stylex";
 
-import { cn } from "../../lib/utils";
+import { mergeStyleProps } from "../stylex/surface";
+import { styles } from "./card.stylex";
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-md border border-border bg-card text-card-foreground transition-colors",
-      className
-    )}
-    {...props}
-  />
+type CardStyle = stylex.StyleXStyles;
+type CardProps = React.HTMLAttributes<HTMLDivElement> & { xstyle?: CardStyle };
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.card, xstyle), className, style)} />
 ));
 Card.displayName = "Card";
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "grid auto-rows-min grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1.5 p-5",
-      className
-    )}
-    {...props}
-  />
+const CardHeader = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.header, xstyle), className, style)} />
 ));
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "col-start-1 text-[15px] font-semibold leading-snug tracking-tight",
-      className
-    )}
-    {...props}
-  />
+const CardTitle = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.title, xstyle), className, style)} />
 ));
 CardTitle.displayName = "CardTitle";
 
-const CardDescription = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("col-start-1 text-sm text-muted-foreground", className)}
-    {...props}
-  />
+const CardDescription = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.description, xstyle), className, style)} />
 ));
 CardDescription.displayName = "CardDescription";
 
-const CardAction = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-      className
-    )}
-    {...props}
-  />
+const CardAction = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.action, xstyle), className, style)} />
 ));
 CardAction.displayName = "CardAction";
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("px-5 pb-3", className)} {...props} />
+const CardContent = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.content, xstyle), className, style)} />
 ));
 CardContent.displayName = "CardContent";
 
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex items-center border-t border-border p-4 px-5", className)}
-    {...props}
-  />
+const CardFooter = React.forwardRef<HTMLDivElement, CardProps>(({ className, style, xstyle, ...props }, ref) => (
+  <div ref={ref} {...props} {...mergeStyleProps(stylex.props(styles.footer, xstyle), className, style)} />
 ));
 CardFooter.displayName = "CardFooter";
 
-export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-};
+export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };

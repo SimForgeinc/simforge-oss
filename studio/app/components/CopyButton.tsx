@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
-
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./CopyButton.stylex";
 export function CopyButton({
   text,
   title = "Copy to clipboard",
   label,
+  className,
 }: {
   text: string;
   title?: string;
   label?: string;
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
   function copy() {
@@ -26,9 +30,13 @@ export function CopyButton({
         type="button"
         onClick={copy}
         title={title}
-        className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+        {...mergeStyleProps(stylex.props(styles.button, styles.compact), className)}
       >
-        {copied ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+        {copied ? (
+          <Check {...stylex.props(styles.compactIcon, styles.copiedIcon)} />
+        ) : (
+          <Copy {...stylex.props(styles.compactIcon)} />
+        )}
         <span>{label}</span>
       </button>
     );
@@ -39,9 +47,13 @@ export function CopyButton({
       type="button"
       onClick={copy}
       title={title}
-      className="inline-flex shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+      {...mergeStyleProps(stylex.props(styles.button), className)}
     >
-      {copied ? <Check className="size-3.5 text-green-400" /> : <Copy className="size-3.5" />}
+      {copied ? (
+        <Check {...stylex.props(styles.iconOnlyIcon, styles.copiedIcon)} />
+      ) : (
+        <Copy {...stylex.props(styles.iconOnlyIcon)} />
+      )}
     </button>
   );
 }

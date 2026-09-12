@@ -1,6 +1,7 @@
 "use client";
 
 import { FlaskConical, GitCompareArrows } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import Link from "next/link";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
@@ -32,14 +33,15 @@ import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import type { ModelVersionRecord } from "@/app/lib/models/contracts";
 import { CloudRunsClient } from "./CloudRunsClient";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "./shared";
+import { styles } from "./evaluation-page.stylex";
 
 function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
   const [policyA, policyB] = campaign.policies;
   return (
     <Card data-testid={`campaign-${campaign.campaignId}`}>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+      <CardHeader xstyle={styles.campaignHeader}>
         <div>
-          <CardTitle className="text-base">{campaign.name}</CardTitle>
+          <CardTitle xstyle={styles.cardTitle}>{campaign.name}</CardTitle>
           <CardDescription>
             {campaign.campaignId} · {campaign.episodes} episodes
             {campaign.createdAt ? ` · created ${new Date(campaign.createdAt).toLocaleString()}` : ""}
@@ -54,7 +56,7 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
                 query: { a: policyA.policyId, b: policyB.policyId },
               }}
             >
-              <GitCompareArrows className="mr-1.5 h-4 w-4" />
+              <GitCompareArrows {...stylex.props(styles.icon)} />
               Compare A/B
             </Link>
           </Button>
@@ -67,10 +69,10 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
               <TableHead>Policy (run)</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Model version</TableHead>
-              <TableHead className="text-right">Driving score</TableHead>
-              <TableHead className="text-right">Route completion</TableHead>
-              <TableHead className="text-right">Episodes</TableHead>
-              <TableHead className="text-right">Last completed</TableHead>
+              <TableHead xstyle={styles.right}>Driving score</TableHead>
+              <TableHead xstyle={styles.right}>Route completion</TableHead>
+              <TableHead xstyle={styles.right}>Episodes</TableHead>
+              <TableHead xstyle={styles.right}>Last completed</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -78,7 +80,7 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
               <TableRow key={policy.policyId}>
                 <TableCell>
                   <Link
-                    className="font-medium text-foreground hover:underline"
+                    {...stylex.props(styles.link)}
                     href={`/dashboard/evaluation/${campaign.campaignId}/policies/${policy.policyId}`}
                   >
                     {policy.policyId}
@@ -90,23 +92,23 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
                 <TableCell>
                   {policy.modelVersionId ? (
                     <Link
-                      className="font-mono text-xs text-muted-foreground hover:underline"
+                      {...stylex.props(styles.modelLink)}
                       href={`/dashboard/evaluation/versions/${policy.modelVersionId}`}
                     >
                       {policy.modelVersionId.slice(0, 12)}…
                     </Link>
                   ) : (
-                    <span className="text-xs text-muted-foreground">unregistered</span>
+                    <span {...stylex.props(styles.muted)}>unregistered</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell xstyle={styles.numeric}>
                   {formatScore(policy.meanScore)}
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell xstyle={styles.numeric}>
                   {formatScore(policy.meanRouteCompletion)}
                 </TableCell>
-                <TableCell className="text-right font-mono">{policy.episodes}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                <TableCell xstyle={styles.numeric}>{policy.episodes}</TableCell>
+                <TableCell xstyle={styles.numericMuted}>
                   {policy.lastCompletedAt
                     ? new Date(policy.lastCompletedAt).toLocaleTimeString()
                     : "—"}
@@ -124,7 +126,7 @@ function ModelVersionsCard({ versions }: { versions: ModelVersionRecord[] }) {
   return (
     <Card data-testid="model-versions">
       <CardHeader>
-        <CardTitle className="text-base">Model versions</CardTitle>
+        <CardTitle xstyle={styles.cardTitle}>Model versions</CardTitle>
         <CardDescription>
           Registry state and promotion gates — promote from a version&apos;s detail page.
         </CardDescription>
@@ -148,7 +150,7 @@ function ModelVersionsCard({ versions }: { versions: ModelVersionRecord[] }) {
                 <TableRow key={version.id}>
                   <TableCell>
                     <Link
-                      className="font-medium hover:underline"
+                      {...stylex.props(styles.link)}
                       href={`/dashboard/evaluation/versions/${version.id}`}
                     >
                       {version.name}
@@ -161,7 +163,7 @@ function ModelVersionsCard({ versions }: { versions: ModelVersionRecord[] }) {
                   <TableCell>
                     <StatusBadge status={version.status} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell xstyle={styles.promoted}>
                     {version.promotedRunId ? `${version.promotedRunId.slice(0, 12)}…` : "—"}
                   </TableCell>
                 </TableRow>
@@ -180,32 +182,31 @@ export function EvaluationPageClient() {
     "/api/evaluation/campaigns",
   );
   const versions = useJsonFetch<{ versions: ModelVersionRecord[] }>("/api/models/versions");
-
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.page)}>
       <PageHeader
         title="Video prediction"
         description="Upload one driving video or synchronized camera views for an unscored AlpaMayo trajectory and reasoning overlay."
       />
-      <Tabs defaultValue="runs" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-5 mt-5 self-start sm:mx-6">
+      <Tabs {...stylex.props(styles.tabs)} defaultValue="runs">
+        <TabsList {...stylex.props(styles.tabList)}>
           <TabsTrigger value="runs">Video prediction</TabsTrigger>
           <TabsTrigger value="campaigns">Research campaigns</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="runs" className="px-5 py-5 sm:px-6">
+        <TabsContent {...stylex.props(styles.tabContent)} value="runs">
           <CloudRunsClient />
         </TabsContent>
 
         <TabsContent value="campaigns">
-          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
+          <div {...stylex.props(styles.campaignList)}>
             {campaigns.kind === "loading" ? <PanelMessage>Loading campaigns…</PanelMessage> : null}
             {campaigns.kind === "error" ? (
               <PanelMessage>Failed to load campaigns: {campaigns.message}</PanelMessage>
             ) : null}
             {campaigns.kind === "ready" && campaigns.data.campaigns.length === 0 ? (
               <EmptyState
-                icon={<FlaskConical className="h-8 w-8" />}
+                icon={<FlaskConical {...stylex.props(styles.emptyIcon)} />}
                 title="No eval campaigns yet"
                 description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
               />

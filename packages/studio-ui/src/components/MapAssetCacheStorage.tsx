@@ -1,8 +1,10 @@
 "use client";
 
 import { FolderOpen, HardDrive, Trash2 } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { useCallback, useEffect, useState } from "react";
-import { cn } from "../lib/utils";
+import { mergeStyleProps } from "./stylex/surface";
+import { styles } from "./MapAssetCacheStorage.stylex";
 import {
   chooseMapAssetCacheDirectory,
   clearMapAssetCache,
@@ -106,7 +108,7 @@ export function MapAssetCacheStorage({
   return (
     <section
       aria-label="Map cache storage"
-      className={cn("border-y border-white/10 py-4 text-white", className)}
+      {...mergeStyleProps(stylex.props(styles.root), className)}
       data-testid="map-asset-cache-storage"
       data-cache-backend={status?.backend ?? "unknown"}
     >

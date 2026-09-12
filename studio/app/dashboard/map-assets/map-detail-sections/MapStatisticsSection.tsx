@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
@@ -26,11 +28,11 @@ export function MapStatisticsSection({
 }: MapStatisticsSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -46,23 +48,23 @@ export function MapStatisticsSection({
             }
             aria-label="Copy map statistics as JSON"
             title="Copy map statistics as JSON"
-            className="shrink-0 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            className={stylex.props(styles.s_713).className}
           >
             {copiedKey === "mapStats" ? (
-              <Check className="size-3 text-green-400" />
+              <Check className={stylex.props(styles.s_714).className} />
             ) : (
-              <Copy className="size-3" />
+              <Copy className={stylex.props(styles.s_927).className} />
             )}
           </button>
         )}
       </div>
       {open &&
         (mapStats != null ? (
-          <div className="mt-2">
+          <div className={stylex.props(styles.s_716).className}>
             <MapStatsDisplay stats={mapStats} candidateLocations={candidateLocations} />
           </div>
         ) : (
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <p className={stylex.props(styles.s_717).className}>
             No statistics yet. They appear here after map metadata has been computed (requires geojson, xodr, and
             rrdata_xml on the asset).
           </p>

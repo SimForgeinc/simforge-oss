@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
@@ -51,8 +53,8 @@ export function CandidateLocationCard({
       )}
     >
       {/* Row 1: Label + confidence */}
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium text-foreground">{candidate.label}</p>
+      <div className={stylex.props(styles.s_831).className}>
+        <p className={stylex.props(styles.s_814).className}>{candidate.label}</p>
         <span
           className={cn(
             "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
@@ -69,27 +71,27 @@ export function CandidateLocationCard({
 
       {/* Row 2: One-line explanation */}
       {explanation && (
-        <p className="mt-1 truncate text-[10px] text-muted-foreground/70">{explanation}</p>
+        <p className={stylex.props(styles.s_458).className}>{explanation}</p>
       )}
 
       {/* Row 3: Family chip + tag chips */}
       {(family || visibleTags.length > 0) && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        <div className={stylex.props(styles.s_459).className}>
           {family && (
-            <span className="rounded-full bg-muted/60 px-2 py-px text-[10px] font-medium text-muted-foreground border border-border">
+            <span className={stylex.props(styles.s_460).className}>
               {family.name}
             </span>
           )}
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className="rounded border border-border bg-muted/40 px-1 py-px text-[10px] text-muted-foreground"
+              className={stylex.props(styles.s_461).className}
             >
               {humanizeTag(tag)}
             </span>
           ))}
           {overflowCount > 0 && (
-            <span className="px-1 text-[10px] text-muted-foreground/60">
+            <span className={stylex.props(styles.s_462).className}>
               +{overflowCount}
             </span>
           )}
@@ -98,12 +100,12 @@ export function CandidateLocationCard({
 
       {/* Row 4: Compact evidence */}
       {evidence && (
-        <p className="mt-0.5 text-[10px] text-muted-foreground/50">{evidence}</p>
+        <p className={stylex.props(styles.s_463).className}>{evidence}</p>
       )}
     </button>
     </TooltipTrigger>
     {tooltipText && (
-      <TooltipContent side="bottom" className="max-w-xs whitespace-pre-line text-xs leading-relaxed">
+      <TooltipContent side="bottom" className={stylex.props(styles.s_984).className}>
         {tooltipText}
       </TooltipContent>
     )}

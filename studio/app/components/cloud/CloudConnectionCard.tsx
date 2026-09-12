@@ -3,9 +3,11 @@
 import { Cloud, CloudOff, ExternalLink, LoaderCircle, LogOut, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { mergeStyleProps, type XStyle } from "@simforge-oss/studio-ui/components/stylex";
+import { card, chip, cloud, lamp, action } from "@/app/components/host-status-cards.stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 const CLOUD_STATE_LABELS: Record<StudioCloudStatus["state"], string> = {
@@ -16,17 +18,18 @@ const CLOUD_STATE_LABELS: Record<StudioCloudStatus["state"], string> = {
   error: "Connection problem",
 };
 
-function stateDotClass(state: StudioCloudStatus["state"] | null): string {
+/** The lamp variant for a connection state. Expired and errored share one. */
+function stateLampStyle(state: StudioCloudStatus["state"] | null): XStyle {
   switch (state) {
     case "connected":
-      return "bg-[#E8E044] shadow-[0_0_14px_rgba(232,224,68,0.35)]";
+      return lamp.connected;
     case "connecting":
-      return "bg-sky-300 animate-pulse";
+      return lamp.connecting;
     case "expired":
     case "error":
-      return "bg-amber-400";
+      return lamp.attention;
     default:
-      return "bg-white/25";
+      return lamp.idle;
   }
 }
 
@@ -65,6 +68,9 @@ function formatExpiry(iso: string | null): string | null {
  * Connection controls for the optional SimCloud account. Connect opens the
  * consent page in the system browser and the card follows the local service's
  * status; Disconnect always asks first because it locks account-only maps.
+ *
+ * Button variants are StyleX-backed; explicit caller classes remain where the
+ * control needs a card-specific size or presentation override.
  */
 export function CloudConnectionCard({ className }: { className?: string }) {
   const { status, loading, error, connect, disconnect } = useStudioCloudStatus();
@@ -75,68 +81,66 @@ export function CloudConnectionCard({ className }: { className?: string }) {
   return (
     <section
       aria-labelledby="cloud-connection-title"
-      className={cn("text-white", className)}
+      {...mergeStyleProps(stylex.props(card.section), className)}
       data-testid="cloud-connection-card"
       data-cloud-state={state ?? "loading"}
     >
-      <div className="flex items-start gap-3">
-        <div className="grid size-10 shrink-0 place-items-center text-[#E8E044]">
+      <div {...stylex.props(card.header)}>
+        <div {...stylex.props(card.icon)}>
           {state === "connected" ? <Cloud aria-hidden="true" /> : <CloudOff aria-hidden="true" />}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-meta text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">
-            SimCloud account
-          </p>
-          <h2 id="cloud-connection-title" className="mt-1 flex items-center gap-2 text-lg font-semibold">
-            <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-sm", stateDotClass(state))} />
-            <span className="truncate">
+        <div {...stylex.props(card.body)}>
+          <p {...stylex.props(card.eyebrow)}>SimCloud account</p>
+          <h2 id="cloud-connection-title" {...stylex.props(card.title, card.titleRow)}>
+            <span aria-hidden="true" {...stylex.props(lamp.base, stateLampStyle(state))} />
+            <span {...stylex.props(card.truncate)}>
               {status?.state === "connected" ? accountLabel(status) : state ? CLOUD_STATE_LABELS[state] : "Checking…"}
             </span>
           </h2>
           {status?.state === "connected" && status.user?.email ? (
-            <p className="truncate font-mono text-xs text-white/55">{status.user.email}</p>
+            <p {...stylex.props(card.truncate, cloud.email)}>{status.user.email}</p>
           ) : null}
-          <p className="mt-2 text-sm leading-6 text-white/55" role={error || state === "error" ? "alert" : undefined}>
+          <p {...stylex.props(card.lede)} role={error || state === "error" ? "alert" : undefined}>
             {cloudStateExplanation(status, error)}
           </p>
           {status ? (
-            <dl className="mt-3 grid gap-x-6 gap-y-1 text-[11px] text-white/40 sm:grid-cols-2">
-              <div className="flex gap-2">
-                <dt className="shrink-0 font-meta text-[9px] font-bold uppercase tracking-[0.14em] text-white/30">Server</dt>
-                <dd className="truncate font-mono" title={status.origin}>{status.origin.replace(/^https?:\/\//, "")}</dd>
+            <dl {...stylex.props(cloud.facts)}>
+              <div {...stylex.props(cloud.fact)}>
+                <dt {...stylex.props(card.factLabel)}>Server</dt>
+                <dd {...stylex.props(card.truncate, card.mono)} title={status.origin}>{status.origin.replace(/^https?:\/\//, "")}</dd>
               </div>
               {status.state === "connected" ? (
-                <div className="flex gap-2">
-                  <dt className="shrink-0 font-meta text-[9px] font-bold uppercase tracking-[0.14em] text-white/30">Credentials</dt>
+                <div {...stylex.props(cloud.fact)}>
+                  <dt {...stylex.props(card.factLabel)}>Credentials</dt>
                   <dd>{status.credentialPersistence === "os-vault" ? "Secure vault on this computer" : "This app session only"}</dd>
                 </div>
               ) : null}
               {status.state === "connected" && expiry ? (
-                <div className="flex gap-2">
-                  <dt className="shrink-0 font-meta text-[9px] font-bold uppercase tracking-[0.14em] text-white/30">Session until</dt>
+                <div {...stylex.props(cloud.fact)}>
+                  <dt {...stylex.props(card.factLabel)}>Session until</dt>
                   <dd>{expiry}</dd>
                 </div>
               ) : null}
             </dl>
           ) : null}
           {status?.state === "connected" && status.credentialPersistence === "session" ? (
-            <p className="mt-3 flex items-start gap-2 text-xs text-amber-300/90">
-              <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <p {...stylex.props(cloud.sessionNotice)}>
+              <ShieldAlert className={stylex.props(cloud.sessionNoticeIcon).className} aria-hidden="true" />
               No OS credential vault was available; the sign-in is held in memory only and is discarded when the app closes.
             </p>
           ) : null}
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div {...stylex.props(card.actions)}>
         {state === "connecting" ? (
           <>
-            <Button className="h-10 gap-2 rounded-full bg-[#E8E044] text-black" disabled>
-              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            <Button xstyle={action.accent} disabled>
+              <LoaderCircle {...stylex.props(action.icon, action.spin)} aria-hidden="true" />
               Waiting for approval
             </Button>
             <Button
-              className="h-10 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5"
+              xstyle={action.outline}
               onClick={() => void disconnect()}
               type="button"
               variant="outline"
@@ -147,19 +151,19 @@ export function CloudConnectionCard({ className }: { className?: string }) {
         ) : state === "connected" ? (
           confirmDisconnect ? (
             <div
-              className="flex w-full flex-col gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4"
+              {...stylex.props(cloud.confirm)}
               role="alertdialog"
               aria-labelledby="cloud-disconnect-title"
               aria-describedby="cloud-disconnect-detail"
             >
-              <p id="cloud-disconnect-title" className="text-sm font-semibold">Disconnect from SimCloud?</p>
-              <p id="cloud-disconnect-detail" className="text-xs leading-5 text-white/60">
+              <p id="cloud-disconnect-title" {...stylex.props(cloud.confirmTitle)}>Disconnect from SimCloud?</p>
+              <p id="cloud-disconnect-detail" {...stylex.props(cloud.confirmDetail)}>
                 Maps that need an account and cloud storage lock until you connect again. Local projects, renders and
                 documents on this computer are kept.
               </p>
-              <div className="flex gap-2">
+              <div {...stylex.props(cloud.confirmActions)}>
                 <Button
-                  className="h-9 gap-2 rounded-full bg-amber-300 text-black hover:bg-amber-200"
+                  xstyle={action.amber}
                   disabled={loading}
                   onClick={() => {
                     setConfirmDisconnect(false);
@@ -167,12 +171,12 @@ export function CloudConnectionCard({ className }: { className?: string }) {
                   }}
                   type="button"
                 >
-                  <LogOut className="size-4" aria-hidden="true" />
+                  <LogOut {...stylex.props(action.icon)} aria-hidden="true" />
                   Disconnect
                 </Button>
                 <Button
                   autoFocus
-                  className="h-9 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5"
+                  xstyle={action.outline}
                   onClick={() => setConfirmDisconnect(false)}
                   type="button"
                   variant="outline"
@@ -183,35 +187,35 @@ export function CloudConnectionCard({ className }: { className?: string }) {
             </div>
           ) : (
             <>
-              <Button asChild className="h-10 gap-2 rounded-full bg-[#E8E044] text-black hover:bg-[#f1ea55]">
+              <Button asChild xstyle={action.accent}>
                 <Link href="/dashboard/cloud-storage">
-                  <Cloud className="size-4" aria-hidden="true" />
+                  <Cloud {...stylex.props(action.icon)} aria-hidden="true" />
                   Open cloud storage
                 </Link>
               </Button>
               <Button
-                className="h-10 gap-2 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5"
+                xstyle={action.outline}
                 disabled={loading}
                 onClick={() => setConfirmDisconnect(true)}
                 type="button"
                 variant="outline"
               >
-                <LogOut className="size-4" aria-hidden="true" />
+                <LogOut {...stylex.props(action.icon)} aria-hidden="true" />
                 Disconnect
               </Button>
             </>
           )
         ) : (
           <Button
-            className="h-10 gap-2 rounded-full bg-[#E8E044] text-black hover:bg-[#f1ea55] disabled:opacity-60"
+            xstyle={action.accentConnect}
             disabled={loading || status === null}
             onClick={() => void connect()}
             type="button"
           >
             {loading ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              <LoaderCircle {...stylex.props(action.icon, action.spin)} aria-hidden="true" />
             ) : (
-              <ExternalLink className="size-4" aria-hidden="true" />
+              <ExternalLink {...stylex.props(action.icon)} aria-hidden="true" />
             )}
             {state === "expired" || state === "error" ? "Connect again" : "Connect to SimCloud"}
           </Button>
@@ -232,20 +236,20 @@ export function CloudConnectionChip({ onNavigate }: { onNavigate?: () => void })
 
   return (
     <div
-      className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5"
+      {...stylex.props(chip.root)}
       data-testid="cloud-connection-chip"
       data-cloud-state={state ?? "loading"}
     >
-      <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-sm", stateDotClass(state))} />
-      <div className="min-w-0 flex-1">
-        <p className="mb-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.16em] text-white/30">SimCloud</p>
-        <p className="truncate text-xs font-semibold text-white/80" title={summary}>
+      <span aria-hidden="true" {...stylex.props(lamp.base, stateLampStyle(state))} />
+      <div {...stylex.props(chip.body)}>
+        <p {...stylex.props(chip.eyebrow)}>SimCloud</p>
+        <p {...stylex.props(card.truncate, chip.summary)} title={summary}>
           {summary}
         </p>
       </div>
       {state === "connected" || state === "connecting" ? (
         <Link
-          className="shrink-0 rounded-lg border border-white/[0.06] px-2.5 py-1.5 text-[10px] font-medium text-white/50 transition-colors hover:border-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+          {...stylex.props(chip.action, chip.manage)}
           href="/dashboard/settings"
           onClick={onNavigate}
         >
@@ -253,7 +257,7 @@ export function CloudConnectionChip({ onNavigate }: { onNavigate?: () => void })
         </Link>
       ) : (
         <button
-          className="shrink-0 rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#E8E044] transition-colors hover:bg-[#E8E044]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] disabled:opacity-50"
+          {...stylex.props(chip.action, chip.connect)}
           disabled={loading || status === null}
           onClick={() => void connect()}
           type="button"

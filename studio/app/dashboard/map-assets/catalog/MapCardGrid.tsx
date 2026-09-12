@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import type { MapAsset } from "@simforge-oss/studio-shared";
 import { MapCard } from "./MapCard";
@@ -9,7 +11,7 @@ interface MapCardGridProps {
 
 export function MapCardGrid({ assets }: MapCardGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className={stylex.props(styles.s_196).className}>
       {assets.map((asset) => (
         <MapCard key={asset.map_asset_id} asset={asset} />
       ))}

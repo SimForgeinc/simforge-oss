@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -52,9 +54,9 @@ const Map2DOverlay = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="fixed inset-0 z-40 grid place-items-center bg-black/65 backdrop-blur-sm" role="status">
-        <div className="flex items-center gap-2 bg-black/75 px-4 py-3 text-sm text-white">
-          <Loader2 className="size-4 animate-spin text-[#E8E044]" />
+      <div className={stylex.props(styles.s_211).className} role="status">
+        <div className={stylex.props(styles.s_212).className}>
+          <Loader2 className={stylex.props(styles.s_213).className} />
           Loading 2D map…
         </div>
       </div>
@@ -116,7 +118,7 @@ function MapGalleryWorldPreview({
   return (
     <>
       <ScenarioWorldHost
-        className="absolute inset-0 isolate"
+        className={stylex.props(styles.s_214).className}
         interactive
         onActorRendererChange={setActorRenderer}
         onStateChange={setWorldState}
@@ -140,7 +142,7 @@ function AddMapTopBarAction() {
     <TopBarActionsPortal>
       <Button asChild size="sm">
         <Link href="/dashboard/map-assets/new">
-          <Plus className="size-4" />
+          <Plus className={stylex.props(styles.s_847).className} />
           Add map
         </Link>
       </Button>
@@ -172,9 +174,9 @@ function MapArrow({
       onClick={onClick}
       disabled={disabled}
       aria-label={`${direction === "previous" ? "Previous" : "Next"} map: ${targetLabel}`}
-      className="grid size-10 place-items-center border border-white/20 bg-black/25 text-white/85 backdrop-blur-md transition-colors hover:border-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] disabled:pointer-events-none disabled:opacity-30"
+      className={stylex.props(styles.s_216).className}
     >
-      <Icon className="size-[18px]" />
+      <Icon className={stylex.props(styles.s_251).className} />
     </button>
   );
 }
@@ -261,18 +263,18 @@ export function MapGalleryPageClient({
       <>
         <AddMapTopBarAction />
         <EmptyState
-          icon={<MapPin className="size-7" />}
+          icon={<MapPin className={stylex.props(styles.s_946).className} />}
           title="No maps yet"
           description="Upload your first map to explore it in 3D and create simulation scenarios."
           action={
             <Button asChild>
               <Link href="/dashboard/map-assets/new">
-                <Plus className="mr-1.5 size-4" />
+                <Plus className={stylex.props(styles.s_219).className} />
                 Add map
               </Link>
             </Button>
           }
-          className="h-full"
+          className={stylex.props(styles.s_220).className}
         />
       </>
     );
@@ -313,12 +315,12 @@ export function MapGalleryPageClient({
   return (
     <>
       <AddMapTopBarAction />
-      <main className="relative h-full min-h-[32rem] overflow-hidden bg-[#07100d] text-white">
-        <div className="absolute inset-0">
+      <main className={stylex.props(styles.s_221).className}>
+        <div className={stylex.props(styles.s_801).className}>
           {locked || !entry.map.installed.browser ? (
             // Do not mount a viewer before its local closure is installed and authorized.
             <div
-              className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,224,68,0.08),transparent_60%)]"
+              className={stylex.props(styles.s_223).className}
               data-testid={locked ? "map-gallery-locked-backdrop" : "map-gallery-uninstalled-backdrop"}
             />
           ) : (
@@ -330,21 +332,15 @@ export function MapGalleryPageClient({
           )}
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/25 to-transparent" />
+        <div className={stylex.props(styles.s_224).className} />
+        <div className={stylex.props(styles.s_225).className} />
 
-        <div className="absolute right-5 top-5 z-30 flex items-center gap-2 sm:right-8 sm:top-8">
+        <div className={stylex.props(styles.s_226).className}>
           <button
             type="button"
             aria-label={sumoAvailable ? `SUMO traffic ${sumoEnabled ? "on" : "off"}` : "SUMO traffic unavailable"}
             aria-pressed={sumoAvailable ? sumoEnabled : undefined}
-            className={cn(
-              "inline-flex h-10 items-center gap-2 border px-3.5 text-xs font-semibold backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]",
-              sumoEnabled && sumoAvailable
-                ? "border-[#E8E044]/65 bg-[#E8E044]/14 text-[#E8E044] hover:bg-[#E8E044]/22"
-                : "border-white/20 bg-black/45 text-white/70 hover:border-white/40 hover:text-white",
-              !sumoAvailable && "cursor-not-allowed opacity-45",
-            )}
+            className={stylex.props(styles.u_927, styles.u_922, styles.u_928, styles.u_918, styles.u_903, styles.u_939, styles.u_900, styles.u_970, styles.u_910, styles.u_911, styles.u_912).className}
             disabled={!sumoAvailable}
             onClick={() => setSumoEnabled((enabled) => !enabled)}
             title={
@@ -356,11 +352,11 @@ export function MapGalleryPageClient({
             }
           >
             {sumoLoading ? (
-              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+              <Loader2 aria-hidden="true" className={stylex.props(styles.s_254).className} />
             ) : sumoFailed ? (
-              <AlertTriangle aria-hidden="true" className="size-4" />
+              <AlertTriangle aria-hidden="true" className={stylex.props(styles.s_847).className} />
             ) : (
-              <CarFront aria-hidden="true" className="size-4" />
+              <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
             )}
             <span>
               {!sumoAvailable
@@ -370,23 +366,23 @@ export function MapGalleryPageClient({
                   : `SUMO ${sumoEnabled ? "on" : "off"}`}
             </span>
             {sumoEnabled && sumoStatus.actorCount > 0 ? (
-              <span className="font-mono text-[9px] text-current/65">{sumoStatus.actorCount}</span>
+              <span className={stylex.props(styles.s_230).className}>{sumoStatus.actorCount}</span>
             ) : null}
           </button>
           <button
             type="button"
             onClick={() => setMap2DOpen(true)}
             disabled={!entry.asset}
-            className="inline-flex h-10 items-center gap-2 border border-white/20 bg-black/45 px-3.5 text-xs font-semibold text-white backdrop-blur-md transition-colors hover:border-[#E8E044]/70 hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] disabled:cursor-not-allowed disabled:opacity-40"
+            className={stylex.props(styles.s_231).className}
             title={entry.asset ? "Open the 2D map workspace" : "No 2D map is available for this digital twin"}
           >
-            <MapIcon aria-hidden="true" className="size-4 text-[#E8E044]" />
+            <MapIcon aria-hidden="true" className={stylex.props(styles.s_232).className} />
             View 2D map
           </button>
         </div>
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-0 z-10 h-[88%] w-[92%] bg-[radial-gradient(ellipse_at_bottom_left,rgba(2,8,6,0.76)_0%,rgba(2,8,6,0.58)_30%,rgba(2,8,6,0.2)_55%,transparent_76%)] backdrop-blur-[14px] sm:w-[78%] lg:w-[68%]"
+          className={stylex.props(styles.s_233).className}
           data-testid="map-gallery-diagonal-veil"
           style={{
             maskImage: "radial-gradient(ellipse 92% 105% at 0% 100%, black 0%, black 38%, rgba(0,0,0,0.76) 52%, transparent 78%)",
@@ -395,49 +391,49 @@ export function MapGalleryPageClient({
         />
 
         <section
-          className="absolute inset-x-0 bottom-0 z-20"
+          className={stylex.props(styles.s_234).className}
           data-testid="map-gallery-editorial-overlay"
         >
-          <div className="mx-auto w-full max-w-[1440px] px-5 pb-5 sm:px-8 sm:pb-8 lg:px-14 lg:pb-10">
-            <div className="max-w-2xl">
-              <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#E8E044] sm:text-[11px]">
-                <Sparkles aria-hidden="true" className="size-3.5" />
+          <div className={stylex.props(styles.s_235).className}>
+            <div className={stylex.props(styles.s_236).className}>
+              <p className={stylex.props(styles.s_237).className}>
+                <Sparkles aria-hidden="true" className={stylex.props(styles.s_991).className} />
                 Simulation-ready digital twin
               </p>
               <h1
-                className="mt-3 max-w-3xl text-balance text-[clamp(2.25rem,4.2vw,4.5rem)] font-semibold leading-[0.96] tracking-[-0.045em] text-white"
+                className={stylex.props(styles.s_239).className}
                 style={{ textShadow: "0 4px 28px rgba(0,0,0,0.5)" }}
               >
                 {entry.map.label}
               </h1>
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-white/[0.72] sm:text-base">
-                <MapPin aria-hidden="true" className="size-3.5 text-[#E8E044]" />
+              <p className={stylex.props(styles.s_240).className}>
+                <MapPin aria-hidden="true" className={stylex.props(styles.s_241).className} />
                 {mapLocation(entry)}
               </p>
               {entry.asset?.description ? (
-                <p className="mt-2 line-clamp-2 max-w-xl text-sm leading-6 text-white/[0.62]">
+                <p className={stylex.props(styles.s_242).className}>
                   {entry.asset.description}
                 </p>
               ) : null}
-              <div className="mt-3 flex min-h-5 flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/50 sm:text-xs">
+              <div className={stylex.props(styles.s_243).className}>
                 {stats.map((stat) => (
-                  <span className="font-mono" key={stat.key} title={stat.tooltip}>{stat.value}</span>
+                  <span className={stylex.props(styles.s_940).className} key={stat.key} title={stat.tooltip}>{stat.value}</span>
                 ))}
                 {entry.asset ? (
                   <Link
                     href={`/dashboard/map-assets/${encodeURIComponent(entry.asset.map_asset_id)}`}
-                    className="pointer-events-auto inline-flex items-center gap-1 text-white/[0.58] transition-colors hover:text-white"
+                    className={stylex.props(styles.s_245).className}
                   >
                     View map details
-                    <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                    <ArrowUpRight aria-hidden="true" className={stylex.props(styles.s_991).className} />
                   </Link>
                 ) : null}
               </div>
-              <LocalMapPreparationPanel className="mt-4" map={entry.map} />
+              <LocalMapPreparationPanel className={stylex.props(styles.s_247).className} map={entry.map} />
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/20 pt-4 sm:mt-7 sm:pt-5">
-              <div className="flex items-center gap-2">
+            <div className={stylex.props(styles.s_248).className}>
+              <div className={stylex.props(styles.s_908).className}>
                 <MapArrow
                   direction="previous"
                   targetLabel={previous.map.label}
@@ -446,12 +442,12 @@ export function MapGalleryPageClient({
                 />
                 <button
                   aria-label="Choose a map"
-                  className="grid size-10 place-items-center border border-white/20 bg-black/25 text-white/85 backdrop-blur-md transition-colors hover:border-[#E8E044]/70 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                  className={stylex.props(styles.s_250).className}
                   onClick={() => setMapPickerOpen(true)}
                   title="Open map gallery"
                   type="button"
                 >
-                  <MapIcon aria-hidden="true" className="size-[18px]" />
+                  <MapIcon aria-hidden="true" className={stylex.props(styles.s_251).className} />
                 </button>
                 <MapArrow
                   direction="next"
@@ -459,7 +455,7 @@ export function MapGalleryPageClient({
                   disabled={entries.length < 2}
                   onClick={() => move(1)}
                 />
-                <span className="ml-2 font-mono text-[11px] tracking-[0.16em] text-white/50">
+                <span className={stylex.props(styles.s_252).className}>
                   {String(selectedIndex + 1).padStart(2, "0")} / {String(entries.length).padStart(2, "0")}
                 </span>
               </div>
@@ -470,11 +466,11 @@ export function MapGalleryPageClient({
                 onClick={createScenario}
                 disabled={creating || locked || !entry.map.installed.browser}
                 title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
-                className="h-11 rounded-none bg-[#E8E044] px-4 text-sm font-semibold text-black shadow-xl hover:bg-[#f0e84e] sm:px-5"
+                className={stylex.props(styles.s_253).className}
               >
-                {creating ? <Loader2 className="size-4 animate-spin" /> : null}
+                {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}
                 <span>{creating ? "Creating scenario…" : "Create scenario"}</span>
-                {!creating ? <ArrowRight aria-hidden="true" className="size-4" /> : null}
+                {!creating ? <ArrowRight aria-hidden="true" className={stylex.props(styles.s_847).className} /> : null}
               </Button>
             </div>
           </div>

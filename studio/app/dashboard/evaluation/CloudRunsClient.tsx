@@ -10,13 +10,14 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
 import { EvaluationWorkspace, RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
 import type { LocalRunLauncher } from "@simforge-oss/studio-ui/evaluation";
 import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
 import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
 import { LocalRunUnavailable, startLocalRun } from "@/app/lib/host/local-runs";
-
+import { styles } from "./cloud-runs.stylex";
 type CloudWorkspace = { id: string; name: string; role: string };
 
 export function CloudRunsClient() {
@@ -84,12 +85,12 @@ export function CloudRunsClient() {
   );
 
   return (
-    <div className="space-y-6">
+    <div {...stylex.props(styles.root)}>
       {error ? <RefusalNotice tone="warn" title="SimCloud" reasons={[error]} /> : null}
 
       {workspaces && workspaces.length > 0 ? (
-        <div className="max-w-sm space-y-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Workspace</span>
+        <div {...stylex.props(styles.selector)}>
+          <span {...stylex.props(styles.label)}>Workspace</span>
           <SelectMenu
             label="SimCloud workspace"
             value={workspaceId ?? ""}
@@ -99,7 +100,7 @@ export function CloudRunsClient() {
             }))}
             onChange={setWorkspaceId}
           />
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p {...stylex.props(styles.help)}>
             Runs belong to the workspace, not to this app session. Everyone in it sees them, and
             closing the app does not stop them.
           </p>

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import { getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
@@ -23,11 +25,11 @@ export function ScenarioTagsSection({
 }: ScenarioTagsSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -40,20 +42,20 @@ export function ScenarioTagsSection({
           onClick={() => onCopy(tags.join(","), "tags")}
           aria-label="Copy tags as CSV"
           title="Copy tags as CSV"
-          className="shrink-0 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+          className={stylex.props(styles.s_713).className}
         >
-          {copiedKey === "tags" ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+          {copiedKey === "tags" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
         </button>
       </div>
       {open && (
-        <ul className="mt-2 space-y-1.5">
+        <ul className={stylex.props(styles.s_819).className}>
           {tags.map((tagId) => {
             const descriptor = getMapAssetDescriptorTag(tagId);
             return (
-              <li key={tagId} className="rounded border border-border bg-muted/30 px-2.5 py-2">
-                <p className="text-xs font-medium text-foreground">{tagId.replace(/_/g, " ")}</p>
+              <li key={tagId} className={stylex.props(styles.s_563).className}>
+                <p className={stylex.props(styles.s_814).className}>{tagId.replace(/_/g, " ")}</p>
                 {descriptor?.shortDefinition && (
-                  <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  <p className={stylex.props(styles.s_565).className}>
                     {descriptor.shortDefinition}
                   </p>
                 )}

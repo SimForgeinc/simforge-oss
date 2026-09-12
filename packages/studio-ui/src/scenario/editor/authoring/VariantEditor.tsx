@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./authoring.stylex";
 import type { Variant } from "@simforge-oss/scenario";
 import type { EditorDocument } from "@simforge-oss/editor";
 import { DeleteButton, Heading, MiniAdd, TextField, uniqueId } from "./fields";
@@ -28,20 +30,20 @@ export function VariantEditor({ document }: { document: EditorDocument }) {
 
   return (
     <section data-testid="variant-editor">
-      <div className="flex items-center">
+      <div {...stylex.props(styles.row)}>
         <Heading>Variants</Heading>
         <MiniAdd label="Add variant" onClick={add} />
       </div>
       {document.data.variants.map((variant) => (
-        <div key={variant.id} className="mt-2 bg-muted/30 p-2">
-          <div className="flex items-center">
-            <span className="truncate">{variant.label ?? variant.id}</span>
+        <div key={variant.id} {...stylex.props(styles.item)}>
+          <div {...stylex.props(styles.row)}>
+            <span>{variant.label ?? variant.id}</span>
             <DeleteButton
               label={`Remove variant ${variant.label ?? variant.id}`}
               onClick={() => document.removeVariant(variant.id)}
             />
           </div>
-          <div className="mt-2 space-y-2">
+          <div {...stylex.props(styles.stack)}>
             <TextField
               label="Variant label"
               value={variant.label ?? ""}
@@ -53,7 +55,7 @@ export function VariantEditor({ document }: { document: EditorDocument }) {
             <TextField
               label="Override path"
               value={variant.overrides[0]?.path ?? "environment.weather"}
-              className="font-mono text-micro"
+              className={stylex.props(styles.monoInput).className}
               onChange={(path) => {
                 const first =
                   variant.overrides[0] ??

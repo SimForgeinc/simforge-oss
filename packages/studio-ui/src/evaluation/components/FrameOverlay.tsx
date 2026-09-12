@@ -11,9 +11,11 @@
  */
 
 import { useMemo, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
+import { styles as s } from "./evaluation-components.stylex";
 import type { OpenLoopItem, TrajectoryProjection } from "../contracts";
 import { createProjector, projectPolyline } from "../projection";
 
@@ -68,8 +70,8 @@ export function FrameOverlay({
   };
 
   return (
-    <figure className={cn("min-w-0", className)}>
-      <div className="relative bg-black" style={{ aspectRatio: `${width} / ${height}` }}>
+    <figure className={cn(stylex.props(s.figure).className, className)}>
+      <div {...stylex.props(s.relative, s.black)} style={{ aspectRatio: `${width} / ${height}` }}>
         {source.kind === "video" ? (
           <video
             ref={videoRef}
@@ -77,21 +79,21 @@ export function FrameOverlay({
             controls
             playsInline
             preload="metadata"
-            className="h-full w-full object-contain"
+            {...stylex.props(s.full, s.objectContain)}
             data-testid="overlay-video"
           />
         ) : (
           <img
             src={source.urls[Math.min(frameIndex, frameCount - 1)]}
             alt={`Camera ${projection.cameraId} frame ${frameIndex + 1} of ${frameCount}`}
-            className="h-full w-full object-contain"
+            {...stylex.props(s.full, s.objectContain)}
             data-testid="overlay-frame"
           />
         )}
         <svg
           viewBox={`0 0 ${width} ${height}`}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full"
+          {...stylex.props(s.absoluteOverlay)}
           data-testid="overlay-svg"
         >
           {paths.samples.map((path, index) => (
@@ -99,7 +101,7 @@ export function FrameOverlay({
               key={index}
               d={path}
               fill="none"
-              className="stroke-primary"
+              {...stylex.props(s.svgPrimary)}
               strokeWidth={Math.max(2, width / 320)}
               strokeOpacity={paths.samples.length > 1 ? 0.6 : 0.95}
             />
@@ -116,13 +118,13 @@ export function FrameOverlay({
         </svg>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <figcaption className="text-xs text-muted-foreground">
+      <div {...stylex.props(s.rowBetween)} style={{ marginTop: "0.5rem" }}>
+        <figcaption {...stylex.props(s.textXs, s.textMuted)}>
           Camera {projection.cameraId} · {width}×{height} · projected from{" "}
           {item.convention ?? "FLU"} metres using the clip&apos;s own calibration
           {projection.distortion ? ` (${projection.distortion.model} distortion)` : ""}
         </figcaption>
-        <div className="flex items-center gap-1">
+        <div {...stylex.props(s.rowTight)}>
           <Button
             type="button"
             variant="outline"
@@ -133,7 +135,7 @@ export function FrameOverlay({
             <ChevronLeft aria-hidden="true" />
           </Button>
           {source.kind === "frames" ? (
-            <span className="min-w-20 text-center text-xs tabular-nums text-muted-foreground">
+            <span {...stylex.props(s.tabular, s.textXs, s.textMuted)} style={{ minWidth: "5rem", textAlign: "center" }}>
               {frameIndex + 1} / {frameCount}
             </span>
           ) : null}

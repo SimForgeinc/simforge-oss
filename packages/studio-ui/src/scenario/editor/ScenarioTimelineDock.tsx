@@ -15,6 +15,8 @@ import {
   type V1TimelineSignalAuthoring,
   type V1TimelineSignalLane,
 } from "./timeline/V1TimelineRail";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./timeline-dock.stylex";
 import type { EditorExperience } from "./simple-timed-routes";
 
 // `editor-trigger-builders.test.ts` imports these from this module path; keep the
@@ -308,7 +310,7 @@ export function ScenarioTimelineDock({
 
   return (
     <div
-      className="relative min-w-0"
+      {...stylex.props(styles.dock)}
       data-testid="resizable-timeline-dock"
       data-timeline-left-inset="0"
       data-timeline-right-inset="0"
@@ -320,7 +322,7 @@ export function ScenarioTimelineDock({
         aria-orientation="vertical"
         aria-valuemin={0}
         aria-valuenow={0}
-        className="group absolute inset-y-0 -left-1.5 z-50 w-3 cursor-ew-resize touch-none"
+        {...stylex.props(styles.handle, styles.left)}
         data-testid="timeline-left-resize-handle"
         onDoubleClick={() => resetEdge("left")}
         onKeyDown={(event) => adjustEdgeWithKeyboard("left", event)}
@@ -331,7 +333,7 @@ export function ScenarioTimelineDock({
         role="separator"
         tabIndex={0}
       >
-        <span className="pointer-events-none absolute inset-y-5 left-1/2 w-px -translate-x-1/2 rounded-full bg-white/30 shadow-[0_0_10px_rgba(255,255,255,0.12)] transition-colors group-hover:bg-[#E8E044]/80 group-focus-visible:bg-[#E8E044]" />
+        <span {...stylex.props(styles.marker)} />
       </div>
       <V1TimelineRail
         document={document}
@@ -355,7 +357,7 @@ export function ScenarioTimelineDock({
         aria-orientation="vertical"
         aria-valuemin={0}
         aria-valuenow={0}
-        className="group absolute inset-y-0 -right-1.5 z-50 w-3 cursor-ew-resize touch-none"
+        {...stylex.props(styles.handle, styles.right)}
         data-testid="timeline-right-resize-handle"
         onDoubleClick={() => resetEdge("right")}
         onKeyDown={(event) => adjustEdgeWithKeyboard("right", event)}
@@ -366,7 +368,7 @@ export function ScenarioTimelineDock({
         role="separator"
         tabIndex={0}
       >
-        <span className="pointer-events-none absolute inset-y-5 left-1/2 w-px -translate-x-1/2 rounded-full bg-white/30 shadow-[0_0_10px_rgba(255,255,255,0.12)] transition-colors group-hover:bg-[#E8E044]/80 group-focus-visible:bg-[#E8E044]" />
+        <span {...stylex.props(styles.marker)} />
       </div>
     </div>
   );

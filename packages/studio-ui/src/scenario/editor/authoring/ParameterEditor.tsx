@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./authoring.stylex";
 import { SelectMenuField } from "../../../components/ui/select-menu";
 import type { ParamDecl } from "@simforge-oss/scenario";
 import type { EditorDocument } from "@simforge-oss/editor";
@@ -39,23 +41,20 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
 
   return (
     <section data-testid="parameter-editor">
-      <div className="flex items-center">
+      <div {...stylex.props(styles.row)}>
         <Heading>Parameters</Heading>
         <MiniAdd label="Add parameter" onClick={add} />
       </div>
       {declarations.map((param) => (
-        <div
-          key={param.id}
-          className="mt-2 border border-border bg-muted/20 p-2"
-        >
-          <div className="flex items-center">
-            <span className="font-mono">{param.id}</span>
+        <div key={param.id} {...stylex.props(styles.itemBorder)}>
+          <div {...stylex.props(styles.row)}>
+            <span>{param.id}</span>
             <DeleteButton
               label={`Remove parameter ${param.id}`}
               onClick={() => document.removeParameter(param.id)}
             />
           </div>
-          <div className="mt-2">
+          <div {...stylex.props(styles.input)}>
             <TextField
               label="Description"
               value={param.description ?? ""}
@@ -65,7 +64,7 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
               }
             />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div {...stylex.props(styles.grid)}>
             <SelectMenuField
               label="Type"
               value={param.type}
@@ -76,7 +75,7 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
                   parameterAs(type as ParamDecl["type"], param.id),
                 )
               }
-              className="h-8 text-xs"
+              className={stylex.props(styles.input).className}
             />
             {param.type === "continuous" ? (
               <>

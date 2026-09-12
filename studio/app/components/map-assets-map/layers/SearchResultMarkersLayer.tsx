@@ -1,6 +1,7 @@
+import * as stylex from "@stylexjs/stylex";
 import { Marker } from "react-map-gl/maplibre";
 import { C } from "../map-layer-constants";
-
+import { styles } from "../map-canvas.stylex";
 export type SearchResultMarker = {
   id: string;
   lng: number;
@@ -46,7 +47,7 @@ function MapPinSvg({ color, strokeColor, scale }: PinProps) {
       height={h}
       viewBox="0 0 24 32"
       aria-hidden="true"
-      style={{ display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
+      {...stylex.props(styles.pinSvg)}
     >
       <path
         d="M12 0C5.92 0 1 4.92 1 11c0 7.87 9.46 19.2 10.15 20.02.45.52 1.25.52 1.7 0C13.54 30.2 23 18.87 23 11 23 4.92 18.08 0 12 0z"
@@ -122,7 +123,7 @@ export function SearchResultMarkersLayer({
                     }
                   : undefined
               }
-              style={{ display: "block" }}
+              {...stylex.props(styles.svgBlock)}
             >
               <MapPinSvg
                 color={hovered ? C.selected : C.highlighted}

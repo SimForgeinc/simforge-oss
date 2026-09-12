@@ -1,13 +1,21 @@
 import * as React from "react";
-import { cn } from "../../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "../stylex/surface";
+import { styles } from "./skeleton.stylex";
 
+/**
+ * Loading placeholder. Geometry and tint compose through xstyle; className
+ * remains supported for appearance-frozen Tailwind callers.
+ */
 function Skeleton({
   className,
+  style,
+  xstyle,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { xstyle?: stylex.StyleXStyles }) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...mergeStyleProps(stylex.props(styles.base, xstyle), className, style)}
       {...props}
     />
   );

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Download, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
@@ -41,7 +43,7 @@ export function ArtifactsSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        className="flex w-full items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+        className={stylex.props(styles.s_465).className}
         aria-expanded={open}
       >
         <ChevronRight
@@ -50,37 +52,37 @@ export function ArtifactsSection({
         Artifacts ({visibleArtifacts.length})
       </button>
       {open && (
-        <div className="mt-2 space-y-2">
-          <ul className="space-y-1">
+        <div className={stylex.props(styles.s_968).className}>
+          <ul className={stylex.props(styles.s_879).className}>
             {visibleArtifacts.map((artifact, index) => {
               const proxyUrl = s3UriToMapAssetProxyUrl(artifact.uri, assetId);
               const filename = artifact.uri.split("/").pop() ?? "download";
               return (
                 <li
                   key={`${artifact.uri}-${index}`}
-                  className="flex items-center justify-between gap-2 rounded border border-border px-2 py-1.5"
+                  className={stylex.props(styles.s_468).className}
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">{artifact.artifact_type}</span>
+                  <div className={stylex.props(styles.s_761).className}>
+                    <span className={stylex.props(styles.s_470).className}>
+                      <span className={stylex.props(styles.s_517).className}>{artifact.artifact_type}</span>
                       {artifact.label ? ` — ${artifact.label}` : ""}
                     </span>
-                    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
+                    <span className={stylex.props(styles.s_472).className}>
                       {artifact.created_at && <span>{formatDate(artifact.created_at)}</span>}
                       {artifact.created_at && artifact.size_bytes != null && <span>·</span>}
                       {artifact.size_bytes != null && <span>{formatFileSize(artifact.size_bytes)}</span>}
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className={stylex.props(styles.s_473).className}>
                     {artifact.artifact_type === "mp4" && proxyUrl && (
                       <button
                         type="button"
                         title="Play video"
                         aria-label={`Play ${artifact.label ?? artifact.artifact_type}`}
                         onClick={() => onViewArtifact?.({ proxyUrl, label: artifact.label })}
-                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        className={stylex.props(styles.s_478).className}
                       >
-                        <Play className="size-3.5" />
+                        <Play className={stylex.props(styles.s_991).className} />
                       </button>
                     )}
                     {proxyUrl && (artifact.artifact_type === "mp4" || artifact.artifact_type === "image" || artifact.artifact_type === "thumbnail") ? (
@@ -89,9 +91,9 @@ export function ArtifactsSection({
                         download={filename}
                         title={`Download ${filename}`}
                         aria-label={`Download ${filename}`}
-                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        className={stylex.props(styles.s_478).className}
                       >
-                        <Download className="size-3.5" />
+                        <Download className={stylex.props(styles.s_991).className} />
                       </a>
                     ) : null}
                     {artifact.artifact_type === "search_index" ? (
@@ -101,9 +103,9 @@ export function ArtifactsSection({
                         rel="noopener noreferrer"
                         title={`Open ${filename} in a new tab`}
                         aria-label={`Open ${filename} in a new tab`}
-                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        className={stylex.props(styles.s_478).className}
                       >
-                        <Download className="size-3.5" />
+                        <Download className={stylex.props(styles.s_991).className} />
                       </a>
                     ) : null}
                   </div>

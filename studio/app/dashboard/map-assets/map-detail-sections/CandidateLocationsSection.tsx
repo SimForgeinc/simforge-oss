@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
@@ -26,11 +28,11 @@ export function CandidateLocationsSection({
 }: CandidateLocationsSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -38,24 +40,24 @@ export function CandidateLocationsSection({
           />
           Candidate Locations
           {candidateLocations.length > 0 && (
-            <span className="rounded-full bg-orange-950/60 px-1.5 py-px text-[10px] font-semibold text-orange-300">
+            <span className={stylex.props(styles.s_965).className}>
               {candidateLocations.length}
             </span>
           )}
         </button>
       </div>
       {open && (
-        <div className="mt-2 space-y-2">
+        <div className={stylex.props(styles.s_968).className}>
           {candidateLocationsLoading ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" /> Loading…
+            <p className={stylex.props(styles.s_971).className}>
+              <Loader2 className={stylex.props(styles.s_972).className} /> Loading…
             </p>
           ) : candidateLocations.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
+            <p className={stylex.props(styles.s_973).className}>
               No candidate locations computed yet.
             </p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className={stylex.props(styles.s_986).className}>
               {candidateLocations.map((candidate) => (
                 <li key={candidate.id}>
                   <CandidateLocationCard

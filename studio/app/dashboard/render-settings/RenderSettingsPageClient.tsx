@@ -1,5 +1,6 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { studioHost } from "@/app/lib/host";
 import { DatabaseZap } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -9,13 +10,11 @@ import { ProfileMapPreparation } from "@/app/components/ProfileMapPreparation";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { readRenderingPreference,
-saveRenderingPreference,
-type RenderingPreference, } from "@simforge-oss/studio-ui/components/rendering-preference"
+import { readRenderingPreference, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { QualityChooser } from "@simforge-oss/studio-ui/scenario/editor/states/EditorStatePanels";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
-
+import { styles } from "./render-settings-page.stylex";
 type Preparation = {
   profile: RenderingPreference;
   redownload?: boolean;
@@ -100,9 +99,9 @@ export function RenderSettingsPageClient() {
   const finish = () => router.push("/dashboard/map-assets");
 
   return (
-    <div className="relative h-full min-h-0 overflow-hidden text-white">
+    <div {...stylex.props(styles.root)}>
       <SkyCloudBackdrop className="absolute" />
-      <div className="relative z-10 h-full min-h-0 overflow-y-auto">
+      <div {...stylex.props(styles.scroll)}>
         {preparation ? (
           <ProfileMapPreparation
             profile={preparation.profile}
@@ -125,19 +124,19 @@ export function RenderSettingsPageClient() {
                 />
               ) : (
                 <div
-                  className="mx-auto mt-6 w-full max-w-4xl px-6 py-5 text-center"
+                  {...stylex.props(styles.benchmark)}
                   data-testid="rendering-benchmark-placeholder"
                   data-visual-treatment="flat"
                 >
-                  <p className="font-meta text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]">
+                  <p {...stylex.props(styles.eyebrow)}>
                     Benchmark
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-white">
+                  <p {...stylex.props(styles.benchmarkTitle)}>
                     {benchmarkCatalogReady
                       ? "Benchmark unavailable"
                       : "Preparing benchmark…"}
                   </p>
-                  <p className="mt-1 text-xs text-white/45">
+                  <p {...stylex.props(styles.benchmarkCopy)}>
                     {benchmarkCatalogReady
                       ? "Choose a rendering mode below."
                       : "Selecting a test map automatically."}
@@ -147,18 +146,18 @@ export function RenderSettingsPageClient() {
             }
             footer={
               currentProfile ? (
-                <div className="flex flex-col items-center gap-2">
+                <div {...stylex.props(styles.footer)}>
                   <Button
-                    className="h-10 rounded-full border-white/15 bg-transparent px-5 text-xs text-white/65 hover:bg-white/5 hover:text-white"
+                    xstyle={styles.cacheButton}
                     onClick={() => setConfirmRedownload(true)}
                     type="button"
                     variant="outline"
                   >
-                    <DatabaseZap className="size-4" aria-hidden="true" />
+                    <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
                     Delete cache and re-download{" "}
                     {PROFILE_LABELS[currentProfile]}
                   </Button>
-                  <p className="text-center text-[11px] text-white/35">
+                  <p {...stylex.props(styles.current)}>
                     Current setting: {PROFILE_LABELS[currentProfile]}
                   </p>
                 </div>
@@ -216,19 +215,19 @@ function ConfirmationPanel({
 }) {
   return (
     <div
-      className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-5 backdrop-blur-xl"
+      {...stylex.props(styles.overlay)}
       role="dialog"
       aria-modal="true"
       aria-labelledby="cache-confirmation-title"
     >
-      <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#101010]/95 p-6 shadow-2xl">
-        <h2 id="cache-confirmation-title" className="text-xl font-semibold">
+      <div {...stylex.props(styles.dialog)}>
+        <h2 id="cache-confirmation-title" {...stylex.props(styles.dialogTitle)}>
           {title}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-white/50">{detail}</p>
-        <div className="mt-6 flex flex-col gap-2">
+        <p {...stylex.props(styles.dialogDetail)}>{detail}</p>
+        <div {...stylex.props(styles.dialogActions)}>
           <Button
-            className="rounded-full bg-[#E8E044] text-black hover:bg-[#f1ea55]"
+            xstyle={styles.primaryButton}
             disabled={busy}
             onClick={onPrimary}
           >
@@ -236,7 +235,7 @@ function ConfirmationPanel({
           </Button>
           {secondaryLabel && onSecondary ? (
             <Button
-              className="rounded-full border-white/15 bg-transparent text-white hover:bg-white/5"
+              xstyle={styles.secondaryButton}
               disabled={busy}
               onClick={onSecondary}
               variant="outline"
@@ -245,7 +244,7 @@ function ConfirmationPanel({
             </Button>
           ) : null}
           <Button
-            className="rounded-full text-white/50 hover:bg-transparent hover:text-white"
+            xstyle={styles.cancelButton}
             disabled={busy}
             onClick={onCancel}
             variant="ghost"

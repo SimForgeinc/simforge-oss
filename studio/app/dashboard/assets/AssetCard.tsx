@@ -1,10 +1,13 @@
 "use client";
 
 import { ArrowUpRight, Sparkles } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
+import { card } from "./asset-grid.stylex";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
+
 
 /** One tile in the local model catalog. */
 export function AssetCard({
@@ -15,29 +18,22 @@ export function AssetCard({
   onSelect: (asset: GalleryAssetSummary) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(asset)}
-      className="group flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-lg hover:shadow-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    >
-      <div className="relative aspect-square overflow-hidden bg-[radial-gradient(circle_at_50%_42%,hsl(var(--muted))_0%,hsl(var(--card))_70%)]">
+    <button type="button" onClick={() => onSelect(asset)} {...stylex.props(card.root)}>
+      <div {...stylex.props(card.well)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- short-lived presigned S3 thumbnail; next/image cannot cache a rotating signature */}
         <img
           src={asset.thumbnailUrl}
           alt=""
           loading="lazy"
           decoding="async"
-          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+          {...stylex.props(card.thumbnail)}
         />
-        <div className="absolute left-2 top-2">
+        <div {...stylex.props(card.pillSlot)}>
           <CarlaCompatibilityPill compatibility={GALLERY_UPLOAD_CARLA_COMPATIBILITY} size="sm" />
         </div>
         {asset.animated ? (
-          <Badge
-            variant="secondary"
-            className="absolute right-2 top-2 h-5 gap-1 border-primary/25 bg-background/80 px-1.5 py-0 text-[10px] text-primary"
-          >
-            <Sparkles aria-hidden="true" className="size-3 animate-pulse" />
+          <Badge variant="secondary" xstyle={card.animatedBadge}>
+            <Sparkles aria-hidden="true" {...stylex.props(card.animatedIcon)} />
             Animated
           </Badge>
         ) : null}
@@ -45,26 +41,21 @@ export function AssetCard({
             scanned, and 24 identical call-to-actions add noise to every scan.
             Hidden from the tree so it does not prefix the tile's accessible
             name — the button role already says the tile is activatable. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-8 text-xs font-medium text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
-        >
+        <div aria-hidden="true" {...stylex.props(card.reveal)}>
           View details
-          <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          <ArrowUpRight aria-hidden="true" {...stylex.props(card.revealIcon)} />
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 truncate text-sm font-semibold leading-snug transition-colors group-hover:text-primary">
-            {asset.title}
-          </h3>
-          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] capitalize text-muted-foreground">
+      <div {...stylex.props(card.body)}>
+        <div {...stylex.props(card.titleRow)}>
+          <h3 {...stylex.props(card.title)}>{asset.title}</h3>
+          <span {...stylex.props(card.classChip)}>
             {asset.actorClass.replaceAll("_", " ")}
           </span>
         </div>
-        <div className="mt-auto text-right text-xs text-muted-foreground">
-          <span className="font-mono tabular-nums">
+        <div {...stylex.props(card.meta)}>
+          <span {...stylex.props(card.metaCount)}>
             {asset.triangleCount.toLocaleString()} tris
           </span>
         </div>

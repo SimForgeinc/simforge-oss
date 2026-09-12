@@ -9,7 +9,9 @@
  * is claimed about where the path falls in the image.
  */
 
+import * as stylex from "@stylexjs/stylex";
 import { cn } from "../../lib/utils";
+import { styles as s } from "./evaluation-components.stylex";
 import type { OpenLoopItem } from "../contracts";
 
 const WIDTH = 320;
@@ -59,10 +61,8 @@ export function TrajectoryPlot({
   if (polylines.length === 0) {
     return (
       <div
-        className={cn(
-          "flex h-64 items-center justify-center border border-border bg-muted/20 px-6 text-center text-sm text-muted-foreground",
-          className,
-        )}
+        className={cn(stylex.props(s.border, s.mutedSurface, s.textSm, s.textMuted).className, className)}
+        style={stylex.props(s.border, s.mutedSurface, s.textSm, s.textMuted).style}
       >
         This item produced no trajectory to plot.
       </div>
@@ -102,12 +102,12 @@ export function TrajectoryPlot({
   }
 
   return (
-    <figure className={cn("min-w-0", className)}>
+    <figure className={cn(stylex.props(s.figure).className, className)}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
         aria-label={`Bird's-eye trajectory plot for item ${item.itemId}, ${item.convention ?? "FLU"} frame, metres`}
-        className="h-auto w-full bg-muted/10"
+        {...stylex.props(s.plot)}
         data-testid="trajectory-plot"
       >
         {gridLines.map((metres) => {
@@ -119,10 +119,10 @@ export function TrajectoryPlot({
                 x2={WIDTH - PADDING / 2}
                 y1={y}
                 y2={y}
-                className="stroke-border"
+                {...stylex.props(s.svgBorder)}
                 strokeWidth={0.5}
               />
-              <text x={4} y={y - 3} className="fill-muted-foreground" fontSize={9}>
+              <text x={4} y={y - 3} {...stylex.props(s.svgMuted)} fontSize={9}>
                 {metres} m
               </text>
             </g>
@@ -133,7 +133,7 @@ export function TrajectoryPlot({
           x2={WIDTH / 2}
           y1={PADDING / 2}
           y2={HEIGHT - PADDING / 2}
-          className="stroke-border"
+          {...stylex.props(s.svgBorder)}
           strokeWidth={0.5}
           strokeDasharray="3 4"
         />
@@ -143,7 +143,7 @@ export function TrajectoryPlot({
             key={`sample-${index}`}
             d={pathOf(line)}
             fill="none"
-            className="stroke-primary"
+            {...stylex.props(s.svgPrimary)}
             strokeWidth={samples.length > 1 ? 1.25 : 2}
             strokeOpacity={samples.length > 1 ? 0.55 : 0.9}
           />
@@ -152,24 +152,24 @@ export function TrajectoryPlot({
           <path
             d={pathOf(reference)}
             fill="none"
-            className="stroke-foreground"
+            {...stylex.props(s.textFg)}
             strokeWidth={2}
             strokeDasharray="6 4"
           />
         ) : null}
 
-        <circle cx={WIDTH / 2} cy={HEIGHT - PADDING - (0 - extent.minX) * scale} r={4} className="fill-foreground" />
+        <circle cx={WIDTH / 2} cy={HEIGHT - PADDING - (0 - extent.minX) * scale} r={4} {...stylex.props(s.textFg)} />
       </svg>
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden="true" className="inline-block h-0.5 w-5 bg-primary" />
+      <figcaption {...stylex.props(s.caption)}>
+        <span {...stylex.props(s.rowTight)}>
+          <span aria-hidden="true" {...stylex.props(s.swatch)} />
           {samples.length > 1 ? `${samples.length} predicted samples` : "prediction"}
         </span>
         {reference ? (
-          <span className="inline-flex items-center gap-1.5">
+          <span {...stylex.props(s.rowTight)}>
             <span
               aria-hidden="true"
-              className="inline-block h-0.5 w-5 bg-foreground"
+              {...stylex.props(s.dashedSwatch)}
               style={{ backgroundImage: "repeating-linear-gradient(90deg,currentColor 0 6px,transparent 6px 10px)" }}
             />
             reference ({item.reference.kind})

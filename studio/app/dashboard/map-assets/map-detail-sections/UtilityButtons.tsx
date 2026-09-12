@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { Check, Copy } from "lucide-react";
 
@@ -20,29 +22,29 @@ export function UtilityButtons({
   onCopy,
 }: UtilityButtonsProps) {
   return (
-    <section className="flex flex-wrap gap-2">
+    <section className={stylex.props(styles.s_523).className}>
       <button
         type="button"
         onClick={() => onCopy(assetId, "mapId")}
-        className="flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className={stylex.props(styles.s_530).className}
       >
-        {copiedKey === "mapId" ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+        {copiedKey === "mapId" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
         Map ID
       </button>
       <button
         type="button"
         onClick={() => onCopy(bboxText, "bbox")}
-        className="flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className={stylex.props(styles.s_530).className}
       >
-        {copiedKey === "bbox" ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+        {copiedKey === "bbox" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
         bbox
       </button>
       <button
         type="button"
         onClick={() => onCopy(centerText, "center")}
-        className="flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className={stylex.props(styles.s_530).className}
       >
-        {copiedKey === "center" ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+        {copiedKey === "center" ? <Check className={stylex.props(styles.s_714).className} /> : <Copy className={stylex.props(styles.s_927).className} />}
         center
       </button>
     </section>

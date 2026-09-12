@@ -1,8 +1,8 @@
 "use client";
 
 import { CheckCircle2, FileUp, MapPin } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { useEffect, useId, useState } from "react";
-import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import {
   SERVER_GENERATED_CLOSURE_PATHS,
   type CreateMapUploadInput,
@@ -10,6 +10,8 @@ import {
   type PublishedMapSummary,
 } from "@/app/lib/map-ingest/contracts";
 import type { ImportedMap } from "@/app/lib/map-ingest/map-import";
+import { Input } from "@simforge-oss/studio-ui/components/ui/input";
+import { dialog } from "./asset-dialogs.stylex";
 
 /**
  * Where the map upload is in its lifecycle. The dialog owns the shared progress
@@ -55,9 +57,9 @@ function formatBytes(bytes: number) {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-      <p className="text-[10px] uppercase tracking-wider text-white/35">{label}</p>
-      <p className="mt-1 text-sm tabular-nums">{value}</p>
+    <div {...stylex.props(dialog.stat)}>
+      <p {...stylex.props(dialog.statLabel)}>{label}</p>
+      <p {...stylex.props(dialog.statValue)}>{value}</p>
     </div>
   );
 }
@@ -248,34 +250,27 @@ export function MapUploadPanel({
 
   if (published) {
     return (
-      <div className="mt-6 space-y-5">
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
-            <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-            {published.label} is published and available in the scenario editor
-          </p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-white/45">
-            <MapPin className="size-3 shrink-0" aria-hidden="true" />
-            {published.locality} · roadway consistency: {published.generated.roadwayConsistencyVerdict}
-          </p>
+      <div {...stylex.props(dialog.panel)}>
+        <div {...stylex.props(dialog.cardSuccess)}>
+          <p {...stylex.props(dialog.titleText)}><CheckCircle2 {...stylex.props(dialog.iconSm)} />{published.label} is published and available in the scenario editor</p>
+          <p {...stylex.props(dialog.mutedText)}><MapPin {...stylex.props(dialog.iconSm)} />{published.locality} · roadway consistency: {published.generated.roadwayConsistencyVerdict}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div {...stylex.props(dialog.grid2)}>
           <StatTile label="Lanes" value={published.generated.laneCount.toLocaleString()} />
           <StatTile label="Junctions" value={published.generated.junctionCount.toLocaleString()} />
           <StatTile label="Locations" value={published.generated.locationCount.toLocaleString()} />
           <StatTile label="Triangles" value={published.generated.triangleCount.toLocaleString()} />
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
+        <div {...stylex.props(dialog.grid2)}>
           <StatTile label="Closure objects" value={`${published.objectCount.toLocaleString()} files`} />
           <StatTile label="Closure size" value={formatBytes(published.byteLength)} />
         </div>
 
         {published.browserOnly ? (
-          <div className="rounded-xl border border-amber-300/25 bg-amber-300/[0.05] p-4">
-            <p className="text-sm font-semibold text-amber-100">Browser-only map version</p>
-            <p className="mt-1 text-xs leading-5 text-amber-100/70">
+          <div {...stylex.props(dialog.cardWarning)}>
+            <p {...stylex.props(dialog.titleText)}>Browser-only map version</p>
+            <p {...stylex.props(dialog.mutedText)}>
               No cooked CARLA map is bound to this version, so CARLA renders will refuse it. Scenarios author
               and render in the browser. To enable local CARLA renders, cook a CARLA map, then publish again
               with its name in the CARLA map name field.
@@ -283,14 +278,14 @@ export function MapUploadPanel({
           </div>
         ) : null}
 
-        <dl className="space-y-2 text-xs">
+        <dl {...stylex.props(dialog.stack)}>
           <div>
-            <dt className="text-white/35">Map version</dt>
-            <dd className="mt-1 break-all rounded-lg bg-black/30 px-3 py-2 font-mono text-white/60">{published.mapVersionId}</dd>
+            <dt {...stylex.props(dialog.statLabel)}>Map version</dt>
+            <dd {...stylex.props(dialog.mono)}>{published.mapVersionId}</dd>
           </div>
           <div>
-            <dt className="text-white/35">Closure digest</dt>
-            <dd className="mt-1 break-all rounded-lg bg-black/30 px-3 py-2 font-mono text-white/60">{published.closureSha256}</dd>
+            <dt {...stylex.props(dialog.statLabel)}>Closure digest</dt>
+            <dd {...stylex.props(dialog.mono)}>{published.closureSha256}</dd>
           </div>
         </dl>
       </div>
@@ -300,148 +295,56 @@ export function MapUploadPanel({
   const totalLayerBytes = map?.layers.reduce((total, layer) => total + layer.blob.size, 0) ?? 0;
 
   return (
-    <form id={formId} onSubmit={submit} className="mt-6 space-y-5">
-      <label
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault();
-          chooseFiles(Array.from(event.dataTransfer.files));
-        }}
-        className="flex min-h-32 w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.025] px-6 text-center transition-colors hover:border-[#E8E044]/40 hover:bg-[#E8E044]/[0.03] focus-within:border-[#E8E044] focus-within:outline-none"
-      >
-        <input
-          type="file"
-          multiple
-          disabled={busy}
-          className="sr-only"
-          accept=".xodr,.glb"
-          onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))}
-        />
-        <FileUp className="mb-3 size-6 text-[#E8E044]" aria-hidden="true" />
-        <span className="text-sm font-medium">Drop map.xodr and one GLB per layer here</span>
-        <span className="mt-1 text-xs text-white/35">
-          road.glb is required. Add sidewalk, building, vegetation, terrain, furniture, pole, signage or water as
-          separate GLBs — the file name is the layer id.
-        </span>
+    <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
+      <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); chooseFiles(Array.from(event.dataTransfer.files)); }} {...stylex.props(dialog.drop)}>
+        <input type="file" multiple disabled={busy} {...stylex.props(dialog.srOnly)} accept=".xodr,.glb" onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
+        <FileUp {...stylex.props(dialog.iconAccent)} aria-hidden="true" />
+        <span {...stylex.props(dialog.uploadDropLabel)}>Drop map.xodr and one GLB per layer here</span>
+        <span {...stylex.props(dialog.subText)}>road.glb is required. Add sidewalk, building, vegetation, terrain, furniture, pole, signage or water as separate GLBs — the file name is the layer id.</span>
       </label>
-
       {map && thumbnailUrl ? (
         <>
-          <div className="grid gap-5 md:grid-cols-[240px_1fr]">
+          <div {...stylex.props(dialog.grid)}>
             <div>
-              {/* eslint-disable-next-line @next/next/no-img-element -- client-generated blob: URL for the pre-upload preview */}
-              <img
-                src={thumbnailUrl}
-                alt="Rendered preview of the uploaded map"
-                className="aspect-square w-full rounded-xl border border-white/10 bg-[radial-gradient(circle,#27303a,#101317)] object-contain"
-              />
-              <p className="mt-2 text-xs text-white/40">
-                {map.totalTriangles.toLocaleString()} triangles · {formatBytes(totalLayerBytes)} of geometry
-              </p>
+              <img src={thumbnailUrl} alt="Rendered preview of the uploaded map" {...stylex.props(dialog.preview)} />
+              <p {...stylex.props(dialog.mutedText)}>{map.totalTriangles.toLocaleString()} triangles · {formatBytes(totalLayerBytes)} of geometry</p>
             </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-white/35">OpenDRIVE map name</p>
-                <p className="mt-1 text-sm text-white/70">{map.mapName}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <div {...stylex.props(dialog.stack)}>
+              <div><p {...stylex.props(dialog.statLabel)}>OpenDRIVE map name</p><p {...stylex.props(dialog.statValue)}>{map.mapName}</p></div>
+              <div {...stylex.props(dialog.grid2)}>
                 <StatTile label="Lanes" value={map.preflight.laneCount.toLocaleString()} />
                 <StatTile label="Drivable lanes" value={map.preflight.drivableLaneCount.toLocaleString()} />
                 <StatTile label="Junctions" value={map.preflight.junctionCount.toLocaleString()} />
-                <StatTile
-                  label="Georeferenced"
-                  value={map.preflight.georeferenced ? "Yes" : "Local coordinates only"}
-                />
+                <StatTile label="Georeferenced" value={map.preflight.georeferenced ? "Yes" : "Local coordinates only"} />
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-white/35">Plan-view geometry</p>
-                <p className="mt-1 text-sm text-white/70">{map.preflight.geometryKinds.join(", ")}</p>
-              </div>
+              <div><p {...stylex.props(dialog.statLabel)}>Plan-view geometry</p><p {...stylex.props(dialog.statValue)}>{map.preflight.geometryKinds.join(", ")}</p></div>
             </div>
           </div>
-
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-white/35">
-              {map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}
-            </p>
-            <ul className="mt-2 divide-y divide-white/[0.06] rounded-lg border border-white/[0.07]">
-              {map.layers.map((layer) => (
-                <li key={layer.layerId} className="flex items-center gap-2 px-3 py-2 text-sm">
-                  <span className="shrink-0">{layer.layerId}</span>
-                  <span className="truncate font-mono text-xs text-white/30">{layer.fileName}</span>
-                  <span className="ml-auto shrink-0 tabular-nums text-xs text-white/40">
-                    {layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <div><p {...stylex.props(dialog.statLabel)}>{map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}</p><ul {...stylex.props(dialog.list)}>{map.layers.map((layer) => <li key={layer.layerId} {...stylex.props(dialog.listRow)}><span>{layer.layerId}</span><span {...stylex.props(dialog.mutedText)}>{layer.fileName}</span><span {...stylex.props(dialog.mutedText)}>{layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}</span></li>)}</ul></div>
         </>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-xs text-white/45">
-          Label
-          <Input
-            required
-            minLength={3}
-            maxLength={120}
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="Downtown New Haven"
-            className="mt-1"
-          />
-        </label>
-        <label className="text-xs text-white/45">
-          Locality
-          <Input
-            required
-            minLength={2}
-            maxLength={120}
-            value={locality}
-            onChange={(event) => setLocality(event.target.value)}
-            placeholder="New Haven, Connecticut"
-            className="mt-1"
-          />
-        </label>
-        <div className="sm:col-span-2">
-          <label htmlFor={carlaFieldId} className="text-xs text-white/45">CARLA map name, optional</label>
-          <Input
-            id={carlaFieldId}
-            aria-describedby={carlaHelpId}
-            maxLength={120}
-            value={carlaMapName}
-            onChange={(event) => setCarlaMapName(event.target.value)}
-            placeholder="Town10HD_Opt"
-            className="mt-1"
-          />
-          <p id={carlaHelpId} className="mt-1.5 text-xs leading-5 text-white/40">
-            Fill this in only when a cooked CARLA map of the same road network already exists. Leave it empty and the
-            map version is browser-only: you can author and render scenarios in the browser, but local CARLA renders
-            are not available for it.
-          </p>
+      <div {...stylex.props(dialog.grid)}>
+        <label {...stylex.props(dialog.fieldLabel)}>Label<Input required minLength={3} maxLength={120} value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Downtown New Haven" {...stylex.props(dialog.fieldControl)} /></label>
+        <label {...stylex.props(dialog.fieldLabel)}>Locality<Input required minLength={2} maxLength={120} value={locality} onChange={(event) => setLocality(event.target.value)} placeholder="New Haven, Connecticut" {...stylex.props(dialog.fieldControl)} /></label>
+        <div {...stylex.props(dialog.span2)}>
+          <label htmlFor={carlaFieldId} {...stylex.props(dialog.fieldLabel)}>CARLA map name, optional</label>
+          <Input id={carlaFieldId} aria-describedby={carlaHelpId} maxLength={120} value={carlaMapName} onChange={(event) => setCarlaMapName(event.target.value)} placeholder="Town10HD_Opt" {...stylex.props(dialog.fieldControl)} />
+          <p id={carlaHelpId} {...stylex.props(dialog.mutedText)}>Fill this in only when a cooked CARLA map of the same road network already exists. Leave it empty and the map version is browser-only: you can author and render scenarios in the browser, but local CARLA renders are not available for it.</p>
         </div>
       </div>
 
       {phase === "generating" ? (
         // Not a live region: the dialog's status line already announces the phase, and
         // announcing eight artifact names on top of it is noise, not information.
-        <div className="rounded-xl border border-[#E8E044]/20 bg-[#E8E044]/[0.03] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#E8E044]">
-            Generating on the server
-          </p>
-          <p className="mt-1.5 text-xs leading-5 text-white/50">
-            Your files are stored. The publisher is now building the {SERVER_GENERATED_CLOSURE_PATHS.length} derived
-            artifacts the editor loads, and binding them into one immutable map version. This usually takes up to a
-            minute — keep this dialog open.
-          </p>
-          <ul className="mt-3 space-y-1.5">
+        <div {...stylex.props(dialog.generateCard)}>
+          <p {...stylex.props(dialog.generateHeading)}>Generating on the server</p>
+          <p {...stylex.props(dialog.generateText)}>Your files are stored. The publisher is now building the {SERVER_GENERATED_CLOSURE_PATHS.length} derived artifacts the editor loads, and binding them into one immutable map version. This usually takes up to a minute — keep this dialog open.</p>
+          <ul {...stylex.props(dialog.artifactList)}>
             {SERVER_GENERATED_CLOSURE_PATHS.map((path) => (
-              <li key={path} className="flex items-start gap-2 text-xs leading-5 text-white/50">
-                <span aria-hidden="true" className="mt-2 size-1 shrink-0 rounded-full bg-[#E8E044]/60" />
-                <span>
-                  <span className="font-mono text-white/70">{path}</span> — {GENERATED_ARTIFACT_LABELS[path]}
-                </span>
+              <li key={path} {...stylex.props(dialog.artifactItem)}>
+                <span aria-hidden="true" {...stylex.props(dialog.artifactDot)} />
+                <span><span {...stylex.props(dialog.cellStrong)}>{path}</span> — {GENERATED_ARTIFACT_LABELS[path]}</span>
               </li>
             ))}
           </ul>

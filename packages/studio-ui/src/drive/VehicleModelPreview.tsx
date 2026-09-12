@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import * as stylex from "@stylexjs/stylex";
 import {
   AmbientLight,
   Box3,
@@ -35,11 +36,17 @@ const TURNTABLE_RAD_PER_S = 0.35;
  * builder for catalog families that have no GLB yet, so the picker is never
  * blank.
  */
-export function VehicleModelPreview({ catalogId, color, className }: {
+export function VehicleModelPreview({ catalogId, color, xstyle }: {
   catalogId: CatalogId;
   /** Hex colour applied to the paint slot; livery vehicles ignore it. */
   color: string;
-  className?: string;
+  /**
+   * Where the preview sits. The host owns the box because the stage it fills
+   * is the caller's: the preview only needs to know it must have one, and a
+   * `className` here would leave a Tailwind seam in an otherwise compiled
+   * surface.
+   */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const modelRef = useRef<Group | null>(null);
@@ -162,7 +169,7 @@ export function VehicleModelPreview({ catalogId, color, className }: {
     };
   }, [catalogId]);
 
-  return <div className={className} data-testid="drive-vehicle-preview" ref={hostRef} />;
+  return <div {...stylex.props(xstyle)} data-testid="drive-vehicle-preview" ref={hostRef} />;
 }
 
 /**

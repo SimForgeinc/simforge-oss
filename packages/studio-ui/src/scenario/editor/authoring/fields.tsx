@@ -4,6 +4,8 @@ import { useId, type ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "../../../components/ui/input";
 import { newTemplateId } from "@simforge-oss/scenario";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./authoring.stylex";
 
 /**
  * Shared controls for the authoring panel's six editors.
@@ -15,7 +17,7 @@ import { newTemplateId } from "@simforge-oss/scenario";
 
 export function Heading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="font-semibold uppercase tracking-meta text-muted-foreground">
+    <h3 {...stylex.props(styles.heading)}>
       {children}
     </h3>
   );
@@ -42,11 +44,10 @@ export function MiniAdd({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="editor-motion ml-auto text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card disabled:opacity-30"
+      {...stylex.props(styles.iconButton)}
     >
-      <Plus aria-hidden="true" className="size-3" />
+      <Plus aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
-  );
 }
 
 /** Icon-only remove button, named after what it removes. */
@@ -63,11 +64,10 @@ export function DeleteButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="editor-motion ml-auto text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+      {...stylex.props(styles.iconButtonMuted)}
     >
-      <Trash2 aria-hidden="true" className="size-3" />
+      <Trash2 aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
-  );
 }
 
 /** A labelled text field. `htmlFor`/`id` are generated, never assumed. */
@@ -86,8 +86,8 @@ export function TextField({
 }) {
   const id = useId();
   return (
-    <div className="min-w-0">
-      <label className="block text-muted-foreground" htmlFor={id}>
+    <div {...stylex.props(styles.fieldWrap)}>
+      <label {...stylex.props(styles.label)} htmlFor={id}>
         {label}
       </label>
       <Input
@@ -95,7 +95,7 @@ export function TextField({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className={`mt-1 h-8 ${className ?? ""}`}
+        className={[stylex.props(styles.input).className, className].filter(Boolean).join(" ")}
       />
     </div>
   );
@@ -117,8 +117,8 @@ export function NumberField({
 }) {
   const id = useId();
   return (
-    <div className="min-w-0">
-      <label className="block text-muted-foreground" htmlFor={id}>
+    <div {...stylex.props(styles.fieldWrap)}>
+      <label {...stylex.props(styles.label)} htmlFor={id}>
         {label}
       </label>
       <Input
@@ -128,7 +128,7 @@ export function NumberField({
         min={min}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-1 h-8"
+        {...stylex.props(styles.input)}
       />
     </div>
   );

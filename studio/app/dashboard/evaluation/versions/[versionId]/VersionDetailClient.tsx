@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import type {
   ModelVersionRecord,
 } from "@/app/lib/models/contracts";
 import { PanelMessage, StatusBadge, useJsonFetch } from "../../shared";
+import { styles } from "../../route-residuals.stylex";
 
 type PromotionResult =
   | { kind: "promoted"; runId: string }
@@ -89,7 +91,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
   const record = version.data.version;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)} >
       <PageHeader
         eyebrow={record.family}
         title={record.name}
@@ -99,20 +101,20 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
             <StatusBadge status={record.status} />
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/evaluation">
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                <ArrowLeft {...stylex.props(styles.icon)} />
                 Evaluation
               </Link>
             </Button>
           </>
         }
       />
-      <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.content)} >
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Version</CardTitle>
+            <CardTitle {...stylex.props(styles.cardTitle)} >Version</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+            <dl {...stylex.props(styles.dlProvenance)} >
               {(
                 [
                   ["Source", record.source],
@@ -124,8 +126,8 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
-                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-                  <dd className="mt-0.5 break-all font-mono text-xs text-foreground">{value}</dd>
+                  <dt {...stylex.props(styles.label)} >{label}</dt>
+                  <dd {...stylex.props(styles.monoSmall)} >{value}</dd>
                 </div>
               ))}
             </dl>
@@ -135,16 +137,15 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
         {result ? (
           <div
             data-testid="promotion-result"
-            className={
-              result.kind === "promoted"
-                ? "flex items-start gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
-                : "flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            }
+            {...stylex.props(
+              styles.resultBox,
+              result.kind === "promoted" ? styles.promoted : styles.refused,
+            )}
           >
             {result.kind === "promoted" ? (
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <ShieldCheck {...stylex.props(styles.iconBare)} />
             ) : (
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <ShieldAlert {...stylex.props(styles.iconBare)} />
             )}
             <span>
               {result.kind === "promoted"
@@ -156,7 +157,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Eval runs</CardTitle>
+            <CardTitle {...stylex.props(styles.cardTitle)} >Eval runs</CardTitle>
             <CardDescription>
               The promotion gate requires a succeeded openloop or policy_episode run of this
               version — the database trigger is the arbiter, refusals surface here.
@@ -177,30 +178,30 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
                     <TableHead>Run</TableHead>
                     <TableHead>Kind</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Attempts</TableHead>
-                    <TableHead className="text-right">Created</TableHead>
-                    <TableHead className="text-right">Promote</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Attempts</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Created</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Promote</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {runs.data.runs.map((run) => (
                     <TableRow key={run.id} data-testid={`model-run-${run.id}`}>
-                      <TableCell className="font-mono text-xs">{run.id}</TableCell>
+                      <TableCell {...stylex.props(styles.monoSmall)} >{run.id}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{run.kind}</Badge>
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={run.status} />
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {run.attemptCount}/{run.maxAttempts}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      <TableCell {...stylex.props(styles.numericTinyMuted)} >
                         {new Date(run.createdAt).toLocaleTimeString()}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {record.promotedRunId === run.id ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                          <Badge {...stylex.props(styles.promotedBadge)}>
                             promoted
                           </Badge>
                         ) : (

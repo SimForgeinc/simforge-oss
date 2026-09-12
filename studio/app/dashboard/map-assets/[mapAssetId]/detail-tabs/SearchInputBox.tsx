@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
@@ -42,8 +44,8 @@ export function SearchInputBox({
   }
 
   return (
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+    <div className={stylex.props(styles.s_987).className}>
+      <Search className={stylex.props(styles.s_988).className} />
       <Input
         ref={inputRef}
         type="text"
@@ -93,7 +95,7 @@ export function SearchInputBox({
             onSubmitSearch();
           }
         }}
-        className="h-10 rounded-md border-border bg-muted/30 pl-9 pr-9 text-sm"
+        className={stylex.props(styles.s_989).className}
         aria-label="Search this map"
         aria-autocomplete="list"
         aria-expanded={showSuggestions && suggestions.length > 0}
@@ -111,16 +113,16 @@ export function SearchInputBox({
             onDraftQueryChange("");
             onSubmitSearch("");
           }}
-          className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_990).className}
           aria-label="Clear search"
         >
-          <X className="size-3.5" />
+          <X className={stylex.props(styles.s_991).className} />
         </button>
       ) : null}
       {showSuggestions && suggestions.length > 0 ? (
         <div
           id="map-search-suggestions"
-          className="absolute left-0 right-0 top-full z-20 mt-1 rounded-md border border-border bg-popover p-1 shadow-md"
+          className={stylex.props(styles.s_992).className}
           role="listbox"
         >
           {suggestions.map((suggestion, index) => (
@@ -130,10 +132,7 @@ export function SearchInputBox({
               type="button"
               role="option"
               aria-selected={index === highlightedSuggestionIndex}
-              className={cn(
-                "flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-secondary/40",
-                index === highlightedSuggestionIndex && "bg-secondary/40",
-              )}
+              className={stylex.props(styles.u_908, styles.u_928, styles.u_955, styles.u_936, styles.u_943, styles.u_965, styles.u_964, styles.u_970, styles.u_924).className}
               onMouseDown={(event) => {
                 event.preventDefault();
               }}

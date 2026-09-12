@@ -1,8 +1,10 @@
 "use client";
 
 import { Boxes, Map as MapIcon, Sparkles, Upload } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
+import { header } from "./asset-gallery.stylex";
 import { AssetGallerySegmented } from "./AssetGallerySegmented";
 
 /** The two things this library holds. Models and maps share nothing but the shelf. */
@@ -30,18 +32,21 @@ export function AssetGalleryHeader({
   onGenerate: () => void;
   onUpload: () => void;
 }) {
-  // Padding outside the centred column, matching `AssetsTabs` above it — the
-  // two used to inset differently and their left edges did not line up.
   return (
-    <div className="border-b border-border bg-background px-5 sm:px-8">
-      <div className="mx-auto max-w-[1500px]">
+    <div {...stylex.props(header.bar)}>
+      <div {...stylex.props(header.measure)}>
+        {/* `PageHeader` is still a Tailwind component and its own base classes
+            win over StyleX by design — the generated sheet is ordered weaker
+            so unmigrated callers keep rendering unchanged. Its frame is
+            stripped here, so these overrides have to stay Tailwind to beat
+            it. They move when `PageHeader` itself does. */}
         <PageHeader
           className="border-b-0 bg-transparent px-0 pb-4 sm:px-0"
           eyebrow="Local library"
           title="Assets"
           description={SECTION_DESCRIPTION[section]}
           actions={
-            <div className="flex flex-wrap items-center gap-2">
+            <div {...stylex.props(header.actions)}>
               {section === "models" ? (
                 <Button type="button" onClick={onGenerate}>
                   <Sparkles aria-hidden="true" />
@@ -60,7 +65,7 @@ export function AssetGalleryHeader({
           value={section}
           options={SECTION_OPTIONS}
           onChange={onSectionChange}
-          className="mb-4"
+          xstyle={header.sectionSwitch}
         />
       </div>
     </div>

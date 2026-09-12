@@ -1,6 +1,7 @@
 import Image from "next/image";
-
-import { cn } from "../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "./stylex/surface";
+import { styles } from "./CarlaReadyMark.stylex";
 
 /**
  * The CARLA wordmark, used as the single visual signal that an actor has a
@@ -22,15 +23,13 @@ export function CarlaReadyMark({
 }) {
   return (
     <Image
+      src={CARLA_MARK_SRC}
       alt=""
       aria-hidden="true"
-      className={cn("shrink-0 object-contain invert", className)}
-      data-testid={testId}
-      height={size}
-      src={CARLA_MARK_SRC}
       title={title}
       unoptimized
       width={size}
+      height={size}
     />
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { Check, CircleAlert, LoaderCircle, RotateCcw, SkipForward } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
+import { setup } from "../setup-preparation.stylex";
+import { PROGRESS_VAR, preparation } from "./map-preparation.stylex";
 import type { MapPreparationPhase, MapPreparationRow } from "./useMapPreparation";
 
 /**
@@ -38,45 +42,45 @@ export function MapPreparationProgress({
   const ready = maps.filter((map) => map.state === "ready" || map.state === "skipped").length;
   return (
     <div data-testid="map-preparation-progress" data-phase={phase}>
-      <div className="flex items-baseline justify-between font-mono text-micro uppercase text-white/35">
+      <div {...stylex.props(preparation.summary)}>
         <span>
           {ready} / {maps.length} maps
         </span>
         <span>{phase === "complete" ? "Done" : phase === "blocked" ? "Needs attention" : "Downloading"}</span>
       </div>
-      <ul className="mt-3 grid gap-2">
+      <ul {...stylex.props(preparation.list)}>
         {maps.map((map) => {
           const percent = map.bytes > 0 ? Math.min(100, Math.round((100 * map.completedBytes) / map.bytes)) : 0;
           return (
             <li
               key={map.mapVersionId}
-              className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+              {...stylex.props(preparation.row)}
               data-testid="map-preparation-row"
               data-map-version-id={map.mapVersionId}
               data-state={map.state}
             >
-              <div className="flex items-center gap-3">
-                <span className="grid size-5 shrink-0 place-items-center text-[#E8E044]">
+              <div {...stylex.props(preparation.rowHead)}>
+                <span {...stylex.props(preparation.stateIcon)}>
                   {map.state === "ready" ? (
-                    <Check className="size-4" aria-hidden="true" />
+                    <Check {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : map.state === "installing" ? (
-                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" />
                   ) : map.state === "error" ? (
-                    <CircleAlert className="size-4 text-destructive" aria-hidden="true" />
+                    <CircleAlert {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : map.state === "skipped" ? (
-                    <SkipForward className="size-4 text-white/35" aria-hidden="true" />
+                    <SkipForward {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                   ) : null}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-white/80">{map.label}</span>
-                <span className="font-mono text-[11px] text-white/40">
+                <span {...stylex.props(preparation.rowLabel)}>{map.label}</span>
+                <span {...stylex.props(preparation.rowBytes)}>
                   {map.state === "installing" || map.state === "ready"
                     ? `${formatBytes(map.completedBytes)}${map.bytes > 0 ? ` / ${formatBytes(map.bytes)}` : ""}`
                     : STATE_LABELS[map.state]}
                 </span>
                 {map.state === "error" ? (
-                  <span className="flex shrink-0 gap-2">
+                  <span {...stylex.props(preparation.rowActions)}>
                     <Button variant="outline" onClick={() => onRetry(map.mapVersionId)}>
-                      <RotateCcw className="mr-1 size-3.5" aria-hidden="true" />
+                      <RotateCcw {...stylex.props(setup.iconSmall)} aria-hidden="true" />
                       Retry
                     </Button>
                     <Button variant="outline" onClick={() => onSkip(map.mapVersionId)}>
@@ -87,18 +91,21 @@ export function MapPreparationProgress({
               </div>
               {map.state === "installing" ? (
                 <div
-                  className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"
+                  {...stylex.props(preparation.track)}
                   role="progressbar"
                   aria-label={`${map.label} download`}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={percent}
                 >
-                  <div className="h-full rounded-full bg-[#E8E044] transition-[width] duration-500" style={{ width: `${percent}%` }} />
+                  <div
+                    {...stylex.props(preparation.fill)}
+                    style={{ [PROGRESS_VAR]: `${percent}%` } as CSSProperties}
+                  />
                 </div>
               ) : null}
               {map.message ? (
-                <p className="mt-2 text-xs text-destructive" role="alert">
+                <p {...stylex.props(preparation.rowMessage)} role="alert">
                   {map.message}
                 </p>
               ) : null}

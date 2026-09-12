@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { AlertTriangle, Check, Clipboard, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
+import { AlertTriangle, Check, Clipboard, Loader2, Pencil, Trash2 } from "lucide-react";
 import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
@@ -14,6 +15,7 @@ import {
   SheetTitle,
 } from "@simforge-oss/studio-ui/components/ui/sheet";
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
+import { dialog, drawer } from "./asset-dialogs.stylex";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 
 /**
@@ -24,7 +26,7 @@ import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 const AssetModelPreview = dynamic(() => import("./AssetModelPreview"), {
   ssr: false,
   loading: () => (
-    <div className="grid h-72 place-items-center rounded-xl border border-border bg-card text-xs text-muted-foreground">
+    <div {...stylex.props(dialog.loadingPreview)}>
       Loading preview…
     </div>
   ),
@@ -152,92 +154,68 @@ export function AssetDetailDrawer({
 
   return (
     <Sheet open={asset !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent className="w-full overflow-y-auto border-border bg-background sm:max-w-xl">
+      <SheetContent {...stylex.props(drawer.root, dialog.detailSheet)}>
         {asset ? (
-          <div className="space-y-6">
+          <div {...stylex.props(drawer.root)}>
             <SheetHeader>
-              <SheetTitle className="pr-8 text-2xl">{asset.title}</SheetTitle>
+          <SheetTitle {...stylex.props(dialog.drawerTitle)}>{asset.title}</SheetTitle>
               <SheetDescription>
                 Imported {new Date(asset.createdAt).toLocaleDateString()} · version {asset.version}
               </SheetDescription>
             </SheetHeader>
 
             <AssetModelPreview catalogId={asset.catalogId} />
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Class</p>
-                <p className="mt-1 capitalize">{asset.actorClass.replaceAll("_", " ")}</p>
+            <div {...stylex.props(drawer.stats)}>
+              <div {...stylex.props(drawer.tile)}>
+                <p {...stylex.props(drawer.eyebrow)}>Class</p><p {...stylex.props(drawer.value)}>{asset.actorClass.replaceAll("_", " ")}</p>
               </div>
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Triangles</p>
-                <p className="mt-1 tabular-nums">{asset.triangleCount.toLocaleString()}</p>
+              <div {...stylex.props(drawer.tile)}>
+                <p {...stylex.props(drawer.eyebrow)}>Triangles</p><p {...stylex.props(drawer.value)}>{asset.triangleCount.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Dimensions</p>
-                <p className="mt-1 tabular-nums">
-                  {asset.dims.l.toFixed(2)} × {asset.dims.w.toFixed(2)} × {asset.dims.h.toFixed(2)} m
-                </p>
+              <div {...stylex.props(drawer.tile)}>
+                <p {...stylex.props(drawer.eyebrow)}>Dimensions</p><p {...stylex.props(drawer.value)}>{asset.dims.l.toFixed(2)} × {asset.dims.w.toFixed(2)} × {asset.dims.h.toFixed(2)} m</p>
               </div>
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Source</p>
-                <p className="mt-1 uppercase">
-                  {asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB
-                </p>
+              <div {...stylex.props(drawer.tile)}>
+                <p {...stylex.props(drawer.eyebrow)}>Source</p><p {...stylex.props(drawer.value)}>{asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB</p>
               </div>
-              <div className="col-span-2 rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">CARLA</p>
-                <div className="mt-1.5 flex flex-col items-start gap-2">
+              <div {...stylex.props(drawer.tile, dialog.span2)}>
+                <p {...stylex.props(drawer.eyebrow)}>CARLA</p>
+                <div {...stylex.props(drawer.section)}>
                   <CarlaCompatibilityPill compatibility={GALLERY_UPLOAD_CARLA_COMPATIBILITY} size="sm" />
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Runs in browser preview and browser-recorded renders, but not CARLA renders because it has no runtime blueprint.
-                  </p>
+                  <p {...stylex.props(dialog.mutedText)}>Runs in browser preview and browser-recorded renders, but not CARLA renders because it has no runtime blueprint.</p>
                 </div>
               </div>
             </div>
 
             {asset.description ? (
-              <p className="text-sm leading-6 text-foreground/80">{asset.description}</p>
+              <p {...stylex.props(dialog.bodyText)}>{asset.description}</p>
             ) : null}
 
             {asset.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {asset.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
-                    {tag}
-                  </span>
-                ))}
+              <div {...stylex.props(dialog.tagList)}>
+                {asset.tags.map((tag) => <span key={tag} {...stylex.props(dialog.tag)}>{tag}</span>)}
               </div>
             ) : null}
 
-            <section aria-labelledby="asset-clips-heading">
-              <h3 id="asset-clips-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Animation clips
-              </h3>
+            <section aria-labelledby="asset-clips-heading" {...stylex.props(drawer.section)}>
+              <h3 id="asset-clips-heading" {...stylex.props(dialog.sectionHeading)}>Animation clips</h3>
               {asset.clips.length > 0 ? (
-                <ul className="mt-2 space-y-1 rounded-lg border border-border p-3 text-sm">
+                <ul {...stylex.props(dialog.list)}>
                   {asset.clips.map((clip) => (
-                    <li key={clip} className="flex justify-between gap-3">
-                      <span className="truncate">{clip}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {clip === asset.idleClip ? "Idle" : clip === asset.locomotionClip ? "Locomotion" : ""}
-                      </span>
+                    <li key={clip} {...stylex.props(dialog.listRow)}>
+                      <span>{clip}</span>
+                      <span {...stylex.props(dialog.mutedText)}>{clip === asset.idleClip ? "Idle" : clip === asset.locomotionClip ? "Locomotion" : ""}</span>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mt-2 text-sm text-muted-foreground">No animation clips</p>
-              )}
+              ) : <p {...stylex.props(dialog.bodyText)}>No animation clips</p>}
             </section>
 
-            <div className="space-y-3">
-              <p className="break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
-                {asset.catalogId}
-              </p>
-
+            <div {...stylex.props(dialog.stack)}>
+              <p {...stylex.props(dialog.mono)}>{asset.catalogId}</p>
               {renameDraft !== null ? (
                 <form
-                  className="flex flex-wrap items-center gap-2"
+                  {...stylex.props(dialog.renameForm)}
                   onSubmit={(event) => {
                     event.preventDefault();
                     void renameAsset();
@@ -249,17 +227,17 @@ export function AssetDetailDrawer({
                     maxLength={120}
                     value={renameDraft}
                     onChange={(event) => setRenameDraft(event.target.value)}
-                    className="h-9 min-w-0 flex-1"
+                    {...stylex.props(dialog.inputCompact)}
                   />
-                  <Button type="submit" size="sm" className="h-9" disabled={renaming || renameDraft.trim() === ""}>
-                    {renaming ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
+                  <Button type="submit" size="sm" {...stylex.props(dialog.buttonCompact)} disabled={renaming || renameDraft.trim() === ""}>
+                    {renaming ? <Loader2 aria-hidden="true" {...stylex.props(dialog.progressPulse)} /> : null}
                     {renaming ? "Saving…" : "Save title"}
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-9"
+                    {...stylex.props(dialog.buttonCompact)}
                     disabled={renaming}
                     onClick={() => setRenameDraft(null)}
                   >
@@ -270,34 +248,34 @@ export function AssetDetailDrawer({
                 <div
                   role="group"
                   aria-labelledby="asset-delete-heading"
-                  className="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+                  {...stylex.props(dialog.deleteBox)}
                 >
-                  <p id="asset-delete-heading" className="text-sm font-semibold">
+                  <p id="asset-delete-heading" {...stylex.props(dialog.deleteHeading)}>
                     Remove “{asset.title}” from the local library?
                   </p>
 
                   {usage.phase === "loading" ? (
-                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Loader2 aria-hidden="true" className="size-3 animate-spin" />
+                    <p {...stylex.props(dialog.usageLoading)}>
+                      <Loader2 aria-hidden="true" {...stylex.props(dialog.usageIcon, dialog.progressPulse)} />
                       Checking which scenarios use it…
                     </p>
                   ) : usage.phase === "known" && usage.scenarioCount > 0 ? (
-                    <p className="mt-2 inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-sm font-semibold text-primary">
-                      <AlertTriangle aria-hidden="true" className="size-4" />
+                    <p {...stylex.props(dialog.usageWarning)}>
+                      <AlertTriangle aria-hidden="true" {...stylex.props(dialog.usageWarningIcon)} />
                       Used by {usage.scenarioCount} {usage.scenarioCount === 1 ? "scenario" : "scenarios"}
                     </p>
                   ) : usage.phase === "known" ? (
-                    <p className="mt-2 text-xs text-muted-foreground">No scenario places this model.</p>
+                    <p {...stylex.props(dialog.usageNote)}>No scenario places this model.</p>
                   ) : (
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p {...stylex.props(dialog.usageNote)}>
                       Scenario usage could not be checked, so remove this one with care.
                     </p>
                   )}
 
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div {...stylex.props(dialog.deleteActions)}>
                     <Button type="button" size="sm" variant="destructive" disabled={deleting} onClick={() => void deleteAsset()}>
-                      {deleting ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Trash2 aria-hidden="true" />}
+                      {deleting ? <Loader2 aria-hidden="true" {...stylex.props(dialog.progressPulse)} /> : <Trash2 aria-hidden="true" />}
                       {deleting ? "Removing…" : "Remove asset"}
                     </Button>
                     <Button
@@ -312,7 +290,7 @@ export function AssetDetailDrawer({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div {...stylex.props(drawer.actions)}>
                   <Button type="button" size="sm" variant="outline" onClick={() => void copyCatalogId()}>
                     {copied ? <Check aria-hidden="true" /> : <Clipboard aria-hidden="true" />}
                     {copied ? "Copied" : "Copy catalog ID"}
@@ -333,9 +311,7 @@ export function AssetDetailDrawer({
               )}
 
               {error ? (
-                <p role="alert" className="text-sm text-red-300">
-                  {error}
-                </p>
+                <p role="alert" {...stylex.props(dialog.errorDanger)}>{error}</p>
               ) : null}
             </div>
           </div>

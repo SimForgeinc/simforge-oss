@@ -1,0 +1,45 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, radii, text } from "../../stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  list: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "2.25rem",
+    borderRadius: radii.lg,
+    backgroundColor: colors.muted,
+    padding: "0.25rem",
+    color: colors.mutedForeground,
+  },
+  trigger: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    whiteSpace: "nowrap",
+    borderRadius: radii.md,
+    paddingInline: "0.75rem",
+    paddingBlock: "0.25rem",
+    fontSize: text.sizeSm,
+    fontWeight: 500,
+    transitionProperty: "all",
+    transitionDuration: "150ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineColor: { default: null, ":focus-visible": colors.ring },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    pointerEvents: { default: null, ":disabled": "none" },
+    opacity: { default: null, ":disabled": 0.5 },
+    backgroundColor: { default: null, "[data-state=active]": colors.bg },
+    color: { default: null, "[data-state=active]": colors.text },
+    boxShadow: { default: null, "[data-state=active]": "0 1px 2px 0 rgb(0 0 0 / 0.05)" },
+  },
+  content: {
+    marginTop: "1rem",
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineColor: { default: null, ":focus-visible": colors.ring },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+  },
+});

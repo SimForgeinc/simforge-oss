@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useMemo, useState } from "react";
 import {
@@ -287,8 +289,8 @@ function TopologyPathChain({
   // itself plus the `truncated` flag is enough to render it correctly.
   const headEnd = Math.floor(path.length / 2);
   return (
-    <div className="flex flex-wrap items-center gap-1 pl-2 pt-0.5 text-[10px] text-muted-foreground">
-      <span className="font-medium uppercase tracking-wide text-muted-foreground/80">
+    <div className={stylex.props(styles.s_868).className}>
+      <span className={stylex.props(styles.s_869).className}>
         Path
       </span>
       {path.map((step, idx) => {
@@ -300,34 +302,29 @@ function TopologyPathChain({
         return (
           <div
             key={`${step.objectId}-${idx}`}
-            className="flex items-center gap-1"
+            className={stylex.props(styles.s_961).className}
           >
             {showEllipsisBefore ? (
               <>
                 <MoreHorizontal
-                  className="size-3 text-muted-foreground/60"
+                  className={stylex.props(styles.s_871).className}
                   aria-label="path truncated"
                 />
                 <ChevronRight
-                  className="size-2.5 text-muted-foreground/60"
+                  className={stylex.props(styles.s_872).className}
                   aria-hidden="true"
                 />
               </>
             ) : null}
             <div
-              className={cn(
-                "flex items-center gap-1 rounded border px-1.5 py-0.5 transition-colors",
-                stepHighlighted
-                  ? "border-primary/60 bg-primary/15"
-                  : "border-border/40 bg-muted/40",
-              )}
+              className={stylex.props(styles.u_908, styles.u_928, styles.u_916, styles.u_951, styles.u_903, styles.u_935, styles.u_941, styles.u_970).className}
               title={`${step.title ?? step.objectId} (${step.cumulativeM} m from subject)`}
             >
-              <StepIcon className="size-2.5 shrink-0" aria-hidden="true" />
-              <span className="max-w-[200px] truncate font-mono text-muted-foreground/90">
+              <StepIcon className={stylex.props(styles.s_873).className} aria-hidden="true" />
+              <span className={stylex.props(styles.s_874).className}>
                 {step.objectId}
               </span>
-              <span className="font-mono text-muted-foreground/80">
+              <span className={stylex.props(styles.s_875).className}>
                 {step.cumulativeM}m
               </span>
               {onToggleHighlight ? (
@@ -347,7 +344,7 @@ function TopologyPathChain({
             </div>
             {!isLast ? (
               <ChevronRight
-                className="size-2.5 shrink-0 text-muted-foreground/60"
+                className={stylex.props(styles.s_876).className}
                 aria-hidden="true"
               />
             ) : null}
@@ -391,13 +388,7 @@ export function HighlightToggleButton({
       aria-pressed={active}
       aria-label={label}
       title={label}
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded transition-colors",
-        dimensions,
-        active
-          ? "bg-primary/30 text-primary hover:bg-primary/40"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
+      className={stylex.props(styles.u_908, styles.u_928, styles.u_929, styles.u_951, styles.u_970).className}
     >
       <Target className={cn(iconSize, "shrink-0")} aria-hidden="true" />
     </button>
@@ -448,8 +439,8 @@ export function SearchResultsTab({
 
   if (!query.trim()) {
     return (
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="shrink-0 space-y-4 px-4 pt-4 pb-3">
+      <div className={stylex.props(styles.s_877).className}>
+        <div className={stylex.props(styles.s_878).className}>
           <SearchInputBox
             draftQuery={draftQuery}
             onDraftQueryChange={onDraftQueryChange}
@@ -457,16 +448,16 @@ export function SearchResultsTab({
             autoFocus={autoFocus}
           />
 
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">Try a spatial query</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
+          <div className={stylex.props(styles.s_879).className}>
+            <p className={stylex.props(styles.s_880).className}>Try a spatial query</p>
+            <p className={stylex.props(styles.s_881).className}>
               Click a chip to run it, or build your own query — every junction,
               street, and feature on the map is indexed.
             </p>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <div className={stylex.props(styles.s_882).className}>
           <SearchExamplesPanel onRunExample={onSubmitSearch} />
         </div>
       </div>
@@ -475,8 +466,8 @@ export function SearchResultsTab({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="flex h-full flex-col space-y-3 p-4">
-        <div className="space-y-2.5">
+      <div className={stylex.props(styles.s_883).className}>
+        <div className={stylex.props(styles.s_884).className}>
           <SearchInputBox
             draftQuery={draftQuery}
             onDraftQueryChange={onDraftQueryChange}
@@ -484,21 +475,21 @@ export function SearchResultsTab({
             autoFocus={autoFocus}
           />
           {showDebug ? (
-            <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-secondary/20 p-2 text-[11px]">
-              <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground">Parsed query</span>
+            <div className={stylex.props(styles.s_885).className}>
+              <p className={stylex.props(styles.s_1005).className}>
+                <span className={stylex.props(styles.s_887).className}>Parsed query</span>
                 {" — "}
                 chips: {chips.length}, free-text: {freeText.length}, results: {results.length}
               </p>
               {chips.length > 0 ? (
                 <div>
-                  <p className="text-muted-foreground">Chips</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className={stylex.props(styles.s_1005).className}>Chips</p>
+                  <div className={stylex.props(styles.s_969).className}>
                     {chips.map((chip) => (
                       <Badge
                         key={`debug-${chip.id}`}
                         variant="outline"
-                        className="px-1.5 py-0 font-mono text-[10px]"
+                        className={stylex.props(styles.s_893).className}
                       >
                         {chip.id}
                       </Badge>
@@ -508,13 +499,13 @@ export function SearchResultsTab({
               ) : null}
               {freeText.length > 0 ? (
                 <div>
-                  <p className="text-muted-foreground">Free-text tokens</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className={stylex.props(styles.s_1005).className}>Free-text tokens</p>
+                  <div className={stylex.props(styles.s_969).className}>
                     {freeText.map((token) => (
                       <Badge
                         key={`ft-${token}`}
                         variant="outline"
-                        className="px-1.5 py-0 font-mono text-[10px]"
+                        className={stylex.props(styles.s_893).className}
                       >
                         {token}
                       </Badge>
@@ -525,7 +516,7 @@ export function SearchResultsTab({
             </div>
           ) : null}
           {chips.length > 0 || freeText.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-1 px-1">
+            <div className={stylex.props(styles.s_894).className}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -533,15 +524,12 @@ export function SearchResultsTab({
                     onClick={() => setShowDebug((prev) => !prev)}
                     aria-label="Toggle search debug"
                     aria-pressed={showDebug}
-                    className={cn(
-                      "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground",
-                      showDebug && "bg-secondary/60 text-foreground",
-                    )}
+                    className={stylex.props(styles.u_927, styles.u_960, styles.u_928, styles.u_929, styles.u_954, styles.u_970, styles.u_924, styles.u_926).className}
                   >
-                    <Bug className="size-3" />
+                    <Bug className={stylex.props(styles.s_927).className} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
+                <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
                   {showDebug ? "Hide debug" : "Show debug"}
                 </TooltipContent>
               </Tooltip>
@@ -549,13 +537,13 @@ export function SearchResultsTab({
                 chip.kind === "relation" && chip.operatorLabel && chip.objectLabel ? (
                   <span
                     key={chip.id}
-                    className="inline-flex items-center overflow-hidden rounded-full border border-primary/40 bg-primary/10 text-[11px] font-normal"
+                    className={stylex.props(styles.s_897).className}
                     title={`Spatial relation: ${chip.operatorLabel} ${chip.objectLabel}`}
                   >
-                    <span className="px-1.5 py-0 text-primary">
+                    <span className={stylex.props(styles.s_898).className}>
                       {chip.operatorLabel}
                     </span>
-                    <span className="px-1.5 py-0 text-foreground bg-primary/10">
+                    <span className={stylex.props(styles.s_899).className}>
                       {chip.objectLabel}
                     </span>
                   </span>
@@ -563,7 +551,7 @@ export function SearchResultsTab({
                   <Badge
                     key={chip.id}
                     variant="secondary"
-                    className="border-transparent bg-secondary/50 px-1.5 py-0 text-[11px] font-normal text-foreground"
+                    className={stylex.props(styles.s_900).className}
                   >
                     {chip.label}
                   </Badge>
@@ -573,7 +561,7 @@ export function SearchResultsTab({
                 <Badge
                   key={`free-${token}`}
                   variant="outline"
-                  className="border-dashed bg-transparent px-1.5 py-0 text-[11px] font-normal text-muted-foreground"
+                  className={stylex.props(styles.s_901).className}
                   title="Free-text token — not matched to a structured filter"
                 >
                   {token}
@@ -583,13 +571,13 @@ export function SearchResultsTab({
           ) : null}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border pt-2">
+        <div className={stylex.props(styles.s_902).className}>
           {loading ? (
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" aria-hidden="true" /> Loading map data…
+            <p className={stylex.props(styles.s_903).className}>
+              <Loader2 className={stylex.props(styles.s_972).className} aria-hidden="true" /> Loading map data…
             </p>
           ) : (
-            <div className="mb-2 flex items-center justify-between text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className={stylex.props(styles.s_905).className}>
               <span>Results ({results.length})</span>
               <CopyJsonButton
                 payload={{ query, chips, freeText: freeText ?? [], results }}
@@ -598,8 +586,8 @@ export function SearchResultsTab({
               />
             </div>
           )}
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-2 pr-2">
+          <div className={stylex.props(styles.s_906).className}>
+            <div className={stylex.props(styles.s_907).className}>
               {results.map((result) => {
                 const selected = result.id === selectedResultId;
                 const ResultIcon = iconForSubtype(result.subtype);
@@ -627,43 +615,43 @@ export function SearchResultsTab({
                         : "border-border bg-secondary/20 hover:bg-secondary/40",
                     )}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className={stylex.props(styles.s_908).className}>
                       <ResultIcon
-                        className="size-3.5 shrink-0 text-muted-foreground"
+                        className={stylex.props(styles.s_909).className}
                         aria-label={`${result.subtype} icon`}
                       />
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                      <p className={stylex.props(styles.s_910).className}>
                         {result.title}
                       </p>
-                      {selected ? <Check className="size-4 shrink-0 text-primary" /> : null}
+                      {selected ? <Check className={stylex.props(styles.s_911).className} /> : null}
                     </div>
 
-                    <div className="mt-1.5 grid grid-cols-3 gap-2 text-[11px]">
-                      <div className="min-w-0">
-                        <p className="truncate text-muted-foreground">Type</p>
-                        <p className="truncate font-medium text-foreground">
+                    <div className={stylex.props(styles.s_912).className}>
+                      <div className={stylex.props(styles.s_919).className}>
+                        <p className={stylex.props(styles.s_920).className}>Type</p>
+                        <p className={stylex.props(styles.s_918).className}>
                           {formatFamilyLabel(result.objectFamily)}
                         </p>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-muted-foreground">SubType</p>
-                        <p className="truncate font-medium text-foreground">{result.subtype}</p>
+                      <div className={stylex.props(styles.s_919).className}>
+                        <p className={stylex.props(styles.s_920).className}>SubType</p>
+                        <p className={stylex.props(styles.s_918).className}>{result.subtype}</p>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-muted-foreground">Confidence</p>
-                        <p className="truncate font-medium text-emerald-400">
+                      <div className={stylex.props(styles.s_919).className}>
+                        <p className={stylex.props(styles.s_920).className}>Confidence</p>
+                        <p className={stylex.props(styles.s_921).className}>
                           {Math.round(result.candidateConfidence * 100)}%
                         </p>
                       </div>
                     </div>
 
                     {result.exactMapAttributes.length > 0 ? (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
+                      <div className={stylex.props(styles.s_922).className}>
                         {result.exactMapAttributes.map((fact) => (
                           <Badge
                             key={fact}
                             variant="secondary"
-                            className="border-transparent bg-secondary/50 px-2 py-0.5 text-[9px] text-foreground"
+                            className={stylex.props(styles.s_923).className}
                           >
                             {fact}
                           </Badge>
@@ -672,7 +660,7 @@ export function SearchResultsTab({
                     ) : null}
 
                     {result.relatedObjectRefs && result.relatedObjectRefs.length > 0 ? (
-                      <div className="mt-1.5 space-y-1">
+                      <div className={stylex.props(styles.s_924).className}>
                         {result.relatedObjectRefs.slice(0, 2).map((ref) => {
                           const RefIcon = ref.subtype ? iconForSubtype(ref.subtype) : MapPin;
                           const refHighlighted =
@@ -680,30 +668,25 @@ export function SearchResultsTab({
                           return (
                             <div
                               key={`${result.id}-rel-${ref.objectId}`}
-                              className="space-y-0.5"
+                              className={stylex.props(styles.s_925).className}
                             >
                               <div
-                                className={cn(
-                                  "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors",
-                                  refHighlighted
-                                    ? "border-primary/60 bg-primary/15"
-                                    : "border-primary/20 bg-primary/5",
-                                )}
+                                className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_954, styles.u_903, styles.u_936, styles.u_942, styles.u_963, styles.u_970).className}
                                 title={`${formatRelation(ref.relation)} ${ref.title ?? ref.objectId}${ref.distance_m != null ? ` (${ref.distance_m} m)` : ""}`}
                               >
-                                <span className="flex items-center gap-1 text-primary">
-                                  <ArrowRight className="size-3" aria-hidden="true" />
-                                  <span className="font-medium">{formatRelation(ref.relation)}</span>
+                                <span className={stylex.props(styles.s_926).className}>
+                                  <ArrowRight className={stylex.props(styles.s_927).className} aria-hidden="true" />
+                                  <span className={stylex.props(styles.s_928).className}>{formatRelation(ref.relation)}</span>
                                 </span>
                                 <RefIcon
-                                  className="size-3 shrink-0 text-muted-foreground"
+                                  className={stylex.props(styles.s_929).className}
                                   aria-hidden="true"
                                 />
-                                <span className="min-w-0 flex-1 truncate text-foreground">
+                                <span className={stylex.props(styles.s_930).className}>
                                   {ref.title ?? ref.objectId}
                                 </span>
                                 {ref.distance_m != null ? (
-                                  <span className="shrink-0 text-muted-foreground">
+                                  <span className={stylex.props(styles.s_931).className}>
                                     {ref.distance_m} m
                                   </span>
                                 ) : null}
@@ -741,14 +724,14 @@ export function SearchResultsTab({
                                 />
                               ) : null}
                               {showDebug ? (
-                                <div className="flex flex-wrap items-center gap-1 pl-2 text-[10px] text-muted-foreground/80">
-                                  <span className="font-mono">{ref.objectId}</span>
+                                <div className={stylex.props(styles.s_932).className}>
+                                  <span className={stylex.props(styles.s_940).className}>{ref.objectId}</span>
                                   <span>·</span>
-                                  <span className="font-mono">
+                                  <span className={stylex.props(styles.s_940).className}>
                                     {formatGeometryRef(ref.geometryReference)}
                                   </span>
                                   <span>·</span>
-                                  <span className="font-mono">{formatCentroid(ref.centroid)}</span>
+                                  <span className={stylex.props(styles.s_940).className}>{formatCentroid(ref.centroid)}</span>
                                 </div>
                               ) : null}
                             </div>
@@ -758,41 +741,41 @@ export function SearchResultsTab({
                     ) : null}
 
                     {showDebug ? (
-                      <div className="mt-1.5 space-y-0.5 text-[10px] text-muted-foreground">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className="font-mono">{result.id}</span>
+                      <div className={stylex.props(styles.s_936).className}>
+                        <div className={stylex.props(styles.s_937).className}>
+                          <span className={stylex.props(styles.s_940).className}>{result.id}</span>
                           <span>·</span>
-                          <span className="font-mono">
+                          <span className={stylex.props(styles.s_940).className}>
                             {formatGeometryRef(result.geometryReference)}
                           </span>
                           <span>·</span>
-                          <span className="font-mono">{formatCentroid(result.centroid)}</span>
+                          <span className={stylex.props(styles.s_940).className}>{formatCentroid(result.centroid)}</span>
                         </div>
                         {result.matchReasons.length > 0 ? (
-                          <div className="truncate">
+                          <div className={stylex.props(styles.s_941).className}>
                             match: {result.matchReasons.slice(0, 3).join(", ")}
                           </div>
                         ) : null}
                       </div>
                     ) : null}
 
-                    <div className="mt-2 flex items-center justify-end gap-1">
+                    <div className={stylex.props(styles.s_942).className}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="size-7"
+                            className={stylex.props(styles.s_946).className}
                             onClick={(event) => {
                               event.stopPropagation();
                               onZoomToResult(result.id);
                             }}
                             aria-label="Zoom on Map"
                           >
-                            <Map className="size-3.5" />
+                            <Map className={stylex.props(styles.s_991).className} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
+                        <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
                           Zoom on Map
                         </TooltipContent>
                       </Tooltip>
@@ -801,17 +784,17 @@ export function SearchResultsTab({
                           <Button
                             variant="outline"
                             size="icon"
-                            className="size-7"
+                            className={stylex.props(styles.s_946).className}
                             onClick={(event) => {
                               event.stopPropagation();
                               onUseInScenario(result.id);
                             }}
                             aria-label="Use in Scenario"
                           >
-                            <Play className="size-3.5" />
+                            <Play className={stylex.props(styles.s_991).className} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
+                        <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
                           Use in Scenario
                         </TooltipContent>
                       </Tooltip>
@@ -820,21 +803,21 @@ export function SearchResultsTab({
                 );
               })}
               {results.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center">
+                <div className={stylex.props(styles.s_949).className}>
                   {loading ? (
-                    <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                      <Loader2 className="size-3 animate-spin" aria-hidden="true" /> Loading map data…
+                    <p className={stylex.props(styles.s_950).className}>
+                      <Loader2 className={stylex.props(styles.s_972).className} aria-hidden="true" /> Loading map data…
                     </p>
                   ) : (
                     <>
-                      <p className="text-sm font-medium text-foreground">No matching locations</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className={stylex.props(styles.s_1006).className}>No matching locations</p>
+                      <p className={stylex.props(styles.s_953).className}>
                         Try broadening the query or removing a few constraints.
                       </p>
                       {alternativeQueries.length > 0 ? (
-                        <div className="mt-3 flex flex-col items-center gap-1.5">
-                          <p className="text-[11px] text-muted-foreground">Or try each term on its own:</p>
-                          <div className="flex flex-wrap justify-center gap-1.5">
+                        <div className={stylex.props(styles.s_954).className}>
+                          <p className={stylex.props(styles.s_955).className}>Or try each term on its own:</p>
+                          <div className={stylex.props(styles.s_956).className}>
                             {alternativeQueries.map((alt) => (
                               <button
                                 key={alt}
@@ -843,7 +826,7 @@ export function SearchResultsTab({
                                   onDraftQueryChange(alt);
                                   onSubmitSearch(alt);
                                 }}
-                                className="rounded-md border border-border bg-secondary/30 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10"
+                                className={stylex.props(styles.s_957).className}
                               >
                                 {alt}
                               </button>

@@ -1,11 +1,11 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { Skeleton } from "@simforge-oss/studio-ui/components/ui/skeleton";
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { AssetCard } from "./AssetCard";
+import { grid } from "./asset-grid.stylex";
 
-const GRID_CLASS =
-  "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
 
 /**
  * A catalog is a list of things, so the grid is a real list: assistive tech
@@ -21,7 +21,7 @@ export function AssetGalleryGrid({
   onSelect: (asset: GalleryAssetSummary) => void;
 }) {
   return (
-    <ul className={GRID_CLASS}>
+    <ul {...stylex.props(grid.grid, grid.list)}>
       {assets.map((asset) => (
         <li key={asset.catalogId}>
           <AssetCard asset={asset} onSelect={onSelect} />
@@ -42,21 +42,21 @@ export function AssetGalleryGrid({
 export function AssetGalleryGridSkeleton({ count = 10 }: { count?: number }) {
   return (
     <>
-      <p role="status" className="sr-only">
+      <p role="status" {...stylex.props(grid.srOnly)}>
         Loading assets…
       </p>
-      <div aria-hidden="true" className={GRID_CLASS}>
+      <div aria-hidden="true" {...stylex.props(grid.grid)}>
         {Array.from({ length: count }, (_, index) => (
-          <div key={index} className="overflow-hidden rounded-lg border border-border bg-card">
-            <Skeleton className="aspect-square rounded-none bg-muted/40" />
-            <div className="flex flex-col gap-2.5 p-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <Skeleton className="h-3.5 w-2/3" />
-                <Skeleton className="h-3.5 w-12 rounded-full" />
+          <div key={index} {...stylex.props(grid.skeletonCard)}>
+            <Skeleton xstyle={grid.skeletonThumb} />
+            <div {...stylex.props(grid.skeletonBody)}>
+              <div {...stylex.props(grid.skeletonRow)}>
+                <Skeleton {...stylex.props(grid.skeletonTitle)} />
+                <Skeleton {...stylex.props(grid.skeletonChip)} />
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-16" />
+              <div {...stylex.props(grid.skeletonRow)}>
+                <Skeleton {...stylex.props(grid.skeletonMeta)} />
+                <Skeleton {...stylex.props(grid.skeletonMetaShort)} />
               </div>
             </div>
           </div>

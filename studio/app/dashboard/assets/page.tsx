@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { connection } from "next/server";
 import { Skeleton } from "@simforge-oss/studio-ui/components/ui/skeleton";
 import { listGalleryAssets } from "@/app/lib/asset-gallery/store";
 import { requireAppContext } from "@/app/lib/db/app-context";
 import { AssetGalleryClient } from "./AssetGalleryClient";
 import { AssetGalleryGridSkeleton } from "./AssetGalleryGrid";
+import { assetPage } from "./asset-surfaces.stylex";
 import { AssetsTabs } from "./AssetsTabs";
 
 const GALLERY_PAGE_SIZE = 24;
@@ -34,16 +36,16 @@ async function GalleryShelf() {
 function GalleryShelfFallback() {
   return (
     <>
-      <div className="border-b border-border bg-background px-5 sm:px-8" aria-hidden="true">
-        <div className="mx-auto max-w-[1500px] py-5">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="mt-2.5 h-8 w-56" />
-          <Skeleton className="mt-3 h-4 w-full max-w-xl" />
-          <Skeleton className="mt-5 h-9 w-40 rounded-md" />
+      <div {...stylex.props(assetPage.chrome)} aria-hidden="true">
+        <div {...stylex.props(assetPage.measure)}>
+          <Skeleton {...stylex.props(assetPage.skeletonLabel)} />
+          <Skeleton {...stylex.props(assetPage.skeletonTitle)} />
+          <Skeleton {...stylex.props(assetPage.skeletonDescription)} />
+          <Skeleton {...stylex.props(assetPage.skeletonButton)} />
         </div>
       </div>
-      <div className="px-5 py-6 sm:px-8">
-        <div className="mx-auto max-w-[1500px]">
+      <div {...stylex.props(assetPage.content)}>
+        <div {...stylex.props(assetPage.measure)}>
           <AssetGalleryGridSkeleton />
         </div>
       </div>
@@ -53,7 +55,7 @@ function GalleryShelfFallback() {
 
 export default function AssetsPage() {
   return (
-    <div className="min-h-full bg-background">
+    <div {...stylex.props(assetPage.root)}>
       <AssetsTabs />
       <Suspense fallback={<GalleryShelfFallback />}>
         <GalleryShelf />

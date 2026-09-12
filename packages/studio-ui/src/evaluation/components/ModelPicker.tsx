@@ -13,14 +13,16 @@
  * is displayed verbatim rather than pre-guessed here.
  */
 
+import * as stylex from "@stylexjs/stylex";
 import { Cloud, HardDrive, Info } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { Badge } from "../../components/ui/badge";
-import { SelectMenu } from "../../components/ui/select-menu";
+import { cn } from "../../lib/utils";
+import { styles as s } from "./evaluation-components.stylex";
 import type { ModelFamilyId, ModelQuant } from "../model-catalog";
 import { MODEL_CATALOG, MODEL_FAMILIES } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
+import { SelectMenu } from "../../components/ui/select-menu";
 
 export type ModelSelection = {
   family: ModelFamilyId;
@@ -93,8 +95,8 @@ export function ModelPicker({
   }));
 
   return (
-    <section className="space-y-5" data-testid="evaluation-model-step">
-      <div className={cn("grid gap-3", families.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+    <section {...stylex.props(s.section5)} data-testid="evaluation-model-step">
+      <div {...stylex.props(families.length === 2 ? s.familyGrid2 : s.familyGrid3)}>
         {families.map((family) => {
           const candidate = MODEL_CATALOG[family];
           const active = family === selection.family;
@@ -111,21 +113,14 @@ export function ModelPicker({
                   target: cloudOnly || candidate.remoteOnly ? "runpod" : selection.target,
                 })
               }
-              className={cn(
-                "flex flex-col items-start gap-2 border p-4 text-left transition-colors",
-                active
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background hover:bg-accent/40",
-                disabled ? "cursor-not-allowed opacity-60" : null,
-              )}
-              data-testid={`model-choice-${family}`}
+              {...stylex.props(s.buttonCard, active && s.buttonCardActive, disabled && s.buttonCardDisabled)}
             >
-              <span className="text-sm font-semibold text-foreground">{candidate.displayName}</span>
-              <span className="text-xs text-muted-foreground">
+              <span {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>{candidate.displayName}</span>
+              <span {...stylex.props(s.textXs, s.textMuted)}>
                 {formatBytes(candidate.approxWeightsBytes)} weights ·{" "}
                 {uploadedVideo ? "trajectory + reasoning" : candidate.capabilities.vqa ? "trajectory + text" : "trajectory only"}
               </span>
-              <span className="flex flex-wrap gap-1.5">
+              <span {...stylex.props(s.rowTight)}>
                 {cloudOnly || candidate.remoteOnly ? (
                   <Badge variant="secondary">Cloud execution</Badge>
                 ) : (
@@ -140,9 +135,9 @@ export function ModelPicker({
         })}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wide text-muted-foreground" htmlFor="quant">
+      <div {...stylex.props(s.familyGrid2)}>
+        <div {...stylex.props(s.stack15)}>
+          <label {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)} htmlFor="quant">
             Precision
           </label>
           <SelectMenu
@@ -153,21 +148,19 @@ export function ModelPicker({
             disabled={disabled}
             onChange={(value) => onChange({ ...selection, quant: value as ModelQuant })}
           />
-          <p className="text-xs text-muted-foreground">
-            {cloudOnly
-              ? "Runs on a managed GPU. No local model download or Hugging Face token is required."
-              : entry.quants.find((offer) => offer.quant === selection.quant)?.note}
-          </p>
+          <p {...stylex.props(s.textXs, s.textMuted)}>{cloudOnly
+            ? "Runs on a managed GPU. No local model download or Hugging Face token is required."
+            : entry.quants.find((offer) => offer.quant === selection.quant)?.note}</p>
         </div>
 
-        <dl className="space-y-1 text-xs text-muted-foreground">
-          <div className="flex gap-2">
-            <dt className="w-24 shrink-0 uppercase tracking-wide">Revision</dt>
-            <dd className="min-w-0 truncate font-mono text-foreground">{entry.weightsRevision}</dd>
+        <dl {...stylex.props(s.space1, s.textXs, s.textMuted)}>
+          <div {...stylex.props(s.rowTight)}>
+            <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Revision</dt>
+            <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>{entry.weightsRevision}</dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="w-24 shrink-0 uppercase tracking-wide">Cameras</dt>
-            <dd className="text-foreground">
+          <div {...stylex.props(s.rowTight)}>
+            <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Cameras</dt>
+            <dd {...stylex.props(s.textFg)}>
               {uploadedVideo
                 ? "1–7 uploaded views, mapped below"
                 : entry.cameras.required
@@ -175,9 +168,9 @@ export function ModelPicker({
                   : `variable, default [${entry.cameras.default.join(", ")}]`}
             </dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="w-24 shrink-0 uppercase tracking-wide">License</dt>
-            <dd className="text-foreground">
+          <div {...stylex.props(s.rowTight)}>
+            <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>License</dt>
+            <dd {...stylex.props(s.textFg)}>
               {entry.license.id}
               {entry.license.commercialUseReviewRequired ? " · commercial use needs review" : ""}
             </dd>
@@ -186,14 +179,14 @@ export function ModelPicker({
       </div>
 
       {entry.license.cardConflictNote ? (
-        <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
-          <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+        <p {...stylex.props(s.rowTight, s.textXs, s.leading5, s.textMuted)}>
+          <Info aria-hidden="true" {...stylex.props(s.mt1, s.iconSm)} />
           {entry.license.cardConflictNote}
         </p>
       ) : null}
 
-      <fieldset className="space-y-2" data-testid="execution-target">
-        <legend className="text-xs uppercase tracking-wide text-muted-foreground">
+      <fieldset {...stylex.props(s.space2)} data-testid="execution-target">
+        <legend {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>
           Where it runs
         </legend>
         {offers.map((offer) => {
@@ -203,23 +196,19 @@ export function ModelPicker({
           return (
             <label
               key={offer.target}
-              className={cn(
-                "flex cursor-pointer items-start gap-3 border p-3",
-                active ? "border-primary bg-primary/5" : "border-border",
-                offer.available ? null : "cursor-not-allowed opacity-90",
-              )}
+              {...stylex.props(s.targetCard, active && s.targetCardActive, !offer.available && s.targetCardUnavailable)}
             >
               <input
                 type="radio"
                 name="execution-target"
-                className="mt-1"
+                {...stylex.props(s.mt1)}
                 checked={active}
                 disabled={disabled || !offer.available}
                 onChange={() => onChange({ ...selection, target: offer.target })}
               />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Icon aria-hidden="true" className="size-4" />
+              <span {...stylex.props(s.targetBody)}>
+                <span {...stylex.props(s.targetTitle)}>
+                  <Icon aria-hidden="true" {...stylex.props(s.icon)} />
                   {meta.label}
                   {offer.qualification === "qualification-pending" ? (
                     <Badge variant="outline">Qualification pending</Badge>
@@ -228,18 +217,18 @@ export function ModelPicker({
                     <Badge variant="outline">Not supported here</Badge>
                   ) : null}
                 </span>
-                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                <span {...stylex.props(s.targetDesc)}>
                   {meta.description}
                 </span>
                 {offer.target === "local" && offer.available && localVramGiB !== null ? (
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  <span {...stylex.props(s.targetDesc, s.mt1)}>
                     The measured profile needs about {localVramGiB} GiB of device memory with
                     nothing else resident. Another process holding the GPU fails the run with an
                     out-of-memory error rather than degrading it.
                   </span>
                 ) : null}
                 {offer.reasons.length > 0 ? (
-                  <ul className="mt-1.5 space-y-0.5 text-xs leading-5 text-amber-600 dark:text-amber-500">
+                  <ul {...stylex.props(s.targetReason)}>
                     {offer.reasons.map((reason) => (
                       <li key={reason}>{reason}</li>
                     ))}

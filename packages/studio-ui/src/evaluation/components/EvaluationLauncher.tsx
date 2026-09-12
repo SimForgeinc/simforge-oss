@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Loader2, Play, RefreshCw } from "lucide-react";
-import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SelectMenu } from "../../components/ui/select-menu";
+import { Button } from "../../components/ui/button";
+import { styles as s } from "./evaluation-components.stylex";
 import { InputPicker, type PreparedInput } from "./InputPicker";
 import { ModelPicker, type ModelSelection } from "./ModelPicker";
 import { RefusalNotice } from "./RefusalNotice";
@@ -49,12 +51,9 @@ function defaultCameraMappings(count: number): UploadedVideoCamera[] {
 
 function StepHeading({ index, title, hint }: { index: number; title: string; hint?: string }) {
   return (
-    <div className="space-y-1">
-      <h2 className="text-sm font-semibold text-foreground">
-        <span className="mr-2 text-muted-foreground">{index}.</span>
-        {title}
-      </h2>
-      {hint ? <p className="text-xs leading-5 text-muted-foreground">{hint}</p> : null}
+    <div {...stylex.props(s.stack1)}>
+      <h2 {...stylex.props(s.titleSm)}><span {...stylex.props(s.textMuted)}>{index}.</span> {title}</h2>
+      {hint ? <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>{hint}</p> : null}
     </div>
   );
 }
@@ -241,8 +240,8 @@ export function EvaluationLauncher({
   };
 
   return (
-    <div className="space-y-8" data-testid="evaluation-launcher">
-      <section className="space-y-3">
+    <div {...stylex.props(s.section8)} data-testid="evaluation-launcher">
+      <section {...stylex.props(s.section3)}>
         <StepHeading
           index={1}
           title="Camera videos"
@@ -259,11 +258,10 @@ export function EvaluationLauncher({
         />
       </section>
 
-      <section className="space-y-3">
+      <section {...stylex.props(s.section3)}>
         <StepHeading
           index={2}
           title="Model"
-          hint="This upload workflow supports AlpaMayo 1.5 and AlpaMayo 2 Super. It produces predictions and reasoning, never a score."
         />
         <ModelPicker
           host={host}
@@ -278,21 +276,21 @@ export function EvaluationLauncher({
       </section>
 
       {prepared ? (
-        <section className="space-y-4" data-testid="video-camera-mapping">
+        <section {...stylex.props(s.section4)} data-testid="video-camera-mapping">
           <StepHeading
             index={3}
             title="Map cameras and timing"
             hint="Identify the physical view in each file. Input order remains exactly as uploaded; this mapping tells the model which real camera each input contains."
           />
-          <div className="divide-y divide-border border border-border">
+          <div {...stylex.props(s.borderBox)}>
             {prepared.files.map((file, inputIndex) => {
               const camera = cameras.find((entry) => entry.inputIndex === inputIndex);
               if (!camera) return null;
               return (
-                <div key={`${file.name}-${inputIndex}`} className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,1fr)_9rem] sm:items-end">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
-                    <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <div key={`${file.name}-${inputIndex}`} {...stylex.props(s.cameraGrid)}>
+                  <div {...stylex.props(s.min0)}>
+                    <p {...stylex.props(s.truncate, s.textSm, s.fontMedium, s.textFg)}>{file.name}</p>
+                    <label {...stylex.props(s.mt2, s.rowTight, s.textXs, s.textMuted)}>
                       <input
                         type="radio"
                         name="primary-camera"
@@ -312,8 +310,8 @@ export function EvaluationLauncher({
                       Primary view for the overlay
                     </label>
                   </div>
-                  <div className="space-y-1.5">
-                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Camera position</span>
+                  <div {...stylex.props(s.labelStack)}>
+                    <span {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Camera position</span>
                     <SelectMenu
                       label={`Camera position for ${file.name}`}
                       value={String(camera.cameraId)}
@@ -322,7 +320,7 @@ export function EvaluationLauncher({
                       onChange={(value) => updateCameraId(inputIndex, Number(value))}
                     />
                   </div>
-                  <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                     Offset (seconds)
                     <Input
                       type="number"
@@ -346,42 +344,42 @@ export function EvaluationLauncher({
               );
             })}
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
             The primary camera defines time zero, so its offset is fixed at 0. For every other
             camera, a positive offset means its recording starts later than the primary timeline;
             use a negative value when it starts earlier. No missing camera view is duplicated or
             invented.
           </p>
 
-          <details className="border border-border bg-muted/10">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">
+          <details {...stylex.props(s.border, s.mutedSurface)}>
+            <summary {...stylex.props(s.cursor, s.px4py3, s.textSm, s.fontMedium, s.textFg)}>
               Advanced assumptions
             </summary>
-            <div className="space-y-4 border-t border-border p-4">
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <div {...stylex.props(s.space4, s.borderTop, s.p4)}>
+              <p {...stylex.props(s.max3xl, s.textSm, s.leading6, s.textMuted)}>
                 Ordinary video does not include measured camera calibration or vehicle motion. The
                 overlay therefore uses an approximate pinhole camera and a constant-speed,
                 straight-ahead ego history. Edit these values when you know them. The result is an
                 approximate, exploratory prediction and is never scored against ground truth.
               </p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <div {...stylex.props(s.grid2)}>
+                <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                   Horizontal FOV (degrees)
                   <Input type="number" min={20} max={170} step={1} value={horizontalFovDeg} disabled={submitting} onChange={(event) => setHorizontalFovDeg(Math.max(20, Math.min(170, Number(event.target.value) || 20)))} />
                 </label>
-                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                   Camera height (m)
                   <Input type="number" min={0.1} max={10} step={0.1} value={cameraHeightM} disabled={submitting} onChange={(event) => setCameraHeightM(Math.max(0.1, Math.min(10, Number(event.target.value) || 0.1)))} />
                 </label>
-                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                   Ego speed (m/s)
                   <Input type="number" min={0} max={80} step={0.1} value={egoSpeedMps} disabled={submitting} onChange={(event) => setEgoSpeedMps(Math.max(0, Math.min(80, Number(event.target.value) || 0)))} />
                 </label>
-                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                   Predictions / second
                   <Input type="number" min={0.1} max={2} step={0.1} value={predictionHz} disabled={submitting} onChange={(event) => setPredictionHz(Math.max(0.1, Math.min(2, Number(event.target.value) || 0.1)))} />
                 </label>
-                <label className="space-y-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <label {...stylex.props(s.labelStack, s.textXs, s.uppercaseWide, s.textMuted)}>
                   Seed
                   <Input type="number" min={0} step={1} value={seed} disabled={submitting} onChange={(event) => setSeed(Math.max(0, Math.floor(Number(event.target.value) || 0)))} />
                 </label>
@@ -392,36 +390,34 @@ export function EvaluationLauncher({
       ) : null}
 
       {prepared && selection.target === "runpod" ? (
-        <section className="space-y-3" data-testid="evaluation-estimate">
+        <section {...stylex.props(s.space3)} data-testid="evaluation-estimate">
           <StepHeading index={4} title="Cost and limits" />
           {estimating ? (
-            <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+            <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
+              <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />
               Estimating…
             </p>
           ) : estimate ? (
-            <div className="space-y-3">
-              <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Estimated cost</dt>
-                  <dd className="text-foreground">{formatCentsRange(estimate.estimate.lowCents, estimate.estimate.highCents)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Workspace credit</dt>
-                  <dd className="text-foreground">{formatCentsRange(estimate.availableCreditsCents, estimate.availableCreditsCents)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Concurrent runs</dt>
-                  <dd className="text-foreground">{estimate.concurrency.active} / {estimate.concurrency.limit}</dd>
-                </div>
-              </dl>
-              <p className="text-xs leading-5 text-muted-foreground">
-                This is a cost bound. Settlement uses the provider&apos;s actual accounting, including startup and idle time.
-              </p>
-              {estimate.refusal ? <RefusalNotice title="This run cannot be submitted yet" reasons={[estimate.refusal.message]} /> : null}
-            </div>
+            <div {...stylex.props(s.space3)}><dl {...stylex.props(s.grid3, s.textSm)}>
+              <div>
+                <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Estimated cost</dt>
+                <dd {...stylex.props(s.textFg)}>{formatCentsRange(estimate.estimate.lowCents, estimate.estimate.highCents)}</dd>
+              </div>
+              <div>
+                <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Workspace credit</dt>
+                <dd {...stylex.props(s.textFg)}>{formatCentsRange(estimate.availableCreditsCents, estimate.availableCreditsCents)}</dd>
+              </div>
+              <div>
+                <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Concurrent runs</dt>
+                <dd {...stylex.props(s.textFg)}>{estimate.concurrency.active} / {estimate.concurrency.limit}</dd>
+              </div>
+            </dl>
+            <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
+              This is a cost bound. Settlement uses the provider&apos;s actual accounting, including startup and idle time.
+            </p>
+            {estimate.refusal ? <RefusalNotice title="This run cannot be submitted yet" reasons={[estimate.refusal.message]} /> : null}</div>
           ) : (
-            <p className="text-sm text-muted-foreground">An estimate appears once the videos are uploaded and mapped.</p>
+            <p {...stylex.props(s.textSm, s.textMuted)}>An estimate appears once the videos are uploaded and mapped.</p>
           )}
         </section>
       ) : null}
@@ -429,9 +425,9 @@ export function EvaluationLauncher({
       {localUnavailable ? <RefusalNotice title="Local execution is not available here" reasons={[localUnavailable]} /> : null}
       {error ? <RefusalNotice title="Submission failed" reasons={[error]} /> : null}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+      <div {...stylex.props(s.row, s.borderTop)}>
         <Button type="button" disabled={!canSubmit} onClick={() => void submit()} data-testid="evaluation-submit">
-          {submitting ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Play aria-hidden="true" />}
+          {submitting ? <Loader2 aria-hidden="true" {...stylex.props(s.icon)} /> : <Play aria-hidden="true" />}
           {selection.target === "local" ? "Run prediction on this machine" : "Submit prediction"}
         </Button>
         {prepared ? (

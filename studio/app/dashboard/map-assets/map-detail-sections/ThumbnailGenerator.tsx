@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useState, useRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { Camera, Loader2, AlertCircle } from "lucide-react";
@@ -134,36 +136,35 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
     return (
       <div
         ref={containerRef}
-        className="pointer-events-none fixed -left-[9999px] -top-[9999px]"
-        style={{ width: 512, height: 512 }}
+        {...stylex.props(styles.s_542, styles.thumbnailCanvas)}
       />
     );
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
+    <div className={stylex.props(styles.s_960).className}>
+      <div className={stylex.props(styles.s_908).className}>
         <Button
           type="button"
           variant="outline"
           size="sm"
           disabled={busy}
           onClick={generate}
-          className="gap-1.5 text-xs"
+          className={stylex.props(styles.s_536).className}
         >
           {busy ? (
-            <Loader2 className="size-3 animate-spin" />
+            <Loader2 className={stylex.props(styles.s_972).className} />
           ) : (
-            <Camera className="size-3" />
+            <Camera className={stylex.props(styles.s_927).className} />
           )}
           {hasThumbnail ? "Regenerate thumbnail" : "Generate thumbnail"}
         </Button>
         {busy && (
-          <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[status]}</span>
+          <span className={stylex.props(styles.s_539).className}>{STATUS_LABELS[status]}</span>
         )}
         {status === "error" && (
-          <span className="flex items-center gap-1 text-[10px] text-destructive">
-            <AlertCircle className="size-3" />
+          <span className={stylex.props(styles.s_540).className}>
+            <AlertCircle className={stylex.props(styles.s_927).className} />
             {error}
           </span>
         )}
@@ -171,8 +172,7 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
       {/* Hidden container for offscreen MapLibre rendering (square for card thumbnails) */}
       <div
         ref={containerRef}
-        className="pointer-events-none fixed -left-[9999px] -top-[9999px]"
-        style={{ width: 512, height: 512 }}
+        {...stylex.props(styles.s_542, styles.thumbnailCanvas)}
       />
     </div>
   );

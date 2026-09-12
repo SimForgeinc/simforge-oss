@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { join } from "node:path";
+import { stylexBabelConfig, stylexCompileRoots } from "./stylex.config.mjs";
 
 /**
  * Origin serving a live twin's camera feeds (MJPEG) when one is attached.
@@ -63,12 +64,32 @@ const nextConfig: NextConfig = {
     "@simforge-oss/studio-host",
     "@simforge-oss/studio-ui",
   ],
+  /**
+   * StyleX is compiled here rather than through a root Babel config: a Babel
+   * config would take the whole app off SWC, and `next/font` — which
+   * `app/layout.tsx` uses for all three faces — is unsupported under Babel.
+   * This rule is appended after Next's own, so it runs first on the original
+   * source and hands SWC plain JS/TS with the StyleX calls already rewritten.
+   *
+   * Consequence: the studio must be built and served with `--webpack`, which
+   * every script in `package.json` and `scripts/local-host.ts` already does.
+   */
   webpack(config) {
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,
       ".js": [".ts", ".tsx", ".js"],
       ".jsx": [".tsx", ".jsx"],
     };
+    config.module.rules.push({
+      test: /\.(?:tsx|ts|jsx|js|mjs|cjs)$/,
+      include: stylexCompileRoots,
+      use: [
+        {
+          loader: "babel-loader",
+          options: { ...stylexBabelConfig, cacheDirectory: true },
+        },
+      ],
+    });
     return config;
   },
   experimental: {
