@@ -19,7 +19,15 @@ async function readHostState(dataRoot?: string): Promise<LocalHostState | null> 
   }
 }
 
-type CloudOptions = { pretty: boolean; dataRoot?: string; origin?: string; workspaceId?: string };
+type CloudOptions = {
+  pretty: boolean;
+  dataRoot?: string;
+  origin?: string;
+  workspaceId?: string;
+  datasetId?: string;
+  artifactId?: string;
+  remoteDatasetId?: string;
+};
 
 function requireLoopback(origin: string): URL {
   const url = new URL(origin);
@@ -58,6 +66,10 @@ async function localRequest<T>(path: string, options: CloudOptions, init: Reques
 
 export async function cloudCommand(operation: string | undefined, options: CloudOptions): Promise<number> {
   let result: unknown;
+  const requireValue = (value: string | undefined, flag: string): string => {
+    if (!value) throw new CliError('missing_argument', `cloud ${operation ?? 'operation'} requires ${flag}`, { path: flag });
+    return value;
+  };
   switch (operation) {
     case 'status':
       result = await localRequest('/status', options);
@@ -71,6 +83,53 @@ export async function cloudCommand(operation: string | undefined, options: Cloud
     }
     case 'disconnect':
       result = await localRequest('/disconnect', options, { method: 'POST' });
+      break;
+    case 'dataset-import': {
+      result = await localRequest('/datasets/import', options, {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: requireValue(options.workspaceId, '--workspace'),
+          datasetId: requireValue(options.datasetId, '--dataset'),
+        }),
+      });
+      break;
+    }
+    case 'dataset-publish': {
+      result = await localRequest('/datasets/publish', options, {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: requireValue(options.workspaceId, '--workspace'),
+          datasetId: requireValue(options.datasetId, '--dataset'),
+          ...(options.remoteDatasetId ? { remoteDatasetId: options.remoteDatasetId } : {}),
+        }),
+      });
+      break;
+    }
+    case 'artifact-import': {
+      result = await localRequest('/artifacts/import', options, {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: requireValue(options.workspaceId, '--workspace'),
+          artifactId: requireValue(options.artifactId, '--artifact'),
+        }),
+      });
+      break;
+    }
+    case 'artifact-upload': {
+      result = await localRequest('/artifacts/upload', options, {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: requireValue(options.workspaceId, '--workspace'),
+          artifactId: requireValue(options.artifactId, '--artifact'),
+        }),
+      });
+      break;
+    }
+    case 'dataset-links':
+      result = await localRequest('/datasets/links', options);
+      break;
+    case 'artifact-links':
+      result = await localRequest('/artifacts/links', options);
       break;
     case 'workspaces':
       result = await localRequest('/workspaces', options);
@@ -87,7 +146,13 @@ export async function cloudCommand(operation: string | undefined, options: Cloud
     }
     default:
       throw new CliError('unknown_command', `unknown cloud operation ${operation ?? '(missing)'}`, {
-        detail: { known: ['status', 'connect', 'disconnect', 'workspaces', 'datasets', 'artifacts'] },
+        detail: {
+          known: [
+            'status', 'connect', 'disconnect', 'workspaces', 'datasets', 'artifacts',
+            'dataset-import', 'dataset-publish', 'artifact-import', 'artifact-upload',
+            'dataset-links', 'artifact-links',
+          ],
+        },
       });
   }
   emit(result, { pretty: options.pretty });
