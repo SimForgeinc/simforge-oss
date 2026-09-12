@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./dataset-export.stylex";
 import {
   Download,
   LoaderCircle,
@@ -8,14 +10,13 @@ import {
   PackagePlus,
   RefreshCw,
 } from "lucide-react";
+import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
 import {
   DATASET_EXPORT_RECIPES,
   isDatasetExportRecipeQueueable,
   type DatasetExportRecipeId,
 } from "@/app/lib/studio-shared/dataset-export-recipes";
 import type { ExportFormat } from "@/app/lib/studio-shared/dataset";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
-import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polling";
 
 type ExportJob = {
   id: string;
@@ -92,18 +93,11 @@ function exportStatusLabel(status: string, phase: string | null | undefined) {
   return status.replaceAll("_", " ");
 }
 
-function exportStatusClasses(status: string) {
-  switch (status) {
-    case "succeeded":
-      return "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-200";
-    case "failed":
-    case "cancelled":
-      return "border-rose-400/30 bg-rose-400/[0.08] text-rose-200";
-    case "running":
-      return "border-[#E8E044]/35 bg-[#E8E044]/[0.07] text-[#E8E044]";
-    default:
-      return "border-white/15 bg-white/[0.04] text-white/65";
-  }
+function exportStatusStyle(status: string) {
+  if (status === "succeeded") return styles.statusSuccess;
+  if (status === "failed" || status === "cancelled") return styles.statusError;
+  if (status === "running") return styles.statusRunning;
+  return styles.statusDefault;
 }
 
 function canDownloadExport(job: ExportJob) {
@@ -382,192 +376,87 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
   );
 
   return (
-    <section className="border border-border/60 bg-card/40">
-      <header className="grid gap-4 border-b border-border/60 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <PackageCheck className="size-4 text-[#E8E044]" />
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Export bundle
-            </h3>
-            {latestJob ? (
-              <span
-                className={cn(
-                  "border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em]",
-                  exportStatusClasses(latestJob.status),
-                )}
-              >
-                {exportStatusLabel(latestJob.status, latestJob.phase)}
-              </span>
-            ) : null}
+    <section {...stylex.props(styles.panel)}>
+      <header {...stylex.props(styles.header)}>
+        <div {...stylex.props(styles.minWidth)}>
+          <div {...stylex.props(styles.flexWrapGap)}>
+            <PackageCheck {...stylex.props(styles.iconYellow)} />
+            <h3 {...stylex.props(styles.eyebrow)}>Export bundle</h3>
+            {latestJob ? <span {...stylex.props(styles.status, exportStatusStyle(latestJob.status))}>{exportStatusLabel(latestJob.status, latestJob.phase)}</span> : null}
           </div>
-          <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">
+          <p {...stylex.props(styles.description)}>
             Create a downloadable package from the current dataset artifacts.
             Exports run as background jobs and become downloadable when publication
             finishes.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <button
-            type="button"
-            onClick={refreshExports}
-            disabled={state === "loading"}
-            className="inline-flex items-center gap-2 border border-white/15 bg-white/[0.04] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-white/70 transition-colors hover:border-white/30 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            <RefreshCw className={cn("size-3", state === "loading" && "animate-spin")} />
-            Refresh
+        <div {...stylex.props(styles.actions)}>
+          <button type="button" onClick={refreshExports} disabled={state === "loading"} {...stylex.props(styles.button)}>
+            <RefreshCw {...stylex.props(styles.iconSmall, state === "loading" && styles.iconSpin)} /> Refresh
           </button>
           {latestJob ? (
-            <button
-              type="button"
-              onClick={() => void handleDownload(latestJob)}
-              disabled={!latestReady || downloadingId === latestJob.id}
-              className="inline-flex items-center gap-2 border border-[#E8E044]/60 bg-[#E8E044] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[#0a0a0c] transition-colors hover:bg-[#f5ed5a] disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-white/[0.04] disabled:text-white/35"
-            >
-              {downloadingId === latestJob.id ? (
-                <LoaderCircle className="size-3 animate-spin" />
-              ) : (
-                <Download className="size-3" />
-              )}
+            <button type="button" onClick={() => void handleDownload(latestJob)} disabled={!latestReady || downloadingId === latestJob.id} {...stylex.props(styles.button, styles.primaryButton)}>
+              {downloadingId === latestJob.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />}
               Download latest
             </button>
           ) : null}
         </div>
       </header>
-
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="border-b border-border/60 lg:border-b-0 lg:border-r">
-          <div className="grid gap-0 md:grid-cols-3">
+      <div {...stylex.props(styles.exportGrid)}>
+        <div {...stylex.props(styles.borderSection)}>
+          <div {...stylex.props(styles.recipeGrid)}>
             {recipeOptions.map((recipe) => {
               const active = recipe.id === selected.id;
               return (
-                <button
-                  key={recipe.id}
-                  type="button"
-                  onClick={() => setSelectedRecipe(recipe.id)}
-                  className={cn(
-                    "min-h-[150px] border-b border-r border-border/60 p-4 text-left transition-colors last:border-r-0 md:border-b-0",
-                    active
-                      ? "bg-[#E8E044]/[0.08] text-foreground"
-                      : "bg-background/30 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em]">
-                      {recipe.format.replaceAll("_", " ")}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "size-2 border",
-                        active ? "border-[#E8E044] bg-[#E8E044]" : "border-white/20",
-                      )}
-                    />
+                <button key={recipe.id} type="button" onClick={() => setSelectedRecipe(recipe.id)} {...stylex.props(styles.recipeCard, active && styles.recipeActive)}>
+                  <div {...stylex.props(styles.recipeTop)}>
+                    <span {...stylex.props(styles.monoLabel)}>{recipe.format.replaceAll("_", " ")}</span>
+                    <span aria-hidden="true" {...stylex.props(styles.marker, active && styles.markerActive)} />
                   </div>
-                  <div className="mt-5 text-sm font-semibold text-foreground">
-                    {recipe.label}
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    {recipe.description}
-                  </p>
+                  <div {...stylex.props(styles.recipeTitle)}>{recipe.label}</div>
+                  <p {...stylex.props(styles.recipeDescription)}>{recipe.description}</p>
                 </button>
               );
             })}
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 px-4 py-4">
-            <button
-              type="button"
-              onClick={() => void handleQueue()}
-              disabled={queueing}
-              className="inline-flex items-center gap-2 border border-[#E8E044]/60 bg-[#E8E044] px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[#0a0a0c] transition-colors hover:bg-[#f5ed5a] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {queueing ? (
-                <LoaderCircle className="size-3.5 animate-spin" />
-              ) : (
-                <PackagePlus className="size-3.5" />
-              )}
+          <div {...stylex.props(styles.queueRow)}>
+            <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props(styles.button, styles.primaryButton)}>
+              {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, styles.iconSpin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
               Queue export
             </button>
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
-              {selected.label} · {selected.format.replaceAll("_", " ")}
-            </div>
+            <div {...stylex.props(styles.subtleMono)}>{selected.label} · {selected.format.replaceAll("_", " ")}</div>
           </div>
         </div>
-
-        <aside className="min-h-[260px] bg-background/40">
-          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              Export jobs
-            </span>
-            <span className="font-mono text-[10px] text-muted-foreground/70">
-              {jobs.length}
-            </span>
+        <aside {...stylex.props(styles.jobs)}>
+          <div {...stylex.props(styles.jobsHeader)}>
+            <span {...stylex.props(styles.monoLabel, styles.textMuted)}>Export jobs</span>
+            <span {...stylex.props(styles.count)}>{jobs.length}</span>
           </div>
-          {error && jobs.length > 0 ? (
-            <div className="m-4 border border-rose-400/30 bg-rose-400/[0.06] px-3 py-2 text-xs text-rose-100/80">
-              {error}
-            </div>
-          ) : null}
+          {error && jobs.length > 0 ? <div {...stylex.props(styles.error)}>{error}</div> : null}
           {state === "loading" && jobs.length === 0 ? (
-            <div className="space-y-2 p-4">
-              <div className="h-10 animate-pulse bg-white/[0.05]" />
-              <div className="h-10 animate-pulse bg-white/[0.05]" />
-              <div className="h-10 animate-pulse bg-white/[0.05]" />
-            </div>
+            <div {...stylex.props(styles.skeletonWrap)}>{[1, 2, 3].map((key) => <div key={key} {...stylex.props(styles.skeleton)} />)}</div>
           ) : error && jobs.length === 0 ? (
-            <div className="m-4 border border-rose-400/30 bg-rose-400/[0.06] px-3 py-2 text-xs text-rose-100/80">
-              {error}
-            </div>
+            <div {...stylex.props(styles.error)}>{error}</div>
           ) : jobs.length === 0 ? (
-            <div className="p-4 text-xs leading-5 text-muted-foreground">
-              No exports yet. Pick a recipe and queue the first bundle.
-            </div>
+            <div {...stylex.props(styles.empty)}>No exports yet. Pick a recipe and queue the first bundle.</div>
           ) : (
-            <ol className="divide-y divide-border/60">
+            <ol {...stylex.props(styles.jobsList)}>
               {jobs.slice(0, 5).map((job) => {
                 const downloadable = canDownloadExport(job);
                 return (
-                  <li key={job.id} className="grid gap-3 px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-medium text-foreground">
-                          {recipeLabel(job.recipe, job.format)}
-                        </div>
-                        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/65">
-                          {shortId(job.id, 12)} · {formatJobTime(job.createdAt)}
-                        </div>
+                  <li key={job.id} {...stylex.props(styles.job)}>
+                    <div {...stylex.props(styles.jobTop)}>
+                      <div {...stylex.props(styles.minWidth)}>
+                        <div {...stylex.props(styles.truncate)}>{recipeLabel(job.recipe, job.format)}</div>
+                        <div {...stylex.props(styles.jobMeta)}>{shortId(job.id, 12)} · {formatJobTime(job.createdAt)}</div>
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em]",
-                          exportStatusClasses(job.status),
-                        )}
-                      >
-                        {exportStatusLabel(job.status, job.phase)}
-                      </span>
+                      <span {...stylex.props(styles.status, exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
                     </div>
-                    {job.errorMessage ? (
-                      <div className="text-xs leading-5 text-rose-200/80">
-                        {job.errorMessage}
-                      </div>
-                    ) : null}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/55">
-                        Snapshot {shortId(job.datasetSnapshotId, 8)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => void handleDownload(job)}
-                        disabled={!downloadable || downloadingId === job.id}
-                        className="inline-flex items-center gap-1.5 border border-white/15 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-white/70 transition-colors hover:border-[#E8E044]/50 hover:text-[#E8E044] disabled:cursor-not-allowed disabled:opacity-35"
-                      >
-                        {downloadingId === job.id ? (
-                          <LoaderCircle className="size-3 animate-spin" />
-                        ) : (
-                          <Download className="size-3" />
-                        )}
-                        Download
+                    {job.errorMessage ? <div {...stylex.props(styles.jobError)}>{job.errorMessage}</div> : null}
+                    <div {...stylex.props(styles.jobBottom)}>
+                      <span {...stylex.props(styles.subtleMono)}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
+                      <button type="button" onClick={() => void handleDownload(job)} disabled={!downloadable || downloadingId === job.id} {...stylex.props(styles.downloadButton)}>
+                        {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
                       </button>
                     </div>
                   </li>
@@ -577,18 +466,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
           )}
         </aside>
       </div>
-      {toast ? (
-        <p
-          className={cn(
-            "border-t px-4 py-3 font-mono text-[11px]",
-            toast.kind === "success"
-              ? "border-emerald-400/20 bg-emerald-400/[0.05] text-emerald-200"
-              : "border-rose-400/20 bg-rose-400/[0.05] text-rose-200",
-          )}
-        >
-          {toast.message}
-        </p>
-      ) : null}
+      {toast ? <p {...stylex.props(styles.toast, toast.kind === "success" ? styles.toastSuccess : styles.toastError)}>{toast.message}</p> : null}
     </section>
   );
 }

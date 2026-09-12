@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { BarChart3, LayoutDashboard, Layers, Lightbulb, PanelRightClose, PanelRightOpen } from "lucide-react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
@@ -76,10 +78,10 @@ export function MapDetailRightPanel({
     return (
       <button
         onClick={() => setPanelOpen(true)}
-        className="shrink-0 border-l border-border bg-background hover:bg-muted transition-colors flex items-center px-1.5"
+        className={stylex.props(styles.s_733).className}
       >
-        <div className="flex items-center gap-1.5 [writing-mode:vertical-lr] rotate-180 text-xs text-muted-foreground hover:text-foreground py-3">
-          <PanelRightOpen className="size-3.5 rotate-90" />
+        <div className={stylex.props(styles.s_734).className}>
+          <PanelRightOpen className={stylex.props(styles.s_735).className} />
           Map Attributes
         </div>
       </button>
@@ -87,18 +89,18 @@ export function MapDetailRightPanel({
   }
 
   return (
-    <div className="relative w-[24rem] shrink-0 min-h-0 overflow-hidden flex flex-col">
+    <div className={stylex.props(styles.s_736).className}>
       {/* Collapse rail */}
       {!editMode && (
         <button
           onClick={() => setPanelOpen(false)}
-          className="absolute inset-y-0 left-0 z-20 w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:-translate-x-1/2 after:w-[2px] after:rounded-full after:transition-all hover:after:w-1 hover:after:bg-primary/40 cursor-e-resize flex items-center justify-center group/rail"
+          className={stylex.props(styles.s_737).className}
           aria-label="Collapse panel"
         >
-          <PanelRightClose className="size-3 text-muted-foreground opacity-0 group-hover/rail:opacity-100 transition-opacity" />
+          <PanelRightClose className={stylex.props(styles.s_738).className} />
         </button>
       )}
-      <div className="w-full border-l border-border bg-background flex flex-col min-h-0">
+      <div className={stylex.props(styles.s_739).className}>
         {editMode ? (
           <MapAssetEditPanel
             asset={currentAsset}
@@ -117,9 +119,9 @@ export function MapDetailRightPanel({
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className="flex-1 flex flex-col min-h-0"
+            className={stylex.props(styles.s_740).className}
           >
-            <TabsList className="grid grid-cols-4 shrink-0 w-full rounded-none border-b border-border h-10 bg-transparent p-0">
+            <TabsList className={stylex.props(styles.s_741).className}>
               {([
                 { value: "overview", label: "Overview", Icon: LayoutDashboard, disabled: false },
                 { value: "layers", label: "Layers", Icon: Layers, disabled: false },
@@ -130,17 +132,17 @@ export function MapDetailRightPanel({
                   key={value}
                   value={value}
                   disabled={disabled}
-                  className="gap-1 rounded-none border-b-2 border-transparent text-xs text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none min-w-0 px-1"
+                  className={stylex.props(styles.s_742).className}
                 >
-                  <Icon className="size-3.5 shrink-0" />
-                  <span className="truncate">{label}</span>
+                  <Icon className={stylex.props(styles.s_760).className} />
+                  <span className={stylex.props(styles.s_941).className}>{label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
 
             <TabsContent
               value="overview"
-              className="flex-1 overflow-y-auto p-3 mt-0 data-[state=inactive]:hidden"
+              className={stylex.props(styles.s_748).className}
             >
               <OverviewTab
                 asset={currentAsset}
@@ -166,7 +168,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="layers"
-              className="flex-1 overflow-y-auto p-3 mt-0 data-[state=inactive]:hidden"
+              className={stylex.props(styles.s_748).className}
             >
               <LayersTab
                 asset={currentAsset}
@@ -229,7 +231,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="analytics"
-              className="flex-1 overflow-y-auto p-3 mt-0 data-[state=inactive]:hidden"
+              className={stylex.props(styles.s_748).className}
             >
               <AnalyticsTab
                 asset={currentAsset}
@@ -241,7 +243,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="insights"
-              className="flex-1 overflow-y-auto p-3 mt-0 data-[state=inactive]:hidden"
+              className={stylex.props(styles.s_748).className}
             >
               <InsightsTab
                 asset={currentAsset}

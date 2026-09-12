@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import * as stylex from "@stylexjs/stylex";
 
 import { OnboardingGate } from "@/app/components/OnboardingGate";
 import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
+import { route } from "./drive-route.stylex";
 
 export const instant = false;
 
@@ -14,7 +16,7 @@ export const instant = false;
 export default function DriveLayout({ children }: { children: ReactNode }) {
   return (
     <StudioHostBoundary>
-      <div className="h-svh overflow-hidden bg-[#050607] text-white">
+      <div {...stylex.props(route.shell)}>
         <OnboardingGate>{children}</OnboardingGate>
       </div>
     </StudioHostBoundary>

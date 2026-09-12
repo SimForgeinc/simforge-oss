@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import * as stylex from "@stylexjs/stylex";
 import {
   Cloud,
   CloudDownload,
@@ -22,7 +23,7 @@ import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { styles } from "@/app/components/cloud-storage/cloud-storage.stylex";
 import { studioHost } from "@/app/lib/host";
 import { studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 
@@ -268,14 +269,14 @@ export function CloudStoragePanel() {
   );
 
   return (
-    <div className="flex min-h-full flex-col bg-background">
+    <div {...stylex.props(styles.shell)}>
       <PageHeader
         eyebrow="SimCloud"
         title="Cloud Storage"
         description="Import cloud datasets and artifacts as local working copies, and publish or upload local work when you decide to."
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading || busy !== null}>
-            <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+            <RefreshCw {...stylex.props(styles.icon, loading && styles.spinner)} />
             Refresh
           </Button>
         }
@@ -283,8 +284,8 @@ export function CloudStoragePanel() {
 
       {!connected ? (
         <EmptyState
-          icon={<Cloud className="size-8" />}
           title="Connect to SimCloud to use cloud storage"
+          icon={<Cloud {...stylex.props(styles.icon8)} />}
           description={
             cloud.status?.state === "expired"
               ? "Your SimCloud session has expired. Connect again to browse your workspaces. Nothing on this computer is affected."
@@ -292,20 +293,20 @@ export function CloudStoragePanel() {
           }
           action={
             <Button onClick={() => void cloud.connect()} disabled={cloud.loading}>
-              {cloud.loading ? <LoaderCircle className="size-4 animate-spin" /> : <Cloud className="size-4" />}
+              {cloud.loading ? <LoaderCircle {...stylex.props(styles.icon4, styles.spinner)} /> : <Cloud {...stylex.props(styles.icon4)} />}
               {cloud.status?.state === "connecting" ? "Waiting for your browser…" : "Connect to SimCloud"}
             </Button>
           }
         />
       ) : (
-        <div className="flex flex-col gap-6 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cloud-storage-workspace">
+        <div {...stylex.props(styles.content)}>
+          <div {...stylex.props(styles.workspaceBar)}>
+            <label {...stylex.props(styles.label)} htmlFor="cloud-storage-workspace">
               Workspace
             </label>
             <select
               id="cloud-storage-workspace"
-              className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              {...stylex.props(styles.select)}
               value={workspaceId ?? ""}
               onChange={(event) => setWorkspaceId(event.target.value || null)}
               disabled={workspaces.length === 0 || busy !== null}
@@ -318,7 +319,7 @@ export function CloudStoragePanel() {
               ))}
             </select>
             {workspace ? (
-              <span className="text-xs text-muted-foreground">
+              <span {...stylex.props(styles.account)}>
                 {cloud.status?.user?.email ?? cloud.status?.user?.name ?? "Signed in"} · {origin}
               </span>
             ) : null}
@@ -327,22 +328,17 @@ export function CloudStoragePanel() {
           {notice ? (
             <div
               role={notice.tone === "error" ? "alert" : "status"}
-              className={cn(
-                "flex items-start gap-2 rounded-md border px-3 py-2 text-sm",
-                notice.tone === "error"
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-              )}
+              {...stylex.props(styles.notice, notice.tone === "success" && styles.noticeSuccess)}
             >
-              {notice.tone === "error" ? <TriangleAlert className="mt-0.5 size-4 shrink-0" /> : <Cloud className="mt-0.5 size-4 shrink-0" />}
+              {notice.tone === "error" ? <TriangleAlert {...stylex.props(styles.noticeIcon)} /> : <Cloud {...stylex.props(styles.noticeIcon)} />}
               <span>{notice.text}</span>
             </div>
           ) : null}
 
-          <section className="grid gap-4 lg:grid-cols-2">
+          <section {...stylex.props(styles.sectionGrid)}>
             <ListCard
-              icon={<Database className="size-4" />}
               title="Datasets in SimCloud"
+              icon={<Database {...stylex.props(styles.icon4)} />}
               subtitle={workspace ? workspace.name : "Choose a workspace"}
               empty="This workspace has no datasets yet."
               items={cloudDatasets}
@@ -357,7 +353,7 @@ export function CloudStoragePanel() {
                     badge={link ? <Badge variant="secondary">Local copy · imported {formatWhen(link.lastImportedAt)}</Badge> : null}
                     action={
                       <Button size="sm" variant={link ? "outline" : "default"} disabled={busy !== null} onClick={() => void importDataset(dataset)}>
-                        {busy === key ? <LoaderCircle className="size-3.5 animate-spin" /> : <CloudDownload className="size-3.5" />}
+                        {busy === key ? <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} /> : <CloudDownload {...stylex.props(styles.icon)} />}
                         {link ? "Update local copy" : "Import"}
                       </Button>
                     }
@@ -366,8 +362,8 @@ export function CloudStoragePanel() {
               }}
             />
             <ListCard
-              icon={<Database className="size-4" />}
               title="Datasets on this computer"
+              icon={<Database {...stylex.props(styles.icon4)} />}
               subtitle="Publish is explicit and all-or-nothing"
               empty="No local datasets yet."
               items={localDatasets}
@@ -393,10 +389,10 @@ export function CloudStoragePanel() {
                       ) : null
                     }
                     action={
-                      <div className="flex items-center gap-2">
+                      <div {...stylex.props(styles.actions)}>
                         <select
                           aria-label={`Publish target for ${dataset.name}`}
-                          className="h-8 max-w-44 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                          {...stylex.props(styles.targetSelect)}
                           value={target}
                           disabled={busy !== null}
                           onChange={(event) => setPublishTargets((current) => ({ ...current, [dataset.id]: event.target.value }))}
@@ -409,7 +405,7 @@ export function CloudStoragePanel() {
                           ))}
                         </select>
                         <Button size="sm" variant={linkedHere ? "outline" : "default"} disabled={busy !== null || dataset.documentCount === 0} onClick={() => void publishDataset(dataset)}>
-                          {busy === key ? <LoaderCircle className="size-3.5 animate-spin" /> : <CloudUpload className="size-3.5" />}
+                          {busy === key ? <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} /> : <CloudUpload {...stylex.props(styles.icon)} />}
                           Publish
                         </Button>
                       </div>
@@ -420,10 +416,10 @@ export function CloudStoragePanel() {
             />
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
+          <section {...stylex.props(styles.sectionGrid)}>
             <ListCard
-              icon={<FileBox className="size-4" />}
               title="Artifacts in SimCloud"
+              icon={<FileBox {...stylex.props(styles.icon4)} />}
               subtitle="Render outputs and uploads in this workspace"
               empty="This workspace has no available artifacts."
               items={importableArtifacts}
@@ -438,7 +434,7 @@ export function CloudStoragePanel() {
                     badge={link ? <Badge variant="secondary">{link.direction === "upload" ? "Uploaded from here" : "Imported"}</Badge> : null}
                     action={
                       <Button size="sm" variant={link ? "outline" : "default"} disabled={busy !== null} onClick={() => void importArtifact(artifact)}>
-                        {busy === key ? <LoaderCircle className="size-3.5 animate-spin" /> : <CloudDownload className="size-3.5" />}
+                        {busy === key ? <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} /> : <CloudDownload {...stylex.props(styles.icon)} />}
                         {link ? "Import again" : "Import"}
                       </Button>
                     }
@@ -447,8 +443,8 @@ export function CloudStoragePanel() {
               }}
             />
             <ListCard
-              icon={<FileBox className="size-4" />}
               title="Artifacts on this computer"
+              icon={<FileBox {...stylex.props(styles.icon4)} />}
               subtitle="Only bytes the workspace lacks are transferred"
               empty="No local render artifacts yet. Render a scenario first."
               items={uploadableArtifacts}
@@ -463,7 +459,7 @@ export function CloudStoragePanel() {
                     badge={link ? <Badge variant="secondary">{link.direction === "import" ? "Imported from this workspace" : "Uploaded"}</Badge> : null}
                     action={
                       <Button size="sm" variant={link ? "outline" : "default"} disabled={busy !== null} onClick={() => void uploadArtifact(artifact)}>
-                        {busy === key ? <LoaderCircle className="size-3.5 animate-spin" /> : <CloudUpload className="size-3.5" />}
+                        {busy === key ? <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} /> : <CloudUpload {...stylex.props(styles.icon)} />}
                         {link ? "Upload again" : "Upload"}
                       </Button>
                     }
@@ -494,19 +490,19 @@ function ListCard<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <div className="flex min-h-48 flex-col rounded-lg border border-border/70 bg-card/25">
-      <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3">
-        <span className="text-muted-foreground">{icon}</span>
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+    <div {...stylex.props(styles.card)}>
+      <div {...stylex.props(styles.cardHeader)}>
+        <span {...stylex.props(styles.cardIcon)}>{icon}</span>
+        <div {...stylex.props(styles.cardHeading)}>
+          <h2 {...stylex.props(styles.cardTitle)}>{title}</h2>
+          <p {...stylex.props(styles.cardSubtitle)}>{subtitle}</p>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
+        <span {...stylex.props(styles.count)}>{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-muted-foreground">{empty}</p>
+        <p {...stylex.props(styles.empty)}>{empty}</p>
       ) : (
-        <ul className="divide-y divide-border/60">{items.map(renderItem)}</ul>
+        <ul {...stylex.props(styles.list)}>{items.map(renderItem)}</ul>
       )}
     </div>
   );
@@ -524,13 +520,13 @@ function Row({
   action: ReactNode;
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{title}</span>
+    <li {...stylex.props(styles.row)}>
+      <div {...stylex.props(styles.rowBody)}>
+        <div {...stylex.props(styles.rowHeading)}>
+          <span {...stylex.props(styles.rowTitle)}>{title}</span>
           {badge}
         </div>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">{detail}</p>
+        <p {...stylex.props(styles.rowDetail)}>{detail}</p>
       </div>
       {action}
     </li>

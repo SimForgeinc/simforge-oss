@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, SquarePen } from "lucide-react";
 import Link from "next/link";
@@ -38,11 +40,11 @@ export function ScenariosSection({
 
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -56,13 +58,13 @@ export function ScenariosSection({
               <TooltipTrigger asChild>
                 <Link
                   href={primaryEditorHref}
-                  className="flex size-5 items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/50 hover:text-foreground"
+                  className={stylex.props(styles.s_388).className}
                   aria-label="Open latest scenario in editor"
                 >
-                  <SquarePen className="size-3" />
+                  <SquarePen className={stylex.props(styles.s_927).className} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs">
+              <TooltipContent side="left" className={stylex.props(styles.s_948).className}>
                 Open latest scenario in editor
               </TooltipContent>
             </Tooltip>
@@ -71,26 +73,26 @@ export function ScenariosSection({
       </div>
       {open &&
         (scenarios.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">No scenarios yet.</p>
+          <p className={stylex.props(styles.s_818).className}>No scenarios yet.</p>
         ) : (
-          <ul className="mt-2 space-y-1.5">
+          <ul className={stylex.props(styles.s_819).className}>
             {scenarios.map((scenario) => (
               <li
                 key={scenario.id}
-                className="flex items-center justify-between gap-2 rounded border border-border p-2"
+                className={stylex.props(styles.s_393).className}
               >
-                <div className="min-w-0">
+                <div className={stylex.props(styles.s_919).className}>
                   <Link
                     href={buildDashboardScenarioEditorHref({
                       scenarioId: scenario.id,
                       mapName,
                     })}
-                    className="block truncate text-xs font-medium hover:underline"
+                    className={stylex.props(styles.s_395).className}
                   >
                     {scenario.displayName}
                   </Link>
                   <span
-                    className="text-xs text-muted-foreground"
+                    className={stylex.props(styles.s_973).className}
                     title={new Date(scenario.createdAt).toLocaleString(undefined, {
                       dateStyle: "medium",
                       timeStyle: "short",

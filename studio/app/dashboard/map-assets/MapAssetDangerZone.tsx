@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./map-assets.stylex";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
@@ -32,14 +34,14 @@ export function MapAssetDangerZone({
   onToggleDangerOpen,
 }: MapAssetDangerZoneProps) {
   return (
-    <section className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
+    <section className={stylex.props(styles.s_140).className}>
       <button
         type="button"
         onClick={onToggleDangerOpen}
-        className="flex w-full items-center gap-2 text-left"
+        className={stylex.props(styles.s_141).className}
       >
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-        <h3 className="flex-1 text-xs font-semibold uppercase tracking-wide text-destructive">
+        <AlertTriangle className={stylex.props(styles.s_142).className} aria-hidden />
+        <h3 className={stylex.props(styles.s_143).className}>
           Delete map
         </h3>
         <ChevronDown
@@ -47,26 +49,26 @@ export function MapAssetDangerZone({
         />
       </button>
       {dangerOpen && (
-        <div className="mt-2">
-          <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+        <div className={stylex.props(styles.s_716).className}>
+          <p className={stylex.props(styles.s_145).className}>
             This permanently removes the map, all stored artifacts in S3 under this asset, and computed metadata
             (including stats). Existing scenarios that reference this map will point at a missing asset. This
             cannot be undone.
           </p>
           {sessionLoaded && !sessionEmail && (
-            <p className="mb-2 text-[11px] text-destructive">
+            <p className={stylex.props(styles.s_151).className}>
               Your account has no email address on file. Please update your account settings to enable map deletion.
             </p>
           )}
           {sessionEmail && (
             <>
-              <p className="mb-1.5 text-[11px] text-muted-foreground">
+              <p className={stylex.props(styles.s_147).className}>
                 Type your signed-in email address below to confirm (case does not matter):
               </p>
-              <p className="mb-2 break-all rounded border border-border bg-muted/40 px-2 py-1 font-mono text-[10px] text-foreground">
+              <p className={stylex.props(styles.s_148).className}>
                 {sessionEmail}
               </p>
-              <label htmlFor="delete-confirm-email" className="sr-only">
+              <label htmlFor="delete-confirm-email" className={stylex.props(styles.s_997).className}>
                 Type your email to confirm deletion
               </label>
               <Input
@@ -75,17 +77,17 @@ export function MapAssetDangerZone({
                 onChange={(e) => onDeleteConfirmEmailChange(e.target.value)}
                 placeholder="Type your email to confirm"
                 autoComplete="off"
-                className="mb-2 h-8 font-mono text-xs"
+                className={stylex.props(styles.s_150).className}
                 disabled={deleteBusy}
               />
             </>
           )}
-          {deleteError && <p className="mb-2 text-[11px] text-destructive">{deleteError}</p>}
+          {deleteError && <p className={stylex.props(styles.s_151).className}>{deleteError}</p>}
           <Button
             type="button"
             variant="destructive"
             size="sm"
-            className="w-full"
+            className={stylex.props(styles.s_708).className}
             disabled={
               deleteBusy ||
               !sessionEmail ||

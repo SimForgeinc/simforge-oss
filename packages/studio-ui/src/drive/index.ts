@@ -14,6 +14,11 @@ export {
   type EgoPose,
   type OrbitState,
 } from "./cameras";
+// Drive's chrome travels through this barrel; its *tokens* deliberately do
+// not. StyleX resolves `defineVars` through the importing module's own path,
+// so a var group re-exported from an index fails the compile — import
+// `./drive.stylex` (or `@simforge-oss/studio-ui/drive/drive.stylex`) directly.
+export { DriveButton, DrivePill, driveChrome } from "./chrome";
 export { CarPickerScreen, DRIVE_PAINT_COLORS, type DriveVehicleOption } from "./CarPickerScreen";
 export { MapPickerScreen, type DriveMapOption } from "./MapPickerScreen";
 export { PauseMenu } from "./PauseMenu";

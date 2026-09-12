@@ -1,6 +1,9 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import * as stylex from "@stylexjs/stylex";
+
+import { driveColors, driveRadius } from "../drive.stylex";
 
 /** One lane centreline in scene metres, as the lane index stores it. */
 export interface MinimapLane {
@@ -17,6 +20,25 @@ export interface MinimapHandle {
 const VIEW_RADIUS_M = 160;
 const LANE_COLOR = "rgba(255,255,255,0.34)";
 const EGO_COLOR = "#E8E044";
+
+/**
+ * The disc itself.
+ *
+ * The canvas is the instrument face, so it carries the readout panel's own
+ * chrome directly rather than being wrapped: a wrapper would add a box the
+ * `sizePx` inline style would then have to be duplicated onto.
+ */
+const styles = stylex.create({
+  disc: {
+    display: "block",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: driveColors.line,
+    borderRadius: driveRadius.pill,
+    backgroundColor: driveColors.panelReadout,
+    backdropFilter: "blur(8px)",
+  },
+});
 
 /**
  * Lane-graph minimap.
@@ -90,8 +112,8 @@ export const Minimap = forwardRef<MinimapHandle, {
 
   return (
     <canvas
+      {...stylex.props(styles.disc)}
       aria-hidden="true"
-      className="rounded-full border border-white/15 bg-black/55 backdrop-blur"
       data-testid="drive-minimap"
       ref={canvasRef}
       style={{ width: sizePx, height: sizePx }}

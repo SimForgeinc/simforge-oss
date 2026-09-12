@@ -1,9 +1,11 @@
 "use client";
 
 import { ExternalLink, LoaderCircle } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "../components/ui/button";
 import { HeroBackdrop } from "./HeroBackdrop";
+import { onboarding } from "./onboarding.stylex";
 
 /**
  * The first screen of a fresh installation: sign in to SimCloud, or continue
@@ -32,37 +34,35 @@ export function WelcomeScreen({
 
   return (
     <main
-      className="relative grid min-h-svh place-items-center overflow-hidden bg-[#050607] px-6 py-12 text-white"
+      {...stylex.props(onboarding.welcomeScreen)}
       data-testid="onboarding-welcome"
       data-cloud-state={cloudState ?? "unknown"}
     >
       <HeroBackdrop />
-      <section className="relative z-10 w-full max-w-2xl">
-        <p className="font-meta text-[10px] font-bold uppercase tracking-[0.22em] text-[#E8E044]">
-          SimForge Studio
-        </p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Welcome to SimForge Studio</h1>
-        <p className="mt-5 max-w-xl text-base leading-7 text-white/75">
+      <section {...stylex.props(onboarding.welcomeColumn)}>
+        <p {...stylex.props(onboarding.eyebrow)}>SimForge Studio</p>
+        <h1 {...stylex.props(onboarding.welcomeTitle)}>Welcome to SimForge Studio</h1>
+        <p {...stylex.props(onboarding.welcomeLede)}>
           Studio turns real streets into simulation-ready digital twins on this computer. Sign in to
           SimCloud for your account&apos;s maps and cloud storage, or continue locally with the public
           Richmond Field Station map.
         </p>
 
         {connected && userEmail ? (
-          <p className="mt-6 text-sm text-[#E8E044]" data-testid="onboarding-welcome-account">
+          <p {...stylex.props(onboarding.accountNote)} data-testid="onboarding-welcome-account">
             Signed in as {userEmail}
           </p>
         ) : null}
         {error ? (
-          <p className="mt-6 max-w-xl text-sm leading-6 text-amber-300/90" role="alert">
+          <p {...stylex.props(onboarding.cautionNote)} role="alert">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+        <div {...stylex.props(onboarding.welcomeActions)}>
           <Button
             autoFocus
-            className="h-12 flex-1 rounded-full bg-[#E8E044] text-black hover:bg-[#E8E044]/85"
+            xstyle={onboarding.primaryAction}
             data-testid="onboarding-sign-in"
             disabled={busy || connecting}
             onClick={connected ? onContinueLocally : onSignIn}
@@ -70,20 +70,20 @@ export function WelcomeScreen({
           >
             {connecting ? (
               <>
-                <LoaderCircle className="mr-1 size-4 animate-spin" aria-hidden="true" />
+                <LoaderCircle {...stylex.props(onboarding.icon, onboarding.iconWithLabel, onboarding.spinner)} aria-hidden="true" />
                 Waiting for approval…
               </>
             ) : connected ? (
               "Continue with SimCloud"
             ) : (
               <>
-                <ExternalLink className="mr-1 size-4" aria-hidden="true" />
+                <ExternalLink {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
                 Sign in to SimCloud
               </>
             )}
           </Button>
           <Button
-            className="h-12 flex-1 rounded-full border-white/30 bg-white/[0.04] text-white hover:bg-white/10"
+            xstyle={onboarding.secondaryAction}
             data-testid="onboarding-continue-locally"
             onClick={onContinueLocally}
             type="button"
@@ -92,7 +92,7 @@ export function WelcomeScreen({
             Continue locally
           </Button>
         </div>
-        <p className="mt-4 text-xs text-white/50">
+        <p {...stylex.props(onboarding.footnote)}>
           You can sign in later from Settings; nothing here is permanent.
         </p>
       </section>

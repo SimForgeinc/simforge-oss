@@ -3,6 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { LoaderCircle, Sparkles, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { SelectMenuField } from "@simforge-oss/studio-ui/components/ui/select-menu";
@@ -21,6 +22,7 @@ import { useVisiblePolling } from "@simforge-oss/studio-ui/lib/use-visible-polli
 import { AssetGenerateImagePicker } from "./AssetGenerateImagePicker";
 import type { GalleryActorClass, GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import type { GalleryGenerationSummary } from "@/app/lib/asset-gallery/generation-contracts";
+import { dialog } from "./asset-dialogs.stylex";
 import type { PreparedReferenceImage } from "./asset-generation-images";
 
 type UploadTarget = { url: string; headers: Record<string, string> };
@@ -250,44 +252,44 @@ export function AssetGenerateDialog({
             : null;
 
   return (
-    <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog.Root open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[210] max-h-[92vh] w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1014] p-6 text-white shadow-2xl outline-none">
-          <Dialog.Title className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><Sparkles className="size-5 text-[#E8E044]" />Generate 3D asset</Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-white/45">Turn photographs of one object into a textured, gallery-ready 3D model. Generation usually takes about 90 seconds.</Dialog.Description>
-          <Dialog.Close asChild><button type="button" aria-label="Close generation dialog" className="absolute right-4 top-4 rounded-md p-2 text-white/45 hover:bg-white/5 hover:text-white"><X className="size-4" /></button></Dialog.Close>
+        <Dialog.Overlay {...stylex.props(dialog.overlay)} />
+        <Dialog.Content {...stylex.props(dialog.content)}>
+          <Dialog.Title {...stylex.props(dialog.title)}><Sparkles {...stylex.props(dialog.iconAccent)} />Generate 3D asset</Dialog.Title>
+          <Dialog.Description {...stylex.props(dialog.description)}>Turn photographs of one object into a textured, gallery-ready 3D model. Generation usually takes about 90 seconds.</Dialog.Description>
+          <Dialog.Close asChild><button type="button" aria-label="Close generation dialog" {...stylex.props(dialog.close)}><X {...stylex.props(dialog.iconSm)} /></button></Dialog.Close>
 
           {active ? (
-            <div className="mt-6 space-y-5">
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.025]">
+            <div {...stylex.props(dialog.panel)}>
+              <div {...stylex.props(dialog.card)}>
                 {active.previewUrl ? (
                   /* Runtime provider previews are not known to Next's remote image allowlist. */
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={active.previewUrl} alt={`Generated preview of ${active.title}`} className="aspect-[16/9] w-full bg-[radial-gradient(circle,#27303a,#101317)] object-contain" />
+                  <img src={active.previewUrl} alt={`Generated preview of ${active.title}`} {...stylex.props(dialog.preview)} />
                 ) : (
-                  <div className="flex aspect-[16/7] items-center justify-center text-white/30"><LoaderCircle className="mr-2 size-5 animate-spin" />Building preview…</div>
+                  <div {...stylex.props(dialog.loadingPreview)}><LoaderCircle {...stylex.props(dialog.icon, dialog.progressPulse)} />Building preview…</div>
                 )}
-                <div className="p-4"><p className="font-medium">{active.title}</p><p className="mt-1 text-xs text-white/40">{active.imageCount} reference {active.imageCount === 1 ? "photo" : "photos"}</p></div>
+                <div {...stylex.props(dialog.card)}><p {...stylex.props(dialog.titleText)}>{active.title}</p><p {...stylex.props(dialog.mutedText)}>{active.imageCount} reference {active.imageCount === 1 ? "photo" : "photos"}</p></div>
               </div>
 
               {status ? (
                 <div aria-live="polite">
-                  <div className="mb-1 flex justify-between text-xs text-white/45"><span>{status}</span><span>{generationProgress}%</span></div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><div className={`h-full bg-[#E8E044] transition-[width] ${active.state === "importing" ? "animate-pulse" : ""}`} style={{ width: `${generationProgress}%` }} /></div>
-                  {active.state === "generating" || active.state === "importing" ? <p className="mt-2 text-xs text-white/35">You can close this dialog. Work continues in the background.</p> : null}
+                  <div {...stylex.props(dialog.progressText)}><span>{status}</span><span>{generationProgress}%</span></div>
+                  <div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar, active.state === "importing" ? dialog.progressPulse : null)} style={{ width: `${generationProgress}%` }} /></div>
+                  {active.state === "generating" || active.state === "importing" ? <p {...stylex.props(dialog.mutedText)}>You can close this dialog. Work continues in the background.</p> : null}
                 </div>
               ) : null}
 
               {publishedAsset ? (
-                <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4">
-                  <p className="text-sm font-medium text-emerald-100">Ready to use</p>
-                  <p className="mt-1 text-xs text-white/55">{publishedAsset.dims.l.toFixed(2)} × {publishedAsset.dims.w.toFixed(2)} × {publishedAsset.dims.h.toFixed(2)} m</p>
-                  <p className="mt-2 text-xs text-white/55">Actors travel nose-first along +X. If this model faces the wrong way, correct its orientation from the asset drawer.</p>
+                <div {...stylex.props(dialog.cardSuccess)}>
+                  <p {...stylex.props(dialog.successText)}>Ready to use</p>
+                  <p {...stylex.props(dialog.mutedText)}>{publishedAsset.dims.l.toFixed(2)} × {publishedAsset.dims.w.toFixed(2)} × {publishedAsset.dims.h.toFixed(2)} m</p>
+                  <p {...stylex.props(dialog.mutedText)}>Actors travel nose-first along +X. If this model faces the wrong way, correct its orientation from the asset drawer.</p>
                 </div>
               ) : null}
-              {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
-              <div className="flex justify-end gap-2">
+              {error ? <p role="alert" {...stylex.props(dialog.errorText)}>{error}</p> : null}
+              <div {...stylex.props(dialog.actionsRow)}>
                 {active.state === "ready" && !publishedAsset ? <Button type="button" variant="outline" onClick={() => void loadPublishedAsset(active)}>Load published asset</Button> : null}
                 {isGalleryGenerationTerminal(active.state) ? <Button type="button" variant="outline" onClick={() => { setActive(null); setPublishedAsset(null); setError(null); }}>Generate another</Button> : null}
                 <Dialog.Close asChild><Button type="button">{isGalleryGenerationTerminal(active.state) ? "Done" : "Close"}</Button></Dialog.Close>
@@ -296,26 +298,26 @@ export function AssetGenerateDialog({
           ) : (
             <>
               {resumable.length > 0 ? (
-                <div className="mt-5 rounded-xl border border-[#E8E044]/20 bg-[#E8E044]/[0.04] p-4">
-                  <p className="text-sm font-medium">Recent generation</p>
-                  <div className="mt-2 space-y-2">{resumable.map((generation) => <button type="button" key={generation.generationId} onClick={() => { setActive(generation); setError(null); }} className="flex w-full items-center justify-between rounded-lg bg-white/[0.04] px-3 py-2 text-left text-sm hover:bg-white/[0.07]"><span>{generation.title}</span><span className="text-xs text-[#E8E044]">{generation.state === "ready" ? "View result" : `Rejoin · ${generation.state === "importing" ? "importing" : `${generation.progress}%`}`}</span></button>)}</div>
+                <div {...stylex.props(dialog.recent)}>
+                  <p {...stylex.props(dialog.titleText)}>Recent generation</p>
+                  <div {...stylex.props(dialog.recentList)}>{resumable.map((generation) => <button type="button" key={generation.generationId} onClick={() => { setActive(generation); setError(null); }} {...stylex.props(dialog.recentItem)}><span>{generation.title}</span><span {...stylex.props(dialog.accentText)}>{generation.state === "ready" ? "View result" : `Rejoin · ${generation.state === "importing" ? "importing" : `${generation.progress}%`}`}</span></button>)}</div>
                 </div>
               ) : null}
 
-              <form id={formId} onSubmit={submit} className="mt-6 space-y-5">
+              <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
                 <AssetGenerateImagePicker images={images} onChange={setImages} onBusyChange={setPreparing} onError={setError} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-xs text-white/45">Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} className="mt-1" /></label>
+                <div {...stylex.props(dialog.grid)}>
+                  <label {...stylex.props(dialog.fieldLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} {...stylex.props(dialog.fieldControl)} /></label>
                   <SelectMenuField label="Actor class" value={actorClass} onChange={(value) => { const parsed = GalleryActorClassSchema.safeParse(value); if (parsed.success) setActorClass(parsed.data); }} options={ACTOR_CLASS_OPTIONS} labelClassName="mb-1 text-xs text-white/45" />
-                  <label className="text-xs text-white/45 sm:col-span-2">Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1" /></label>
-                  <label className="text-xs text-white/45 sm:col-span-2">Texture guidance<Textarea maxLength={600} value={texturePrompt} onChange={(event) => setTexturePrompt(event.target.value)} placeholder="Matte black paint, no decals" className="mt-1" /><span className="mt-1 block text-[11px] leading-4 text-white/35">Steers surface appearance only, not the model’s shape.</span></label>
+                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} {...stylex.props(dialog.fieldControl)} /></label>
+                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Texture guidance<Textarea maxLength={600} value={texturePrompt} onChange={(event) => setTexturePrompt(event.target.value)} placeholder="Matte black paint, no decals" {...stylex.props(dialog.fieldControl)} /><span {...stylex.props(dialog.subText)}>Steers surface appearance only, not the model’s shape.</span></label>
                 </div>
               </form>
 
-              <div className="mt-5 space-y-5">
-                {submitting ? <div aria-live="polite"><div className="mb-1 flex justify-between text-xs text-white/45"><span>{status}</span><span>{uploadProgress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full bg-[#E8E044] transition-[width]" style={{ width: `${uploadProgress}%` }} /></div></div> : null}
-                {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
-                <div className="flex justify-end gap-2"><Dialog.Close asChild><Button type="button" variant="ghost">Cancel</Button></Dialog.Close><Button type="submit" form={formId} disabled={images.length === 0 || !title.trim() || preparing || submitting}><Upload />{submitting ? "Starting…" : "Generate asset"}</Button></div>
+              <div {...stylex.props(dialog.footer)}>
+                {submitting ? <div aria-live="polite"><div {...stylex.props(dialog.progressText)}><span>{status}</span><span>{uploadProgress}%</span></div><div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar)} style={{ width: `${uploadProgress}%` }} /></div></div> : null}
+                {error ? <p role="alert" {...stylex.props(dialog.errorText)}>{error}</p> : null}
+                <div {...stylex.props(dialog.actionsRow)}><Dialog.Close asChild><Button type="button" variant="ghost">Cancel</Button></Dialog.Close><Button type="submit" form={formId} disabled={images.length === 0 || !title.trim() || preparing || submitting}><Upload />{submitting ? "Starting…" : "Generate asset"}</Button></div>
               </div>
             </>
           )}

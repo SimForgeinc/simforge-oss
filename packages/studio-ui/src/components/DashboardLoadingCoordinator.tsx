@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./DashboardLoadingCoordinator.stylex";
 
 import {
   createContext,
@@ -219,13 +221,14 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
               : "scene-loader-cloud-exit"
           }
           className={cn(
-            "!z-[250] transition-colors duration-[900ms] ease-out motion-reduce:transition-none",
+            "!z-[250] transition-colors ease-out motion-reduce:transition-none",
             entryKind === "route" && "route-loading",
             enteringScene && "dashboard-scene-loading-enter",
             visible
               ? "pointer-events-auto bg-black/70 backdrop-blur-2xl"
               : "pointer-events-none bg-transparent backdrop-blur-none",
           )}
+          style={{ transitionDuration: "900ms" }}
           contentTestId="dashboard-loading-content"
           contentWrapClassName={
             visible
@@ -305,10 +308,10 @@ function stalledLoadingSource(source: DashboardLoadingSource): DashboardLoadingS
     eyebrow: "SimForge interrupted",
     severity: "error",
     priority: 100,
-    icon: <CircleAlert className="size-5" aria-hidden="true" />,
+    icon: <CircleAlert aria-hidden="true" {...stylex.props(styles.alertIcon)} />,
     actions: (
       <Button
-        className="mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]"
+        {...stylex.props(styles.reload)}
         onClick={() => window.location.reload()}
       >
         Reload

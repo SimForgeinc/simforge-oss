@@ -1,5 +1,7 @@
+import * as stylex from "@stylexjs/stylex";
 import { Badge } from "./ui/badge";
-import { cn } from "../lib/utils";
+import { mergeStyleProps } from "./stylex/surface";
+import { styles } from "./CarlaCompatibilityPill.stylex";
 import {
   CARLA_COMPATIBILITY_HINT,
   CARLA_COMPATIBILITY_LABEL,
@@ -11,11 +13,11 @@ interface CarlaCompatibilityPillProps {
   size?: "sm" | "md";
 }
 
-const STATUS_CLASS: Record<CarlaCompatibility["status"], string> = {
-  native: "border-sky-400/25 bg-sky-400/15 text-sky-200 hover:bg-sky-400/15",
-  "generated-pack": "border-transparent bg-muted text-muted-foreground hover:bg-muted",
-  "browser-only": "border-border bg-transparent text-muted-foreground",
-};
+const STATUS_STYLE = {
+  native: styles.native,
+  "generated-pack": styles.generated,
+  "browser-only": styles.browser,
+} as const;
 
 export function CarlaCompatibilityPill({
   compatibility,
@@ -30,10 +32,13 @@ export function CarlaCompatibilityPill({
       variant={compatibility.status === "browser-only" ? "outline" : "secondary"}
       data-carla-compatibility={compatibility.status}
       title={`${CARLA_COMPATIBILITY_HINT[compatibility.status]} ${detail}`}
-      className={cn(
-        "shrink-0 cursor-default gap-1 whitespace-nowrap font-medium",
-        size === "sm" ? "h-5 px-1.5 py-0 text-[10px]" : "h-6 px-2 py-0.5 text-xs",
-        STATUS_CLASS[compatibility.status],
+      {...mergeStyleProps(
+        stylex.props(
+          styles.root,
+          size === "sm" ? styles.small : styles.medium,
+          STATUS_STYLE[compatibility.status],
+        ),
+        undefined,
       )}
     >
       <span>{CARLA_COMPATIBILITY_LABEL[compatibility.status]}</span>

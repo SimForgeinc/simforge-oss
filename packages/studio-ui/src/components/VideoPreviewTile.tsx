@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
-import { cn } from "../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "./stylex/surface";
+import { styles } from "./VideoPreviewTile.stylex";
 import { useVideoGroupContext } from "./VideoGroupPlayer";
 
 export function VideoPreviewTile({
@@ -155,11 +157,7 @@ export function VideoPreviewTile({
 
   return (
     <div
-      className={cn(
-        "group/video relative aspect-video overflow-hidden bg-black",
-        className,
-      )}
-      onMouseEnter={handleEnter}
+      {...mergeStyleProps(stylex.props(styles.root), className)}
       onMouseLeave={handleLeave}
       onContextMenu={blockContextMenu}
       role="figure"
@@ -167,7 +165,7 @@ export function VideoPreviewTile({
       {showVideo ? (
         <video
           ref={videoCallbackRef}
-          className="block h-full w-full object-cover transition duration-300 group-hover/video:scale-[1.03] group-hover/video:brightness-110"
+          {...stylex.props(styles.video)}
           src={videoUrl ?? undefined}
           poster={posterUrl ?? undefined}
           muted
@@ -183,52 +181,41 @@ export function VideoPreviewTile({
         </video>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-start justify-between gap-3 bg-gradient-to-b from-black/75 via-black/35 to-transparent px-3 py-2">
-        <div className="min-w-0">
-          {eyebrow ? (
-            <div className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-white/55">
-              {eyebrow}
-            </div>
-          ) : null}
-          <div className="truncate text-xs font-semibold capitalize text-white drop-shadow">
-            {label}
-          </div>
+      <div {...stylex.props(styles.overlay)}>
+        <div {...stylex.props(styles.labelWrap)}>
+          {eyebrow ? <div {...stylex.props(styles.eyebrow)}>{eyebrow}</div> : null}
+          <div {...stylex.props(styles.label)}>{label}</div>
         </div>
-        {badge ? <div className="pointer-events-auto shrink-0">{badge}</div> : null}
+        {badge ? <div {...stylex.props(styles.badge)}>{badge}</div> : null}
       </div>
 
       {!synced && (
         <div
           ref={progressRef}
-          className={cn(
-            "absolute inset-x-0 bottom-0 z-30 flex h-4 cursor-pointer items-end opacity-0 transition-opacity group-hover/video:opacity-100",
-            scrubbing && "opacity-100",
+          {...stylex.props(
+            styles.progressArea,
+            scrubbing && styles.progressAreaScrubbing,
           )}
           onMouseDown={handleScrubStart}
         >
           <div
-            className={cn(
-              "h-[3px] w-full bg-white/15 transition-all hover:h-[5px]",
-              scrubbing && "h-[5px]",
+            {...stylex.props(
+              styles.progressTrack,
+              scrubbing && styles.progressTrackScrubbing,
             )}
           >
             <div
-              className="relative h-full bg-primary transition-[width] duration-75"
+              {...stylex.props(styles.progress)}
               style={{ width: `${progress * 100}%` }}
             >
-              <div
-                className={cn(
-                  "absolute right-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 scale-0 rounded-full bg-primary transition-transform group-hover/video:scale-100",
-                  scrubbing && "scale-100",
-                )}
-              />
+              <div {...stylex.props(styles.thumb, scrubbing && styles.thumbScrubbing)} />
             </div>
           </div>
         </div>
       )}
 
       {!showVideo ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950 px-6 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-white/35">
+        <div {...stylex.props(styles.empty)}>
           {hasError ? "Video unavailable" : emptyLabel}
         </div>
       ) : null}

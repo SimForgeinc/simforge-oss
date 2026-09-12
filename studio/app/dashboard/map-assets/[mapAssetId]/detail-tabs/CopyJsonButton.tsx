@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
@@ -68,17 +70,12 @@ export function CopyJsonButton({
             onClick={handleCopy}
             disabled={disabled || !clipboardAvailable}
             aria-label={label}
-            className={cn(
-              "inline-flex shrink-0 items-center justify-center rounded p-1 transition-colors",
-              "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-              "disabled:opacity-40 disabled:pointer-events-none",
-              className,
-            )}
+            className={stylex.props(styles.u_927, styles.u_928, styles.u_929, styles.u_951, styles.u_933, styles.u_970).className}
           >
             {copied ? (
-              <Check className="size-3.5 text-green-400" aria-hidden="true" />
+              <Check className={stylex.props(styles.s_808).className} aria-hidden="true" />
             ) : (
-              <Copy className="size-3.5" aria-hidden="true" />
+              <Copy className={stylex.props(styles.s_991).className} aria-hidden="true" />
             )}
           </button>
         </TooltipTrigger>

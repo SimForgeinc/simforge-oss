@@ -7,15 +7,17 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { CheckCircle2, FileVideo, Loader2, Upload, X } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "../../components/ui/button";
-import { RefusalNotice } from "./RefusalNotice";
+import { CheckCircle2, FileVideo, Loader2, Upload, X } from "lucide-react";
+import { styles as s } from "./evaluation-components.stylex";
 import type { EvaluationGateway } from "../gateway";
 import { ComputeApiError } from "../gateway";
 import { classifyEvaluationInput, type EvaluationInputClass } from "../input-kinds";
 import type { ModelCatalogEntry } from "../model-catalog";
 import { formatBytes } from "../presentation";
 import type { ExecutionTarget } from "../presentation";
+import { RefusalNotice } from "./RefusalNotice";
 import type { UploadedArtifact, UploadProgress } from "../upload";
 import { uploadEvaluationInput } from "../upload";
 
@@ -172,14 +174,14 @@ export function InputPicker({
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
   return (
-    <section className="space-y-4" data-testid="evaluation-input-step">
-      <div className="flex flex-wrap items-center gap-3">
+    <section {...stylex.props(s.section4)} data-testid="evaluation-input-step">
+      <div {...stylex.props(s.row)}>
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,.webm,.mkv"
-          className="hidden"
+          {...stylex.props(s.hidden)}
           onChange={(event) => select(Array.from(event.target.files ?? []))}
           data-testid="evaluation-file-input"
         />
@@ -198,27 +200,25 @@ export function InputPicker({
             Clear
           </Button>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p {...stylex.props(s.textSm, s.textMuted)}>
             Select one video, or up to seven synchronized camera recordings together.
           </p>
         )}
       </div>
 
       {files.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-xs leading-5 text-muted-foreground">
+        <div {...stylex.props(s.section1)}>
+          <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
             File order is preserved through upload and submission. You will map each file to its
             real camera position after the upload.
           </p>
-          <ul className="divide-y divide-border border border-border" data-testid="evaluation-file-list">
+          <ul {...stylex.props(s.borderBox)} data-testid="evaluation-file-list">
             {files.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <FileVideo aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                <span className="w-14 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  Input {index + 1}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">{formatBytes(file.size)}</span>
+              <li key={`${file.name}-${index}`} {...stylex.props(s.row, s.px3py2, s.textSm)}>
+                <FileVideo aria-hidden="true" {...stylex.props(s.iconSm, s.svgMuted)} />
+                <span {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Input {index + 1}</span>
+                <span {...stylex.props(s.min0, s.flex1, s.truncate)}>{file.name}</span>
+                <span {...stylex.props(s.shrink0, s.tabular, s.textMuted)}>{formatBytes(file.size)}</span>
               </li>
             ))}
           </ul>
@@ -228,11 +228,11 @@ export function InputPicker({
       {error ? <RefusalNotice title="Video selection failed" reasons={[error]} /> : null}
 
       {progress && progress.phase !== "done" ? (
-        <div className="space-y-2" data-testid="evaluation-upload-progress">
-          <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex min-w-0 items-center gap-2">
-              <Loader2 aria-hidden="true" className="size-3.5 shrink-0 animate-spin" />
-              <span className="truncate">
+        <div {...stylex.props(s.section1)} data-testid="evaluation-upload-progress">
+          <div {...stylex.props(s.rowBetween, s.textXs, s.textMuted)}>
+            <span {...stylex.props(s.rowTight, s.min0)}>
+              <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} />
+              <span {...stylex.props(s.truncate)}>
                 {progress.phase === "hashing"
                   ? "Checksumming"
                   : progress.phase === "reserving"
@@ -243,24 +243,20 @@ export function InputPicker({
                 {uploadingName ? ` ${uploadingName}` : ""}
               </span>
             </span>
-            <span className="shrink-0 tabular-nums">
-              {formatBytes(progress.bytesDone)} / {formatBytes(progress.bytesTotal)}
-            </span>
+            <span {...stylex.props(s.shrink0, s.tabular)}>{formatBytes(progress.bytesDone)} / {formatBytes(progress.bytesTotal)}</span>
           </div>
-          <div className="h-1.5 w-full bg-muted">
-            <div
-              className="h-full bg-primary transition-[width]"
-              style={{
-                width: `${progress.bytesTotal > 0 ? Math.min(100, (progress.bytesDone / progress.bytesTotal) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <div {...stylex.props(s.progressTrack)}><div
+            {...stylex.props(s.progressFill)}
+            style={{
+              width: `${progress.bytesTotal > 0 ? Math.min(100, (progress.bytesDone / progress.bytesTotal) * 100) : 0}%`,
+            }}
+          /></div>
         </div>
       ) : null}
 
       {prepared ? (
-        <p className="inline-flex items-center gap-2 text-sm text-foreground" data-testid="evaluation-input-ready">
-          <CheckCircle2 aria-hidden="true" className="size-4 text-primary" />
+        <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textFg)} data-testid="evaluation-input-ready">
+          <CheckCircle2 aria-hidden="true" {...stylex.props(s.icon, s.svgPrimary)} />
           {prepared.artifacts.length === 0
             ? `${prepared.files.length} video${prepared.files.length === 1 ? "" : "s"} ready for local execution — nothing was uploaded.`
             : `${prepared.artifacts.length} video${prepared.artifacts.length === 1 ? "" : "s"} stored and verified${
@@ -276,7 +272,7 @@ export function InputPicker({
           onClick={execution === "local" ? useWithoutUpload : () => void upload()}
           data-testid="evaluation-upload-button"
         >
-          {uploading ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
+          {uploading ? <Loader2 aria-hidden="true" {...stylex.props(s.icon)} /> : null}
           {execution === "local"
             ? `Use ${files.length === 1 ? "this video" : `${files.length} videos`}`
             : `Upload ${files.length === 1 ? "video" : `${files.length} videos`}`}

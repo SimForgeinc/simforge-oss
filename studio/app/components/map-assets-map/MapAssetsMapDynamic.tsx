@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import * as stylex from "@stylexjs/stylex";
 import type { MapAssetsMapProps } from "@/app/components/map-assets-map/MapAssetsMap";
+import { styles } from "./map-canvas.stylex";
 
 const MAP_IMPORT_RETRIES = 3;
 const MAP_IMPORT_RETRY_DELAY_MS = 750;
@@ -29,7 +31,7 @@ async function importMapAssetsMap() {
 const MapAssetsMap = dynamic(importMapAssetsMap, {
   ssr: false,
   loading: () => (
-    <div className="flex h-full min-h-[400px] items-center justify-center bg-background/50 text-sm text-muted-foreground">
+    <div {...stylex.props(styles.loading)}>
       Loading map…
     </div>
   ),
@@ -38,10 +40,7 @@ const MapAssetsMap = dynamic(importMapAssetsMap, {
 const SilentMapAssetsMap = dynamic(importMapAssetsMap, {
   ssr: false,
   loading: () => (
-    <div
-      className="h-full min-h-[400px] bg-background/50"
-      aria-hidden="true"
-    />
+    <div {...stylex.props(styles.loading)} aria-hidden="true" />
   ),
 });
 

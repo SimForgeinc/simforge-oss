@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpDown, Loader2, Search, X } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import {
   type GalleryCarlaFilter,
   type GallerySort,
 } from "./gallery-filters";
+import { dialog } from "./asset-dialogs.stylex";
 
 
 export function AssetGalleryToolbar({
@@ -50,38 +52,21 @@ export function AssetGalleryToolbar({
   searching: boolean;
 }) {
   return (
-    <Toolbar className="mx-auto max-w-[1500px] border-b-0 bg-transparent px-0 sm:px-0">
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
-        {searching ? (
-          <Loader2
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-primary"
-          />
-        ) : (
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-        )}
+    <Toolbar {...stylex.props(dialog.toolbar)}>
+      <div {...stylex.props(dialog.searchWrap)}>
+        {searching ? <Loader2 aria-hidden="true" {...stylex.props(dialog.searchIcon, dialog.progressPulse)} /> : <Search aria-hidden="true" {...stylex.props(dialog.searchIcon)} />}
         <Input
           type="search"
           aria-label="Search assets by title"
           placeholder="Search assets by title…"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          // `type=search` gives assistive tech and the Escape key their usual
-          // meaning, but Chrome also draws its own clear glyph — which sat next
-          // to ours as a second, unlabelled ×.
-          className="h-9 pl-9 pr-9 text-sm [&::-webkit-search-cancel-button]:hidden"
+          // Native bridge: hide the browser's duplicate search clear button.
+          className="[&::-webkit-search-cancel-button]:hidden"
         />
         {query ? (
-          <button
-            type="button"
-            aria-label="Clear search"
-            onClick={() => onQueryChange("")}
-            className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <X aria-hidden="true" className="size-3.5" />
+          <button type="button" aria-label="Clear search" onClick={() => onQueryChange("")} {...stylex.props(dialog.clearButton)}>
+            <X aria-hidden="true" {...stylex.props(dialog.iconSm)} />
           </button>
         ) : null}
       </div>
@@ -91,19 +76,19 @@ export function AssetGalleryToolbar({
         onChange={(value) => onActorClassChange(value as GalleryActorClass | "all")}
         options={GALLERY_ACTOR_CLASS_OPTIONS}
         label="Filter by actor class"
-        className="h-9 text-xs sm:w-48"
+        {...stylex.props(dialog.toolbarSelect, dialog.toolbarActor)}
       />
       <SelectMenu
         value={carla}
         onChange={(value) => onCarlaChange(value as GalleryCarlaFilter)}
         options={GALLERY_CARLA_FILTER_OPTIONS}
         label="Filter by CARLA compatibility"
-        className="h-9 text-xs sm:w-40"
+        {...stylex.props(dialog.toolbarSelect, dialog.toolbarCarla)}
       />
 
-      <ToolbarGroup className="ml-auto">
-        <p className="shrink-0 text-xs text-muted-foreground">
-          <span className="tabular-nums text-foreground">{resultCount}</span>{" "}
+      <ToolbarGroup {...stylex.props(dialog.toolbarGroup)}>
+        <p {...stylex.props(dialog.toolbarCount)}>
+          <span {...stylex.props(dialog.toolbarCountValue)}>{resultCount}</span>{" "}
           {resultCount === 1 ? "asset" : "assets"}
           {hasMore ? " loaded" : ""}
         </p>
@@ -112,14 +97,14 @@ export function AssetGalleryToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="h-9 gap-1.5 text-xs"
+              {...stylex.props(dialog.toolbarSort)}
               title={
                 hasMore
                   ? "Sorts the assets loaded so far. Load more to sort across the rest of the library."
                   : undefined
               }
             >
-              <ArrowUpDown aria-hidden="true" className="size-3.5" />
+              <ArrowUpDown aria-hidden="true" {...stylex.props(dialog.iconButton)} />
               Sort: {GALLERY_SORT_LABELS[sort]}
             </Button>
           </DropdownMenuTrigger>

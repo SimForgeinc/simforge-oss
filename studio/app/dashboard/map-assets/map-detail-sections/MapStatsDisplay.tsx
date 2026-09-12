@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useState, useCallback, useMemo } from "react";
 import type {
@@ -37,7 +39,7 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 pb-1.5 group"
+        className={stylex.props(styles.s_634).className}
         aria-expanded={open}
       >
         <ChevronRight
@@ -46,19 +48,19 @@ function CollapsibleSection({
             open && "rotate-90",
           )}
         />
-        <Icon className="size-3 text-muted-foreground shrink-0" />
-        <span className="text-xs font-semibold">{label}</span>
+        <Icon className={stylex.props(styles.s_635).className} />
+        <span className={stylex.props(styles.s_636).className}>{label}</span>
       </button>
-      {open && <div className="space-y-0.5 ml-[18px]">{children}</div>}
+      {open && <div className={stylex.props(styles.s_637).className}>{children}</div>}
     </div>
   );
 }
 
 function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium tabular-nums text-right">{value}</span>
+    <div className={stylex.props(styles.s_648).className}>
+      <span className={stylex.props(styles.s_973).className}>{label}</span>
+      <span className={stylex.props(styles.s_650).className}>{value}</span>
     </div>
   );
 }
@@ -152,15 +154,15 @@ export function MapStatsDisplay({
   }
 
   return (
-    <div className="space-y-3 pt-1">
+    <div className={stylex.props(styles.s_641).className}>
       {/* Expand / Collapse all */}
-      <div className="flex items-center justify-end">
+      <div className={stylex.props(styles.s_642).className}>
         <button
           type="button"
           onClick={toggleAll}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          className={stylex.props(styles.s_643).className}
         >
-          <ChevronsUpDown className="size-3" />
+          <ChevronsUpDown className={stylex.props(styles.s_927).className} />
           {allExpanded ? "Collapse all" : "Expand all"}
         </button>
       </div>
@@ -174,11 +176,11 @@ export function MapStatsDisplay({
             <StatRow
               label="Speed limits (mph)"
               value={
-                <span className="flex flex-wrap gap-1 justify-end">
+                <span className={stylex.props(styles.s_416).className}>
                   {rn.speed_limits_mph.map((s) => (
                     <span
                       key={s}
-                      className="inline-flex items-center rounded border border-border px-1.5 py-px text-[10px] font-medium"
+                      className={stylex.props(styles.s_417).className}
                     >
                       {s}
                     </span>
@@ -211,7 +213,7 @@ export function MapStatsDisplay({
                 overtureCrosswalkSurvivors && overtureCrosswalkSurvivors > 0 ? (
                   <>
                     {fmt(fi.crosswalks.total + overtureCrosswalkSurvivors)}
-                    <span className="ml-1 text-muted-foreground">
+                    <span className={stylex.props(styles.s_418).className}>
                       ({fmt(fi.crosswalks.total)} in-house + {fmt(overtureCrosswalkSurvivors)} Overture)
                     </span>
                   </>
@@ -271,8 +273,8 @@ export function MapStatsDisplay({
             <div>
               <StatRow label="Signalized Junctions" value={fmt(fi.junctions.signalized)} />
               {rn?.signal_breakdown?.traffic_lights != null && rn.signal_breakdown.traffic_lights > 0 && (
-                <div className="ml-2">
-                  <span className="text-[10px] text-muted-foreground/60">({fmt(rn.signal_breakdown.traffic_lights)} traffic lights)</span>
+                <div className={stylex.props(styles.s_421).className}>
+                  <span className={stylex.props(styles.s_698).className}>({fmt(rn.signal_breakdown.traffic_lights)} traffic lights)</span>
                 </div>
               )}
             </div>
@@ -283,8 +285,8 @@ export function MapStatsDisplay({
             <div>
               <StatRow label="Stop Junctions" value={fmt(fi.junctions.stop_sign_controlled)} />
               {rn?.signal_breakdown?.stop_signs != null && rn.signal_breakdown.stop_signs > 0 && (
-                <div className="ml-2">
-                  <span className="text-[10px] text-muted-foreground/60">({fmt(rn.signal_breakdown.stop_signs)} stop signs)</span>
+                <div className={stylex.props(styles.s_421).className}>
+                  <span className={stylex.props(styles.s_698).className}>({fmt(rn.signal_breakdown.stop_signs)} stop signs)</span>
                 </div>
               )}
             </div>
@@ -324,11 +326,11 @@ export function MapStatsDisplay({
             label="Phase timing"
             value={
               sig.has_signal_phase_timing ? (
-                <span className="inline-flex items-center rounded-sm bg-green-500/10 px-1.5 py-px text-[10px] font-medium text-green-600 dark:text-green-400">
+                <span className={stylex.props(styles.s_423).className}>
                   Available
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground">
+                <span className={stylex.props(styles.s_424).className}>
                   Not available
                 </span>
               )
@@ -394,7 +396,7 @@ export function MapStatsDisplay({
               <StatRow key={label} label={label} value={fmt(count)} />
             ))}
             {attribution && (
-              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
+              <p className={stylex.props(styles.s_425).className}>
                 {attribution}
               </p>
             )}

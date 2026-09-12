@@ -1,5 +1,8 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./error.stylex";
+
 export default function DashboardError({
   error,
   reset,
@@ -8,15 +11,12 @@ export default function DashboardError({
   reset: () => void;
 }) {
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <h2 className="text-lg font-semibold mb-2">Something went wrong</h2>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div {...stylex.props(styles.root)}>
+      <h2 {...stylex.props(styles.heading)}>Something went wrong</h2>
+      <p {...stylex.props(styles.message)}>
         {error.message || "An unexpected error occurred."}
       </p>
-      <button
-        onClick={reset}
-        className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-      >
+      <button onClick={reset} {...stylex.props(styles.retry)}>
         Try again
       </button>
     </div>

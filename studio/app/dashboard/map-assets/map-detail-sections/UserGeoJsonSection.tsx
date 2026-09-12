@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useRef, useState } from "react";
 import { AlertCircle, Palette, Trash2, Upload } from "lucide-react";
@@ -45,8 +47,8 @@ function SliderRow({
   display: string;
 }) {
   return (
-    <div className="mt-1.5 flex items-center gap-2">
-      <span className="w-14 shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+    <div className={stylex.props(styles.s_365).className}>
+      <span className={stylex.props(styles.s_366).className}>
         {label}
       </span>
       <input
@@ -56,10 +58,10 @@ function SliderRow({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-1 flex-1 cursor-pointer accent-primary"
+        className={stylex.props(styles.s_367).className}
         aria-label={ariaLabel}
       />
-      <span className="w-8 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+      <span className={stylex.props(styles.s_368).className}>
         {display}
       </span>
     </div>
@@ -121,24 +123,24 @@ export function UserGeoJsonSection({
 
   return (
     <section data-testid="user-geojson-section">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className={stylex.props(styles.s_484).className}>
+        <span className={stylex.props(styles.s_370).className}>
           Uploaded GeoJSON
         </span>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1.5 rounded border border-border bg-muted/20 px-2 py-1 text-[11px] font-medium text-foreground/90 transition-colors hover:bg-muted/40"
+          className={stylex.props(styles.s_371).className}
           data-testid="upload-geojson-button"
         >
-          <Upload className="size-3" />
+          <Upload className={stylex.props(styles.s_927).className} />
           Upload GeoJSON
         </button>
         <input
           ref={inputRef}
           type="file"
           accept=".geojson,.json,application/geo+json,application/json"
-          className="hidden"
+          className={stylex.props(styles.s_373).className}
           data-testid="upload-geojson-input"
           onChange={(e) => {
             handleFiles(e.target.files);
@@ -150,42 +152,42 @@ export function UserGeoJsonSection({
 
       {error && (
         <div
-          className="mt-2 flex items-start gap-1.5 rounded border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-[11px] text-destructive"
+          className={stylex.props(styles.s_374).className}
           data-testid="upload-geojson-error"
           role="alert"
         >
-          <AlertCircle className="mt-px size-3.5 shrink-0" />
+          <AlertCircle className={stylex.props(styles.s_375).className} />
           <span>{error}</span>
         </div>
       )}
 
       {layers.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
+        <ul className={stylex.props(styles.s_819).className}>
           {layers.map((layer) => {
             const paletteOpen = openColorId === layer.id;
             return (
               <li
                 key={layer.id}
-                className="rounded border border-border bg-muted/20 px-2.5 py-1.5"
+                className={stylex.props(styles.s_377).className}
               >
-                <div className="flex items-center gap-2">
+                <div className={stylex.props(styles.s_908).className}>
                   <button
                     type="button"
                     onClick={() => setOpenColorId(paletteOpen ? null : layer.id)}
-                    className="relative flex size-4 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ring-black/20"
+                    className={stylex.props(styles.s_379).className}
                     style={{ backgroundColor: layer.color }}
                     title="Change color"
                     aria-label={`Change color for ${layer.name}`}
                   >
-                    <Palette className="size-2.5 text-white/80" />
+                    <Palette className={stylex.props(styles.s_380).className} />
                   </button>
                   <span
-                    className="min-w-0 flex-1 truncate text-xs text-foreground/90"
+                    className={stylex.props(styles.s_630).className}
                     title={layer.name}
                   >
                     {layer.name}
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                  <span className={stylex.props(styles.s_624).className}>
                     {layer.featureCount.toLocaleString()}
                   </span>
                   <Switch
@@ -196,16 +198,16 @@ export function UserGeoJsonSection({
                   <button
                     type="button"
                     onClick={() => onRemoveLayer(layer.id)}
-                    className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                    className={stylex.props(styles.s_383).className}
                     title="Remove layer"
                     aria-label={`Remove ${layer.name}`}
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className={stylex.props(styles.s_991).className} />
                   </button>
                 </div>
 
                 {paletteOpen && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className={stylex.props(styles.s_385).className}>
                     {USER_GEOJSON_PALETTE.map((c) => (
                       <button
                         key={c}

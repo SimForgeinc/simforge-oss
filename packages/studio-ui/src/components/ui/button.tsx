@@ -1,56 +1,52 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import * as stylex from "@stylexjs/stylex";
 
-import { cn } from "../../lib/utils";
+import { mergeStyleProps } from "../stylex/surface";
+import {
+  button as buttonBase,
+  buttonSizes,
+  buttonVariants as buttonVariantStyles,
+} from "./controls.stylex";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/85",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/70",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-6",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+type ButtonStyle = stylex.StyleXStyles;
+type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+type ButtonSize = "default" | "sm" | "lg" | "icon";
+
+/**
+ * These descendant selectors remain a deliberately tiny Tailwind bridge:
+ * Button accepts arbitrary icon components, so their dimensions cannot be
+ * inherited from the parent. All root, state, variant, and size styling is
+ * compiled by StyleX.
+ */
+const ICON_CLASS = "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0";
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean;
+  variant?: ButtonVariant | null;
+  size?: ButtonSize | null;
+  xstyle?: ButtonStyle;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, xstyle, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const styleProps = stylex.props(
+      buttonBase.base,
+      variant == null ? (variant === null ? null : buttonVariantStyles.default) : buttonVariantStyles[variant],
+      size == null ? (size === null ? null : buttonSizes.default) : buttonSizes[size],
+      xstyle,
+    );
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        {...mergeStyleProps(styleProps, className ? `${ICON_CLASS} ${className}` : ICON_CLASS)}
         ref={ref}
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+export { Button };

@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import {
   detectHeroSceneEnvironment,
   HERO_SCENE_LOAD_TIMEOUT_MS,
   shouldRenderHeroScene,
 } from "./hero-scene";
+import { hero } from "./onboarding.stylex";
 
 /**
  * The animated backdrop behind the onboarding screens: the same two Unicorn
@@ -35,9 +37,6 @@ const SCENE_PROPS = {
   showPlaceholderWhileLoading: false,
 } as const;
 
-const FALLBACK_GRADIENT =
-  "radial-gradient(120% 90% at 72% 18%, #1b4a5e 0%, #0d2130 38%, #060a0e 72%, #050607 100%)";
-
 export function HeroBackdrop({ className = "" }: { className?: string }) {
   /**
    * `probing` until the browser has been asked what it supports: the server
@@ -60,23 +59,21 @@ export function HeroBackdrop({ className = "" }: { className?: string }) {
     return () => window.clearTimeout(timer);
   }, [scene, loaded]);
 
+  const root = stylex.props(hero.root);
+
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+      // A caller's class still applies on top: this layer is positioned by
+      // whatever screen mounts it.
+      className={className ? `${root.className ?? ""} ${className}`.trim() : root.className}
       data-testid="onboarding-hero-backdrop"
       data-scene={scene}
-      style={{ backgroundImage: FALLBACK_GRADIENT }}
+      style={root.style}
     >
       {scene === "live" ? (
         <>
-          <div
-            className="absolute inset-0"
-            style={{
-              maskImage: "linear-gradient(202deg, black 0%, black 50%, transparent 72%)",
-              WebkitMaskImage: "linear-gradient(202deg, black 0%, black 50%, transparent 72%)",
-            }}
-          >
+          <div {...stylex.props(hero.layer, hero.skyMask)}>
             <UnicornScene
               {...SCENE_PROPS}
               projectId="Lgi1YImqkgZhsSfqjKTg"
@@ -86,13 +83,7 @@ export function HeroBackdrop({ className = "" }: { className?: string }) {
               onLoad={() => setLoaded(true)}
             />
           </div>
-          <div
-            className="absolute inset-0"
-            style={{
-              maskImage: "linear-gradient(202deg, transparent 46%, black 68%, black 100%)",
-              WebkitMaskImage: "linear-gradient(202deg, transparent 46%, black 68%, black 100%)",
-            }}
-          >
+          <div {...stylex.props(hero.layer, hero.groundMask)}>
             <UnicornScene
               {...SCENE_PROPS}
               projectId="PT1yYvFGJoaxM36xAiSA"
@@ -107,8 +98,8 @@ export function HeroBackdrop({ className = "" }: { className?: string }) {
       {/* The marketing hero carries a headline over a wide crop; this screen
           carries three lines of instructions and two buttons over the same
           scene, so the copy side of the scrim is darker than the site's. */}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,7,0.5)_0%,rgba(5,6,7,0.18)_38%,rgba(5,6,7,0.94)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,7,0.9)_0%,rgba(5,6,7,0.78)_38%,rgba(5,6,7,0.3)_72%,rgba(5,6,7,0.42)_100%)]" />
+      <div {...stylex.props(hero.layer, hero.verticalScrim)} />
+      <div {...stylex.props(hero.layer, hero.copyScrim)} />
     </div>
   );
 }

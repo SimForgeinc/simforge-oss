@@ -1,16 +1,13 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { Boxes, KeyRound, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
-import type {
-  AiProviderKeyStatus,
-  AiProviderSettingsStatus,
-  UpdateAiProviderSettings,
-} from "@/app/lib/ai-providers/contracts";
+import type { AiProviderKeyStatus, AiProviderSettingsStatus, UpdateAiProviderSettings } from "@/app/lib/ai-providers/contracts";
+import { styles } from "./ai-provider-settings.stylex";
 
 const SETTINGS_URL = "/api/simforge/ai-providers";
 
@@ -63,41 +60,25 @@ function KeyField({
     setDraft("");
   };
   return (
-    <form onSubmit={submit} className="space-y-2">
-      <label htmlFor={inputId} className="text-xs font-medium text-white/60">
-        {label}
-      </label>
-      <div className="flex items-center gap-2">
-        <Input
-          id={inputId}
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          value={draft}
+    <form onSubmit={submit} {...stylex.props(styles.form)}>
+      <label htmlFor={inputId} {...stylex.props(styles.label)}>{label}</label>
+      <div {...stylex.props(styles.controls)}>
+        <Input id={inputId} type="password" autoComplete="off" spellCheck={false} value={draft}
           placeholder={status.configured ? `Replace key ending in …${status.keyHint}` : placeholder}
-          onChange={(event) => setDraft(event.target.value)}
-          disabled={busy}
-          className="font-mono"
-        />
-        <Button type="submit" disabled={busy || draft.trim().length < 8}>
-          <KeyRound aria-hidden="true" />
-          Save
-        </Button>
+          onChange={(event) => setDraft(event.target.value)} disabled={busy}
+          xstyle={styles.mono} />
+        <Button type="submit" disabled={busy || draft.trim().length < 8}><KeyRound {...stylex.props(styles.icon)} aria-hidden="true" />Save</Button>
         {status.configured && status.source !== "environment" ? (
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void onClear()}>
-            <Trash2 aria-hidden="true" />
-            Remove
-          </Button>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => void onClear()}><Trash2 {...stylex.props(styles.icon)} aria-hidden="true" />Remove</Button>
         ) : null}
       </div>
-      <p className="text-[11px] leading-4 text-white/40">
+      <p {...stylex.props(styles.note)}>
         {status.configured ? `Key ending in …${status.keyHint}, ${sourceLabel(status)}.` : "No key stored."}{" "}
         The key is sent once to the local SimForge service and never shown again.
       </p>
     </form>
   );
 }
-
 export function AiProviderSettingsClient() {
   const [status, setStatus] = useState<AiProviderSettingsStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,65 +121,22 @@ export function AiProviderSettingsClient() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8 text-white">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">AI providers</h1>
-        <p className="mt-1 text-sm text-white/50">
-          3D asset generation calls an external AI service. SimForge ships no keys: bring your own.
-        </p>
-        <p className="mt-2 text-xs text-white/40">
-          <Link href="/dashboard/settings" className="underline underline-offset-2">
-            Back to settings
-          </Link>
-        </p>
+    <div {...stylex.props(styles.root)}>
+      <header {...stylex.props(styles.header)}>
+        <h1 {...stylex.props(styles.title)}>AI providers</h1>
+        <p {...stylex.props(styles.lead)}>3D asset generation calls an external AI service. SimForge ships no keys: bring your own.</p>
+        <p {...stylex.props(styles.back)}><Link href="/dashboard/settings">Back to settings</Link></p>
       </header>
-
-      {error ? (
-        <p role="alert" className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-          {error}
-        </p>
-      ) : null}
-
+      {error ? <p role="alert" {...stylex.props(styles.alert)}>{error}</p> : null}
       {!status ? (
-        <p className="flex items-center gap-2 text-sm text-white/50">
-          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-          Loading provider status…
-        </p>
+        <p {...stylex.props(styles.loading)}><LoaderCircle {...stylex.props(styles.spinner)} aria-hidden="true" />Loading provider status…</p>
       ) : (
         <>
-          <p className="flex items-center gap-2 text-xs text-white/45">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            {status.keyStorage === "os-vault"
-              ? "Keys you enter are kept in this computer's secure credential vault."
-              : "This computer has no usable credential vault: keys you enter are kept in memory only and must be re-entered after the app restarts."}
-          </p>
-
-          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-            <h2 className="flex items-center gap-2 text-base font-medium">
-              <Boxes className="size-4 text-[#E8E044]" aria-hidden="true" />
-              3D asset generation
-            </h2>
-            <p
-              className={cn(
-                "mt-2 text-xs",
-                status.assetGeneration.available ? "text-emerald-200/80" : "text-amber-200/90",
-              )}
-              aria-live="polite"
-            >
-              {status.assetGeneration.available
-                ? "Ready: generated models are published to your local asset library."
-                : status.assetGeneration.reason}
-            </p>
-            <div className="mt-4">
-              <KeyField
-                label="Meshy API key"
-                status={status.assetGeneration.meshy}
-                placeholder="msy_…"
-                busy={busy}
-                onSave={(key) => patch({ meshyApiKey: key })}
-                onClear={() => patch({ meshyApiKey: null })}
-              />
-            </div>
+          <p {...stylex.props(styles.vault)}><ShieldCheck {...stylex.props(styles.icon)} aria-hidden="true" />{status.keyStorage === "os-vault" ? "Keys you enter are kept in this computer's secure credential vault." : "This computer has no usable credential vault: keys you enter are kept in memory only and must be re-entered after the app restarts."}</p>
+          <section {...stylex.props(styles.panel)}>
+            <h2 {...stylex.props(styles.panelTitle)}><Boxes {...stylex.props(styles.icon, styles.accent)} aria-hidden="true" />3D asset generation</h2>
+            <p {...stylex.props(styles.availability, status.assetGeneration.available ? styles.ready : styles.unavailable)} aria-live="polite">{status.assetGeneration.available ? "Ready: generated models are published to your local asset library." : status.assetGeneration.reason}</p>
+            <div {...stylex.props(styles.field)}><KeyField label="Meshy API key" status={status.assetGeneration.meshy} placeholder="msy_…" busy={busy} onSave={(key) => patch({ meshyApiKey: key })} onClear={() => patch({ meshyApiKey: null })} /></div>
           </section>
         </>
       )}

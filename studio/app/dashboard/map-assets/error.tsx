@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./map-assets.stylex";
 
 export default function MapAssetsError({
   error,
@@ -8,14 +10,14 @@ export default function MapAssetsError({
   reset: () => void;
 }) {
   return (
-    <div className="p-6">
-      <h2 className="text-lg font-semibold mb-2">Failed to load map assets</h2>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className={stylex.props(styles.s_136).className}>
+      <h2 className={stylex.props(styles.s_137).className}>Failed to load map assets</h2>
+      <p className={stylex.props(styles.s_138).className}>
         {error.message || "Could not fetch map asset data."}
       </p>
       <button
         onClick={reset}
-        className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+        className={stylex.props(styles.s_139).className}
       >
         Try again
       </button>

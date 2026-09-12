@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 import { ArrowLeft, Pause, Play } from "lucide-react";
 import Link from "next/link";
@@ -19,8 +20,8 @@ import type {
   EvalEvent,
   EvalViewTick,
 } from "@/app/lib/evaluation/contracts";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "../../../shared";
+import { styles } from "../../../route-residuals.stylex";
 
 const EVENT_COLOR: Record<EvalEvent["severity"], string> = {
   info: "#38bdf8",
@@ -58,7 +59,7 @@ function EgoSpeedChart({
   return (
     <svg
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-      className="w-full cursor-crosshair select-none rounded-md border border-border bg-muted/30"
+      {...stylex.props(styles.chart)}
       data-testid="ego-speed-chart"
       onClick={(mouse) => {
         const rect = mouse.currentTarget.getBoundingClientRect();
@@ -66,7 +67,7 @@ function EgoSpeedChart({
         onSeek(Math.round(fraction * (ticks.length - 1)));
       }}
     >
-      <text x={6} y={14} className="fill-muted-foreground text-[10px]">
+      <text x={6} y={14} {...stylex.props(styles.tinyMuted)}>
         ego speed (m/s), max {maxSpeed.toFixed(1)}
       </text>
       <path d={path} fill="none" stroke="hsl(160 84% 39%)" strokeWidth={1.6} />
@@ -122,10 +123,10 @@ function PathPlot({ ticks, cursor }: { ticks: EvalViewTick[]; cursor: number }) 
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="w-full rounded-md border border-border bg-muted/30"
+      {...stylex.props(styles.chartStatic)}
       data-testid="path-plot"
     >
-      <text x={6} y={14} className="fill-muted-foreground text-[10px]">
+      <text x={6} y={14} {...stylex.props(styles.tinyMuted)}>
         top-down path (m)
       </text>
       <path
@@ -200,7 +201,7 @@ export function EpisodePlaybackClient({
   const policyId = payload.provenance?.policy.policyId ?? payload.score?.policyId ?? null;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)} >
       <PageHeader
         eyebrow={campaignId}
         title={payload.score?.scenarioId ?? episodeId}
@@ -208,13 +209,13 @@ export function EpisodePlaybackClient({
         actions={
           <>
             <StatusBadge status={payload.complete ? "complete" : "running"} />
-            <Badge variant="secondary" className="font-mono">
+            <Badge variant="secondary" {...stylex.props(styles.mono)} >
               score {formatScore(payload.score?.drivingScore)}
             </Badge>
             {policyId ? (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/dashboard/evaluation/${campaignId}/policies/${policyId}`}>
-                  <ArrowLeft className="mr-1.5 h-4 w-4" />
+                  <ArrowLeft {...stylex.props(styles.icon)} />
                   {policyId}
                 </Link>
               </Button>
@@ -222,31 +223,31 @@ export function EpisodePlaybackClient({
           </>
         }
       />
-      <div className="flex flex-col gap-4 px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.content4)} >
         {ticks.length === 0 ? (
           <PanelMessage>No trace.jsonl for this episode — nothing to play back.</PanelMessage>
         ) : (
           <>
             <Card>
-              <CardContent className="flex flex-col gap-3 pt-5">
+              <CardContent {...stylex.props(styles.content4)}>
                 <EgoSpeedChart
                   ticks={ticks}
                   events={payload.events}
                   cursor={cursor}
                   onSeek={(index) => setCursor(Math.max(0, Math.min(ticks.length - 1, index)))}
                 />
-                <div className="flex items-center gap-3">
+                <div {...stylex.props(styles.controls)}>
                   <Button
                     size="sm"
                     variant="outline"
                     data-testid="playback-toggle"
                     onClick={() => setPlaying((value) => !value)}
                   >
-                    {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {playing ? <Pause {...stylex.props(styles.iconBare)} /> : <Play {...stylex.props(styles.iconBare)} />}
                   </Button>
                   <input
                     type="range"
-                    className="w-full accent-primary"
+                    {...stylex.props(styles.range)}
                     min={0}
                     max={ticks.length - 1}
                     value={cursor}
@@ -256,7 +257,7 @@ export function EpisodePlaybackClient({
                       setCursor(Number(change.target.value));
                     }}
                   />
-                  <span className="w-44 shrink-0 text-right font-mono text-xs text-muted-foreground">
+                  <span {...stylex.props(styles.time)}>
                     step {current?.step ?? 0}/{ticks[ticks.length - 1]?.step ?? 0} ·{" "}
                     {(current?.tS ?? 0).toFixed(1)}s
                   </span>
@@ -264,13 +265,13 @@ export function EpisodePlaybackClient({
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div {...stylex.props(styles.grid3)} >
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Ego state</CardTitle>
+                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+                  <CardTitle {...stylex.props(styles.cardTitleSmall)}>Ego state</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-sm">
+                  <dl {...stylex.props(styles.dlState)} >
                     {current
                       ? (
                           [
@@ -283,22 +284,22 @@ export function EpisodePlaybackClient({
                           ] as const
                         ).map(([label, value]) => (
                           <div key={label}>
-                            <dt className="text-[10px] uppercase text-muted-foreground">{label}</dt>
+                            <dt {...stylex.props(styles.tinyMuted)}>{label}</dt>
                             <dd>{value}</dd>
                           </div>
                         ))
                       : null}
                   </dl>
-                  <div className="mt-3">
+                  <div style={{ marginTop: ".75rem" }}>
                     <PathPlot ticks={ticks} cursor={cursor} />
                   </div>
                 </CardContent>
               </Card>
 
               <Card data-testid="reasoning-panel">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Policy reasoning</CardTitle>
-                  <CardDescription className="font-mono text-xs">
+                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+                  <CardTitle {...stylex.props(styles.cardTitleSmall)}>Policy reasoning</CardTitle>
+                  <CardDescription {...stylex.props(styles.monoSmall)}>
                     {current
                       ? `decision #${current.step}` +
                         (current.inferMs !== null ? ` · infer ${current.inferMs} ms` : "") +
@@ -306,19 +307,19 @@ export function EpisodePlaybackClient({
                       : "—"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                <CardContent {...stylex.props(styles.content4)}>
+                  <p {...stylex.props(styles.whitespace)}>
                     {reasoning
                       ? reasoning.value
                       : "This trace carries no reasoning text — showing raw decision data."}
                   </p>
                   {reasoning && reasoning.tick.step !== current?.step ? (
-                    <p className="font-mono text-[10px] text-muted-foreground">
+                    <p {...stylex.props(styles.tinyMuted, styles.mono)}>
                       from decision #{reasoning.tick.step} (latest with reasoning)
                     </p>
                   ) : null}
                   {current ? (
-                    <div className="rounded-md bg-muted/40 p-2 font-mono text-xs text-muted-foreground">
+                    <div {...stylex.props(styles.actionData)}>
                       a={JSON.stringify(current.action)} rw={current.rw ?? "—"}
                       {current.roundtripMs !== null ? ` roundtrip=${current.roundtripMs}ms` : ""}
                     </div>
@@ -327,9 +328,9 @@ export function EpisodePlaybackClient({
               </Card>
 
               <Card data-testid="frames-panel">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Camera frames</CardTitle>
-                  <CardDescription className="font-mono text-xs">
+                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+                <CardTitle {...stylex.props(styles.cardTitleSmall)}>Camera frames</CardTitle>
+                <CardDescription {...stylex.props(styles.monoSmall)}>
                     {anyFrames
                       ? frames
                         ? `bundle recording @ step ${frames.tick.step}`
@@ -339,16 +340,16 @@ export function EpisodePlaybackClient({
                 </CardHeader>
                 <CardContent>
                   {frames ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div {...stylex.props(styles.frames)}>
                       {Object.entries(frames.value).map(([cam, relativePath]) => (
                         <figure key={cam}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             alt={`${cam} camera at step ${frames.tick.step}`}
-                            className="w-full rounded border border-border"
+                            {...stylex.props(styles.image)}
                             src={`/api/evaluation/campaigns/${campaignId}/episodes/${episodeId}/frames/${relativePath}`}
                           />
-                          <figcaption className="mt-1 text-center font-mono text-[10px] text-muted-foreground">
+                          <figcaption {...stylex.props(styles.centerCaption, styles.monoTiny, styles.muted)}>
                             {cam}
                           </figcaption>
                         </figure>
@@ -362,31 +363,31 @@ export function EpisodePlaybackClient({
             </div>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Events</CardTitle>
+              <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+                <CardTitle {...stylex.props(styles.cardTitleSmall)}>Events</CardTitle>
                 <CardDescription>
                   {payload.events.length} recorded · markers drawn on the timeline
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="flex flex-col gap-1.5">
+                <ul {...stylex.props(styles.list)}>
                   {payload.events.map((event, index) => {
                     const reached = current ? event.tS <= current.tS : false;
                     return (
                       <li
                         key={`${event.tick}-${index}`}
-                        className={cn(
-                          "flex items-center gap-3 rounded-md border border-transparent px-2 py-1 text-sm",
-                          reached ? "bg-muted/50" : "opacity-50",
+                        {...stylex.props(
+                          styles.event,
+                          reached ? styles.reached : styles.unreached,
                         )}
                       >
                         <span
-                          className="h-2 w-2 shrink-0 rounded-full"
+                          {...stylex.props(styles.dot)}
                           style={{ backgroundColor: EVENT_COLOR[event.severity] }}
                         />
                         <button
                           type="button"
-                          className="font-mono text-xs text-muted-foreground hover:underline"
+                          {...stylex.props(styles.monoSmall, styles.muted, styles.link)}
                           onClick={() => {
                             const target = ticks.findIndex((tick) => tick.tS >= event.tS);
                             if (target >= 0) setCursor(target);
@@ -394,15 +395,15 @@ export function EpisodePlaybackClient({
                         >
                           t={event.tS.toFixed(1)}s
                         </button>
-                        <span className="font-mono text-xs">{event.type}</span>
+                        <span {...stylex.props(styles.monoSmall)}>{event.type}</span>
                         <Badge
                           variant={event.severity === "infraction" ? "destructive" : "secondary"}
-                          className="text-[10px]"
+                          {...stylex.props(styles.tinyMuted)}
                         >
                           {event.severity}
                         </Badge>
                         {event.position ? (
-                          <span className="font-mono text-[10px] text-muted-foreground">
+                          <span {...stylex.props(styles.eventPosition)}>
                             ({event.position.x.toFixed(1)}, {event.position.y.toFixed(1)})
                           </span>
                         ) : null}

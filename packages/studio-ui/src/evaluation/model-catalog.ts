@@ -13,4 +13,45 @@
  *
  * Requires `@simforge-oss/model-store` in this package's dependencies.
  */
-export * from "@simforge-oss/model-store/catalog";
+import {
+  MODEL_CATALOG,
+  MODEL_FAMILIES,
+  MODEL_QUANTS_BY_FAMILY,
+  MODEL_RIG_PRESETS,
+  UPSTREAM_CODE_LICENSE,
+  WEIGHTS_LICENSE_BLOB_SHA,
+  WEIGHTS_LICENSE_ID,
+  catalogEntry,
+  isModelFamilyId,
+  quantOffer,
+  rigPresetForCameras,
+} from "@simforge-oss/model-store/catalog";
+
+export {
+  MODEL_CATALOG,
+  MODEL_FAMILIES,
+  MODEL_QUANTS_BY_FAMILY,
+  MODEL_RIG_PRESETS,
+  UPSTREAM_CODE_LICENSE,
+  WEIGHTS_LICENSE_BLOB_SHA,
+  WEIGHTS_LICENSE_ID,
+  catalogEntry,
+  isModelFamilyId,
+  quantOffer,
+  rigPresetForCameras,
+};
+export type {
+  ModelFamilyId,
+  ModelQuant,
+  ModelQuantStatus,
+  ModelExecutionStatus,
+  ModelCapabilities,
+  ModelQuantOffer,
+  ModelSidecar,
+  ModelLicense,
+  ModelCameraContract,
+  ModelCatalogEntry,
+  ModelInstallState,
+  ModelInstallStep,
+  ModelExecutionEligibility,
+} from "@simforge-oss/model-store/catalog";

@@ -10,8 +10,11 @@ import {
   type ReactNode,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { cn } from "../lib/utils";
+
+import { mergeStyleProps } from "./stylex/surface";
+import { styles } from "./VideoGroupPlayer.stylex";
 
 interface VideoGroupContextValue {
   register: (el: HTMLVideoElement) => void;
@@ -189,67 +192,62 @@ export function VideoGroupPlayer({
 
   return (
     <VideoGroupCtx.Provider value={{ register, unregister }}>
-      <div className={cn("flex flex-col", className)}>
+      <div {...mergeStyleProps(stylex.props(styles.root), className)}>
         {hasVideos && (
-          <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-black/80 px-4 py-2">
+          <div {...stylex.props(styles.toolbar)}>
             <button
               type="button"
               onClick={handlePlayPause}
-              className="flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              {...stylex.props(styles.control, styles.playControl)}
               aria-label={playing ? "Pause all" : "Play all"}
             >
               {playing ? (
-                <Pause className="size-3.5" />
+                <Pause {...stylex.props(styles.playIcon)} />
               ) : (
-                <Play className="size-3.5 ml-0.5" />
+                <Play
+                  {...stylex.props(styles.playIcon, styles.playIconOffset)}
+                />
               )}
             </button>
 
             <button
               type="button"
               onClick={handleRestart}
-              className="flex size-7 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+              {...stylex.props(styles.control, styles.restartControl)}
               aria-label="Restart"
             >
-              <RotateCcw className="size-3" />
+              <RotateCcw {...stylex.props(styles.restartIcon)} />
             </button>
 
-            <span className="w-10 text-right font-mono text-xs text-white/60">
+            <span {...stylex.props(styles.elapsedTime)}>
               {formatTime(currentTime)}
             </span>
 
             <div
               ref={progressBarRef}
-              className="group/bar relative flex h-6 flex-1 cursor-pointer items-center"
+              {...stylex.props(
+                styles.scrubArea,
+                scrubbing && styles.scrubbing,
+              )}
               onMouseDown={handleScrubStart}
             >
-              <div
-                className={cn(
-                  "h-[3px] w-full rounded-full bg-white/15 transition-all group-hover/bar:h-[5px]",
-                  scrubbing && "h-[5px]",
-                )}
-              >
+              <div {...stylex.props(styles.scrubTrack)}>
                 <div
-                  className="relative h-full rounded-full bg-primary transition-[width] duration-75"
+                  {...stylex.props(styles.scrubProgress)}
                   style={{ width: `${progress * 100}%` }}
                 >
-                  <div
-                    className={cn(
-                      "absolute right-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 scale-0 rounded-full bg-primary transition-transform group-hover/bar:scale-100",
-                      scrubbing && "scale-100",
-                    )}
-                  />
+                  <div {...stylex.props(styles.scrubThumb)} />
                 </div>
               </div>
             </div>
 
-            <span className="w-10 font-mono text-xs text-white/60">
+            <span {...stylex.props(styles.durationTime)}>
               {formatTime(duration)}
             </span>
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div {...stylex.props(styles.body)}>{children}</div>
       </div>
     </VideoGroupCtx.Provider>
   );

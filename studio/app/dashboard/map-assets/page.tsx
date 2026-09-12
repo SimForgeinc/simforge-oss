@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./map-assets.stylex";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { requireAppContext } from "@/app/lib/db/app-context";
@@ -15,7 +17,7 @@ async function MapAssetsContent() {
   const [assets, maps] = await Promise.all([getMapAssets(), listLocalMapCatalog()]);
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className={stylex.props(styles.s_779).className}>
       <MapGalleryPageClient assets={assets} maps={maps} />
     </div>
   );

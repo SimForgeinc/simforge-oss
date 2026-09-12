@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./authoring.stylex";
 import { SelectMenuField } from "../../../components/ui/select-menu";
 import type { EditorDocument } from "@simforge-oss/editor";
 import { DeleteButton, Heading, MiniAdd, TextField, uniqueId } from "./fields";
@@ -34,22 +36,20 @@ export function InvariantEditor({ document }: { document: EditorDocument }) {
 
   return (
     <section data-testid="invariant-editor">
-      <div className="flex items-center">
+      <div {...stylex.props(styles.row)}>
         <Heading>Invariants</Heading>
         <MiniAdd label="Add invariant" onClick={add} disabled={!first} />
       </div>
       {document.data.invariants.map((rule) => (
-        <div key={rule.id} className="mt-2 bg-muted/30 p-2">
-          <div className="flex items-center">
-            <span className="truncate">
-              {rule.label ?? rule.id} · {rule.kind}
-            </span>
+        <div key={rule.id} {...stylex.props(styles.item)}>
+          <div {...stylex.props(styles.row)}>
+            <span>{rule.label ?? rule.id} · {rule.kind}</span>
             <DeleteButton
               label={`Remove invariant ${rule.label ?? rule.id}`}
               onClick={() => document.removeInvariant(rule.id)}
             />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div {...stylex.props(styles.grid)}>
             <TextField
               label="Label"
               value={rule.label ?? ""}
@@ -67,7 +67,7 @@ export function InvariantEditor({ document }: { document: EditorDocument }) {
                   essentiality: essentiality as typeof rule.essentiality,
                 })
               }
-              className="h-8 text-xs"
+              className={stylex.props(styles.input).className}
             />
           </div>
         </div>

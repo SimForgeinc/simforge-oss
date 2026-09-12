@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -18,9 +20,9 @@ const CityViewDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-background/50">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
-          <Box className="size-8 animate-pulse text-muted-foreground" />
+      <div className={stylex.props(styles.s_766).className}>
+        <div className={stylex.props(styles.s_769).className}>
+          <Box className={stylex.props(styles.s_765).className} />
         </div>
       </div>
     ),
@@ -130,21 +132,21 @@ export function DigitalTwinViewerPanel({
 
   if (has3D === null) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-background/50">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className={stylex.props(styles.s_766).className}>
+        <Loader2 className={stylex.props(styles.s_767).className} />
       </div>
     );
   }
 
   if (!has3D) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background/50">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
-          <Box className="size-8 text-muted-foreground" />
+      <div className={stylex.props(styles.s_768).className}>
+        <div className={stylex.props(styles.s_769).className}>
+          <Box className={stylex.props(styles.s_770).className} />
         </div>
-        <div className="text-center">
-          <p className="text-sm font-semibold text-foreground">Digital Twin Viewer</p>
-          <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+        <div className={stylex.props(styles.s_771).className}>
+          <p className={stylex.props(styles.s_880).className}>Digital Twin Viewer</p>
+          <p className={stylex.props(styles.s_773).className}>
             No 3D digital twin assets found for this map. Switch to Map mode to explore in 2D.
           </p>
         </div>
@@ -154,15 +156,15 @@ export function DigitalTwinViewerPanel({
 
   if (viewerError) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-background/50">
-        <AlertTriangle className="size-7 text-destructive" />
-        <p className="max-w-md text-center text-xs text-muted-foreground">{viewerError}</p>
+      <div className={stylex.props(styles.s_774).className}>
+        <AlertTriangle className={stylex.props(styles.s_775).className} />
+        <p className={stylex.props(styles.s_776).className}>{viewerError}</p>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0">
+    <div className={stylex.props(styles.s_801).className}>
       <CityViewDynamic
         manifestUrl={manifestUrl}
         options={{ assetVariant: "auto", ktx2TranscoderPath: "/basis/" }}
@@ -172,7 +174,7 @@ export function DigitalTwinViewerPanel({
         ariaLabel={`3D digital twin of ${asset.name}`}
         role="application"
         tabIndex={0}
-        className="h-full w-full"
+        className={stylex.props(styles.s_778).className}
       />
     </div>
   );

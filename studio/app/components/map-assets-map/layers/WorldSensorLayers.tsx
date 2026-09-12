@@ -1,8 +1,10 @@
+import * as stylex from "@stylexjs/stylex";
 import { Marker } from "react-map-gl/maplibre";
 import {
   resolveMapMarkerScale,
   type MapMarkerSizingMode,
 } from "@/app/lib/maps/frontend/map-marker-sizing";
+import { styles } from "../map-canvas.stylex";
 
 type SensorFeature = {
   type: "Feature";
@@ -60,7 +62,7 @@ function CameraMarkerSvg({
       viewBox="-12 -12 24 24"
       width={MARKER_SIZE}
       height={MARKER_SIZE}
-      style={{ display: "block", overflow: "visible" }}
+      {...stylex.props(styles.svgOverflow)}
     >
       {/* Vision cone — fans outward from camera body */}
       {showCone && (
@@ -152,16 +154,8 @@ export function WorldSensorLayers({
           >
             <div
               aria-label={label}
-              style={{
-                position: "relative",
-                width: `${MARKER_SIZE}px`,
-                height: `${MARKER_SIZE}px`,
-                overflow: "visible",
-                pointerEvents: "auto",
-                cursor: onClickSensor ? "pointer" : "default",
-                transform: `rotate(${-(yaw ?? 0)}deg) scale(${effectiveMarkerScale})`,
-                transformOrigin: "center center",
-              }}
+              {...stylex.props(styles.sensorMarker)}
+              style={{ cursor: onClickSensor ? "pointer" : "default", transform: `rotate(${-(yaw ?? 0)}deg) scale(${effectiveMarkerScale})` }}
               onClick={
                 onClickSensor
                   ? () => onClickSensor(id)
@@ -176,21 +170,8 @@ export function WorldSensorLayers({
             </div>
             {showLabels ? (
               <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "100%",
-                  transform: `translateX(-50%)${labelScale !== 1 ? ` scale(${labelScale})` : ""}`,
-                  whiteSpace: "nowrap",
-                  fontSize: "11px",
-                  fontFamily: "'Open Sans', sans-serif",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  textShadow:
-                    "-1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 1px 1px 0 #0f172a",
-                  pointerEvents: "none",
-                  marginTop: "2px",
-                }}
+                {...stylex.props(styles.sensorLabel)}
+                style={{ transform: `translateX(-50%)${labelScale !== 1 ? ` scale(${labelScale})` : ""}` }}
               >
                 {label}
               </div>

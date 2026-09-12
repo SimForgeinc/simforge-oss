@@ -13,6 +13,14 @@
     "exports": {
       "./package.json": "./package.json",
       "./styles.css": "./dist/styles.css",
+      "./stylex/tokens.stylex": {
+        "types": "./dist/stylex/tokens.stylex.d.ts",
+        "default": "./dist/stylex/tokens.stylex.js"
+      },
+      "./components/stylex": {
+        "types": "./dist/components/stylex/index.d.ts",
+        "default": "./dist/components/stylex/index.js"
+      },
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
@@ -136,6 +144,10 @@
       "./drive/audio": {
         "types": "./dist/drive/audio/index.d.ts",
         "default": "./dist/drive/audio/index.js"
+      },
+      "./drive/drive.stylex": {
+        "types": "./dist/drive/drive.stylex.d.ts",
+        "default": "./dist/drive/drive.stylex.js"
       },
       "./drive/telemetry": {
         "types": "./dist/drive/telemetry.d.ts",
@@ -388,6 +400,16 @@
       "development": "./src/styles.css",
       "default": "./dist/styles.css"
     },
+    "./stylex/tokens.stylex": {
+      "development": "./src/stylex/tokens.stylex.ts",
+      "types": "./dist/stylex/tokens.stylex.d.ts",
+      "default": "./dist/stylex/tokens.stylex.js"
+    },
+    "./components/stylex": {
+      "development": "./src/components/stylex/index.ts",
+      "types": "./dist/components/stylex/index.d.ts",
+      "default": "./dist/components/stylex/index.js"
+    },
     ".": {
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
@@ -542,6 +564,11 @@
       "development": "./src/drive/audio/index.ts",
       "types": "./dist/drive/audio/index.d.ts",
       "default": "./dist/drive/audio/index.js"
+    },
+    "./drive/drive.stylex": {
+      "development": "./src/drive/drive.stylex.ts",
+      "types": "./dist/drive/drive.stylex.d.ts",
+      "default": "./dist/drive/drive.stylex.js"
     },
     "./drive/telemetry": {
       "development": "./src/drive/telemetry.ts",
@@ -863,6 +890,7 @@
     "@simforge-oss/scenario": "workspace:*",
     "@simforge-oss/studio-host": "workspace:*",
     "@simforge-oss/viewer": "workspace:*",
+    "@stylexjs/stylex": "^0.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.2",

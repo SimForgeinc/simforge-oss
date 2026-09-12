@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
 import { toast } from "sonner";
+import * as stylex from "@stylexjs/stylex";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
 import type { EditorDocument, LaneIndex, ScenarioMapEntry } from "@simforge-oss/editor";
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
@@ -20,6 +21,7 @@ import {
   ORBIT_MIN_PITCH_RAD,
   PauseMenu,
   createDriveInput,
+  driveChrome,
   emptyDriveTelemetry,
   type DriveAction,
   type DriveCameraKind,
@@ -40,6 +42,7 @@ import {
 } from "@/app/lib/live-world/authored-world-source";
 import { createTruthViewerBridge, type TruthViewerBridge } from "@/app/lib/live-world/truth-viewer-bridge";
 import { useWorldSource } from "@/app/lib/live-world/use-world-source";
+import { route } from "./drive-route.stylex";
 import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
@@ -517,10 +520,10 @@ export function DriveSession({
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
-    <div className="relative h-svh w-full overflow-hidden bg-[#050607]">
+    <div {...stylex.props(route.session)}>
       <CityView
         ariaLabel={`Driving ${vehicleLabel} on ${map.label}`}
-        className="h-full w-full focus-visible:outline-none"
+        {...stylex.props(route.canvas)}
         key={quality}
         manifestUrl={map.browserManifestUrl}
         onError={(reason) => {
@@ -553,7 +556,7 @@ export function DriveSession({
       />
       {status ? (
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10 bg-black/70 px-4 py-2 text-sm text-white/70"
+          {...stylex.props(driveChrome.panelStatus, route.status)}
           data-testid="drive-status"
           role={spawnError ? "alert" : "status"}
         >

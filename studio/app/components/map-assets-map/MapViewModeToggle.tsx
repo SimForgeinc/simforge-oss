@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Video } from "lucide-react";
 import { C } from "./map-layer-constants";
+import { styles } from "./map-canvas.stylex";
 import {
   useMapViewModeStore,
   useSelectionStore,
@@ -83,23 +85,8 @@ export function MapViewModeToggle({
     <div
       data-testid="map-view-mode-toggle"
       data-map-view-mode={mode}
-      style={{
-        position: "absolute",
-        bottom: "0.75rem",
-        right: "0.75rem",
-        // Above any surface a mode swaps in — the editor's twin canvas covers
-        // the map at z-20, and this toggle is the only way back out of it.
-        zIndex: 30,
-        display: "flex",
-        alignItems: "center",
-        borderRadius: "999px",
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-        fontFamily: C.font,
-        opacity: disabled ? 0.5 : 1,
-        pointerEvents: disabled ? "none" : "auto",
-      }}
+      {...stylex.props(styles.control, styles.modeControl)}
+      style={{ border: `1px solid ${C.border}`, opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : "auto" }}
     >
       {/*
         The twin is opt-in from Settings, and until then it is not drawn at all
@@ -124,20 +111,12 @@ export function MapViewModeToggle({
                 ? `${option.hint} (Shift+D)`
                 : `${option.hint} (Shift+D)`
             }
+            {...stylex.props(styles.modeButton)}
             style={{
-              padding: "0.3rem 0.85rem",
-              fontSize: "0.75rem",
               fontWeight: isActive ? 600 : 400,
-              letterSpacing: "0.02em",
               cursor: isActive ? "default" : "pointer",
-              border: "none",
               background: isActive ? C.fg : `${C.bg}f2`,
               color: isActive ? C.bg : C.fg,
-              transition: "background 0.15s, color 0.15s",
-              whiteSpace: "nowrap",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.35rem",
             }}
           >
             {option.label}
@@ -145,14 +124,8 @@ export function MapViewModeToggle({
               <span
                 aria-hidden
                 data-testid="map-view-mode-loading"
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "999px",
-                  border: `1.5px solid ${C.bg}`,
-                  borderTopColor: "transparent",
-                  animation: "mapViewModeSpin 700ms linear infinite",
-                }}
+                {...stylex.props(styles.spinner)}
+                style={{ border: `1.5px solid ${C.bg}`, borderTopColor: "transparent" }}
               />
             ) : null}
           </button>
@@ -185,22 +158,16 @@ export function MapViewModeToggle({
           }
           type="button"
           onClick={() => setFollowSelectedActor(!followSelectedActor)}
+          {...stylex.props(styles.modeFollow)}
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 30,
-            padding: 0,
-            border: "none",
             borderLeft: `1px solid ${C.border}`,
             background: followSelectedActor ? C.fg : `${C.bg}f2`,
             color: followSelectedActor ? C.bg : C.fg,
             opacity: selectedActorId ? 1 : 0.4,
             cursor: selectedActorId ? "pointer" : "not-allowed",
-            transition: "background 0.15s, color 0.15s",
           }}
         >
-          <Video aria-hidden style={{ width: 13, height: 13 }} />
+          <Video aria-hidden {...stylex.props(styles.icon13)} />
         </button>
       ) : null}
       <style>{`

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
@@ -55,15 +57,15 @@ export function Map2DOverlay({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Overlay className={stylex.props(styles.s_197).className} />
         <DialogPrimitive.Content
-          className="fixed inset-x-3 bottom-3 top-[4.25rem] z-50 overflow-hidden border border-white/15 bg-background shadow-2xl outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:inset-x-5 sm:bottom-5 lg:inset-x-8 lg:bottom-8"
+          className={stylex.props(styles.s_198).className}
           data-testid="map-gallery-2d-overlay"
         >
-          <DialogPrimitive.Title className="sr-only">
+          <DialogPrimitive.Title className={stylex.props(styles.s_997).className}>
             {asset.name} 2D map
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="sr-only">
+          <DialogPrimitive.Description className={stylex.props(styles.s_997).className}>
             Explore road geometry, map layers, search results, and attributes for this map.
           </DialogPrimitive.Description>
           <MapDetailPageClient

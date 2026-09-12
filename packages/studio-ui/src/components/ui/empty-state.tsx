@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
-import { cn } from "../../lib/utils";
+import type { CSSProperties, ReactNode } from "react";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "../stylex/surface";
+import { styles } from "./empty-state.stylex";
 
 export function EmptyState({
   icon,
@@ -7,19 +9,24 @@ export function EmptyState({
   description,
   action,
   className,
+  style,
+  xstyle,
 }: {
   icon?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
   className?: string;
+  style?: CSSProperties;
+  xstyle?: stylex.StyleXStyles;
 }) {
+  const root = stylex.props(styles.root, xstyle);
   return (
-    <div className={cn("flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center", className)}>
-      {icon ? <div className="mb-4 text-muted-foreground">{icon}</div> : null}
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
-      {description ? <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{description}</p> : null}
-      {action ? <div className="mt-5">{action}</div> : null}
+    <div {...mergeStyleProps(root, className, style)}>
+      {icon ? <div {...stylex.props(styles.icon)}>{icon}</div> : null}
+      <h2 {...stylex.props(styles.title)}>{title}</h2>
+      {description ? <p {...stylex.props(styles.description)}>{description}</p> : null}
+      {action ? <div {...stylex.props(styles.action)}>{action}</div> : null}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import dynamic from "next/dynamic";
 
@@ -12,7 +14,7 @@ type Props = {
 
 const AddMapPreviewMap = dynamic(() => import("./AddMapPreviewMap"), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 animate-pulse bg-muted" />,
+  loading: () => <div className={stylex.props(styles.s_289).className} />,
 });
 
 export default function AddMapPreviewMapDynamic(props: Props) {

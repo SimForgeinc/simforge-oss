@@ -1,81 +1,25 @@
 "use client";
 
-/**
- * The evaluation screen: submit a run, then watch the workspace's runs.
- *
- * This is the whole product surface the web portal offers beyond account
- * management, and it is the same component the desktop app mounts — the host
- * differences (a local model store, a local execution target) arrive as props
- * rather than as a second implementation.
- */
-
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { cn } from "../../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "../../components/stylex/surface";
 import type { ComputeJob } from "../contracts";
 import type { EvaluationGateway } from "../gateway";
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { EvaluationLauncher, type LocalRunLauncher } from "./EvaluationLauncher";
 import { JobHistory } from "./JobHistory";
+import { styles as s } from "./evaluation-components.stylex";
 
-export function EvaluationWorkspace({
-  gateway,
-  host,
-  runtime,
-  onOpenJob,
-  onRunLocally,
-  notice,
-  className,
-}: {
-  gateway: EvaluationGateway;
-  host: HostExecutionSnapshot;
-  /** Desktop only; the browser portal has no local model store. */
-  runtime: ModelRuntimeSnapshot | null;
-  onOpenJob: (jobId: string) => void;
-  onRunLocally?: LocalRunLauncher;
-  /** Host-specific banner, e.g. the desktop's "connect an account" prompt. */
-  notice?: ReactNode;
-  className?: string;
+export function EvaluationWorkspace({ gateway, host, runtime, onOpenJob, onRunLocally, notice, className }: {
+  gateway: EvaluationGateway; host: HostExecutionSnapshot; runtime: ModelRuntimeSnapshot | null;
+  onOpenJob: (jobId: string) => void; onRunLocally?: LocalRunLauncher; notice?: ReactNode; className?: string;
 }) {
   const [lastSubmitted, setLastSubmitted] = useState<ComputeJob | null>(null);
-
-  return (
-    <div className={cn("space-y-10", className)} data-testid="evaluation-workspace">
-      {notice}
-
-      <section className="space-y-5">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Predict from uploaded video
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Upload one driving video or synchronized camera views, then run AlpaMayo 1.5 or 2
-            Super. The durable result includes a playable trajectory and reasoning overlay plus
-            timestamped model output. This exploratory workflow is approximate and unscored.
-          </p>
-        </div>
-        <EvaluationLauncher
-          gateway={gateway}
-          host={host}
-          runtime={runtime}
-          onSubmitted={(job) => {
-            setLastSubmitted(job);
-            onOpenJob(job.id);
-          }}
-          onRunLocally={onRunLocally}
-        />
-      </section>
-
-      <section className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">Runs</h2>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Every run in this workspace, from the web portal and from the desktop app. Runs outlive
-            the tab and the app session; signing out does not cancel them.
-          </p>
-        </div>
-        <JobHistory gateway={gateway} onOpenJob={onOpenJob} refreshToken={lastSubmitted?.id} />
-      </section>
-    </div>
-  );
+  const root = stylex.props(s.section10);
+  return <div {...mergeStyleProps(root, className)} data-testid="evaluation-workspace">
+    {notice}
+    <section {...stylex.props(s.section5)}><div {...stylex.props(s.stack1)}><h1 {...stylex.props(s.titleMd)}>Predict from uploaded video</h1><p {...stylex.props(s.max3xl, s.textSm, s.leading6, s.textMuted)}>Upload one driving video or synchronized camera views, then run AlpaMayo 1.5 or 2 Super. The durable result includes a playable trajectory and reasoning overlay plus timestamped model output. This exploratory workflow is approximate and unscored.</p></div><EvaluationLauncher gateway={gateway} host={host} runtime={runtime} onSubmitted={(job) => { setLastSubmitted(job); onOpenJob(job.id); }} onRunLocally={onRunLocally} /></section>
+    <section {...stylex.props(s.section4)}><div {...stylex.props(s.stack1)}><h2 {...stylex.props(s.titleMd)}>Runs</h2><p {...stylex.props(s.max3xl, s.textSm, s.leading6, s.textMuted)}>Every run in this workspace, from the web portal and from the desktop app. Runs outlive the tab and the app session; signing out does not cancel them.</p></div><JobHistory gateway={gateway} onOpenJob={onOpenJob} refreshToken={lastSubmitted?.id} /></section>
+  </div>;
 }

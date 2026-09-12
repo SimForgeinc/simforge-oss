@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useRef, useState, useMemo, useEffect } from "react";
 import { ChevronDown, Search, Check } from "lucide-react";
@@ -55,24 +57,24 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-10 w-44 items-center gap-1.5 rounded-md border border-border bg-muted/30 px-3 text-sm font-medium transition-colors hover:bg-muted/50 sm:w-[280px]"
+          className={stylex.props(styles.s_749).className}
         >
-          <span className="flex-1 truncate text-left">{currentAsset.name}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground ml-auto" />
+          <span className={stylex.props(styles.s_750).className}>{currentAsset.name}</span>
+          <ChevronDown className={stylex.props(styles.s_751).className} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[280px] p-0" sideOffset={4}>
+      <DropdownMenuContent align="start" className={stylex.props(styles.s_752).className} sideOffset={4}>
         {/* Search input */}
-        <div className="border-b border-border p-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <div className={stylex.props(styles.s_753).className}>
+          <div className={stylex.props(styles.s_987).className}>
+            <Search className={stylex.props(styles.s_755).className} />
             <Input
               ref={inputRef}
               type="search"
               placeholder="Search maps..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-8 pl-8 text-xs"
+              className={stylex.props(styles.s_756).className}
               onKeyDown={(e) => {
                 // Prevent dropdown from closing on key presses
                 e.stopPropagation();
@@ -89,9 +91,9 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
         </div>
 
         {/* Map list */}
-        <div className="max-h-64 overflow-y-auto py-1">
+        <div className={stylex.props(styles.s_757).className}>
           {filtered.length === 0 ? (
-            <p className="px-3 py-4 text-center text-xs text-muted-foreground">No maps found</p>
+            <p className={stylex.props(styles.s_758).className}>No maps found</p>
           ) : (
             filtered.map((asset) => {
               const isCurrent = asset.map_asset_id === currentAsset.map_asset_id;
@@ -113,24 +115,19 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     if (!isCurrent) switchToMap(asset.map_asset_id);
                     setOpen(false);
                   }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
-                    isCurrent
-                      ? "bg-primary/5 text-primary"
-                      : "text-foreground hover:bg-muted/50",
-                  )}
+                  className={stylex.props(styles.u_908, styles.u_928, styles.u_918, styles.u_938, styles.u_944, styles.u_965, styles.u_970).className}
                 >
                   {isCurrent ? (
-                    <Check className="size-3.5 shrink-0 text-primary" />
+                    <Check className={stylex.props(styles.s_759).className} />
                   ) : (
-                    <div className="size-3.5 shrink-0" />
+                    <div className={stylex.props(styles.s_760).className} />
                   )}
-                  <div className="min-w-0 flex-1">
+                  <div className={stylex.props(styles.s_761).className}>
                     <p className={cn("text-xs truncate", isCurrent && "font-medium")}>
                       {asset.name}
                     </p>
                     {place && (
-                      <p className="text-[10px] text-muted-foreground truncate">{place}</p>
+                      <p className={stylex.props(styles.s_762).className}>{place}</p>
                     )}
                   </div>
                 </button>

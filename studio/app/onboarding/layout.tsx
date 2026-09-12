@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
+import { layout } from "./onboarding-layout.stylex";
 
 /**
  * First-run onboarding has no dashboard chrome on purpose: there is nothing to
@@ -10,7 +12,7 @@ import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   return (
     <StudioHostBoundary>
-      <div className="min-h-svh bg-[#050607] text-white">{children}</div>
+      <div {...stylex.props(layout.shell)}>{children}</div>
     </StudioHostBoundary>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { useMemo, useState } from "react";
 import { CarlaCompatibilityPill } from "@simforge-oss/studio-ui/components/CarlaCompatibilityPill";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
@@ -14,6 +15,7 @@ import {
   TableRow,
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { CarlaCompatibility } from "@simforge-oss/studio-ui/lib/scenario/carla-compatibility";
+import { dialog } from "../asset-dialogs.stylex";
 
 export interface CarlaCompatibilityRow {
   catalogId: string;
@@ -49,16 +51,15 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
   }, [query, rows, status]);
 
   return (
-    <section aria-label="CARLA compatibility catalog" className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/30" />
+    <section aria-label="CARLA compatibility catalog" {...stylex.props(dialog.panel)}>
+      <div {...stylex.props(dialog.tableTools)}>
+        <div {...stylex.props(dialog.searchWrap)}>
+          <Search {...stylex.props(dialog.searchIcon)} />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search objects, classes, or blueprints"
             aria-label="Search CARLA compatibility"
-            className="border-white/10 bg-white/[0.035] pl-9"
           />
         </div>
         <SelectMenu
@@ -66,54 +67,54 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
           onChange={(value) => setStatus(value as typeof status)}
           options={STATUS_OPTIONS}
           label="Filter by compatibility status"
-          className="sm:w-56"
+          {...stylex.props(dialog.toolbarSelect, dialog.toolbarCarla)}
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
-        <Table className="min-w-[1050px] text-xs">
-          <TableHeader className="bg-white/[0.035] [&_tr]:border-white/[0.08]">
-            <TableRow className="border-white/[0.08] hover:bg-transparent">
-              <TableHead className="h-10 text-white/40">Object</TableHead>
-              <TableHead className="h-10 text-white/40">Source</TableHead>
-              <TableHead className="h-10 text-white/40">Class</TableHead>
-              <TableHead className="h-10 text-white/40">Dimensions</TableHead>
-              <TableHead className="h-10 text-white/40">Status</TableHead>
-              <TableHead className="h-10 text-white/40">CARLA blueprint</TableHead>
-              <TableHead className="h-10 text-white/40">Agreement</TableHead>
+      <div {...stylex.props(dialog.tableWrap)}>
+        <Table {...stylex.props(dialog.table)}>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Object</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Class</TableHead>
+              <TableHead>Dimensions</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>CARLA blueprint</TableHead>
+              <TableHead>Agreement</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRows.map((row) => {
               const native = row.compatibility.status === "native" ? row.compatibility : null;
               return (
-                <TableRow key={row.catalogId} className="border-white/[0.06] hover:bg-white/[0.025]">
-                  <TableCell className="py-2.5">
-                    <p className="font-medium text-white/85">{row.label}</p>
-                    <p className="mt-0.5 font-mono text-[10px] text-white/35">{row.catalogId}</p>
+                <TableRow key={row.catalogId}>
+                  <TableCell {...stylex.props(dialog.tableCell)}>
+                    <p {...stylex.props(dialog.cellStrong)}>{row.label}</p>
+                    <p {...stylex.props(dialog.mutedText)}>{row.catalogId}</p>
                   </TableCell>
-                  <TableCell className="py-2.5 text-white/55">{row.source}</TableCell>
-                  <TableCell className="py-2.5 capitalize text-white/55">{row.objectClass.replaceAll("_", " ")}</TableCell>
-                  <TableCell className="py-2.5 tabular-nums text-white/55">{row.dimensions ?? "—"}</TableCell>
-                  <TableCell className="py-2.5"><CarlaCompatibilityPill compatibility={row.compatibility} size="sm" /></TableCell>
-                  <TableCell className="max-w-sm py-2.5">
+                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.source}</TableCell>
+                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.objectClass.replaceAll("_", " ")}</TableCell>
+                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.dimensions ?? "—"}</TableCell>
+                  <TableCell {...stylex.props(dialog.tableCell)}><CarlaCompatibilityPill compatibility={row.compatibility} size="sm" /></TableCell>
+                  <TableCell {...stylex.props(dialog.tableCell)}>
                     {row.compatibility.status === "native"
-                      ? <span className="font-mono text-[11px] text-white/65">{row.compatibility.blueprintId}</span>
-                      : <span className="text-white/45">{row.compatibility.reason}</span>}
+                      ? <span {...stylex.props(dialog.cellStrong)}>{row.compatibility.blueprintId}</span>
+                      : <span {...stylex.props(dialog.cellMuted)}>{row.compatibility.reason}</span>}
                   </TableCell>
-                  <TableCell className="py-2.5 capitalize text-white/55">{native?.dimensionalAgreement ?? "—"}</TableCell>
+                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{native?.dimensionalAgreement ?? "—"}</TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
         {filteredRows.length === 0 ? (
-          <div className="border-t border-white/[0.06] px-4 py-12 text-center text-sm text-white/40">
+          <div {...stylex.props(dialog.tableEmpty)}>
             No catalog objects match these filters.
           </div>
         ) : null}
       </div>
-      <p className="text-xs tabular-nums text-white/35">Showing {filteredRows.length.toLocaleString()} of {rows.length.toLocaleString()} objects</p>
+      <p {...stylex.props(dialog.mutedText)}>Showing {filteredRows.length.toLocaleString()} of {rows.length.toLocaleString()} objects</p>
     </section>
   );
 }

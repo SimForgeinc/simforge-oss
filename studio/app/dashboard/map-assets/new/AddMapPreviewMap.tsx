@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 import { useEffect, useRef, useCallback } from "react";
 import Map, { Source, Layer, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection } from "geojson";
@@ -96,7 +98,7 @@ export default function AddMapPreviewMap({ geojson, bbox, onThumbnailReady }: Pr
       workerUrl="/maplibre/maplibre-gl-worker.mjs"
       mapStyle={DARK_BASEMAP}
       initialViewState={{ longitude: 0, latitude: 20, zoom: 1 }}
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      {...stylex.props(styles.staticCanvas)}
       attributionControl={false}
       canvasContextAttributes={{ preserveDrawingBuffer: true }}
       onLoad={handleMapLoad}

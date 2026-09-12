@@ -1,8 +1,11 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import * as stylex from "@stylexjs/stylex";
 
 import type { DriveCameraKind } from "../cameras";
+import { DrivePill, driveChrome } from "../chrome";
+import { driveColors, driveRadius, driveText } from "../drive.stylex";
 import type { DriveTelemetry } from "../telemetry";
 import { Minimap, type MinimapHandle, type MinimapLane } from "./Minimap";
 
@@ -41,6 +44,167 @@ const RPM_ARC_SWEEP = (240 / 360) * 2 * Math.PI * RPM_ARC_RADIUS;
 const COLLISION_FLASH_NS = 2000;
 const COLLISION_FLASH_MS = 450;
 const GEAR_LABELS: Readonly<Record<string, string>> = { "-1": "R", "0": "N" };
+
+/**
+ * The instrument layout.
+ *
+ * Corners only: the HUD frames the world rather than sitting on it, so every
+ * cluster is pinned to an edge and the middle of the screen stays the road.
+ */
+const styles = stylex.create({
+  /**
+   * A full-bleed impact flash. Its opacity is written per frame from the
+   * collision impulse, so it carries no transition target of its own beyond
+   * the fade Tailwind used to give it.
+   */
+  flash: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: driveColors.impact,
+    transitionProperty: "opacity",
+    transitionDuration: "100ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+
+  metaRow: {
+    position: "absolute",
+    left: "1.25rem",
+    top: "1rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+  },
+  vehicle: { color: driveColors.textVehicle },
+  camera: { color: driveColors.textFaint },
+  /** Off the drivable surface — the one warning the HUD shows inline. */
+  surface: {
+    fontWeight: 600,
+    color: driveColors.offRoad,
+  },
+
+  toggles: {
+    position: "absolute",
+    right: "1.25rem",
+    top: "1rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  debug: {
+    position: "absolute",
+    right: "1.25rem",
+    top: "3.5rem",
+    paddingInline: "0.5rem",
+    paddingBlock: "0.25rem",
+    fontFamily: driveText.fontMono,
+    fontSize: driveText.sizeMeta,
+    fontVariantNumeric: "tabular-nums",
+    color: driveColors.textBody,
+  },
+
+  minimapSlot: {
+    position: "absolute",
+    bottom: "1.25rem",
+    left: "1.25rem",
+  },
+  instruments: {
+    position: "absolute",
+    bottom: "1.25rem",
+    right: "1.25rem",
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "1.25rem",
+  },
+
+  gMeter: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "0.25rem",
+  },
+  dial: {
+    position: "relative",
+    width: "68px",
+    height: "68px",
+  },
+  crosshairVertical: {
+    position: "absolute",
+    left: "50%",
+    top: 0,
+    height: "100%",
+    width: "1px",
+    transform: "translateX(-50%)",
+    backgroundColor: driveColors.lineCrosshair,
+  },
+  crosshairHorizontal: {
+    position: "absolute",
+    left: 0,
+    top: "50%",
+    height: "1px",
+    width: "100%",
+    transform: "translateY(-50%)",
+    backgroundColor: driveColors.lineCrosshair,
+  },
+  /** The g dot. Its own transform is written per frame. */
+  gDot: {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    marginLeft: "-3px",
+    marginTop: "-3px",
+    width: "6px",
+    height: "6px",
+    borderRadius: driveRadius.pill,
+    backgroundColor: driveColors.accent,
+  },
+  gReadout: { color: driveColors.textMeta },
+
+  tachometer: {
+    position: "relative",
+    display: "grid",
+    placeItems: "center",
+    width: "120px",
+    height: "120px",
+  },
+  arc: {
+    position: "absolute",
+    inset: 0,
+    transform: "rotate(-210deg)",
+  },
+  speedStack: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  /** The one number read at speed: the heavy face, at 36px, undimmed. */
+  speed: {
+    fontFamily: driveText.fontHeavy,
+    fontSize: "2.25rem",
+    lineHeight: 1,
+    fontVariantNumeric: "tabular-nums",
+  },
+  speedUnits: {
+    fontSize: driveText.sizeMicro,
+    textTransform: "uppercase",
+    letterSpacing: driveText.trackUnit,
+    color: driveColors.textCaption,
+  },
+  gear: {
+    position: "absolute",
+    bottom: "-0.25rem",
+    right: "0.25rem",
+    fontFamily: driveText.fontHeavy,
+    fontSize: "1.25rem",
+    lineHeight: 1,
+    color: driveColors.accent,
+  },
+  rpm: {
+    position: "absolute",
+    bottom: "-0.25rem",
+    left: "0.25rem",
+    color: driveColors.textDim,
+  },
+});
 
 /**
  * The driving HUD: speed, tachometer and gear, minimap, g-meter, clock.
@@ -128,80 +292,67 @@ export const DriveHud = forwardRef<DriveHudHandle, {
   }), []);
 
   return (
-    <div className="pointer-events-none absolute inset-0 select-none font-body text-white" data-testid="drive-hud">
+    <div {...stylex.props(driveChrome.worldOverlay)} data-testid="drive-hud">
       <div
-        className="absolute inset-0 bg-red-500 transition-opacity duration-100"
+        {...stylex.props(styles.flash)}
         data-testid="drive-impact-flash"
         ref={flashRef}
         style={{ opacity: 0 }}
       />
 
-      <div className="absolute left-5 top-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-white/55">
-        <span className="text-white/80">{vehicleLabel}</span>
-        <span className="tabular-nums" data-testid="drive-clock" ref={clockRef}>
+      <div {...stylex.props(driveChrome.metaRow, styles.metaRow)}>
+        <span {...stylex.props(styles.vehicle)}>{vehicleLabel}</span>
+        <span {...stylex.props(driveChrome.numeric)} data-testid="drive-clock" ref={clockRef}>
           00:00
         </span>
-        <span className="text-white/40" data-testid="drive-camera-kind" ref={cameraRef}>
+        <span {...stylex.props(styles.camera)} data-testid="drive-camera-kind" ref={cameraRef}>
           chase
         </span>
-        <span className="font-semibold text-[#ff8a3d]" data-testid="drive-surface" ref={surfaceRef} />
+        <span {...stylex.props(styles.surface)} data-testid="drive-surface" ref={surfaceRef} />
       </div>
 
-      <div className="pointer-events-auto absolute right-5 top-4 flex items-center gap-2">
-        <button
-          className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.14em] transition-colors ${
-            trafficEnabled ? "border-[#E8E044]/70 bg-[#E8E044]/15 text-[#E8E044]" : "border-white/15 bg-black/40 text-white/60 hover:border-white/30"
-          }`}
+      <div {...stylex.props(driveChrome.interactive, styles.toggles)}>
+        <DrivePill
+          active={trafficEnabled}
           data-testid="drive-traffic-toggle"
           onClick={onToggleTraffic}
-          type="button"
         >
           Traffic {trafficEnabled ? "on" : "off"}
-        </button>
-        <button
-          className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/60 transition-colors hover:border-white/30"
-          data-testid="drive-units-toggle"
-          onClick={onToggleUnits}
-          type="button"
-        >
+        </DrivePill>
+        <DrivePill data-testid="drive-units-toggle" onClick={onToggleUnits}>
           {units === "kmh" ? "km/h" : "mph"}
-        </button>
-        <button
-          className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/60 transition-colors hover:border-white/30"
-          data-testid="drive-pause"
-          onClick={onPause}
-          type="button"
-        >
+        </DrivePill>
+        <DrivePill data-testid="drive-pause" onClick={onPause}>
           Esc
-        </button>
+        </DrivePill>
       </div>
 
       {debug ? (
         <span
-          className="absolute right-5 top-14 rounded-md border border-white/10 bg-black/55 px-2 py-1 font-mono text-[11px] tabular-nums text-white/70"
+          {...stylex.props(driveChrome.panelReadout, styles.debug)}
           data-testid="drive-debug"
           ref={debugRef}
         />
       ) : null}
 
-      <div className="absolute bottom-5 left-5">
+      <div {...stylex.props(styles.minimapSlot)}>
         <Minimap lanes={lanes} ref={minimapRef} />
       </div>
 
-      <div className="absolute bottom-5 right-5 flex items-end gap-5">
-        <div className="flex flex-col items-center gap-1" data-testid="drive-gmeter">
-          <div className="relative size-[68px] rounded-full border border-white/15 bg-black/45">
-            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/10" />
-            <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/10" />
-            <div className="absolute left-1/2 top-1/2 -ml-[3px] -mt-[3px] size-[6px] rounded-full bg-[#E8E044]" ref={gDotRef} />
+      <div {...stylex.props(styles.instruments)}>
+        <div {...stylex.props(styles.gMeter)} data-testid="drive-gmeter">
+          <div {...stylex.props(driveChrome.panelDial, styles.dial)}>
+            <div {...stylex.props(styles.crosshairVertical)} />
+            <div {...stylex.props(styles.crosshairHorizontal)} />
+            <div {...stylex.props(styles.gDot)} ref={gDotRef} />
           </div>
-          <span className="font-mono text-[10px] tabular-nums text-white/55" ref={gReadoutRef}>
+          <span {...stylex.props(driveChrome.monoMicro, styles.gReadout)} ref={gReadoutRef}>
             0.00 g
           </span>
         </div>
 
-        <div className="relative grid size-[120px] place-items-center">
-          <svg className="absolute inset-0 -rotate-[210deg]" viewBox="0 0 120 120">
+        <div {...stylex.props(styles.tachometer)}>
+          <svg {...stylex.props(styles.arc)} viewBox="0 0 120 120">
             <circle
               cx="60"
               cy="60"
@@ -226,23 +377,19 @@ export const DriveHud = forwardRef<DriveHudHandle, {
               strokeWidth="7"
             />
           </svg>
-          <div className="flex flex-col items-center">
-            <span className="font-heavy text-4xl leading-none tabular-nums" data-testid="drive-speed" ref={speedRef}>
+          <div {...stylex.props(styles.speedStack)}>
+            <span {...stylex.props(styles.speed)} data-testid="drive-speed" ref={speedRef}>
               0
             </span>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+            <span {...stylex.props(styles.speedUnits)}>
               {units === "kmh" ? "km/h" : "mph"}
             </span>
           </div>
-          <span
-            className="absolute -bottom-1 right-1 font-heavy text-xl leading-none text-[#E8E044]"
-            data-testid="drive-gear"
-            ref={gearRef}
-          >
+          <span {...stylex.props(styles.gear)} data-testid="drive-gear" ref={gearRef}>
             N
           </span>
           <span
-            className="absolute -bottom-1 left-1 font-mono text-[10px] tabular-nums text-white/45"
+            {...stylex.props(driveChrome.monoMicro, styles.rpm)}
             data-testid="drive-rpm"
             ref={rpmTextRef}
           >

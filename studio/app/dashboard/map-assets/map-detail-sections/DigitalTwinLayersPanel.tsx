@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useCallback, useState } from "react";
 import { Building2, Check, Sun, Trash2, TreePine } from "lucide-react";
@@ -36,10 +38,10 @@ export function DigitalTwinLayersPanel() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <span className="text-xs font-semibold">Render quality</span>
-        <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+    <div className={stylex.props(styles.s_426).className}>
+      <div className={stylex.props(styles.s_986).className}>
+        <span className={stylex.props(styles.s_636).className}>Render quality</span>
+        <div className={stylex.props(styles.s_429).className}>
           {QUALITY_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
@@ -55,12 +57,12 @@ export function DigitalTwinLayersPanel() {
             </button>
           ))}
         </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className={stylex.props(styles.s_430).className}>
           Changes apply to the shared scenario-editor and digital-twin viewer on reload.
         </p>
       </div>
 
-      <div className="space-y-2 rounded-md border border-border/70 p-2.5">
+      <div className={stylex.props(styles.s_431).className}>
         <LayerStatus icon={Building2} label="Streamed city geometry and road surface" />
         <LayerStatus icon={TreePine} label="Distance-admitted vegetation" />
         <LayerStatus icon={Sun} label="Sky, sun shadows, and street luminaires" />
@@ -70,9 +72,9 @@ export function DigitalTwinLayersPanel() {
         type="button"
         onClick={handleClearCache}
         disabled={cacheState === "clearing"}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        className={stylex.props(styles.s_432).className}
       >
-        <Trash2 className="size-3" />
+        <Trash2 className={stylex.props(styles.s_927).className} />
         {cacheState === "clearing"
           ? "Clearing cache…"
           : cacheState === "cleared"
@@ -91,10 +93,10 @@ function LayerStatus({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-foreground">
-      <Icon className="size-3 text-muted-foreground" />
-      <span className="flex-1">{label}</span>
-      <Check className="size-3 text-green-500" />
+    <div className={stylex.props(styles.s_434).className}>
+      <Icon className={stylex.props(styles.s_435).className} />
+      <span className={stylex.props(styles.s_436).className}>{label}</span>
+      <Check className={stylex.props(styles.s_496).className} />
     </div>
   );
 }

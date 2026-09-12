@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Boxes, FileUp, Map as MapIcon, Upload, X } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { useEffect, useId, useRef, useState, useMemo} from "react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
@@ -19,6 +20,7 @@ import {
 } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import type { GalleryModelFacing } from "@/app/lib/asset-gallery/model-import";
 import type { PublishedMapSummary } from "@/app/lib/map-ingest/contracts";
+import { dialog } from "./asset-dialogs.stylex";
 import { MapUploadPanel, type MapUploadPhase } from "./MapUploadPanel";
 
 /** Which kind of asset the dialog is publishing. */
@@ -401,50 +403,50 @@ export function AssetUploadDialog({
   return (
     <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!busy) onOpenChange(nextOpen); }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[210] max-h-[92vh] w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1014] p-6 text-white shadow-2xl outline-none">
-          <Dialog.Title className="text-2xl font-semibold tracking-tight">
+        <Dialog.Overlay {...stylex.props(dialog.overlay)} />
+        <Dialog.Content {...stylex.props(dialog.content)}>
+          <Dialog.Title {...stylex.props(dialog.title)}>
             {kind === "model" ? "Upload 3D asset" : "Upload map"}
           </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-white/45">
+          <Dialog.Description {...stylex.props(dialog.description)}>
             {kind === "model"
               ? "Models are converted to GLB and thumbnailed entirely in your browser."
               : "The road network and layer geometry are read in your browser. Publishing generates the manifest, semantics and derived artifacts on the server."}
           </Dialog.Description>
           <Dialog.Close asChild>
-            <button type="button" aria-label="Close upload dialog" disabled={busy} className="absolute right-4 top-4 rounded-md p-2 text-white/45 hover:bg-white/5 hover:text-white">
-              <X className="size-4" />
+            <button type="button" aria-label="Close upload dialog" disabled={busy} {...stylex.props(dialog.close)}>
+              <X {...stylex.props(dialog.iconSm)} />
             </button>
           </Dialog.Close>
 
-          <div className="mt-5 flex w-fit rounded-md border border-white/10 bg-white/[0.025] p-1" role="group" aria-label="Asset kind">
+          <div {...stylex.props(dialog.tabGroup)} role="group" aria-label="Asset kind">
             <button
               type="button"
               aria-pressed={kind === "model"}
               disabled={busy}
               onClick={() => selectKind("model")}
-              className={`flex items-center gap-1.5 rounded px-4 py-1.5 text-xs disabled:opacity-40 ${kind === "model" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}
+              {...stylex.props(dialog.tab, kind === "model" ? dialog.tabActive : null)}
             >
-              <Boxes className="size-3.5" aria-hidden="true" />3D model
+              <Boxes {...stylex.props(dialog.iconSm)} aria-hidden="true" />3D model
             </button>
             <button
               type="button"
               aria-pressed={kind === "map"}
               disabled={busy}
               onClick={() => selectKind("map")}
-              className={`flex items-center gap-1.5 rounded px-4 py-1.5 text-xs disabled:opacity-40 ${kind === "map" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}
+              {...stylex.props(dialog.tab, kind === "map" ? dialog.tabActive : null)}
             >
-              <MapIcon className="size-3.5" aria-hidden="true" />Map
+              <MapIcon {...stylex.props(dialog.iconSm)} aria-hidden="true" />Map
             </button>
           </div>
 
           {kind === "model" ? (
-            <form id={formId} onSubmit={submit} className="mt-6 space-y-5">
+            <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
               <input
                 ref={inputRef}
                 type="file"
                 multiple
-                className="sr-only"
+                {...stylex.props(dialog.srOnly)}
                 accept=".glb,.gltf,.fbx,.obj,.mtl,.stl,.dae,.ply,.usdz,image/*"
                 onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))}
               />
@@ -456,24 +458,24 @@ export function AssetUploadDialog({
                   event.preventDefault();
                   chooseFiles(Array.from(event.dataTransfer.files));
                 }}
-                className="flex min-h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.025] px-6 text-center transition-colors hover:border-[#E8E044]/40 hover:bg-[#E8E044]/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                {...stylex.props(dialog.drop)}
               >
-                <FileUp className="mb-3 size-6 text-[#E8E044]" />
-                <span className="text-sm font-medium">Drop a model and its texture files here</span>
-                <span className="mt-1 text-xs text-white/35">GLB, GLTF, FBX, OBJ, STL, DAE, PLY or USDZ</span>
+                <FileUp {...stylex.props(dialog.iconAccent)} />
+                <span {...stylex.props(dialog.uploadDropLabel)}>Drop a model and its texture files here</span>
+                <span {...stylex.props(dialog.subText)}>GLB, GLTF, FBX, OBJ, STL, DAE, PLY or USDZ</span>
               </button>
 
               {model && thumbnailUrl ? (
-                <div className="grid gap-5 md:grid-cols-[240px_1fr]">
+                <div {...stylex.props(dialog.uploadPreviewGrid)}>
                   <div>
                     {/* eslint-disable-next-line @next/next/no-img-element -- client-generated blob: URL for the pre-upload preview */}
-                    <img src={thumbnailUrl} alt="Generated model thumbnail" className="aspect-square w-full rounded-xl border border-white/10 bg-[radial-gradient(circle,#27303a,#101317)] object-contain" />
-                    <p className="mt-2 text-xs text-white/40">
+                    <img src={thumbnailUrl} alt="Generated model thumbnail" {...stylex.props(dialog.uploadImage)} />
+                    <p {...stylex.props(dialog.uploadMeta)}>
                       {model.dims.l.toFixed(2)} × {model.dims.w.toFixed(2)} × {model.dims.h.toFixed(2)} m · {model.triangleCount.toLocaleString()} triangles
                     </p>
                   </div>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div {...stylex.props(dialog.uploadControls)}>
+                    <div {...stylex.props(dialog.uploadGrid2)}>
                       <SelectMenuField
                         label="Up axis"
                         value={upAxis}
@@ -481,14 +483,14 @@ export function AssetUploadDialog({
                         options={[{ value: "auto", label: "Auto detect" }, { value: "y", label: "Y up" }, { value: "z", label: "Z up" }]}
                         labelClassName="mb-1 text-xs text-white/45"
                       />
-                      <label className="text-xs text-white/45">
+                      <label {...stylex.props(dialog.uploadLabel)}>
                         Scale to metres
-                        <Input value={scale} onChange={(event) => setScale(event.target.value)} inputMode="decimal" className="mt-1" />
+                        <Input value={scale} onChange={(event) => setScale(event.target.value)} inputMode="decimal" {...stylex.props(dialog.uploadField)} />
                       </label>
                     </div>
                     {/* Editor-core drives every actor nose-first along +X, so a model
                         authored facing the other way runs its routes backwards. */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div {...stylex.props(dialog.uploadGrid2)}>
                       <SelectMenuField
                         label="Facing"
                         value={facing}
@@ -502,22 +504,22 @@ export function AssetUploadDialog({
                         ]}
                         labelClassName="mb-1 text-xs text-white/45"
                       />
-                      <div className="flex items-end">
+                      <div {...stylex.props(dialog.uploadRow)}>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           disabled={processing}
                           onClick={flipFacing}
-                          className="w-full border-white/10 bg-transparent"
+                          {...stylex.props(dialog.uploadFullButton)}
                           title="Turn the model 180° — use it when the thumbnail faces the wrong way"
                         >
                           Flip 180°
                         </Button>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess} className="border-white/10 bg-transparent">
+                    <div {...stylex.props(dialog.uploadRow)}>
+                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess} {...stylex.props(dialog.uploadTransparent)}>
                         {processing ? "Reprocessing…" : "Apply correction"}
                       </Button>
                       {/* A file states no unit, but an author knows what the thing is:
@@ -528,7 +530,7 @@ export function AssetUploadDialog({
                         variant="outline"
                         disabled={processing || autoSize === null}
                         onClick={() => autoSize && applyAutoSize(autoSize.scale)}
-                        className="border-[#E8E044]/40 bg-transparent text-[#E8E044] hover:bg-[#E8E044]/10"
+                        {...stylex.props(dialog.autoSize)}
                         title={
                           autoSize
                             ? `Scale so it is ${autoSize.metres} m ${autoSize.axisLabel}, like ${autoSize.example}`
@@ -538,22 +540,22 @@ export function AssetUploadDialog({
                         {autoSize ? `Auto-size to ${autoSize.metres} m ${autoSize.axisLabel}` : "Auto-size"}
                       </Button>
                       {autoSize ? (
-                        <span className="text-xs text-white/35">{`typical for ${autoSize.example}`}</span>
+                        <span {...stylex.props(dialog.warningText)}>{`typical for ${autoSize.example}`}</span>
                       ) : (
-                        <span className="text-xs text-white/35">pick a motion answer to enable</span>
+                        <span {...stylex.props(dialog.warningText)}>pick a motion answer to enable</span>
                       )}
                     </div>
-                    {model.warnings.map((warning) => <p key={warning} className="text-xs text-amber-200/70">{warning}</p>)}
+                    {model.warnings.map((warning) => <p key={warning} {...stylex.props(dialog.warningText)}>{warning}</p>)}
                     <div>
-                      <p className="text-xs text-white/45">Detected clips</p>
-                      <p className="mt-1 text-sm text-white/70">{model.clips.length > 0 ? model.clips.join(", ") : "No animation clips"}</p>
+                      <p {...stylex.props(dialog.clipsTitle)}>Detected clips</p>
+                      <p {...stylex.props(dialog.clipsText)}>{model.clips.length > 0 ? model.clips.join(", ") : "No animation clips"}</p>
                     </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="text-xs text-white/45">Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} className="mt-1" /></label>
+              <div {...stylex.props(dialog.uploadGrid)}>
+                <label {...stylex.props(dialog.uploadLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} {...stylex.props(dialog.uploadField)} /></label>
                 {archetype === "ground" ? (
                   <SelectMenuField
                     label="Ground actor"
@@ -563,35 +565,31 @@ export function AssetUploadDialog({
                     labelClassName="mb-1 text-xs text-white/45"
                   />
                 ) : null}
-                <div className="sm:col-span-2">
-                  <p className="mb-1 text-xs text-white/45">How does it move?</p>
-                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="How does it move?">
+                <div {...stylex.props(dialog.uploadSpan2)}>
+                  <p {...stylex.props(dialog.uploadLabel)}>How does it move?</p>
+                  <div {...stylex.props(dialog.uploadMotionGrid)} role="radiogroup" aria-label="How does it move?">
                     {MOTION_OPTIONS.map((option) => (
                       <button
                         aria-checked={archetype === option.value}
-                        className={`rounded-lg border p-3 text-left ${
-                          archetype === option.value
-                            ? "border-[#E8E044]/60 bg-[#E8E044]/10"
-                            : "border-white/12 bg-white/[0.03] hover:bg-white/[0.06]"
-                        }`}
+                        {...stylex.props(dialog.motionOption, archetype === option.value ? dialog.motionOptionActive : null)}
                         data-testid={`asset-motion-${option.value}`}
                         key={option.value}
                         onClick={() => selectArchetype(option.value)}
                         role="radio"
                         type="button"
                       >
-                        <strong className="block text-sm text-white">{option.label}</strong>
-                        <span className="mt-0.5 block text-xs leading-5 text-white/55">{option.description}</span>
+                        <strong {...stylex.props(dialog.motionTitle)}>{option.label}</strong>
+                        <span {...stylex.props(dialog.motionDescription)}>{option.description}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-                <label className="text-xs text-white/45 sm:col-span-2">Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1" /></label>
-                <label className="text-xs text-white/45 sm:col-span-2">Tags, comma separated<Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="street-furniture, urban" className="mt-1" /></label>
+                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} {...stylex.props(dialog.uploadField)} /></label>
+                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Tags, comma separated<Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="street-furniture, urban" {...stylex.props(dialog.uploadField)} /></label>
               </div>
 
               {model?.animated ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div {...stylex.props(dialog.uploadGrid2)}>
                   <SelectMenuField label="Idle clip" value={idleClip} onChange={setIdleClip} options={[{ value: "", label: "None" }, ...model.clips]} labelClassName="mb-1 text-xs text-white/45" />
                   <SelectMenuField label="Locomotion clip" value={locomotionClip} onChange={setLocomotionClip} options={[{ value: "", label: "None" }, ...model.clips]} labelClassName="mb-1 text-xs text-white/45" />
                 </div>
@@ -610,16 +608,16 @@ export function AssetUploadDialog({
             />
           )}
 
-          <div className="mt-5 space-y-5">
+          <div {...stylex.props(dialog.uploadBottom)}>
             {status ? (
               <div aria-live="polite">
-                <div className="mb-1 flex justify-between text-xs text-white/45"><span>{status}</span><span>{progress}%</span></div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full bg-[#E8E044] transition-[width]" style={{ width: `${progress}%` }} /></div>
+                <div {...stylex.props(dialog.uploadStatus)}><span>{status}</span><span>{progress}%</span></div>
+                <div {...stylex.props(dialog.uploadBar)}><div {...stylex.props(dialog.uploadBarFill)} style={{ width: `${progress}%` }} /></div>
               </div>
             ) : null}
-            {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+            {error ? <p role="alert" {...stylex.props(dialog.uploadText)}>{error}</p> : null}
 
-            <div className="flex justify-end gap-2">
+            <div {...stylex.props(dialog.uploadActions)}>
               {kind === "map" && mapPhase === "published" ? (
                 <Dialog.Close asChild><Button type="button">Done</Button></Dialog.Close>
               ) : (

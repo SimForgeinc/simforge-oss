@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Play } from "lucide-react";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
@@ -40,7 +42,7 @@ export function VideosSection({
       <button
         type="button"
         onClick={onToggleOpen}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+        className={stylex.props(styles.s_566).className}
         aria-expanded={open}
       >
         <ChevronRight
@@ -49,7 +51,7 @@ export function VideosSection({
         Videos
       </button>
       {open && (
-        <ul className="mt-2 space-y-2">
+        <ul className={stylex.props(styles.s_968).className}>
           {mp4Artifacts.map((artifact) => {
             const proxyUrl = s3UriToMapAssetProxyUrl(artifact.uri, assetId);
             if (!proxyUrl) return null;
@@ -67,9 +69,9 @@ export function VideosSection({
                   <button
                     type="button"
                     onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                    className="group block w-full overflow-hidden rounded-md border border-border bg-muted/30 text-left transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className={stylex.props(styles.s_545).className}
                   >
-                    <div className="relative aspect-video w-full bg-muted/30">
+                    <div className={stylex.props(styles.s_546).className}>
                       <video
                         // `#t=0.1` nudges the element to decode and paint an
                         // actual frame; the poster covers the gap until then.
@@ -79,15 +81,15 @@ export function VideosSection({
                         playsInline
                         preload="metadata"
                         aria-label={label}
-                        className="h-full w-full object-cover"
+                        className={stylex.props(styles.s_547).className}
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
-                        <span className="flex size-11 items-center justify-center rounded-full bg-foreground/80 text-background transition-transform group-hover:scale-110">
-                          <Play className="size-5 fill-current" />
+                      <div className={stylex.props(styles.s_548).className}>
+                        <span className={stylex.props(styles.s_549).className}>
+                          <Play className={stylex.props(styles.s_550).className} />
                         </span>
                       </div>
                     </div>
-                    <span className="block truncate px-2 py-1.5 text-xs text-muted-foreground group-hover:text-foreground">
+                    <span className={stylex.props(styles.s_551).className}>
                       {label}
                     </span>
                   </button>
@@ -101,14 +103,14 @@ export function VideosSection({
                 <button
                   type="button"
                   onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                  className="group flex w-full items-center gap-2 overflow-hidden rounded-md border border-border bg-muted/30 py-1.5 pl-1.5 pr-2 transition-colors hover:border-foreground/20 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={stylex.props(styles.s_552).className}
                 >
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded bg-muted/60">
-                    <span className="flex size-7 items-center justify-center rounded-full bg-foreground/80 text-background transition-transform group-hover:scale-110">
-                      <Play className="size-3.5 fill-current" />
+                  <div className={stylex.props(styles.s_553).className}>
+                    <span className={stylex.props(styles.s_554).className}>
+                      <Play className={stylex.props(styles.s_555).className} />
                     </span>
                   </div>
-                  <span className="min-w-0 flex-1 truncate text-left text-xs text-muted-foreground group-hover:text-foreground">
+                  <span className={stylex.props(styles.s_556).className}>
                     {label}
                   </span>
                 </button>

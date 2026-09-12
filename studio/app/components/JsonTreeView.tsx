@@ -1,8 +1,9 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { useState, useMemo } from "react";
 import { ChevronRight, Eye, LocateFixed } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import {
   UUID_RE,
   tryParseJson,
@@ -10,6 +11,7 @@ import {
   collapsedPreview,
   isSimple,
 } from "@/app/lib/json-tree-utils";
+import { styles } from "./JsonTreeView.stylex";
 
 // ---------------------------------------------------------------------------
 // Components
@@ -22,59 +24,24 @@ interface PrimitiveValueProps {
   onSelectId?: (id: string) => void;
   knownIds?: Set<string>;
 }
-
 function PrimitiveValue({ value, onHighlightId, onSelectId, knownIds }: PrimitiveValueProps) {
-  if (value === null || value === undefined) {
-    return <span className="text-muted-foreground/50 italic">null</span>;
-  }
+  if (value === null || value === undefined) return <span {...stylex.props(styles.nullValue)}>null</span>;
   if (typeof value === "boolean") {
-    return (
-      <span
-        className={cn(
-          "inline-flex items-center rounded px-1.5 py-px text-[10px] font-medium",
-          value
-            ? "bg-green-500/10 text-green-500"
-            : "bg-muted text-muted-foreground",
-        )}
-      >
-        {String(value)}
-      </span>
-    );
+    return <span {...stylex.props(styles.bool, value ? styles.boolTrue : styles.boolFalse)}>{String(value)}</span>;
   }
-  if (typeof value === "number") {
-    return <span className="font-mono text-foreground">{value}</span>;
-  }
+  if (typeof value === "number") return <span {...stylex.props(styles.mono)}>{value}</span>;
   const str = String(value);
-  // UUID strings get monospace compact styling + optional action buttons
   if (UUID_RE.test(str)) {
     const isKnown = knownIds?.has(str);
     return (
-      <span className="inline-flex items-center gap-1">
-        <span className="font-mono text-foreground/80 break-all text-[10px]">{str}</span>
-        {isKnown && onHighlightId && (
-          <button
-            type="button"
-            onClick={() => onHighlightId(str)}
-            title="Highlight on map"
-            className="inline-flex size-4 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:text-sky-400 hover:bg-sky-400/10"
-          >
-            <Eye className="size-3" />
-          </button>
-        )}
-        {isKnown && onSelectId && (
-          <button
-            type="button"
-            onClick={() => onSelectId(str)}
-            title="Select on map"
-            className="inline-flex size-4 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:text-primary hover:bg-primary/10"
-          >
-            <LocateFixed className="size-3" />
-          </button>
-        )}
+      <span {...stylex.props(styles.inline)}>
+        <span {...stylex.props(styles.uuid)}>{str}</span>
+        {isKnown && onHighlightId && <button type="button" onClick={() => onHighlightId(str)} title="Highlight on map" {...stylex.props(styles.action)}><Eye className="size-3" /></button>}
+        {isKnown && onSelectId && <button type="button" onClick={() => onSelectId(str)} title="Select on map" {...stylex.props(styles.action, styles.actionSelect)}><LocateFixed className="size-3" /></button>}
       </span>
     );
   }
-  return <span className="text-foreground break-words">{str}</span>;
+  return <span {...stylex.props(styles.mono)}>{str}</span>;
 }
 
 interface JsonNodeProps {
@@ -130,10 +97,8 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
   // Simple/primitive value — early return after all hooks
   if (simple) {
     return (
-      <div className="flex items-baseline gap-2 py-0.5" style={{ paddingLeft: depth * 12 }}>
-        {label && (
-          <span className="shrink-0 text-muted-foreground text-xs">{label}</span>
-        )}
+      <div {...stylex.props(styles.row)} style={{ paddingLeft: depth * 12 }}>
+        {label && <span {...stylex.props(styles.label)}>{label}</span>}
         <PrimitiveValue value={parsed} onHighlightId={onHighlightId} onSelectId={onSelectId} knownIds={knownIds} />
       </div>
     );
@@ -147,28 +112,15 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
       <button
         type="button"
         onClick={() => setExpanded((o) => !o)}
-        className="flex w-full items-baseline gap-1.5 py-0.5 text-xs hover:bg-muted/30 rounded transition-colors"
+        {...stylex.props(styles.header)}
         style={{ paddingLeft: depth * 12 }}
       >
-        <ChevronRight
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform duration-150 mt-0.5",
-            expanded && "rotate-90",
-          )}
-        />
+        <ChevronRight {...stylex.props(styles.chevron, expanded && styles.chevronOpen)} />
         {label && (
-          <span className="shrink-0 text-muted-foreground">{label}</span>
+          <span {...stylex.props(styles.label)}>{label}</span>
         )}
-        {!expanded && (
-          <span className="text-muted-foreground/60 font-mono text-[10px] truncate">
-            {collapsedPreview(parsed)}
-          </span>
-        )}
-        {expanded && effectiveIsArray && (
-          <span className="text-muted-foreground/60 font-mono text-[10px]">
-            [{count}]
-          </span>
-        )}
+        {!expanded && <span {...stylex.props(styles.preview)}>{collapsedPreview(parsed)}</span>}
+        {expanded && effectiveIsArray && <span {...stylex.props(styles.count)}>[{count}]</span>}
       </button>
 
       {/* Children — only rendered when expanded */}
@@ -187,7 +139,7 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
                 ) {
                   return (
                     <div key={key}>
-                      {idx > 0 && <div className="border-t border-border/30 my-0.5" style={{ marginLeft: (depth + 1) * 12 }} />}
+                      {idx > 0 && <div {...stylex.props(styles.divider)} style={{ marginLeft: (depth + 1) * 12 }} />}
                       {Object.entries(itemParsed as Record<string, unknown>).map(([k, v]) => (
                         <JsonNode key={k} label={k} value={v} depth={depth + 1} collapseArrays={collapseArrays} onHighlightId={onHighlightId} onSelectId={onSelectId} knownIds={knownIds} />
                       ))}
@@ -198,24 +150,10 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
                 return <JsonNode key={key} value={val} depth={depth + 1} collapseArrays={collapseArrays} onHighlightId={onHighlightId} onSelectId={onSelectId} knownIds={knownIds} />;
               })
             : visibleEntries.map(([key, val]) => (
-              <JsonNode
-                key={key}
-                label={effectiveIsArray ? undefined : key}
-                value={val}
-                depth={depth + 1}
-                collapseArrays={collapseArrays}
-                onHighlightId={onHighlightId}
-                onSelectId={onSelectId}
-                knownIds={knownIds}
-              />
+              <JsonNode key={key} label={effectiveIsArray ? undefined : key} value={val} depth={depth + 1} collapseArrays={collapseArrays} onHighlightId={onHighlightId} onSelectId={onSelectId} knownIds={knownIds} />
             ))}
           {hasMore && (
-            <button
-              type="button"
-              onClick={() => setShowAll(true)}
-              className="py-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
-              style={{ paddingLeft: (depth + 1) * 12 }}
-            >
+            <button type="button" onClick={() => setShowAll(true)} {...stylex.props(styles.more)} style={{ paddingLeft: (depth + 1) * 12 }}>
               Show {entries.length - VISIBLE_LIMIT} more…
             </button>
           )}
@@ -254,13 +192,11 @@ export function JsonTreeView({ data, defaultExpanded = true, collapseArrays = fa
   const entries = Object.entries(data);
 
   if (entries.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground/50 italic py-2">No properties</p>
-    );
+    return <p {...stylex.props(styles.empty)}>No properties</p>;
   }
 
   return (
-    <div className={cn("text-xs", className)}>
+    <div {...mergeStyleProps(stylex.props(styles.root), className)}>
       {entries.map(([key, value]) => (
         <JsonNode
           key={key}

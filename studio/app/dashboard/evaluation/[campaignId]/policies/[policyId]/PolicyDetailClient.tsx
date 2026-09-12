@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -23,6 +24,7 @@ import {
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { EvalPolicyDetail } from "@/app/lib/evaluation/contracts";
 import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "../../../shared";
+import { styles } from "../../../route-residuals.stylex";
 
 function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
   const provenance = detail.provenanceSample;
@@ -30,7 +32,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Provenance</CardTitle>
+          <CardTitle {...stylex.props(styles.cardTitle)} >Provenance</CardTitle>
         </CardHeader>
         <CardContent>
           <PanelMessage>No provenance.json recorded for this policy.</PanelMessage>
@@ -52,10 +54,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
     [
       "Model version",
       detail.policy.modelVersionId ? (
-        <Link
-          className="font-mono text-xs hover:underline"
-          href={`/dashboard/evaluation/versions/${detail.policy.modelVersionId}`}
-        >
+        <Link {...stylex.props(styles.monoSmall, styles.link)} href={`/dashboard/evaluation/versions/${detail.policy.modelVersionId}`}>
           {detail.policy.modelVersionId}
         </Link>
       ) : (
@@ -66,15 +65,15 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Provenance</CardTitle>
+        <CardTitle {...stylex.props(styles.cardTitle)} >Provenance</CardTitle>
         <CardDescription>From the first completed episode of this policy</CardDescription>
       </CardHeader>
       <CardContent>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+        <dl {...stylex.props(styles.dlProvenance)} >
           {rows.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-              <dd className="mt-0.5 break-all text-foreground">{value}</dd>
+              <dt {...stylex.props(styles.label)} >{label}</dt>
+              <dd {...stylex.props(styles.textSmall)} >{value}</dd>
             </div>
           ))}
         </dl>
@@ -108,7 +107,7 @@ export function PolicyDetailClient({
   );
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)} >
       <PageHeader
         eyebrow={campaignId}
         title={policyId}
@@ -118,15 +117,15 @@ export function PolicyDetailClient({
             <StatusBadge status="complete" />
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/evaluation">
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                <ArrowLeft {...stylex.props(styles.icon)} />
                 All campaigns
               </Link>
             </Button>
           </>
         }
       />
-      <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div {...stylex.props(styles.content)} >
+        <div {...stylex.props(styles.grid4)} >
           {(
             [
               ["Mean driving score", formatScore(detail.policy.meanScore)],
@@ -136,9 +135,9 @@ export function PolicyDetailClient({
             ] as const
           ).map(([label, value]) => (
             <Card key={label}>
-              <CardHeader className="pb-2">
+              <CardHeader {...stylex.props(styles.cardHeaderTight)} >
                 <CardDescription>{label}</CardDescription>
-                <CardTitle className="font-mono text-2xl">{value}</CardTitle>
+                <CardTitle {...stylex.props(styles.cardTitleLarge)} >{value}</CardTitle>
               </CardHeader>
             </Card>
           ))}
@@ -148,7 +147,7 @@ export function PolicyDetailClient({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Episodes</CardTitle>
+            <CardTitle {...stylex.props(styles.cardTitle)} >Episodes</CardTitle>
             <CardDescription>Per-scenario scores and infractions</CardDescription>
           </CardHeader>
           <CardContent>
@@ -159,46 +158,43 @@ export function PolicyDetailClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-                    <TableHead className="text-right">Seed</TableHead>
-                    <TableHead className="text-right">Driving score</TableHead>
-                    <TableHead className="text-right">Route</TableHead>
-                    <TableHead className="text-right">Steps</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Seed</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Driving score</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Route</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Steps</TableHead>
                     <TableHead>Infractions</TableHead>
-                    <TableHead className="text-right">Completed</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Completed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {detail.episodes.map((episode) => (
                     <TableRow key={episode.episodeId}>
                       <TableCell>
-                        <Link
-                          className="font-medium hover:underline"
-                          href={`/dashboard/evaluation/${campaignId}/episodes/${episode.episodeId}`}
-                        >
+                        <Link {...stylex.props(styles.linkMedium)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.episodeId}`}>
                           {episode.scenarioId}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-right font-mono">{episode.seed}</TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.numeric)} >{episode.seed}</TableCell>
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {formatScore(episode.score?.drivingScore ?? episode.ledgerScore)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {formatScore(episode.score?.routeCompletion ?? episode.ledgerRouteCompletion)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {episode.score?.steps ?? "—"}
                       </TableCell>
                       <TableCell>
                         {Object.keys(episode.score?.infractions ?? {}).length === 0 ? (
-                          <span className="text-xs text-muted-foreground">none</span>
+                          <span {...stylex.props(styles.tinyMuted)} >none</span>
                         ) : (
-                          <div className="flex flex-wrap gap-1">
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: ".25rem" }} >
                             {Object.entries(episode.score?.infractions ?? {}).map(
                               ([type, count]) => (
                                 <Badge
                                   key={type}
                                   variant="destructive"
-                                  className="font-mono text-[10px]"
+                                  {...stylex.props(styles.infractionBadge)}
                                 >
                                   {type}
                                   {count > 1 ? ` ×${count}` : ""}
@@ -208,7 +204,7 @@ export function PolicyDetailClient({
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      <TableCell {...stylex.props(styles.numericTinyMuted)} >
                         {new Date(episode.completedAt).toLocaleTimeString()}
                       </TableCell>
                     </TableRow>

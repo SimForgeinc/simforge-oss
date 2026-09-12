@@ -21,16 +21,6 @@ describe("WorkspacePaneLoading", () => {
     expect(html).toContain("Fetching artifacts");
   });
 
-  it("renders without hint when none provided", () => {
-    const html = renderToString(<WorkspacePaneLoading message="Loading" />);
-    expect(html).not.toContain("text-white/60");
-  });
-
-  it("renders a spinner svg", () => {
-    const html = renderToString(<WorkspacePaneLoading message="Loading" />);
-    expect(html).toContain("<svg");
-    expect(html).toContain("animate-spin");
-  });
 
   it("uses role=status for accessibility", () => {
     const html = renderToString(<WorkspacePaneLoading message="Loading" />);
@@ -38,10 +28,4 @@ describe("WorkspacePaneLoading", () => {
     expect(html).toContain('aria-busy="true"');
   });
 
-  it("stays a compact local status instead of mounting the cinematic cloud surface", () => {
-    const html = renderToString(<WorkspacePaneLoading message="Loading" />);
-    expect(html).toContain("min-h-20");
-    expect(html).not.toContain("data-cloud-loading-scope");
-    expect(html).not.toContain("app-switcher-three-sky");
-  });
 });

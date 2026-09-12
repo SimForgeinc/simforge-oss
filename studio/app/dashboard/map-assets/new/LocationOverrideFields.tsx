@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { FieldLabel } from "./FieldLabel";
 
@@ -18,35 +20,35 @@ export function LocationOverrideFields({
   return (
     <div>
       <FieldLabel>Location</FieldLabel>
-      <p className="mb-2 text-xs text-muted-foreground">
+      <p className={stylex.props(styles.s_327).className}>
         Optional. Auto-filled from map coordinates. Override if the nearest city is incorrect.
       </p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className={stylex.props(styles.s_291).className}>
         <div>
-          <label className="mb-1 block text-[11px] text-muted-foreground">City</label>
+          <label className={stylex.props(styles.s_296).className}>City</label>
           <Input
             value={city}
             onChange={(e) => onCityChange(e.target.value)}
             placeholder="e.g. San Jose"
-            className="h-8 text-xs"
+            className={stylex.props(styles.s_297).className}
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-muted-foreground">State / Region</label>
+          <label className={stylex.props(styles.s_296).className}>State / Region</label>
           <Input
             value={state}
             onChange={(e) => onStateChange(e.target.value)}
             placeholder="e.g. California"
-            className="h-8 text-xs"
+            className={stylex.props(styles.s_297).className}
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-muted-foreground">Country</label>
+          <label className={stylex.props(styles.s_296).className}>Country</label>
           <Input
             value={country}
             onChange={(e) => onCountryChange(e.target.value)}
             placeholder="e.g. United States"
-            className="h-8 text-xs"
+            className={stylex.props(styles.s_297).className}
           />
         </div>
       </div>

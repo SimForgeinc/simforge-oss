@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { Loader2 } from "lucide-react";
 import type {
@@ -36,17 +38,17 @@ export function AnalyticsTab({
   if (viewMode === "3d") {
     if (threeDStatsLoading) {
       return (
-        <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
-          <Loader2 className="size-5 text-muted-foreground animate-spin" aria-hidden="true" />
-          <span className="sr-only">Loading 3D statistics</span>
+        <div className={stylex.props(styles.s_995).className} role="status" aria-live="polite">
+          <Loader2 className={stylex.props(styles.s_996).className} aria-hidden="true" />
+          <span className={stylex.props(styles.s_997).className}>Loading 3D statistics</span>
         </div>
       );
     }
 
     if (!threeDStats) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50 mb-3">
+        <div className={stylex.props(styles.s_1003).className}>
+          <div className={stylex.props(styles.s_1004).className}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -57,14 +59,14 @@ export function AnalyticsTab({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-muted-foreground"
+              className={stylex.props(styles.s_1005).className}
             >
               <path d="M3 3v18h18" />
               <path d="m19 9-5 5-4-4-3 3" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-foreground">No 3D statistics available</p>
-          <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+          <p className={stylex.props(styles.s_1006).className}>No 3D statistics available</p>
+          <p className={stylex.props(styles.s_1007).className}>
             Upload 3D digital twin assets to see scene analytics.
           </p>
         </div>
@@ -83,8 +85,8 @@ export function AnalyticsTab({
 
   if (!mapStats) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50 mb-3">
+      <div className={stylex.props(styles.s_1003).className}>
+        <div className={stylex.props(styles.s_1004).className}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
@@ -95,14 +97,14 @@ export function AnalyticsTab({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-muted-foreground"
+            className={stylex.props(styles.s_1005).className}
           >
             <path d="M3 3v18h18" />
             <path d="m19 9-5 5-4-4-3 3" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-foreground">No statistics available</p>
-        <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+        <p className={stylex.props(styles.s_1006).className}>No statistics available</p>
+        <p className={stylex.props(styles.s_1007).className}>
           Run &quot;Re-extract Metadata&quot; from the actions menu to compute map statistics.
         </p>
       </div>

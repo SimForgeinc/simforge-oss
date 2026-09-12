@@ -1,34 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { styles } from "./shared.stylex";
 
-const STATUS_BADGE_CLASS: Record<string, string> = {
-  queued: "bg-muted text-muted-foreground border-transparent",
-  running: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-transparent",
-  complete: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-transparent",
-  succeeded: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-transparent",
-  promoted: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-transparent",
-  registered: "bg-muted text-muted-foreground border-transparent",
-  failed: "bg-destructive/15 text-destructive border-transparent",
-};
+const STATUS_BADGE_CLASS: Record<string, keyof typeof styles> = { queued: "queued", running: "running", complete: "complete", succeeded: "complete", promoted: "complete", registered: "queued", failed: "failed" };
 
 export function StatusBadge({ status }: { status: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "capitalize",
-        STATUS_BADGE_CLASS[status] ?? "bg-muted text-muted-foreground border-transparent",
-      )}
-    >
-      {status}
-    </Badge>
-  );
+  const tone = STATUS_BADGE_CLASS[status] ?? "queued";
+  return <Badge variant="outline" {...stylex.props(styles.status, styles[tone])}>{status}</Badge>;
 }
 
-/** Driving scores are 0..1 on the wire; render as percent. */
 export function formatScore(score: number | null | undefined): string {
   return typeof score === "number" ? `${(score * 100).toFixed(1)}%` : "—";
 }
@@ -44,7 +27,6 @@ export type FetchState<T> =
   | { kind: "error"; message: string }
   | { kind: "ready"; data: T };
 
-/** Same-origin JSON GET with the loading/error/ready triple every page shares. */
 export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<T> {
   const [state, setState] = useState<FetchState<T>>({ kind: "loading" });
   useEffect(() => {
@@ -62,10 +44,7 @@ export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<
       .then((data) => setState({ kind: "ready", data }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        setState({ kind: "error", message: error instanceof Error ? error.message : String(error) });
       });
     return () => controller.abort();
   }, [url, refreshKey]);
@@ -73,9 +52,5 @@ export function useJsonFetch<T>(url: string | null, refreshKey = 0): FetchState<
 }
 
 export function PanelMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
-      {children}
-    </div>
-  );
+  return <div {...stylex.props(styles.message)}>{children}</div>;
 }

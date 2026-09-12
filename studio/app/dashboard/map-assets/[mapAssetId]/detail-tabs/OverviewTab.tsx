@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useState, useMemo } from "react";
 import { Route, GitFork, PersonStanding, Footprints, Bike, SquareParking, ChevronRight, Loader2 } from "lucide-react";
@@ -32,12 +34,12 @@ interface QuickStatCardProps {
 
 function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
   const card = (
-    <div className="p-3 rounded-lg bg-secondary/50 border border-border hover:bg-secondary/70 transition-colors">
-      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+    <div className={stylex.props(styles.s_825).className}>
+      <div className={stylex.props(styles.s_826).className}>
         {icon}
-        <span className="text-xs font-medium">{label}</span>
+        <span className={stylex.props(styles.s_827).className}>{label}</span>
       </div>
-      <p className="text-lg font-semibold text-foreground font-mono">{value}</p>
+      <p className={stylex.props(styles.s_828).className}>{value}</p>
     </div>
   );
 
@@ -47,7 +49,7 @@ function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs leading-relaxed">
+        <TooltipContent side="bottom" className={stylex.props(styles.s_829).className}>
           {tooltip.map((line, i) => (
             <div key={i}>{line}</div>
           ))}
@@ -219,12 +221,12 @@ export function OverviewTab({
   const visibleFamilies = showAllFamilies ? familyGroups : familyGroups.slice(0, 6);
 
   return (
-    <div className="space-y-5">
+    <div className={stylex.props(styles.s_993).className}>
       {/* Map name + location + description */}
       <section>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-snug">{asset.name}</h2>
+        <div className={stylex.props(styles.s_831).className}>
+          <div className={stylex.props(styles.s_919).className}>
+            <h2 className={stylex.props(styles.s_833).className}>{asset.name}</h2>
             {(() => {
               const place = asset.place_context;
               const location = [place?.city, place?.state, place?.country]
@@ -232,7 +234,7 @@ export function OverviewTab({
                 .join(", ");
               if (!location) return null;
               return (
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{location}</p>
+                <p className={stylex.props(styles.s_834).className}>{location}</p>
               );
             })()}
           </div>
@@ -243,7 +245,7 @@ export function OverviewTab({
           />
         </div>
         {asset.description && (
-          <div className="mt-1">
+          <div className={stylex.props(styles.s_835).className}>
             <p
               className={cn(
                 "text-xs leading-relaxed text-muted-foreground",
@@ -255,7 +257,7 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => setDescExpanded((o) => !o)}
-              className="mt-0.5 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              className={stylex.props(styles.s_836).className}
             >
               {descExpanded ? "Show less" : "Show more"}
             </button>
@@ -277,22 +279,22 @@ export function OverviewTab({
 
       {/* Quick stats — same card for both 2D and 3D views */}
       <section>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <div className={stylex.props(styles.s_848).className}>
+          <h3 className={stylex.props(styles.s_849).className}>
             Quick Stats
           </h3>
           <button
             type="button"
             onClick={onSwitchToStatsTab}
-            className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
+            className={stylex.props(styles.s_850).className}
           >
             View all
-            <ChevronRight className="size-3" />
+            <ChevronRight className={stylex.props(styles.s_927).className} />
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className={stylex.props(styles.s_841).className}>
           <QuickStatCard
-            icon={<Route className="size-4" />}
+            icon={<Route className={stylex.props(styles.s_847).className} />}
             value={mileageKm != null ? `${mileageKm.toFixed(1)} km` : "—"}
             label="Roads"
             tooltip={[
@@ -303,7 +305,7 @@ export function OverviewTab({
             ].filter((l): l is string => l != null)}
           />
           <QuickStatCard
-            icon={<GitFork className="size-4" />}
+            icon={<GitFork className={stylex.props(styles.s_847).className} />}
             value={junctions != null ? String(junctions) : "—"}
             label="Junctions"
             tooltip={signalJunctions != null ? [
@@ -313,12 +315,12 @@ export function OverviewTab({
             ].filter((l): l is string => l != null) : undefined}
           />
           <QuickStatCard
-            icon={<PersonStanding className="size-4" />}
+            icon={<PersonStanding className={stylex.props(styles.s_847).className} />}
             value={sidewalkKm != null ? `${sidewalkKm.toFixed(1)} km` : "—"}
             label="Sidewalks"
           />
           <QuickStatCard
-            icon={<Footprints className="size-4" />}
+            icon={<Footprints className={stylex.props(styles.s_847).className} />}
             value={crosswalks != null ? String(crosswalks) : "—"}
             label="Crosswalks"
             tooltip={
@@ -332,12 +334,12 @@ export function OverviewTab({
             }
           />
           <QuickStatCard
-            icon={<Bike className="size-4" />}
+            icon={<Bike className={stylex.props(styles.s_847).className} />}
             value={bikeLaneKm != null ? `${bikeLaneKm.toFixed(1)} km` : "—"}
             label="Bike Lns"
           />
           <QuickStatCard
-            icon={<SquareParking className="size-4" />}
+            icon={<SquareParking className={stylex.props(styles.s_847).className} />}
             value={parkingSpaces != null ? String(parkingSpaces) : "—"}
             label="Parking"
             tooltip={[
@@ -359,26 +361,26 @@ export function OverviewTab({
       {/* Scenario Insights */}
       {(tags.length > 0 || candidateLocations.length > 0 || candidateLocationsLoading) && (
         <section>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <div className={stylex.props(styles.s_848).className}>
+            <h3 className={stylex.props(styles.s_849).className}>
               Scenario Insights
             </h3>
             <button
               type="button"
               onClick={() => onSwitchToInsightsTab()}
-              className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
+              className={stylex.props(styles.s_850).className}
             >
               View all
-              <ChevronRight className="size-3" />
+              <ChevronRight className={stylex.props(styles.s_927).className} />
             </button>
           </div>
 
           {/* Stats row */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+          <div className={stylex.props(styles.s_852).className}>
+            <span className={stylex.props(styles.s_853).className}>
               {candidateLocationsLoading ? (
                 <>
-                  <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+                  <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
                   <span>Loading locations…</span>
                 </>
               ) : (
@@ -387,11 +389,11 @@ export function OverviewTab({
                 </>
               )}
             </span>
-            <span className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+            <span className={stylex.props(styles.s_855).className}>
               {familyGroups.length} scenario {familyGroups.length !== 1 ? "families" : "family"}
             </span>
             {totalHighConfidence > 0 && (
-              <span className="inline-flex items-center rounded-full bg-emerald-950/40 px-2 py-0.5 text-[10px] text-emerald-400 border border-emerald-700/30">
+              <span className={stylex.props(styles.s_856).className}>
                 {totalHighConfidence} high-confidence
               </span>
             )}
@@ -399,7 +401,7 @@ export function OverviewTab({
 
           {/* Family summary cards — 2 columns */}
           <TooltipProvider delayDuration={200}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={stylex.props(styles.s_857).className}>
               {visibleFamilies.map((group) => {
                 const Icon = getFamilyIcon(group.family);
                 const tagCount = group.tags.length;
@@ -410,28 +412,28 @@ export function OverviewTab({
                       <button
                         type="button"
                         onClick={() => onSwitchToInsightsTab(group.family.id)}
-                        className="min-w-0 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                        className={stylex.props(styles.s_858).className}
                       >
-                        <div className="flex items-center gap-2">
-                          <Icon className="size-3.5 text-primary shrink-0" />
-                          <span className="truncate text-xs font-medium text-foreground">{group.family.name}</span>
+                        <div className={stylex.props(styles.s_908).className}>
+                          <Icon className={stylex.props(styles.s_977).className} />
+                          <span className={stylex.props(styles.s_861).className}>{group.family.name}</span>
                         </div>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                        <p className={stylex.props(styles.s_862).className}>
                           {locCount} location{locCount !== 1 ? "s" : ""}, {tagCount} tag{tagCount !== 1 ? "s" : ""}
                         </p>
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs space-y-1 text-xs leading-relaxed">
+                    <TooltipContent side="top" className={stylex.props(styles.s_863).className}>
                       <div>
-                        <span className="font-semibold">Scenario Family:</span> {group.family.name}
+                        <span className={stylex.props(styles.s_865).className}>Scenario Family:</span> {group.family.name}
                       </div>
                       <div>
-                        <span className="font-semibold">Description:</span> {group.family.description}
+                        <span className={stylex.props(styles.s_865).className}>Description:</span> {group.family.description}
                       </div>
                       <div>
                         {tagCount} tag{tagCount !== 1 ? "s" : ""}, {locCount} location{locCount !== 1 ? "s" : ""}
                       </div>
-                      <div className="text-muted-foreground">Click to inspect candidate locations</div>
+                      <div className={stylex.props(styles.s_1005).className}>Click to inspect candidate locations</div>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -444,7 +446,7 @@ export function OverviewTab({
             <button
               type="button"
               onClick={() => setShowAllFamilies((o) => !o)}
-              className="mt-2 flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
+              className={stylex.props(styles.s_867).className}
             >
               {showAllFamilies
                 ? "Show fewer"

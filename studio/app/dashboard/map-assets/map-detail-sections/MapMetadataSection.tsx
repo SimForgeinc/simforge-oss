@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -41,11 +43,11 @@ export function MapMetadataSection({
 }: MapMetadataSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-1">
+      <div className={stylex.props(styles.s_961).className}>
         <button
           type="button"
           onClick={onToggleOpen}
-          className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          className={stylex.props(styles.s_962).className}
           aria-expanded={open}
         >
           <ChevronRight
@@ -68,31 +70,31 @@ export function MapMetadataSection({
             }
             aria-label="Copy map metadata as JSON"
             title="Copy map metadata as JSON"
-            className="shrink-0 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            className={stylex.props(styles.s_713).className}
           >
             {copiedKey === "mapMetadata" ? (
-              <Check className="size-3 text-green-400" />
+              <Check className={stylex.props(styles.s_714).className} />
             ) : (
-              <Copy className="size-3" />
+              <Copy className={stylex.props(styles.s_927).className} />
             )}
           </button>
         )}
       </div>
       {open && (
-        <div className="mt-2 space-y-3">
+        <div className={stylex.props(styles.s_663).className}>
           {!hasExtractedMetadata && (
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className={stylex.props(styles.s_664).className}>
               No extracted fields yet. Upload geojson, xodr, and rrdata_xml for this map, then run{" "}
-              <span className="text-foreground/80">Populate metadata</span> below (or create a new map with all
+              <span className={stylex.props(styles.s_665).className}>Populate metadata</span> below (or create a new map with all
               three files).
             </p>
           )}
           {asset.place_context && (
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className={stylex.props(styles.s_699).className}>
                 Location
               </h4>
-              <p className="text-xs text-foreground/90">
+              <p className={stylex.props(styles.s_667).className}>
                 {[
                   asset.place_context.city,
                   asset.place_context.state,
@@ -105,44 +107,44 @@ export function MapMetadataSection({
           )}
           {asset.map_source && (
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className={stylex.props(styles.s_699).className}>
                 Map source
               </h4>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <dl className={stylex.props(styles.s_700).className}>
                 {asset.map_source.tool != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Tool</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_source.tool}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Tool</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.tool}</dd>
                   </>
                 )}
                 {asset.map_source.tool_version != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Version</dt>
-                    <dd className="break-all font-mono text-foreground/90">{asset.map_source.tool_version}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Version</dt>
+                    <dd className={stylex.props(styles.s_697).className}>{asset.map_source.tool_version}</dd>
                   </>
                 )}
                 {asset.map_source.vendor != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Vendor</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_source.vendor}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Vendor</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.vendor}</dd>
                   </>
                 )}
                 {asset.map_source.opendrive_version != null && (
                   <>
-                    <dt className="text-muted-foreground/70">OpenDRIVE</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_source.opendrive_version}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>OpenDRIVE</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.opendrive_version}</dd>
                   </>
                 )}
                 {asset.map_source.rrdata_schema_version != null && (
                   <>
-                    <dt className="text-muted-foreground/70">RR schema</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_source.rrdata_schema_version}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>RR schema</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_source.rrdata_schema_version}</dd>
                   </>
                 )}
                 {asset.map_source.exported_at != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Exported</dt>
-                    <dd className="break-all font-mono text-foreground/90">{asset.map_source.exported_at}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Exported</dt>
+                    <dd className={stylex.props(styles.s_697).className}>{asset.map_source.exported_at}</dd>
                   </>
                 )}
               </dl>
@@ -150,15 +152,15 @@ export function MapMetadataSection({
           )}
           {asset.map_coordinate_ref && (
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className={stylex.props(styles.s_699).className}>
                 Coordinate reference
               </h4>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <dl className={stylex.props(styles.s_700).className}>
                 {asset.map_coordinate_ref.origin_lat != null &&
                   asset.map_coordinate_ref.origin_lon != null && (
                     <>
-                      <dt className="text-muted-foreground/70">Origin</dt>
-                      <dd className="font-mono text-foreground/90">
+                      <dt className={stylex.props(styles.s_705).className}>Origin</dt>
+                      <dd className={stylex.props(styles.s_706).className}>
                         {asset.map_coordinate_ref.origin_lat.toFixed(6)},{" "}
                         {asset.map_coordinate_ref.origin_lon.toFixed(6)}
                       </dd>
@@ -166,14 +168,14 @@ export function MapMetadataSection({
                   )}
                 {asset.map_coordinate_ref.utm_zone != null && (
                   <>
-                    <dt className="text-muted-foreground/70">UTM</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_coordinate_ref.utm_zone}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>UTM</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_coordinate_ref.utm_zone}</dd>
                   </>
                 )}
                 {asset.map_coordinate_ref.editor_offset_m != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Editor offset</dt>
-                    <dd className="font-mono text-foreground/90">
+                    <dt className={stylex.props(styles.s_705).className}>Editor offset</dt>
+                    <dd className={stylex.props(styles.s_706).className}>
                       {asset.map_coordinate_ref.editor_offset_m.x.toFixed(2)},{" "}
                       {asset.map_coordinate_ref.editor_offset_m.y.toFixed(2)} m
                     </dd>
@@ -181,14 +183,14 @@ export function MapMetadataSection({
                 )}
                 {asset.map_coordinate_ref.projection_type != null && (
                   <>
-                    <dt className="text-muted-foreground/70">Projection</dt>
-                    <dd className="font-mono text-foreground/90">{asset.map_coordinate_ref.projection_type}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Projection</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{asset.map_coordinate_ref.projection_type}</dd>
                   </>
                 )}
                 {asset.map_coordinate_ref.proj_string != null && (
                   <>
-                    <dt className="text-muted-foreground/70 shrink-0">PROJ</dt>
-                    <dd className="break-all font-mono text-[10px] leading-snug text-foreground/85">
+                    <dt className={stylex.props(styles.s_692).className}>PROJ</dt>
+                    <dd className={stylex.props(styles.s_693).className}>
                       {asset.map_coordinate_ref.proj_string}
                     </dd>
                   </>
@@ -198,42 +200,42 @@ export function MapMetadataSection({
           )}
           {asset.carla_map_name && (
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className={stylex.props(styles.s_699).className}>
                 CARLA Metadata
               </h4>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                <dt className="text-muted-foreground/70">Carla Map Name</dt>
-                <dd className="break-all font-mono text-foreground/90">{asset.carla_map_name}</dd>
+              <dl className={stylex.props(styles.s_700).className}>
+                <dt className={stylex.props(styles.s_705).className}>Carla Map Name</dt>
+                <dd className={stylex.props(styles.s_697).className}>{asset.carla_map_name}</dd>
               </dl>
             </div>
           )}
           {asset.metadata_last_populated_at && (
-            <p className="text-[10px] text-muted-foreground/60">
+            <p className={stylex.props(styles.s_698).className}>
               Metadata last computed {new Date(asset.metadata_last_populated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </p>
           )}
           {enrichment && (
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className={stylex.props(styles.s_699).className}>
                 Third-Party Enrichment Source
               </h4>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <dl className={stylex.props(styles.s_700).className}>
                 {enrichment.provider && (
                   <>
-                    <dt className="text-muted-foreground/70">Provider</dt>
-                    <dd className="font-mono text-foreground/90">{enrichment.provider}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Provider</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{enrichment.provider}</dd>
                   </>
                 )}
                 {enrichment.provider_release && (
                   <>
-                    <dt className="text-muted-foreground/70">Snapshot</dt>
-                    <dd className="font-mono text-foreground/90">{enrichment.provider_release}</dd>
+                    <dt className={stylex.props(styles.s_705).className}>Snapshot</dt>
+                    <dd className={stylex.props(styles.s_706).className}>{enrichment.provider_release}</dd>
                   </>
                 )}
                 {enrichment.computed_at && (
                   <>
-                    <dt className="text-muted-foreground/70">Computed</dt>
-                    <dd className="font-mono text-foreground/90">
+                    <dt className={stylex.props(styles.s_705).className}>Computed</dt>
+                    <dd className={stylex.props(styles.s_706).className}>
                       {new Date(enrichment.computed_at).toLocaleDateString()}
                     </dd>
                   </>
@@ -242,25 +244,25 @@ export function MapMetadataSection({
             </div>
           )}
           {showPopulateMetadata && (
-            <div className="pt-1">
+            <div className={stylex.props(styles.s_707).className}>
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="w-full"
+                className={stylex.props(styles.s_708).className}
                 disabled={populateBusy}
                 onClick={onPopulateMetadata}
               >
                 {populateBusy ? (
                   <>
-                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    <Loader2 className={stylex.props(styles.s_709).className} />
                     Populating…
                   </>
                 ) : (
                   "Populate metadata"
                 )}
               </Button>
-              {populateErr && <p className="mt-1.5 text-xs text-destructive">{populateErr}</p>}
+              {populateErr && <p className={stylex.props(styles.s_710).className}>{populateErr}</p>}
             </div>
           )}
         </div>

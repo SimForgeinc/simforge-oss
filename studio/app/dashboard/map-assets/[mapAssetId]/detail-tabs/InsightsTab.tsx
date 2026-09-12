@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../../map-assets.stylex";
 
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef } from "react";
 import { ChevronRight, Loader2, X } from "lucide-react";
@@ -99,13 +101,13 @@ export function InsightsTab({
   }, [sortedCandidates, activeFilter]);
 
   return (
-    <div className="space-y-5">
+    <div className={stylex.props(styles.s_993).className}>
       {familyGroups.length > 0 && (
         <section>
-          <h3 className="mb-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className={stylex.props(styles.s_959).className}>
             Scenario Families
           </h3>
-          <div className="space-y-2">
+          <div className={stylex.props(styles.s_960).className}>
             {familyGroups.map((group) => (
               <ScenarioFamilyCard
                 key={group.family.id}
@@ -127,11 +129,11 @@ export function InsightsTab({
 
       {(candidateLocations.length > 0 || candidateLocationsLoading) && (
         <section>
-          <div className="flex items-center gap-1">
+          <div className={stylex.props(styles.s_961).className}>
             <button
               type="button"
               onClick={() => setExplorerOpen((o) => !o)}
-              className="flex flex-1 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              className={stylex.props(styles.s_962).className}
               aria-expanded={explorerOpen}
             >
               <ChevronRight
@@ -139,12 +141,12 @@ export function InsightsTab({
               />
               Candidate Locations
               {candidateLocationsLoading ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-1.5 py-px text-[10px] text-muted-foreground">
-                  <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+                <span className={stylex.props(styles.s_979).className}>
+                  <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
                   <span>Loading…</span>
                 </span>
               ) : candidateLocations.length > 0 ? (
-                <span className="rounded-full bg-orange-950/60 px-1.5 py-px text-[10px] font-semibold text-orange-300">
+                <span className={stylex.props(styles.s_965).className}>
                   {activeFilter ? `${filteredCandidates.length}/${candidateLocations.length}` : candidateLocations.length}
                 </span>
               ) : null}
@@ -153,19 +155,19 @@ export function InsightsTab({
               <button
                 type="button"
                 onClick={() => setActiveFilter(null)}
-                className="flex items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+                className={stylex.props(styles.s_966).className}
               >
                 {activeFilter.type === "family"
                   ? familyGroups.find((g) => g.family.id === activeFilter.id)?.family.name ?? activeFilter.id
                   : humanizeTag(activeFilter.id)}
-                <X className="size-2.5" />
+                <X className={stylex.props(styles.s_967).className} />
               </button>
             )}
           </div>
 
           {explorerOpen && (
-            <div className="mt-2 space-y-2">
-              <div className="flex flex-wrap gap-1">
+            <div className={stylex.props(styles.s_968).className}>
+              <div className={stylex.props(styles.s_969).className}>
                 {familyGroups.map((group) => {
                   const isActive = activeFilter?.type === "family" && activeFilter.id === group.family.id;
                   return (
@@ -175,18 +177,13 @@ export function InsightsTab({
                       onClick={() =>
                         setActiveFilter(isActive ? null : { type: "family", id: group.family.id })
                       }
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] border transition-colors",
-                        isActive
-                          ? "bg-primary/15 text-primary border-primary/30"
-                          : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50",
-                      )}
+                      className={stylex.props(styles.u_952, styles.u_936, styles.u_941, styles.u_962, styles.u_903, styles.u_970).className}
                     >
                       {group.family.name}
                       {!candidateLocationsLoading && (
                         <>
                           {" "}
-                          <span className="text-muted-foreground/60">({group.candidates.length})</span>
+                          <span className={stylex.props(styles.s_970).className}>({group.candidates.length})</span>
                         </>
                       )}
                     </button>
@@ -195,15 +192,15 @@ export function InsightsTab({
               </div>
 
               {candidateLocationsLoading ? (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="size-3 animate-spin" /> Loading…
+                <p className={stylex.props(styles.s_971).className}>
+                  <Loader2 className={stylex.props(styles.s_972).className} /> Loading…
                 </p>
               ) : filteredCandidates.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className={stylex.props(styles.s_973).className}>
                   {activeFilter ? "No candidates match this filter." : "No candidate locations computed yet."}
                 </p>
               ) : (
-                <ul className="space-y-1.5">
+                <ul className={stylex.props(styles.s_986).className}>
                   {filteredCandidates.map((candidate) => (
                     <li key={candidate.id}>
                       <CandidateLocationCard
@@ -249,11 +246,11 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
       : null;
 
     return (
-      <div ref={ref} className="rounded-lg border border-border bg-muted/10">
+      <div ref={ref} className={stylex.props(styles.s_975).className}>
         <button
           type="button"
           onClick={onToggle}
-          className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-muted/20"
+          className={stylex.props(styles.s_976).className}
         >
           <ChevronRight
             className={cn(
@@ -261,41 +258,41 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
               expanded && "rotate-90",
             )}
           />
-          <Icon className="size-3.5 text-primary shrink-0" />
-          <span className="flex-1 text-xs font-medium text-foreground">{group.family.name}</span>
+          <Icon className={stylex.props(styles.s_977).className} />
+          <span className={stylex.props(styles.s_978).className}>{group.family.name}</span>
           {loading ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-1.5 py-px text-[10px] text-muted-foreground">
-              <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+            <span className={stylex.props(styles.s_979).className}>
+              <Loader2 className={stylex.props(styles.s_980).className} aria-hidden="true" />
               <span>Loading…</span>
             </span>
           ) : (
-            <span className="rounded-full bg-muted/50 px-1.5 py-px text-[10px] text-muted-foreground">
+            <span className={stylex.props(styles.s_981).className}>
               {group.candidates.length} location{group.candidates.length !== 1 ? "s" : ""}
             </span>
           )}
         </button>
 
         {expanded && (
-          <div className="border-t border-border px-3 py-2.5 space-y-2.5">
+          <div className={stylex.props(styles.s_982).className}>
             {tagTooltip ? (
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className="text-left text-[11px] text-muted-foreground leading-relaxed cursor-help underline decoration-dotted underline-offset-2">
+                    <button type="button" className={stylex.props(styles.s_983).className}>
                       {group.family.description}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs whitespace-pre-line text-xs leading-relaxed">
+                  <TooltipContent side="bottom" className={stylex.props(styles.s_984).className}>
                     {tagTooltip}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{group.family.description}</p>
+              <p className={stylex.props(styles.s_985).className}>{group.family.description}</p>
             )}
 
             {group.candidates.length > 0 && (
-              <ul className="space-y-1.5">
+              <ul className={stylex.props(styles.s_986).className}>
                 {group.candidates.map((candidate: CandidateLocation) => (
                   <li key={candidate.id}>
                     <CandidateLocationCard

@@ -13,9 +13,10 @@
  *   anybody can compare.
  * - An `authored` or `reference-policy` reference is never called ground truth.
  */
-
 import { AlertTriangle, Ban, Download, Loader2 } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import { cn } from "../../lib/utils";
+import { styles as s } from "./evaluation-components.stylex";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import type { HorizonMetrics, OpenLoopItem, TrajectoryProjection, UploadedVideoProvenance } from "../contracts";
@@ -48,12 +49,12 @@ function HorizonTable({ label, metrics }: { label: string; metrics: HorizonMetri
   if (horizons.length === 0) return null;
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
+      <p {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>{label}</p>
+      <dl {...stylex.props(s.stack1)} style={{ marginTop: "0.25rem", display: "flex", flexWrap: "wrap", columnGap: "1.5rem", rowGap: "0.25rem" }}>
         {horizons.map(([horizon, metric]) => (
-          <div key={horizon} className="text-sm">
-            <dt className="text-xs text-muted-foreground">{horizon}s</dt>
-            <dd className="tabular-nums text-foreground">{metric.toFixed(3)} m</dd>
+          <div key={horizon} {...stylex.props(s.textSm)}>
+            <dt {...stylex.props(s.textXs, s.textMuted)}>{horizon}s</dt>
+            <dd {...stylex.props(s.tabular, s.textFg)}>{metric.toFixed(3)} m</dd>
           </div>
         ))}
       </dl>
@@ -113,25 +114,23 @@ function ItemCard({
   return (
     <Card data-testid={`result-item-${item.itemId}`}>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-mono">
-            {uploadedVideo && predictionSeconds !== null
-              ? `Prediction at ${predictionSeconds.toFixed(3)} s`
-              : item.itemId}
-          </span>
+        <CardTitle {...stylex.props(s.cardTitle)}>
+          <span {...stylex.props(s.mono)}>{uploadedVideo && predictionSeconds !== null
+            ? `Prediction at ${predictionSeconds.toFixed(3)} s`
+            : item.itemId}</span>
           {item.status === "ok" ? null : (
-            <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-500">
+            <Badge variant="outline" {...stylex.props(s.borderAmber)}>
               {item.status}
             </Badge>
           )}
           {item.latencyMs !== null && item.latencyMs !== undefined ? (
-            <span className="text-xs font-normal text-muted-foreground">
+            <span {...stylex.props(s.textXs, s.textNormal, s.textMuted)}>
               {Math.round(item.latencyMs)} ms inference
             </span>
           ) : null}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent {...stylex.props(s.space4)}>
         {item.status === "refused" && item.refusal ? (
           <RefusalNotice
             title={REFUSAL_TITLES[item.refusal.code ?? ""] ?? "Refused"}
@@ -147,17 +146,17 @@ function ItemCard({
         ) : null}
 
         {item.text ? (
-          <div className="space-y-1">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Model answer</p>
-            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{item.text}</p>
-            <p className="text-xs text-muted-foreground">
+          <div {...stylex.props(s.space1)}>
+            <p {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Model answer</p>
+            <p {...stylex.props(s.whitespace, s.textSm, s.leading6, s.textFg)}>{item.text}</p>
+            <p {...stylex.props(s.textXs, s.textMuted)}>
               Text analysis, not a trajectory evaluation. No ADE/FDE is produced from it.
             </p>
           </div>
         ) : null}
 
         {item.status === "ok" && item.points.length > 0 ? (
-          <div className={uploadedVideo ? "max-w-2xl" : "grid gap-6 lg:grid-cols-2"}>
+          <div {...stylex.props(uploadedVideo ? s.max3xl : s.resultsGrid)}>
             <TrajectoryPlot item={item} />
             {!uploadedVideo && projection && (videoUrl || frameUrls.length > 0) ? (
               <FrameOverlay
@@ -170,9 +169,9 @@ function ItemCard({
                 }
               />
             ) : !uploadedVideo && (videoUrl || frameUrls.length > 0) ? (
-              <div className="space-y-3">
-                <video src={videoUrl ?? frameUrls[0]} controls playsInline className="w-full bg-black" />
-                <p className="text-xs leading-5 text-muted-foreground">
+              <div {...stylex.props(s.space3)}>
+                <video src={videoUrl ?? frameUrls[0]} controls playsInline {...stylex.props(s.video)} />
+                <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
                   No image-space overlay: this input carried no camera calibration, so drawing the
                   path on the frames would assert a correspondence that was never measured. The
                   metric plot beside it is the real result.
@@ -183,13 +182,13 @@ function ItemCard({
         ) : null}
 
         {minADE || minFDE ? (
-          <div className="flex flex-wrap gap-8">
+          <div {...stylex.props(s.flexGap8)}>
             {minADE ? <HorizonTable label={`minADE (k=${item.points.length})`} metrics={minADE} /> : null}
             {minFDE ? <HorizonTable label={`minFDE (k=${item.points.length})`} metrics={minFDE} /> : null}
           </div>
         ) : null}
 
-        <p className="text-xs leading-5 text-muted-foreground">
+        <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
           {uploadedVideo
             ? `Unscored exploratory prediction${item.convention ? ` · ${item.convention} frame` : ""}${item.dtS ? ` · ${item.dtS}s trajectory step` : ""}${item.horizonS ? ` · ${item.horizonS}s horizon` : ""}.`
             : `Reference: ${referenceKind}${
@@ -202,16 +201,16 @@ function ItemCard({
         </p>
 
         {reasoning.length > 0 ? (
-          <div className="space-y-2 text-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div {...stylex.props(s.spaceY2, s.textSm)}>
+            <p {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>
               Model reasoning
               {predictionSeconds !== null ? ` at ${predictionSeconds.toFixed(3)} s` : ""}
             </p>
-            <ol className="space-y-2">
+            <ol {...stylex.props(s.space2)}>
               {reasoning.map((entry, index) => (
-                <li key={index} className="whitespace-pre-wrap leading-6 text-foreground">
+                <li key={index} {...stylex.props(s.whitespace, s.leading6, s.textFg)}>
                   {reasoning.length > 1 ? (
-                    <span className="mr-2 text-xs text-muted-foreground">Sample {index + 1}</span>
+                    <span {...stylex.props(s.mr2, s.textXs, s.textMuted)}>Sample {index + 1}</span>
                   ) : null}
                   {entry}
                 </li>
@@ -219,7 +218,7 @@ function ItemCard({
             </ol>
           </div>
         ) : item.status === "ok" && uploadedVideo ? (
-          <p className="text-xs text-muted-foreground">The model returned no reasoning text at this timestamp.</p>
+          <p {...stylex.props(s.textXs, s.textMuted)}>The model returned no reasoning text at this timestamp.</p>
         ) : null}
       </CardContent>
     </Card>
@@ -235,11 +234,11 @@ function UploadedVideoResult({
 }) {
   const assumptions = provenance.assumptions;
   return (
-    <section className="space-y-4" data-testid="uploaded-video-result">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section {...stylex.props(s.space4)} data-testid="uploaded-video-result">
+      <div {...stylex.props(s.flexCenterBetween)}>
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Prediction and reasoning overlay</h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>Prediction and reasoning overlay</h2>
+          <p {...stylex.props(s.mt1, s.textXs, s.leading5, s.textMuted)}>
             The rendered trajectory changes only at the model inference timestamps shown below.
           </p>
         </div>
@@ -247,9 +246,9 @@ function UploadedVideoResult({
           <a
             href={overlayVideoUrl}
             download="prediction-overlay.mp4"
-            className="inline-flex h-9 items-center gap-2 border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+            {...stylex.props(s.downloadLink)}
           >
-            <Download aria-hidden="true" className="size-4" />
+            <Download aria-hidden="true" {...stylex.props(s.icon)} />
             Download overlay video
           </a>
         ) : null}
@@ -260,7 +259,7 @@ function UploadedVideoResult({
           controls
           playsInline
           preload="metadata"
-          className="aspect-video w-full bg-black"
+          {...stylex.props(s.videoWide)}
           aria-label="Predicted trajectory and model reasoning overlay"
         />
       ) : (
@@ -272,27 +271,27 @@ function UploadedVideoResult({
           ]}
         />
       )}
-      <div className="border border-border bg-muted/10 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div {...stylex.props(s.borderMutedP4)}>
+        <p {...stylex.props(s.textXs, s.fontSemibold, s.uppercaseWide, s.textMuted)}>
           Approximate input assumptions
         </p>
-        <p className="mt-2 text-sm leading-6 text-foreground">
+        <p {...stylex.props(s.mt2, s.textSm, s.leading6, s.textFg)}>
           Pinhole camera · {assumptions.horizontalFovDeg}° horizontal FOV ·{" "}
           {assumptions.cameraHeightM} m camera height · constant-speed straight ego history at{" "}
           {assumptions.egoSpeedMps} m/s. Camera starts were{" "}
           {assumptions.synchronizedStarts ? "declared synchronized" : "aligned with the offsets below"}.
         </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        <p {...stylex.props(s.mt1, s.textXs, s.leading5, s.textMuted)}>
           These are declared approximations, not measured calibration or vehicle telemetry. This
           exploratory output is unscored and has no reference trajectory.
         </p>
       </div>
-      <details className="border border-border">
-        <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <details {...stylex.props(s.details)}>
+        <summary {...stylex.props(s.summary)}>
           Source cameras and inference timestamps
         </summary>
-        <div className="space-y-4 border-t border-border p-4 text-xs">
-          <ul className="space-y-1 text-muted-foreground">
+        <div {...stylex.props(s.detailsBody)}>
+          <ul {...stylex.props(s.listMuted)}>
             {provenance.sources.map((source) => (
               <li key={source.inputIndex}>
                 Input {source.inputIndex + 1} → camera {source.cameraId} · {source.width}×
@@ -302,10 +301,10 @@ function UploadedVideoResult({
             ))}
           </ul>
           <div>
-            <p className="uppercase tracking-wide text-muted-foreground">
+            <p {...stylex.props(s.uppercaseWide, s.textMuted)}>
               Inference timestamps ({provenance.inferenceTimestampsUs.length})
             </p>
-            <p className="mt-1 break-words font-mono leading-5 text-foreground">
+            <p {...stylex.props(s.mt1, s.mono, s.leading5, s.textFg)}>
               {provenance.inferenceTimestampsUs
                 .map((timestampUs) => `${(timestampUs / 1_000_000).toFixed(3)}s`)
                 .join(", ") || "none"}
@@ -340,8 +339,8 @@ export function JobDetail({
 
   if (loading && !job) {
     return (
-      <p className={cn("inline-flex items-center gap-2 text-sm text-muted-foreground", className)}>
-        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+      <p className={cn(stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted).style}>
+        <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
         Loading run…
       </p>
     );
@@ -375,11 +374,11 @@ export function JobDetail({
   const uploadedVideo = videoProvenanceCandidate !== undefined || overlayVideoUrl !== null;
 
   return (
-    <div className={cn("space-y-6", className)} data-testid="job-detail">
-      <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className={cn(stylex.props(s.section6).className, className)} data-testid="job-detail">
+      <header {...stylex.props(s.space3)}>
+        <div {...stylex.props(s.flexCenterGap3)}>
           <JobStatusBadge job={job} />
-          <span className="font-mono text-xs text-muted-foreground">{job.id}</span>
+          <span {...stylex.props(s.mono, s.textXs, s.textMuted)}>{job.id}</span>
           <Badge variant="outline">{job.origin}</Badge>
           {manifest?.mode ? <Badge variant="outline">{manifest.mode}</Badge> : null}
           {job.scored === false || manifest?.scored === false ? (
@@ -387,22 +386,22 @@ export function JobDetail({
           ) : null}
         </div>
         {presentation.detail ? (
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{presentation.detail}</p>
+          <p {...stylex.props(s.max2xl, s.textSm, s.leading6, s.textMuted)}>{presentation.detail}</p>
         ) : null}
-        <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
+        <dl {...stylex.props(s.gridMeta)}>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Model</dt>
-            <dd className="text-foreground">
+            <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Model</dt>
+            <dd {...stylex.props(s.textFg)}>
               {job.model.family} · {job.model.quant}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Submitted by</dt>
-            <dd className="text-foreground">{job.submittedByEmail ?? job.submittedByUserId}</dd>
+            <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Submitted by</dt>
+            <dd {...stylex.props(s.textFg)}>{job.submittedByEmail ?? job.submittedByUserId}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Queued / ran</dt>
-            <dd className="text-foreground">
+            <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Queued / ran</dt>
+            <dd {...stylex.props(s.textFg)}>
               {formatSeconds(job.queuedSeconds)} / {formatSeconds(
                 job.startedAt && job.finishedAt
                   ? (Date.parse(job.finishedAt) - Date.parse(job.startedAt)) / 1000
@@ -411,8 +410,8 @@ export function JobDetail({
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Cost</dt>
-            <dd className="text-foreground">
+            <dt {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Cost</dt>
+            <dd {...stylex.props(s.textFg)}>
               {job.settledCents !== null
                 ? `${formatCents(job.settledCents)} settled`
                 : `${formatCents(job.reservedCents)} reserved`}
@@ -471,17 +470,17 @@ export function JobDetail({
         />
       ) : null}
       {overlayVideoUrl && !uploadedVideoProvenance ? (
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">
+        <section {...stylex.props(s.space3)}>
+          <div {...stylex.props(s.flexCenterBetween)}>
+            <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>
               Prediction and reasoning overlay
             </h2>
             <a
               href={overlayVideoUrl}
               download="prediction-overlay.mp4"
-              className="inline-flex h-9 items-center gap-2 border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+              {...stylex.props(s.downloadLink)}
             >
-              <Download aria-hidden="true" className="size-4" />
+              <Download aria-hidden="true" {...stylex.props(s.icon)} />
               Download overlay video
             </a>
           </div>
@@ -490,7 +489,7 @@ export function JobDetail({
             controls
             playsInline
             preload="metadata"
-            className="aspect-video w-full bg-black"
+            {...stylex.props(s.videoWide)}
             aria-label="Predicted trajectory and model reasoning overlay"
           />
           <RefusalNotice
@@ -503,9 +502,9 @@ export function JobDetail({
 
 
       {aggregate && !uploadedVideo ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Aggregate</h2>
-          <div className="flex flex-wrap gap-8">
+        <section {...stylex.props(s.space3)}>
+          <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>Aggregate</h2>
+          <div {...stylex.props(s.flexGap8)}>
             {Object.keys(aggregate.minADE).length > 0 ? (
               <HorizonTable label="minADE" metrics={aggregate.minADE} />
             ) : null}
@@ -513,14 +512,14 @@ export function JobDetail({
               <HorizonTable label="minFDE" metrics={aggregate.minFDE} />
             ) : null}
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Items</p>
-              <p className="mt-1 text-sm text-foreground">
+              <p {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>Items</p>
+              <p {...stylex.props(s.mt1, s.textSm, s.textFg)}>
                 {aggregate.okItems} of {aggregate.itemCount} returned a prediction
                 {aggregate.refusedItems > 0 ? ` · ${aggregate.refusedItems} refused` : ""}
                 {aggregate.failedItems > 0 ? ` · ${aggregate.failedItems} failed` : ""}
               </p>
               {Object.keys(aggregate.scoredItems).length > 0 ? (
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p {...stylex.props(s.mt1, s.textXs, s.textMuted)}>
                   scored per horizon:{" "}
                   {Object.entries(aggregate.scoredItems)
                     .map(([horizon, count]) => `${horizon}s: ${count}`)
@@ -530,8 +529,8 @@ export function JobDetail({
             </div>
           </div>
           {aggregate.refusedItems > 0 ? (
-            <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-              <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+            <p {...stylex.props(s.flexStartGap2, s.textXs, s.leading5, s.textMuted)}>
+              <AlertTriangle aria-hidden="true" {...stylex.props(s.mt1, s.iconSm)} />
               Refused items are excluded from the aggregate. They are listed below with the fields
               they were missing; nothing was substituted for them.
             </p>
@@ -540,8 +539,8 @@ export function JobDetail({
       ) : null}
 
       {provenanceModel || provenanceInput || provenanceRuntime ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Provenance</h2>
+        <section {...stylex.props(s.space3)}>
+          <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>Provenance</h2>
           {unqualifiedRuntime ? (
             <RefusalNotice
               tone="warn"
@@ -551,12 +550,12 @@ export function JobDetail({
               ]}
             />
           ) : null}
-          <dl className="grid gap-x-8 gap-y-2 text-xs sm:grid-cols-3">
+          <dl {...stylex.props(s.gridMeta3)}>
             {provenanceModel
               ? Object.entries(provenanceModel).map(([field, value]) => (
                   <div key={field}>
-                    <dt className="uppercase tracking-wide text-muted-foreground">{field}</dt>
-                    <dd className="min-w-0 truncate font-mono text-foreground">
+                    <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>{field}</dt>
+                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
@@ -565,8 +564,8 @@ export function JobDetail({
             {provenanceInput
               ? Object.entries(provenanceInput).map(([field, value]) => (
                   <div key={`input-${field}`}>
-                    <dt className="uppercase tracking-wide text-muted-foreground">input.{field}</dt>
-                    <dd className="min-w-0 truncate font-mono text-foreground">
+                    <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>input.{field}</dt>
+                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
@@ -575,15 +574,15 @@ export function JobDetail({
             {provenanceRuntime
               ? Object.entries(provenanceRuntime).map(([field, value]) => (
                   <div key={`runtime-${field}`}>
-                    <dt className="uppercase tracking-wide text-muted-foreground">runtime.{field}</dt>
-                    <dd className="min-w-0 truncate font-mono text-foreground">
+                    <dt {...stylex.props(s.uppercaseWide, s.textMuted)}>runtime.{field}</dt>
+                    <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>
                       {formatProvenanceValue(value)}
                     </dd>
                   </div>
                 ))
               : null}
           </dl>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>
             Same seed alone is not proof of reproducibility across GPUs: the model revision,
             checkpoint digest, quantization, runtime and RNG provenance above are what pin this
             result.
@@ -595,11 +594,11 @@ export function JobDetail({
       ) : null}
 
       {openLoop ? (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">
+        <section {...stylex.props(s.space4)}>
+          <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>
             {uploadedVideo ? "Timestamped predictions" : "Items"} ({openLoop.items.length})
           </h2>
-          <div className="space-y-4">
+          <div {...stylex.props(s.space4)}>
             {openLoop.items.map((item) => (
               <ItemCard
                 key={item.itemId}
@@ -613,29 +612,29 @@ export function JobDetail({
           </div>
         </section>
       ) : presentation.live ? (
-        <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+        <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
+          <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
           Results appear here when the run finishes. Closing this page does not stop it.
         </p>
       ) : job.status === "cancelled" ? (
-        <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <Ban aria-hidden="true" className="size-4" />
+        <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
+          <Ban aria-hidden="true" {...stylex.props(s.icon)} />
           This run was cancelled. Cost settles from the provider&apos;s actual accounting, so a
           cancelled run is not automatically free.
         </p>
       ) : null}
 
       {job.result && job.result.artifacts.length > 0 ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-foreground">Stored artifacts</h2>
-          <ul className="divide-y divide-border border border-border text-sm">
+        <section {...stylex.props(s.space2)}>
+          <h2 {...stylex.props(s.textSm, s.fontSemibold, s.textFg)}>Stored artifacts</h2>
+          <ul {...stylex.props(s.artifactList)}>
             {job.result.artifacts.map((artifact) => (
-              <li key={artifact.artifactId} className="flex items-center gap-3 px-3 py-2">
-                <span className="w-36 shrink-0 text-muted-foreground">{artifact.role}</span>
-                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+              <li key={artifact.artifactId} {...stylex.props(s.artifactItem)}>
+                <span {...stylex.props(s.artifactRole)}>{artifact.role}</span>
+                <span {...stylex.props(s.artifactHash)}>
                   {artifact.sha256.slice(0, 16)}
                 </span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
+                <span {...stylex.props(s.artifactSize)}>
                   {formatBytes(artifact.bytes)}
                 </span>
               </li>

@@ -6,13 +6,15 @@
  * metrics, provenance and refusals.
  */
 
-import Link from "next/link";
+import * as stylex from "@stylexjs/stylex";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { JobDetail } from "@simforge-oss/studio-ui/evaluation";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { useEvaluationGateway } from "@/app/lib/host/evaluation";
+import { styles } from "../../route-residuals.stylex";
 
 export function RunDetailClient({ jobId }: { jobId: string }) {
   useSetPageTitle("Run");
@@ -21,7 +23,7 @@ export function RunDetailClient({ jobId }: { jobId: string }) {
   const gateway = useEvaluationGateway(null);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)}>
       <PageHeader
         title="Run"
         description="A cloud evaluation run in this workspace."
@@ -34,7 +36,7 @@ export function RunDetailClient({ jobId }: { jobId: string }) {
           </Button>
         }
       />
-      <div className="px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.content)}>
         <JobDetail gateway={gateway} jobId={jobId} />
       </div>
     </div>

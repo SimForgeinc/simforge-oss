@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Barlow, Chakra_Petch } from "next/font/google";
 import { Toaster } from "sonner";
+// StyleX first, Tailwind second: both emit single-class selectors, so this
+// order is what lets a Tailwind class from an unmigrated caller still override
+// a migrated component's own styles.
+import "./stylex.css";
 import "./globals.css";
 
 const display = Bricolage_Grotesque({

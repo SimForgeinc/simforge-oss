@@ -2,6 +2,7 @@
 
 import { Boxes, Loader2, SearchX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
 import {
@@ -15,6 +16,7 @@ import { AssetGalleryToolbar } from "./AssetGalleryToolbar";
 import { AssetGenerateDialog } from "./AssetGenerateDialog";
 import { AssetUploadDialog, type AssetUploadKind } from "./AssetUploadDialog";
 import { MapList } from "./MapList";
+import { gallery } from "./asset-surfaces.stylex";
 import {
   galleryVisibleAssets,
   type GalleryCarlaFilter,
@@ -131,7 +133,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
   };
 
   return (
-    <div className="min-h-full bg-background text-foreground">
+    <div {...stylex.props(gallery.root)}>
       <AssetGalleryHeader
         section={section}
         onSectionChange={setSection}
@@ -144,7 +146,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
 
       {/* Model-only catalog controls are hidden for the compact map catalog. */}
       {section === "models" ? (
-        <div className="sticky top-0 z-20 border-b border-border bg-background/85 px-5 backdrop-blur-sm sm:px-8">
+        <div {...stylex.props(gallery.toolbar)}>
           <AssetGalleryToolbar
             query={query}
             onQueryChange={setQuery}
@@ -161,8 +163,8 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
         </div>
       ) : null}
 
-      <main className="px-5 py-6 sm:px-8">
-        <div className="mx-auto max-w-[1500px]">
+      <main {...stylex.props(gallery.main)}>
+        <div {...stylex.props(gallery.measure)}>
           {section === "maps" ? (
             <MapList
               reloadToken={mapReloadToken}
@@ -174,10 +176,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
           ) : (
             <>
               {error ? (
-                <p
-                  role="alert"
-                  className="mb-4 rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm text-red-200"
-                >
+                <p role="alert" {...stylex.props(gallery.alert)}>
                   {error}
                 </p>
               ) : null}
@@ -188,7 +187,7 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
                 <AssetGalleryGrid assets={visibleItems} onSelect={setSelected} />
               ) : filtered ? (
                 <EmptyState
-                  icon={<SearchX className="size-7" />}
+                  icon={<SearchX {...stylex.props(gallery.icon)} />}
                   title="Nothing matches these filters"
                   description="No published asset fits this combination. Widen the search, or clear the filters to see the whole library again."
                   action={
@@ -196,15 +195,15 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
                       Clear filters
                     </Button>
                   }
-                  className="rounded-lg border border-dashed border-border"
+                  xstyle={gallery.emptyState}
                 />
               ) : (
                 <EmptyState
-                  icon={<Boxes className="size-7" />}
+                  icon={<Boxes {...stylex.props(gallery.icon)} />}
                   title="The library is empty"
                   description="Generate a model from reference photos, or import a GLB you already have."
                   action={
-                    <div className="flex flex-wrap items-center justify-center gap-2">
+                    <div {...stylex.props(gallery.actions)}>
                       <Button type="button" onClick={() => setGenerateOpen(true)}>
                         Generate a model
                       </Button>
@@ -220,14 +219,14 @@ export function AssetGalleryClient({ initialPage }: { initialPage: GalleryPage }
                       </Button>
                     </div>
                   }
-                  className="rounded-lg border border-dashed border-border"
+                  xstyle={gallery.emptyState}
                 />
               )}
 
               {nextCursor ? (
-                <div className="mt-8 flex justify-center">
+                <div {...stylex.props(gallery.loadMore)}>
                   <Button type="button" variant="outline" disabled={appending} onClick={() => void loadMore()}>
-                    {appending ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
+                    {appending ? <Loader2 aria-hidden="true" {...stylex.props(gallery.spinner)} /> : null}
                     {appending ? "Loading…" : "Load more"}
                   </Button>
                 </div>

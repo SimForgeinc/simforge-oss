@@ -8,21 +8,22 @@
  * in the cloud, and this screen says so per model and per precision rather
  * than hiding what the hardware cannot do.
  */
-
+import * as stylex from "@stylexjs/stylex";
 import { ModelStorePanel } from "@simforge-oss/studio-ui/evaluation/model-store";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { styles } from "./models-page.stylex";
 
 export function ModelsPageClient() {
   useSetPageTitle("Models");
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.root)}>
       <PageHeader
         title="Models"
         description="Download, verify and remove Alpamayo weights. Downloading a model is separate from being able to execute it — cloud runs need no local download at all."
       />
-      <div className="px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.content)}>
         <ModelStorePanel />
       </div>
     </div>

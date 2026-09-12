@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -63,8 +65,8 @@ function CachedThumbnail({ url, alt }: { url: string; alt: string }) {
 
   if (!src) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-muted-foreground/30">
-        <div className="size-6 animate-pulse rounded-full bg-muted/50" />
+      <div className={stylex.props(styles.s_186).className}>
+        <div className={stylex.props(styles.s_181).className} />
       </div>
     );
   }
@@ -75,7 +77,7 @@ function CachedThumbnail({ url, alt }: { url: string; alt: string }) {
       alt={alt}
       fill
       sizes="(max-width: 768px) 100vw, 33vw"
-      className="object-cover transition-transform duration-300 group-hover:scale-105"
+      className={stylex.props(styles.s_182).className}
       unoptimized
     />
   );
@@ -135,7 +137,7 @@ function CardPreviewVideo({
       loop
       playsInline
       preload="none"
-      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      className={stylex.props(styles.s_183).className}
     />
   );
 }
@@ -184,16 +186,16 @@ export function MapCard({ asset }: MapCardProps) {
   return (
     <Link
       href={`/dashboard/map-assets/${asset.map_asset_id}`}
-      className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 hover:border-border/80"
+      className={stylex.props(styles.s_184).className}
     >
       {/* Thumbnail / fly-by preview */}
-      <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
+      <div className={stylex.props(styles.s_185).className}>
         {previewUrl ? (
           <CardPreviewVideo videoUrl={previewUrl} posterUrl={thumbnailUrl} alt={asset.name} />
         ) : thumbnailUrl ? (
           <CachedThumbnail url={thumbnailUrl} alt={asset.name} />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/30">
+          <div className={stylex.props(styles.s_186).className}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="48"
@@ -212,14 +214,14 @@ export function MapCard({ asset }: MapCardProps) {
       </div>
 
       {/* Card body */}
-      <div className="flex flex-1 flex-col gap-2.5 p-3.5">
+      <div className={stylex.props(styles.s_187).className}>
         {/* Name + location */}
         <div>
-          <h3 className="text-sm font-semibold leading-snug truncate group-hover:text-primary transition-colors">
+          <h3 className={stylex.props(styles.s_188).className}>
             {asset.name}
           </h3>
           {locationStr && (
-            <p className="mt-0.5 text-xs text-muted-foreground truncate">{locationStr}</p>
+            <p className={stylex.props(styles.s_189).className}>{locationStr}</p>
           )}
         </div>
 
@@ -231,18 +233,18 @@ export function MapCard({ asset }: MapCardProps) {
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className={stylex.props(styles.s_969).className}>
             {tags.map((tagId) => (
               <span
                 key={tagId}
-                className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/20"
+                className={stylex.props(styles.s_191).className}
                 title={getMapAssetDescriptorTag(tagId)?.shortDefinition}
               >
                 {humanizeTag(tagId)}
               </span>
             ))}
             {remainingTags > 0 && (
-              <span className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+              <span className={stylex.props(styles.s_855).className}>
                 +{remainingTags}
               </span>
             )}
@@ -250,10 +252,10 @@ export function MapCard({ asset }: MapCardProps) {
         )}
 
         {/* Action */}
-        <div className="mt-auto pt-1">
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+        <div className={stylex.props(styles.s_193).className}>
+          <span className={stylex.props(styles.s_194).className}>
             Open Map
-            <ArrowRight className="size-3" />
+            <ArrowRight className={stylex.props(styles.s_927).className} />
           </span>
         </div>
       </div>

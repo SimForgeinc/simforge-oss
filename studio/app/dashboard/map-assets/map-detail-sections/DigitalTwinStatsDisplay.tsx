@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useState, useCallback } from "react";
 import {
@@ -56,7 +58,7 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 pb-1.5 group"
+        className={stylex.props(styles.s_634).className}
         aria-expanded={open}
       >
         <ChevronRight
@@ -65,19 +67,19 @@ function CollapsibleSection({
             open && "rotate-90",
           )}
         />
-        <Icon className="size-3 text-muted-foreground shrink-0" />
-        <span className="text-xs font-semibold">{label}</span>
+        <Icon className={stylex.props(styles.s_635).className} />
+        <span className={stylex.props(styles.s_636).className}>{label}</span>
       </button>
-      {open && <div className="space-y-0.5 ml-[18px]">{children}</div>}
+      {open && <div className={stylex.props(styles.s_637).className}>{children}</div>}
     </div>
   );
 }
 
 function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium tabular-nums text-right">{value}</span>
+    <div className={stylex.props(styles.s_648).className}>
+      <span className={stylex.props(styles.s_973).className}>{label}</span>
+      <span className={stylex.props(styles.s_650).className}>{value}</span>
     </div>
   );
 }
@@ -111,15 +113,15 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
   const coverageArea = stats.sceneDimensions.widthM * stats.sceneDimensions.depthM;
 
   return (
-    <div className="space-y-3 pt-1">
+    <div className={stylex.props(styles.s_641).className}>
       {/* Expand / Collapse all */}
-      <div className="flex items-center justify-end">
+      <div className={stylex.props(styles.s_642).className}>
         <button
           type="button"
           onClick={toggleAll}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          className={stylex.props(styles.s_643).className}
         >
-          <ChevronsUpDown className="size-3" />
+          <ChevronsUpDown className={stylex.props(styles.s_927).className} />
           {allExpanded ? "Collapse all" : "Expand all"}
         </button>
       </div>
@@ -159,17 +161,17 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         <StatRow label="LOD levels" value={String(stats.lodLevels)} />
 
         {/* Per-LOD summary table */}
-        <div className="mt-2 mb-1">
-          <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide mb-1.5">
+        <div className={stylex.props(styles.s_645).className}>
+          <p className={stylex.props(styles.s_646).className}>
             Per-LOD Summary
           </p>
-          <div className="space-y-0.5">
+          <div className={stylex.props(styles.s_925).className}>
             {stats.lodSummaries.map((lod) => (
-              <div key={lod.level} className="flex items-baseline justify-between gap-2 py-0.5">
-                <span className="text-xs text-muted-foreground">
+              <div key={lod.level} className={stylex.props(styles.s_648).className}>
+                <span className={stylex.props(styles.s_973).className}>
                   LOD{lod.level}
                 </span>
-                <span className="text-xs font-medium tabular-nums text-right">
+                <span className={stylex.props(styles.s_650).className}>
                   {fmt(lod.totalTriangles)} tris &middot; {fmtBytes(lod.totalFileSize)}
                 </span>
               </div>
@@ -235,7 +237,7 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         open={openSections.has("readiness")}
         onToggle={() => toggle("readiness")}
       >
-        <div className="space-y-2 py-1">
+        <div className={stylex.props(styles.s_651).className}>
           <ReadinessSignal
             label="Visual richness"
             description={
@@ -281,11 +283,11 @@ export function DigitalTwinStatsDisplay({ stats }: { stats: ThreeDStatsResponse 
         open={openSections.has("limitations")}
         onToggle={() => toggle("limitations")}
       >
-        <div className="py-1 space-y-1.5">
-          <p className="text-xs text-muted-foreground leading-relaxed">
+        <div className={stylex.props(styles.s_652).className}>
+          <p className={stylex.props(styles.s_664).className}>
             No object-level semantic counts available (buildings, props, signage).
           </p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className={stylex.props(styles.s_664).className}>
             Material and texture inventory not included in manifest.
           </p>
         </div>
@@ -315,18 +317,15 @@ function ReadinessSignal({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 mb-0.5">
+      <div className={stylex.props(styles.s_655).className}>
         <span
-          className={cn(
-            "inline-flex items-center rounded-sm px-1.5 py-px text-[10px] font-medium border",
-            colorMap[strength],
-          )}
+          className={stylex.props(styles.u_927, styles.u_928, styles.u_955, styles.u_935, styles.u_947, styles.u_962, styles.u_903).className}
         >
           {strength}
         </span>
-        <span className="text-xs font-medium">{label}</span>
+        <span className={stylex.props(styles.s_827).className}>{label}</span>
       </div>
-      <p className="text-[11px] text-muted-foreground leading-relaxed ml-0.5">
+      <p className={stylex.props(styles.s_657).className}>
         {description}
       </p>
     </div>

@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 import type { ComponentType } from "react";
 import { Route, GitFork, OctagonAlert, Bike, Bus, Footprints, PersonStanding, Box, CirclePlay } from "lucide-react";
 import { TrafficLightIcon } from "@/app/components/icons/TrafficLightIcon";
@@ -25,13 +27,13 @@ export function CardStatsRow({ stats, size = "md" }: { stats: CardStat[]; size?:
   const iconCls = size === "sm" ? "size-2.5" : "size-3";
   const textCls = size === "sm" ? "text-[10px]" : "text-xs";
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground", textCls)}>
+    <div className={stylex.props(styles.u_908, styles.u_909, styles.u_928, styles.u_920, styles.u_921).className}>
       {stats.map((stat) => {
         const Icon = STAT_ICONS[stat.icon];
         return (
-          <span key={stat.key} className="flex items-center gap-1" title={stat.tooltip}>
+          <span key={stat.key} className={stylex.props(styles.s_961).className} title={stat.tooltip}>
             <Icon className={iconCls} />
-            <span className="font-mono">{stat.value}</span>
+            <span className={stylex.props(styles.s_940).className}>{stat.value}</span>
           </span>
         );
       })}
@@ -60,13 +62,7 @@ function HintChip({
     <span
       title={active ? activeTip : inactiveTip}
       aria-label={active ? activeTip : inactiveTip}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-medium transition-colors",
-        textCls,
-        active
-          ? "border-primary/30 bg-primary/10 text-primary"
-          : "border-border/50 text-muted-foreground/40",
-      )}
+      className={stylex.props(styles.u_927, styles.u_928, styles.u_916, styles.u_954, styles.u_903, styles.u_935, styles.u_941, styles.u_970).className}
     >
       <Icon className={iconCls} />
       {label}
@@ -77,7 +73,7 @@ function HintChip({
 /** Always-visible capability hints (3D model + simulation readiness). */
 export function CapabilityHints({ caps, size = "md" }: { caps: MapCapabilities; size?: Size }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={stylex.props(styles.s_167).className}>
       <HintChip
         active={caps.has3d}
         icon={Box}

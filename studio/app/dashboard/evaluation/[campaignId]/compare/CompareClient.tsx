@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -22,8 +23,8 @@ import {
   TableRow,
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { EvalPolicySummary, EvalRunComparison } from "@/app/lib/evaluation/contracts";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { formatDelta, formatScore, PanelMessage, useJsonFetch } from "../../shared";
+import { styles } from "../../route-residuals.stylex";
 
 function PolicySummaryCard({
   label,
@@ -36,19 +37,16 @@ function PolicySummaryCard({
 }) {
   return (
     <Card data-testid={`compare-${label}`}>
-      <CardHeader className="pb-2">
+      <CardHeader {...stylex.props(styles.cardHeaderTight)} >
         <CardDescription>Policy {label}</CardDescription>
-        <CardTitle className="text-base">
-          <Link
-            className="hover:underline"
-            href={`/dashboard/evaluation/${campaignId}/policies/${policy.policyId}`}
-          >
+        <CardTitle {...stylex.props(styles.cardTitle)} >
+          <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/policies/${policy.policyId}`}>
             {policy.policyId}
           </Link>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <dl className="grid grid-cols-3 gap-x-4 text-sm">
+        <dl {...stylex.props(styles.dl3)} >
           {(
             [
               ["Score", formatScore(policy.meanScore)],
@@ -57,8 +55,8 @@ function PolicySummaryCard({
             ] as const
           ).map(([term, value]) => (
             <div key={term}>
-              <dt className="text-xs text-muted-foreground">{term}</dt>
-              <dd className="font-mono">{value}</dd>
+              <dt {...stylex.props(styles.tinyMuted)} >{term}</dt>
+              <dd {...stylex.props(styles.mono)} >{value}</dd>
             </div>
           ))}
         </dl>
@@ -93,7 +91,7 @@ export function CompareClient({
   const comparison = state.data;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)} >
       <PageHeader
         eyebrow={campaignId}
         title="A/B comparison"
@@ -101,21 +99,21 @@ export function CompareClient({
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/evaluation">
-              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              <ArrowLeft {...stylex.props(styles.icon)} />
               All campaigns
             </Link>
           </Button>
         }
       />
-      <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div {...stylex.props(styles.content)} >
+        <div {...stylex.props(styles.grid2)} >
           <PolicySummaryCard label="A" campaignId={campaignId} policy={comparison.a} />
           <PolicySummaryCard label="B" campaignId={campaignId} policy={comparison.b} />
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Per-scenario deltas</CardTitle>
+            <CardTitle {...stylex.props(styles.cardTitle)} >Per-scenario deltas</CardTitle>
             <CardDescription>
               Score delta is B − A. Divergence is the first trace step where the ego positions
               drift apart by more than {comparison.divergenceThresholdM} m.
@@ -129,36 +127,30 @@ export function CompareClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-                    <TableHead className="text-right">Seed</TableHead>
-                    <TableHead className="text-right">A score</TableHead>
-                    <TableHead className="text-right">B score</TableHead>
-                    <TableHead className="text-right">Δ</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Seed</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >A score</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >B score</TableHead>
+                    <TableHead {...stylex.props(styles.numeric)} >Δ</TableHead>
                     <TableHead>Divergence</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {comparison.episodes.map((episode) => (
                     <TableRow key={`${episode.scenarioId}-${episode.seed}`}>
-                      <TableCell className="font-medium">{episode.scenarioId}</TableCell>
-                      <TableCell className="text-right font-mono">{episode.seed}</TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.linkMedium)} >{episode.scenarioId}</TableCell>
+                      <TableCell {...stylex.props(styles.numeric)} >{episode.seed}</TableCell>
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {episode.aEpisodeId ? (
-                          <Link
-                            className="hover:underline"
-                            href={`/dashboard/evaluation/${campaignId}/episodes/${episode.aEpisodeId}`}
-                          >
+                          <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.aEpisodeId}`}>
                             {formatScore(episode.aScore)}
                           </Link>
                         ) : (
                           "—"
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell {...stylex.props(styles.numeric)} >
                         {episode.bEpisodeId ? (
-                          <Link
-                            className="hover:underline"
-                            href={`/dashboard/evaluation/${campaignId}/episodes/${episode.bEpisodeId}`}
-                          >
+                          <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.bEpisodeId}`}>
                             {formatScore(episode.bScore)}
                           </Link>
                         ) : (
@@ -166,25 +158,24 @@ export function CompareClient({
                         )}
                       </TableCell>
                       <TableCell
-                        className={cn(
-                          "text-right font-mono",
+                        {...stylex.props(
+                          styles.delta,
                           episode.scoreDelta !== null && episode.scoreDelta > 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : null,
-                          episode.scoreDelta !== null && episode.scoreDelta < 0
-                            ? "text-destructive"
-                            : null,
+                            ? styles.deltaPositive
+                            : episode.scoreDelta !== null && episode.scoreDelta < 0
+                              ? styles.deltaNegative
+                              : null,
                         )}
                       >
                         {formatDelta(episode.scoreDelta)}
                       </TableCell>
                       <TableCell>
                         {episode.divergenceStep !== null ? (
-                          <Badge variant="secondary" className="font-mono text-[10px]">
+                          <Badge variant="secondary" {...stylex.props(styles.monoTiny)} >
                             step {episode.divergenceStep} · {episode.divergenceTS?.toFixed(1)}s
                           </Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span {...stylex.props(styles.tinyMuted)} >
                             {episode.aEpisodeId && episode.bEpisodeId ? "none" : "incomplete pair"}
                           </span>
                         )}

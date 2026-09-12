@@ -1,4 +1,6 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "../map-assets.stylex";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -29,7 +31,7 @@ function AddMapTopBarAction() {
     <TopBarActionsPortal>
       <Button asChild size="sm">
         <Link href="/dashboard/map-assets/new">
-          <Plus className="size-4" />
+          <Plus className={stylex.props(styles.s_847).className} />
           Add map
         </Link>
       </Button>
@@ -55,11 +57,11 @@ export function MapCatalogPageClient({ assets, runs: _runs }: MapCatalogPageClie
       <>
         <AddMapTopBarAction />
         <EmptyState
-          icon={<MapPin className="size-7" />}
+          icon={<MapPin className={stylex.props(styles.s_946).className} />}
           title="No maps yet"
           description="Upload your first map to start exploring assets and building simulation scenarios."
-          action={<Button asChild><Link href="/dashboard/map-assets/new"><Plus className="mr-1.5 size-4" />Add map</Link></Button>}
-          className="h-full"
+          action={<Button asChild><Link href="/dashboard/map-assets/new"><Plus className={stylex.props(styles.s_219).className} />Add map</Link></Button>}
+          className={stylex.props(styles.s_220).className}
         />
       </>
     );
@@ -68,7 +70,7 @@ export function MapCatalogPageClient({ assets, runs: _runs }: MapCatalogPageClie
   return (
     <>
       <AddMapTopBarAction />
-      <div className="flex h-full flex-col">
+      <div className={stylex.props(styles.s_353).className}>
         <MapCatalogToolbar
           query={query}
           onQueryChange={setQuery}
@@ -79,16 +81,16 @@ export function MapCatalogPageClient({ assets, runs: _runs }: MapCatalogPageClie
           resultCount={filtered.length}
         />
 
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className={stylex.props(styles.s_206).className}>
           {view === "grid" ? (
-            <div className="h-full overflow-y-auto">
+            <div className={stylex.props(styles.s_207).className}>
               {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-sm text-muted-foreground">No maps match your search.</p>
+                <div className={stylex.props(styles.s_208).className}>
+                  <p className={stylex.props(styles.s_209).className}>No maps match your search.</p>
                   <button
                     type="button"
                     onClick={() => setQuery("")}
-                    className="mt-2 text-xs text-primary hover:text-primary/80"
+                    className={stylex.props(styles.s_210).className}
                   >
                     Clear search
                   </button>
