@@ -425,6 +425,12 @@ simforge cloud connect --origin https://staging.simforge.ai
 simforge cloud workspaces
 simforge cloud datasets --workspace <workspace-id>
 simforge cloud artifacts --workspace <workspace-id>
+simforge cloud dataset-import --workspace <workspace-id> --dataset <dataset-id>
+simforge cloud dataset-publish --workspace <workspace-id> --dataset <dataset-id> [--remote-dataset <id>]
+simforge cloud artifact-import --workspace <workspace-id> --artifact <artifact-id>
+simforge cloud artifact-upload --workspace <workspace-id> --artifact <artifact-id>
+simforge cloud dataset-links
+simforge cloud artifact-links
 simforge cloud disconnect
 ```
 
