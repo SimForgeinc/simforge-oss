@@ -111,7 +111,7 @@ const COMMANDS = [
   { name: 'models cache', summary: 'report (or with --reclaim, free) unreferenced shared model-cache entries' },
   { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
-  { name: 'cloud status|connect|disconnect|workspaces|datasets|artifacts', summary: 'use the running local Studio host for authenticated SimCloud operations' },
+  { name: 'cloud status|connect|disconnect|workspaces|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
 const GLOBAL_BOOLEANS = ['pretty', 'help'];
@@ -280,13 +280,16 @@ async function dispatch(argv: readonly string[]): Promise<number> {
     case 'cloud': {
       const args = parseArgs(argv.slice(2), {
         booleans: [...GLOBAL_BOOLEANS],
-        values: ['data-root', 'origin', 'workspace'],
+        values: ['data-root', 'origin', 'workspace', 'dataset', 'artifact', 'remote-dataset'],
       });
       return cloudCommand(sub, {
         pretty: boolFlag(args, 'pretty'),
         dataRoot: optionalString(args, 'data-root'),
         origin: optionalString(args, 'origin'),
         workspaceId: optionalString(args, 'workspace'),
+        datasetId: optionalString(args, 'dataset'),
+        artifactId: optionalString(args, 'artifact'),
+        remoteDatasetId: optionalString(args, 'remote-dataset'),
       });
     }
     case 'maps': {
