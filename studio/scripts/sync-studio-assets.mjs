@@ -34,3 +34,18 @@ await cp(join(maplibreSource, "../LICENSE.txt"), join(maplibreDestination, "LICE
 // @simforge-oss/studio-ui/public with the same layout it needs under `/`.
 const studioUiPublic = join(dirname(require.resolve("@simforge-oss/studio-ui/package.json")), "public");
 await cp(studioUiPublic, publicDir, { recursive: true });
+
+// Catalog model packs the browser viewer fetches by their catalog URL
+// (`/catalog/<pack>/models/*.glb`, the `model.url` in @simforge-oss/asset-catalog).
+// Copied from the repository's own packs rather than an installed package:
+// they are repository content, tracked beside their ATTRIBUTION.json, and the
+// desktop stage picks them up with the rest of `public/`. Models only — the
+// manifests, conversion tooling and licence files are not served to browsers,
+// they are audited at release (scripts/release/bundled-components.json).
+const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
+for (const pack of ["vehicles-carla", "pedestrians-carla"]) {
+  const models = join(repoRoot, "catalog", pack, "models");
+  const destination = join(publicDir, "catalog", pack, "models");
+  await mkdir(destination, { recursive: true });
+  await cp(models, destination, { recursive: true });
+}

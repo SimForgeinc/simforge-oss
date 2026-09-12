@@ -341,21 +341,29 @@ function buildExternalPlaceholder(id: string, dims: Dims): Group {
  * returned group faces +X, carries `userData.catalogId` for round-tripping
  * back to the catalog, and is ground-centred unless the entry declares
  * `origin: 'body-centre'`, in which case it is centred on the origin.
+ *
+ * A bundled id keeps its procedural build even when the entry also binds an
+ * authored model: that build is what every consumer that cannot load the GLB
+ * draws — a composite layout, a contact sheet, a viewer waiting on the
+ * download — and a dimensioned grey box there would be a downgrade. The box
+ * placeholder is for registered external entries, which have no builder at
+ * all.
  */
 export function buildProp<K extends string>(
   id: K,
   params?: K extends CatalogId ? Partial<PropParamMap[K]> : never,
 ): Group {
   const entry = getEntry(id);
-  if (entry.model) return buildExternalPlaceholder(id, entry.dims);
-
   const builder = (
     BUILDERS as unknown as Record<
       string,
       ((params: PropParamMap[CatalogId]) => Group) | undefined
     >
   )[id];
-  if (!builder) throw new Error(`Unknown catalog id: ${id}`);
+  if (!builder) {
+    if (entry.model) return buildExternalPlaceholder(id, entry.dims);
+    throw new Error(`Unknown catalog id: ${id}`);
+  }
   const merged = { ...entry.defaultParams, ...params } as PropParamMap[CatalogId];
   const group = builder(merged);
   group.name = id;

@@ -49,6 +49,12 @@ describe('every catalog entry', () => {
 
       it('sits on the ground plane', () => {
         const { bbox } = measure(entry.id);
+        if ('origin' in entry && entry.origin === 'body-centre') {
+          // A rigid-body component is centred on its solver origin, which is
+          // where the exporter's pose puts it; the ground is not its datum.
+          expect(bbox.min.y, `${entry.id} min-y`).toBeCloseTo(-entry.dims.h / 2, 1);
+          return;
+        }
         // Nothing may float above y = 0 or sink below it by more than 2 cm.
         expect(bbox.min.y, `${entry.id} min-y`).toBeGreaterThan(-0.02);
         expect(bbox.min.y, `${entry.id} min-y`).toBeLessThan(0.02);
@@ -119,8 +125,8 @@ describe('parametric builds', () => {
     expect(paintOf(blue)).toBe('#0000ff');
   });
 
-  // `pedestrian.adult` ships a GLB, so `buildProp` hands back a placeholder;
-  // the procedural rig behind it is exercised directly.
+  // `pedestrian.adult` also ships a GLB; `buildProp` still builds the
+  // procedural rig behind it, which is what this exercises directly.
   it('varies the pedestrian stride with the pose', () => {
     const standing = buildAdultPedestrian({ height: 1.75, pose: 'standing' });
     const walking = buildAdultPedestrian({ height: 1.75, pose: 'walking' });

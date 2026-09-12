@@ -63,7 +63,11 @@ renderer/target-*/
 renderer/vendor/bevy_gltf/target/
 
 # Static assets studio/scripts/sync-studio-assets.mjs copies from installed
-# packages (Three's Basis transcoder, MapLibre's worker, studio-ui public assets).
+# packages (Three's Basis transcoder, MapLibre's worker, studio-ui public
+# assets) and from this repository's own catalog packs (the CARLA model GLBs
+# the viewer fetches by their catalog `model.url`; they are versioned once
+# under catalog/<pack>/models, not a second time under what Next serves).
+studio/public/catalog/
 studio/public/basis/
 studio/public/maplibre/
 studio/public/render-selection/

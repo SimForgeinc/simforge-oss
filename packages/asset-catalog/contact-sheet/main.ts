@@ -26,8 +26,10 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { CATALOG } from '../src/catalog.js';
+import type { CatalogEntry } from '../src/types.js';
 import { buildParkedRow, buildWorkZone } from '../src/composites.js';
 import { buildProp } from '../src/registry.js';
 
@@ -80,6 +82,68 @@ const grouped = classOrder.map((cls) => ({
   entries: CATALOG.filter((entry) => entry.class === cls),
 }));
 
+const gltfLoader = new GLTFLoader();
+const authoredIds: string[] = [];
+
+/**
+ * Authored models, fetched once per file and shared by every entry that binds
+ * it: three entries ride the same Sprinter, and the pack's GLBs are tens of
+ * megabytes each. Six at a time keeps the fetches overlapped without making
+ * the page decode twenty textures at once.
+ */
+const loadedByUrl = new Map<string, Group>();
+const entries: readonly CatalogEntry[] = CATALOG;
+const modelUrls = [...new Set(
+  entries.flatMap((entry) => (entry.model?.kind === 'glb' ? [entry.model.url] : [])),
+)];
+let cursor = 0;
+await Promise.all(Array.from({ length: 6 }, async () => {
+  for (let index = cursor++; index < modelUrls.length; index = cursor++) {
+    const url = modelUrls[index] as string;
+    loadedByUrl.set(url, (await gltfLoader.loadAsync(url)).scene);
+  }
+}));
+
+/**
+ * What a cell draws: the entry's authored model when it binds one, otherwise
+ * its procedural build. The authored scene is fitted to the entry's longest
+ * dimension exactly as the renderers fit it, and the paint slot takes the
+ * entry's colour, so the sheet shows what a placed actor looks like.
+ */
+function subject(entry: CatalogEntry): Object3D {
+  const model = entry.model;
+  if (model?.kind !== 'glb') return buildProp(entry.id);
+  const loaded = loadedByUrl.get(model.url);
+  if (!loaded) throw new Error(`${entry.id}: ${model.url} was not prefetched`);
+  // Cloned per entry: geometry and untinted materials stay shared, so only
+  // the paint slot is duplicated below.
+  const scene = loaded.clone(true);
+  scene.updateMatrixWorld(true);
+  const size = new Box3().setFromObject(scene).getSize(new Vector3());
+  const longest = entry.dims.l >= entry.dims.h && entry.dims.l >= entry.dims.w
+    ? entry.dims.l / size.x
+    : entry.dims.h >= entry.dims.w ? entry.dims.h / size.y : entry.dims.w / size.z;
+  scene.scale.multiplyScalar(longest);
+  const colour = entry.defaultParams['color'];
+  if (model.paint !== undefined && typeof colour === 'string') {
+    scene.traverse((object) => {
+      const mesh = object as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mesh.material = materials.map((material) => {
+        if (material.name !== model.paint) return material;
+        const painted = (material as MeshStandardMaterial).clone();
+        painted.color = new Color(colour);
+        return painted;
+      });
+      if (!Array.isArray(mesh.material)) return;
+      if (mesh.material.length === 1) mesh.material = mesh.material[0] as MeshStandardMaterial;
+    });
+  }
+  authoredIds.push(entry.id);
+  return scene;
+}
+
 for (const { cls, entries } of grouped) {
   if (column !== 0) {
     cursorY += CELL_H;
@@ -93,7 +157,7 @@ for (const { cls, entries } of grouped) {
       id: entry.id,
       dims: `${entry.dims.l} × ${entry.dims.w} × ${entry.dims.h} m`,
       tags: entry.tags.join(' · '),
-      object: buildProp(entry.id),
+      object: subject(entry),
       x: PAD + column * CELL_W,
       y: cursorY,
       w: CELL_W - 8,
@@ -158,7 +222,7 @@ sheet.style.height = `${SHEET_H}px`;
 // ------------------------------------------------------------------- overlay
 const header = document.createElement('div');
 header.className = 'header';
-header.innerHTML = `<h1>@simforge-oss/asset-catalog</h1><p>${CATALOG.length} procedurally generated props · dimensions in metres · 1 m ground grid · origin at ground centre, +X towards the camera-right</p>`;
+header.innerHTML = `<h1>@simforge-oss/asset-catalog</h1><p>${CATALOG.length} props · ${authoredIds.length} authored CC BY 4.0 CARLA models, the rest procedurally generated · dimensions in metres · 1 m ground grid · origin at ground centre, +X towards the camera-right</p>`;
 overlay.appendChild(header);
 
 for (const section of sections) {

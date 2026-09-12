@@ -190,6 +190,30 @@ export type ExternalModelBinding =
       readonly url: string;
       /** Lowercase sha256 hex of the GLB bytes. The cache key; stable across signed URL rotation. */
       readonly contentHash: string;
+      /**
+       * Articulated nodes the renderers drive, in the authored GLB's own node
+       * names. Wheels spin about their local Z (the node origin is the wheel
+       * centre, so its height is the rolling radius) and front wheels also
+       * take the steer angle; doors yaw about their hinge origin and answer
+       * the trace's left/right/rear door states.
+       */
+      readonly nodes?: {
+        readonly wheelsFront?: readonly string[];
+        readonly wheelsRear?: readonly string[];
+        readonly doors?: {
+          readonly left?: readonly string[];
+          readonly right?: readonly string[];
+          readonly rear?: readonly string[];
+        };
+        /** Steered but not rolling: a two-wheeler's handlebar assembly. */
+        readonly steered?: readonly string[];
+      };
+      /**
+       * Material name carrying the tintable paint (`body_paint`). Absent means
+       * the model's appearance is authored — a police, taxi or bus livery —
+       * and an actor's body colour must not touch it.
+       */
+      readonly paint?: string;
       /** Uniform scale applied to the loaded scene before normalisation. Defaults to 1. */
       readonly scale?: number;
       /** Yaw applied about +Y before normalisation, radians. Defaults to 0. */

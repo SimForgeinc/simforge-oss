@@ -200,6 +200,14 @@ export interface SampledActor {
    * sets it, and every reader treats absence as upright.
    */
   readonly downProgress?: number;
+  /**
+   * Recorded road-wheel steer angle and axle rolling rate, from the
+   * force-based backend's `physics` track. Absent for a trace without one
+   * (static actors, older bundles), where a renderer derives wheel motion
+   * from road speed instead.
+   */
+  readonly steerRad?: number;
+  readonly wheelAngularSpeedRadps?: number;
 }
 
 export interface SampledSignal extends PlaybackSignal {
@@ -844,6 +852,9 @@ export function samplePlaybackActors(bundle: PlaybackBundle, time: number): Samp
         bundle.trace.ticks.t[bracket.upper] as number,
       );
     const alpha = discontinuous && bracket.alpha < 1 ? 0 : bracket.alpha;
+    // Wheel and steer motion a renderer articulates with: recorded, so
+    // scrubbing shows the wheels the solver actually had at that instant.
+    const physics = track.physics;
     return {
       id: actor.id,
       catalogId: actor.catalogId,
@@ -864,6 +875,14 @@ export function samplePlaybackActors(bundle: PlaybackBundle, time: number): Samp
       static: false,
       motionDirection,
       downProgress: knockdownProgress(track.downSinceS, time),
+      ...(physics ? {
+        steerRad: lerp(physics.steerRad[bracket.lower] as number, physics.steerRad[bracket.upper] as number, alpha),
+        wheelAngularSpeedRadps: lerp(
+          physics.wheelAngularSpeedRadps[bracket.lower] as number,
+          physics.wheelAngularSpeedRadps[bracket.upper] as number,
+          alpha,
+        ),
+      } : {}),
     };
   });
 }

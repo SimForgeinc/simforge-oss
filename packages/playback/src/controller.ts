@@ -608,6 +608,12 @@ export class PlaybackController {
           // walk cycle and the bob running while it slides.
           speedMps: (actor.downProgress ?? 0) > 0 ? 0 : actor.speedMps,
           reversing: actor.motionDirection === -1,
+          // A rigged model rolls its wheels and turns its front axle from the
+          // recorded channels; a knocked-down body is no longer driving.
+          ...((actor.downProgress ?? 0) > 0 || actor.steerRad === undefined ? {} : { steerRad: actor.steerRad }),
+          ...((actor.downProgress ?? 0) > 0 || actor.wheelAngularSpeedRadps === undefined
+            ? {}
+            : { wheelAngularSpeedRadps: actor.wheelAngularSpeedRadps }),
           ...((actor.downProgress ?? 0) > 0 ? { downProgress: actor.downProgress } : {}),
           ...(metadata ? { kind: metadata.kind } : {}),
           ...(metadata?.modelBasis === 'input-tag' ? { catalogIdAuthored: true } : {}),

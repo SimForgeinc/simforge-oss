@@ -42,6 +42,17 @@ const externalModelSchema = z.discriminatedUnion('kind', [
     kind: z.literal('glb'),
     url: z.string().min(1),
     contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+    nodes: z.strictObject({
+      wheelsFront: z.array(z.string().min(1)).optional(),
+      wheelsRear: z.array(z.string().min(1)).optional(),
+      doors: z.strictObject({
+        left: z.array(z.string().min(1)).optional(),
+        right: z.array(z.string().min(1)).optional(),
+        rear: z.array(z.string().min(1)).optional(),
+      }).optional(),
+      steered: z.array(z.string().min(1)).optional(),
+    }).optional(),
+    paint: z.string().min(1).optional(),
     scale: z.number().positive().optional(),
     yawRad: z.number().finite().optional(),
     animated: z.boolean().optional(),

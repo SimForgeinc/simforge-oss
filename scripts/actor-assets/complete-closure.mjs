@@ -20,7 +20,13 @@
 //   --external-root  Directory that resolves root-relative catalog `model.url`
 //                    bindings (`/catalog/...`). Defaults to the repository root.
 //
-// For each `CATALOG_IDS` id absent from the base catalog:
+// An id the catalog binds to an external `glb` model is always taken from the
+// catalog, replacing whatever the base closure held for it: the web viewer
+// instantiates `model.url`, so a base entry answering the same id with an
+// older stand-in would have the two renderers draw different actors from one
+// scenario. Such ids are reported under `coverage.rebound`.
+//
+// For each remaining `CATALOG_IDS` id absent from the base catalog:
 //   - a procedural entry is built with `buildProp(id)` (catalog default
 //     params) and exported to GLB with three's GLTFExporter, exactly the
 //     geometry and palette materials the web viewer instantiates. Flat-shaded
@@ -394,14 +400,35 @@ const catalogTable = { ...base.catalog };
 const members = new Map([...base.members].map(([memberPath, member]) => [memberPath, { sha256: member.sha256, bytes: member.bytes, provide: (destination) => placeFile(member.file, destination) }]));
 const exportedProcedural = [];
 const externalBound = [];
-const preserved = catalogIds.filter((id) => id in base.catalog);
+const rebound = [];
+
+/**
+ * Whether the catalog's own binding must replace what the base closure holds
+ * for this id.
+ *
+ * The catalog is the single source of truth for what an actor looks like: the
+ * web viewer instantiates `model.url`, so a base closure that answers the
+ * same id with an older stand-in (a generated mesh, or the procedural build
+ * from before the pack landed) makes the two renderers draw different cars
+ * from one scenario. An authored binding therefore wins, and only when it
+ * resolves locally to exactly the declared bytes — `resolveExternal` proves
+ * that, so a pack that is not checked out fails the run instead of silently
+ * keeping the stand-in.
+ */
+const rebinds = (id) => assetCatalog.getEntry(id).model?.kind === 'glb';
+const preserved = catalogIds.filter((id) => id in base.catalog && !rebinds(id));
 
 for (const id of catalogIds) {
-  if (id in base.catalog || NATIVE_ARTICULATED_IDS.includes(id)) continue;
+  if (NATIVE_ARTICULATED_IDS.includes(id)) continue;
+  const replacing = id in base.catalog;
+  if (replacing && !rebinds(id)) continue;
   const entry = assetCatalog.getEntry(id);
   if (entry.origin === 'body-centre') fail(`${id} is body-centre and not one of the native articulated ids ${NATIVE_ARTICULATED_IDS.join(', ')}`);
   const relative = `models/${id}/model.glb`;
-  if (members.has(relative)) fail(`${relative} is already a closure member but ${CATALOG_MEMBER} does not bind ${id}`);
+  // A base member under this id's path belongs to this id's base entry, which
+  // is what we are replacing; any other collision means the base closure
+  // carries geometry nothing binds.
+  if (members.has(relative) && !replacing) fail(`${relative} is already a closure member but ${CATALOG_MEMBER} does not bind ${id}`);
 
   if (entry.model) {
     const external = await resolveExternal(externalRoot, id, entry.model);
@@ -429,7 +456,7 @@ for (const id of catalogIds) {
       },
       animations: {},
     };
-    externalBound.push(id);
+    (replacing ? rebound : externalBound).push(id);
     continue;
   }
 
@@ -513,6 +540,7 @@ const report = {
     preserved,
     exportedProcedural,
     externalBound,
+    rebound,
     nativeArticulated: NATIVE_ARTICULATED_IDS,
   },
   missing,

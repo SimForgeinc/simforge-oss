@@ -116,6 +116,16 @@ export interface ActorView {
   /** Scenario clock and sampled speed drive procedural motion until a rigged GLB is installed. */
   readonly animationTimeS?: number;
   readonly speedMps?: number;
+  /**
+   * Road-wheel steer angle, radians, positive to the left. The recorded
+   * trace's `physics.steerRad` or the live frame's `telemetry.steerRad`; a
+   * normalised -1..1 stick value must be converted before it gets here.
+   */
+  readonly steerRad?: number;
+  /** Per-wheel rolling rate `[fl, fr, rl, rr]`, rad/s, from live telemetry. */
+  readonly wheelSpeedsRadps?: readonly [number, number, number, number];
+  /** Axle rolling rate, rad/s: the trace's `physics.wheelAngularSpeedRadps`. */
+  readonly wheelAngularSpeedRadps?: number;
   /** Physical sensors authored on this actor. Playback-only views omit them. */
   readonly sensors?: readonly ActorSensor[];
   /**
@@ -130,12 +140,45 @@ export interface ActorView {
 interface TemplatePart {
   geometry: BufferGeometry;
   material: Material;
+  /** Carries the model's tintable paint slot, so an actor colour applies here only. */
+  tintable?: boolean;
+}
+
+/** What an articulated node does when the actor's state changes. */
+type ArticulationRole = 'wheel-front' | 'wheel-rear' | 'steer' | DoorName;
+
+/**
+ * One authored GLB node the renderer poses per actor: its geometry is baked
+ * about the node origin, so a single instanced batch per material serves every
+ * actor of this catalog id at its own wheel phase, steer and door angle.
+ */
+interface ArticulatedNode {
+  role: ArticulationRole;
+  parts: TemplatePart[];
+  /** Node origin in model space: wheel centre, or door hinge. */
+  offset: Vector3;
+  /** -1 for a node on the actor's left (-Z), 1 on its right. */
+  lateralSign: 1 | -1;
 }
 
 interface PropTemplate {
   parts: TemplatePart[];
   dims: Dims;
   ownedMaterials?: Material[];
+  /**
+   * Authored models are scaled uniformly (by the actor's longest authored
+   * axis) rather than stretched onto the catalog box per axis: a CARLA body
+   * squashed to a box it was not authored for reads as a broken asset, and
+   * the native renderer fits the same models the same way.
+   */
+  uniformFit?: boolean;
+  /**
+   * The model's materials are authored, not palette-built: only the part
+   * carrying its declared paint slot takes an actor's body colour, so glass,
+   * tyres and police/taxi liveries keep the appearance they shipped with.
+   */
+  authoredMaterials?: boolean;
+  articulated?: ArticulatedNode[];
 }
 
 const templates = new Map<string, PropTemplate>();
@@ -193,6 +236,10 @@ export function propTemplate(catalogId: string): PropTemplate {
       const template = mergeTemplate(scene, { l: size.x, w: size.z, h: size.y }, {
         preserveUv: true,
         disposeSourceGeometry: false,
+        uniformFit: true,
+        authoredMaterials: true,
+        articulated: articulationRoles(binding.nodes),
+        ...(binding.paint === undefined ? {} : { paint: binding.paint }),
       });
       templates.set(key, template);
       return template;
@@ -248,6 +295,27 @@ function templateFor(identity: ActorRenderIdentity): PropTemplate {
 interface MergeTemplateOptions {
   preserveUv?: boolean;
   disposeSourceGeometry?: boolean;
+  uniformFit?: boolean;
+  authoredMaterials?: boolean;
+  /** Node name -> what the renderer poses it as; that subtree leaves the hull. */
+  articulated?: ReadonlyMap<string, ArticulationRole>;
+  /** Material name carrying the actor's paint. */
+  paint?: string;
+}
+
+/** Catalog node declarations as a name -> role lookup for {@link mergeTemplate}. */
+function articulationRoles(
+  nodes: Extract<ExternalModelBinding, { readonly kind: 'glb' }>['nodes'],
+): ReadonlyMap<string, ArticulationRole> | undefined {
+  if (!nodes) return undefined;
+  const roles = new Map<string, ArticulationRole>();
+  for (const name of nodes.wheelsFront ?? []) roles.set(name, 'wheel-front');
+  for (const name of nodes.wheelsRear ?? []) roles.set(name, 'wheel-rear');
+  for (const name of nodes.steered ?? []) roles.set(name, 'steer');
+  for (const door of ['left', 'right', 'rear'] as const) {
+    for (const name of nodes.doors?.[door] ?? []) roles.set(name, door);
+  }
+  return roles.size > 0 ? roles : undefined;
 }
 
 function mergeTemplate(
@@ -263,13 +331,42 @@ function mergeTemplate(
     normals: number[];
     uvs?: number[];
   }
-  const byMaterial = new Map<string, MaterialBucket>();
+  /** One merge target: the static hull, or one articulated node. */
+  interface Bucketed {
+    byMaterial: Map<string, MaterialBucket>;
+    node?: { name: string; role: ArticulationRole; origin: Vector3 };
+  }
+  const hull: Bucketed = { byMaterial: new Map() };
+  const nodes = new Map<string, Bucketed>();
+  // An articulated subtree's vertices are baked about its node origin, so the
+  // per-actor instance matrix carries the wheel phase or door angle. Nested
+  // meshes therefore resolve to their nearest declared ancestor, not the mesh.
+  const targetFor = (mesh: Mesh): Bucketed => {
+    if (!options.articulated) return hull;
+    for (let object: Object3D | null = mesh; object; object = object.parent) {
+      const role = options.articulated.get(object.name);
+      if (role === undefined) continue;
+      let bucketed = nodes.get(object.name);
+      if (!bucketed) {
+        bucketed = {
+          byMaterial: new Map(),
+          node: { name: object.name, role, origin: object.getWorldPosition(new Vector3()) },
+        };
+        nodes.set(object.name, bucketed);
+      }
+      return bucketed;
+    }
+    return hull;
+  };
+
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
+    const target = targetFor(mesh);
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const flat = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
     flat.applyMatrix4(mesh.matrixWorld);
+    if (target.node) flat.translate(-target.node.origin.x, -target.node.origin.y, -target.node.origin.z);
     if (!flat.attributes.normal) flat.computeVertexNormals();
     const position = flat.attributes.position as BufferAttribute;
     const normal = flat.attributes.normal as BufferAttribute;
@@ -281,7 +378,7 @@ function mergeTemplate(
     for (const group of groups) {
       const material = materials[group.materialIndex ?? 0] ?? materials[0];
       if (!material) continue;
-      let bucket = byMaterial.get(material.uuid);
+      let bucket = target.byMaterial.get(material.uuid);
       if (!bucket) {
         bucket = {
           material,
@@ -289,7 +386,7 @@ function mergeTemplate(
           normals: [],
           ...(options.preserveUv ? { uvs: [] } : {}),
         };
-        byMaterial.set(material.uuid, bucket);
+        target.byMaterial.set(material.uuid, bucket);
       }
       const end = Math.min(position.count, group.start + group.count);
       for (let i = group.start; i < end; i++) {
@@ -308,20 +405,47 @@ function mergeTemplate(
     });
   }
 
-  const parts: TemplatePart[] = [];
-  for (const bucket of byMaterial.values()) {
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(new Float32Array(bucket.positions), 3));
-    geometry.setAttribute('normal', new BufferAttribute(new Float32Array(bucket.normals), 3));
-    if (bucket.uvs) {
-      geometry.setAttribute('uv', new BufferAttribute(new Float32Array(bucket.uvs), 2));
+  const bake = (byMaterial: Map<string, MaterialBucket>): TemplatePart[] => {
+    const parts: TemplatePart[] = [];
+    for (const bucket of byMaterial.values()) {
+      if (bucket.positions.length === 0) continue;
+      const geometry = new BufferGeometry();
+      geometry.setAttribute('position', new BufferAttribute(new Float32Array(bucket.positions), 3));
+      geometry.setAttribute('normal', new BufferAttribute(new Float32Array(bucket.normals), 3));
+      if (bucket.uvs) {
+        geometry.setAttribute('uv', new BufferAttribute(new Float32Array(bucket.uvs), 2));
+      }
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+      parts.push({
+        geometry,
+        material: bucket.material,
+        ...(options.paint !== undefined && bucket.material.name === options.paint ? { tintable: true } : {}),
+      });
     }
-    geometry.computeBoundingBox();
-    geometry.computeBoundingSphere();
-    parts.push({ geometry, material: bucket.material });
+    return parts;
+  };
+
+  const articulated: ArticulatedNode[] = [];
+  for (const { byMaterial, node } of nodes.values()) {
+    if (!node) continue;
+    const parts = bake(byMaterial);
+    if (parts.length === 0) continue;
+    articulated.push({
+      role: node.role,
+      parts,
+      offset: node.origin,
+      lateralSign: node.origin.z < 0 ? -1 : 1,
+    });
   }
 
-  return { parts, dims };
+  return {
+    parts: bake(hull.byMaterial),
+    dims,
+    ...(options.uniformFit ? { uniformFit: true } : {}),
+    ...(options.authoredMaterials ? { authoredMaterials: true } : {}),
+    ...(articulated.length > 0 ? { articulated } : {}),
+  };
 }
 
 function buildSemanticProp(kind: 'animal' | 'scooter' | 'static_object'): Group {
@@ -686,7 +810,9 @@ export class ActorRenderer {
       // A catalog prop has several material batches, but every part of an
       // actor has the same world transform and tint. Compute those once per
       // actor rather than once per material part (a sedan has seven parts).
-      const matrices = list.map((actor) => poseMatrix(actor, template.dims));
+      const fit = template.uniformFit ? 'uniform' : 'stretch';
+      const matrices = list.map((actor) => poseMatrix(actor, template.dims, fit));
+      const fitScales = list.map((actor) => (fit === 'uniform' ? uniformFitScale(actor.dims, template.dims) : 1));
       const colors = list.map(instanceBodyTint);
       this.slots.set(identityKey, ids);
       for (let part = 0; part < template.parts.length; part++) {
@@ -697,9 +823,12 @@ export class ActorRenderer {
         batch.mesh.userData.actorIds = ids;
         batch.mesh.userData.renderIdentity = group.identity;
         batch.mesh.count = list.length;
+        // An authored model declares which material slot takes the actor's
+        // paint; tinting the rest would recolour its glass, tyres and livery.
+        const tinted = template.authoredMaterials !== true || spec.tintable === true;
         list.forEach((_actor, index) => {
           batch.mesh.setMatrixAt(index, matrices[index]!);
-          batch.mesh.setColorAt(index, colors[index]!);
+          batch.mesh.setColorAt(index, tinted ? colors[index]! : WHITE_INSTANCE_TINT);
         });
         batch.mesh.instanceMatrix.needsUpdate = true;
         if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true;
@@ -707,6 +836,7 @@ export class ActorRenderer {
         batch.mesh.visible = list.length > 0;
         draws++;
       }
+      draws += this.syncArticulation(identityKey, template, list, matrices, colors, fitScales, activeBatchKeys);
     }
     for (const [actorId, animated] of this.animatedClones) {
       if (!activeAnimatedIds.has(actorId)) this.disposeAnimatedClone(actorId, animated);
@@ -773,6 +903,52 @@ export class ActorRenderer {
       object = object.parent;
     }
     return null;
+  }
+
+  /**
+   * Pose an authored model's articulated nodes for every actor of one catalog
+   * id: wheels roll (and the front pair steers), a two-wheeler's handlebar
+   * steers, doors swing on their hinges. Each node keeps one instanced batch
+   * per material, so the whole fleet costs the same draw calls as one car.
+   */
+  private syncArticulation(
+    identityKey: string,
+    template: PropTemplate,
+    actors: readonly ActorView[],
+    poses: readonly Matrix4[],
+    colors: readonly Color[],
+    fitScales: readonly number[],
+    activeBatchKeys: Set<string>,
+  ): number {
+    if (!template.articulated) return 0;
+    let draws = 0;
+    const ids = actors.map((actor) => actor.id);
+    for (let node = 0; node < template.articulated.length; node++) {
+      const spec = template.articulated[node] as ArticulatedNode;
+      for (let part = 0; part < spec.parts.length; part++) {
+        const key = `${identityKey}@${node}#${part}`;
+        activeBatchKeys.add(key);
+        const partSpec = spec.parts[part] as TemplatePart;
+        const batch = this.ensureBatch(key, partSpec, actors.length);
+        batch.mesh.userData.actorIds = ids;
+        batch.mesh.userData.articulation = spec.role;
+        batch.mesh.count = actors.length;
+        const tinted = template.authoredMaterials !== true || partSpec.tintable === true;
+        actors.forEach((actor, index) => {
+          batch.mesh.setMatrixAt(
+            index,
+            articulatedMatrix(poses[index] as Matrix4, spec, actor, fitScales[index] as number),
+          );
+          batch.mesh.setColorAt(index, tinted ? colors[index]! : WHITE_INSTANCE_TINT);
+        });
+        batch.mesh.instanceMatrix.needsUpdate = true;
+        if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true;
+        batch.mesh.computeBoundingSphere();
+        batch.mesh.visible = actors.length > 0;
+        draws++;
+      }
+    }
+    return draws;
   }
 
   dispose(): void {
@@ -894,7 +1070,7 @@ export class ActorRenderer {
       this.animatedClones.set(actor.id, animated);
     }
 
-    animated.container.matrix.copy(poseMatrix(actor, animated.templateDims));
+    animated.container.matrix.copy(poseMatrix(actor, animated.templateDims, 'uniform'));
     animated.container.matrixWorldNeedsUpdate = true;
     const requestedName = (actor.speedMps ?? 0) > 0.1
       ? binding.clips?.locomotion
@@ -980,7 +1156,9 @@ export class ActorRenderer {
     let draws = 0;
     for (const name of ['left', 'right', 'rear'] as const) {
       const articulated = actors
-        .filter((actor) => actor.doors?.[name] !== undefined)
+        // An authored model with a rigged panel for this door swings its own;
+        // drawing the proxy slab too would put two doors on one hinge.
+        .filter((actor) => actor.doors?.[name] !== undefined && !hasRiggedDoor(actor, name))
         .sort((a, b) => a.id.localeCompare(b.id));
       const existing = this.doorBatches.get(name);
       if (articulated.length === 0) {
@@ -1261,18 +1439,119 @@ function applyDownPose(actor: ActorView, dims: Dims): void {
   _position.y += Math.sin(angle) * Math.min(dims.h, dims.w) * 0.5;
 }
 
+/**
+ * Whether this actor's loaded model rigs the named door itself. Only true
+ * once the GLB is in memory: until then the actor renders as its procedural
+ * placeholder, which needs the proxy panel.
+ */
+function hasRiggedDoor(actor: ActorView, name: DoorName): boolean {
+  let binding: ExternalModelBinding | undefined;
+  try {
+    binding = getEntry(actor.catalogId).model;
+  } catch {
+    return false;
+  }
+  if (binding?.kind !== 'glb' || (binding.nodes?.doors?.[name] ?? []).length === 0) return false;
+  return externalModelScene(binding.contentHash) !== null;
+}
+
 /** Where this actor's catalog mesh keeps its origin; drives centring math. */
 export function actorOrigin(actor: Pick<ActorView, 'catalogId'>): CatalogOrigin {
   return getEntry(actor.catalogId).origin ?? 'ground';
 }
 
-export function poseMatrix(actor: ActorView, templateDims = getEntry(actor.catalogId).dims): Matrix4 {
+/**
+ * Scale that fits a model authored to `templateDims` into an actor's authored
+ * box without distorting it: the ratio on the actor's longest authored axis,
+ * which is length for a vehicle and height for a pedestrian.
+ */
+export function uniformFitScale(dims: Dims, templateDims: Dims): number {
+  if (dims.l >= dims.h && dims.l >= dims.w) return dims.l / templateDims.l;
+  return dims.h >= dims.w ? dims.h / templateDims.h : dims.w / templateDims.w;
+}
+
+/** How far a rigged door swings when the trace says it is open, radians. */
+const DOOR_SWING_RAD = 1.05;
+/** Steering is a presentation of the solver's road-wheel angle, not a stop. */
+const MAX_RENDER_STEER_RAD = 0.7;
+const _nodeMatrix = new Matrix4();
+const _nodeOffset = new Vector3();
+const _nodeRotation = new Quaternion();
+const _forwardAxis = new Vector3(0, 0, 1);
+const _steerRotation = new Quaternion();
+const _unitScale = new Vector3(1, 1, 1);
+
+/**
+ * World transform of one articulated node: the actor's body pose, translated
+ * to the node origin, then rotated about it.
+ *
+ * Wheel phase is `-ω · t` rather than an accumulator: recorded frames are
+ * produced by seeking, so an integrating renderer would drift and scrubbing
+ * backwards would not return the earlier pose. Sign follows the pack frame
+ * (+X forward, +Z right): rolling forward turns a wheel negatively about Z.
+ */
+function articulatedMatrix(pose: Matrix4, node: ArticulatedNode, actor: ActorView, fitScale: number): Matrix4 {
+  const time = actor.animationTimeS ?? 0;
+  if (node.role === 'wheel-front' || node.role === 'wheel-rear') {
+    const perWheel = actor.wheelSpeedsRadps;
+    const index = node.role === 'wheel-front'
+      ? (node.lateralSign < 0 ? 0 : 1)
+      : (node.lateralSign < 0 ? 2 : 3);
+    // The node origin is the wheel centre, so its height is the rolling
+    // radius: a view that only knows road speed still rolls at the right rate.
+    const radius = Math.max(node.offset.y * fitScale, 0.05);
+    const omega = perWheel?.[index] ?? actor.wheelAngularSpeedRadps ?? (actor.speedMps ?? 0) / radius;
+    _nodeRotation.setFromAxisAngle(_forwardAxis, -omega * time);
+    if (node.role === 'wheel-front') {
+      _nodeRotation.premultiply(_steerRotation.setFromAxisAngle(_up, renderSteerRad(actor)));
+    }
+  } else if (node.role === 'steer') {
+    _nodeRotation.setFromAxisAngle(_up, renderSteerRad(actor));
+  } else {
+    // A hinge at the node origin with the panel extending rearward from it,
+    // so the free end swings away from the body when the yaw takes the sign
+    // of the side the node sits on.
+    const open = doorOpenness(actor.doors?.[node.role] ?? 'closed');
+    _nodeRotation.setFromAxisAngle(_up, node.lateralSign * open * DOOR_SWING_RAD);
+  }
+  // Returned by reference: the caller copies it into an instance matrix
+  // immediately, so nothing here needs a per-node allocation.
+  return _nodeMatrix
+    .compose(_nodeOffset.copy(node.offset), _nodeRotation, _unitScale)
+    .premultiply(pose);
+}
+
+function renderSteerRad(actor: ActorView): number {
+  const steer = actor.steerRad ?? 0;
+  return Math.max(-MAX_RENDER_STEER_RAD, Math.min(MAX_RENDER_STEER_RAD, steer));
+}
+
+/**
+ * World transform of one actor's body.
+ *
+ * `fit` decides how a template's extents become the actor's authored `dims`.
+ * Procedural props are built to those dims, so per-axis (`stretch`) is exact.
+ * An authored model was modelled to its own proportions and is fitted
+ * `uniform`ly instead — scaled by the ratio on the actor's longest authored
+ * axis, which is length for a vehicle and height for a pedestrian — because
+ * squashing a real body onto a box it was not authored for reads as a broken
+ * asset, and the native renderer fits the same GLBs the same way.
+ */
+export function poseMatrix(
+  actor: ActorView,
+  templateDims = getEntry(actor.catalogId).dims,
+  fit: 'stretch' | 'uniform' = 'stretch',
+): Matrix4 {
   const entry = getEntry(actor.catalogId);
-  _scale.set(
-    actor.dims.l / templateDims.l,
-    actor.dims.h / templateDims.h,
-    actor.dims.w / templateDims.w,
-  );
+  if (fit === 'uniform') {
+    _scale.setScalar(uniformFitScale(actor.dims, templateDims));
+  } else {
+    _scale.set(
+      actor.dims.l / templateDims.l,
+      actor.dims.h / templateDims.h,
+      actor.dims.w / templateDims.w,
+    );
+  }
   if (entry.origin === 'body-centre') {
     // Rigid-body component: the exporter's centre pose is the pose. Hover,
     // gait bob and knock-down are solver outcomes here, not renderer effects.

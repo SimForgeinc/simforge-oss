@@ -5,6 +5,7 @@ import type {
   PropClass,
   PropTag,
 } from './types';
+import { CARLA_VEHICLE_MODELS } from './vehicles-carla.generated';
 export const EXTERNAL_CATALOG_PREFIXES = ['gallery.', 'carla.'] as const;
 export type ExternalCatalogEntry = Omit<CatalogEntry, 'id'> & {
   readonly id: string;
@@ -32,6 +33,7 @@ export const CATALOG = [
     dims: { l: 4.7, w: 1.82, h: 1.45 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#2f4f74' },
+    model: CARLA_VEHICLE_MODELS['vehicle.sedan'],
   },
   {
     id: 'vehicle.hatchback',
@@ -43,6 +45,7 @@ export const CATALOG = [
     dims: { l: 4.05, w: 1.75, h: 1.46 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#8f2f2f' },
+    model: CARLA_VEHICLE_MODELS['vehicle.hatchback'],
   },
   {
     id: 'vehicle.suv',
@@ -54,6 +57,7 @@ export const CATALOG = [
     dims: { l: 4.85, w: 1.95, h: 1.78 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#25282c' },
+    model: CARLA_VEHICLE_MODELS['vehicle.suv'],
   },
   {
     id: 'vehicle.pickup',
@@ -66,6 +70,7 @@ export const CATALOG = [
     dims: { l: 5.9, w: 2.03, h: 1.95 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#5a6068' },
+    model: CARLA_VEHICLE_MODELS['vehicle.pickup'],
   },
   {
     id: 'vehicle.van',
@@ -77,6 +82,7 @@ export const CATALOG = [
     dims: { l: 5.3, w: 2.0, h: 2.4 },
     tags: ['occlusion:high', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#e8e9ea' },
+    model: CARLA_VEHICLE_MODELS['vehicle.van'],
   },
   {
     id: 'vehicle.kia.carnival',
@@ -89,6 +95,7 @@ export const CATALOG = [
     dims: { l: 5.15, w: 2.0, h: 1.78 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway'],
     defaultParams: { color: '#f1f2f3' },
+    model: CARLA_VEHICLE_MODELS['vehicle.kia.carnival'],
   },
   {
     id: 'vehicle.box_truck',
@@ -100,6 +107,7 @@ export const CATALOG = [
     dims: { l: 7.6, w: 2.44, h: 3.4 },
     tags: ['occlusion:high', 'mobile', 'roadway', 'large-vehicle'],
     defaultParams: { color: '#e8e9ea' },
+    model: CARLA_VEHICLE_MODELS['vehicle.box_truck'],
   },
   {
     id: 'vehicle.semi_truck',
@@ -122,6 +130,7 @@ export const CATALOG = [
     dims: { l: 12.2, w: 2.55, h: 3.2 },
     tags: ['occlusion:high', 'mobile', 'roadway', 'large-vehicle'],
     defaultParams: { color: '#2f5b45' },
+    model: CARLA_VEHICLE_MODELS['vehicle.bus'],
   },
   {
     id: 'vehicle.motorcycle',
@@ -133,6 +142,7 @@ export const CATALOG = [
     dims: { l: 2.1, w: 0.75, h: 1.23 },
     tags: ['occlusion:low', 'mobile', 'vru', 'parkable', 'roadway'],
     defaultParams: { color: '#25282c' },
+    model: CARLA_VEHICLE_MODELS['vehicle.motorcycle'],
   },
   {
     id: 'vehicle.bicycle',
@@ -144,6 +154,7 @@ export const CATALOG = [
     dims: { l: 1.75, w: 0.5, h: 1.71 },
     tags: ['occlusion:low', 'mobile', 'vru', 'roadway'],
     defaultParams: { color: '#2f4f74' },
+    model: CARLA_VEHICLE_MODELS['vehicle.bicycle'],
   },
   {
     id: 'vehicle.ambulance',
@@ -156,6 +167,7 @@ export const CATALOG = [
     dims: { l: 6.1, w: 2.1, h: 2.65 },
     tags: ['occlusion:high', 'mobile', 'roadway', 'large-vehicle'],
     defaultParams: { color: '#eceff1' },
+    model: CARLA_VEHICLE_MODELS['vehicle.ambulance'],
   },
   {
     id: 'vehicle.tram',
@@ -190,6 +202,7 @@ export const CATALOG = [
     dims: { l: 4.67, w: 1.8, h: 1.42 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#4b5563' },
+    model: CARLA_VEHICLE_MODELS['vehicle.honda_civic'],
   },
   {
     id: 'vehicle.toyota_camry',
@@ -201,6 +214,7 @@ export const CATALOG = [
     dims: { l: 4.88, w: 1.84, h: 1.45 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#c8cbd0' },
+    model: CARLA_VEHICLE_MODELS['vehicle.toyota_camry'],
   },
   {
     id: 'vehicle.tesla_model_3',
@@ -212,6 +226,7 @@ export const CATALOG = [
     dims: { l: 4.72, w: 1.85, h: 1.44 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#f2f3f4' },
+    model: CARLA_VEHICLE_MODELS['vehicle.tesla_model_3'],
   },
   {
     id: 'vehicle.ford_mustang',
@@ -223,6 +238,7 @@ export const CATALOG = [
     dims: { l: 4.81, w: 1.92, h: 1.4 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#1f5fa8' },
+    model: CARLA_VEHICLE_MODELS['vehicle.ford_mustang'],
   },
   {
     id: 'vehicle.chevrolet_corvette',
@@ -234,6 +250,7 @@ export const CATALOG = [
     dims: { l: 4.63, w: 1.93, h: 1.23 },
     tags: ['occlusion:low', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#d62828' },
+    model: CARLA_VEHICLE_MODELS['vehicle.chevrolet_corvette'],
   },
   {
     id: 'vehicle.porsche_911',
@@ -256,6 +273,7 @@ export const CATALOG = [
     dims: { l: 4.79, w: 1.88, h: 1.87 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#49633d' },
+    model: CARLA_VEHICLE_MODELS['vehicle.jeep_wrangler'],
   },
   {
     id: 'vehicle.minivan',
@@ -267,6 +285,7 @@ export const CATALOG = [
     dims: { l: 5.15, w: 2, h: 1.78 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger'],
     defaultParams: { color: '#6f7782' },
+    model: CARLA_VEHICLE_MODELS['vehicle.minivan'],
   },
   {
     id: 'vehicle.taxi',
@@ -278,6 +297,7 @@ export const CATALOG = [
     dims: { l: 4.9, w: 1.85, h: 1.55 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'passenger', 'service'],
     defaultParams: { color: '#f0c419' },
+    model: CARLA_VEHICLE_MODELS['vehicle.taxi'],
   },
   {
     id: 'vehicle.police_cruiser',
@@ -289,6 +309,7 @@ export const CATALOG = [
     dims: { l: 5.1, w: 2, h: 1.55 },
     tags: ['occlusion:medium', 'mobile', 'parkable', 'roadway', 'emergency', 'service'],
     defaultParams: { color: '#1f2937' },
+    model: CARLA_VEHICLE_MODELS['vehicle.police_cruiser'],
   },
   {
     id: 'vehicle.police_suv',
@@ -322,6 +343,7 @@ export const CATALOG = [
     dims: { l: 10.2, w: 2.55, h: 3.3 },
     tags: ['occlusion:high', 'mobile', 'roadway', 'large-vehicle', 'emergency', 'service'],
     defaultParams: { color: '#b91c1c' },
+    model: CARLA_VEHICLE_MODELS['vehicle.fire_engine'],
   },
   {
     id: 'vehicle.dump_truck',
@@ -421,6 +443,7 @@ export const CATALOG = [
     dims: { l: 7.4, w: 2.3, h: 2.8 },
     tags: ['occlusion:high', 'mobile', 'roadway', 'large-vehicle', 'service'],
     defaultParams: { color: '#e2e8f0' },
+    model: CARLA_VEHICLE_MODELS['vehicle.shuttle_bus'],
   },
   {
     id: 'vehicle.delivery_van',
@@ -432,6 +455,7 @@ export const CATALOG = [
     dims: { l: 6, w: 2.05, h: 2.65 },
     tags: ['occlusion:high', 'mobile', 'parkable', 'roadway', 'delivery', 'commercial'],
     defaultParams: { color: '#8b5e3c' },
+    model: CARLA_VEHICLE_MODELS['vehicle.delivery_van'],
   },
 
   // ------------------------------------------------------------- pedestrians

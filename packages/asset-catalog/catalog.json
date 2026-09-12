@@ -18,6 +18,34 @@
     ],
     "defaultParams": {
       "color": "#2f4f74"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz.glb",
+      "contentHash": "7243955057e273733036bb03dc9a4ece7f059cf9c20842e44fbbb3acec760b32",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ],
+          "rear": [
+            "door_rl",
+            "door_rr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -39,6 +67,30 @@
     ],
     "defaultParams": {
       "color": "#8f2f2f"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_hatchback_mini_cooper.glb",
+      "contentHash": "f49ec6e4b9fdaee6fb9e0b490a1b511ff719aad4a11ddb1554fdcd1bd3bb38d0",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -60,6 +112,34 @@
     ],
     "defaultParams": {
       "color": "#25282c"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_suv_nissan_patrol.glb",
+      "contentHash": "edce2506049352e26a073efbcdf490cf2042542265850095f7df7d73f1d88e8b",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ],
+          "rear": [
+            "door_rl",
+            "door_rr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -84,6 +164,11 @@
     ],
     "defaultParams": {
       "color": "#5a6068"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_pickup_tesla_cybertruck.glb",
+      "contentHash": "de8452597568d1579e8b981d6be0ac8d731e5cc38ea83e7e346497462c5f999e"
     }
   },
   {
@@ -105,6 +190,30 @@
     ],
     "defaultParams": {
       "color": "#e8e9ea"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_van_mercedes_sprinter.glb",
+      "contentHash": "c8f91488d67a51e8fa298df4598558f84315d071e471e213fe5d7a137034f908",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -129,6 +238,22 @@
     ],
     "defaultParams": {
       "color": "#f1f2f3"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_minivan_bmw_gran_tourer.glb",
+      "contentHash": "6733c345fef27f85888667c8cd6dac9f1ff037cbf40da0367710c22125a6abd7",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -150,6 +275,30 @@
     ],
     "defaultParams": {
       "color": "#e8e9ea"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_truck_carlacola.glb",
+      "contentHash": "ac1003559a0e299acd8242b50b98e91f9851ad3724d11977ec64b23d3f2a87f7",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -192,6 +341,21 @@
     ],
     "defaultParams": {
       "color": "#2f5b45"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_bus_mitsubishi_fusorosa.glb",
+      "contentHash": "4c2061dac9d7351796029f6e8b79b1cedbaec43de660a9c6d29d510f88300048",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      }
     }
   },
   {
@@ -214,6 +378,23 @@
     ],
     "defaultParams": {
       "color": "#25282c"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_motorcycle_harley.glb",
+      "contentHash": "3a62ab86449571a6399673657db2a5679729b0b253b2e59636c17b5ee20b3eb9",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_f"
+        ],
+        "wheelsRear": [
+          "wheel_r"
+        ],
+        "steered": [
+          "handlebar"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -235,6 +416,23 @@
     ],
     "defaultParams": {
       "color": "#2f4f74"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_bicycle_gazelle_omafiets.glb",
+      "contentHash": "8c07c8fcee87fb3b0acf622cc790f92cfcd848d5b72269d757fe6b2d27d494a2",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_f"
+        ],
+        "wheelsRear": [
+          "wheel_r"
+        ],
+        "steered": [
+          "handlebar"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -259,6 +457,29 @@
     ],
     "defaultParams": {
       "color": "#eceff1"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_ambulance_ford.glb",
+      "contentHash": "64566ed8a709afd21c5e7d8ca089c509446633606eb562193cc1b92be74831d8",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      }
     }
   },
   {
@@ -326,6 +547,34 @@
     ],
     "defaultParams": {
       "color": "#4b5563"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_sedan_dodge_charger.glb",
+      "contentHash": "68d993ff00d645564b349011eacfd1fec09d69f7a78f4e771f10538a6a7ce24e",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ],
+          "rear": [
+            "door_rl",
+            "door_rr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -348,6 +597,22 @@
     ],
     "defaultParams": {
       "color": "#c8cbd0"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_sedan_chevrolet_impala.glb",
+      "contentHash": "46f70ab9110425a0dbcecc341b81fc491feeb3d7f802aa36df57d0fdc12ad491",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -370,6 +635,11 @@
     ],
     "defaultParams": {
       "color": "#f2f3f4"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_sedan_tesla_model3.glb",
+      "contentHash": "f4906b8afc82a69d95132146ced52aa960c6cfe4c502929a3a6283318ce2722b"
     }
   },
   {
@@ -392,6 +662,22 @@
     ],
     "defaultParams": {
       "color": "#1f5fa8"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_coupe_ford_mustang.glb",
+      "contentHash": "f4cc002c88e2126affeb7dd960bfc8aac34867e28841560014034a6136f0d937",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -414,6 +700,22 @@
     ],
     "defaultParams": {
       "color": "#d62828"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_coupe_audi_tt.glb",
+      "contentHash": "2859e7ae360be1996e199acb8a38e2e5c131bdc27055cb5c7e467904f1f386a5",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -458,6 +760,12 @@
     ],
     "defaultParams": {
       "color": "#49633d"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_suv_jeep_wrangler.glb",
+      "contentHash": "897ad79a7bb413a3d604d19afa4cbadc40ded774656be4dd8c3c0155a916fa86",
+      "paint": "body_paint"
     }
   },
   {
@@ -480,6 +788,22 @@
     ],
     "defaultParams": {
       "color": "#6f7782"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_minivan_bmw_gran_tourer.glb",
+      "contentHash": "6733c345fef27f85888667c8cd6dac9f1ff037cbf40da0367710c22125a6abd7",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ]
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -503,6 +827,33 @@
     ],
     "defaultParams": {
       "color": "#f0c419"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_sedan_ford_crown.glb",
+      "contentHash": "2b0c17f12d850f91101cc5c0cade1e5cd3c21204a43c54c4dbea91f9931e08a9",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ],
+          "rear": [
+            "door_rl",
+            "door_rr"
+          ]
+        }
+      }
     }
   },
   {
@@ -526,6 +877,33 @@
     ],
     "defaultParams": {
       "color": "#1f2937"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_police_dodge_charger.glb",
+      "contentHash": "2d37575da0af3e815b41581a5b47d48440a2938bda5e75462c6cae76c5cfde89",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ],
+          "rear": [
+            "door_rl",
+            "door_rr"
+          ]
+        }
+      }
     }
   },
   {
@@ -595,6 +973,29 @@
     ],
     "defaultParams": {
       "color": "#b91c1c"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_firetruck_actros.glb",
+      "contentHash": "741ee999b05a12283f25ea46f646c71dff2195a34a936cfb9a716b4045c70c1d",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      }
     }
   },
   {
@@ -798,6 +1199,30 @@
     ],
     "defaultParams": {
       "color": "#e2e8f0"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_van_mercedes_sprinter.glb",
+      "contentHash": "c8f91488d67a51e8fa298df4598558f84315d071e471e213fe5d7a137034f908",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {
@@ -821,6 +1246,30 @@
     ],
     "defaultParams": {
       "color": "#8b5e3c"
+    },
+    "model": {
+      "kind": "glb",
+      "url": "/catalog/vehicles-carla/models/vehicle_van_mercedes_sprinter.glb",
+      "contentHash": "c8f91488d67a51e8fa298df4598558f84315d071e471e213fe5d7a137034f908",
+      "nodes": {
+        "wheelsFront": [
+          "wheel_fl",
+          "wheel_fr"
+        ],
+        "wheelsRear": [
+          "wheel_rl",
+          "wheel_rr"
+        ],
+        "doors": {
+          "left": [
+            "door_fl"
+          ],
+          "right": [
+            "door_fr"
+          ]
+        }
+      },
+      "paint": "body_paint"
     }
   },
   {

@@ -31,12 +31,19 @@ if (!existsSync(join(dist, 'index.html'))) {
 }
 
 // --- serve (ES modules are blocked under file://)
+//
+// Entries that bind an authored model fetch it by its catalog URL
+// (`/catalog/<pack>/models/x.glb`), so the repository's packs are served
+// alongside the built bundle; a sheet that could not reach them would be a
+// sheet of procedural stand-ins.
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json',
+  '.glb': 'model/gltf-binary',
 };
+const repoRoot = resolve(pkgRoot, '..', '..');
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const rel = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
@@ -44,8 +51,9 @@ const server = createServer((req, res) => {
     res.writeHead(204).end();
     return;
   }
-  const file = join(dist, rel === '/' ? 'index.html' : rel);
-  if (!file.startsWith(dist) || !existsSync(file)) {
+  const root = rel.startsWith('/catalog/') ? repoRoot : dist;
+  const file = join(root, rel === '/' ? 'index.html' : rel);
+  if (!file.startsWith(root) || !existsSync(file)) {
     res.writeHead(404).end('not found');
     return;
   }

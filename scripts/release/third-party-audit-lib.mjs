@@ -308,6 +308,20 @@ export function renderThirdPartyNotices({ receipt, components, release = null })
         "",
       );
     }
+    // A component whose payload mixes provenances credits each one here. CC BY
+    // 4.0 is satisfied by the notice itself, not by a pointer to it: the
+    // credit line, the licence terms and the statement of modification must be
+    // in this document, so they are rendered rather than merely recorded.
+    for (const determined of component.provenance?.classes ?? []) {
+      const provenanceClass = /** @type {any} */ (determined);
+      lines.push(`### ${provenanceClass.source} (${provenanceClass.models} models)`, "");
+      lines.push(`- Attribution: ${provenanceClass.attributionApplied ?? provenanceClass.attribution}`);
+      if (provenanceClass.attributionApplied) lines.push(`  - As recorded upstream: ${provenanceClass.attribution}`);
+      lines.push(`- Terms: ${provenanceClass.terms}`);
+      if (provenanceClass.modifications) lines.push(`- Modifications: ${provenanceClass.modifications}`);
+      lines.push("");
+    }
+    if (component.provenance?.note) lines.push(component.provenance.note, "");
     for (const [platform, determined] of Object.entries(component.perTarget ?? {})) {
       const target = /** @type {any} */ (determined);
       lines.push(

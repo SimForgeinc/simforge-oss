@@ -178,6 +178,38 @@
           "residualProvenanceGap": "Which Meshy plan the closure was generated under is not recorded in this repository. tools/meshy/generate.mjs drives Meshy's Text-to-3D API with a MESHY_API_KEY from the secrets manager, and the API is a subscription feature, which suggests a paid plan, but that is an inference. It is answerable only from the Meshy account's billing history, and it is not blocking: attributing under CC BY 4.0 is valid in both cases."
         }
       ]
+    },
+    {
+      "id": "carla-model-packs",
+      "role": "76 glTF actor models (38 vehicles, 38 pedestrians) that the browser viewer fetches by catalog URL. studio/scripts/sync-studio-assets.mjs copies catalog/{vehicles,pedestrians}-carla/models into studio/public/catalog, and the stage copies studio/public, so the Next server inside the installed application serves them offline. Distinct from actor-appearance-closure, which is the same actors for the native renderer and is fetched separately.",
+      "license": "CC-BY-4.0",
+      "origin": "https://github.com/carla-simulator/carla",
+      "targets": [
+        "windows-x64",
+        "linux-x64",
+        "macos-arm64",
+        "macos-x64"
+      ],
+      "provenance": {
+        "note": "Per-asset title, source package, licence and modification list are recorded in catalog/vehicles-carla/ATTRIBUTION.json and catalog/pedestrians-carla/ATTRIBUTION.json, which travel with the packs in this repository. The catalog binds each served GLB by sha256 (packages/asset-catalog/src/vehicles-carla.generated.ts), so the bytes a notice describes are the bytes the application loads.",
+        "classes": [
+          {
+            "source": "carla-0.10.0-ue5",
+            "models": 76,
+            "attribution": "Vehicle and pedestrian models (c) CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge.",
+            "terms": "CC-BY-4.0: redistribution permitted with credit, license identification and a statement of modification.",
+            "modifications": "Meshes and textures extracted from cooked Unreal Engine packages with CUE4Parse, door/glass/emissive blueprint components merged, decimated with meshoptimizer, and re-authored as self-contained glTF 2.0 binaries. No RoadRunner Asset Library content is included."
+          }
+        ]
+      },
+      "obligations": [
+        {
+          "kind": "attribution",
+          "requirement": "Credit CARLA, identify CC BY 4.0 with its URL, and state that the models were modified.",
+          "status": "satisfied",
+          "evidence": "Both packs carry an ATTRIBUTION.json with a per-asset attribution line, licence id and licence URL (https://creativecommons.org/licenses/by/4.0/) and the modification list reproduced above; THIRD_PARTY_NOTICES renders this component's licence, origin and modification statement from this ledger."
+        }
+      ]
     }
   ],
   "neverShipped": [
