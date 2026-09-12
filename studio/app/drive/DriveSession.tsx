@@ -115,6 +115,7 @@ export function DriveSession({
   const pausedRef = useRef(false);
   const debugRef = useRef(false);
   const latestFrameRef = useRef<TruthFrame | null>(null);
+  const onActionRef = useRef<(action: DriveAction) => void>(() => {});
   const world = useWorldSource(source);
   pausedRef.current = paused;
   debugRef.current = debug;
@@ -176,7 +177,9 @@ export function DriveSession({
   // Taking the car: the compiled world names actors itself, so the document's
   // role id has to be resolved through the source before it can be driven.
   useEffect(() => {
-    if (!source || !roleId || world.status !== "running") return;
+    // `world.status` drives the retry; the source itself says whether the
+    // session this render is holding is the one that is actually running.
+    if (!source || !roleId || source.status !== "running") return;
     try {
       const actorId = source.selectEgo(roleId);
       if (!actorId) throw new Error("The session scenario produced no drivable vehicle");
@@ -207,6 +210,10 @@ export function DriveSession({
   useEffect(() => {
     if (!source) return;
     latestFrameRef.current = null;
+    // A respawn hands the same bridge a different world, whose ticks count
+    // from zero and whose car is a different actor: without this the bridge
+    // would keep drawing the session that just closed.
+    bridge?.reset();
     // The loop reads frames from a ref: publishing them as React state at 20 Hz
     // would rebuild the loop's closure twenty times a second.
     return source.subscribeFrames((frame) => {
@@ -262,7 +269,7 @@ export function DriveSession({
     );
   }, [ambientTraffic.sumoAvailable, ambientTraffic.sumoUnavailableReason, document, map.label, trafficEnabled]);
 
-  const onAction = useCallback((action: DriveAction) => {
+  const onAction = (action: DriveAction): void => {
     if (action === "pause") {
       setPaused((current) => !current);
       return;
@@ -298,16 +305,25 @@ export function DriveSession({
       audioRef.current?.setHorn(true);
       hornOffAtRef.current = performance.now() + HORN_PULSE_MS;
     }
-  }, [respawn, toggleTraffic]);
+  };
 
+  // One input device for the whole session, reached through a ref. Rebuilding
+  // it when a handler changes — a respawn replaces the document, which
+  // `toggleTraffic` closes over — would drop every key the player is holding,
+  // so the car would sit still after a reset until the throttle was pressed
+  // again.
+  onActionRef.current = onAction;
   useEffect(() => {
-    const input = createDriveInput({ onAction, onGamepadChange: setGamepadConnected });
+    const input = createDriveInput({
+      onAction: (action) => onActionRef.current(action),
+      onGamepadChange: setGamepadConnected,
+    });
     inputRef.current = input;
     return () => {
       inputRef.current = null;
       input.dispose();
     };
-  }, [onAction]);
+  }, []);
 
   // One audio graph per car. The context is created with the session and
   // closed with it: a context per respawn would leak hardware voices, and the
@@ -347,16 +363,23 @@ export function DriveSession({
   // kept running would let a car roll off a bridge behind the menu. The held
   // command is released first so the car is not still on the throttle when the
   // world resumes.
+  //
+  // Respawning from the pause menu unpauses and replaces the world in the same
+  // commit, so this effect still sees the session the respawn just closed, and
+  // React's copy of its status is a render behind. Asking the source itself is
+  // the only guard that holds: a closed source throws on a transport command,
+  // and that throw would take the whole game down. `world.status` stays in the
+  // dependencies so the new session is played the moment it reports running.
   useEffect(() => {
     inputRef.current?.setEnabled(!paused);
-    if (!source || !egoActorId) return;
+    if (!source || !egoActorId || source.status !== "running") return;
     if (paused) {
       source.setDriverCommand(null);
       source.transport.stop();
     } else {
       source.transport.play();
     }
-  }, [egoActorId, paused, source]);
+  }, [egoActorId, paused, source, world.status]);
 
   /** Orbit view drag and zoom. The other views are fixed to the car. */
   useEffect(() => {

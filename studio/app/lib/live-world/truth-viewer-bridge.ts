@@ -18,6 +18,12 @@ export interface TruthViewerBridge {
    * caller can read it from its own `onFrame` hook without allocating.
    */
   rendered(actorId: string): ActorRenderState | null;
+  /**
+   * Forget the session this bridge was drawing. A respawn keeps the viewer and
+   * the bridge but starts a new world, whose frames share neither the tick
+   * sequence nor necessarily the actor ids of the old one.
+   */
+  reset(): void;
   dispose(): void;
 }
 
@@ -37,6 +43,13 @@ export function createTruthViewerBridge(
   const lastRendered = new Map<string, ActorRenderState>();
 
   viewer.scene.add(adapter.actors.group);
+
+  const resetFrames = (): void => {
+    earlier = null;
+    latest = null;
+    elapsedSinceLatest = 0;
+    lastRendered.clear();
+  };
 
   const render = (dt: number): void => {
     if (disposed || !latest) return;
@@ -93,7 +106,13 @@ export function createTruthViewerBridge(
     actors: adapter.actors,
     apply(frame) {
       if (disposed) return;
-      if (latest && frame.tick <= latest.tick) return;
+      if (latest) {
+        // Ticks only ever go backwards when a new world took over — a respawn
+        // or a transport reset. Dropping those as stale would freeze the scene
+        // on the last frame of a session that no longer exists.
+        if (frame.tick < latest.tick) resetFrames();
+        else if (frame.tick <= latest.tick) return;
+      }
       earlier = latest;
       latest = frame;
       elapsedSinceLatest = 0;
@@ -102,15 +121,18 @@ export function createTruthViewerBridge(
     rendered(actorId) {
       return lastRendered.get(actorId) ?? null;
     },
+    reset() {
+      if (disposed) return;
+      resetFrames();
+      adapter.actors.clearLayer(layer);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       if (viewer.onFrame === frameHook) viewer.onFrame = previousFrameHook;
       adapter.actors.clearLayer(layer);
       adapter.actors.dispose();
-      earlier = null;
-      latest = null;
-      lastRendered.clear();
+      resetFrames();
     },
   };
 }

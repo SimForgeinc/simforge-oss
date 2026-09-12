@@ -167,9 +167,44 @@ describe('truth viewer bridge', () => {
     viewer.onFrame?.(0.05);
     expect(viewerMocks.batches).toHaveLength(writes);
   });
+
+  it('takes over a respawned world whose ticks restart instead of freezing on the old session', () => {
+    const viewer = {
+      scene: { add: vi.fn() },
+      controls: { applyView: vi.fn(), setEnabled: vi.fn() },
+      camera: { fov: 55 },
+      onFrame: null as ((dt: number) => void) | null,
+      getGroundIndex: vi.fn(() => null),
+    };
+    const bridge = createTruthViewerBridge(viewer as never, { groundLift: true, layer: 'drive' });
+    bridge.apply(frame(1, 0, 0));
+    bridge.apply(frame(2, 0.05, 10));
+    expect(bridge.rendered('ego')).not.toBeNull();
+
+    // A respawn is a new world: the same viewer and bridge, a session that
+    // counts from zero again, and a car the previous session never had.
+    bridge.reset();
+    expect(bridge.rendered('ego')).toBeNull();
+
+    bridge.apply(frame(1, 0, 60, 'ego-2'));
+    bridge.apply(frame(2, 0.05, 70, 'ego-2'));
+    viewer.onFrame?.(0.05);
+
+    const drawn = bridge.rendered('ego-2');
+    expect(drawn).toEqual(expect.objectContaining({ x: 70, z: 0 }));
+    expect(bridge.rendered('ego')).toBeNull();
+    expect(viewerMocks.batches.at(-1)!.actors.map((actor) => actor.id)).toEqual(['ego-2']);
+
+    // Even without the explicit reset — a transport reset, say — a tick that
+    // walks backwards is a new run, not a stale frame to drop.
+    bridge.apply(frame(1, 0, 5, 'ego-3'));
+    expect(bridge.rendered('ego-3')).toEqual(expect.objectContaining({ x: 5 }));
+    expect(bridge.rendered('ego-2')).toBeNull();
+    bridge.dispose();
+  });
 });
 
-function frame(tick: number, timeSec: number, x: number): TruthFrame {
+function frame(tick: number, timeSec: number, x: number, id = 'ego'): TruthFrame {
   return {
     tick,
     timeSec,
@@ -177,7 +212,7 @@ function frame(tick: number, timeSec: number, x: number): TruthFrame {
       tick,
       t: timeSec,
       actors: [{
-        id: 'ego',
+        id,
         kind: tick === 1 ? 'spawn' : 'update',
         position: [x, 0, 0],
         rotation: [0, 0, 0, 1],
@@ -187,6 +222,6 @@ function frame(tick: number, timeSec: number, x: number): TruthFrame {
       }],
     },
     signals: [],
-    actors: [{ id: 'ego', class: 'car', dims: { l: 4.5, w: 1.9, h: 1.5 }, accel: { ax: 0, ay: 0 } }],
+    actors: [{ id, class: 'car', dims: { l: 4.5, w: 1.9, h: 1.5 }, accel: { ax: 0, ay: 0 } }],
   };
 }
