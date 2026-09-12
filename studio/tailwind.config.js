@@ -2,6 +2,15 @@ import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import tailwindcssAnimate from "tailwindcss-animate";
 
+/**
+ * `@simforge-oss/studio-ui` resolves to its build output, but the dev host and
+ * the desktop dev shell import the package's `src` through the `development`
+ * export condition — scanning only `dist` means a component added to the
+ * package renders unstyled until someone rebuilds it. Both trees are scanned
+ * so the classes exist either way.
+ */
+const studioUi = dirname(dirname(createRequire(import.meta.url).resolve("@simforge-oss/studio-ui")));
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
@@ -9,7 +18,8 @@ export default {
     relative: true,
     files: [
       "./app/**/*.{ts,tsx}",
-      `${dirname(createRequire(import.meta.url).resolve("@simforge-oss/studio-ui"))}/**/*.{js,ts,tsx}`,
+      `${studioUi}/src/**/*.{ts,tsx}`,
+      `${studioUi}/dist/**/*.js`,
     ],
   },
   theme: {

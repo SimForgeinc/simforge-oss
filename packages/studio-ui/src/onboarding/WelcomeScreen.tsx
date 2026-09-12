@@ -42,7 +42,7 @@ export function WelcomeScreen({
           SimForge Studio
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Welcome to SimForge Studio</h1>
-        <p className="mt-5 max-w-xl text-base leading-7 text-white/60">
+        <p className="mt-5 max-w-xl text-base leading-7 text-white/75">
           Studio turns real streets into simulation-ready digital twins on this computer. Sign in to
           SimCloud for your account&apos;s maps and cloud storage, or continue locally with the public
           Richmond Field Station map.
@@ -83,7 +83,7 @@ export function WelcomeScreen({
             )}
           </Button>
           <Button
-            className="h-12 flex-1 rounded-full border-white/15 bg-transparent text-white hover:bg-white/5"
+            className="h-12 flex-1 rounded-full border-white/30 bg-white/[0.04] text-white hover:bg-white/10"
             data-testid="onboarding-continue-locally"
             onClick={onContinueLocally}
             type="button"
@@ -92,7 +92,7 @@ export function WelcomeScreen({
             Continue locally
           </Button>
         </div>
-        <p className="mt-4 text-xs text-white/35">
+        <p className="mt-4 text-xs text-white/50">
           You can sign in later from Settings; nothing here is permanent.
         </p>
       </section>

@@ -128,9 +128,11 @@ describe("useMapPreparation", () => {
   it("installs the selection in order and reports catalog labels and sizes", async () => {
     const harness = await mount(["map-a", "map-b", "map-c"]);
     await settle();
+    // A `semantic` install transfers the browser closure too, so the estimate
+    // shown before the first progress event is the sum of both.
     assert.deepEqual(
       harness.current.maps.map((row) => [row.label, row.bytes]),
-      [["Alpha", 100], ["Bravo", 200], ["Charlie", 300]],
+      [["Alpha", 110], ["Bravo", 220], ["Charlie", 330]],
     );
     assert.equal(harness.current.phase, "idle");
 

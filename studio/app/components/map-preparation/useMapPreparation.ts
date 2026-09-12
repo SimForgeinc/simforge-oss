@@ -163,7 +163,12 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
           return {
             ...row,
             label: map.label,
-            bytes: row.bytes > 0 ? row.bytes : (map.closureBytes?.semantic ?? 0),
+            // The install reports the bytes of both closures it transfers
+            // (`semantic` includes the browser one), so the estimate that
+            // stands in for it until the first progress event says the same.
+            bytes: row.bytes > 0
+              ? row.bytes
+              : (map.closureBytes ? map.closureBytes.browser + map.closureBytes.semantic : 0),
           };
         }),
       );

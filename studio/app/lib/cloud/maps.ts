@@ -216,9 +216,11 @@ function localizeDescriptor(map: UpstreamDescriptor): ScenarioMapDescriptorDto {
 /**
  * Total download size per profile, from the upstream cache plans this module
  * already fetches and caches for installs, so a selection screen can show
- * sizes before anything is downloaded. Absent when the plans cannot be read
- * (offline, or an account map without a session): a missing size is not an
- * error, it is simply unknown.
+ * sizes before anything is downloaded.
+ *
+ * A size is an annotation on the catalog, never a reason to fail it: offline,
+ * an account map without a session, or a plan the upstream serves malformed
+ * all leave the size unknown while the maps themselves still list.
  */
 async function closureBytesByMap(signal?: AbortSignal): Promise<Map<string, { browser: number; semantic: number }>> {
   const sizes = new Map<string, { browser: number; semantic: number }>();
@@ -226,9 +228,8 @@ async function closureBytesByMap(signal?: AbortSignal): Promise<Map<string, { br
     let plans: UpstreamPlanMap[];
     try {
       plans = await fetchUpstreamPlan(profile, signal);
-    } catch (error) {
-      if (error instanceof CloudConnectionError) continue;
-      throw error;
+    } catch {
+      continue;
     }
     for (const plan of plans) {
       const entry = sizes.get(plan.mapVersionId) ?? { browser: 0, semantic: 0 };

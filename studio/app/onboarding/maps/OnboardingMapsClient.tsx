@@ -80,7 +80,10 @@ export function OnboardingMapsClient() {
           label: map.label,
           locality: map.locality,
           thumbnailUrl: map.thumbnailUrl,
-          bytes: map.closureBytes?.semantic ?? null,
+          // A `semantic` install pulls the browser closure too, which is what
+          // the install's own progress total counts, so the card shows the sum
+          // rather than a number half the size of the download it starts.
+          bytes: map.closureBytes ? map.closureBytes.browser + map.closureBytes.semantic : null,
           locked: map.locked,
         }));
       setMaps(available);
