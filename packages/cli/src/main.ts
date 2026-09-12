@@ -65,6 +65,7 @@ import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
+import { cloudCommand } from './commands/cloud.js';
 
 const COMMANDS = [
   { name: 'maps list', summary: 'list immutable maps and versions in the configured registry' },
@@ -110,6 +111,7 @@ const COMMANDS = [
   { name: 'models cache', summary: 'report (or with --reclaim, free) unreferenced shared model-cache entries' },
   { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
+  { name: 'cloud status|connect|disconnect|workspaces|datasets|artifacts', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
 const GLOBAL_BOOLEANS = ['pretty', 'help'];
@@ -275,6 +277,18 @@ async function dispatch(argv: readonly string[]): Promise<number> {
   }
 
   switch (head) {
+    case 'cloud': {
+      const args = parseArgs(argv.slice(2), {
+        booleans: [...GLOBAL_BOOLEANS],
+        values: ['data-root', 'origin', 'workspace'],
+      });
+      return cloudCommand(sub, {
+        pretty: boolFlag(args, 'pretty'),
+        dataRoot: optionalString(args, 'data-root'),
+        origin: optionalString(args, 'origin'),
+        workspaceId: optionalString(args, 'workspace'),
+      });
+    }
     case 'maps': {
       if (sub === 'list') {
         const args = parseArgs(argv.slice(2), {

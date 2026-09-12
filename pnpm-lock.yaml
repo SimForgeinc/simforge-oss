@@ -148,6 +148,9 @@ importers:
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
+      '@simforge-oss/studio-host':
+        specifier: workspace:*
+        version: link:../studio-host
       meshoptimizer:
         specifier: ^1.2.0
         version: 1.2.0

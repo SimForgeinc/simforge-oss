@@ -448,6 +448,26 @@ local blob cache (`--blob-cache-root`, hardlinked into every layout):
 Versions published before the master format (tiled canonical closures) are
 refused by `pull`; re-ingest them.
 
+## Local Studio and SimCloud operations
+
+The installed Studio remains the authority for local persistence and cloud
+credentials. The CLI talks to that running local host; it never stores or
+prints tokens and never follows redirects away from loopback:
+
+```bash
+simforge cloud status
+simforge cloud connect --origin https://staging.simforge.ai
+simforge cloud workspaces
+simforge cloud datasets --workspace <workspace-id>
+simforge cloud artifacts --workspace <workspace-id>
+simforge cloud disconnect
+```
+
+`cloud connect` emits the real authorization URL for approval in the system
+browser. `datasets` and `artifacts` require an explicit workspace. Starting
+Studio is still a desktop concern; the CLI fails with a structured
+`host_unavailable` error when no local host is running.
+
 ## Current execution boundaries
 
 Stated plainly, because they bound what a number from `simforge` means:
