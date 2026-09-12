@@ -37,18 +37,12 @@ describe("Input", () => {
     expect(html).toContain('type="search"');
   });
 
-  it("applies base structural classes", () => {
-    const html = renderToString(<Input />);
-  });
 
   it("applies placeholder styling classes", () => {
     const html = renderToString(<Input placeholder="Enter value" />);
     expect(html).toContain('placeholder="Enter value"');
   });
 
-  it("applies disabled styling classes", () => {
-    const html = renderToString(<Input disabled />);
-  });
 
   it("renders disabled attribute when disabled prop is passed", () => {
     const html = renderToString(<Input disabled />);

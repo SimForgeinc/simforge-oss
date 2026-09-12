@@ -23,6 +23,7 @@ export function CarlaReadyMark({
 }) {
   return (
     <Image
+      {...mergeStyleProps(stylex.props(styles.root), className)}
       data-testid={testId}
       src={CARLA_MARK_SRC}
       alt=""

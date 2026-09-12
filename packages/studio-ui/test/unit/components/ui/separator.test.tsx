@@ -10,17 +10,8 @@ describe("Separator", () => {
     expect(html).toBeTruthy();
   });
 
-  it("applies horizontal size classes by default", () => {
-    const html = renderToString(<Separator />);
-  });
 
-  it("applies vertical size classes when orientation is vertical", () => {
-    const html = renderToString(<Separator orientation="vertical" />);
-  });
 
-  it("applies base shrink-0 and bg-border classes", () => {
-    const html = renderToString(<Separator />);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<Separator className="my-separator" />);

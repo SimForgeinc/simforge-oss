@@ -19,13 +19,7 @@ describe("Table", () => {
     expect(html).toContain("<table");
   });
 
-  it("wraps the table in an overflow container div", () => {
-    const html = renderToString(<Table />);
-  });
 
-  it("applies w-full and caption-bottom classes", () => {
-    const html = renderToString(<Table />);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<Table className="my-table" />);
@@ -44,10 +38,6 @@ describe("TableHeader", () => {
     expect(html).toContain("<thead");
   });
 
-  it("applies border-b class to rows via selector", () => {
-    const html = renderToString(<table><TableHeader /></table>);
-    // renderToString HTML-encodes & to &amp; in attribute values
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><TableHeader className="custom-header" /></table>);
@@ -61,10 +51,6 @@ describe("TableBody", () => {
     expect(html).toContain("<tbody");
   });
 
-  it("applies last-row border class via selector", () => {
-    const html = renderToString(<table><TableBody /></table>);
-    // renderToString HTML-encodes & to &amp; in attribute values
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><TableBody className="custom-body" /></table>);
@@ -78,9 +64,6 @@ describe("TableFooter", () => {
     expect(html).toContain("<tfoot");
   });
 
-  it("applies border-t and bg-muted/50 classes", () => {
-    const html = renderToString(<table><TableFooter /></table>);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><TableFooter className="custom-footer" /></table>);
@@ -94,13 +77,7 @@ describe("TableRow", () => {
     expect(html).toContain("<tr");
   });
 
-  it("applies border-b and transition-colors classes", () => {
-    const html = renderToString(<table><tbody><TableRow /></tbody></table>);
-  });
 
-  it("applies hover muted background class", () => {
-    const html = renderToString(<table><tbody><TableRow /></tbody></table>);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><tbody><TableRow className="custom-row" /></tbody></table>);
@@ -120,13 +97,7 @@ describe("TableHead", () => {
     expect(html).toContain("Name");
   });
 
-  it("applies h-11 height and padding classes", () => {
-    const html = renderToString(<table><thead><tr><TableHead /></tr></thead></table>);
-  });
 
-  it("applies uppercase tracking-wider text-xs classes", () => {
-    const html = renderToString(<table><thead><tr><TableHead /></tr></thead></table>);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><thead><tr><TableHead className="custom-th" /></tr></thead></table>);
@@ -141,13 +112,7 @@ describe("TableCell", () => {
     expect(html).toContain("Value");
   });
 
-  it("applies padding classes", () => {
-    const html = renderToString(<table><tbody><tr><TableCell /></tr></tbody></table>);
-  });
 
-  it("applies align-middle class", () => {
-    const html = renderToString(<table><tbody><tr><TableCell /></tr></tbody></table>);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><tbody><tr><TableCell className="custom-td" /></tr></tbody></table>);
@@ -168,9 +133,6 @@ describe("TableCaption", () => {
     expect(html).toContain("Results");
   });
 
-  it("applies mt-4 and text-muted-foreground classes", () => {
-    const html = renderToString(<table><TableCaption>Caption</TableCaption></table>);
-  });
 
   it("merges a custom className", () => {
     const html = renderToString(<table><TableCaption className="custom-caption">Caption</TableCaption></table>);

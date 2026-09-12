@@ -14,6 +14,8 @@ export default defineConfig({
     '@simforge-oss/scenario',
     '@simforge-oss/viewer',
     'fflate',
+    '@simforge-oss/native-runtime',
+    '@simforge-oss/native-runtime/shared',
     'three',
     'zod',
   ],

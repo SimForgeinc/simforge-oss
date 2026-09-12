@@ -49,11 +49,12 @@ export interface EnvAction {
   readonly control?: { readonly throttle: number; readonly brake: number; readonly steer: number };
 }
 
-/** Write `action` into `row` (a `Float64Array(ACTION_WIDTH)` slice); unset fields become `NaN`. */
+/** Write `action` into `row`; unspecified control fields become `NaN`, while motion defaults to forward. */
 export function encodeAction(action: EnvAction | null | undefined, row: Float64Array): Float64Array {
   if (row.length !== ACTION_WIDTH) throw new RangeError(`action row must have ${ACTION_WIDTH} slots, got ${row.length}`);
   row.fill(Number.NaN);
   if (!action) return row;
+  row[ACTION_SLOT.motionDirection] = action.motionDirection ?? 1;
   if (action.targetSpeedMps !== undefined) row[ACTION_SLOT.targetSpeedMps] = action.targetSpeedMps;
   if (action.targetAccelerationMps2 !== undefined) row[ACTION_SLOT.targetAccelerationMps2] = action.targetAccelerationMps2;
   if (action.motionDirection !== undefined) row[ACTION_SLOT.motionDirection] = action.motionDirection;

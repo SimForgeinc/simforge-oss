@@ -10,9 +10,8 @@ import { performance } from 'node:perf_hooks';
 import { decode, encode } from '@msgpack/msgpack';
 import sharp from 'sharp';
 import { loadMap, readInstance } from '@simforge-oss/compiler/node';
-import { TrajectoryFollower, anchorPlanToWorld } from '@simforge-oss/engine';
-import type { SessionActorSnapshot, SimScenarioInput, TrajectoryPlanPoint } from '@simforge-oss/engine';
-import { EnvSession } from '@simforge-oss/training-env';
+import type { SessionActorSnapshot, SimScenarioInput } from '@simforge-oss/engine';
+import { sessions } from '@simforge-oss/training-env/node';
 import type { EnvAction, StepResult } from '@simforge-oss/training-env';
 import { NativeServiceClient, stripRgbaPadding } from '@simforge-oss/render/native';
 
@@ -75,6 +74,60 @@ function repositoryRoot(): string {
 }
 type ModelResult = { trajectories: number[][][]; reasoning: string[]; timings?: Record<string, number>; vram?: Record<string, number> };
 type ModelResponse = { ok: boolean; result?: ModelResult; error?: string };
+type TrajectoryPlanPoint = {
+  readonly x: number;
+  readonly y: number;
+  readonly headingRad: number;
+  readonly speedMps: number;
+  readonly tS: number;
+};
+type DrivePose = { readonly tS: number; readonly x: number; readonly y: number; readonly yawRad: number; readonly speedMps: number };
+
+function anchorPlanToWorld(points: readonly TrajectoryPlanPoint[], pose: DrivePose): TrajectoryPlanPoint[] {
+  const cos = Math.cos(pose.yawRad);
+  const sin = Math.sin(pose.yawRad);
+  return points.map((point) => ({
+    ...point,
+    x: pose.x + point.x * cos - point.y * sin,
+    y: pose.y + point.x * sin + point.y * cos,
+    headingRad: pose.yawRad + point.headingRad,
+    tS: pose.tS + point.tS,
+  }));
+}
+
+class TrajectoryFollower {
+  private plan: readonly TrajectoryPlanPoint[] = [];
+  private issuedAt = 0;
+  setPlan(plan: readonly TrajectoryPlanPoint[], issuedAt: number): void {
+    this.plan = plan;
+    this.issuedAt = issuedAt;
+  }
+  command(pose: DrivePose, now: number): {
+    targetSpeedMps: number;
+    targetAccelerationMps2: number;
+    motionDirection: -1 | 1;
+    previewPoint: { x: number; y: number };
+    previewHeadingRad: number;
+    crossTrackErrorM: number;
+  } {
+    if (this.plan.length === 0) throw new Error("trajectory follower has no plan");
+    const preview = this.plan.find((point) => point.tS >= now + 0.35) ?? this.plan.at(-1)!;
+    const dx = preview.x - pose.x;
+    const dy = preview.y - pose.y;
+    const cos = Math.cos(pose.yawRad);
+    const sin = Math.sin(pose.yawRad);
+    const localY = -dx * sin + dy * cos;
+    const targetSpeedMps = preview.speedMps;
+    return {
+      targetSpeedMps,
+      targetAccelerationMps2: Math.max(-8, Math.min(4, (targetSpeedMps - pose.speedMps) / Math.max(0.1, preview.tS - Math.max(now, this.issuedAt)))),
+      motionDirection: targetSpeedMps < 0 ? -1 : 1,
+      previewPoint: { x: preview.x, y: preview.y },
+      previewHeadingRad: preview.headingRad,
+      crossTrackErrorM: localY,
+    };
+  }
+}
 export interface DriveEncoder { readonly child: ChildProcess; write(frame: Buffer): Promise<void>; finish(): Promise<void>; }
 export interface DriveTelemetry {
   schema: 'simforge.alpamayo-drive.v1'; mapId: string; world: readonly string[]; cameraProfile: string; policy: 'alpamayo-1.5'; seed: number;
@@ -120,7 +173,7 @@ function catalogId(actor: SimScenarioInput['actors'][number]): string {
 function makeSceneState(input: SimScenarioInput, mapId: string, snapshot: { actors: readonly SessionActorSnapshot[] }): Record<string, unknown> {
   const sourceById = new Map(input.actors.map((actor) => [actor.id, actor]));
   return { version: 'scene-state.v1', mapId, tick: 0, tickHz: 1 / input.dt, actors: snapshot.actors.filter((actor) => actor.present).map((actor) => {
-    const source = sourceById.get(actor.id); const yaw = actor.headingRad;
+    const source = sourceById.get(actor.id); const yaw = actor.yawRad;
     return { id: actor.id, kind: 'update', catalogId: source ? catalogId(source) : 'vehicle.sedan', actorClass: source ? actorClass(source.kind) : 'car', transform: { position: [actor.x, 0, -actor.y], rotation: [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)] }, velocity: [actor.speedMps * Math.cos(yaw), 0, -actor.speedMps * Math.sin(yaw)] };
   }) };
 }
@@ -210,16 +263,32 @@ export async function drive(options: DriveOptions): Promise<number> {
   const renderBinary = options.renderBinary ?? process.env['SIMFORGE_NATIVE_RENDER_BINARY'] ?? path.join(root, 'renderer/target/release/native-render-service'); const modelScript = path.join(root, 'adapters/alpamayo/scripts/run_server.sh'); let renderer: ChildProcess | undefined; let modelServer: ChildProcess | undefined; let native: NativeServiceClient | undefined; let model: AlpamayoClient | undefined; let encoder: DriveEncoder | undefined;
   const telemetry: DriveTelemetry = { schema: 'simforge.alpamayo-drive.v1', mapId, world, cameraProfile: options.cameraProfile, policy: 'alpamayo-1.5', seed: options.seed, durationS: options.duration, steps: 0, renderedFrames: 0, model: {}, records: [] };
   try {
-    if (!options.noStartRenderer) { renderer = spawn(renderBinary, ['--scene', scenePath, '--socket', renderSocket, '--shm', shmPath, '--shm-size-mb', '512'], { stdio: ['ignore', 'ignore', 'pipe'] }); await waitForSocket(renderSocket, renderer); }
-    native = await NativeServiceClient.connect(renderSocket); telemetry.model.renderer = await native.rpc({ op: 'hello' });
-    if (!options.noStartModel) { modelServer = spawn('bash', [modelScript, '--quant', options.quant, '--socket', options.modelSocket], { stdio: ['ignore', 'ignore', 'pipe'] }); await waitForSocket(options.modelSocket, modelServer); }
-    model = await AlpamayoClient.connect(options.modelSocket); const modelHello = await model.hello(); if (!modelHello.ok) throw new Error(modelHello.error ?? 'Alpamayo hello failed'); telemetry.model.alpamayo = modelHello;
+    if (!options.noStartRenderer) {
+      renderer = spawn(renderBinary, ['--scene', scenePath, '--socket', renderSocket, '--shm', shmPath, '--shm-size-mb', '512'], { stdio: ['ignore', 'ignore', 'pipe'] });
+      await waitForSocket(renderSocket, renderer);
+    }
+    native = await NativeServiceClient.connect(renderSocket);
+    telemetry.model.renderer = await native.rpc({ op: 'hello' });
+    if (!options.noStartModel) {
+      modelServer = spawn('bash', [modelScript, '--family', 'alpamayo-1.5', '--quant', options.quant, '--socket', options.modelSocket], { stdio: ['ignore', 'ignore', 'pipe'] });
+      await waitForSocket(options.modelSocket, modelServer);
+    }
+    model = await AlpamayoClient.connect(options.modelSocket);
+    const modelHello = await model.hello();
+    if (!modelHello.ok) throw new Error(modelHello.error ?? 'Alpamayo hello failed');
+    telemetry.model.alpamayo = modelHello;
     encoder = await createEncoder(videoPath);
-    const env = new EnvSession({ input: instance.input, graph: map.graph, episode: { decisionHz: 10, clipSeconds: options.duration, maxDecisions: Math.ceil(options.duration * 10), observation: { stateVector: true, bev: null } }, runOptions: { mode: 'live', ambientReactivity: 'reactive', guards: 'collect' } });
-    let result: StepResult = env.reset(options.seed); let snapshot = env.snapshot(); if (!snapshot) throw new Error('simulation did not produce an initial snapshot'); const frameHistory = new Map<string, Buffer[]>(); const egoHistory: number[][] = []; let prediction: number[][] | null = null; let reasoning = 'warming camera history'; let renderTick = 0;
+    const env = sessions().env({ input: instance.input, graph: map.graph, episode: { decisionHz: 10, clipSeconds: options.duration, maxDecisions: Math.ceil(options.duration * 10), observation: { stateVector: true, bev: null } } });
+    let result: StepResult = env.reset(options.seed);
+    let snapshot = env.snapshot();
+    if (!snapshot) throw new Error('simulation did not produce an initial snapshot');
+    const frameHistory = new Map<string, Buffer[]>();
+    const egoHistory: number[][] = [];
+    let prediction: number[][] | null = null;
+    let reasoning = 'warming camera history';
+    let renderTick = 0;
     const renderCurrent = async (): Promise<void> => {
       const pose = env.egoPose();
-      if (!pose) throw new Error('missing ego pose');
       snapshot = env.snapshot();
       if (!snapshot) throw new Error('missing simulation snapshot');
       await native!.rpc({ op: 'load_scene_state', states: [makeSceneState(instance.input, mapId, snapshot)] });
@@ -245,14 +314,12 @@ export async function drive(options: DriveOptions): Promise<number> {
     for (let i = 0; i < HISTORY_FRAMES; i += 1) await renderCurrent();
     for (let step = 0; step < Math.ceil(options.duration * 10) && !result.terminated && !result.truncated; step += 1) {
       const pose = env.egoPose();
-      if (!pose) throw new Error('missing ego pose before action');
       const cameraObs = profile.map((spec) => {
-        const history = frameHistory.get(spec.sensorId)!;
+        const history = frameHistory.get(spec.sensorId) ?? [];
         return { camera_id: spec.cameraId, frames: [...Array(Math.max(0, HISTORY_FRAMES - history.length)).fill(history[0]!), ...history], encoding: 'raw', width: WIDTH, height: HEIGHT };
       });
-      const history = egoHistoryAtPose(egoHistory, pose);
       const started = performance.now();
-      const response = await model.act({ cameras: cameraObs, ego_history_xyz: history }, options.seed + step);
+      const response = await model.act({ cameras: cameraObs, ego_history_xyz: egoHistoryAtPose(egoHistory, pose) }, options.seed + step);
       const elapsedMs = performance.now() - started;
       if (!response.ok || !response.result) throw new Error(response.error ?? 'Alpamayo act failed');
       const raw = response.result.trajectories[0];
@@ -264,8 +331,11 @@ export async function drive(options: DriveOptions): Promise<number> {
       const miss = elapsedMs > options.deadlineMs;
       const applied = miss ? 'zero-control' : 'policy';
       const action: EnvAction = miss ? { control: { throttle: 0, brake: 0, steer: 0 } } : {
-        targetSpeedMps: command.targetSpeedMps, targetAccelerationMps2: command.targetAccelerationMps2,
-        motionDirection: command.motionDirection, previewPoint: command.previewPoint, previewHeadingRad: command.previewHeadingRad,
+        targetSpeedMps: command.targetSpeedMps,
+        targetAccelerationMps2: command.targetAccelerationMps2,
+        motionDirection: command.motionDirection,
+        previewPoint: command.previewPoint,
+        previewHeadingRad: command.previewHeadingRad,
       };
       reasoning = response.result.reasoning?.[0] ?? 'no reasoning returned';
       prediction = decoded.display;
@@ -274,6 +344,16 @@ export async function drive(options: DriveOptions): Promise<number> {
       telemetry.steps += 1;
       await renderCurrent();
     }
-    await encoder.finish(); await fs.writeFile(telemetryPath, `${JSON.stringify({ ...telemetry, outputVideo: videoPath }, null, 2)}\n`); emit({ ok: true, ...telemetry, outputVideo: videoPath, telemetry: telemetryPath, mapLoaded: true, worldLoaded: true }, options); return EXIT.ok;
-  } finally { model?.close(); if (native) await native.close().catch(() => undefined); stopChild(encoder?.child); stopChild(modelServer); stopChild(renderer); await fs.rm(temp, { recursive: true, force: true }).catch(() => undefined); }
+    await encoder.finish();
+    await fs.writeFile(telemetryPath, `${JSON.stringify({ ...telemetry, outputVideo: videoPath }, null, 2)}\n`);
+    emit({ ok: true, ...telemetry, outputVideo: videoPath, telemetry: telemetryPath, mapLoaded: true, worldLoaded: true }, options);
+    return EXIT.ok;
+  } finally {
+    model?.close();
+    if (native) await native.close().catch(() => undefined);
+    stopChild(encoder?.child);
+    stopChild(modelServer);
+    stopChild(renderer);
+    await fs.rm(temp, { recursive: true, force: true }).catch(() => undefined);
+  }
 }

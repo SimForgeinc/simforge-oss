@@ -60,38 +60,8 @@ describe("TooltipTrigger", () => {
 });
 
 describe("TooltipContent", () => {
-  it("applies z-50 and overflow-hidden classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  });
 
-  it("applies rounded-md and border classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  });
 
-  it("applies bg-popover and text-popover-foreground classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  });
 
   it("renders tooltip text content", () => {
     const html = renderToString(

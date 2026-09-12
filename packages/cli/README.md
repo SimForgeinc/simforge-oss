@@ -86,6 +86,37 @@ simforge job list
 simforge worker reconcile|capacity
 simforge cas ingest <path> | cas verify <sha256>
 ```
+## Local Alpamayo driving
+
+`drive` runs the pinned local Alpamayo 1.5 policy against the fixed-step
+native simulation and Bevy renderer. Each rendered camera history is sent to
+the model; its trajectory is anchored to the current ego pose and converted
+into a pure-pursuit action before the next simulation step.
+
+```bash
+simforge drive examples/edge-cases/01-construction-chicane-reversing-truck/scenario.instance.json \
+  --map richmond-field-station --policy alpamayo --duration 10 \
+  --camera-profile alpamayo-2cam --quant nf4 \
+  --out run/alpamayo-drive
+```
+
+The command reads native map tiles from
+`$SIMFORGE_MAPS_CACHE_ROOT/.corpus/<map>/3d/tiles` (or the default
+`~/.local/share/simforge/maps/.corpus/...`). Pull the complete map first with
+`simforge maps pull <map>@<version>`; `--native-world` accepts a prepared tile
+directory or master GLB. Build the renderer with
+`cargo build --release --manifest-path renderer/Cargo.toml --bin
+native-render-service`. Alpamayo setup requires the pinned inference checkout
+and model cache; run `adapters/alpamayo/scripts/setup.sh` before using the
+default auto-started model service.
+
+The output directory contains `alpamayo-drive.mp4` with the Bevy camera view,
+predicted-plan inset, reasoning text and deadline status, plus
+`alpamayo-drive.json` with model latency, deadline verdict, pose, cross-track
+error, applied action and renderer/model handshake telemetry. Use
+`--no-start-model` or `--no-start-renderer` when a service is already running.
+Manual and scripted driving paths remain available through the existing
+simulation commands.
 
 The `job`, `worker`, `cas` and `runtime` groups are forwarded verbatim (plus
 `--pretty`/`--root`) to the native runner binary, located through

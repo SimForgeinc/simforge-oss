@@ -40,6 +40,16 @@ export interface SignalBookState {
   readonly signals: readonly SignalSnapshot[];
   readonly overrides: Readonly<Record<string, string>>;
 }
+/** Current actor row exposed to native renderer adapters. */
+export interface SessionActorSnapshot {
+  readonly id: string;
+  readonly kind: string;
+  readonly x: number;
+  readonly y: number;
+  readonly yawRad: number;
+  readonly speedMps: number;
+  readonly present: boolean;
+}
 
 interface RawInfo {
   readonly events: StepInfo['events'];
@@ -72,6 +82,7 @@ export function decodeStepResult(raw: NativeStepResult, bevShape: { height: numb
 export class EnvSession {
   readonly native: NativeEnvSession;
   private readonly row = new Float64Array(ACTION_WIDTH);
+  private lastResult: NativeStepResult | null = null;
 
   constructor(module: NativeModule, engine: EngineRuntime, options: EnvSessionOptions) {
     const scenario = engine.scenario(options.input);
@@ -96,7 +107,9 @@ export class EnvSession {
    * else about the scenario is preserved byte-for-byte. Warm-up is consumed here.
    */
   reset(seed?: number | string): StepResult {
-    return decodeStepResult(guard(() => this.native.reset(seed ?? null)), this.native.bevShape);
+    const raw = guard(() => this.native.reset(seed ?? null));
+    this.lastResult = raw;
+    return decodeStepResult(raw, this.native.bevShape);
   }
 
   /**
@@ -105,7 +118,32 @@ export class EnvSession {
    */
   step(action: EnvAction = {}): StepResult {
     encodeAction(action, this.row);
-    return decodeStepResult(guard(() => this.native.step(this.row)), this.native.bevShape);
+    const raw = guard(() => this.native.step(this.row));
+    this.lastResult = raw;
+    return decodeStepResult(raw, this.native.bevShape);
+  }
+  /** Read-only current world snapshot for renderer adapters. */
+  snapshot(): { tS: number; done: boolean; actors: readonly SessionActorSnapshot[] } | null {
+    if (!this.lastResult) return null;
+    const poses = this.native.actors();
+    const present = this.native.present();
+    const actors = this.native.actorIds.map((id, index) => {
+      const base = index * 8;
+      return {
+        id,
+        kind: this.native.actorKinds[index] ?? "unknown",
+        x: poses[base] ?? 0,
+        y: poses[base + 1] ?? 0,
+        yawRad: poses[base + 2] ?? 0,
+        speedMps: poses[base + 3] ?? 0,
+        present: present[index] === 1,
+      };
+    });
+    return {
+      tS: this.lastResult.tS,
+      done: this.lastResult.terminated || this.lastResult.truncated,
+      actors,
+    };
   }
 
   /** Opaque, portable continuation state of the current decision. */
@@ -113,9 +151,10 @@ export class EnvSession {
     return guard(() => this.native.checkpoint());
   }
 
-  /** Restore a checkpoint; returns the exact `StepResult` that decision produced. */
   restore(checkpoint: Uint8Array): StepResult {
-    return decodeStepResult(guard(() => this.native.restore(checkpoint)), this.native.bevShape);
+    const raw = guard(() => this.native.restore(checkpoint));
+    this.lastResult = raw;
+    return decodeStepResult(raw, this.native.bevShape);
   }
 
   /** Ego pose at the current decision; throws before `reset()`. */
@@ -175,12 +214,6 @@ export class SessionBatch {
     return guard(() => this.native.resetAll(seeds ? [...seeds] : null));
   }
  
-  /** Read-only current world snapshot for renderer adapters. */
-  snapshot(): { tS: number; done: boolean; actors: readonly SessionActorSnapshot[] } | null {
-    if (!this.engineSession) return null;
-    const snap = this.engineSession.peek();
-    return { tS: snap.tS, done: snap.done, actors: snap.actors };
-  }
 
   /** Reset only `worlds`; `seeds[k]` (may be `null`) applies to `worlds[k]`. */
   resetWorlds(worlds: readonly number[], seeds?: readonly (number | string | null)[]) {

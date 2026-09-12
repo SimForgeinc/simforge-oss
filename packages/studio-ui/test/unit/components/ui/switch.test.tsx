@@ -15,21 +15,9 @@ describe("Switch", () => {
     expect(html).toContain("<button");
   });
 
-  it("applies peer class for Tailwind peer selectors", () => {
-    const html = renderToString(<Switch />);
-  });
 
-  it("applies base sizing classes", () => {
-    const html = renderToString(<Switch />);
-  });
 
-  it("applies rounded-full class", () => {
-    const html = renderToString(<Switch />);
-  });
 
-  it("applies disabled styling classes", () => {
-    const html = renderToString(<Switch disabled />);
-  });
 
   it("renders disabled attribute when disabled prop is passed", () => {
     const html = renderToString(<Switch disabled />);
@@ -41,9 +29,6 @@ describe("Switch", () => {
     expect(html).toContain("my-switch");
   });
 
-  it("renders the thumb span inside the root", () => {
-    const html = renderToString(<Switch />);
-  });
 
   it("passes through aria-label attribute", () => {
     const html = renderToString(<Switch aria-label="Toggle notifications" />);
