@@ -174,6 +174,13 @@ export class SessionBatch {
   resetAll(seeds?: readonly (number | string)[]) {
     return guard(() => this.native.resetAll(seeds ? [...seeds] : null));
   }
+ 
+  /** Read-only current world snapshot for renderer adapters. */
+  snapshot(): { tS: number; done: boolean; actors: readonly SessionActorSnapshot[] } | null {
+    if (!this.engineSession) return null;
+    const snap = this.engineSession.peek();
+    return { tS: snap.tS, done: snap.done, actors: snap.actors };
+  }
 
   /** Reset only `worlds`; `seeds[k]` (may be `null`) applies to `worlds[k]`. */
   resetWorlds(worlds: readonly number[], seeds?: readonly (number | string | null)[]) {

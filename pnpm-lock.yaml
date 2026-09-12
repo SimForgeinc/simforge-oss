@@ -118,6 +118,9 @@ importers:
       '@gltf-transform/functions':
         specifier: ^4.4.2
         version: 4.4.2(@types/node@22.20.1)
+      '@msgpack/msgpack':
+        specifier: ^3.1.3
+        version: 3.1.3
       '@simforge-oss/compiler':
         specifier: workspace:*
         version: link:../compiler
@@ -151,6 +154,9 @@ importers:
       '@simforge-oss/studio-host':
         specifier: workspace:*
         version: link:../studio-host
+      '@simforge-oss/training-env':
+        specifier: workspace:*
+        version: link:../training-env
       meshoptimizer:
         specifier: ^1.2.0
         version: 1.2.0

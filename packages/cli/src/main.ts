@@ -63,6 +63,7 @@ import { templateNew, templateValidate } from './commands/template.js';
 import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
+import { drive } from './commands/drive.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
 import { cloudCommand } from './commands/cloud.js';
@@ -95,6 +96,7 @@ const COMMANDS = [
   { name: 'render run', summary: 'execute one immutable render intent with the browser, CARLA, or native engine' },
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
+  { name: 'drive', summary: 'run a local closed-loop driving policy with native Bevy rendering' },
   { name: 'corpus prewarm', summary: 'tile subset a camera route touches (--map --route poses.json [--radius m])' },
   { name: 'job submit|start|run|status|list|cancel|attach|artifacts', summary: 'durable native jobs (simforge.native-job/v1 manifests) in the native runner: compile, simulate, episode batches, renders; argv passes through to simforge-runner' },
   { name: 'worker reconcile|capacity', summary: 'native runner worker maintenance and declared capacity' },
@@ -819,6 +821,32 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       }
       throw new CliError('unknown_command', `simforge render ${sub ?? ''}`.trim(), {
         detail: { known: ['run', 'hash'] },
+      });
+    }
+    case 'drive': {
+      const args = parseArgs(argv.slice(1), {
+        booleans: [...GLOBAL_BOOLEANS, 'no-start-model', 'no-start-renderer'],
+        values: ['policy', 'map', 'duration', 'camera-profile', 'model-socket', 'render-binary', 'native-world', 'quant', 'seed', 'out', 'deadline-ms'],
+      });
+      const policy = optionalString(args, 'policy') ?? 'alpamayo';
+      if (policy !== 'alpamayo') {
+        throw new CliError('bad_value', '--policy must be alpamayo', { path: '--policy' });
+      }
+      return drive({
+        file: positional(args, 0, 'instance.json'),
+        map: optionalString(args, 'map'),
+        duration: optionalNumber(args, 'duration') ?? 10,
+        cameraProfile: optionalString(args, 'camera-profile') ?? 'alpamayo-2cam',
+        modelSocket: optionalString(args, 'model-socket') ?? '/tmp/simforge-alpamayo.sock',
+        renderBinary: optionalString(args, 'render-binary'),
+        nativeWorld: optionalString(args, 'native-world'),
+        quant: optionalString(args, 'quant') ?? 'nf4',
+        seed: Number(optionalString(args, 'seed') ?? '42'),
+        out: optionalString(args, 'out') ?? './run/alpamayo-drive',
+        deadlineMs: optionalNumber(args, 'deadline-ms') ?? 2500,
+        noStartModel: boolFlag(args, 'no-start-model'),
+        noStartRenderer: boolFlag(args, 'no-start-renderer'),
+        pretty: boolFlag(args, 'pretty'),
       });
     }
 

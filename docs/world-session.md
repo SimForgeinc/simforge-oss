@@ -123,3 +123,13 @@ zod-validated at the boundary.
   spawn+despawn works).
 - The world horizon (`horizonSeconds`, default 120 s) fixes the engine clip
   at construction; `done` worlds accept commands but time no longer advances.
+
+## Renderer adapter snapshot
+
+The training environment also exposes a read-only `EnvSession.snapshot()`
+after `reset()`. It returns the current simulation time, completion flag, and
+actor snapshots without advancing the world or mutating policy-visible state.
+Renderer and closed-loop driver adapters may use it to synchronize a frame
+bundle with the just-completed policy step. The policy still receives only the
+configured observation channels; actor snapshots remain an adapter/ground-truth
+surface.
