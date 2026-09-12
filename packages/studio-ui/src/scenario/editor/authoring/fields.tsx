@@ -48,6 +48,7 @@ export function MiniAdd({
     >
       <Plus aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
+  );
 }
 
 /** Icon-only remove button, named after what it removes. */
@@ -68,6 +69,7 @@ export function DeleteButton({
     >
       <Trash2 aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
+  );
 }
 
 /** A labelled text field. `htmlFor`/`id` are generated, never assumed. */

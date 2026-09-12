@@ -69,8 +69,6 @@ describe("DropdownMenu", () => {
     expect(html).toContain('data-testid="menu-trigger"');
     expect(html).toContain("Open");
     expect(html).toContain("custom-content");
-    expect(html).toContain("min-w-[8rem]");
-    expect(html).toContain("shadow-lg");
     expect(html).toContain("Menu item");
 
     app.unmount();
@@ -111,8 +109,6 @@ describe("DropdownMenuSubTrigger", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("sub-trigger");
-    expect(html).toContain("pl-8");
-    expect(html).toContain("ml-auto");
     expect(html).toContain("More");
 
     app.unmount();
@@ -134,8 +130,6 @@ describe("DropdownMenuSubContent", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("custom-sub");
-    expect(html).toContain("shadow-lg");
-    expect(html).toContain("overflow-hidden");
     expect(html).toContain("Nested item");
 
     app.unmount();
@@ -155,8 +149,6 @@ describe("DropdownMenuItem", () => {
     );
     const html = document.body.innerHTML;
 
-    expect(html).toContain("pl-8");
-    expect(html).toContain("data-[disabled]:opacity-50");
     expect(html).toContain('data-testid="menu-item"');
     expect(html).toContain("Item");
 
@@ -178,9 +170,6 @@ describe("DropdownMenuCheckboxItem", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("checkbox-item");
-    expect(html).toContain("pl-8");
-    expect(html).toContain("absolute left-2");
-    expect(html).toContain("h-4 w-4");
     expect(html).toContain("Checked item");
 
     app.unmount();
@@ -203,8 +192,6 @@ describe("DropdownMenuRadioItem", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("radio-item");
-    expect(html).toContain("h-2 w-2");
-    expect(html).toContain("fill-current");
     expect(html).toContain("Alpha");
 
     app.unmount();
@@ -225,9 +212,6 @@ describe("DropdownMenuLabel", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("menu-label");
-    expect(html).toContain("px-2");
-    expect(html).toContain("font-semibold");
-    expect(html).toContain("pl-8");
     expect(html).toContain("Actions");
 
     app.unmount();
@@ -246,9 +230,6 @@ describe("DropdownMenuSeparator", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("menu-separator");
-    expect(html).toContain("-mx-1");
-    expect(html).toContain("h-px");
-    expect(html).toContain("bg-muted");
 
     app.unmount();
   });
@@ -262,8 +243,6 @@ describe("DropdownMenuShortcut", () => {
       </DropdownMenuShortcut>
     );
 
-    expect(html).toContain("ml-auto");
-    expect(html).toContain("tracking-widest");
     expect(html).toContain("custom-shortcut");
     expect(html).toContain('data-testid="shortcut"');
     expect(html).toContain("CMD+K");

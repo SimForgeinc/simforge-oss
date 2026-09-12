@@ -23,6 +23,7 @@ export function CarlaReadyMark({
 }) {
   return (
     <Image
+      data-testid={testId}
       src={CARLA_MARK_SRC}
       alt=""
       aria-hidden="true"

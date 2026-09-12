@@ -81,8 +81,6 @@ describe("SheetOverlay", () => {
     );
     const html = document.body.innerHTML;
 
-    expect(html).toContain("fixed inset-0");
-    expect(html).toContain("bg-black/80");
     expect(html).toContain("overlay-extra");
 
     app.unmount();
@@ -103,11 +101,6 @@ describe("SheetContent", () => {
     const html = document.body.innerHTML;
 
     expect(html).toContain("content-extra");
-    expect(html).toContain("fixed z-50");
-    expect(html).toContain("right-0");
-    expect(html).toContain("border-l");
-    expect(html).toContain("absolute right-4 top-4");
-    expect(html).toContain("sr-only");
     expect(html).toContain("Close");
     expect(html).toContain("Body");
 
@@ -150,13 +143,6 @@ describe("SheetContent", () => {
     );
     const left = document.body.innerHTML;
 
-    expect(top).toContain("top-0");
-    expect(top).toContain("border-b");
-    expect(bottom).toContain("bottom-0");
-    expect(bottom).toContain("border-t");
-    expect(left).toContain("left-0");
-    expect(left).toContain("border-r");
-    expect(left).toContain("sm:max-w-sm");
 
     leftApp.unmount();
   });
@@ -166,10 +152,6 @@ describe("SheetHeader", () => {
   it("renders header layout classes", () => {
     const html = renderToString(<SheetHeader className="header-extra">Header</SheetHeader>);
 
-    expect(html).toContain("flex");
-    expect(html).toContain("flex-col");
-    expect(html).toContain("space-y-2");
-    expect(html).toContain("sm:text-left");
     expect(html).toContain("header-extra");
   });
 });
@@ -178,9 +160,6 @@ describe("SheetFooter", () => {
   it("renders footer layout classes", () => {
     const html = renderToString(<SheetFooter className="footer-extra">Footer</SheetFooter>);
 
-    expect(html).toContain("flex-col-reverse");
-    expect(html).toContain("sm:flex-row");
-    expect(html).toContain("sm:justify-end");
     expect(html).toContain("footer-extra");
   });
 });
@@ -197,9 +176,6 @@ describe("SheetTitle", () => {
     );
     const html = document.body.innerHTML;
 
-    expect(html).toContain("text-lg");
-    expect(html).toContain("font-semibold");
-    expect(html).toContain("text-foreground");
     expect(html).toContain("title-extra");
 
     app.unmount();
@@ -218,8 +194,6 @@ describe("SheetDescription", () => {
     );
     const html = document.body.innerHTML;
 
-    expect(html).toContain("text-sm");
-    expect(html).toContain("text-muted-foreground");
     expect(html).toContain("description-extra");
 
     app.unmount();

@@ -8,6 +8,7 @@ export const styles = stylex.create({
   itemBorder: { marginTop: space.md, border: `1px solid ${colors.border}`, backgroundColor: colors.glass, padding: space.md },
   monoInput: { marginTop: space.xs, height: "2rem", fontFamily: text.fontMono, fontSize: text.sizeMicro },
   stack: { marginTop: space.md, display: "flex", flexDirection: "column", gap: space.md },
+  grid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: space.md },
   fieldWrap: { minWidth: 0 },
   label: { display: "block", color: colors.textMuted },
   input: { marginTop: space.xs, height: "2rem" },

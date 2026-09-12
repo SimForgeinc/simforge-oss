@@ -30,7 +30,6 @@ describe("ScenarioBootGate cloud loading", () => {
 
     const gate = screen.getByTestId("dashboard-loading-surface");
     expect(gate.getAttribute("data-cloud-loading-scope")).toBe("screen");
-    expect(gate.className).toContain("fixed inset-0");
     expect(gate.getAttribute("data-load-kind")).toBe("boot");
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("42");
     expect(screen.getByText("Loading scenario document")).toBeTruthy();

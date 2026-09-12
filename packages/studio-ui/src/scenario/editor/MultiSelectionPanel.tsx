@@ -45,6 +45,7 @@ export function MultiSelectionPanel({
       <span {...stylex.props(styles.count)} data-testid="multi-selection-count">
         {count} selected
       </span>
+      {unanchored.length > 0 ? (
         <Button
           className={stylex.props(styles.button).className}
           data-testid="multi-selection-resnap"

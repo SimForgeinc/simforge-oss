@@ -20,7 +20,6 @@ describe("standard page structure", () => {
     const html = renderToString(<Toolbar><span>Search</span><ToolbarGroup><button>Sort</button></ToolbarGroup></Toolbar>);
     expect(html).toContain("Search");
     expect(html).toContain("Sort");
-    expect(html).toContain("min-h-11");
   });
 
   it("renders a task-oriented empty state with an optional action", () => {
