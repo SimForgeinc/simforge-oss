@@ -82,12 +82,6 @@
       "role": "asset-catalog"
     },
     {
-      "name": "@simforge-oss/asset-packer",
-      "version": "0.1.0-rc.61",
-      "path": "packages/asset-packer",
-      "role": "asset-pack-builder"
-    },
-    {
       "name": "@simforge-oss/render",
       "version": "0.1.0-rc.61",
       "path": "packages/render",
