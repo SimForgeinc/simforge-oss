@@ -134,6 +134,9 @@ function createWindow() {
     minHeight: 640,
     title: PRODUCT.name,
     backgroundColor: "#0b0e14",
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 14, y: 18 } }
+      : {}),
     ...(process.platform === "linux" ? { icon: join(pagesDir, "icon.png") } : {}),
     webPreferences: webPreferences(),
   });
@@ -291,8 +294,12 @@ function updateMenuItem() {
     return {
       label,
       enabled: updater.state !== "checking" && updater.state !== "downloading",
-      // Failures already reach the menu through the updater's error event.
-      click: () => { if (updater.state === "ready") updater.install?.(); else void updater.check?.().catch(() => undefined); },
+      click: () => {
+        if (updater.state === "ready") updater.install?.();
+        else void updater.check?.().catch((error) => {
+          dialog.showErrorBox(PRODUCT.name, error instanceof Error ? error.message : String(error));
+        });
+      },
     };
   }
   return {

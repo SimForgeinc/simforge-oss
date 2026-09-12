@@ -38,7 +38,7 @@ export function AppTopBar() {
   return (
     <>
       <header
-        className="sticky top-0 z-[260] flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-white/15 bg-black/[0.52] shadow-[0_10px_35px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl backdrop-saturate-0 after:pointer-events-none after:absolute after:inset-0 after:shadow-[inset_0_0_34px_rgba(255,255,255,0.07)]"
+        className="app-topbar-native sticky top-0 z-[260] flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-white/15 bg-black/[0.52] shadow-[0_10px_35px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl backdrop-saturate-0 after:pointer-events-none after:absolute after:inset-0 after:shadow-[inset_0_0_34px_rgba(255,255,255,0.07)]"
         data-testid="app-topbar"
       >
         <div

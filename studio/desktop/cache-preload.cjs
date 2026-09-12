@@ -39,6 +39,7 @@ async function call(method, ...args) {
   if (typeof detail.name === "string" && detail.name) failure.name = detail.name;
   throw failure;
 }
+document.documentElement.dataset.simforgePlatform = process.platform;
 
 contextBridge.exposeInMainWorld("simforgeDesktop", {
   version: 1,

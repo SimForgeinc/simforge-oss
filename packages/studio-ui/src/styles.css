@@ -1224,3 +1224,20 @@ html {
     transition: none !important;
   }
 }
+
+/* Electron unified title bar. Native traffic lights occupy this inset on macOS;
+   browser mode has no platform marker and keeps the normal web toolbar. */
+.app-topbar-native {
+  -webkit-app-region: drag;
+}
+
+.app-topbar-native button,
+.app-topbar-native a,
+.app-topbar-native [data-topbar-slot="actions"],
+.app-topbar-native [data-topbar-slot="trailing"] {
+  -webkit-app-region: no-drag;
+}
+
+html[data-simforge-platform="darwin"] .app-topbar-native > div {
+  padding-left: 5.25rem;
+}
