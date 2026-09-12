@@ -22,12 +22,14 @@ describe('authoring runtime warmup', () => {
     const index = {} as LaneIndex;
     const pending = new Promise<LaneIndex>((done) => { resolve = done; });
     const load = vi.spyOn(LaneIndex, 'load').mockReturnValue(pending);
+    const engine = { laneGraph: {} } as Parameters<typeof warmAuthoringRuntime>[1];
 
-    const first = warmAuthoringRuntime(TEST_MAP);
-    const second = warmAuthoringRuntime(TEST_MAP);
+    const first = warmAuthoringRuntime(TEST_MAP, engine);
+    const second = warmAuthoringRuntime(TEST_MAP, engine);
     expect(first).toBe(second);
+    await Promise.resolve();
     expect(load).toHaveBeenCalledOnce();
-    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl);
+    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl, { engine });
     expect(authoringRuntimeReady(TEST_MAP.mapVersionId)).toBe(false);
 
     resolve(index);
