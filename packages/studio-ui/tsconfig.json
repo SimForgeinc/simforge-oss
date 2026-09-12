@@ -6,6 +6,6 @@
     "types": ["node"],
     "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"]
   },
-  "include": ["src"],
+  "include": ["src", "scripts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

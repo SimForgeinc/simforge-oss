@@ -133,6 +133,10 @@
         "types": "./dist/drive/index.d.ts",
         "default": "./dist/drive/index.js"
       },
+      "./drive/audio": {
+        "types": "./dist/drive/audio/index.d.ts",
+        "default": "./dist/drive/audio/index.js"
+      },
       "./drive/telemetry": {
         "types": "./dist/drive/telemetry.d.ts",
         "default": "./dist/drive/telemetry.js"
@@ -533,6 +537,11 @@
       "development": "./src/drive/index.ts",
       "types": "./dist/drive/index.d.ts",
       "default": "./dist/drive/index.js"
+    },
+    "./drive/audio": {
+      "development": "./src/drive/audio/index.ts",
+      "types": "./dist/drive/audio/index.d.ts",
+      "default": "./dist/drive/audio/index.js"
     },
     "./drive/telemetry": {
       "development": "./src/drive/telemetry.ts",
