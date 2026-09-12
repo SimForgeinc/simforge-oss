@@ -10,7 +10,7 @@ import { performance } from 'node:perf_hooks';
 import { decode, encode } from '@msgpack/msgpack';
 import sharp from 'sharp';
 import { loadMap, readInstance } from '@simforge-oss/compiler/node';
-import type { SessionActorSnapshot, SimScenarioInput } from '@simforge-oss/engine';
+import type { SimScenarioInput } from '@simforge-oss/engine';
 import { sessions } from '@simforge-oss/training-env/node';
 import type { EnvAction, StepResult } from '@simforge-oss/training-env';
 import { NativeServiceClient, stripRgbaPadding } from '@simforge-oss/render/native';
@@ -74,6 +74,15 @@ function repositoryRoot(): string {
 }
 type ModelResult = { trajectories: number[][][]; reasoning: string[]; timings?: Record<string, number>; vram?: Record<string, number> };
 type ModelResponse = { ok: boolean; result?: ModelResult; error?: string };
+type SessionActorSnapshot = {
+  readonly id: string;
+  readonly kind: string;
+  readonly x: number;
+  readonly y: number;
+  readonly yawRad: number;
+  readonly speedMps: number;
+  readonly present: boolean;
+};
 type TrajectoryPlanPoint = {
   readonly x: number;
   readonly y: number;
