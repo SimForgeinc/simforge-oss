@@ -65,11 +65,11 @@ export const DASHBOARD_APPS: NavItem[] = [
     match: (p) => p.startsWith("/dashboard/dataset-export"),
   },
   {
-    href: "/dashboard/drive",
+    href: "/drive",
     label: "Drive",
-    description: "Continuous worlds and live driving",
+    description: "Drive a car on an installed map",
     icon: CarFront,
-    match: (p) => p.startsWith("/dashboard/drive"),
+    match: (p) => p.startsWith("/drive"),
   },
 ];
 

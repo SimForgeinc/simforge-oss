@@ -14,12 +14,14 @@ import type {
   LiveWorldWorkerResponse,
 } from '../app/lib/live-world/worker-protocol';
 import {
+  applyDriverCommand,
   applyEgoControl,
   assertControllableActor,
   authoredPlaybackBudget,
   authoredClipCompleted,
   authoredPlaybackRequiresReset,
   createAuthoredWorldSession,
+  heldDriverCommandSupported,
 } from '../app/lib/live-world/authored-world-session';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
@@ -37,6 +39,8 @@ let playing = true;
 let inspecting = false;
 let completed = false;
 let authoredTickHz = 20;
+/** A game session: the world runs past the document's clip and never parks. */
+let endless = false;
 let authoredClockLastWallTimeMs: number | null = null;
 let authoredClockRemainderS = 0;
 let lastAuthoredLagWarningMs = Number.NEGATIVE_INFINITY;
@@ -92,7 +96,7 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
     // A completed authored clip is a healthy, parked world. Keyboard control
     // continues at 20 Hz while Drive is mounted, so ignore it until replay
     // instead of asking a finished WorldSession to accept another act command.
-    if (authoredInput && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))) {
+    if (!endless && authoredInput && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))) {
       completed = true;
       playing = false;
       postTransport();
@@ -123,6 +127,28 @@ scope.onmessage = (event: MessageEvent<LiveWorldWorkerRequest>): void => {
         return;
       }
       fail(new Error(outcome.error ?? 'control failed'));
+    }
+    return;
+  }
+
+  if (message.type === 'driver-command') {
+    // As above: a parked clip is not an error, and the driver's pedals simply
+    // stop being read until the transport replays.
+    if (!endless && authoredInput && (completed || authoredClipCompleted(world.time(), authoredInput.clipSeconds))) {
+      completed = true;
+      playing = false;
+      postTransport();
+      return;
+    }
+    const outcome = applyDriverCommand(world, message.actorId, message.command, commandSequence++);
+    if (!outcome.ok) {
+      if (/not running/i.test(outcome.error ?? '')) {
+        completed = true;
+        playing = false;
+        postTransport();
+        return;
+      }
+      fail(new Error(outcome.error ?? 'driver command failed'));
     }
     return;
   }
@@ -204,7 +230,7 @@ async function initialize(message: Extract<LiveWorldWorkerRequest, { type: 'init
   world = sessions.world({ input, graph, mode: 'live' });
   truth = world.subscribeTruth();
   timer = setInterval(tick, 1000 / message.tickHz);
-  post({ type: 'ready' });
+  post({ type: 'ready', heldDriverCommand: heldDriverCommandSupported(world) });
 }
 
 async function initializeAuthored(
@@ -218,16 +244,18 @@ async function initializeAuthored(
   sessions = await loadSessions();
   authoredGraph = sessions.engine.laneGraph(await fetchTopology(message.laneGraphUrl));
   authoredTickHz = message.tickHz;
+  endless = message.endless === true;
   playing = false;
   inspecting = false;
   completed = false;
-  rebuildAuthoredWorld();
+  const session = rebuildAuthoredWorld();
   timer = setInterval(tick, 1000 / authoredTickHz);
-  post({ type: 'ready' });
+  post({ type: 'ready', heldDriverCommand: heldDriverCommandSupported(session) });
   postTransport();
 }
 
-function rebuildAuthoredWorld(): void {
+/** Builds the authored world afresh and returns it, so callers can use it without a null check. */
+function rebuildAuthoredWorld(): WorldSession {
   if (!sessions || !authoredInput || !authoredGraph) throw new Error('authored world inputs are unavailable');
   truth?.close();
   world = createAuthoredWorldSession(sessions, authoredInput, authoredGraph);
@@ -235,6 +263,7 @@ function rebuildAuthoredWorld(): void {
   commandSequence = 0;
   completed = false;
   resetAuthoredClock();
+  return world;
 }
 
 function applyTransport(message: Extract<LiveWorldWorkerRequest, { type: 'transport' }>): void {
@@ -323,13 +352,16 @@ function tick(): void {
       }
 
       if (budget.ticks > 0) {
+        // An endless session ignores the clip length: the game's world has no
+        // end to park at, and the document's clip is only there because a
+        // scenario must declare one.
         const remainingS = Math.max(0, authoredInput.clipSeconds - world.time());
         const remainingTicks = Math.ceil(remainingS / authoredInput.dt - 1e-9);
-        const ticks = Math.min(budget.ticks, remainingTicks);
+        const ticks = endless ? budget.ticks : Math.min(budget.ticks, remainingTicks);
         if (ticks > 0) world.advance(ticks);
         postTruthFrames(truth.pull(), true);
       }
-      completed = authoredClipCompleted(world.time(), authoredInput.clipSeconds);
+      completed = !endless && authoredClipCompleted(world.time(), authoredInput.clipSeconds);
 
       if (completed) {
         playing = false;

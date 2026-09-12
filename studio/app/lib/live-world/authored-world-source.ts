@@ -14,7 +14,13 @@ import {
   selectAuthoredEgoActor,
 } from './authored-world-session';
 import type { LiveWorldWorkerRequest, LiveWorldWorkerResponse } from './worker-protocol';
-import type { ControlInput, SpawnActorRequest, WorldSource, WorldSourceStatus } from './types';
+import type {
+  ControlInput,
+  DriverCommand,
+  SpawnActorRequest,
+  WorldSource,
+  WorldSourceStatus,
+} from './types';
 
 export interface WorldTransport {
   readonly sessionId: string;
@@ -38,6 +44,17 @@ export interface AuthoredWorldSource extends WorldSource {
   selectEgo(preferredActorId?: string | null): string | null;
   roleIdForActor(actorId: string): string | null;
   setEgo(actorId: string | null): void;
+  /**
+   * Hold the ego's pedals and wheel until the next call; `null` hands the car
+   * back to its scenario controller. Safe to call every rendered frame.
+   */
+  setDriverCommand(command: DriverCommand | null): void;
+  /**
+   * Whether the runtime behind this source holds the command across physics
+   * substeps. False means the per-tick fallback is driving the car, which has
+   * no separate handbrake.
+   */
+  readonly heldDriverCommand: boolean;
 }
 
 const AUTHORED_WORKER_READY_TIMEOUT_MS = 45_000;
@@ -46,6 +63,8 @@ export async function createAuthoredWorldSource(opts: {
   document: EditorDocument;
   map: ScenarioMapEntry;
   tickHz?: number;
+  /** Run the world past the document's clip and never park it. See the worker protocol. */
+  endless?: boolean;
 }): Promise<AuthoredWorldSource> {
   const compiler = new ScenarioWorkerClient();
   let input: SimScenarioInput;
@@ -65,7 +84,13 @@ export async function createAuthoredWorldSource(opts: {
   } finally {
     compiler.dispose();
   }
-  return new AuthoredWorkerWorldSource(input, opts.document, opts.map, opts.tickHz ?? 20);
+  return new AuthoredWorkerWorldSource(
+    input,
+    opts.document,
+    opts.map,
+    opts.tickHz ?? 20,
+    opts.endless === true,
+  );
 }
 
 let nextSessionId = 1;
@@ -86,8 +111,16 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   private transportState: { playing: boolean; inspecting: boolean; completed: boolean; time: number };
   readonly transport: WorldTransport;
   private readyTimeout: ReturnType<typeof setTimeout> | undefined;
+  /** Reported by the worker when it comes up; see the interface. */
+  heldDriverCommand = false;
 
-  constructor(input: SimScenarioInput, document: EditorDocument, map: ScenarioMapEntry, tickHz: number) {
+  constructor(
+    input: SimScenarioInput,
+    document: EditorDocument,
+    map: ScenarioMapEntry,
+    tickHz: number,
+    endless: boolean,
+  ) {
     this.input = input;
     this.roleIdByActorId = matchCompiledActorsToRoles(input, document);
     this.transportState = { playing: false, inspecting: false, completed: false, time: 0 };
@@ -130,6 +163,7 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
       input,
       laneGraphUrl: map.topologyUrl,
       tickHz,
+      endless,
     } satisfies LiveWorldWorkerRequest);
   }
 
@@ -191,6 +225,17 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     } satisfies LiveWorldWorkerRequest);
   }
 
+  setDriverCommand(command: DriverCommand | null): void {
+    if (this.currentStatus !== 'running') return;
+    if (this.currentEgoActorId === null) throw new Error('No authored ego vehicle is selected');
+    if (this.transportState.completed) return;
+    this.worker.postMessage({
+      type: 'driver-command',
+      actorId: this.currentEgoActorId,
+      command,
+    } satisfies LiveWorldWorkerRequest);
+  }
+
   spawn(_request: SpawnActorRequest): Promise<{ actorId: string }> {
     return Promise.reject(new Error('Authored worlds can only contain actors compiled from the editor document'));
   }
@@ -227,6 +272,7 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     if (this.currentStatus === 'closed') return;
     if (message.type === 'ready') {
       clearTimeout(this.readyTimeout);
+      this.heldDriverCommand = message.heldDriverCommand;
       if (this.currentStatus !== 'error') this.setStatus('running', null);
       return;
     }

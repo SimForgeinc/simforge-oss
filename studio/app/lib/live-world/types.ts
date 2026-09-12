@@ -18,6 +18,18 @@ export interface ControlInput {
   reverse?: boolean;
 }
 
+/**
+ * A held driver command: the pedals and wheel of one actor, applied at every
+ * physics substep until it is replaced. The runtime owns the type; re-exported
+ * here because it travels the worker protocol and the UI holds it.
+ *
+ * Distinct from {@link ControlInput}, which is a one-tick actuation of the
+ * remote drive protocol: this one carries a handbrake, and has no `reverse`
+ * flag because the gearbox selects reverse itself from the brake pedal at a
+ * standstill, as an automatic does.
+ */
+export type { DriverCommand } from '@simforge-oss/training-env/browser';
+
 export interface WorldClock {
   mode: 'live' | 'replay';
   timeIso: string | null;

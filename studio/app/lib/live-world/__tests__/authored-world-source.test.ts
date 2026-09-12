@@ -9,7 +9,7 @@ const compilerMocks = vi.hoisted(() => ({
   disposeCount: 0,
 }));
 
-vi.mock('../../scenario/playback/scenarioWorkerClient', () => ({
+vi.mock('@simforge-oss/studio-ui/lib/scenario/playback/scenarioWorkerClient', () => ({
   ScenarioWorkerClient: class {
     async prepare(...args: unknown[]) {
       compilerMocks.prepareArgs = args;
@@ -31,6 +31,8 @@ import type { LiveWorldWorkerRequest, LiveWorldWorkerResponse } from '../worker-
 class FakeWorker {
   static instances: FakeWorker[] = [];
   static respondToInit = true;
+  /** What the worker reports about its runtime when it comes up. */
+  static heldDriverCommand = true;
   readonly sent: LiveWorldWorkerRequest[] = [];
   onmessage: ((event: MessageEvent<LiveWorldWorkerResponse>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
@@ -47,7 +49,7 @@ class FakeWorker {
     if (message.type === 'init-authored') {
       if (!FakeWorker.respondToInit) return;
       this.duration = message.input.clipSeconds;
-      this.emit({ type: 'ready' });
+      this.emit({ type: 'ready', heldDriverCommand: FakeWorker.heldDriverCommand });
       this.emitTransport();
       return;
     }
@@ -96,6 +98,7 @@ class FakeWorker {
 beforeEach(() => {
   FakeWorker.instances = [];
   FakeWorker.respondToInit = true;
+  FakeWorker.heldDriverCommand = true;
   compilerMocks.prepareArgs = null;
   compilerMocks.disposeCount = 0;
   compilerMocks.input = fixtureInput();
@@ -205,19 +208,57 @@ describe('authored world source', () => {
     document.dispose();
   });
 
-  it('fails loudly when the selected actor is absent, non-road, static, or lacks dynamic physics', async () => {
+  it('fails loudly when the selected actor is absent, non-road, or static', async () => {
     const { source, document } = await createFixtureSource();
     expect(() => source.setEgo('missing')).toThrow('unknown authored actor');
     expect(() => source.setEgo('walker')).toThrow('not a controllable road vehicle');
     expect(() => source.setEgo('parked')).toThrow('static and has no controllable dynamics');
-
     source.close();
     document.dispose();
+  });
+
+  it('still drives a document that pinned the removed kinematic backend', async () => {
     compilerMocks.input = fixtureInput({ mode: 'kinematic-v1' });
-    const kinematic = await createFixtureSource();
-    expect(() => kinematic.source.setEgo('ego')).toThrow('does not use dynamic-v1 physics');
-    kinematic.source.close();
-    kinematic.document.dispose();
+    const { source, document } = await createFixtureSource();
+    expect(() => source.setEgo('ego')).not.toThrow();
+    expect(source.egoActorId).toBe('ego');
+    source.close();
+    document.dispose();
+  });
+
+  it('holds and releases the driver command for the designated ego only', async () => {
+    const { source, document, worker } = await createFixtureSource();
+    expect(() => source.setDriverCommand({ throttle: 1, brake: 0, steer: 0, handbrake: false }))
+      .toThrow('No authored ego vehicle is selected');
+
+    source.setEgo('ego');
+    source.setDriverCommand({ throttle: 0.6, brake: 0, steer: -0.25, handbrake: false });
+    source.setDriverCommand(null);
+
+    expect(worker.sent.filter((message) => message.type === 'driver-command')).toEqual([
+      {
+        type: 'driver-command',
+        actorId: 'ego',
+        command: { throttle: 0.6, brake: 0, steer: -0.25, handbrake: false },
+      },
+      { type: 'driver-command', actorId: 'ego', command: null },
+    ]);
+    source.close();
+    document.dispose();
+  });
+
+  it('reports whether the runtime behind the worker holds the command across substeps', async () => {
+    FakeWorker.heldDriverCommand = false;
+    const withoutHold = await createFixtureSource();
+    expect(withoutHold.source.heldDriverCommand).toBe(false);
+    withoutHold.source.close();
+    withoutHold.document.dispose();
+
+    FakeWorker.heldDriverCommand = true;
+    const withHold = await createFixtureSource();
+    expect(withHold.source.heldDriverCommand).toBe(true);
+    withHold.source.close();
+    withHold.document.dispose();
   });
 });
 

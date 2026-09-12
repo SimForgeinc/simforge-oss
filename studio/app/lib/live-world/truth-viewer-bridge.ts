@@ -1,8 +1,6 @@
 import type { TruthFrame } from '@simforge-oss/training-env/browser';
 import {
   ThreeRendererAdapter,
-  actorOrigin,
-  followCameraPose,
   indexedWorldHeightSampler,
   type ActorRenderState,
   type ActorRenderer,
@@ -12,7 +10,14 @@ import {
 export interface TruthViewerBridge {
   readonly actors: ActorRenderer;
   apply(frame: TruthFrame): void;
-  setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
+  /**
+   * The interpolated state this bridge last handed the renderer for one actor.
+   *
+   * A camera that follows a car must use the same pose the car was drawn at, or
+   * it shakes by exactly the interpolation error every frame. Pull-based so the
+   * caller can read it from its own `onFrame` hook without allocating.
+   */
+  rendered(actorId: string): ActorRenderState | null;
   dispose(): void;
 }
 
@@ -28,10 +33,8 @@ export function createTruthViewerBridge(
   let earlier: TruthFrame | null = null;
   let latest: TruthFrame | null = null;
   let elapsedSinceLatest = 0;
-  let followId: string | null = null;
-  let followMode: 'chase' | 'dash' = 'chase';
   let disposed = false;
-  let lastRendered = new Map<string, ActorRenderState>();
+  const lastRendered = new Map<string, ActorRenderState>();
 
   viewer.scene.add(adapter.actors.group);
 
@@ -76,8 +79,8 @@ export function createTruthViewerBridge(
       timeS: latest.timeSec,
       actors,
     });
-    lastRendered = new Map(actors.map((actor) => [actor.id, actor]));
-    if (followId) applyFollow();
+    lastRendered.clear();
+    for (const actor of actors) lastRendered.set(actor.id, actor);
   };
 
   const frameHook = (dt: number): void => {
@@ -85,18 +88,6 @@ export function createTruthViewerBridge(
     render(dt);
   };
   viewer.onFrame = frameHook;
-
-  const applyFollow = (): void => {
-    if (!followId || disposed) return;
-    const actor = lastRendered.get(followId);
-    if (!actor) return;
-    const pose = followCameraPose(actor, followMode, actorOrigin(actor));
-    viewer.controls.applyView({
-      position: pose.position,
-      target: pose.target,
-      fov: viewer.camera.fov,
-    });
-  };
 
   return {
     actors: adapter.actors,
@@ -108,18 +99,12 @@ export function createTruthViewerBridge(
       elapsedSinceLatest = 0;
       render(0);
     },
-    setFollow(actorId, mode = 'chase') {
-      if (disposed) return;
-      followId = actorId;
-      followMode = mode;
-      viewer.controls.setEnabled(actorId === null);
-      if (actorId) applyFollow();
+    rendered(actorId) {
+      return lastRendered.get(actorId) ?? null;
     },
     dispose() {
       if (disposed) return;
       disposed = true;
-      followId = null;
-      viewer.controls.setEnabled(true);
       if (viewer.onFrame === frameHook) viewer.onFrame = previousFrameHook;
       adapter.actors.clearLayer(layer);
       adapter.actors.dispose();

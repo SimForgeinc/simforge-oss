@@ -138,7 +138,7 @@ describe('remote world source', () => {
 });
 
 describe('truth viewer bridge', () => {
-  it('interpolates at render rate, lifts through the ground index, follows, and stops after dispose', () => {
+  it('interpolates at render rate, lifts through the ground index, publishes the drawn pose, and stops after dispose', () => {
     const controls = { applyView: vi.fn(), setEnabled: vi.fn() };
     const viewer = {
       scene: { add: vi.fn() },
@@ -156,17 +156,16 @@ describe('truth viewer bridge', () => {
     expect(actor).toEqual(expect.objectContaining({ x: 5, y: 12, z: 0, headingRad: Math.PI / 4 }));
     expect(viewer.getGroundIndex).toHaveBeenCalled();
 
-    bridge.setFollow('ego', 'dash');
-    expect(viewerMocks.followed.at(-1)?.mode).toBe('dash');
-    expect(controls.applyView).toHaveBeenCalledWith({ position: [1, 2, 3], target: [4, 5, 6], fov: 55 });
-    expect(controls.setEnabled).toHaveBeenLastCalledWith(false);
+    // The camera reads the pose the car was actually drawn at, not the truth
+    // frame: anything else shakes by the interpolation error every frame.
+    expect(bridge.rendered('ego')).toEqual(expect.objectContaining({ x: 5, y: 12, z: 0 }));
+    expect(bridge.rendered('nobody')).toBeNull();
 
     const writes = viewerMocks.batches.length;
     bridge.dispose();
     bridge.apply(frame(3, 0.1, 20));
     viewer.onFrame?.(0.05);
     expect(viewerMocks.batches).toHaveLength(writes);
-    expect(controls.setEnabled).toHaveBeenLastCalledWith(true);
   });
 });
 

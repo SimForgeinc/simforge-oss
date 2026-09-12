@@ -1,12 +1,11 @@
 import {
   isRoadActorKind,
-  resolvePhysicsConfig,
   type LaneGraph,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
-import type { SessionRuntime, WorldSession } from '@simforge-oss/training-env/browser';
+import type { CommandOutcome, SessionRuntime, WorldSession } from '@simforge-oss/training-env/browser';
 
-import type { ControlInput } from './types';
+import type { ControlInput, DriverCommand } from './types';
 
 export function createAuthoredWorldSession(sessions: SessionRuntime, input: SimScenarioInput, graph: LaneGraph): WorldSession {
   return sessions.world({ input, graph, mode: 'live' });
@@ -116,9 +115,8 @@ export function assertControllableActor(input: SimScenarioInput, actorId: string
     throw new Error(`Authored actor ${actorId} (${actor.kind}) is not a controllable road vehicle`);
   }
   if (actor.static) throw new Error(`Authored actor ${actorId} is static and has no controllable dynamics`);
-  if (resolvePhysicsConfig(input).mode !== 'dynamic-v1') {
-    throw new Error(`Authored actor ${actorId} cannot be driven because the world does not use dynamic-v1 physics`);
-  }
+  // No physics-mode check: `dynamic-v1` is the only motion backend, and a
+  // document that pinned the removed `kinematic-v1` migrates on parse.
 }
 
 export function applyEgoControl(
@@ -139,6 +137,52 @@ export function applyEgoControl(
         steer: input.steer,
         throttle: input.throttle,
         brake: input.brake,
+      },
+    },
+  });
+}
+
+/**
+ * Whether the native binding behind a session can hold a driver command.
+ *
+ * The probe is on the *binding*, not on `WorldSession`: the wrapper always
+ * declares `setDriverCommand`, while the wasm build the browser loads only
+ * gained it when it was last rebuilt. Calling into a binding that lacks it
+ * throws, so the fallback has to be chosen before the call, not after.
+ */
+export function heldDriverCommandSupported(world: WorldSession): boolean {
+  const native = world.native as { setDriverCommand?: unknown };
+  return typeof native.setDriverCommand === 'function';
+}
+
+/**
+ * Hold the ego's pedals and wheel, or release them back to the scenario
+ * controller with a `null` command.
+ *
+ * Where the binding has no held-command surface, the same intent goes through
+ * the per-tick `act` command: the handbrake folds into the brake pedal, which
+ * is the closest that command can express. The worker reports which path is in
+ * use so the UI can say so rather than quietly implying a handbrake that does
+ * not exist.
+ */
+export function applyDriverCommand(
+  world: WorldSession,
+  actorId: string,
+  command: DriverCommand | null,
+  sequence: number,
+): CommandOutcome {
+  if (heldDriverCommandSupported(world)) {
+    return world.setDriverCommand('drive-worker', sequence, actorId, command);
+  }
+  return world.applyCommand('drive-worker', sequence, {
+    kind: 'act',
+    actorId,
+    action: {
+      motionDirection: 1,
+      control: {
+        steer: command?.steer ?? 0,
+        throttle: command?.throttle ?? 0,
+        brake: command ? Math.max(command.brake, command.handbrake === true ? 1 : 0) : 0,
       },
     },
   });
