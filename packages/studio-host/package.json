@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio-host",
-  "version": "0.1.0-rc.64",
+  "version": "0.1.0-rc.65",
   "description": "Shared Studio host-service boundary: project persistence, artifact/map access, job submission and progress, and runtime capability contracts consumed by local Studio and SimCloud.",
   "repository": {
     "type": "git",

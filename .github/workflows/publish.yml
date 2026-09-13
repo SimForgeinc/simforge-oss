@@ -38,7 +38,7 @@ jobs:
       - name: Build the render worker artifact
         run: pnpm --filter @simforge-oss/render-worker build
       - name: Install the pinned Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @simforge-oss/render exec playwright-core install --with-deps chromium
       - run: pnpm typecheck
       - run: pnpm test:release
       - run: pnpm test:integration

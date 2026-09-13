@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.stack-config/v1",
-  "stackVersion": "0.1.0-rc.64",
+  "stackVersion": "0.1.0-rc.65",
   "repository": "https://github.com/SimForgeinc/simforge-oss",
   "contracts": {
     "scenarioTemplate": "2",
@@ -17,127 +17,127 @@
   "packages": [
     {
       "name": "@simforge-oss/scenario",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/scenario",
       "role": "scenario-format"
     },
     {
       "name": "@simforge-oss/native-runtime",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/native-runtime",
       "role": "native-runtime"
     },
     {
       "name": "@simforge-oss/engine",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/engine",
       "role": "simulation-engine"
     },
     {
       "name": "@simforge-oss/maps",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/maps",
       "role": "map-pipeline"
     },
     {
       "name": "@simforge-oss/compiler",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/compiler",
       "role": "scenario-compiler"
     },
     {
       "name": "@simforge-oss/viewer",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/viewer",
       "role": "interactive-viewer"
     },
     {
       "name": "@simforge-oss/editor",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/editor",
       "role": "authoring-core"
     },
     {
       "name": "@simforge-oss/playback",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/playback",
       "role": "playback-runtime"
     },
     {
       "name": "@simforge-oss/studio-host",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/studio-host",
       "role": "studio-host-boundary"
     },
     {
       "name": "@simforge-oss/studio-ui",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/studio-ui",
       "role": "studio-product-ui"
     },
     {
       "name": "@simforge-oss/asset-catalog",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/asset-catalog",
       "role": "asset-catalog"
     },
     {
       "name": "@simforge-oss/asset-packer",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/asset-packer",
       "role": "asset-pack-builder"
     },
     {
       "name": "@simforge-oss/render",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/render",
       "role": "render-runtime"
     },
     {
       "name": "@simforge-oss/render-worker",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "services/render-worker",
       "role": "render-worker"
     },
     {
       "name": "@simforge-oss/openscenario",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/openscenario",
       "role": "openscenario-interop"
     },
     {
       "name": "@simforge-oss/training-env",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/training-env",
       "role": "training-environment"
     },
     {
       "name": "@simforge-oss/evaluation",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/evaluation",
       "role": "evaluation-harness"
     },
     {
       "name": "@simforge-oss/cli",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/cli",
       "role": "command-line-interface"
     },
     {
       "name": "@simforge-oss/map-pipeline",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/map-pipeline",
       "role": "map-derivative-pipeline"
     },
     {
       "name": "@simforge-oss/map-registry",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/map-registry",
       "role": "map-registry"
     },
     {
       "name": "@simforge-oss/model-store",
-      "version": "0.1.0-rc.64",
+      "version": "0.1.0-rc.65",
       "path": "packages/model-store",
       "role": "model-store"
     }
@@ -145,42 +145,42 @@
   "pythonPackages": [
     {
       "name": "simforge-oss-gym",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "adapters/gym",
       "role": "python-sdk",
       "registry": "pypi"
     },
     {
       "name": "simforge-oss-physics",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "adapters/physics",
       "role": "articulated-physics-profile",
       "registry": "pypi"
     },
     {
       "name": "simforge-oss-gpu",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "adapters/gpu",
       "role": "gpu-batch-profile",
       "registry": "pypi"
     },
     {
       "name": "simforge-oss-native-renderer",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "renderer/service/python",
       "role": "native-renderer-client",
       "registry": "pypi"
     },
     {
       "name": "simforge-oss-splat",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "renderer/splat/python",
       "role": "nurec-splat-renderer",
       "registry": "pypi"
     },
     {
       "name": "simforge-oss-carla-exec",
-      "version": "0.1.0rc64",
+      "version": "0.1.0rc65",
       "path": "adapters/carla-exec",
       "role": "carla-execution-adapter",
       "registry": "pypi"

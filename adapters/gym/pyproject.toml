@@ -1,6 +1,6 @@
 [project]
 name = "simforge-oss-gym"
-version = "0.1.0rc64"
+version = "0.1.0rc65"
 description = "SimForge Python SDK: Gymnasium environments over the Rust native runtime (PyO3), with explicit GPU-batch, articulated-physics and sensor-tensor profiles"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,15 +22,15 @@ Repository = "https://github.com/SimForgeinc/simforge-oss"
 dev = ["pytest==9.1.1"]
 torch = ["torch>=2.0"]
 # roadway-dynamic-gpu-v1: Warp/CUDA device batch (adapters/gpu).
-gpu = ["simforge-oss-gpu==0.1.0rc64", "warp-lang>=1.17", "torch>=2.0"]
+gpu = ["simforge-oss-gpu==0.1.0rc65", "warp-lang>=1.17", "torch>=2.0"]
 # articulated-mujoco-v1: MuJoCo CPU solver (adapters/physics); add `articulated-warp` for the batched backend.
-articulated = ["simforge-oss-physics==0.1.0rc64"]
-articulated-warp = ["simforge-oss-physics[warp]==0.1.0rc64"]
+articulated = ["simforge-oss-physics==0.1.0rc65"]
+articulated-warp = ["simforge-oss-physics[warp]==0.1.0rc65"]
 # Sensor tensors from the in-process NuRec renderer (renderer/splat/python, CUDA only, source install).
-nurec = ["simforge-oss-splat==0.1.0rc64"]
+nurec = ["simforge-oss-splat==0.1.0rc65"]
 # Resident Bevy sensors in-process: the simforge_native provider (renderer/service/python); libsimforge_render
 # ships in the native runtime bundle. torch only for the device path.
-bevy = ["simforge-oss-native-renderer==0.1.0rc64"]
+bevy = ["simforge-oss-native-renderer==0.1.0rc65"]
 
 [project.scripts]
 simforge-oss-policy-runner = "simforge_oss_gym.tools.policy_runner:main"

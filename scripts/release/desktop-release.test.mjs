@@ -364,7 +364,7 @@ test("stable gates fail closed on every unmeasured or unsigned property", () => 
     signing: { windows: "authenticode", macos: "developer-id-notarized", linux: "unsigned" },
     interactivePlatforms: ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"],
     licenseAudit: { publicRedistribution: "cleared", blockedPlatforms: [] },
-    stack: { stackVersion: "0.1.0-rc.64", tagged: true, published: true, vendorLockRevision: "abc123" },
+    stack: { stackVersion: "0.1.0-rc.65", tagged: true, published: true, vendorLockRevision: "abc123" },
     updateCheckInBuild: true,
   });
   assert.equal(ready.verdict, "pass");
@@ -380,7 +380,7 @@ test("stable gates fail closed on every unmeasured or unsigned property", () => 
     signing: { windows: "authenticode", macos: "developer-id", linux: "unsigned" },
     interactivePlatforms: ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"],
     licenseAudit: { publicRedistribution: "cleared", blockedPlatforms: [] },
-    stack: { stackVersion: "0.1.0-rc.64", tagged: true, published: true, vendorLockRevision: "abc123" },
+    stack: { stackVersion: "0.1.0-rc.65", tagged: true, published: true, vendorLockRevision: "abc123" },
     updateCheckInBuild: true,
   });
   assert.equal(signedNotNotarized.verdict, "fail");

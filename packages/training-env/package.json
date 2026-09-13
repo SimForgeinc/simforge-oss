@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/training-env",
-  "version": "0.1.0-rc.64",
+  "version": "0.1.0-rc.65",
   "description": "Gymnasium-semantics environment façades over the SimForge native runtime: EnvSession (reset/step), SessionBatch, PolicySession, WorldSession with the truth-stream wire, and the versioned causal ground-truth channel.",
   "repository": {
     "type": "git",

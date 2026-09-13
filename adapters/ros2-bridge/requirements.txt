@@ -1,3 +1,3 @@
 # Python runtime of the bridge on top of a sourced ROS 2 Jazzy environment
 # (rclpy, rosbag2_py and the message packages come from apt, see README).
-simforge-oss-gym==0.1.0rc64
+simforge-oss-gym==0.1.0rc65
