@@ -72,6 +72,8 @@ function trace(documentInput = input()): SimTrace {
       frame: 'xodr-local',
       actorIds: ['bus', 'ego'],
       metricSubject: 'ego',
+      // An engine-produced trace: the native sensor-limited ego controller ran it.
+      ego: { controllerProfile: 'sensor-limited' },
       operationalConditions: documentInput.operationalConditions,
       ego: { controllerProfile: 'sensor-limited' },
       // An archived trace recorded under the removed choreography backend:
