@@ -44,6 +44,7 @@ import {
   InteractionRefSchema,
   RoleRefSchema,
 } from './common.js';
+import { ManualDriveRecordingSchema } from './manual-drive.js';
 import { FramePoseSchema, SceneAbsoluteInitialRouteSchema } from './roles.js';
 import { SetValueSchema } from './set-keys.js';
 
@@ -381,6 +382,11 @@ export const RouteTargetSchema = z.discriminatedUnion('mode', [
   z.strictObject({ mode: z.literal('polyline'), points: z.array(FramePoseSchema).min(2).max(32) }),
   // Initial state and timeline routes share the exact same map-bound payloads.
   ...SceneAbsoluteInitialRouteSchema.options,
+  /**
+   * Manual drive: a recorded take owns the actor's pose for the whole clip.
+   * Timeline-only — it is the clip, so it has no initial-state twin.
+   */
+  z.strictObject({ mode: z.literal('manualDrive'), recording: ManualDriveRecordingSchema }),
   /** Drive to a specific pose and stop being routed. */
   z.strictObject({ mode: z.literal('acquire'), pose: FramePoseSchema }),
   /**

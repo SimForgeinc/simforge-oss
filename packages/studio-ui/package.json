@@ -313,6 +313,10 @@
         "types": "./dist/scenario/editor/inspector/editor-overlay-selection.d.ts",
         "default": "./dist/scenario/editor/inspector/editor-overlay-selection.js"
       },
+      "./scenario/editor/manual-drive/take-handoff": {
+        "types": "./dist/scenario/editor/manual-drive/take-handoff.d.ts",
+        "default": "./dist/scenario/editor/manual-drive/take-handoff.js"
+      },
       "./scenario/editor/regions/ActorLibraryRail": {
         "types": "./dist/scenario/editor/regions/ActorLibraryRail.d.ts",
         "default": "./dist/scenario/editor/regions/ActorLibraryRail.js"
@@ -778,6 +782,11 @@
       "development": "./src/scenario/editor/inspector/editor-overlay-selection.tsx",
       "types": "./dist/scenario/editor/inspector/editor-overlay-selection.d.ts",
       "default": "./dist/scenario/editor/inspector/editor-overlay-selection.js"
+    },
+    "./scenario/editor/manual-drive/take-handoff": {
+      "development": "./src/scenario/editor/manual-drive/take-handoff.ts",
+      "types": "./dist/scenario/editor/manual-drive/take-handoff.d.ts",
+      "default": "./dist/scenario/editor/manual-drive/take-handoff.js"
     },
     "./scenario/editor/regions/ActorLibraryRail": {
       "development": "./src/scenario/editor/regions/ActorLibraryRail.tsx",

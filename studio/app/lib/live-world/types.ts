@@ -61,6 +61,12 @@ export interface WorldSource {
   readonly lastError: string | null;
   readonly replay?: WorldReplayCapabilities | null;
   subscribeFrames(fn: (frame: TruthFrame) => void): () => void;
+  /**
+   * Authoritative restarts: the world was rebuilt at t = 0 and the next frames
+   * begin again from tick 0. Delivered in order with the frames, before the
+   * first frame of the new generation. Sources that never rebuild omit it.
+   */
+  subscribeResets?(fn: (generation: number) => void): () => void;
   subscribeStatus(fn: (status: WorldSourceStatus, error: string | null) => void): () => void;
   subscribeReplay?(fn: (capabilities: WorldReplayCapabilities | null, error: string | null) => void): () => void;
   /**

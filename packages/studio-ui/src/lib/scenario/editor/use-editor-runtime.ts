@@ -95,7 +95,8 @@ export function useEditorRuntime({
   simulationPreview,
   onDocumentChange,
 }: {
-  record: ScenarioDocumentDto | null;
+  /** The document to open; only its identity and content are read. Null opens a blank document. */
+  record: Pick<ScenarioDocumentDto, "id" | "content"> | null;
   map: ScenarioMapEntry;
   viewer: CityViewer | null;
   /** False while a shared viewer is still loading the document's target map. */

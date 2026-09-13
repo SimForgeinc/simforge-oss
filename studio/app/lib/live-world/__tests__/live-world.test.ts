@@ -195,8 +195,13 @@ describe('truth viewer bridge', () => {
     expect(bridge.rendered('ego')).toBeNull();
     expect(viewerMocks.batches.at(-1)!.actors.map((actor) => actor.id)).toEqual(['ego-2']);
 
-    // Even without the explicit reset — a transport reset, say — a tick that
-    // walks backwards is a new run, not a stale frame to drop.
+    // A tick that walks backwards without an authoritative reset is a stale
+    // frame, not a new run: the worker announces every rebuild (`world-reset`)
+    // before the new generation's frames, so the bridge never has to guess.
+    bridge.apply(frame(1, 0, 5, 'ego-3'));
+    expect(bridge.rendered('ego-3')).toBeNull();
+    expect(bridge.rendered('ego-2')).toEqual(expect.objectContaining({ x: 70 }));
+    bridge.reset();
     bridge.apply(frame(1, 0, 5, 'ego-3'));
     expect(bridge.rendered('ego-3')).toEqual(expect.objectContaining({ x: 5 }));
     expect(bridge.rendered('ego-2')).toBeNull();

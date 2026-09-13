@@ -327,6 +327,9 @@ pub struct ActorState {
     pub best_effort_world_path: bool,
     pub remaining_turns: Vec<TurnRelation>,
     pub speed_mps: f64,
+    /// Required: a checkpoint from an engine without it is rejected by the
+    /// `engine_version` guard before this struct is decoded.
+    pub longitudinal_velocity_mps: f64,
     pub accel_mps2: f64,
     pub lateral_offset_m: f64,
     pub lateral_reference_offset_m: f64,
@@ -420,6 +423,7 @@ impl Simulation {
                 best_effort_world_path: a.best_effort_world_path,
                 remaining_turns: a.remaining_turns.clone(),
                 speed_mps: a.speed_mps,
+                longitudinal_velocity_mps: a.longitudinal_velocity_mps,
                 accel_mps2: a.accel_mps2,
                 lateral_offset_m: a.lateral_offset_m,
                 lateral_reference_offset_m: a.lateral_reference_offset_m,
@@ -609,6 +613,7 @@ impl Simulation {
             a.best_effort_world_path = state.best_effort_world_path;
             a.remaining_turns = state.remaining_turns.clone();
             a.speed_mps = state.speed_mps;
+            a.longitudinal_velocity_mps = state.longitudinal_velocity_mps;
             a.accel_mps2 = state.accel_mps2;
             a.lateral_offset_m = state.lateral_offset_m;
             a.lateral_reference_offset_m = state.lateral_reference_offset_m;

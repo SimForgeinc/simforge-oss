@@ -133,6 +133,7 @@ export function ScenarioTimelineDock({
   onSelectInteraction,
   onClearSelection,
   onSelectSignal,
+  onStartManualDrive,
   readOnly = false,
   experience = "advanced",
 }: {
@@ -148,6 +149,8 @@ export function ScenarioTimelineDock({
   onSelectInteraction?: (interactionId: string, actorId: string) => void;
   onClearSelection?: () => void;
   onSelectSignal?: (headId: string) => void;
+  /** Opens the take recorder for an actor; returns a message when it cannot. */
+  onStartManualDrive?: (actorId: string) => string | null;
   readOnly?: boolean;
   experience?: EditorExperience;
 }) {
@@ -348,6 +351,7 @@ export function ScenarioTimelineDock({
         onSelectInteraction={onSelectInteraction}
         onClearSelection={onClearSelection}
         onSelectSignal={onSelectSignal}
+        onStartManualDrive={onStartManualDrive}
         disableInteractionCreation={experience === "simple"}
         lockSimpleTimedRoutes={experience === "simple"}
         readOnly={readOnly}

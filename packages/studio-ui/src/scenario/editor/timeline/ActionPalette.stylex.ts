@@ -81,6 +81,13 @@ export const styles = stylex.create({
   mt3: {
     marginTop: space.lg,
   },
+  // mt-2 text-micro leading-4 text-amber-200
+  refusal: {
+    marginTop: space.md,
+    fontSize: text.sizeMicro,
+    lineHeight: "1rem",
+    color: "rgb(253 230 138 / 1)",
+  },
   // mt-2 max-h-36 overflow-y-auto
   scrollY: {
     marginTop: space.md,

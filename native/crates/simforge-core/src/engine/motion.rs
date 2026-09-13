@@ -10,11 +10,12 @@ use crate::error::{SimIssue, SimIssueCode};
 use crate::map::LaneId;
 use crate::math::{angle_delta, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
-    BodyIndex, MotionBackend, MotionIntent, WorldContactRef,
+    BodyIndex, MotionBackend, MotionDirection, MotionIntent, VehicleMotionState, WorldContactRef,
     WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
 };
 use crate::trace::metrics::StaticShape;
 use crate::trace::{AbortReason, ActorFrame, PhysicsFrame, ReleasedReason, SignalFrame, SimEvent};
+use crate::types::SetValue;
 
 use super::actor::{
     ActorIndex, ActorRuntime, AxisId, LateralKind, LongitudinalKind, PendingRetarget,
@@ -25,7 +26,10 @@ use super::controllers::{
     ConflictHazard, Leader,
 };
 use super::cornering::{cornering_plan, CornerSpeedInput, CorneringPlan};
-use super::gear::{govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS};
+use super::gear::{
+    gear_of_motion_direction, govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS,
+    MOTION_GEAR_ENGAGED_KEY, MOTION_GEAR_KEY,
+};
 use super::signals::{AuthorityKind, ControlSlot};
 use super::spatial::{candidate_pairs, point_cell, SpatialBounds};
 use super::surface::SurfaceQuery;
@@ -36,19 +40,15 @@ use super::world::{
     DYNAMIC_LATERAL_SETTLE_RATE_MPS, FREEFORM_LANE_REBIND_M, LOOKAHEAD_M, REACTIVE_GRID_CELL_M,
     REACTIVE_MAX_RANGE_M2, REACTIVE_SCAN_RADIUS_M, ROUTE_END_SLACK_M,
 };
-use crate::solve::guards::timed_route_speed_envelope_mps;
 use crate::trace::pairs::along_route_gap_m;
-
-/// How hard a timed-route body chases its authored station, in `1/s`: a
-/// one-metre lag asks for this much extra speed. Deliberately gentle — the
-/// authored schedule is a target, and overdriving it would make a drawn
-/// route oscillate instead of flow.
-const TIMED_STATION_GAIN_PER_S: f64 = 0.6;
 
 /// One actor's planned next state.
 #[derive(Debug, Clone, Default)]
 pub(super) struct Plan {
     pub speed: f64,
+    /// Actual signed velocity along the body yaw; `None` = `speed` signed by
+    /// the engaged gear (kinematic paths), `Some` = the physics backend's own.
+    pub longitudinal_velocity: Option<f64>,
     pub accel: f64,
     pub route_s: f64,
     pub lateral_offset: f64,
@@ -73,6 +73,7 @@ impl Plan {
     fn hold(a: &ActorRuntime) -> Plan {
         Plan {
             speed: a.speed_mps,
+            longitudinal_velocity: None,
             accel: 0.0,
             route_s: a.route_s,
             lateral_offset: a.lateral_offset_m,
@@ -472,10 +473,7 @@ impl Simulation {
         if !a.is_live() {
             return Ok(plan);
         }
-        // Static actors and props have no plant: the motion backend refuses
-        // to register them, so there is nothing to integrate and they hold
-        // the pose they were placed at. Every other actor is a body.
-        if a.is_static || a.body.is_none() {
+        if a.is_static {
             plan.speed = 0.0;
             plan.lateral_rate = 0.0;
             plan.lateral_accel = 0.0;
@@ -516,6 +514,7 @@ impl Simulation {
                 } else {
                     st.longitudinal_velocity_mps.abs()
                 };
+                plan.longitudinal_velocity = Some(st.longitudinal_velocity_mps);
                 plan.accel = st.longitudinal_acceleration_mps2 * a.direction_sign();
                 plan.position = Vec2 { x: st.x, y: st.y };
                 plan.heading = st.yaw_rad;
@@ -529,32 +528,63 @@ impl Simulation {
             return Ok(plan);
         }
 
-        // A freehand timed route is a speed profile over an authored path,
-        // not a choreography: `a.route` already *is* the drawn polyline, so
-        // the path tracker steers along it while the keyframes say how fast
-        // the body should be at each moment. The body gets to its waypoints
-        // by driving there under tyre and drivetrain limits. A station error
-        // against the authored schedule is corrected through the speed
-        // target, which is the only channel a force-based body has.
-        let mut schedule_active = false;
-        if let Some(timed) = &a.timed_route {
-            let end = timed.end_time_s();
-            schedule_active = timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9);
-            if schedule_active {
-                let sample_at = (t + dt).min(self.input.clip_seconds);
-                let sample = timed.sample(sample_at, a.heading_rad);
-                let scheduled_s = a.route.project_point(sample.position).s;
-                let station_error = scheduled_s - a.route_s;
-                let target = (sample.speed_mps + TIMED_STATION_GAIN_PER_S * station_error)
-                    .clamp(0.0, timed_route_speed_envelope_mps(a.kind));
-                let a = &mut self.actors[index.index()];
-                a.cruise_override_mps = Some(target);
-                a.cruise_speed_mps = target;
+        // Exact-time trajectory owns motion until its last keyframe. A staged
+        // caller override is a human at the wheel: it takes the body back from
+        // the track for the rest of the run (a re-take of a recorded drive must
+        // not be steered by the previous take), so the track releases below.
+        if action.is_none() {
+            if let Some(timed) = &a.timed_route {
+                let end = timed.end_time_s();
+                if timed.len() == 1 || end.map_or(false, |e| t + dt <= e + 1e-9) {
+                    let sample_at = (t + dt).min(self.input.clip_seconds);
+                    let sample = timed.sample(sample_at, a.heading_rad);
+                    let recorded = timed.is_recorded();
+                    let projected = a.route.project_point(sample.position);
+                    plan.position = sample.position;
+                    plan.heading = normalize_angle(sample.heading_rad);
+                    plan.speed = sample.speed_mps.abs();
+                    plan.longitudinal_velocity = Some(if recorded {
+                        sample.speed_mps
+                    } else {
+                        plan.speed * a.direction_sign()
+                    });
+                    plan.accel = (plan.speed - a.speed_mps) / dt;
+                    plan.route_s = projected.s;
+                    plan.lateral_offset = a.route.lateral_offset_at(projected.s, sample.position);
+                    plan.lateral_rate = 0.0;
+                    plan.lateral_accel = 0.0;
+                    plan.lateral_reference_offset = plan.lateral_offset;
+                    plan.lateral_reference_rate = 0.0;
+                    plan.lateral_reference_accel = 0.0;
+                    if recorded {
+                        // The take's signed speed is the gear: engage it directly
+                        // so the body's velocity sign and `motion.gear*` keys
+                        // report what was recorded, without the at-rest gate a
+                        // requested gear change normally waits for.
+                        let direction = if sample.speed_mps < 0.0 {
+                            MotionDirection::Reverse
+                        } else if sample.speed_mps > 0.0 {
+                            MotionDirection::Forward
+                        } else {
+                            a.motion_direction
+                        };
+                        let a = &mut self.actors[index.index()];
+                        if direction != a.motion_direction {
+                            a.motion_direction = direction;
+                            a.pending_motion_direction = None;
+                            let gear = gear_of_motion_direction(direction);
+                            a.set_state_key_str(MOTION_GEAR_KEY, SetValue::Text(gear.to_owned()));
+                            a.set_state_key_str(
+                                MOTION_GEAR_ENGAGED_KEY,
+                                SetValue::Text(gear.to_owned()),
+                            );
+                        }
+                    }
+                    return Ok(plan);
+                }
             }
         }
-        // The schedule has run out: release the body onto a freeform runway
-        // and let it brake. Only once — the route is taken here.
-        if !schedule_active && self.actors[index.index()].timed_route.is_some() {
+        if self.actors[index.index()].timed_route.is_some() {
             // Hand-off to physics-controlled braking, not an implicit cruise.
             let a = &mut self.actors[index.index()];
             let released = a
@@ -788,8 +818,17 @@ impl Simulation {
         plan.lateral_reference_rate = lat.rate;
         plan.lateral_reference_accel = lat.accel;
         plan.lateral_complete = lat.complete;
-        {
-            let body = a.body.expect("every planned actor is a body");
+        let dynamic = a.body.is_some();
+        if !dynamic {
+            if let Some(cmd) = &a.lat_cmd {
+                if cmd.kind == LateralKind::ChangeLane && lat.complete && !cmd.done {
+                    plan.swap = cmd.pending.clone();
+                }
+            }
+        }
+
+        if dynamic {
+            let body = a.body.expect("body");
             let short_lookahead = match &dynamic_profile {
                 Some(p) => (p.wheelbase_m * 0.85).max(a.speed_mps.abs() * 0.25),
                 None => 5.0f64.max(a.speed_mps.abs() * 0.8),
@@ -877,6 +916,7 @@ impl Simulation {
                 // Never publish the first off-corridor integration for
                 // generated traffic; hold the last valid pose and retire.
                 plan.speed = 0.0;
+                plan.longitudinal_velocity = None;
                 plan.accel = -a.speed_mps / dt;
                 plan.route_s = a.route_s;
                 plan.lateral_offset = a.lateral_offset_m;
@@ -901,6 +941,7 @@ impl Simulation {
                 return Ok(plan);
             }
             plan.speed = st.longitudinal_velocity_mps.abs();
+            plan.longitudinal_velocity = Some(st.longitudinal_velocity_mps);
             plan.accel = st.longitudinal_acceleration_mps2 * a.direction_sign();
             plan.route_s = projected.s;
             plan.lateral_offset = projected_offset;
@@ -942,6 +983,7 @@ impl Simulation {
             // terminal pose; only exist(absent) despawns.
             plan.accel = -a.speed_mps / dt;
             plan.speed = 0.0;
+            plan.longitudinal_velocity = None;
             plan.lateral_rate = 0.0;
             plan.lateral_accel = 0.0;
             plan.retire = true;
@@ -953,6 +995,17 @@ impl Simulation {
             );
         }
 
+        if !dynamic {
+            plan.lateral_offset = plan.lateral_reference_offset;
+            plan.lateral_rate = plan.lateral_reference_rate;
+            plan.lateral_accel = plan.lateral_reference_accel;
+            let pose = a.route.pose_at(plan.route_s);
+            plan.position = a.route.point_with_offset(plan.route_s, plan.lateral_offset);
+            plan.heading = normalize_angle(
+                heading_with_slip(pose.heading_rad, plan.lateral_rate, plan.speed)
+                    + if a.is_reverse() { PI } else { 0.0 },
+            );
+        }
         self.finish_plan_scratch(index, nearby, caches, cache);
         Ok(plan)
     }
@@ -981,6 +1034,9 @@ impl Simulation {
             {
                 let a = &mut self.actors[index];
                 a.speed_mps = plan.speed;
+                a.longitudinal_velocity_mps = plan
+                    .longitudinal_velocity
+                    .unwrap_or(plan.speed * a.direction_sign());
                 a.accel_mps2 = plan.accel;
                 a.route_s = plan.route_s;
                 a.lateral_offset_m = plan.lateral_offset;
@@ -991,6 +1047,30 @@ impl Simulation {
                 a.lateral_reference_accel_mps2 = plan.lateral_reference_accel;
                 a.position = plan.position;
                 a.heading_rad = plan.heading;
+                if a.timed_route.is_some() && a.crash.is_none() {
+                    if let Some(body) = a.body {
+                        let backend = &mut self.physics;
+                        let current = backend.state(body);
+                        let sign = a.direction_sign();
+                        backend
+                            .set_state(
+                                body,
+                                VehicleMotionState {
+                                    x: plan.position.x,
+                                    y: plan.position.y,
+                                    yaw_rad: plan.heading,
+                                    longitudinal_velocity_mps: plan.speed * sign,
+                                    lateral_velocity_mps: 0.0,
+                                    yaw_rate_radps: 0.0,
+                                    steer_rad: current.map_or(0.0, |c| c.steer_rad),
+                                    wheel_angular_speed_radps: current
+                                        .map_or(0.0, |c| c.wheel_angular_speed_radps),
+                                    longitudinal_acceleration_mps2: plan.accel * sign,
+                                },
+                            )
+                            .map_err(engine_err)?;
+                    }
+                }
                 if t >= 0.0 {
                     a.required_decel_max = a.required_decel_max.max(plan.required_decel);
                 }
@@ -1226,8 +1306,7 @@ impl Simulation {
             let Some(&(_, before)) = speed_before.iter().find(|e| e.0 == actor) else {
                 continue;
             };
-            let Some(st) = self.physics.state(a.body.expect("body"))
-            else {
+            let Some(st) = self.physics.state(a.body.expect("body")) else {
                 continue;
             };
             let after = hypot(st.longitudinal_velocity_mps, st.lateral_velocity_mps);

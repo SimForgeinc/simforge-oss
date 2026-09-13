@@ -158,12 +158,12 @@ describe('authored world source', () => {
     }
 
     expect(worker.sent.filter((message) => message.type === 'set-ego')).toEqual([
-      { type: 'set-ego', actorId: 'ego' },
-      { type: 'set-ego', actorId: null },
-      { type: 'set-ego', actorId: 'ego' },
-      { type: 'set-ego', actorId: null },
-      { type: 'set-ego', actorId: 'ego' },
-      { type: 'set-ego', actorId: null },
+      { type: 'set-ego', actorId: 'ego', mode: 'take' },
+      { type: 'set-ego', actorId: null, mode: 'take' },
+      { type: 'set-ego', actorId: 'ego', mode: 'take' },
+      { type: 'set-ego', actorId: null, mode: 'take' },
+      { type: 'set-ego', actorId: 'ego', mode: 'take' },
+      { type: 'set-ego', actorId: null, mode: 'take' },
     ]);
     expect(worker.sent.filter((message) => message.type === 'control')).toEqual(
       Array.from({ length: 3 }, () => ({

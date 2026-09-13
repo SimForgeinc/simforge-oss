@@ -34,8 +34,8 @@ pub use route::{
     RouteResult, RouteSnapshot,
 };
 pub use timed::{
-    SegmentPeak, TimedKeyframe, TimedKinematics, TimedRoute, TimedRouteExtrema, TimedSample,
-    TIMED_ROUTE_RELEASE_RUNWAY_M,
+    RecordedPose, SegmentPeak, TimedKeyframe, TimedKinematics, TimedRoute, TimedRouteExtrema,
+    TimedSample, TIMED_ROUTE_RELEASE_RUNWAY_M,
 };
 pub use topology::{
     LaneRsl, LaneSide, TopologyAdjacentLane, TopologyAdjacentLanes, TopologyGate, TopologyIndex,

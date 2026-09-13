@@ -5,13 +5,15 @@ import { Vector3 } from "three";
 import { toast } from "sonner";
 import * as stylex from "@stylexjs/stylex";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
-import type { EditorDocument, LaneIndex, ScenarioMapEntry } from "@simforge-oss/editor";
+import { EditorDocument, type LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
+import type { ManualDriveRecording } from "@simforge-oss/scenario";
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
 import type { CityViewer, CityViewerOptions } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
+import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
+import type { ManualDriveTakeSession } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
 import { AUTHORING_QUALITY } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
-import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import {
   DriveCameraRig,
   DriveHud,
@@ -46,7 +48,9 @@ import { route } from "./drive-route.stylex";
 import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
-/** The world advances at this rate; the renderer interpolates between its frames. */
+import { DrivingControls } from "./DrivingControls";
+import { ManualDriveTakeReview } from "./ManualDriveTake";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 const WORLD_TICK_HZ = 20;
 /** Orbit drag sensitivity, radians per pixel. */
 const ORBIT_DRAG_RAD_PER_PX = 0.006;
@@ -74,6 +78,7 @@ export function DriveSession({
   color,
   vehicleLabel,
   quality,
+  take = null,
   onChangeCar,
   onExit,
 }: {
@@ -83,10 +88,10 @@ export function DriveSession({
   color: string;
   vehicleLabel: string;
   quality: ScenarioAuthoringQuality;
+  take?: ManualDriveTakeSession | null;
   onChangeCar: () => void;
   onExit: () => void;
 }) {
-  const lanes = useMemo(() => drivingLanes(laneIndex), [laneIndex]);
   const [spawn, setSpawn] = useState<DriveSpawn | null>(null);
   const [spawnError, setSpawnError] = useState<string | null>(null);
   const [document, setDocument] = useState<EditorDocument | null>(null);
@@ -96,6 +101,10 @@ export function DriveSession({
   const [bridge, setBridge] = useState<TruthViewerBridge | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
+  const [takePhase, setTakePhase] = useState<
+    { kind: "idle" } | { kind: "recording" } | { kind: "review"; recording: ManualDriveRecording } | { kind: "saving" }
+  >({ kind: "idle" });
+  const [takeError, setTakeError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [units, setUnits] = useState<SpeedUnits>("kmh");
   const [debug, setDebug] = useState(false);
@@ -103,8 +112,8 @@ export function DriveSession({
   const [volume, setVolume] = useState(0.8);
   const [trafficEnabled, setTrafficEnabled] = useState(false);
   const [cameraKind, setCameraKind] = useState<DriveCameraKind>("chase");
+  const lanes = useMemo(() => drivingLanes(laneIndex), [laneIndex]);
   const [gamepadConnected, setGamepadConnected] = useState(false);
-
   const hudRef = useRef<DriveHudHandle | null>(null);
   const inputRef = useRef<DriveInput | null>(null);
   const rigRef = useRef(new DriveCameraRig());
@@ -140,27 +149,38 @@ export function DriveSession({
   // a running session but a fresh one. Everything else (viewer, map, camera
   // rig) is kept, which is what makes a respawn feel instant.
   useEffect(() => {
-    if (!spawn) return;
     let disposed = false;
     let created: { document: EditorDocument; source: AuthoredWorldSource } | null = null;
-    void createDriveScenario({ map, catalogId, color, spawn })
-      .then(async (scenario) => {
-        const nextSource = await createAuthoredWorldSource({
-          document: scenario.document,
-          map,
-          tickHz: WORLD_TICK_HZ,
-          endless: true,
-        });
-        if (disposed) {
-          nextSource.close();
-          scenario.document.dispose();
-          return;
-        }
-        created = { document: scenario.document, source: nextSource };
-        setDocument(scenario.document);
-        setRoleId(scenario.roleId);
-        setSource(nextSource);
-      })
+    if (!spawn) return;
+    const open = async (): Promise<{ document: EditorDocument; source: AuthoredWorldSource; roleId: string }> => {
+      if (take) {
+        const nextDocument = await EditorDocument.openBlank(map);
+        nextDocument.importTemplate(take.content);
+        return {
+          document: nextDocument,
+          source: await createAuthoredWorldSource({ document: nextDocument, map, tickHz: WORLD_TICK_HZ }),
+          roleId: take.actorRoleId,
+        };
+      }
+      const scenario = await createDriveScenario({ map, catalogId, color, spawn });
+      return {
+        document: scenario.document,
+        source: await createAuthoredWorldSource({ document: scenario.document, map, tickHz: WORLD_TICK_HZ, endless: true }),
+        roleId: scenario.roleId,
+      };
+    };
+    void open().then((scenario) => {
+      const nextSource = scenario.source;
+      if (disposed) {
+        nextSource.close();
+        scenario.document.dispose();
+        return;
+      }
+      created = { document: scenario.document, source: nextSource };
+      setDocument(scenario.document);
+      setRoleId(scenario.roleId);
+      setSource(nextSource);
+    })
       .catch((error: unknown) => {
         if (disposed) return;
         setSpawnError(errorMessage(error));
@@ -175,56 +195,68 @@ export function DriveSession({
       created?.source.close();
       created?.document.dispose();
     };
-  }, [catalogId, color, map, spawn]);
+  }, [catalogId, color, map, spawn, take]);
 
-  // Taking the car: the compiled world names actors itself, so the document's
   // role id has to be resolved through the source before it can be driven.
   useEffect(() => {
-    // `world.status` drives the retry; the source itself says whether the
-    // session this render is holding is the one that is actually running.
     if (!source || !roleId || source.status !== "running") return;
     try {
       const actorId = source.selectEgo(roleId);
       if (!actorId) throw new Error("The session scenario produced no drivable vehicle");
-      source.setEgo(actorId);
+      source.setEgo(actorId, take ? "take" : "free");
       setEgoActorId(actorId);
-      rigRef.current.reset();
       spawnedAtRef.current = performance.now();
-      source.transport.play();
-      if (!source.heldDriverCommand) {
-        toast.warning("Runtime without a held driver command", {
-          description:
-            "This build applies the pedals once per world tick instead of every physics substep, and has no separate handbrake: the handbrake key brakes hard.",
-          duration: 10000,
-        });
+      if (take) {
+        setTakePhase({ kind: "recording" });
+        source.beginTake();
+      } else {
+        source.transport.play();
       }
     } catch (error) {
       setSpawnError(errorMessage(error));
     }
-  }, [roleId, source, world.status]);
-
-  useEffect(() => {
-    if (!source?.subscribeWarnings) return;
-    return source.subscribeWarnings((message) => {
-      toast.warning("Drive world notice", { description: message, duration: 8000 });
-    });
-  }, [source]);
-
+  }, [roleId, source, take, world.status]);
   useEffect(() => {
     if (!source) return;
     latestFrameRef.current = null;
-    // A respawn hands the same bridge a different world, whose ticks count
-    // from zero and whose car is a different actor: without this the bridge
-    // would keep drawing the session that just closed.
     bridge?.reset();
+    // The worker announces every rebuild (transport reset, seek backwards,
+    // take start) before the new generation's frames; the bridge only accepts
+    // a tick that walks backwards after that authoritative reset.
+    const unsubscribeResets = source.subscribeResets?.(() => {
+      latestFrameRef.current = null;
+      bridge?.reset();
+    });
     // The loop reads frames from a ref: publishing them as React state at 20 Hz
     // would rebuild the loop's closure twenty times a second.
-    return source.subscribeFrames((frame) => {
+    const unsubscribeFrames = source.subscribeFrames((frame) => {
       latestFrameRef.current = frame;
       bridge?.apply(frame);
     });
+    return () => {
+      unsubscribeResets?.();
+      unsubscribeFrames();
+    };
   }, [bridge, source]);
 
+  useEffect(() => {
+    if (!bridge) return;
+    bridge.setFollow(egoActorId, take ? "dash" : "chase");
+  }, [bridge, egoActorId, take]);
+  // A take's outcome arrives once through the source: a sealed recording goes
+  // to review; a failure leaves the take retryable with its reason on screen.
+  useEffect(() => {
+    if (!source || !take) return;
+    return source.subscribeTakes((event) => {
+      if (event.kind === "complete") {
+        setTakeError(null);
+        setTakePhase({ kind: "review", recording: event.recording });
+      } else {
+        setTakeError(event.message);
+        setTakePhase({ kind: "idle" });
+      }
+    });
+  }, [source, take]);
   useEffect(() => () => bridge?.dispose(), [bridge]);
 
   const onViewerReady = useCallback((ready: CityViewer) => {
@@ -377,12 +409,30 @@ export function DriveSession({
     inputRef.current?.setEnabled(!paused);
     if (!source || !egoActorId || source.status !== "running") return;
     if (paused) {
-      source.setDriverCommand(null);
+      source.control({ actorId: egoActorId, steer: 0, throttle: 0, brake: 1 });
       source.transport.stop();
     } else {
       source.transport.play();
     }
   }, [egoActorId, paused, source, world.status]);
+
+  useEffect(() => {
+    if (!take || !source || takePhase.kind !== "recording") return;
+    const pause = () => {
+      if (source.transport.playing) source.transport.stop();
+    };
+    const resume = () => {
+      if (globalThis.document.visibilityState === "visible") source.transport.play();
+    };
+    window.addEventListener("blur", pause);
+    window.addEventListener("pagehide", pause);
+    window.addEventListener("focus", resume);
+    return () => {
+      window.removeEventListener("blur", pause);
+      window.removeEventListener("pagehide", pause);
+      window.removeEventListener("focus", resume);
+    };
+  }, [source, take, takePhase.kind]);
 
   /** Orbit view drag and zoom. The other views are fixed to the car. */
   useEffect(() => {
@@ -446,7 +496,8 @@ export function DriveSession({
         // substep, so pushing it once per rendered frame is the whole of
         // driving: the gearbox picks reverse off the brake pedal at a
         // standstill by itself, exactly as an automatic does.
-        source.setDriverCommand(input.sample(dtS));
+        const command = input.sample(dtS);
+        source.control({ actorId: egoActorId, steer: command.steer, throttle: command.throttle, brake: command.brake });
       }
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
@@ -514,9 +565,27 @@ export function DriveSession({
     if (actorIsPresent(world.latestFrame, egoActorId)) return;
     setSpawnError("The player vehicle left the world. Respawning is the way back.");
   }, [egoActorId, world.latestFrame]);
+  const reviewedTake = takePhase.kind === "review" ? takePhase.recording : null;
+  const saveTake = useCallback(async () => {
+    if (!take || !reviewedTake) return;
+    setTakePhase({ kind: "saving" });
+    try {
+      await take.onSave(reviewedTake, take.revision);
+    } catch (error) {
+      setTakeError(errorMessage(error));
+      setTakePhase({ kind: "review", recording: reviewedTake });
+    }
+  }, [reviewedTake, take]);
+  const retryTake = useCallback(() => {
+    if (!source || !take) return;
+    setTakeError(null);
+    setTakePhase({ kind: "recording" });
+    source.beginTake();
+  }, [source, take]);
 
   const status = spawnError
     ?? (world.status === "error" ? world.error : null)
+    ?? (takePhase.kind === "idle" && takeError ? `Take failed: ${takeError}` : null)
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
@@ -554,13 +623,28 @@ export function DriveSession({
         units={units}
         vehicleLabel={vehicleLabel}
       />
+      <DrivingControls source={takePhase.kind === "review" || takePhase.kind === "saving" ? null : source} actorId={takePhase.kind === "review" || takePhase.kind === "saving" ? null : egoActorId} />
+      {reviewedTake ? (
+        <ManualDriveTakeReview
+          recording={reviewedTake}
+          error={takeError}
+          onDiscard={() => {
+            if (take) take.onCancel();
+          }}
+          onRetry={retryTake}
+          onSave={() => void saveTake()}
+        />
+      ) : null}
       {status ? (
         <div
           {...stylex.props(driveChrome.panelStatus, route.status)}
           data-testid="drive-status"
-          role={spawnError ? "alert" : "status"}
+          role={spawnError || takeError ? "alert" : "status"}
         >
           {status}
+          {takePhase.kind === "idle" && takeError ? (
+            <Button type="button" variant="outline" onClick={retryTake} data-testid="drive-take-retry">Retry</Button>
+          ) : null}
         </div>
       ) : null}
       {paused ? (

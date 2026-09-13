@@ -465,6 +465,6 @@ export interface WorldSnapshot {
   kinds: Array<string>
   laneRsls: Array<string | undefined | null>
   present: Uint8Array
-  /** `(N, 5)` rows `[x, z, headingRad, speedMps, s]` in the scene frame. */
+  /** `(N, 6)` rows `[x, z, headingRad, speedMps, s, longitudinalSpeedMps]` in the scene frame. */
   pose: Float64Array
 }

@@ -3,12 +3,45 @@ import {
   type LaneGraph,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
-import type { CommandOutcome, SessionRuntime, WorldSession } from '@simforge-oss/training-env/browser';
+import {
+  MANUAL_DRIVE_RECORDING_VERSION,
+  validateManualDriveRecording,
+  type ManualDriveRecording,
+  type ManualDriveSample,
+} from '@simforge-oss/scenario';
+import type { CommandOutcome, SessionRuntime, TruthFrame, WorldSession } from '@simforge-oss/training-env/browser';
 
 import type { ControlInput, DriverCommand } from './types';
 
 export function createAuthoredWorldSession(sessions: SessionRuntime, input: SimScenarioInput, graph: LaneGraph): WorldSession {
   return sessions.world({ input, graph, mode: 'live' });
+}
+
+/**
+ * How a designated ego owns the authored world.
+ *
+ * `take` keeps the authored clip boundary: the world parks at the document's
+ * own `clipSeconds`, so a recorded drive is exactly one clip long. `free`
+ * lets the ego keep driving the live native world past that boundary; the
+ * engine itself is unbounded in live mode, only the transport enforces it.
+ */
+export type AuthoredDriveMode = 'free' | 'take';
+
+export function authoredWorldUnbounded(egoActorId: string | null, mode: AuthoredDriveMode): boolean {
+  return egoActorId !== null && mode === 'free';
+}
+
+/** Fixed steps the transport may take this interval; the clip boundary binds only for a bounded world. */
+export function authoredAdvanceTicks(
+  budgetTicks: number,
+  timeS: number,
+  clipSeconds: number,
+  dt: number,
+  unbounded: boolean,
+): number {
+  if (unbounded) return Math.max(0, budgetTicks);
+  const remainingS = Math.max(0, clipSeconds - timeS);
+  return Math.max(0, Math.min(budgetTicks, Math.ceil(remainingS / dt - 1e-9)));
 }
 export interface AuthoredPlaybackBudget {
   readonly ticks: number;
@@ -83,7 +116,9 @@ function routeRunwayScore(actor: SimScenarioInput['actors'][number]): number {
     const stationM = actor.initial.laneRef?.s ?? 0;
     return route.lanes.length * 1_000_000 - stationM;
   }
+  // Time-parameterised routes score by how long they keep the actor moving.
   if (route.kind === 'timedPolyline') return route.points.at(-1)?.timeS ?? 0;
+  if (route.kind === 'recordedTrack') return route.samples.at(-1)?.timeS ?? 0;
   let distanceM = 0;
   for (let index = 1; index < route.points.length; index += 1) {
     const previous = route.points[index - 1]!;
@@ -186,4 +221,126 @@ export function applyDriverCommand(
       },
     },
   });
+}
+
+/**
+ * Take manual ownership of the ego before its next tick: a zero-order-held
+ * neutral control (no throttle, no brake, no steer). The engine then drives
+ * the body from its current physical state under human input only — it
+ * coasts rather than following its authored or recorded route until the
+ * first key. Must run on designation and after every rebuild of an owned
+ * world, before the first advance.
+ */
+export function holdEgoNeutral(world: WorldSession, actorId: string, sequence: number) {
+  return world.applyCommand('drive-worker', sequence, {
+    kind: 'act',
+    actorId,
+    action: { motionDirection: 1, control: { steer: 0, throttle: 0, brake: 0 } },
+  });
+}
+
+/** Release manual ownership: clear the held override so the engine resumes the actor's own behaviour. */
+export function releaseEgo(world: WorldSession, actorId: string, sequence: number) {
+  return world.applyCommand('drive-worker', sequence, { kind: 'act', actorId, action: null });
+}
+
+/* ------------------------------------------------------------- takes */
+
+/**
+ * The recording is the scenario schema's own `manualDrive` take: one sample
+ * per engine tick on the authoritative simulation clock from `t = 0` through
+ * the clip end inclusive, scene y-up metres and radians, `speedMps` signed.
+ * Nothing is decimated or synthesised from input.
+ */
+export type { ManualDriveRecording, ManualDriveSample } from '@simforge-oss/scenario';
+
+/**
+ * The take's first sample. The native truth stream publishes a frame after
+ * each tick, so the initial state at t = 0 comes from the world snapshot,
+ * which carries the same scene xz / heading / signed speed the frames do
+ * (the native frame has no height channel: `position[1]` is 0, matched here).
+ */
+export function initialTakeSample(world: WorldSession, egoActorId: string): ManualDriveSample {
+  const snapshot = world.snapshot();
+  const ego = snapshot.actors.find((actor) => actor.id === egoActorId);
+  if (!ego || !ego.present) throw new Error(`Take aborted: ego ${egoActorId} is not present at t=${snapshot.tS.toFixed(3)} s`);
+  return {
+    timeS: snapshot.tS,
+    x: ego.x,
+    y: 0,
+    z: ego.z,
+    headingRad: ego.headingRad,
+    speedMps: ego.longitudinalSpeedMps,
+  };
+}
+
+/**
+ * Signed longitudinal speed: the frame's scene-frame velocity projected on
+ * the body's forward axis (`+x = cos yaw`, `+z = -sin yaw`). Negative means
+ * the body is actually travelling backwards; no input is consulted.
+ */
+export function longitudinalSpeedMps(velocity: readonly [number, number, number], yawRad: number): number {
+  return velocity[0] * Math.cos(yawRad) - velocity[2] * Math.sin(yawRad);
+}
+
+/**
+ * Append the ego's state from every truth frame. Frames are the native
+ * session's own per-tick scene-state (already y-up scene frame), so this is
+ * a projection, not a conversion. A frame without the ego present means the
+ * take can no longer be an honest recording; it fails rather than gaps.
+ */
+export function appendTakeSamples(
+  samples: ManualDriveSample[],
+  frames: readonly TruthFrame[],
+  egoActorId: string,
+): void {
+  for (const frame of frames) {
+    const ego = frame.scene.actors.find((actor) => actor.id === egoActorId);
+    if (!ego || ego.kind === 'despawn') {
+      throw new Error(`Take aborted: ego ${egoActorId} is not present at t=${frame.timeSec.toFixed(3)} s`);
+    }
+    const last = samples[samples.length - 1];
+    if (last && frame.timeSec <= last.timeS + 1e-9) continue;
+    samples.push({
+      timeS: frame.timeSec,
+      x: ego.position[0],
+      y: ego.position[1],
+      z: ego.position[2],
+      headingRad: ego.yawRad,
+      speedMps: longitudinalSpeedMps(ego.velocity, ego.yawRad),
+    });
+  }
+}
+
+/**
+ * Seal a take: every tick of the clip must be present and the result must
+ * pass the schema's own structural rule, or the take is not a recording.
+ */
+export function finishTakeRecording(
+  samples: readonly ManualDriveSample[],
+  clipSeconds: number,
+  dt: number,
+): ManualDriveRecording {
+  const expected = Math.round(clipSeconds / dt) + 1;
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  if (!first || !last || Math.abs(first.timeS) > 1e-9 || !authoredClipCompleted(last.timeS, clipSeconds)) {
+    throw new Error(
+      `Take is incomplete: samples span ${first?.timeS ?? 'none'}..${last?.timeS ?? 'none'} s of a ${clipSeconds} s clip`,
+    );
+  }
+  if (samples.length !== expected) {
+    throw new Error(`Take is incomplete: ${samples.length} samples captured, ${expected} engine ticks expected`);
+  }
+  // The last frame may sit a floating-point rounding error past the clip end;
+  // pin it to the clip only within that tolerance. Anything larger is a real gap.
+  const recording: ManualDriveRecording = {
+    version: MANUAL_DRIVE_RECORDING_VERSION,
+    clipSeconds,
+    samples: samples.map((sample, index) =>
+      index === samples.length - 1 && Math.abs(sample.timeS - clipSeconds) <= 1e-6 ? { ...sample, timeS: clipSeconds } : sample),
+  };
+  const verdict = validateManualDriveRecording(recording, clipSeconds);
+  if (!verdict.ok) throw new Error(`Take is not a valid recording (${verdict.path}): ${verdict.message}`);
+  return recording;
 }

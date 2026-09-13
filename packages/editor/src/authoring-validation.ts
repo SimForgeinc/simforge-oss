@@ -1,4 +1,5 @@
 import type { Interaction } from '@simforge-oss/scenario';
+import { isManualDrive } from './manual-drive';
 
 export const SIMPLE_MODE_SUPPRESSED_ENGINE_ISSUE_CODES = [
   'traffic_control_route_unbound',
@@ -58,6 +59,30 @@ export function emptyTimedRouteIssues(
       title: 'Custom timed route has no points',
       detail: `${actorName}'s custom timed route needs at least one point before it can be previewed.`,
       solution: 'Open the route, add its first point on the map, then run the preview again.',
+    });
+  }
+  return issues;
+}
+
+/**
+ * Find manual drives whose take was recorded against a different clip length.
+ * The scenario cannot honestly replay a take over a clip it does not cover.
+ */
+export function manualDriveIssues(
+  interactions: readonly Interaction[],
+  clipSeconds: number,
+  actorNames?: Readonly<Record<string, string>>,
+): EditorAuthoringValidationIssue[] {
+  const issues: EditorAuthoringValidationIssue[] = [];
+  for (const interaction of interactions) {
+    if (!isManualDrive(interaction) || Math.abs(interaction.target.recording.clipSeconds - clipSeconds) <= 1e-6) continue;
+    const actorName = actorNames?.[interaction.actor] ?? interaction.actor;
+    issues.push({
+      id: `manual-drive-clip-mismatch:${interaction.id}`,
+      severity: 'error',
+      title: 'Manual drive recorded for a different clip length',
+      detail: `${actorName}'s drive was recorded for ${interaction.target.recording.clipSeconds}s but the clip is now ${clipSeconds}s.`,
+      solution: 'Record the drive again, or restore the clip length it was recorded for.',
     });
   }
   return issues;

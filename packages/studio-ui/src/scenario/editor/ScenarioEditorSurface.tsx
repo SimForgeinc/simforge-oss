@@ -69,7 +69,10 @@ import { SceneLoadingTransition } from "../scene/SceneLoadingTransition";
 import { EditorHeader } from "./regions/EditorHeader";
 import { EditorModeBanner } from "./regions/EditorModeBanner";
 import { PlacementCursorHint } from "./regions/PlacementCursorHint";
-import { NotificationDockSlot, TutorialOverlaySlot } from "./regions/slots";
+import {
+  NotificationDockSlot,
+  TutorialOverlaySlot,
+} from "./regions/slots";
 import { ScenarioEditorShell } from "./shell";
 import { ScenarioTimelineDock } from "./ScenarioTimelineDock";
 import {
@@ -101,6 +104,8 @@ import { usePlaybackControllerState } from "../../lib/scenario/playback/usePlayb
 import { useMapSignalOverlays } from "../../lib/scenario/useMapSignalOverlays";
 import { useScenarioNotification } from "./status";
 import { configureCustomRouteAtClipStart } from "./custom-route-configuration";
+import { ManualDriveReviewPanel } from "./manual-drive/ManualDriveReviewPanel";
+import { useManualDriveRecorder } from "./manual-drive/use-manual-drive-recorder";
 import { EditorSceneEnvironmentBridge } from "./EditorSceneEnvironmentBridge";
 import {
   collectSimulationIssues,
@@ -137,8 +142,6 @@ import {
   routePointMayBeTooFast,
   shouldShowRoutePointWarning,
 } from "./route-authoring-warnings";
-import * as stylex from "@stylexjs/stylex";
-import { styles } from "./ScenarioEditorSurface.stylex";
 
 export function stopAndResetTimelinePlayback(input: {
   controller: { pause: () => void; seek: (time: number) => void } | null;
@@ -828,6 +831,7 @@ export function ScenarioEditorSurface({
           ]),
         ),
         interactions: editorDocument?.data.choreography.interactions,
+        clipSeconds: editorDocument?.data.choreography.clipSeconds,
         carlaCompatibilityTable,
         // Readiness text has to name actors the way the timeline and viewport
         // label them ("Fire truck 1"), not by catalog id: an author matching a
@@ -895,6 +899,21 @@ export function ScenarioEditorSurface({
     setTransportError(result.configured ? null : "Custom route could not be configured at this timestamp.");
   }, [controller, editorDocument, sharedPlayback, setTransportError, viewer]);
 
+  const manualDriveActorLabel = useCallback(
+    (actorId: string) =>
+      editorDocument
+        ? timelineActorLabels(editorDocument.data.roles).get(actorId) ?? actorId
+        : actorId,
+    [editorDocument],
+  );
+  const manualDrive = useManualDriveRecorder({
+    document: editorDocument,
+    documentId: record?.id ?? null,
+    datasetId,
+    map,
+    actorLabel: manualDriveActorLabel,
+  });
+
   return (
     <EditorConfigurationBlockProvider blocked={Boolean(sharedPlayback?.inspecting)}>
       <EditorOverlayProvider
@@ -927,13 +946,17 @@ export function ScenarioEditorSurface({
         />
       ) : null}
       <ScenarioEditorShell
-        xstyle={[styles.inkTall, externalWorld ? styles.inert : styles.live, externalWorld ? styles.bgTransparent : styles.bgBackground]}
+        className={cn(
+          "h-full min-h-editor-shell text-foreground",
+          externalWorld ? "pointer-events-none" : "pointer-events-auto",
+          externalWorld ? "bg-transparent" : "bg-background",
+        )}
         canvasMode={externalWorld ? "passthrough" : "interactive"}
         data-external-world={String(externalWorld)}
         data-testid="scenario-editor-surface"
         header={null}
         leftSidebar={sharedPlayback?.inspecting ? null : (slotProps) => (
-          <div {...slotProps} className={cn(stylex.props(styles.flexTall).className, slotProps.className)}>
+          <div {...slotProps} className={cn(slotProps.className, "flex h-full")}>
             <ActorLibraryRail
               controller={controller}
               state={state}
@@ -961,7 +984,7 @@ export function ScenarioEditorSurface({
                   sumoAvailable={Boolean(map.sumoNetworkSha256)}
                 />
               ) : (
-                <div {...stylex.props(styles.gridCenteredXs)}>
+                <div className="grid h-32 place-items-center text-xs text-muted-foreground">
                   <CloudActivityIndicator label="Loading traffic configuration…" />
                 </div>
               )}
@@ -977,7 +1000,7 @@ export function ScenarioEditorSurface({
           return (
             <div
               {...canvasSlotProps}
-              className={cn(stylex.props(styles.flex).className, canvasSlotProps.className)}
+              className={cn(canvasSlotProps.className, "flex")}
               data-external-world={String(externalWorld)}
             >
               <EditorCanvasRegion
@@ -1002,14 +1025,14 @@ export function ScenarioEditorSurface({
               canvas={externalWorld ? (viewer?.renderer.domElement ?? null) : null}
             />
           ) : state?.mode && state.mode !== "idle" ? (
-            <div {...stylex.props(styles.live)}>
+            <div className="pointer-events-auto">
               <EditorModeBanner state={state} controller={controller} />
             </div>
           ) : state ? (
-            <div {...stylex.props(styles.flexColCenter)}>
+            <div className="pointer-events-none flex flex-col items-center gap-2">
               {clipboardNotice ? (
                 <p
-                  {...stylex.props(styles.xsWhiteBordered)}
+                  className="pointer-events-none rounded-md border border-border/70 bg-black/85 px-3 py-1 text-xs text-white shadow-lg backdrop-blur-md"
                   data-testid="clipboard-notice"
                   role="status"
                 >
@@ -1022,27 +1045,27 @@ export function ScenarioEditorSurface({
         }
         floatingOverlay={environmentSceneReady && editorDocument ? (
           <div
-            {...stylex.props(styles.absFlexMid)}
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4"
             data-left-panel-open={String(expandedTool !== null)}
             data-testid="floating-timeline-layer"
           >
             {/* 920px is the previous 736px widened by a quarter: the clips need the
                 horizontal room more than the viewport needs the margin, and the
                 name column can now be traded against the track by dragging. */}
-            <div {...stylex.props(styles.relLiveWide)}>
+            <div className="pointer-events-auto relative h-auto max-h-[min(65vh,520px)] w-full max-w-[920px] min-w-0">
               {/* Absolutely positioned rather than stacked above the card: the
                   timeline's height is constrained and user-draggable, and a
                   flow sibling would take height from the track. Escape is bound
                   only while playback is inspecting (V1TimelineRail), so the hint
                   appears exactly when the key does something. */}
               {sharedPlayback?.inspecting ? (
-                <p {...stylex.props(styles.absXsWhite)}>
+                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-xs text-white">
                   Press Escape to exit simulation
                 </p>
               ) : null}
               <div
                 aria-hidden="true"
-                {...stylex.props(styles.absInertRound)}
+                className="pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl"
               />
               <EditorTimelineOverlayBridge
                 document={editorDocument}
@@ -1057,6 +1080,7 @@ export function ScenarioEditorSurface({
                 onFrameActor={frameActorAtPlayhead}
                 onFrameSignal={frameSignalHead}
                 onConfigureCustomRoute={configureCustomRoute}
+                onStartManualDrive={manualDrive.startTake}
               />
             </div>
           </div>
@@ -1177,18 +1201,18 @@ function RoutePointSpeedWarningOverlay({
         return (
           <div
             aria-live="polite"
-            {...stylex.props(styles.fixedInert)}
+            className="pointer-events-none fixed z-[90] max-w-56 -translate-x-1/2 -translate-y-full pb-3"
             data-point-warning-id={warning.id}
             data-testid="route-point-speed-warning"
             key={warning.id}
             role="status"
             style={{ left: position.x, top: position.y }}
           >
-            <div {...stylex.props(styles.relMediumBordered)}>
+            <div className="relative border border-amber-300/80 bg-black/90 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md">
               {warning.message}
               <span
                 aria-hidden="true"
-                {...stylex.props(styles.absRuleBRuleR)}
+                className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-amber-300/80 bg-black"
               />
             </div>
           </div>
@@ -1263,6 +1287,7 @@ function EditorTimelineOverlayBridge({
   onFrameActor,
   onFrameSignal,
   onConfigureCustomRoute,
+  onStartManualDrive,
 }: {
   document: EditorDocument;
   state: EditorState | null;
@@ -1276,6 +1301,7 @@ function EditorTimelineOverlayBridge({
   onFrameActor: (actorId: string) => void;
   onFrameSignal: (headId: string) => void;
   onConfigureCustomRoute: (interactionId: string) => void;
+  onStartManualDrive: (actorId: string) => string | null;
 }) {
   const { selection, actions } = useEditorOverlay();
   const [tutorialRouteInteractionId, setTutorialRouteInteractionId] = useState<string | null>(null);
@@ -1537,6 +1563,7 @@ function EditorTimelineOverlayBridge({
       }}
       onClearSelection={actions.clear}
       onSelectSignal={takeSignalControl}
+      onStartManualDrive={onStartManualDrive}
       readOnly={false}
       />
     </>

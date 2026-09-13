@@ -18,17 +18,25 @@ use crate::error::{BindingError, Result};
 /// Flat rows of a world snapshot, in snapshot actor order.
 pub struct WorldSnapshotView {
     snapshot: WorldSnapshot,
-    /// `(N, 5)`: `[x, z, heading_rad, speed_mps, s]` scene frame.
+    /// `(N, 6)`: `[x, z, heading_rad, speed_mps, s, longitudinal_speed_mps]`
+    /// scene frame; the last column is signed by the engaged gear.
     pose: Vec<f64>,
     present: Vec<bool>,
 }
 
 impl WorldSnapshotView {
     fn new(snapshot: WorldSnapshot) -> Self {
-        let mut pose = Vec::with_capacity(snapshot.actors.len() * 5);
+        let mut pose = Vec::with_capacity(snapshot.actors.len() * 6);
         let mut present = Vec::with_capacity(snapshot.actors.len());
         for a in &snapshot.actors {
-            pose.extend_from_slice(&[a.x, a.z, a.heading_rad, a.speed_mps, a.s]);
+            pose.extend_from_slice(&[
+                a.x,
+                a.z,
+                a.heading_rad,
+                a.speed_mps,
+                a.s,
+                a.longitudinal_speed_mps,
+            ]);
             present.push(a.present);
         }
         Self {

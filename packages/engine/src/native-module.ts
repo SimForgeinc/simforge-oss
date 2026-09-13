@@ -233,7 +233,7 @@ export interface NativeWorldSnapshot {
   readonly kinds: string[];
   readonly laneRsls: (string | null | undefined)[];
   readonly present: Uint8Array;
-  /** `(N, 5)` rows `[x, z, headingRad, speedMps, s]` in the scene frame. */
+  /** `(N, 6)` rows `[x, z, headingRad, speedMps, s, longitudinalSpeedMps]` in the scene frame; the last column is signed by the engaged gear. */
   readonly pose: Float64Array;
 }
 
