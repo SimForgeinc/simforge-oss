@@ -686,6 +686,199 @@ export function sensorRigPreset(id: string): SensorRigPreset | undefined {
   return BUILT_IN_SENSOR_RIGS_BY_ID[id];
 }
 
+/**
+ * Which rig a model REQUIRES, and the input properties that must survive
+ * from the editor through the render into the evaluation manifest.
+ *
+ * This is a mapping onto the presets above, not a second catalog: the
+ * geometry lives in `ALPAMAYO_CAMERA_TEMPLATES` and is referenced by rig id
+ * here. Duplicating intrinsics or extrinsics into a model table is exactly
+ * how a rig ends up "calibrated" in one file and not in another.
+ *
+ * `cameraIds` is the model's POSITIONAL camera order. These models carry no
+ * camera-identity channel, so order is contract, not presentation.
+ *
+ * Honest limits recorded per entry rather than implied:
+ * - `datasetCalibrated: false` everywhere. These are authored approximations
+ *   fitted to the published rig description; none is the calibrated dataset
+ *   camera, whose extrinsics live inside a gated archive.
+ * - `variableCameras` marks a family that legitimately accepts other sets.
+ *   A1 and A2 do not: a different set is a refusal, not a degraded mode.
+ */
+export interface ModelRigRequirement {
+  readonly family: string;
+  readonly rigId: string;
+  /** Positional camera order the model consumes. */
+  readonly cameraIds: readonly number[];
+  /** Render size the model's preprocessing expects. */
+  readonly renderWidth: number;
+  readonly renderHeight: number;
+  /** Frames per camera, and the cadence they must be sampled at. */
+  readonly framesPerCamera: number;
+  readonly cadenceHz: number;
+  /** Ego-history steps at `cadenceHz`, oldest first, t0 last. */
+  readonly historySteps: number;
+  /** Ego history and predicted waypoints are in this frame. */
+  readonly coordinateFrame: 'ego-flu-x-forward';
+  readonly variableCameras: boolean;
+  /**
+   * Other rig ids this family is officially documented to serve. Present so
+   * a UI can OFFER them; `rigId` is the recommended default, not a
+   * restriction. Empty for families whose contract fixes one set.
+   */
+  readonly alsoSupportedRigIds: readonly string[];
+  /** Authored approximation, never the calibrated dataset rig. */
+  readonly datasetCalibrated: false;
+}
+
+const ALPAMAYO_INPUT_COMMON = {
+  renderWidth: ALPAMAYO_RENDER_WIDTH,
+  renderHeight: ALPAMAYO_RENDER_HEIGHT,
+  framesPerCamera: 4,
+  cadenceHz: 10,
+  historySteps: 16,
+  coordinateFrame: 'ego-flu-x-forward',
+  datasetCalibrated: false,
+} as const;
+
+export const MODEL_RIG_REQUIREMENTS: readonly ModelRigRequirement[] = Object.freeze([
+  {
+    family: 'alpamayo-1',
+    rigId: 'alpamayo-4cam',
+    cameraIds: [0, 1, 2, 6],
+    variableCameras: false,
+    // Fixed by contract: another set is a refusal, not a degraded mode.
+    alsoSupportedRigIds: [],
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+  {
+    // Variable by contract: it runs on other sets, and the default is the
+    // dataset-default four. A UI may offer the others; it must not silently
+    // substitute one.
+    family: 'alpamayo-1.5',
+    rigId: 'alpamayo-4cam',
+    cameraIds: [0, 1, 2, 6],
+    variableCameras: true,
+    // RECOMMENDED, not required. This family officially serves other camera
+    // subsets and both were measured here: 8,707 MiB peak at the 2-camera
+    // rig, 9,265 at the 4-camera one. A UI should offer these and must not
+    // present the recommendation as the only legal choice.
+    alsoSupportedRigIds: ['alpamayo-2cam', 'alpamayo-6cam'],
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+  {
+    family: 'alpamayo-2-super',
+    rigId: 'alpamayo-6cam',
+    cameraIds: [0, 1, 2, 3, 5, 6],
+    variableCameras: false,
+    // Its text/VQA tasks use a different documented set, which is why the
+    // vqa rig exists as a preset rather than as a variant of this entry.
+    alsoSupportedRigIds: ['alpamayo-6cam-vqa'],
+    ...ALPAMAYO_INPUT_COMMON,
+  },
+]);
+
+const MODEL_RIG_REQUIREMENTS_BY_FAMILY: Readonly<Record<string, ModelRigRequirement>> =
+  Object.fromEntries(MODEL_RIG_REQUIREMENTS.map((entry) => [entry.family, entry]));
+
+export function modelRigRequirement(family: string): ModelRigRequirement | undefined {
+  return MODEL_RIG_REQUIREMENTS_BY_FAMILY[family];
+}
+
+/**
+ * The EXPECTED capture profile for a rig id: the canonical preset, unedited.
+ *
+ * THIS IS A RECOMMENDATION, NOT AN IDENTITY. It answers "what would a
+ * default fitting of this rig look like", which is what a UI should show
+ * before a render exists. It must NOT be used to identify a capture that
+ * already happened: an author can edit a camera's FOV or mount per actor,
+ * and this function would still return the default preset's fields, so two
+ * genuinely different captures would hash the same and compare as matched.
+ * For a render that exists, use `capturePayloadFromSensors` with the
+ * sensors the manifest actually recorded.
+ *
+ * Deliberately excludes the model family. The same four-camera capture is
+ * the same capture whether A1 or A1.5 consumed it, so a comparison that
+ * keyed on a family-prefixed value would call two runs over identical
+ * imagery "sensor-different" and refuse to rank them. Capture identity
+ * answers "was this the same rig, the same camera ids, the same cadence and
+ * the same history window", and nothing about which model asked for it.
+ *
+ * Returned as DATA, unhashed: this package sits below the one that owns
+ * content hashing (`@simforge-oss/engine` depends on this one), and adding a
+ * second SHA-256 here to dodge that layering would duplicate the primitive.
+ * Hash it with `captureHashFromSensors` in `@simforge-oss/engine`.
+ *
+ * Sensor fields are read from the preset, so the payload cannot disagree
+ * with the geometry it describes.
+ */
+export function expectedCapturePayload(rigId: string): Record<string, unknown> {
+  const preset = sensorRigPreset(rigId);
+  if (!preset) throw new Error(`unknown sensor rig "${rigId}"`);
+
+  // The cadence and history window below are the Alpamayo capture contract.
+  // Emitting them for a rig that has no Alpamayo camera mapping would
+  // describe a capture nobody made, so such a rig is refused rather than
+  // given borrowed constants.
+  const cameraIds = preset.sensors.map(
+    (sensor) => ALPAMAYO_CAMERA_INDEX[sensor.id as AlpamayoCameraName],
+  );
+  const unmapped = preset.sensors
+    .filter((_, index) => cameraIds[index] === undefined)
+    .map((sensor) => sensor.id);
+  if (unmapped.length > 0) {
+    throw new Error(
+      `rig "${rigId}" has sensors with no Alpamayo camera index (${unmapped.join(', ')}); ` +
+        'it has no Alpamayo capture profile',
+    );
+  }
+
+  return {
+    schema: 'simforge.expected-capture-profile/v1',
+    rigId,
+    cameraIds,
+    renderWidth: ALPAMAYO_INPUT_COMMON.renderWidth,
+    renderHeight: ALPAMAYO_INPUT_COMMON.renderHeight,
+    framesPerCamera: ALPAMAYO_INPUT_COMMON.framesPerCamera,
+    cadenceHz: ALPAMAYO_INPUT_COMMON.cadenceHz,
+    historySteps: ALPAMAYO_INPUT_COMMON.historySteps,
+    coordinateFrame: ALPAMAYO_INPUT_COMMON.coordinateFrame,
+    sensors: preset.sensors.map((sensor) => ({
+      id: sensor.id,
+      type: sensor.type,
+      mount: sensor.mount,
+      ...(sensor.type === 'dash_camera' ? { camera: sensor.camera } : {}),
+    })),
+  };
+}
+
+/**
+ * MODEL REQUIREMENT identity: which capture profile a family binds to, and
+ * on what terms.
+ *
+ * Separate from capture identity on purpose, and it carries the rig id
+ * rather than restating geometry, so the two can be compared
+ * independently: two runs can share a capture and differ in the model that
+ * consumed it, which is precisely the comparison the product wants to make.
+ * Never derive one from the other by stripping a prefix.
+ */
+export function modelRequirementPayload(family: string): Record<string, unknown> {
+  const requirement = modelRigRequirement(family);
+  if (!requirement) throw new Error(`no rig requirement for model family "${family}"`);
+  return {
+    schema: 'simforge.model-rig-requirement/v1',
+    family: requirement.family,
+    rigId: requirement.rigId,
+    cameraIds: [...requirement.cameraIds],
+    variableCameras: requirement.variableCameras,
+    alsoSupportedRigIds: [...requirement.alsoSupportedRigIds],
+    framesPerCamera: requirement.framesPerCamera,
+    cadenceHz: requirement.cadenceHz,
+    historySteps: requirement.historySteps,
+    coordinateFrame: requirement.coordinateFrame,
+  };
+}
+
 /** Resolve a fixed or vehicle-anchored preset mount to an actor-local numeric mount. */
 export function resolveSensorRigMount(
   mount: SensorRigMount,
@@ -885,4 +1078,75 @@ export function defaultRadar(
     enabled: true,
     mount: resolveSensorMountPreset('front-bumper', actor),
   });
+}
+
+
+/** One sensor as the render actually used it, after any authored edits. */
+export interface ActualCaptureSensor {
+  /** Preset sensor id, or the authored id when the author renamed it. */
+  readonly id: string;
+  readonly type: string;
+  /** Model camera index this sensor was fed to, positional. */
+  readonly cameraId: number;
+  /** Resolved actor-local mount - numeric, post-anchor-resolution. */
+  readonly mount: unknown;
+  /** Camera geometry actually rendered, when the sensor is a camera. */
+  readonly camera?: unknown;
+}
+
+/**
+ * CAPTURE identity: what was ACTUALLY recorded.
+ *
+ * Hashed from the sensors the render used, not from a preset lookup, so an
+ * author who widens a camera's FOV or moves a mount produces a different
+ * capture identity - which is the whole point. Keying on `rigId` alone
+ * would hand two genuinely different captures the same digest and let a
+ * comparison rank them as matched.
+ *
+ * `cameraIds` is the SUBSET actually fed to the model, in positional order.
+ * A four-camera rig rendered but consumed as two cameras is a different
+ * capture from the same rig consumed as four.
+ *
+ * `rigId` is carried as a LABEL only. Two authors can name one capture
+ * differently and the digest settles identity.
+ *
+ * Returned as DATA. Hash it with `captureHashFromSensors` in
+ * `@simforge-oss/engine`; there is one hash primitive in this repo and it
+ * does not live here.
+ */
+export function capturePayloadFromSensors(input: {
+  readonly sensors: readonly ActualCaptureSensor[];
+  readonly renderWidth: number;
+  readonly renderHeight: number;
+  readonly framesPerCamera: number;
+  readonly historySteps: number;
+  readonly coordinateFrame: string;
+  readonly rigLabel?: string;
+}): Record<string, unknown> {
+  if (input.sensors.length === 0) {
+    throw new Error('capture payload needs at least one sensor; a capture with no camera has no identity');
+  }
+  const cameraIds = input.sensors.map((sensor) => sensor.cameraId);
+  if (new Set(cameraIds).size !== cameraIds.length) {
+    throw new Error(`capture payload has duplicate camera ids [${cameraIds.join(', ')}]`);
+  }
+  // Ordered by the positional camera index the model consumes, so an
+  // author's listing order cannot change the digest.
+  const sensors = [...input.sensors].sort((a, b) => a.cameraId - b.cameraId);
+  return {
+    schema: 'simforge.capture-profile/v2',
+    cameraIds: sensors.map((sensor) => sensor.cameraId),
+    renderWidth: input.renderWidth,
+    renderHeight: input.renderHeight,
+    framesPerCamera: input.framesPerCamera,
+    historySteps: input.historySteps,
+    coordinateFrame: input.coordinateFrame,
+    sensors: sensors.map((sensor) => ({
+      id: sensor.id,
+      type: sensor.type,
+      cameraId: sensor.cameraId,
+      mount: sensor.mount,
+      ...(sensor.camera === undefined ? {} : { camera: sensor.camera }),
+    })),
+  };
 }

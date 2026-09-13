@@ -35,7 +35,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { cameraTimestamps } from './cameras.js';
@@ -56,6 +56,15 @@ export interface ReconstructionTier {
   readonly threedgrutRoot?: string;
   /** Interpreter for the 3DGRUT environment; must be the venv Python that has its deps. */
   readonly pythonCommand?: string;
+  /**
+   * CUDA toolkit root. Defaults to `CUDA_HOME` from the environment.
+   *
+   * Training is not a pure Python call: 3DGUT JIT-compiles its tracer plugin on first use, so
+   * the child needs `nvcc` on PATH, not merely a CUDA-enabled torch. Without it training dies
+   * inside `load_3dgut_plugin` after the dataset has already loaded, which reads as a training
+   * failure rather than a missing compiler.
+   */
+  readonly cudaHome?: string;
 }
 
 export interface PreflightReport {
@@ -78,9 +87,22 @@ interface CommandResult {
   readonly stderr: string;
 }
 
-function run(command: string, args: readonly string[], cwd?: string): Promise<CommandResult> {
+function run(command: string, args: readonly string[], cwd?: string, cudaHome?: string): Promise<CommandResult> {
   const { promise, resolve, reject } = deferred<CommandResult>();
-  const child = spawn(command, [...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  const prefix: string[] = [];
+  const resolvedCuda = cudaHome ?? process.env['CUDA_HOME'];
+  if (resolvedCuda !== undefined) {
+    env['CUDA_HOME'] = resolvedCuda;
+    prefix.push(path.join(resolvedCuda, 'bin'));
+  }
+  // Training shells out to siblings of the interpreter: 3DGUT JIT-compiles its tracer with
+  // `slangc`, which lives in the same venv bin as the python being invoked. Calling that python
+  // by absolute path leaves its bin off PATH, so a fully installed environment fails with
+  // ENOENT on slangc after the dataset has loaded — the same trap as the render tier.
+  if (path.isAbsolute(command)) prefix.push(path.dirname(command));
+  if (prefix.length > 0) env['PATH'] = `${prefix.join(path.delimiter)}${path.delimiter}${env['PATH'] ?? ''}`;
+  const child = spawn(command, [...args], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '';
   let stderr = '';
   child.stdout.on('data', (chunk: Buffer) => {
@@ -166,6 +188,25 @@ export async function preflightReconstruction(tier: ReconstructionTier = {}): Pr
         );
       }
     }
+  }
+
+  // `nvcc` must be reachable: the tracer plugin is JIT-compiled at first use, so a CUDA torch
+  // alone is not enough to train.
+  const nvcc = await run('nvcc', ['--version'], undefined, tier.cudaHome).catch(
+    () => ({ code: -1, stdout: '', stderr: '' }),
+  );
+  if (nvcc.code !== 0) {
+    missing.push(
+      'nvcc is not reachable; 3DGUT JIT-compiles its tracer plugin, so set cudaHome/CUDA_HOME to a CUDA toolkit',
+    );
+  }
+  // slangc is the Slang compiler the tracer JIT invokes; it ships in the 3DGRUT environment's
+  // own bin directory, so it is checked through the same interpreter the training will use.
+  const slangc = await run(python, ['-c', 'import shutil,sys;sys.exit(0 if shutil.which("slangc") else 1)'], undefined, tier.cudaHome).catch(
+    () => ({ code: -1, stdout: '', stderr: '' }),
+  );
+  if (slangc.code !== 0) {
+    missing.push("slangc is not reachable from the 3DGRUT environment; it is required to JIT-compile the tracer");
   }
 
   return {
@@ -340,9 +381,18 @@ export async function writeColmapDataset(
       files = extraction.frames.map((frame) => frame.file);
     }
     const timestamps = cameraTimestamps(camera);
-    // COLMAP image names are relative to the dataset root when frames were extracted there,
-    // and relative to the clip when the user supplied a sequence.
-    const nameBase = video.kind === 'image-sequence' ? video.path : path.relative(datasetDir, sequenceDir);
+    // The COLMAP loader resolves image NAMEs under `<dataset>/images`, so every frame must be
+    // reachable there. Frames are LINKED rather than copied: a clip is gigabytes and duplicating
+    // it onto a worker's disk to satisfy a path convention would be wasteful, while a link keeps
+    // the bytes single-sourced and still verifiable against the clip's digest.
+    const nameBase = camera.sensorId;
+    const linkDir = path.join(datasetDir, 'images', nameBase);
+    await mkdir(linkDir, { recursive: true });
+    for (const file of files) {
+      const target = path.join(linkDir, file);
+      await rm(target, { force: true });
+      await symlink(path.resolve(sequenceDir, file), target);
+    }
     for (let index = 0; index < Math.min(files.length, timestamps.length); index += 1) {
       const tUs = timestamps[index]!;
       // Nearest measured rig pose; poses are the reconstruction's ground truth, never resampled
@@ -450,7 +500,7 @@ export async function reconstructClip(options: ReconstructOptions): Promise<Reco
     'export_usd.format=nurec',
     ...(options.iterations === undefined ? [] : [`n_iterations=${options.iterations}`]),
   ];
-  const training = await run(tier.pythonCommand ?? 'python3', args, preflight.threedgrutRoot);
+  const training = await run(tier.pythonCommand ?? 'python3', args, preflight.threedgrutRoot, tier.cudaHome);
   if (training.code !== 0) {
     throw new CapabilityError(
       `3DGUT training failed (exit ${training.code}): ${training.stderr.trim().slice(-2000) || training.stdout.trim().slice(-2000)}`,

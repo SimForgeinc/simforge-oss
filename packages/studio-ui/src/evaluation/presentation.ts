@@ -23,7 +23,7 @@ import type {
   ModelQuant,
 } from "./model-catalog";
 import { MODEL_CATALOG } from "./model-catalog";
-import type { ComputeJobStatus } from "./contracts";
+import type { ComputeJobKind, ComputeJobStatus } from "./contracts";
 
 /** Highest precision first: what a user would pick if the hardware allowed it. */
 const PRECISION_PREFERENCE: readonly ModelQuant[] = ["bf16", "fp8", "nf4"] as const;
@@ -106,8 +106,24 @@ export type HostExecutionSnapshot = {
   host: EvaluationHostKind;
   /** Null in the browser; the desktop reports whether its native runner exists. */
   nativeRuntime: { available: boolean; reason: string | null } | null;
-  /** Whether a signed-in SimCloud workspace is available for cloud runs. */
-  cloud: { connected: boolean; workspaceId: string | null; reason: string | null };
+  /**
+   * Whether a signed-in SimCloud workspace is available for cloud runs, and
+   * which job kinds this deployment can actually execute per family.
+   *
+   * Readiness is per KIND, not per family: a worker serving open-loop
+   * inference does not serve closed-loop episodes, which need the policy
+   * socket and a renderer in the same image. Null `kinds` means the
+   * deployment did not say, which is NOT the same as ready - the target is
+   * offered disabled with that reason, because inviting a launch the control
+   * plane is already known not to serve is worse than saying so. The model
+   * itself stays visible either way.
+   */
+  cloud: {
+    connected: boolean;
+    workspaceId: string | null;
+    reason: string | null;
+    kinds?: Readonly<Partial<Record<ModelFamilyId, readonly ComputeJobKind[]>>> | null;
+  };
 };
 
 /**
@@ -159,6 +175,12 @@ export function executionOffers(
   eligibility: ModelExecutionEligibility | null,
   /** `false` when the family's runtime is known to be unprepared; null when unknown. */
   runtimePrepared: boolean | null = null,
+  /**
+   * The job kind the caller intends to submit. Given, the cloud offer requires
+   * this deployment to serve that kind for this family, so a picker cannot
+   * offer a target the control plane will then refuse.
+   */
+  kind: ComputeJobKind | null = null,
 ): ExecutionOffer[] {
   const localReasons: string[] = [];
   let qualification: ExecutionOffer["qualification"] = null;
@@ -199,6 +221,24 @@ export function executionOffers(
       host.cloud.reason ??
         "Sign in to a SimCloud workspace to run in the cloud. Cloud runs do not require downloading the weights.",
     );
+  }
+  // Readiness is per kind. Unknown is NOT ready: offering a target the
+  // deployment has not said it can serve invites a launch that is already
+  // known to be unqualified. The model stays visible with the reason on it, so
+  // the choice is explained rather than hidden.
+  const servedKinds = host.cloud.kinds?.[entry.family] ?? null;
+  if (kind !== null) {
+    if (servedKinds === null) {
+      cloudReasons.push(
+        `This deployment has not reported which jobs its ${entry.displayName} service runs, so ${kind} cannot be offered here — required execution capability not reported.`,
+      );
+    } else if (!servedKinds.includes(kind)) {
+      cloudReasons.push(
+        servedKinds.length === 0
+          ? `No cloud service in this deployment runs ${entry.displayName}.`
+          : `This deployment's ${entry.displayName} service does not run ${kind}. It serves ${servedKinds.join(", ")}.`,
+      );
+    }
   }
 
   return [

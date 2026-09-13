@@ -211,3 +211,44 @@ def test_rig_presets_mirror_the_camera_contracts():
     assert RIG_CAMERA_IDS["alpamayo-6cam-vqa"] == FAMILIES["alpamayo-2-super"].cameras.vqa
     # An unnamed camera set is reported as unnamed, never relabelled.
     assert profile_for_camera_ids((0, 1)) is None
+
+
+def test_every_quant_row_declares_who_measured_it():
+    """A UI must badge a receipt differently from a citation without parsing
+    prose. So the class is data, and it has to agree with the note it sits
+    beside - a row claiming measured-here whose note carries no measurement
+    would be the same lie in a new field."""
+    from simforge_alpamayo.families import FAMILIES
+
+    classes = {"measured-here", "vendor-published", "unmeasured"}
+    for family in FAMILIES.values():
+        for offer in family.quants:
+            assert offer.evidence in classes, (family.family, offer.quant)
+            # measured-here means WE have figures in the note.
+            assert (offer.evidence == "measured-here") == ("MEASURED" in offer.note), (
+                family.family,
+                offer.quant,
+            )
+            # An unmeasured row must never carry a VRAM floor as if it were known.
+            if offer.evidence == "unmeasured":
+                assert offer.min_vram_gib is None, (family.family, offer.quant)
+            # A supported row must rest on somebody's evidence.
+            if offer.status == "supported":
+                assert offer.evidence in {"measured-here", "vendor-published"}
+
+
+def test_the_bf16_rows_are_citations_and_the_nf4_rows_are_receipts():
+    """The specific confusion this fixes: on this host nf4 was measured and
+    bf16 never ran, yet both read 'supported'."""
+    from simforge_alpamayo.families import get_family
+
+    for family in ("alpamayo-1", "alpamayo-1.5"):
+        offers = {offer.quant: offer for offer in get_family(family).quants}
+        assert offers["bf16"].evidence == "vendor-published"
+        assert offers["nf4"].evidence == "measured-here"
+        assert offers["fp8"].evidence == "unmeasured"
+
+    # A2's bf16 IS ours - measured on the H100.
+    a2 = {offer.quant: offer for offer in get_family("alpamayo-2-super").quants}
+    assert a2["bf16"].evidence == "measured-here"
+    assert a2["nf4"].evidence == "unmeasured"

@@ -258,6 +258,96 @@ def main() -> int:
         point_lines.append(f"{index + 1} {p[0]} {p[1]} {p[2]} {int(c[0])} {int(c[1])} {int(c[2])} 0.0")
     (sparse / "points3D.txt").write_text("\n".join(point_lines) + "\n")
 
+    # A simforge.eval-clip/v1 alongside the COLMAP dataset, so `scene reconstruct --clip <dir>`
+    # drives this capture through the product's own entrypoint rather than requiring someone to
+    # invoke upstream by hand. The clip declares the same intrinsics, the same poses (as 6-DoF
+    # rig poses) and the same seed cloud the dataset holds — one capture, one set of numbers.
+    import hashlib
+
+    def _sequence_digest(directory: Path) -> str:
+        digest = hashlib.sha256()
+        for name in sorted(n.name for n in directory.iterdir() if n.suffix.lower() in {".png", ".jpg", ".jpeg"}):
+            digest.update(f"{name}:{hashlib.sha256((directory / name).read_bytes()).hexdigest()}\n".encode())
+        return digest.hexdigest()
+
+    def _file_digest(target: Path) -> str:
+        return hashlib.sha256(target.read_bytes()).hexdigest()
+
+    period_us = 100_000
+    timestamps = [index * period_us for index in range(args.views)]
+    ego_path = []
+    poses_6dof = []
+    speeds = []
+    for index, world_from_cam in enumerate(poses):
+        position = world_from_cam[:3, 3]
+        # Planar heading from the camera's forward axis, for the deviation reference.
+        forward = world_from_cam[:3, 2]
+        heading = math.atan2(forward[1], forward[0])
+        ego_path.append({"tUs": timestamps[index], "x": float(position[0]), "y": float(position[1]), "headingRad": float(heading)})
+        qw, qx, qy, qz = quat_wxyz(world_from_cam[:3, :3])
+        poses_6dof.append({
+            "tUs": timestamps[index],
+            "position": [float(position[0]), float(position[1]), float(position[2])],
+            "quaternion": [float(qx), float(qy), float(qz), float(qw)],
+        })
+    for index in range(args.views):
+        a = ego_path[max(0, index - 1)]
+        b = ego_path[min(args.views - 1, index + 1)]
+        dt = (b["tUs"] - a["tUs"]) / 1e6
+        speeds.append(0.0 if dt <= 0 else math.dist((a["x"], a["y"]), (b["x"], b["y"])) / dt)
+
+    frame = "capture-world"
+    clip = {
+        "schema": "simforge.eval-clip/v1",
+        "clipId": "sf-calibration-capture-v1",
+        "source": {
+            "kind": "synthetic-fixture",
+            "sceneId": "sf-calibration-capture-v1",
+            "origin": "make_calibration_capture.py (authored in this repository)",
+            "license": "Apache-2.0 (authored here; contains no third-party or captured content)",
+            "redistributable": True,
+            "inputs": [],
+            "importer": {"name": "simforge.replay-context.calibration-capture", "version": "1"},
+        },
+        "videos": [{
+            "cameraId": 1,
+            "sensorId": "camera_front_wide_120fov",
+            "path": "images",
+            "kind": "image-sequence",
+            "sha256": _sequence_digest(images_dir),
+            "width": width,
+            "height": height,
+        }],
+        "cameras": [{
+            "cameraId": 1,
+            "sensorId": "camera_front_wide_120fov",
+            "width": width,
+            "height": height,
+            "intrinsics": {"model": "pinhole", "fx": fx, "fy": fy, "cx": cx, "cy": cy},
+            # Camera is the rig: this capture has a single sensor at the rig origin.
+            "extrinsics": {"matrix": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]},
+            "timing": {"kind": "explicit", "timestampsUs": timestamps, "shutterUs": 0},
+        }],
+        "ego": {
+            "frame": frame,
+            "originUs": timestamps[0],
+            "endUs": timestamps[-1],
+            "recordedPath": ego_path,
+            "speedMps": speeds,
+            "source": "dataset",
+            "recordedPose6dof": poses_6dof,
+        },
+        "dynamics": {"agentMode": "replay", "tracks": [], "excluded": []},
+        "pointCloud": {
+            "path": "sparse/0/points3D.txt",
+            "sha256": _file_digest(sparse / "points3D.txt"),
+            "format": "colmap-points3d-txt",
+            "source": "sfm",
+            "frame": frame,
+        },
+    }
+    (out / "clip.json").write_text(json.dumps(clip, indent=2) + "\n")
+
     manifest = {
         "schema": "simforge.calibration-capture/v1",
         "generator": "make_calibration_capture.py",
@@ -268,6 +358,7 @@ def main() -> int:
         "intrinsics": {"model": "PINHOLE", "fx": fx, "fy": fy, "cx": cx, "cy": cy},
         "pointCloud": {"points": int(points.shape[0]), "source": "exact scene surface samples, not estimated"},
         "poses": "exact, authored; COLMAP world-to-camera convention",
+        "evalClip": "clip.json (simforge.eval-clip/v1), so `scene reconstruct --clip <dir>` drives this capture",
         "note": "Synthetic. Exercises the reconstruction pipeline and its gates; not a claim about real-world reconstruction quality.",
     }
     (out / "capture.json").write_text(json.dumps(manifest, indent=2) + "\n")

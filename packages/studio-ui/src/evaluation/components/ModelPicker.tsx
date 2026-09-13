@@ -21,6 +21,7 @@ import { styles as s } from "./evaluation-components.stylex";
 import type { ModelFamilyId, ModelQuant } from "../model-catalog";
 import { MODEL_CATALOG, MODEL_FAMILIES } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
+import type { ComputeJobKind } from "../contracts";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 import { SelectMenu } from "../../components/ui/select-menu";
 
@@ -53,6 +54,7 @@ export function ModelPicker({
   families = MODEL_FAMILIES,
   uploadedVideo = false,
   cloudOnly = false,
+  kind = null,
 }: {
   host: HostExecutionSnapshot;
   /** Desktop only. Null in the browser portal, which has no local model store. */
@@ -64,6 +66,8 @@ export function ModelPicker({
   families?: readonly ModelFamilyId[];
   uploadedVideo?: boolean;
   cloudOnly?: boolean;
+  /** The job kind this picker is choosing a model for. */
+  kind?: ComputeJobKind | null;
 }) {
   const entry = MODEL_CATALOG[selection.family];
   const key = runtimeKey(selection.family, selection.quant);
@@ -74,6 +78,7 @@ export function ModelPicker({
     runtime?.installs[key] ?? null,
     runtime?.eligibility[key] ?? null,
     runtime ? runtime.prepared[selection.family] ?? null : null,
+    kind,
   );
   const offers = cloudOnly ? allOffers.filter((offer) => offer.target === "runpod") : allOffers;
 
@@ -89,7 +94,11 @@ export function ModelPicker({
     value: offer.quant,
     label:
       offer.status === "supported"
-        ? `${offer.quant}${offer.minVramGiB ? ` · ${offer.minVramGiB} GiB VRAM` : ""}`
+        ? `${offer.quant}${offer.minVramGiB ? ` · ${offer.minVramGiB} GiB VRAM` : ""}${
+          // Whose evidence the figure rests on. A vendor number and one measured
+          // here are both real; rendering them identically hid which was which.
+          offer.evidence === "vendor-published" ? " · vendor figure" : offer.evidence === "unmeasured" ? " · unmeasured" : ""
+        }`
         : `${offer.quant} · ${offer.status === "unsupported" ? "unsupported" : "pending measurement"}`,
     disabled: offer.status !== "supported",
   }));

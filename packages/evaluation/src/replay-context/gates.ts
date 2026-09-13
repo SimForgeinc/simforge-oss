@@ -64,6 +64,16 @@ export interface GateThresholds {
   readonly stockReplayMaxLateralM: number;
   /** G5: p95 lateral deviation (m) for the same replay. */
   readonly stockReplayP95LateralM: number;
+  /**
+   * G5: seconds excluded from the start of the replay before deviation is measured.
+   *
+   * Not a tolerance — it is part of the bound's own definition. `docs/policy-step.md` states
+   * its p95 <= 0.35 m executor envelope "after 1 s settle", because a pure-pursuit controller
+   * acquiring a path from its initial pose has a transient that is a property of the
+   * controller's initialisation, not of the scene under test. Applying the number without the
+   * window the number was measured under was a misapplication on our side.
+   */
+  readonly stockReplaySettleS: number;
 }
 
 /** Documented defaults; see the module docstring for the justification of each. */
@@ -76,6 +86,7 @@ export const DEFAULT_GATE_THRESHOLDS: GateThresholds = {
   trackSampleGapUs: 200_000,
   stockReplayMaxLateralM: 0.35,
   stockReplayP95LateralM: 0.10,
+  stockReplaySettleS: 1,
 };
 
 /** Lateral offsets (m) probed by G2. The largest passing one becomes the envelope. */
@@ -277,12 +288,36 @@ export function gateG4(consistency: DynamicsConsistency, thresholds: GateThresho
 /* ----------------------------------------------------------------------- G5 */
 
 export interface StockReplayMeasurement {
+  /** Measured AFTER `stockReplaySettleS`; see that field for why. */
   readonly maxLateralM: number;
   readonly p95LateralM: number;
+  /**
+   * How many infractions were recorded. A bare count cannot say *what* failed, and on a scene
+   * where one artifact has already masqueraded under two names it must: pass
+   * {@link infractionCategories} so the verdict names them.
+   */
   readonly infractions: number;
+  /** The non-zero infraction categories behind that count, so the reason is legible. */
+  readonly infractionCategories?: readonly { readonly category: string; readonly count: number }[];
   readonly stepsCompared: number;
+  /**
+   * Infraction categories that could NOT be evaluated because the scene lacks an authoritative
+   * source for them, with the missing artifact named. Unavailable is not zero: a category
+   * nobody could measure must block the gate rather than silently count as clean.
+   *
+   * AlpaSim's own scorer set for these artifacts (CollisionScorer, OffRoadScorer,
+   * MinDistanceToObstacle, OpenLoopCollision, GroundTruth, MinADE, PlanDeviation, Image,
+   * Safety) contains no speed-limit and no wrong-way scorer, and a NuRec package ships no
+   * verified speed limits — so on such a scene those categories are unavailable by
+   * construction, not passing.
+   */
+  readonly unavailableCategories?: readonly { readonly category: string; readonly missingArtifact: string }[];
   /** Trace the measurement was taken from, for the persisted verdict. */
   readonly traceRef?: string;
+  /** Seconds excluded at the start; must equal the threshold's settle window. */
+  readonly settleS?: number;
+  /** The same statistics WITHOUT any exclusion, always recorded alongside. */
+  readonly unsettled?: { readonly maxLateralM: number; readonly p95LateralM: number };
 }
 
 /**
@@ -291,6 +326,12 @@ export interface StockReplayMeasurement {
  * This is the precondition for any model episode on the scene: it proves the
  * sim/executor/scoring chain on this specific world before a policy is allowed to be blamed
  * for anything.
+ *
+ * G5 is composite, but a verdict carries one `measured`/`threshold` pair — the deviation. A
+ * reader seeing `passed: false` next to a deviation that is *inside* its bound would reasonably
+ * conclude the deviation failed, so every failing criterion is named in `failureReasons`. The
+ * deviation numbers are never restated against a different window: `measured` is the settled
+ * statistic the threshold is defined for, and the unsettled pair travels beside it.
  */
 export function gateG5(
   measurement: StockReplayMeasurement,
@@ -300,16 +341,46 @@ export function gateG5(
     p95LateralM: measurement.p95LateralM,
     p95ThresholdM: thresholds.stockReplayP95LateralM,
     infractions: measurement.infractions,
+    ...(measurement.infractionCategories === undefined ? {} : { infractionCategories: measurement.infractionCategories }),
     stepsCompared: measurement.stepsCompared,
+    settleS: measurement.settleS ?? thresholds.stockReplaySettleS,
+    ...(measurement.unsettled === undefined ? {} : { withoutSettleWindow: measurement.unsettled }),
     ...(measurement.traceRef === undefined ? {} : { traceRef: measurement.traceRef }),
   });
+  const unavailable = measurement.unavailableCategories ?? [];
+  const failureReasons: string[] = [];
+  if (!base.passed) {
+    failureReasons.push(`max lateral deviation ${measurement.maxLateralM} m exceeds ${thresholds.stockReplayMaxLateralM} m`);
+  }
+  if (measurement.p95LateralM > thresholds.stockReplayP95LateralM) {
+    failureReasons.push(`p95 lateral deviation ${measurement.p95LateralM} m exceeds ${thresholds.stockReplayP95LateralM} m`);
+  }
+  if (measurement.infractions !== 0) {
+    const named = (measurement.infractionCategories ?? []).filter((entry) => entry.count > 0);
+    const detail = named.length === 0
+      ? ''
+      : `: ${named.map((entry) => (entry.count === 1 ? entry.category : `${entry.category} x${entry.count}`)).join(', ')}`;
+    failureReasons.push(`${measurement.infractions} infraction(s) recorded${detail}`);
+  }
+  for (const entry of unavailable) {
+    // Unavailable is not zero, and it is not a deviation failure either.
+    failureReasons.push(`${entry.category} could not be evaluated: ${entry.missingArtifact}`);
+  }
+  if (measurement.stepsCompared <= 0) failureReasons.push('no steps were compared');
   return {
     ...base,
+    detail: {
+      ...base.detail,
+      ...(unavailable.length === 0 ? {} : { unavailableCategories: unavailable }),
+      // Present even when empty on a pass, so absence never has to be interpreted.
+      failureReasons,
+    },
     passed:
       base.passed
       && measurement.p95LateralM <= thresholds.stockReplayP95LateralM
       && measurement.infractions === 0
-      && measurement.stepsCompared > 0,
+      && measurement.stepsCompared > 0
+      && unavailable.length === 0,
   };
 }
 

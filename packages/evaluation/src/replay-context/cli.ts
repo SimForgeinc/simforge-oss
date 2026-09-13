@@ -33,6 +33,7 @@ import { importNurecPackage } from './importers/package.js';
 import { importNurecScene } from './importers/nurec.js';
 import { importUserBundle } from './importers/user-bundle.js';
 import { qualifyBundle, loadReplayContext, writeReplayContext } from './qualify.js';
+import { writeSceneBundleDir } from './scene-bundle.js';
 import { preflightReconstruction, reconstructClip } from './reconstruct.js';
 import { resolveEncoder } from './video.js';
 import { CapabilityError } from './capability.js';
@@ -153,6 +154,11 @@ async function runQualify(args: Args): Promise<Record<string, unknown>> {
       ...(args.flags['splat-command'] === undefined ? {} : { splatCommand: args.flags['splat-command'].split(' ') }),
     },
     ...(args.flags['ticks'] === undefined ? {} : { ticks: Number(args.flags['ticks']) }),
+    // `--profile 0,2,6` qualifies a declared camera subset. The excluded cameras keep their
+    // measured verdicts on the record; the bundle simply cannot serve a rig that needs them.
+    ...(args.flags['profile'] === undefined
+      ? {}
+      : { profileCameraIds: args.flags['profile'].split(',').filter((v) => v !== '').map(Number) }),
   });
   return {
     ...summarise(result.bundle, result.bundleFile),
@@ -164,6 +170,7 @@ async function runReconstruct(args: Args): Promise<Record<string, unknown>> {
   const tier = {
     ...(args.flags['threedgrut-root'] === undefined ? {} : { threedgrutRoot: args.flags['threedgrut-root'] }),
     ...(args.flags['python'] === undefined ? {} : { pythonCommand: args.flags['python'] }),
+    ...(args.flags['cuda-home'] === undefined ? {} : { cudaHome: args.flags['cuda-home'] }),
   };
   if (args.booleans.has('preflight-only')) {
     const report = await preflightReconstruction(tier);
@@ -199,6 +206,12 @@ async function runReconstruct(args: Args): Promise<Record<string, unknown>> {
   };
 }
 
+async function runSceneDir(args: Args): Promise<Record<string, unknown>> {
+  const bundle = await loadReplayContext(required(args, 'bundle'));
+  const result = await writeSceneBundleDir(bundle, required(args, 'scenes-root'));
+  return { ...result, sceneId: bundle.sceneId };
+}
+
 async function runAdmit(args: Args): Promise<Record<string, unknown>> {
   const admission = await loadEvalClip(required(args, 'clip'));
   return {
@@ -230,12 +243,15 @@ export async function main(argv: readonly string[]): Promise<number> {
       case 'reconstruct':
         result = await runReconstruct(args);
         break;
+      case 'scene-dir':
+        result = await runSceneDir(args);
+        break;
       case 'admit':
         result = await runAdmit(args);
         break;
       default:
         process.stderr.write(
-          `${JSON.stringify({ code: 'unknown_command', reason: `unknown command "${args.command}"`, detail: 'expected import | qualify | reconstruct | admit' })}\n`,
+          `${JSON.stringify({ code: 'unknown_command', reason: `unknown command "${args.command}"`, detail: 'expected import | scene-dir | qualify | reconstruct | admit' })}\n`,
         );
         return 1;
     }

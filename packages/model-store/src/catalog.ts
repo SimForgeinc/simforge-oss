@@ -47,11 +47,28 @@ export type ModelCapabilities = {
   readonly grounding: boolean;
 };
 
+/**
+ * WHO produced the evidence behind a quant row.
+ *
+ * Structured so a UI can badge a receipt differently from a citation
+ * without parsing `note`. A consumer inferring a claim from free text is one
+ * edit away from being silently wrong, which is the same reason an
+ * unreported capability is treated as not-ready rather than assumed.
+ *
+ * - `measured-here`: we ran it on hardware we control; `note` carries the
+ *   figures. A receipt.
+ * - `vendor-published`: upstream states it and we have not reproduced it.
+ *   Real evidence, someone else's. A citation.
+ * - `unmeasured`: nobody has a number, ours or theirs.
+ */
+export type ModelQuantEvidence = 'measured-here' | 'vendor-published' | 'unmeasured';
+
 export type ModelQuantOffer = {
   readonly quant: ModelQuant;
   readonly status: ModelQuantStatus;
   /** Vendor-published or measured requirement; `null` when none may be stated. */
   readonly minVramGiB: number | null;
+  readonly evidence: ModelQuantEvidence;
   readonly note: string;
 };
 
@@ -313,12 +330,14 @@ const ALPAMAYO_1: ModelCatalogEntry = {
       quant: 'bf16',
       status: 'supported',
       minVramGiB: 24,
+      evidence: 'vendor-published',
       note: 'NVIDIA-published minimum (RTX 3090/4090/A5000 tested).',
     },
     {
       quant: 'nf4',
       status: 'supported',
       minVramGiB: 15,
+      evidence: 'measured-here',
       note:
         'bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned ' +
         'release runtime (upstream uv.lock at code commit 939f9a28, torch 2.8.0' +
@@ -336,6 +355,7 @@ const ALPAMAYO_1: ModelCatalogEntry = {
       quant: 'fp8',
       status: 'qualification-pending',
       minVramGiB: null,
+      evidence: 'unmeasured',
       note: 'torchao weight-only FP8 recipe is wired; unmeasured on Alpamayo 1.',
     },
   ],
@@ -392,6 +412,7 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       quant: 'bf16',
       status: 'supported',
       minVramGiB: 24,
+      evidence: 'vendor-published',
       note:
         'NVIDIA-published minimum; approximately 40 GiB at 16 samples and ' +
         '60 GiB with CFG-nav.',
@@ -400,6 +421,7 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       quant: 'nf4',
       status: 'supported',
       minVramGiB: 12,
+      evidence: 'measured-here',
       note:
         'bitsandbytes NF4 + double quant, bf16 compute. MEASURED on the pinned ' +
         'release runtime (upstream uv.lock at code commit 24179cfa, torch 2.8.0' +
@@ -419,6 +441,7 @@ const ALPAMAYO_1_5: ModelCatalogEntry = {
       quant: 'fp8',
       status: 'qualification-pending',
       minVramGiB: null,
+      evidence: 'unmeasured',
       note:
         'torchao Float8WeightOnly (e4m3). NOT qualified: the only measured ' +
         'evidence on a 16 GiB device is an out-of-memory failure at 4 cameras, ' +
@@ -476,6 +499,7 @@ const ALPAMAYO_2_SUPER: ModelCatalogEntry = {
       quant: 'bf16',
       status: 'supported',
       minVramGiB: 80,
+      evidence: 'measured-here',
       note:
         'NVIDIA measured a 72,115 MiB device peak (7 cameras, 1 sample, SDPA, ' +
         '10 diffusion steps) on an H100 80GB. No smaller device is validated.',
@@ -484,6 +508,7 @@ const ALPAMAYO_2_SUPER: ModelCatalogEntry = {
       quant: 'nf4',
       status: 'unsupported',
       minVramGiB: null,
+      evidence: 'unmeasured',
       note:
         'No upstream or measured quantized recipe exists for the 32B Cosmos 3 ' +
         'Super backbone. Offering one would be a guess.',

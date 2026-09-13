@@ -2,10 +2,12 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { loadEvalClip, reconstructionRefusal } from '../clip.js';
+import { loadEvalClip, reconstructionRefusal, sequenceDigest } from '../clip.js';
 import { createEnvelopeMonitor, measureDynamicsConsistency, trajectoryGates } from '../envelope.js';
-import { gateG2 } from '../gates.js';
+import { gateG2, gateG5 } from '../gates.js';
+import { LaneContextSchema, bindLane, detectLaneTransitions, summariseBinding, type LaneContext } from '../lanes.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
+import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
 import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
 import { ReplayContextSchema, servesProfile, type GateVerdict } from '../schema.js';
 
@@ -315,5 +317,372 @@ describe('per-profile qualification', () => {
     const parsed = ReplayContextSchema.safeParse(noProfile);
     expect(parsed.success).toBe(false);
     expect(JSON.stringify(parsed.error?.issues)).toContain('camera set');
+  });
+});
+
+describe('image-sequence integrity', () => {
+  it('digests a sequence as a whole, so a changed or added frame is detected', async () => {
+    const { cp, mkdtemp, rm, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const nodePath = await import('node:path');
+
+    const scratch = await mkdtemp(nodePath.join(tmpdir(), 'sf-seq-'));
+    try {
+      const source = fixture('video-only-clip/frames/camera_front_wide_120fov');
+      const copy = nodePath.join(scratch, 'frames');
+      await cp(source, copy, { recursive: true });
+      const original = await sequenceDigest(copy);
+      expect(original).toMatch(/^[a-f0-9]{64}$/);
+      // Same bytes, same digest.
+      expect(await sequenceDigest(copy)).toBe(original);
+
+      // An added frame changes it — a per-file check on a directory path could not see this.
+      await writeFile(nodePath.join(copy, '0000000001.png'), Buffer.from([1, 2, 3]));
+      expect(await sequenceDigest(copy)).not.toBe(original);
+    } finally {
+      await rm(scratch, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('drivable-area containment (lane-union geometry, off-road v2)', () => {
+  // A 20 x 10 rectangle of road with a 4 x 2 island cut out of its middle.
+  const area: DrivableArea = {
+    source: 'clipgt-lane-union',
+    geometry: 'polygons',
+    frame: 'test-frame',
+    confidence: 'authoritative',
+    timeSupportUs: null,
+    boundaries: [],
+    polygons: [
+      { id: 'road', kind: 'drivable', ring: [[0, 0], [20, 0], [20, 10], [0, 10]] },
+      { id: 'island', kind: 'hole', ring: [[8, 4], [12, 4], [12, 6], [8, 6]] },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [20, 10] },
+  };
+  const car = { lengthM: 4, widthM: 2 };
+
+  it('accepts a footprint fully inside the drivable surface', () => {
+    const result = footprintContainment(area, { x: 4, y: 2, headingRad: 0, ...car });
+    expect(result.inside).toBe(true);
+    expect(result.cornersOutside).toBe(0);
+    expect(result.worstOutsideM).toBe(0);
+  });
+
+  it('rejects a footprint fully outside, and reports how far out', () => {
+    const result = footprintContainment(area, { x: 30, y: 5, headingRad: 0, ...car });
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBe(4);
+    // Nearest corner of the box is 8 m past the x=20 edge.
+    expect(result.worstOutsideM).toBeGreaterThan(9);
+  });
+
+  it('treats a hole as undrivable even though it lies inside the road', () => {
+    // Centre of the island: inside the road ring, inside the hole.
+    expect(pointIsDrivable(area, 10, 5)).toBe(false);
+    expect(pointIsDrivable(area, 10, 2)).toBe(true);
+    expect(footprintContainment(area, { x: 10, y: 5, headingRad: 0, ...car }).inside).toBe(false);
+  });
+
+  it('catches a footprint straddling the boundary that a centre test would pass', () => {
+    // Centre is on the road; the box overhangs the y=10 edge by 1 m.
+    expect(pointIsDrivable(area, 5, 9.5)).toBe(true);
+    const result = footprintContainment(area, { x: 5, y: 9.5, headingRad: 0, ...car });
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBe(2);
+    expect(result.worstOutsideM).toBeCloseTo(0.5, 6);
+  });
+
+  it('accounts for orientation: the same centre passes or fails with heading', () => {
+    // Lengthwise along a narrow strip fits; rotated 90 degrees it does not.
+    const narrow: DrivableArea = { ...area, polygons: [{ id: 'strip', kind: 'drivable', ring: [[0, 0], [20, 0], [20, 3], [0, 3]] }] };
+    expect(footprintContainment(narrow, { x: 10, y: 1.5, headingRad: 0, ...car }).inside).toBe(true);
+    expect(footprintContainment(narrow, { x: 10, y: 1.5, headingRad: Math.PI / 2, ...car }).inside).toBe(false);
+  });
+
+  it('scores a pose sequence and stamps the metric version', () => {
+    const poses = [
+      { tUs: 0, x: 4, y: 2, headingRad: 0 },
+      { tUs: 100_000, x: 10, y: 5, headingRad: 0 },  // on the island
+      { tUs: 200_000, x: 16, y: 2, headingRad: 0 },
+    ];
+    const result = scoreOffRoad(area, poses, car);
+    expect(result.metric).toBe('simforge.offroad/v2');
+    expect(result.samples).toBe(3);
+    expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
+  });
+});
+
+describe('drivable-area classification (road-boundary geometry, off-road v3)', () => {
+  // A corridor: two edges running +x, the road between them. The left edge (y = 10) is walked
+  // in -x so its drivable side is also the corridor; both terminate at a CUT, which is how the
+  // real data ends — labelling stops, the road does not.
+  const area: DrivableArea = {
+    source: 'clipgt-road-boundary',
+    geometry: 'oriented-boundaries',
+    frame: 'test-frame',
+    confidence: 'authoritative',
+    timeSupportUs: null,
+    boundaries: [
+      { id: 'right-edge', points: [[0, 0], [100, 0]], drivableSide: 'left', cutStart: true, cutEnd: true },
+      { id: 'left-edge', points: [[100, 10], [0, 10]], drivableSide: 'left', cutStart: true, cutEnd: true },
+    ],
+    polygons: [{ id: 'median', kind: 'hole', ring: [[40, 4], [60, 4], [60, 6], [40, 6]] }],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 10] },
+  };
+  const car = { lengthM: 4, widthM: 2 };
+
+  it('puts a point on the stated drivable side of the nearest edge on the road', () => {
+    expect(classifyPoint(area, 20, 2).verdict).toBe('drivable');
+    expect(classifyPoint(area, 20, 8).verdict).toBe('drivable');
+  });
+
+  it('calls the far side of an edge off-road, and says how far out', () => {
+    const beyond = classifyPoint(area, 20, -3);
+    expect(beyond.verdict).toBe('off-road');
+    expect(beyond.distanceM).toBeCloseTo(3, 6);
+  });
+
+  it('reports unavailable past a CUT terminus instead of inventing an excursion', () => {
+    // Beyond x = 100 the nearest feature is the cut end of both edges: labelling stopped there.
+    // This is the whole reason the boundary source can be used without synthesising closure.
+    expect(classifyPoint(area, 130, 5).verdict).toBe('unavailable');
+    // And it does not leak inward: well inside the labelled span the answer is still decided.
+    expect(classifyPoint(area, 50, 1).verdict).toBe('drivable');
+  });
+
+  it('keeps an island exclusion undrivable inside the corridor', () => {
+    expect(classifyPoint(area, 50, 5).verdict).toBe('off-road');
+  });
+
+  it('counts an unavailable sample separately from a clean one and never as an event', () => {
+    const poses = [
+      { tUs: 0, x: 20, y: 2, headingRad: 0 },        // clean
+      { tUs: 100_000, x: 20, y: -3, headingRad: 0 }, // genuinely off the road
+      { tUs: 200_000, x: 130, y: 5, headingRad: 0 }, // past the cut: unknown
+    ];
+    const result = scoreOffRoad(area, poses, car);
+    expect(result.metric).toBe('simforge.offroad/v3');
+    expect(result.source).toBe('clipgt-road-boundary');
+    expect(result.samples).toBe(3);
+    expect(result.assessed).toBe(2);
+    expect(result.unavailable).toBe(1);
+    expect(result.events.map((event) => event.tUs)).toEqual([100_000]);
+  });
+
+  it('keeps a KNOWN excursion an excursion even when another corner is unknown', () => {
+    // Straddling the cut at x = 100: the front corners are past the labelled extent, the rear
+    // corners are decidedly below the y = 0 edge. The car is off the road and we know it, so
+    // unavailability of the unrelated corners must not launder that into "no data".
+    const result = footprintContainment(area, { x: 99.5, y: -2, headingRad: 0, lengthM: 4, widthM: 2 });
+    expect(result.unavailable).toBe(false);
+    expect(result.inside).toBe(false);
+    expect(result.cornersOutside).toBeGreaterThan(0);
+    expect(result.worstOutsideM).toBeGreaterThan(0);
+  });
+
+  it('reports unavailable only when nothing was decided against the vehicle', () => {
+    // On the road at the near corners, past the cut at the far ones: genuinely ambiguous.
+    const ambiguous = footprintContainment(area, { x: 99.5, y: 5, headingRad: 0, lengthM: 4, widthM: 2 });
+    expect(ambiguous.unavailable).toBe(true);
+    expect(ambiguous.cornersOutside).toBe(0);
+  });
+
+  it('distinguishes assessed-and-clean from nothing-assessed', () => {
+    const clean = scoreOffRoad(area, [{ tUs: 0, x: 20, y: 2, headingRad: 0 }], car);
+    expect(clean.worstOutsideM).toBe(0);
+    const none = scoreOffRoad(area, [{ tUs: 0, x: 130, y: 5, headingRad: 0 }], car);
+    expect(none.worstOutsideM).toBeNull();
+    expect(none.assessed).toBe(0);
+  });
+
+  it('refuses geometry that declares a kind it does not carry', () => {
+    const parsed = DrivableAreaSchema.safeParse({ ...area, boundaries: [] });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('G5 states why it failed', () => {
+  // The values recorded for clipgt-0009402a. Both deviation criteria are inside their bounds.
+  const measurement = {
+    maxLateralM: 0.3468,
+    p95LateralM: 0.0973,
+    infractions: 1,
+    infractionCategories: [{ category: 'lane-departure', count: 1 }],
+    stepsCompared: 190,
+    settleS: 1,
+    unsettled: { maxLateralM: 0.6845, p95LateralM: 0.1175 },
+    unavailableCategories: [{ category: 'speeding', missingArtifact: 'authoritative posted speed limits' }],
+  };
+
+  it('never blames deviation when the settled statistic is inside its bound', () => {
+    const verdict = gateG5(measurement);
+    const reasons = (verdict.detail as { failureReasons: string[] }).failureReasons;
+    expect(verdict.passed).toBe(false);
+    // The unsettled 0.6845 m is recorded but is not the statistic the threshold is defined for.
+    expect(reasons.some((reason) => /deviation/i.test(reason))).toBe(false);
+    expect((verdict.detail as { withoutSettleWindow: unknown }).withoutSettleWindow).toEqual(measurement.unsettled);
+  });
+
+  it('names the infraction category rather than reporting a bare count', () => {
+    const reasons = (gateG5(measurement).detail as { failureReasons: string[] }).failureReasons;
+    expect(reasons[0]).toBe('1 infraction(s) recorded: lane-departure');
+    expect(reasons.some((reason) => reason.startsWith('speeding could not be evaluated'))).toBe(true);
+  });
+
+  it('does blame deviation when the settled statistic actually exceeds its bound', () => {
+    const reasons = (gateG5({ ...measurement, maxLateralM: 0.51, infractions: 0, infractionCategories: [], unavailableCategories: [] })
+      .detail as { failureReasons: string[] }).failureReasons;
+    expect(reasons).toEqual(['max lateral deviation 0.51 m exceeds 0.35 m']);
+  });
+
+  it('passes with an empty reason list when every criterion is met', () => {
+    const verdict = gateG5({ ...measurement, infractions: 0, infractionCategories: [], unavailableCategories: [] });
+    expect(verdict.passed).toBe(true);
+    expect((verdict.detail as { failureReasons: string[] }).failureReasons).toEqual([]);
+  });
+});
+
+describe('lane binding', () => {
+  // Two parallel 3 m lanes running +x, separated by the ~0.2 m inter-rail strip the annotation
+  // leaves between adjacent lanes.
+  const context: LaneContext = {
+    schema: 'simforge.lane-context/v1',
+    source: 'clipgt-lane-rails',
+    sourceSha256: 'a'.repeat(64),
+    frame: 'test-frame',
+    timeSupportUs: null,
+    lanes: [
+      { id: 'right', centreline: [[0, 1.5], [100, 1.5]], leftRail: [[0, 3], [100, 3]], rightRail: [[0, 0], [100, 0]], widthM: 3 },
+      { id: 'left', centreline: [[0, 4.7], [100, 4.7]], leftRail: [[0, 6.2], [100, 6.2]], rightRail: [[0, 3.2], [100, 3.2]], widthM: 3 },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 6.2] },
+  };
+
+  it('binds to the lane whose own rails contain the point, with a signed offset', () => {
+    const binding = bindLane(context, 50, 2.0);
+    expect(binding.kind).toBe('contained');
+    expect(binding.laneId).toBe('right');
+    // 0.5 m left of that lane's centreline.
+    expect(binding.lateralOffsetM).toBeCloseTo(0.5, 6);
+    expect(bindLane(context, 50, 1.0).lateralOffsetM).toBeCloseTo(-0.5, 6);
+  });
+
+  it('reports ambiguous in the inter-rail strip rather than picking the nearer lane', () => {
+    // y = 3.1 is between the two lanes' rails: in neither ring.
+    const binding = bindLane(context, 50, 3.1);
+    expect(binding.kind).toBe('ambiguous');
+    expect(binding.laneId).toBeNull();
+    // The whole point: no offset is reported from a lane the vehicle is not in. Reporting one
+    // is how a 5.454 m departure was produced for a car driving where the human drove.
+    expect(binding.lateralOffsetM).toBeNull();
+  });
+
+  it('reports outside when no lane is plausibly the vehicle\'s', () => {
+    expect(bindLane(context, 50, -20).kind).toBe('outside');
+  });
+
+  it('summarises a sequence and never averages an unbound sample into the offset', () => {
+    const summary = summariseBinding(context, [
+      { x: 10, y: 1.5 },   // dead centre
+      { x: 20, y: 2.4 },   // 0.9 m off centre, still contained
+      { x: 30, y: 3.1 },   // ambiguous
+      { x: 40, y: -20 },   // outside
+    ]);
+    expect(summary).toMatchObject({ samples: 4, contained: 2, ambiguous: 1, outside: 1 });
+    expect(summary.worstOffsetM).toBeCloseTo(0.9, 6);
+    expect(summary.worstOffsetFraction).toBeCloseTo(0.6, 6);
+  });
+
+  it('reports null rather than zero when nothing was bound', () => {
+    const summary = summariseBinding(context, [{ x: 40, y: -20 }]);
+    expect(summary.contained).toBe(0);
+    expect(summary.worstOffsetM).toBeNull();
+    expect(summary.worstOffsetFraction).toBeNull();
+  });
+
+  it('refuses a context with no lanes', () => {
+    expect(LaneContextSchema.safeParse({ ...context, lanes: [] }).success).toBe(false);
+  });
+});
+
+describe('lane transitions are diagnostics, never infractions', () => {
+  const context: LaneContext = {
+    schema: 'simforge.lane-context/v1',
+    source: 'clipgt-lane-rails',
+    sourceSha256: 'b'.repeat(64),
+    frame: 'test-frame',
+    timeSupportUs: null,
+    lanes: [
+      { id: 'right', centreline: [[0, 1.5], [100, 1.5]], leftRail: [[0, 3], [100, 3]], rightRail: [[0, 0], [100, 0]], widthM: 3 },
+      { id: 'left', centreline: [[0, 4.7], [100, 4.7]], leftRail: [[0, 6.2], [100, 6.2]], rightRail: [[0, 3.2], [100, 3.2]], widthM: 3 },
+    ],
+    coverage: { boundsMinXY: [0, 0], boundsMaxXY: [100, 6.2] },
+  };
+
+  it('reports a lane change as one transition, with the ambiguous crossing marked', () => {
+    // A car moving steadily left across the boundary: this is a manoeuvre, not an offence, and
+    // deciding whether it was unsafe needs route and rule context this geometry does not carry.
+    const poses = [{ x: 10, y: 1.5 }, { x: 20, y: 2.6 }, { x: 30, y: 3.1 }, { x: 40, y: 4.0 }, { x: 50, y: 4.7 }];
+    const transitions = detectLaneTransitions(context, poses);
+    expect(transitions.map((t) => t.kind)).toEqual(['entered-ambiguous', 'lane-transition']);
+    expect(transitions[1]).toMatchObject({ fromLaneId: 'right', toLaneId: 'left' });
+  });
+
+  it('calls the next tile of the same lane a segment advance, not a lane change', () => {
+    // ClipGT tiles a lane into ~38 m segments, so a car going perfectly straight changes bound
+    // lane id every few seconds. Reporting those as manoeuvres would put a lane change every 40 m
+    // on a vehicle that never moved sideways.
+    const tiled: LaneContext = {
+      ...context,
+      lanes: [
+        { id: 'seg-a', centreline: [[0, 1.5], [50, 1.5]], leftRail: [[0, 3], [50, 3]], rightRail: [[0, 0], [50, 0]], widthM: 3 },
+        { id: 'seg-b', centreline: [[50, 1.5], [100, 1.5]], leftRail: [[50, 3], [100, 3]], rightRail: [[50, 0], [100, 0]], widthM: 3 },
+      ],
+    };
+    const transitions = detectLaneTransitions(tiled, [{ x: 20, y: 1.5 }, { x: 70, y: 1.5 }]);
+    expect(transitions.map((t) => t.kind)).toEqual(['segment-advance']);
+  });
+
+  it('still calls it a lane change when the crossing lands exactly on a segment end', () => {
+    // The validation drive does exactly this, and a coverage test alone would miss it: the old
+    // lane has run out beneath the vehicle, so only the successor geometry reveals the manoeuvre.
+    const offset: LaneContext = {
+      ...context,
+      lanes: [
+        { id: 'seg-a', centreline: [[0, 1.5], [50, 1.5]], leftRail: [[0, 3], [50, 3]], rightRail: [[0, 0], [50, 0]], widthM: 3 },
+        { id: 'seg-left', centreline: [[50, 4.7], [100, 4.7]], leftRail: [[50, 6.2], [100, 6.2]], rightRail: [[50, 3.2], [100, 3.2]], widthM: 3 },
+      ],
+    };
+    const transitions = detectLaneTransitions(offset, [{ x: 20, y: 1.5 }, { x: 70, y: 4.7 }]);
+    expect(transitions.map((t) => t.kind)).toEqual(['lane-transition']);
+  });
+
+  it('emits nothing for steady lane keeping', () => {
+    expect(detectLaneTransitions(context, [{ x: 10, y: 1.4 }, { x: 20, y: 1.6 }, { x: 30, y: 1.5 }])).toEqual([]);
+  });
+
+  it('marks leaving support so an unavailable stretch is explained, not a silent gap', () => {
+    const transitions = detectLaneTransitions(context, [{ x: 10, y: 1.5 }, { x: 20, y: -20 }]);
+    expect(transitions).toEqual([{ kind: 'left-support', atIndex: 1, fromLaneId: 'right', toLaneId: null }]);
+  });
+
+  it('scopes availability to exact bytes, a frame and a support region', () => {
+    const authority = {
+      available: true,
+      validatedFrame: 'test-frame',
+      supportScope: { boundsMinXY: [0, 0] as [number, number], boundsMaxXY: [100, 6.2] as [number, number], note: 'validated over the recorded drive corridor' },
+      evidence: ['stratified binding control'],
+      notCertified: ['legality of any lane position'],
+    };
+    expect(LaneContextSchema.safeParse({ ...context, authority }).success).toBe(true);
+    // An availability record with no evidence is not an availability record.
+    expect(LaneContextSchema.safeParse({ ...context, authority: { ...authority, evidence: [] } }).success).toBe(false);
+    // Nor is one that forgets to say what it does not certify.
+    expect(LaneContextSchema.safeParse({ ...context, authority: { ...authority, notCertified: [] } }).success).toBe(false);
+  });
+
+  it('refuses a context whose source hash is not a sha256', () => {
+    expect(LaneContextSchema.safeParse({ ...context, sourceSha256: 'not-a-hash' }).success).toBe(false);
   });
 });

@@ -19,7 +19,8 @@
  */
 
 import { sha256File } from './digest.js';
-import { readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
@@ -63,6 +64,20 @@ export interface ClipAdmission {
   readonly rigPresets: readonly string[];
 }
 
+
+/**
+ * Digest of an image sequence: sha256 over `<name>:<sha256>` lines for the directory's frames,
+ * sorted by name. Detects a changed, added, removed or renamed frame — none of which a
+ * per-file digest on a directory path could detect, because there is no file to hash.
+ */
+export async function sequenceDigest(directory: string): Promise<string> {
+  const names = (await readdir(directory)).filter((name) => /\.(png|jpe?g)$/i.test(name)).sort();
+  const hash = createHash('sha256');
+  for (const name of names) {
+    hash.update(`${name}:${await sha256File(path.join(directory, name))}\n`);
+  }
+  return hash.digest('hex');
+}
 
 /**
  * Fields a clip must carry before a driving model may see it, evaluated against the parsed
@@ -137,10 +152,20 @@ export async function loadEvalClip(clipDir: string): Promise<ClipAdmission> {
   }
   const clip = parsed.data;
 
-  const declaredFiles: { path: string; sha256: string }[] = clip.videos.map((video) => ({ path: video.path, sha256: video.sha256 }));
-  if (clip.pointCloud !== undefined) declaredFiles.push({ path: clip.pointCloud.path, sha256: clip.pointCloud.sha256 });
+  // An image sequence is a DIRECTORY of frames, not a file, so its declared digest covers the
+  // sequence as a whole: sha256 over `<name>:<sha256>` lines for its frames, sorted by name.
+  // Hashing the directory this way still detects a changed, added, removed or renamed frame,
+  // which a per-file check on a path that is not a file could not do at all.
+  const declaredFiles: { path: string; sha256: string; kind: 'file' | 'image-sequence' }[] = clip.videos.map((video) => ({
+    path: video.path,
+    sha256: video.sha256,
+    kind: video.kind === 'image-sequence' ? 'image-sequence' : 'file',
+  }));
+  if (clip.pointCloud !== undefined) {
+    declaredFiles.push({ path: clip.pointCloud.path, sha256: clip.pointCloud.sha256, kind: 'file' });
+  }
   if (clip.reference?.path !== undefined) {
-    declaredFiles.push({ path: clip.reference.path, sha256: '' });
+    declaredFiles.push({ path: clip.reference.path, sha256: '', kind: 'file' });
   }
 
   const integrityFailures: MissingField[] = [];
@@ -150,24 +175,35 @@ export async function loadEvalClip(clipDir: string): Promise<ClipAdmission> {
       integrityFailures.push({ path: file.path, requirement: 'declared paths must stay inside the clip directory' });
       continue;
     }
+    let info;
     try {
-      const info = await stat(absolute);
-      if (!info.isFile()) {
-        integrityFailures.push({ path: file.path, requirement: 'declared path must be a file' });
-        continue;
-      }
+      info = await stat(absolute);
     } catch {
-      integrityFailures.push({ path: file.path, requirement: 'declared file is missing from the clip directory' });
+      integrityFailures.push({
+        path: file.path,
+        requirement: file.kind === 'image-sequence'
+          ? 'declared image sequence is missing from the clip directory'
+          : 'declared file is missing from the clip directory',
+      });
+      continue;
+    }
+    if (file.kind === 'image-sequence' ? !info.isDirectory() : !info.isFile()) {
+      integrityFailures.push({
+        path: file.path,
+        requirement: file.kind === 'image-sequence' ? 'an image sequence must be a directory of frames' : 'declared path must be a file',
+      });
       continue;
     }
     if (file.sha256 === '') continue;
-    const digest = await sha256File(absolute);
+    const digest = file.kind === 'image-sequence' ? await sequenceDigest(absolute) : await sha256File(absolute);
     if (digest !== file.sha256) {
       integrityFailures.push({
         path: file.path,
-        requirement: `sha256 mismatch: manifest declares ${file.sha256}, file hashes to ${digest}`,
+        requirement: file.kind === 'image-sequence'
+          ? `sha256 mismatch: manifest declares ${file.sha256}, sequence hashes to ${digest}`
+          : `sha256 mismatch: manifest declares ${file.sha256}, file hashes to ${digest}`,
       });
-    }
+  }
   }
   if (integrityFailures.length > 0) {
     throw new RefusalError({

@@ -422,3 +422,251 @@ def test_bad_param_type_is_a_typed_refusal():
     assert response["ok"] is False
     assert response["error"]["code"] == "input_error"
     assert "params.num_traj_samples" in response["error"]["fields"]
+
+
+def test_bare_camera_id_list_is_a_typed_refusal_not_a_typeerror():
+    """The input a real caller actually sent.
+
+    `{"cameras": [0,1,2,3,5,6]}` is the natural first guess and it used to
+    surface as `TypeError: 'int' object is not subscriptable` from deep inside
+    the decoder, which tells the caller nothing about what an observation is.
+    """
+    from simforge_alpamayo.obs import ObservationError, decode_observation
+
+    with pytest.raises(ObservationError) as exc:
+        decode_observation(
+            {"cameras": [0, 1, 2, 3, 5, 6], "synthetic": True},
+            required_cameras=(0, 1, 2, 3, 5, 6),
+        )
+    assert exc.value.code == "input_error"
+    assert exc.value.fields == ["obs.cameras[0]"]
+    assert "minimal_observation" in str(exc.value)
+
+
+def test_minimal_observation_matches_each_family_camera_contract():
+    """The generator reads the family contract, so a caller cannot construct
+    a stale camera set by hand."""
+    from simforge_alpamayo.families import get_family
+    from simforge_alpamayo.obs import minimal_observation
+
+    for family, expected in (
+        ("alpamayo-1", [0, 1, 2, 6]),
+        ("alpamayo-2-super", [0, 1, 2, 3, 5, 6]),
+    ):
+        obs = minimal_observation(family)
+        assert [c["camera_id"] for c in obs["cameras"]] == expected
+        assert get_family(family).camera_contract("act")[0] == tuple(expected)
+        # Unscorable by construction: this proves a forward pass, not a score.
+        assert obs["synthetic"] is True
+        assert len(obs["cameras"][0]["frames"]) == 4
+        assert len(obs["ego_history_xyz"]) == 16
+
+
+def test_variable_camera_family_gets_its_documented_default():
+    """A1.5 declares no required set; the generator must use the documented
+    default rather than inventing one."""
+    from simforge_alpamayo.families import get_family
+    from simforge_alpamayo.obs import minimal_observation
+
+    obs = minimal_observation("alpamayo-1.5")
+    assert [c["camera_id"] for c in obs["cameras"]] == list(
+        get_family("alpamayo-1.5").cameras.default
+    )
+
+
+def _render_streams(cameras: int = 4, frames: int = 4) -> dict:
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    names = [
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_front_tele_30fov",
+    ][:cameras]
+    return {
+        name: [
+            (rng.integers(0, 250, (384, 512, 3), dtype=np.uint8) + index)
+            .astype(np.uint8)
+            .tobytes()
+            for _ in range(frames)
+        ]
+        for index, name in enumerate(names)
+    }
+
+
+def _convert(render_fps: float, **overrides):
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    args = dict(
+        streams=_render_streams(),
+        rig_profile="alpamayo-4cam",
+        family_required=(0, 1, 2, 6),
+        width=512,
+        height=384,
+        render_fps=render_fps,
+        t0_index=200,
+        ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+        ego_heading_rad=0.0,
+        total_frames=600,
+    )
+    args.update(overrides)
+    return convert_render_to_clip(**args)
+
+
+def test_converted_clip_carries_actual_sample_times_not_a_nominal_rate():
+    """The gate must be applied to real spacing, never to a declared 10 Hz.
+
+    Declaring `ego_history_rate_hz = 10` for a 24 fps render would make the
+    decoder believe evenly spaced samples and hide 20.8 ms of error. So the
+    converter emits the times it really selected: exact at 30 fps, genuinely
+    uneven at 24, and the decoder measures either way.
+    """
+    from simforge_alpamayo.obs import decode_observation
+
+    exact = _convert(30.0)
+    assert "ego_history_rate_hz" not in exact.observation
+    times = exact.observation["ego_history_t_s"]
+    gaps = {round(b - a, 6) for a, b in zip(times, times[1:])}
+    assert gaps == {0.1}
+    decoded = decode_observation(exact.observation, required_cameras=(0, 1, 2, 6))
+    assert decoded["time_base"]["time_base"] == "measured"
+    assert decoded["time_base"]["scorable"] is True
+    assert decoded["time_base"]["history_dt_max_error_s"] < 1e-9
+
+    jittered = _convert(24.0)
+    times = jittered.observation["ego_history_t_s"]
+    gaps = {round(b - a, 5) for a, b in zip(times, times[1:])}
+    # 24 fps cannot land on 10 Hz: the real spacing alternates.
+    assert len(gaps) > 1
+    decoded = decode_observation(jittered.observation, required_cameras=(0, 1, 2, 6))
+    assert decoded["time_base"]["time_base"] == "measured"
+    assert decoded["time_base"]["history_dt_max_error_s"] > 0.02
+    assert "deviates" in decoded["time_base"]["time_base_warning"]
+    assert jittered.provenance["timeBase"]["cadence_divides_exactly"] is False
+    assert jittered.provenance["timeBase"]["sample_times"] == "actual"
+
+
+def test_identical_streams_are_refused_by_default_and_allowed_only_explicitly():
+    """A uniform scene (fog, night, a render failed to black) can legitimately
+    produce identical bytes, so the escape hatch exists - but it must be
+    asked for, and the finding is recorded either way."""
+    from simforge_alpamayo.obs import ObservationError
+
+    black = [b"\x00" * (512 * 384 * 3)] * 4
+    duplicated = {name: black for name in _render_streams()}
+
+    with pytest.raises(ObservationError) as exc:
+        _convert(30.0, streams=duplicated)
+    assert exc.value.code == "input_error"
+    assert len(exc.value.detail["duplicateGroups"]) == 1
+    # The message must not accuse the caller of fanning out one video.
+    assert "does not prove one video was fanned out" in str(exc.value)
+
+    allowed = _convert(30.0, streams=duplicated, allow_identical_streams=True)
+    assert allowed.provenance["identicalStreamsAllowed"] is True
+    assert allowed.provenance["duplicateContentGroups"] != []
+
+
+def test_provenance_carries_identity_under_the_keys_the_reader_expects():
+    """The comparison reader keys on rig.captureVersion (family-free) and
+    treats model.requirementVersion as metadata. The writer must agree, or
+    every pair degrades to incomplete identity."""
+    converted = _convert(
+        30.0,
+        capture_profile_version="alpamayo-4cam@5d56b3d837c8",
+        model_requirement_version="alpamayo-1.5@e1a393f5b1d7",
+    )
+    rig = converted.provenance["rig"]
+    assert rig["captureVersion"] == "alpamayo-4cam@5d56b3d837c8"
+    assert rig["cameraIds"] == [0, 1, 2, 6]
+    assert converted.provenance["model"]["requirementVersion"] == "alpamayo-1.5@e1a393f5b1d7"
+    assert converted.provenance["identityComplete"] is True
+
+
+def test_missing_identity_is_recorded_as_incomplete_never_invented():
+    """Recomputing the digest in Python would be a second implementation of
+    one hash, which is how two runs silently stop comparing. So an absent
+    version is reported, not derived."""
+    converted = _convert(30.0)
+    assert converted.provenance["rig"]["captureVersion"] is None
+    assert converted.provenance["identityComplete"] is False
+    assert "second implementation" in converted.provenance["identityNote"]
+
+
+def test_a_six_camera_render_serves_a_four_camera_model_by_subset():
+    """A shared render is the common case: one six-camera capture feeds A2
+    with all six and A1/A1.5 with the four they require. The unused cameras
+    are dropped, never averaged or substituted, and which subset was
+    consumed is recorded because it is part of capture identity."""
+    import numpy as np
+
+    from simforge_alpamayo.obs import decode_observation
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    rng = np.random.default_rng(0)
+    six = [
+        "camera_cross_left_120fov",
+        "camera_front_wide_120fov",
+        "camera_cross_right_120fov",
+        "camera_rear_left_70fov",
+        "camera_rear_right_70fov",
+        "camera_front_tele_30fov",
+    ]
+    streams = {
+        name: [
+            (rng.integers(0, 250, (384, 512, 3), dtype=np.uint8) + index)
+            .astype(np.uint8)
+            .tobytes()
+            for _ in range(4)
+        ]
+        for index, name in enumerate(six)
+    }
+    base = dict(
+        streams=streams,
+        rig_profile="alpamayo-6cam",
+        width=512,
+        height=384,
+        render_fps=30.0,
+        t0_index=200,
+        ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+        ego_heading_rad=0.0,
+        total_frames=600,
+    )
+
+    everything = convert_render_to_clip(**base, family_required=(0, 1, 2, 3, 5, 6))
+    assert everything.provenance["rig"]["cameraIds"] == [0, 1, 2, 3, 5, 6]
+    assert everything.provenance["rig"]["renderedNotConsumed"] == []
+    assert decode_observation(
+        everything.observation, required_cameras=(0, 1, 2, 3, 5, 6)
+    )["frames"].shape[0] == 6
+
+    subset = convert_render_to_clip(**base, family_required=(0, 1, 2, 6))
+    assert subset.provenance["rig"]["cameraIds"] == [0, 1, 2, 6]
+    assert subset.provenance["rig"]["renderedNotConsumed"] == [3, 5]
+    assert decode_observation(subset.observation, required_cameras=(0, 1, 2, 6))[
+        "frames"
+    ].shape[0] == 4
+
+
+def test_a_render_missing_a_required_camera_is_still_refused():
+    """Subset selection must not become substitution: a four-camera render
+    cannot serve a model that requires six."""
+    from simforge_alpamayo.obs import ObservationError
+    from simforge_alpamayo.render_clip import convert_render_to_clip
+
+    with pytest.raises(ObservationError) as exc:
+        convert_render_to_clip(
+            streams=_render_streams(),
+            rig_profile="alpamayo-4cam",
+            family_required=(0, 1, 2, 3, 5, 6),
+            width=512,
+            height=384,
+            render_fps=30.0,
+            t0_index=200,
+            ego_world_xyz=[[i * 0.4, 0.0, 0.0] for i in range(600)],
+            ego_heading_rad=0.0,
+            total_frames=600,
+        )
+    assert exc.value.code == "camera_set_invalid"
+    assert exc.value.detail["missing"] == [3, 5]

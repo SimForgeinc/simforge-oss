@@ -104,6 +104,9 @@ export const RawRigTrajectoriesSchema = z.looseObject({
   rig_trajectories: z.array(z.looseObject({
     T_rig_worlds: z.array(z.array(z.array(Num))).optional(),
     T_rig_world_timestamps_us: z.array(Num).optional(),
+    /** Per-camera [exposureStartUs, exposureEndUs] pairs: the real capture timeline. */
+    cameras_frame_timestamps_us: z.record(z.string(), z.array(z.array(Num))).optional(),
+    rig_bbox: z.looseObject({ centroid: z.array(Num).optional() }).optional(),
   })).optional(),
 });
 

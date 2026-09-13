@@ -63,7 +63,13 @@ export function materializeBrowserRevisionTraffic(
         materializedSignalState(track.phase[index] ?? "off"),
       ]),
     );
-    recorder.record({ t: bundle.trace.ticks.t[index]!, actors, signals });
+    // The trace's own `t` accumulates the step per tick, so by tick 7 of a
+    // 0.1 s grid it reads 0.7000000000000001, and the recorder - which compares
+    // against `index * step` exactly, and is right to - refuses the frame and
+    // takes the whole render submission down with it. The tick index IS the grid
+    // position and the recorder already computes that position, so hand it the
+    // canonical time instead of an accumulated float.
+    recorder.record({ t: recorder.nextTime, actors, signals });
   }
   return recorder.finalize();
 }

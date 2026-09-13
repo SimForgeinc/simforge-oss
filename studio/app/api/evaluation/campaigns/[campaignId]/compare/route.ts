@@ -7,18 +7,30 @@ import {
 
 type Context = { params: Promise<{ campaignId: string }> };
 
-/** A/B comparison of two policy columns: `?a=<policyId>&b=<policyId>`. */
+/**
+ * Comparison of N policy columns: `?policy=<id>&policy=<id>[&policy=...]`.
+ *
+ * Repeated `policy` rather than `a`/`b`: comparing three models is the normal
+ * case and the two-sided form made it three pages. Order is significant — the
+ * first column is the baseline every verdict is taken against — so the
+ * parameter order is preserved rather than sorted. Duplicates are kept: the
+ * same policy in two columns is a legitimate repeat control.
+ */
 export async function GET(request: Request, route: Context) {
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { campaignId } = await route.params;
-  const search = new URL(request.url).searchParams;
-  const a = search.get("a");
-  const b = search.get("b");
-  if (!a || !b) {
-    return NextResponse.json({ error: "compare_requires_a_and_b" }, { status: 400 });
+  const policies = new URL(request.url).searchParams.getAll("policy").filter((id) => id.length > 0);
+  if (policies.length < 2) {
+    return NextResponse.json(
+      {
+        error: "compare_requires_two_or_more_policies",
+        detail: { received: policies.length, parameter: "policy" },
+      },
+      { status: 400 },
+    );
   }
-  const comparison = await comparePolicies(auth.context, campaignId, a, b);
+  const comparison = await comparePolicies(auth.context, campaignId, policies);
   if (!comparison) return NextResponse.json({ error: "policy_not_found" }, { status: 404 });
   return NextResponse.json(comparison, { headers: SCENARIO_PRIVATE_CACHE_HEADERS });
 }
