@@ -44,7 +44,7 @@ const linkedPrograms = new WeakSet<WebGLProgram>();
 /** Three's compileAsync polls completion, which does not imply successful linking. */
 export function assertMaterialsLinked(renderer: WebGLRenderer, materials: readonly Material[]): void {
   for (const material of materials) {
-    const programs = renderer.properties.get(material).programs as Map<string, { program: WebGLProgram }> | undefined;
+    const programs = (renderer.properties.get(material) as { programs?: Map<string, { program: WebGLProgram }> }).programs;
     if (!programs) continue;
     for (const { program } of programs.values()) {
       if (linkedPrograms.has(program)) continue;
@@ -221,6 +221,8 @@ export function selectKtx2MipLevels(buffer: ArrayBuffer, maxDimension: number): 
 class SharedKTX2Loader extends KTX2Loader {
   /** Largest base level the renderer can allocate; `Infinity` until a renderer is known. */
   maxTextureDimension = Infinity;
+  tracker?: AssetDownloadTracker;
+  signal?: AbortSignal;
   readonly resolvedUrls = new Map<string, string>();
   private activeDownloads = 0;
   private readonly waiting: (() => void)[] = [];
@@ -255,12 +257,6 @@ class SharedKTX2Loader extends KTX2Loader {
     this.parseAtLimit(buffer, this.maxTextureDimension, onLoad, onError);
   }
 
-  override dispose(): void {
-    // Terminating a worker mid-transcode leaves its parser promise unresolved.
-    // Aborted queued requests drain without starting work; active decodes finish.
-    if (this.activeDownloads > 0) this.disposeWhenIdle = true;
-    else this.disposeLoaders();
-  }
 
   private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
     const tracker = this.tracker!;
@@ -292,21 +288,7 @@ class SharedKTX2Loader extends KTX2Loader {
       else this.activeDownloads--;
       if (this.activeDownloads === 0 && this.disposeWhenIdle) this.disposeLoaders();
     }
-    if (!selected.forceRgba) {
-      super.parse(selected.buffer, onLoad, onError);
-      return;
-    }
-    if (!this.rgbaLoader) {
-      this.rgbaLoader = new KTX2Loader(this.manager).setTranscoderPath(this.transcoderPath).setWorkerLimit(1);
-      // A non-block-aligned cropped base is not a legal BC texture. Decode the
-      // same authored mip pixels to RGBA instead; block-aligned images above
-      // keep their compressed format.
-      this.rgbaLoader.workerConfig = {
-        astcSupported: false, astcHDRSupported: false, etc1Supported: false,
-        etc2Supported: false, dxtSupported: false, bptcSupported: false, pvrtcSupported: false,
-      };
-    }
-    this.rgbaLoader.parse(selected.buffer, onLoad, onError);
+ 
   }
   override load(
     url: string,
@@ -332,9 +314,11 @@ class SharedKTX2Loader extends KTX2Loader {
   }
 
   override dispose(): void {
-    super.dispose();
-    this.rgbaLoader?.dispose();
-    this.rgbaLoader = null;
+    if (this.activeDownloads > 0) {
+      this.disposeWhenIdle = true;
+      return;
+    }
+    this.disposeLoaders();
   }
 }
 

@@ -279,6 +279,7 @@ describe('essential streaming assets', () => {
       }],
       build: async () => asset,
       maxConcurrent: 1,
+      pinCoarsest: false,
       memory: { admit: () => true, maxAssetBytes: () => 100 },
       onError,
     });

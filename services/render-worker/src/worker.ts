@@ -58,7 +58,6 @@ function failureOf(error: unknown): { code: string; message: string; retryable: 
  * outside the member set.
  */
 export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'inputs'>): void {
-  const nativeCorpus = job.intent.assets.find((asset) => asset.assetId === NATIVE_CORPUS_ASSET_ID && asset.kind === 'map');
   const expectedInputs = new Map<string, { sha256: string; sizeBytes: number }>([
     ['scenario.xosc', job.intent.scenarioRevision.openScenario],
     ...job.intent.assets.map((asset) => [asset.assetId, asset] as const),
@@ -71,7 +70,7 @@ export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'i
     claimedInputIds.add(input.inputId);
 
     const expected = expectedInputs.get(input.inputId);
-    if (!expected && !nativeMaster && !nativeResource) {
+    if (!expected) {
       throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
     }
     if (expected && (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes)) {

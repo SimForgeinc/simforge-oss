@@ -10,7 +10,7 @@ import {
   write as writeKtx2,
 } from 'three/addons/libs/ktx-parse.module.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultContainer, read as readKtx2, write as writeKtx2, VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
+import { VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import {
