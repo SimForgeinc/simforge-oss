@@ -1099,16 +1099,8 @@ export function ScenarioEditorSurface({
         controller={controller}
         document={editorDocument}
         onConfigureCustomRoute={configureCustomRoute}
-        manualDrive={manualDrive}
         showActorMotionControls={experience === "advanced"}
       />
-      {manualDrive.review ? (
-        <ManualDriveReviewPanel
-          actorLabel={manualDriveActorLabel(manualDrive.review.actorRoleId)}
-          recorder={manualDrive}
-          review={manualDrive.review}
-        />
-      ) : null}
       <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />
       <HifiPreviewSlot

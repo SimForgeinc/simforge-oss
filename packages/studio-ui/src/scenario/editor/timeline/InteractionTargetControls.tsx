@@ -372,6 +372,8 @@ function RouteTargetControls({
         <TextListField label="Lane ids (comma separated)" value={target.lanes} onChange={(lanes) => onChange({ ...target, lanes })} />
       ) : target.mode === "acquire" ? (
         <FramePoseControls interactionId={interaction.id} pose={target.pose} onChange={(pose) => onChange({ ...target, pose })} />
+      ) : target.mode === "manualDrive" ? (
+        null
       ) : (
         <div {...stylex.props(styles.gridCols2Gap2)}>
           <SelectMenuField xstyle={styles.xs} label="Near-miss actor" options={roleOptions} value={target.target} onChange={(next) => onChange({ ...target, target: next })} />
@@ -497,7 +499,8 @@ function defaultRouteTarget(mode: RouteTarget["mode"], peer: string): RouteTarge
   if (mode === "customTimedRoute") return { mode, points: [{ timeS: 0, x: 0, z: 0 }] };
   if (mode === "lanePath") return { mode, lanes: ["1:0:-1"] };
   if (mode === "acquire") return { mode, pose: { s: 0, laneOffset: 0, tFrac: 0, headingOffsetRad: 0 } };
-  return { mode, target: peer, clearanceM: 1, pass: "auto", minSpeedKph: 0, maxSpeedKph: 50, deadlineS: 10 };
+  if (mode === "manualDrive") return { mode, recording: { version: 1, clipSeconds: 0, samples: [] } };
+  return { mode: "nearMiss", target: peer, clearanceM: 1, pass: "auto", minSpeedKph: 0, maxSpeedKph: 50, deadlineS: 10 };
 }
 
 function numberTarget(

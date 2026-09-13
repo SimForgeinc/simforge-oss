@@ -13,7 +13,6 @@ import type {
 import { ActorDetailsPanel } from "./ActorDetailsPanel";
 import { InteractionActionPopover } from "./InteractionActionPopover";
 import { useEditorOverlay } from "./editor-overlay-selection";
-import type { ManualDriveRecorder } from "../manual-drive/use-manual-drive-recorder";
 
 /**
  * Resolves the semantic selection against the live EditorDocument and mounts
@@ -24,14 +23,11 @@ export function EditorOverlayHost({
   controller,
   document,
   onConfigureCustomRoute,
-  manualDrive = null,
   showActorMotionControls = true,
 }: {
   controller: EditorController | null;
   document: EditorDocument | null;
   onConfigureCustomRoute?: (interactionId: string) => void;
-  /** The take recorder; `null` where no simulator handoff exists (embedded hosts). */
-  manualDrive?: ManualDriveRecorder | null;
   showActorMotionControls?: boolean;
 }) {
   const { selection, actions } = useEditorOverlay();
@@ -80,7 +76,6 @@ export function EditorOverlayHost({
         document={document}
         interaction={interaction}
         onConfigureCustomRoute={onConfigureCustomRoute}
-        manualDrive={manualDrive}
         onClose={actions.clear}
       />
     );
