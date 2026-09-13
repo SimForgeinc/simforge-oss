@@ -26,6 +26,7 @@ describe('authoring runtime warmup', () => {
 
     const first = warmAuthoringRuntime(TEST_MAP, engine);
     const second = warmAuthoringRuntime(TEST_MAP, engine);
+    await Promise.resolve();
     expect(first).toBe(second);
     expect(load).toHaveBeenCalledOnce();
     expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl, { engine });

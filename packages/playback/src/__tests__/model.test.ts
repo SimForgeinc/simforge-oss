@@ -386,13 +386,13 @@ describe('SimForge concrete playback import', () => {
         headIds: program.mapBinding?.headIds ?? [],
         timingSource: program.mapBinding?.timingSource ?? 'unbound',
       })),
-      trace: { ticks: { t: [0], signals: {
-        'selected-stage': { phase: ['red'] },
-        'conflicting-stage': { phase: ['red'] },
+      trace: { ticks: { t: [0, 1, 4], signals: {
+        'selected-stage': { phase: ['red', 'green', 'red'] },
+        'conflicting-stage': { phase: ['red', 'red', 'red'] },
       } } },
     } as unknown as PlaybackBundle;
 
-    expect(samplePlaybackSignals(bundle, 2).map((signal) => signal.phase)).toEqual(['red', 'red']);
+    expect(samplePlaybackSignals(bundle, 2).map((signal) => signal.phase)).toEqual(['green', 'red']);
     expect(evaluatePlaybackSignalHeadStates(bundle, .999)).toEqual({ '2230': 'red', '2231': 'red', '2240': 'red' });
     expect(evaluatePlaybackSignalHeadStates(bundle, 1)).toEqual({ '2230': 'green', '2231': 'green', '2240': 'red' });
     expect(evaluatePlaybackSignalHeadStates(bundle, 3.999)).toEqual({ '2230': 'green', '2231': 'green', '2240': 'red' });
