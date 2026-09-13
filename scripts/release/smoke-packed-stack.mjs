@@ -66,14 +66,43 @@ if (browserPackages.length > 0) {
     `export default function Page() { return <pre>{JSON.stringify([${browserPackages.map((_, index) => `Object.keys(product${index})`).join(',')}])}</pre>; }`,
     '',
   ].join('\n'));
-  await writeFile(path.join(root, 'next.config.mjs'),
-    `export default { transpilePackages: ${JSON.stringify(browserPackages.map((entry) => entry.name))} };\n`);
   const consumerRequire = createRequire(path.join(root, 'package.json'));
-  execFileSync(process.execPath, [consumerRequire.resolve('next/dist/bin/next'), 'build', '--webpack'], {
-    cwd: root,
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
-    stdio: 'pipe',
-  });
+  const repoRequire = createRequire(path.join(repoRoot, 'studio', 'package.json'));
+  const uiDir = path.dirname(consumerRequire.resolve('@simforge-oss/studio-ui/package.json'));
+  const babelLoader = repoRequire.resolve('babel-loader');
+  const stylexPlugin = repoRequire.resolve('@stylexjs/babel-plugin');
+  await writeFile(path.join(root, 'next.config.mjs'), [
+    'import path from "node:path";',
+    `const uiDir = ${JSON.stringify(uiDir)};`,
+    `const rootDir = ${JSON.stringify(root)};`,
+    `const babelLoader = ${JSON.stringify(babelLoader)};`,
+    `const stylexPlugin = ${JSON.stringify(stylexPlugin)};`,
+    `export default {
+  transpilePackages: ${JSON.stringify(browserPackages.map((entry) => entry.name))},
+  webpack(config) {
+    config.module.rules.push({
+      test: /\\.(?:js|jsx|ts|tsx|mjs|cjs)$/,
+      include: [path.join(uiDir, "dist")],
+      use: [{
+        loader: babelLoader,
+        options: {
+          babelrc: false,
+          configFile: false,
+          compact: false,
+          plugins: [[stylexPlugin, {
+            dev: false,
+            runtimeInjection: false,
+            treeshakeCompensation: true,
+            enableInlinedConditionalMerge: true,
+            unstable_moduleResolution: { type: "commonJS", rootDir },
+          }]],
+        },
+      }],
+    });
+    return config;
+  },
+};`,
+  ].join('\\n'));
   verified.push(...browserPackages.map((entry) => ({ name: entry.name, runtime: 'next-production-build' })));
 }
 
