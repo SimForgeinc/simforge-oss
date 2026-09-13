@@ -126,6 +126,16 @@ function guardContents(contents) {
   contents.on("did-create-window", (child) => guardContents(child.webContents));
 }
 
+/**
+ * The app's top bar is the window's title bar. `AppTopBar.stylex.ts` sets the
+ * bar to 3.5rem, which is 56px at the 16px root the shell always has; the
+ * Windows/Linux control overlay is drawn at that height so the native
+ * minimise/maximise/close sit inside the bar instead of on a strip above it.
+ */
+const TOP_BAR_HEIGHT = 56;
+/** The bar's ink: `--foreground` in the dark theme (hsl(0 0% 93%)). */
+const TOP_BAR_SYMBOL_COLOR = "#ededed";
+
 function createWindow() {
   window = new BrowserWindow({
     width: 1600,
@@ -133,10 +143,25 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 640,
     title: PRODUCT.name,
-    backgroundColor: "#0b0e14",
+    // hsl(0 0% 4%), the product's --background: no flash before shell.css paints.
+    backgroundColor: "#0a0a0a",
+    // One bar, every platform: the native title bar is hidden and its controls
+    // are overlaid on the page (Window Controls Overlay). The page reads their
+    // geometry through `env(titlebar-area-*)` and keeps its content clear of
+    // them; see `.app-topbar-native` in packages/studio-ui/src/styles.css.
+    titleBarStyle: "hidden",
     ...(process.platform === "darwin"
-      ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 14, y: 18 } }
-      : {}),
+      ? {
+          titleBarOverlay: true,
+          // Vertically centred in the bar: the traffic lights are 12px tall.
+          trafficLightPosition: { x: 14, y: (TOP_BAR_HEIGHT - 12) / 2 },
+        }
+      : {
+          titleBarOverlay: { color: "#0a0a0a", symbolColor: TOP_BAR_SYMBOL_COLOR, height: TOP_BAR_HEIGHT },
+          // The application menu stays reachable with Alt; shown, it would be
+          // a second strip between the overlay and the page.
+          autoHideMenuBar: true,
+        }),
     ...(process.platform === "linux" ? { icon: join(pagesDir, "icon.png") } : {}),
     webPreferences: webPreferences(),
   });

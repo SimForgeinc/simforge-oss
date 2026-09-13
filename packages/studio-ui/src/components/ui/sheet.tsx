@@ -22,7 +22,7 @@ const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Overlay ref={ref} {...mergeStyleProps(stylex.props(styles.overlay), className)} {...props} />
+  <SheetPrimitive.Overlay ref={ref} {...mergeStyleProps(stylex.props(styles.overlay), className ? `app-overlay-native ${className}` : "app-overlay-native")} {...props} />
 ));
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 

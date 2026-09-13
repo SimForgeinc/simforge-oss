@@ -96,8 +96,26 @@ export function workspaceHostPlan(mode: LocalHostMode, config: LocalHostConfig):
   };
 }
 
+/**
+ * Pins `process.title` before any module of a host child runs.
+ *
+ * On macOS, libuv implements `process.title` by checking the process in with
+ * LaunchServices, and LaunchServices puts every checked-in process in the
+ * Dock: for a Node-mode Electron child that is a generic "exec" tile beside
+ * the real application icon. Next sets its title unconditionally
+ * (`next-server (vX)`), so the children get the property pinned instead. A
+ * `data:` import needs no file to stage, and forked grandchildren inherit it
+ * through `execArgv`. Other platforms have no such surface and get nothing.
+ */
+const HOLD_PROCESS_TITLE = `data:text/javascript,${encodeURIComponent(
+  'Object.defineProperty(process, "title", { configurable: true, enumerable: true, get: () => "simforge-host", set() {} });',
+)}`;
+
 function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>): ChildProcess {
-  return spawn(command.command, command.args, {
+  const args = process.platform === "darwin" && command.command === process.execPath
+    ? ["--import", HOLD_PROCESS_TITLE, ...command.args]
+    : command.args;
+  return spawn(command.command, args, {
     cwd: command.cwd,
     stdio: "inherit",
     env: {

@@ -8,6 +8,7 @@ import type { RefObject } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
 import { CloudConnectionChip } from "@/app/components/cloud/CloudConnectionCard";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { DASHBOARD_APPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
@@ -28,7 +29,7 @@ export function AppSwitcherOverlay({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          {...stylex.props(styles.backdrop)}
+          {...mergeStyleProps(stylex.props(styles.backdrop), "app-overlay-native")}
           data-testid="app-switcher-backdrop"
         >
           <SkyCloudBackdrop />

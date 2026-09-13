@@ -1,5 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import SimForgeLogo from "@/app/components/landing/SimForgeLogo";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { styles } from "@/app/components/AppTopBarFrame.stylex";
 
 /**
@@ -22,7 +23,7 @@ import { styles } from "@/app/components/AppTopBarFrame.stylex";
 export function AppTopBarFrame() {
   return (
     <header
-      {...stylex.props(styles.header)}
+      {...mergeStyleProps(stylex.props(styles.header), "app-topbar-native")}
       role="status"
       aria-label="Loading workspace navigation"
     >

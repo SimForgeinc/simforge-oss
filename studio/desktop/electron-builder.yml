@@ -45,6 +45,8 @@ files:
   - cache-preload.cjs
   - starting.html
   - host-exited.html
+  - cloud-loading.css
+  - shell.css
   - icon.png
   - package.json
   - "!node_modules/**/*"
@@ -66,7 +68,9 @@ publish:
   url: "https://github.com/SimForgeinc/simforge-oss/releases/download/studio-channel-preview/"
   channel: preview
 
+# Icons come from desktop/build/icon.svg via `node desktop/build-icons.mjs`.
 win:
+  icon: desktop/build/icon.ico
   target:
     - nsis
   # Native binaries are MSVC builds; the VC++ runtime ships with Windows 10/11 updates
@@ -81,6 +85,7 @@ nsis:
   artifactName: "SimForge-Studio-Setup-${version}-${arch}.${ext}"
 
 mac:
+  icon: desktop/build/icon.icns
   sign: desktop/sign-mac.mjs
   target:
     - dmg
@@ -99,6 +104,7 @@ dmg:
   writeUpdateInfo: false
 
 linux:
+  icon: desktop/build/icon.png
   target:
     - dir
     - AppImage

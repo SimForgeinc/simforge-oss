@@ -15,6 +15,8 @@
     "desktop:dev": "node desktop/dev.mjs",
     "desktop:stage": "node desktop/stage.mjs",
     "desktop:encoders": "node desktop/build-encoders.mjs",
+    "desktop:icons": "node desktop/build-icons.mjs",
+    "desktop:pages": "node desktop/build-shell-pages.mjs",
     "desktop:dist": "node desktop/stage.mjs && electron-builder --config desktop/electron-builder.yml --publish never",
     "desktop:verify": "node desktop/verify-package.mjs",
     "migrate": "tsx scripts/migrate.ts",

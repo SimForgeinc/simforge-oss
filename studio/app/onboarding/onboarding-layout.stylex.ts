@@ -12,4 +12,18 @@ export const layout = stylex.create({
     backgroundColor: "#050607",
     color: "#ffffff",
   },
+  /**
+   * Onboarding has no top bar, so in the desktop shell nothing would drag the
+   * window. This strip is the title-bar area the shell reports between its
+   * window controls (`env(titlebar-area-*)`); a browser reports none and the
+   * fallbacks collapse it to nothing. `.app-topbar-native` makes it drag.
+   */
+  dragStrip: {
+    position: "fixed",
+    top: 0,
+    left: "env(titlebar-area-x, 0px)",
+    width: "env(titlebar-area-width, 0px)",
+    height: "env(titlebar-area-height, 0px)",
+    zIndex: 1,
+  },
 });

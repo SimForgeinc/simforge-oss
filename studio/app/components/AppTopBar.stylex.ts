@@ -50,12 +50,17 @@ export const styles = stylex.create({
    * sticky top-0 z-[260] flex h-14 w-full shrink-0 items-center overflow-hidden
    * border-b border-white/15 bg-black/[0.52]
    * shadow-[0_10px_35px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)]
-   * backdrop-blur-2xl backdrop-saturate-0 after:pointer-events-none
-   * after:absolute after:inset-0
-   * after:shadow-[inset_0_0_34px_rgba(255,255,255,0.07)]
+   * backdrop-blur-2xl backdrop-saturate-0
    *
-   * The `::after` layer is the inner glow on the glass; Tailwind's `after:`
-   * variants supply the empty `content` that makes it render.
+   * The third shadow is the inner glow on the glass. The bar shipped it as an
+   * `::after` layer over the content (`after:absolute after:inset-0`), and it
+   * must not go back there: the header is the desktop shell's window drag
+   * region, and Chromium computes draggable regions from element rectangles
+   * without regard to `pointer-events`, so a full-size pseudo-element inside
+   * the drag element covered every `no-drag` control in the bar and swallowed
+   * their clicks. An inset shadow paints between background and content —
+   * under the mark and the title instead of over them — which at 7% white
+   * is not a visible difference.
    */
   header: {
     position: "sticky",
@@ -72,15 +77,8 @@ export const styles = stylex.create({
     borderBottomColor: "rgb(255 255 255 / 0.15)",
     backgroundColor: "rgb(0 0 0 / 0.52)",
     boxShadow:
-      "0 10px 35px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.10)",
+      "0 10px 35px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 0 34px rgba(255,255,255,0.07)",
     backdropFilter: "blur(40px) saturate(0)",
-    "::after": {
-      content: "",
-      pointerEvents: "none",
-      position: "absolute",
-      inset: 0,
-      boxShadow: "inset 0 0 34px rgba(255,255,255,0.07)",
-    },
   },
 
   // pointer-events-none absolute -inset-x-[8%] -inset-y-full
@@ -93,13 +91,23 @@ export const styles = stylex.create({
     bottom: "-100%",
   },
 
-  // relative z-10 flex h-full w-full items-center gap-3 px-3
+  /**
+   * relative z-10 flex h-full items-center gap-3 px-3
+   *
+   * The row is the part of the bar that keeps clear of the desktop shell's
+   * window controls: `titlebar-area-x` is the traffic lights' width on macOS
+   * and `titlebar-area-width` stops short of the buttons on Windows/Linux.
+   * Neither exists in a browser, where the fallbacks restore the full row.
+   * The header behind it still spans the window, so the glass and the cloud
+   * plate run under the controls as one surface.
+   */
   row: {
     position: "relative",
     zIndex: 10,
     display: "flex",
     height: "100%",
-    width: "100%",
+    marginLeft: "env(titlebar-area-x, 0px)",
+    width: "env(titlebar-area-width, 100%)",
     alignItems: "center",
     gap: "0.75rem",
     paddingInline: "0.75rem",

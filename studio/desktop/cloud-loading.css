@@ -1,0 +1,233 @@
+/* Lifted from packages/studio-ui/src/styles.css by desktop/build-shell-pages.mjs. */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 3.9%;
+  --primary: 0 0% 9%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96.1%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 0 0% 45.1%;
+  --accent: 0 0% 96.1%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 89.8%;
+  --input: 0 0% 89.8%;
+  --ring: 0 0% 3.9%;
+  --radius: 0rem;
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 0 0% 26.1%;
+  --sidebar-primary: 0 0% 9%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 95.9%;
+  --sidebar-accent-foreground: 0 0% 9%;
+  --sidebar-border: 0 0% 91%;
+  --sidebar-ring: 0 0% 3.9%;
+  --accent-brand: #E8E044;
+  /* Traffic-signal indications. Not semantic tokens: these are the physical
+   * colours of a lamp, so they are identical in both themes and must not be
+   * remapped to `--destructive` / `--primary` — a red light that follows the
+   * error colour and a green one that has no token at all is how v1's signal
+   * surfaces ended up with four hardcoded hexes. Values carried over from v1's
+   * `SIGNAL_STATE_COLORS` unchanged so the look is preserved exactly. */
+  --signal-green: 140 60% 53%;
+  --signal-yellow: 42 87% 55%;
+  --signal-red: 0 84% 62%;
+  --signal-off: 220 8% 28%;
+  /* A head whose indication is not stated at all, which is distinct from
+   * `off`: `off` is a commanded dark lamp, `unknown` is no information. */
+  --signal-unknown: 220 8% 46%;
+  /* --font-heavy is Chakra Petch, provided by next/font in app/layout.tsx.
+   * Do not alias it here: a :root fallback silently repoints every
+   * var(--font-heavy) consumer at the display font. */
+  --font-accent: var(--font-display);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  /* The two list-chrome surfaces the semantic scale does not cover. Both sit
+   * BELOW --background: the dataset/document list frames itself against a
+   * near-black plate so the rows read as inset panels rather than as cards
+   * floating on the page background. Formerly re-inlined as #050607 and
+   * #0a0a0c across the list and editor trees. */
+  --surface-deep: 210 17% 2.4%;
+  --surface-raised: 240 9% 4.3%;
+  /* The meta face: uppercase, wide-tracked labels and counters. Distinct from
+   * --font-mono, which is the code face — this one is chosen for the
+   * instrument-panel look and is never used for code. */
+  --font-meta: "Share Tech Mono", "IBM Plex Mono", ui-monospace,
+    SFMono-Regular, Menlo, monospace;
+  --background: 0 0% 4%;
+  --foreground: 0 0% 93%;
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 93%;
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 93%;
+  --primary: 53 78% 58%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 11%;
+  --secondary-foreground: 0 0% 93%;
+  --muted: 0 0% 11%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 0 0% 11%;
+  --accent-foreground: 0 0% 93%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --ring: 53 78% 58%;
+  --sidebar-background: 0 0% 5%;
+  --sidebar-foreground: 0 0% 85%;
+  --sidebar-primary: 53 78% 58%;
+  --sidebar-primary-foreground: 0 0% 4%;
+  --sidebar-accent: 0 0% 10%;
+  --sidebar-accent-foreground: 0 0% 90%;
+  --sidebar-border: 0 0% 10%;
+  --sidebar-ring: 53 78% 58%;
+  --accent-brand: #E8E044;
+  --surface-deep: 210 17% 2.4%;
+  --surface-raised: 240 9% 4.3%;
+  /* Repeated rather than inherited on purpose: every other token is declared
+   * in both blocks, and a signal colour that only exists on `:root` would
+   * silently disappear if the dark block ever became the only one applied. */
+  --signal-green: 140 60% 53%;
+  --signal-yellow: 42 87% 55%;
+  --signal-red: 0 84% 62%;
+  --signal-off: 220 8% 28%;
+  --signal-unknown: 220 8% 46%;
+}
+
+@layer priority1, priority2, priority3, priority4, priority5, priority6, priority7;
+@keyframes x1wc8ddo-B{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes x1ys2hyy-B{from{transform:translate3d(-1.5%,0,0) scale(1.04);}to{transform:translate3d(1.5%,-2%,0) scale(1.08);}}
+@keyframes xekq5re-B{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
+:root, .x1v8wcze{--x1kcb9ph:0;--xk7uflf:10;--x1e81ouf:30;--x1l50pu8:50;--x1ugch5d:60;--x1p3a2ig:80;--x1vw1nqg:90;--x13xocut:100;--x1m6s65r:140;--xiecjun:150;--x1yug64t:200;--x5tposc:220;--xbv830k:240;--x12vzh2l:250;--xil9aes:260;--xqw7t5d:300;--x813cjl:310;--xoduqa7:1000;}
+:root, .x4tvh11{--x1l4rge2:0;--x1nb01we:0.125rem;--x1of02yt:0.25rem;--x1wmfoul:0.375rem;--x1y7i6yq:0.5rem;--xspaln7:0.75rem;--xb6jw46:1rem;--xhfq7p:1.5rem;--xzlirxo:2rem;--x1e2rvwk:13.75rem;--x1m1qf65:18.25rem;--x1m4abu6:16.25rem;--x44t9ed:20rem;--x1b0jcla:26.25rem;--x4rp57o:38.75rem;}
+:root, .x7gy2z5{--x1wnuac1:0;--x174y018:0;--x1gikxzf:0;--x1967hl6:0;--xkf2b5k:0;--x3a15vn:9999px;}
+:root, .xuwn3px{--x8ivezz:80ms;--x1071jqo:120ms;--xqok2ys:180ms;--x101gq7y:260ms;--x1ystjs2:cubic-bezier(0.4, 0, 0.2, 1);--xd9c8x2:cubic-bezier(0.16, 1, 0.3, 1);--x17chw88:cubic-bezier(0.2, 0.8, 0.2, 1);--xkyi6nw:ease-out;--xn0p13:blur(12px);--xafnu9l:blur(24px);}
+:root, .x13ix3yp{--x9fbalp:var(--font-display), system-ui, sans-serif;--x1vs1wdo:var(--font-body), system-ui, sans-serif;--x5zrtue:var(--font-heavy), system-ui, sans-serif;--x5vthj5:var(--font-mono), ui-monospace, monospace;--x1xu3zu3:var(--font-meta), ui-monospace, monospace;--x1arvc61:0.625rem;--x13apq4d:0.6875rem;--xdjj1rl:0.75rem;--x1tx5n9f:0.875rem;--x1ab9yth:1rem;--x1um6odb:1.125rem;--xhjufxk:1.25rem;--x6ri2v2:1.5rem;--x1sjs8jk:0.875rem;--x1qn8kjv:1rem;--xx6o2h4:1.25;--x1q8grjz:1.5;--x1mxg9fi:400;--xpkfybe:500;--x4fhr8g:600;--x1y6xebf:700;--xflcw33:0.1em;--x1nbj0u0:0.12em;--x1m56arv:0.14em;--xkw8zar:0.16em;--x95uxoi:0.18em;--x1uve9el:0.22em;}
+:root, .x1jdqsfj{--xvsvrw5:hsl(var(--background));--x1vsr4wm:hsl(var(--card));--x85do0y:hsl(var(--card));--xa14hq7:hsl(var(--popover));--xr4rjsh:hsl(var(--muted));--x935i6g:hsl(var(--muted-foreground));--xixpbpb:hsl(var(--secondary));--x3n3w4j:hsl(var(--secondary-foreground));--xnhqh9o:hsl(var(--primary));--xo6zxiq:hsl(var(--primary-foreground));--x186583v:hsl(var(--border));--xjzxn8n:hsl(var(--ring));--xowvac4:hsl(var(--surface-deep));--x1fiswby:hsl(var(--surface-raised));--x1uybryw:#0a0a0a;--x12opm75:#111113;--xk07xcg:#18181b;--xw8xkki:hsl(var(--foreground));--xw613dv:hsl(var(--muted-foreground));--x1pvdje6:rgba(255, 255, 255, 0.5);--xv5tb43:rgba(255, 255, 255, 0.35);--x1y8383y:rgba(255, 255, 255, 0.08);--xdkfq3h:rgba(255, 255, 255, 0.08);--xco1ukc:rgba(255, 255, 255, 0.14);--x11rgoot:rgba(255, 255, 255, 0.04);--xfgh4n3:rgba(255, 255, 255, 0.07);--xdg6f0j:rgba(255, 255, 255, 0.15);--x1dnnvqt:rgba(255, 255, 255, 0.1);--xg328o1:rgba(255, 255, 255, 0.15);--x179m73g:rgba(0, 0, 0, 0.45);--xyp3n6p:rgba(0, 0, 0, 0.25);--x1m8hb1q:#E8E044;--x1dm9x0v:#f1ea55;--xgukt51:#0a0a0a;--xp2zqny:rgba(232, 224, 68, 0.12);--xfydabx:hsl(var(--destructive));--x1otdkiv:hsl(var(--destructive-foreground));--xgddgjf:hsl(var(--signal-green));--x1l37qj:hsl(var(--signal-yellow));--xgp13cz:hsl(var(--signal-red));--x34vg00:hsl(var(--signal-off));--x1dxhxyo:hsl(var(--signal-unknown));}
+@layer priority2{
+.x10a8y8t{inset:0}
+}
+@layer priority3{
+.x1bgw0s5{border-color:rgb(252 211 77 / 25%)}
+.x1eo6qxu{border-color:rgb(255 255 255 / 8%)}
+.x1yt6v20{border-radius:.75rem}
+.x10hpsqq{border-radius:9999px}
+.xmkeg23{border-width:1px}
+.x98rzlu{flex:1}
+.x13z6uf9{gap:.5rem}
+.x8fetqu{gap:1rem}
+.xb3r6kr{overflow:hidden}
+.x13eudtd{padding-block:.625rem}
+.x1yb22fu{padding-block:1.5rem}
+.x1j6fjeo{padding-block:2.5rem}
+.x1ryrjj2{padding-inline:.75rem}
+.x1qhpy6z{padding-inline:1.25rem}
+.xzsmjar{padding-inline:1.5rem}
+.x1ku5rj1{place-items:center}
+@media (min-width: 640px){.x184b5yi.x184b5yi{padding-block:1.75rem}}
+@media (min-width: 640px){.xx5f43f.xx5f43f{padding-inline:2rem}}
+}
+@layer priority4{
+.x6s0dn4{align-items:center}
+.x1cy8zhl{align-items:flex-start}
+.xpz12be{animation-direction:alternate}
+.xmg6eyc{animation-duration:1.5s}
+.x7s8090{animation-duration:16s}
+.x1q3qbx4{animation-duration:1s}
+.xa4qsjk{animation-iteration-count:infinite}
+.x1aerksh{animation-name:x1wc8ddo-B}
+.xpjgpil{animation-name:x1ys2hyy-B}
+.x1rhffln{animation-name:xekq5re-B}
+.x4hg4is{animation-timing-function:ease-in-out}
+.x1esw782{animation-timing-function:linear}
+.xm5t9ug{backdrop-filter:blur(42px) contrast(1.25) saturate(0)}
+.x42x0ya{background-color:black}
+.xnf4n8c{background-color:rgb(0 0 0 / .6)}
+.xw3p576{background-color:rgb(0 0 0 / 15%)}
+.xklqylz{background-color:rgb(252 211 77 / 10%)}
+.xhkldz1{background-color:rgb(255 255 255 / 10%)}
+.xphe6ip{background-color:var(--x1m8hb1q)}
+.x1xzktwu{background-image:radial-gradient(ellipse 16% 34% at 7% 50%,rgba(255,255,255,.2) 0%,rgba(255,255,255,.12) 44%,transparent 76%),radial-gradient(ellipse 22% 40% at 27% 58%,rgba(255,255,255,.17) 0%,rgba(255,255,255,.08) 48%,transparent 78%),radial-gradient(ellipse 19% 38% at 51% 43%,rgba(255,255,255,.22) 0%,rgba(255,255,255,.09) 45%,transparent 76%),radial-gradient(ellipse 24% 42% at 74% 59%,rgba(255,255,255,.16) 0%,rgba(255,255,255,.07) 50%,transparent 80%),radial-gradient(ellipse 17% 35% at 95% 46%,rgba(255,255,255,.2) 0%,rgba(255,255,255,.1) 45%,transparent 76%)}
+.x14rmedj{color:rgb(254 243 199 / 70%)}
+.xl7hjui{color:rgb(254 243 199)}
+.x1xeuy8b{color:rgb(255 255 255 / 35%)}
+.x1mjg8q5{color:rgb(255 255 255 / 45%)}
+.x38f5v3{color:rgb(255 255 255 / 55%)}
+.x1d3faxd{color:rgb(255 255 255 / 65%)}
+.xphggvg{color:var(--x1m8hb1q)}
+.x1awj2ng{color:white}
+.x78zum5{display:flex}
+.xrvj5dj{display:grid}
+.x3nfvp2{display:inline-flex}
+.x1fro9wb{filter:blur(11px)}
+.x2lah0s{flex-shrink:0}
+.xszmtrc{font-family:var(--font-meta)}
+.x12e830c{font-family:var(--x5vthj5)}
+.xkpwil5{font-size:.875rem}
+.x1c3i2sq{font-size:1.125rem}
+.x1603h9y{font-size:1.25rem}
+.x1k6wstc{font-size:10px}
+.x1j6dyjg{font-size:11px}
+.xvwhms9{font-size:9px}
+.x1s688f{font-weight:600}
+.x1xlr1w8{font-weight:700}
+.xc8icb0{isolation:isolate}
+.x1qughib{justify-content:space-between}
+.x1w69ole{letter-spacing:-0.025em}
+.x7447wj{letter-spacing:.12em}
+.x1dor1uw{letter-spacing:.1em}
+.xribhvm{letter-spacing:.2em}
+.x8r4c90{line-height:1.25rem}
+.xladpa3{line-height:1.75rem}
+.x27vdmw{opacity:.95}
+.x47corl{pointer-events:none}
+.x10l6tqk{position:absolute}
+.xixxii4{position:fixed}
+.x1n2onr6{position:relative}
+.xtvhhri{text-transform:uppercase}
+.x1d8287x{transition-duration:.3s}
+.xxrbq2n{transition-property:width}
+.x9lcvmn{transition-timing-function:ease-out}
+.x1so62im{will-change:transform}
+.x1n327nk{z-index:10}
+.x7elcn7{z-index:240}
+@media (prefers-reduced-motion: reduce){.x1aquc0h.x1aquc0h{animation-name:none}}
+}
+@layer priority5{
+.x4j2xbe{height:.375rem}
+.xf08kfj{height:.875rem}
+.xmll18r{height:1.25rem}
+.x5yr21d{height:100%}
+.xwaiz5r{height:2.5rem}
+.x1tbvfm1{margin-top:.25rem}
+.x5j7nwy{margin-top:.375rem}
+.x1mjqqkp{margin-top:.5rem}
+.x1c4vshn{margin-top:1.5rem}
+.xj1urod{margin-top:1rem}
+.x197vjsw{max-width:430px}
+.x1us19tq{min-height:100%}
+.x1ov3xa9{min-height:100dvh}
+.x1b3lxvz{min-height:12rem}
+.xeuugli{min-width:0}
+.x1xvt488{width:.875rem}
+.xwqq7k2{width:1.25rem}
+.xh8yej3{width:100%}
+.xvm51jw{width:2.5rem}
+.x1kbppkt{width:33.333%}
+.x140l2k2{width:min(430px,calc(100vw - 2rem))}
+@media (prefers-reduced-motion: reduce){.xie2s74.xie2s74{width:100%}}
+}
+@layer priority6{
+.xxx281p::before{inset:0}
+}
+@layer priority7{
+.x19nmgeo::before{background-image:radial-gradient(circle at 50% 46%,rgba(255,255,255,.07) 0%,rgba(18,19,20,.18) 38%,rgba(2,3,4,.72) 100%)}
+.x1cpjm7i::before{content:""}
+.x1hmns74::before{position:absolute}
+}

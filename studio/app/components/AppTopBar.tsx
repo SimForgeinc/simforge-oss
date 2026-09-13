@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { AppSwitcherOverlay } from "@/app/components/AppSwitcherOverlay";
 import SimForgeLogo from "@/app/components/landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { activeNavItem } from "@/app/lib/dashboard-nav";
 import { cloudPlate, styles } from "@/app/components/AppTopBar.stylex";
 
@@ -38,8 +39,10 @@ export function AppTopBar() {
 
   return (
     <>
+      {/* `app-topbar-native` is a global hook, not `xstyle`: the drag region
+          has to reach every interactive descendant (styles.css). */}
       <header
-        {...stylex.props(styles.header)}
+        {...mergeStyleProps(stylex.props(styles.header), "app-topbar-native")}
         data-testid="app-topbar"
       >
         <div

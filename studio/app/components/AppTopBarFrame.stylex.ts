@@ -38,11 +38,14 @@ export const styles = stylex.create({
     backgroundColor: "hsl(var(--background) / 0.95)",
     backdropFilter: "blur(4px)",
   },
-  // flex h-full w-full items-center gap-3 px-3
+  // flex h-full w-full items-center gap-3 px-3, inset around the desktop
+  // shell's window controls exactly as `AppTopBar.stylex.ts`'s row is, so the
+  // streamed bar replaces this without a shift.
   row: {
     display: "flex",
     height: "100%",
-    width: "100%",
+    marginLeft: "env(titlebar-area-x, 0px)",
+    width: "env(titlebar-area-width, 100%)",
     alignItems: "center",
     gap: "0.75rem",
     paddingInline: "0.75rem",

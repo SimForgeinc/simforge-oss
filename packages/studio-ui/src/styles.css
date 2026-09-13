@@ -683,19 +683,42 @@ html {
   }
 }
 
-/* Electron unified title bar. Native traffic lights occupy this inset on macOS;
-   browser mode has no platform marker and keeps the normal web toolbar. */
+/* The desktop shell's unified title bar. Electron hides the native title bar
+   and overlays its window controls on the page (Window Controls Overlay), so
+   the app's top bar is the title bar: the whole bar drags the window and its
+   controls opt back out. Both properties are inert in a browser, and the
+   `env(titlebar-area-*)` inset the bar's StyleX applies falls back to the
+   full width there, so one stylesheet serves both hosts. These are global
+   classes only because `-webkit-app-region` must reach every interactive
+   descendant, which StyleX cannot express. */
 .app-topbar-native {
   -webkit-app-region: drag;
 }
 
 .app-topbar-native button,
 .app-topbar-native a,
+.app-topbar-native input,
+.app-topbar-native select,
+.app-topbar-native [role="button"],
 .app-topbar-native [data-topbar-slot="actions"],
 .app-topbar-native [data-topbar-slot="trailing"] {
   -webkit-app-region: no-drag;
 }
 
-html[data-simforge-platform="darwin"] .app-topbar-native > div {
-  padding-left: 5.25rem;
+/* Surfaces that float over the bar. Chromium builds the window's draggable
+   region from element rectangles in paint order, ignoring z-order and
+   pointer-events, and only an element that *declares* `no-drag` subtracts
+   from it. A portalled dialog, sheet, menu, popover, tooltip or toast that
+   lands on the bar's band would otherwise hand its clicks to the window
+   manager — the app switcher's close button could not be clicked. Overlay
+   backdrops carry `app-overlay-native` because Radix gives them no role. */
+[role="dialog"],
+[role="alertdialog"],
+[role="menu"],
+[role="listbox"],
+[role="tooltip"],
+[data-radix-popper-content-wrapper],
+[data-sonner-toaster],
+.app-overlay-native {
+  -webkit-app-region: no-drag;
 }

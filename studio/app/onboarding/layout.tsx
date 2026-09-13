@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { StudioHostBoundary } from "@/app/lib/host/StudioHostBoundary";
+import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { layout } from "./onboarding-layout.stylex";
 
 /**
@@ -12,6 +13,7 @@ import { layout } from "./onboarding-layout.stylex";
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   return (
     <StudioHostBoundary>
+      <div aria-hidden="true" {...mergeStyleProps(stylex.props(layout.dragStrip), "app-topbar-native")} />
       <div {...stylex.props(layout.shell)}>{children}</div>
     </StudioHostBoundary>
   );
