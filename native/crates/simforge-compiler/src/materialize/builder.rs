@@ -787,13 +787,19 @@ impl<'a> Materializer<'a> {
                         },
                         None,
                     ),
-                    (Some(t::SceneAbsoluteInitialRoute::WorldPath { points, .. }), _) => (
+                    (Some(t::SceneAbsoluteInitialRoute::WorldPath { points, stop_controls }), _) => (
                         Route::from_polyline(points.iter().map(|p| Vec2 { x: p.x, y: -p.z })),
                         sim::RouteSpec::Polyline {
                             points: points
                                 .iter()
                                 .map(|p| sim::ScenePoint { x: p.x, z: p.z })
                                 .collect(),
+                            stop_controls: stop_controls.iter().map(|stop| sim::RouteStationStop {
+                                id: stop.id.clone(),
+                                s: stop.s,
+                                dwell_s: stop.dwell_s,
+                                coordination_id: stop.coordination_id.clone(),
+                            }).collect(),
                         },
                         None,
                     ),
@@ -860,7 +866,7 @@ impl<'a> Materializer<'a> {
                         ];
                         (
                             Route::from_polyline(points.iter().map(|q| Vec2 { x: q.x, y: -q.z })),
-                            sim::RouteSpec::Polyline { points },
+                            sim::RouteSpec::Polyline { points, stop_controls: Vec::new() },
                             None,
                         )
                     }
@@ -1152,6 +1158,7 @@ impl<'a> Materializer<'a> {
         let route_spec = if route.is_freeform() {
             sim::RouteSpec::Polyline {
                 points: polyline_points_of(&route),
+                stop_controls: Vec::new(),
             }
         } else {
             sim::RouteSpec::LanePath {
@@ -2064,6 +2071,7 @@ impl<'a> Materializer<'a> {
             verb: sim::Verb::Route {
                 target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline {
                     points: solution.points.to_vec(),
+                    stop_controls: Vec::new(),
                 }),
                 join_from_current_pose: None,
                 best_effort_world_path: None,
@@ -2710,7 +2718,7 @@ impl<'a> Materializer<'a> {
                         .point,
                     ));
                 }
-                spec(sim::RouteSpec::Polyline { points: out })
+                spec(sim::RouteSpec::Polyline { points: out, stop_controls: Vec::new() })
             }
             t::RouteTarget::CustomRoute { points } => sim::Verb::Route {
                 target: sim::RouteActionTarget::Spec(sim::RouteSpec::Polyline {
@@ -2718,6 +2726,7 @@ impl<'a> Materializer<'a> {
                         .iter()
                         .map(|p| sim::ScenePoint { x: p.x, z: p.z })
                         .collect(),
+                    stop_controls: Vec::new(),
                 }),
                 join_from_current_pose: Some(true),
                 best_effort_world_path: Some(true),
@@ -3905,7 +3914,7 @@ impl<'a> Materializer<'a> {
         }
         let worker_points: Option<&Vec<sim::ScenePoint>> =
             worker.and_then(|w| match &w.behavior.route {
-                sim::RouteSpec::Polyline { points }
+                sim::RouteSpec::Polyline { points, .. }
                     if w.kind == sim::ActorKind::Pedestrian && !w.is_static =>
                 {
                     Some(points)

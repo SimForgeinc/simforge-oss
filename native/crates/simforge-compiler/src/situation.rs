@@ -2724,6 +2724,7 @@ pub fn compile_situation(
                                 .iter()
                                 .map(|p| sim::ScenePoint { x: p.x, z: p.z })
                                 .collect(),
+                            stop_controls: Vec::new(),
                         }),
                         join_from_current_pose: None,
                         best_effort_world_path: None,

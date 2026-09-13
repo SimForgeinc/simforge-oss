@@ -424,6 +424,16 @@ pub struct TimedPoint {
     pub z: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RouteStationStop {
+    pub id: String,
+    pub s: f64,
+    pub dwell_s: f64,
+    #[serde(default)]
+    pub coordination_id: Option<String>,
+}
+
 /// How an actor's path through the network is specified.
 ///
 /// `Deserialize` is the plain-data form for session commands, logs and
@@ -445,10 +455,12 @@ pub enum RouteSpec {
         #[serde(default = "default_follow_max_length_m")]
         max_length_m: f64,
     },
-    /// An explicit ground path in scene coordinates. A single point is a
-    /// zero-length route: the actor stays where it is.
     #[serde(rename_all = "camelCase")]
-    Polyline { points: Vec<ScenePoint> },
+    Polyline {
+        points: Vec<ScenePoint>,
+        #[serde(default)]
+        stop_controls: Vec<RouteStationStop>,
+    },
     /// Exact scene-space position constraints. Time owns the actor through
     /// the final authored timestamp; physics takes over and brakes afterward.
     #[serde(rename_all = "camelCase")]
@@ -2422,7 +2434,7 @@ fn parse_route_spec_from(p: &mut Parser, m: &Map<String, Value>, kind: &str) -> 
         }
         "polyline" => {
             let points = p.list_field(m, "points", 1, usize::MAX, parse_scene_point);
-            Some(RouteSpec::Polyline { points: points? })
+            Some(RouteSpec::Polyline { points: points?, stop_controls: Vec::new() })
         }
         "timedPolyline" => {
             let points = p.list_field(m, "points", 1, usize::MAX, |p, v| {

@@ -179,6 +179,14 @@ pub struct RoadControlRuntimeState {
     /// True after this actor has been held by a signal indication.
     pub was_blocked: bool,
 }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RouteStationRuntime {
+    pub id: String,
+    pub s: f64,
+    pub dwell_s: f64,
+    pub coordination_id: Option<String>,
+}
+
 
 /// Small deterministic variation, not a second simulation model.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -230,6 +238,8 @@ pub struct ActorRuntime {
     pub cruise_override_mps: Option<f64>,
 
     pub route: Route,
+    pub route_stations: Vec<RouteStationRuntime>,
+    pub route_station_states: Vec<RoadControlRuntimeState>,
     pub route_s: f64,
     /// Exact absolute-time world keyframes; cleared permanently on collision.
     pub timed_route: Option<TimedRoute>,

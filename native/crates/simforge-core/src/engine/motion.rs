@@ -782,6 +782,18 @@ impl Simulation {
         plan.accel = accel;
         plan.speed = speed;
         plan.route_s = a.route_s + speed * dt;
+        if let Some((station_index, station)) = a.route_stations.iter().enumerate().find(|(idx, station)| {
+            !a.route_station_states[*idx].released
+                && a.route_s <= station.s + 0.05
+                && plan.route_s >= station.s - 0.05
+        }) {
+            let state = &a.route_station_states[station_index];
+            if state.stopped_since_s.is_none() || t - state.stopped_since_s.unwrap_or(t) < station.dwell_s {
+                plan.speed = 0.0;
+                plan.accel = -a.speed_mps / dt;
+                plan.route_s = station.s;
+            }
+        }
 
         let lat = lateral_step(a, t, dt);
         plan.lateral_reference_offset = lat.offset;
@@ -988,6 +1000,17 @@ impl Simulation {
                 a.lateral_accel_mps2 = plan.lateral_accel;
                 a.lateral_reference_offset_m = plan.lateral_reference_offset;
                 a.lateral_reference_rate_mps = plan.lateral_reference_rate;
+                for (station_index, station) in a.route_stations.iter().enumerate() {
+                    let state = &mut a.route_station_states[station_index];
+                    if !state.released && (a.route_s - station.s).abs() <= 0.05 {
+                        if state.stopped_since_s.is_none() {
+                            state.stopped_since_s = Some(t);
+                        } else if t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s {
+                            state.released = true;
+                            state.released_at_s = Some(t);
+                        }
+                    }
+                }
                 a.lateral_reference_accel_mps2 = plan.lateral_reference_accel;
                 a.position = plan.position;
                 a.heading_rad = plan.heading;
