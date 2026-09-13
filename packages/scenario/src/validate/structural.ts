@@ -238,7 +238,7 @@ export function structuralIssues(template: ScenarioTemplateV2): ClauseResult[] {
           { required: 0, actual: speed.value },
         ));
       }
-      if (role.kind === 'scene_absolute' && role.initialRoute) {
+      if (role.kind === 'scene_absolute' && role.initialRoute?.mode === 'lanePath') {
         out.push(issue(
           'error',
           'static_actor_motion',

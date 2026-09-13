@@ -787,7 +787,7 @@ impl<'a> Materializer<'a> {
                         },
                         None,
                     ),
-                    (Some(t::SceneAbsoluteInitialRoute::CustomRoute { points }), _) => (
+                    (Some(t::SceneAbsoluteInitialRoute::WorldPath { points, .. }), _) => (
                         Route::from_polyline(points.iter().map(|p| Vec2 { x: p.x, y: -p.z })),
                         sim::RouteSpec::Polyline {
                             points: points

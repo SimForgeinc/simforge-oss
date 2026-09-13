@@ -142,12 +142,23 @@ export const FramePoseSchema = z.strictObject({
  * imply an event at t=0 and force every consumer to rediscover the actor's
  * initial route by scanning interactions.
  */
+export const SceneAbsoluteLaneRouteSchema = z.strictObject({
+  mode: z.literal('lanePath'),
+  lanes: z.array(z.string().min(1)).min(1).max(128),
+});
+
 export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
+  SceneAbsoluteLaneRouteSchema,
   z.strictObject({
-    mode: z.literal('lanePath'),
-    lanes: z.array(z.string().min(1)).min(1).max(128),
+    mode: z.literal('worldPath'),
+    points: z.array(z.strictObject({ x: z.number().finite(), z: z.number().finite() })).min(2).max(20000),
+    stopControls: z.array(z.strictObject({
+      id: z.string().min(1),
+      s: z.number().finite().nonnegative(),
+      dwellS: z.number().finite().positive(),
+      coordinationId: z.string().min(1).optional(),
+    })).optional(),
   }),
-  /** One scene-space point holds position; otherwise cruise speed owns motion. */
   z.strictObject({
     mode: z.literal('customRoute'),
     points: z.array(z.strictObject({
@@ -155,7 +166,6 @@ export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
       z: z.number().finite(),
     })).min(1).max(128),
   }),
-  /** Clip-clock keyframes: repeated positions encode dwells, without retiming. */
   z.strictObject({
     mode: z.literal('customTimedRoute'),
     points: z.array(z.strictObject({
