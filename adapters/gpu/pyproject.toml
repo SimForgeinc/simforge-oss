@@ -1,6 +1,6 @@
 [project]
 name = "simforge-oss-gpu"
-version = "0.1.0rc62"
+version = "0.1.0rc63"
 description = "GPU batch profile (roadway-dynamic-gpu-v1): Warp/CUDA batched execution of the current dynamic-v1 roadway semantics with device-resident reset, actions, observations, rewards, termination and checkpoints."
 readme = "README.md"
 requires-python = ">=3.10"

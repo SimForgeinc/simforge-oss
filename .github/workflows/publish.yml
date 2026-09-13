@@ -28,6 +28,15 @@ jobs:
       - name: Install OpenSCENARIO schema validator
         run: sudo apt-get update && sudo apt-get install --yes libxml2-utils
       - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install the pinned WASM build tool
+        run: cargo install wasm-pack --version 0.13.1 --locked
+      - name: Build publishable JavaScript artifacts
+        run: pnpm -r --filter './packages/**' build
+      - name: Build the render worker artifact
+        run: pnpm --filter @simforge-oss/render-worker build
       - run: pnpm typecheck
       - run: pnpm test:release
       - run: pnpm test:integration

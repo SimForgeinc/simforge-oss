@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/native-runtime",
-  "version": "0.1.0-rc.62",
+  "version": "0.1.0-rc.63",
   "description": "SimForge native runtime for Node (N-API) and the browser (WASM): scenario loading, compilation, simulation, sessions, batches and live worlds over typed arrays.",
   "repository": {
     "type": "git",
