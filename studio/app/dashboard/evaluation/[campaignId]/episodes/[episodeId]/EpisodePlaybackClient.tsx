@@ -209,7 +209,7 @@ export function EpisodePlaybackClient({
         actions={
           <>
             <StatusBadge status={payload.complete ? "complete" : "running"} />
-            <Badge variant="secondary" {...stylex.props(styles.mono)} >
+            <Badge variant="secondary" xstyle={styles.mono} >
               score {formatScore(payload.score?.drivingScore)}
             </Badge>
             {policyId ? (
@@ -267,8 +267,8 @@ export function EpisodePlaybackClient({
 
             <div {...stylex.props(styles.grid3)} >
               <Card>
-                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
-                  <CardTitle {...stylex.props(styles.cardTitleSmall)}>Ego state</CardTitle>
+                <CardHeader xstyle={styles.cardHeaderTight} >
+                  <CardTitle xstyle={styles.cardTitleSmall}>Ego state</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <dl {...stylex.props(styles.dlState)} >
@@ -297,9 +297,9 @@ export function EpisodePlaybackClient({
               </Card>
 
               <Card data-testid="reasoning-panel">
-                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
-                  <CardTitle {...stylex.props(styles.cardTitleSmall)}>Policy reasoning</CardTitle>
-                  <CardDescription {...stylex.props(styles.monoSmall)}>
+                <CardHeader xstyle={styles.cardHeaderTight} >
+                  <CardTitle xstyle={styles.cardTitleSmall}>Policy reasoning</CardTitle>
+                  <CardDescription xstyle={styles.monoSmall}>
                     {current
                       ? `decision #${current.step}` +
                         (current.inferMs !== null ? ` · infer ${current.inferMs} ms` : "") +
@@ -328,9 +328,9 @@ export function EpisodePlaybackClient({
               </Card>
 
               <Card data-testid="frames-panel">
-                <CardHeader {...stylex.props(styles.cardHeaderTight)} >
-                <CardTitle {...stylex.props(styles.cardTitleSmall)}>Camera frames</CardTitle>
-                <CardDescription {...stylex.props(styles.monoSmall)}>
+                <CardHeader xstyle={styles.cardHeaderTight} >
+                <CardTitle xstyle={styles.cardTitleSmall}>Camera frames</CardTitle>
+                <CardDescription xstyle={styles.monoSmall}>
                     {anyFrames
                       ? frames
                         ? `bundle recording @ step ${frames.tick.step}`
@@ -363,8 +363,8 @@ export function EpisodePlaybackClient({
             </div>
 
             <Card>
-              <CardHeader {...stylex.props(styles.cardHeaderTight)} >
-                <CardTitle {...stylex.props(styles.cardTitleSmall)}>Events</CardTitle>
+              <CardHeader xstyle={styles.cardHeaderTight} >
+                <CardTitle xstyle={styles.cardTitleSmall}>Events</CardTitle>
                 <CardDescription>
                   {payload.events.length} recorded · markers drawn on the timeline
                 </CardDescription>
@@ -398,7 +398,7 @@ export function EpisodePlaybackClient({
                         <span {...stylex.props(styles.monoSmall)}>{event.type}</span>
                         <Badge
                           variant={event.severity === "infraction" ? "destructive" : "secondary"}
-                          {...stylex.props(styles.tinyMuted)}
+                          xstyle={styles.tinyMuted}
                         >
                           {event.severity}
                         </Badge>

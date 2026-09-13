@@ -111,7 +111,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
       <div {...stylex.props(styles.content)} >
         <Card>
           <CardHeader>
-            <CardTitle {...stylex.props(styles.cardTitle)} >Version</CardTitle>
+            <CardTitle xstyle={styles.cardTitle} >Version</CardTitle>
           </CardHeader>
           <CardContent>
             <dl {...stylex.props(styles.dlProvenance)} >
@@ -127,7 +127,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
               ).map(([label, value]) => (
                 <div key={label}>
                   <dt {...stylex.props(styles.labelMedium)} >{label}</dt>
-                  <dd {...stylex.props(styles.monoSmall)} >{value}</dd>
+                  <dd {...stylex.props(styles.monoSmall, styles.ddBreakAll)} >{value}</dd>
                 </div>
               ))}
             </dl>
@@ -157,7 +157,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle {...stylex.props(styles.cardTitle)} >Eval runs</CardTitle>
+            <CardTitle xstyle={styles.cardTitle} >Eval runs</CardTitle>
             <CardDescription>
               The promotion gate requires a succeeded openloop or policy_episode run of this
               version — the database trigger is the arbiter, refusals surface here.
@@ -178,30 +178,30 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
                     <TableHead>Run</TableHead>
                     <TableHead>Kind</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Attempts</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Created</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Promote</TableHead>
+                    <TableHead xstyle={styles.numeric} >Attempts</TableHead>
+                    <TableHead xstyle={styles.numeric} >Created</TableHead>
+                    <TableHead xstyle={styles.numeric} >Promote</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {runs.data.runs.map((run) => (
                     <TableRow key={run.id} data-testid={`model-run-${run.id}`}>
-                      <TableCell {...stylex.props(styles.monoSmall)} >{run.id}</TableCell>
+                      <TableCell xstyle={styles.monoSmall} >{run.id}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{run.kind}</Badge>
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={run.status} />
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >
                         {run.attemptCount}/{run.maxAttempts}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numericTinyMuted)} >
+                      <TableCell xstyle={styles.numericTinyMuted} >
                         {new Date(run.createdAt).toLocaleTimeString()}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >
                         {record.promotedRunId === run.id ? (
-                          <Badge {...stylex.props(styles.promotedBadge)}>
+                          <Badge xstyle={styles.promotedBadge}>
                             promoted
                           </Badge>
                         ) : (

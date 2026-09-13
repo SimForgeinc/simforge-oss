@@ -114,12 +114,12 @@ function ItemCard({
   return (
     <Card data-testid={`result-item-${item.itemId}`}>
       <CardHeader>
-        <CardTitle {...stylex.props(s.cardTitle)}>
+        <CardTitle xstyle={s.cardTitle}>
           <span {...stylex.props(s.mono)}>{uploadedVideo && predictionSeconds !== null
             ? `Prediction at ${predictionSeconds.toFixed(3)} s`
             : item.itemId}</span>
           {item.status === "ok" ? null : (
-            <Badge variant="outline" {...stylex.props(s.borderAmber)}>
+            <Badge variant="outline" xstyle={s.borderAmber}>
               {item.status}
             </Badge>
           )}
@@ -130,7 +130,7 @@ function ItemCard({
           ) : null}
         </CardTitle>
       </CardHeader>
-      <CardContent {...stylex.props(s.space4)}>
+      <CardContent xstyle={s.space4}>
         {item.status === "refused" && item.refusal ? (
           <RefusalNotice
             title={REFUSAL_TITLES[item.refusal.code ?? ""] ?? "Refused"}
@@ -304,7 +304,7 @@ function UploadedVideoResult({
             <p {...stylex.props(s.uppercaseWide, s.textMuted)}>
               Inference timestamps ({provenance.inferenceTimestampsUs.length})
             </p>
-            <p {...stylex.props(s.mt1, s.mono, s.leading5, s.textFg)}>
+            <p {...stylex.props(s.mt1, s.breakWords, s.mono, s.leading5, s.textFg)}>
               {provenance.inferenceTimestampsUs
                 .map((timestampUs) => `${(timestampUs / 1_000_000).toFixed(3)}s`)
                 .join(", ") || "none"}

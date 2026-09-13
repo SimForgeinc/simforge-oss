@@ -156,8 +156,8 @@ export function JobHistory({
               <TableHead>Model</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
-              <TableHead {...stylex.props(s.tableRight)}>Cost</TableHead>
-              <TableHead {...stylex.props(s.shrink0)} />
+              <TableHead xstyle={s.tableRight}>Cost</TableHead>
+              <TableHead xstyle={s.shrink0} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -166,7 +166,7 @@ export function JobHistory({
               const elapsed = elapsedSeconds(job.startedAt, job.finishedAt);
               return (
                 <TableRow key={job.id} data-testid={`job-row-${job.id}`}>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <button
                       type="button"
                       onClick={() => onOpenJob(job.id)}
@@ -183,13 +183,13 @@ export function JobHistory({
                       {job.inputs.length > 1 ? <span>{job.inputs.length} inputs</span> : null}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                  <TableCell xstyle={s.alignTopTextSm}>
                     <div {...stylex.props(s.textFg)}>{job.model.family}</div>
                     <div {...stylex.props(s.textXs, s.textMuted)}>
                       {job.model.quant} · {job.model.revision.slice(0, 12)}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <JobStatusBadge job={job} />
                     {presentation.detail ? (
                       <p {...stylex.props(s.mt1, s.maxXs, s.textXs, s.leading5, s.textMuted)}>
@@ -202,7 +202,7 @@ export function JobHistory({
                       </p>
                     ) : null}
                   </TableCell>
-                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                  <TableCell xstyle={s.alignTopTextSm}>
                     <div {...stylex.props(s.textFg)}>
                       {new Date(job.createdAt).toLocaleString()}
                     </div>
@@ -211,7 +211,7 @@ export function JobHistory({
                       {elapsed !== null ? ` · ${formatSeconds(elapsed)}` : ""}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.justifyEndSm, s.tabular)}>
+                  <TableCell xstyle={[s.justifyEndSm, s.tabular]}>
                     <div {...stylex.props(s.textFg)}>
                       {job.settledCents !== null
                         ? formatCents(job.settledCents)
@@ -221,7 +221,7 @@ export function JobHistory({
                       {job.settledCents !== null ? "settled" : "reserved"}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <div {...stylex.props(s.flexGap1)}>
                       {job.cancellable ? (
                         <Button

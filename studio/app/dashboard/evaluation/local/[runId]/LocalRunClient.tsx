@@ -155,7 +155,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               </div>
               <div>
                 <dt {...stylex.props(styles.label)} >Model version</dt>
-                <dd {...stylex.props(styles.monoSmall)} >
+                <dd {...stylex.props(styles.truncateValue, styles.monoSmall)} >
                   {run.modelVersionId}
                 </dd>
               </div>
@@ -177,7 +177,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
                   {Object.entries(manifest.metrics).map(([field, value]) => (
                     <div key={field}>
                       <dt {...stylex.props(styles.label)} >{field}</dt>
-                      <dd {...stylex.props(styles.mono)} >
+                      <dd {...stylex.props(styles.truncateValue, styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>
@@ -198,7 +198,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
                   {Object.entries(run.metrics).map(([field, value]) => (
                     <div key={field}>
                       <dt {...stylex.props(styles.label)} >{field}</dt>
-                      <dd {...stylex.props(styles.mono)} >
+                      <dd {...stylex.props(styles.truncateValue, styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>

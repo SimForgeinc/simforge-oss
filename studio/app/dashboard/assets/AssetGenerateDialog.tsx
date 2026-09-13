@@ -307,10 +307,10 @@ export function AssetGenerateDialog({
               <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
                 <AssetGenerateImagePicker images={images} onChange={setImages} onBusyChange={setPreparing} onError={setError} />
                 <div {...stylex.props(dialog.grid)}>
-                  <label {...stylex.props(dialog.fieldLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} {...stylex.props(dialog.fieldControl)} /></label>
+                  <label {...stylex.props(dialog.fieldLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} xstyle={dialog.fieldControl} /></label>
                   <SelectMenuField label="Actor class" value={actorClass} onChange={(value) => { const parsed = GalleryActorClassSchema.safeParse(value); if (parsed.success) setActorClass(parsed.data); }} options={ACTOR_CLASS_OPTIONS} labelClassName="mb-1 text-xs text-white/45" />
-                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} {...stylex.props(dialog.fieldControl)} /></label>
-                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Texture guidance<Textarea maxLength={600} value={texturePrompt} onChange={(event) => setTexturePrompt(event.target.value)} placeholder="Matte black paint, no decals" {...stylex.props(dialog.fieldControl)} /><span {...stylex.props(dialog.subText)}>Steers surface appearance only, not the model’s shape.</span></label>
+                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} xstyle={dialog.fieldControl} /></label>
+                  <label {...stylex.props(dialog.fieldLabel, dialog.span2)}>Texture guidance<Textarea maxLength={600} value={texturePrompt} onChange={(event) => setTexturePrompt(event.target.value)} placeholder="Matte black paint, no decals" xstyle={dialog.fieldControl} /><span {...stylex.props(dialog.subText)}>Steers surface appearance only, not the model’s shape.</span></label>
                 </div>
               </form>
 

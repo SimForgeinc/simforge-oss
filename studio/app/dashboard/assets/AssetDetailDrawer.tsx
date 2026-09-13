@@ -154,11 +154,11 @@ export function AssetDetailDrawer({
 
   return (
     <Sheet open={asset !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent {...stylex.props(drawer.root, dialog.detailSheet)}>
+      <SheetContent xstyle={[drawer.root, dialog.detailSheet]}>
         {asset ? (
           <div {...stylex.props(drawer.root)}>
             <SheetHeader>
-          <SheetTitle {...stylex.props(dialog.drawerTitle)}>{asset.title}</SheetTitle>
+          <SheetTitle xstyle={dialog.drawerTitle}>{asset.title}</SheetTitle>
               <SheetDescription>
                 Imported {new Date(asset.createdAt).toLocaleDateString()} · version {asset.version}
               </SheetDescription>
@@ -227,9 +227,9 @@ export function AssetDetailDrawer({
                     maxLength={120}
                     value={renameDraft}
                     onChange={(event) => setRenameDraft(event.target.value)}
-                    {...stylex.props(dialog.inputCompact)}
+                    xstyle={dialog.inputCompact}
                   />
-                  <Button type="submit" size="sm" {...stylex.props(dialog.buttonCompact)} disabled={renaming || renameDraft.trim() === ""}>
+                  <Button type="submit" size="sm" xstyle={dialog.buttonCompact} disabled={renaming || renameDraft.trim() === ""}>
                     {renaming ? <Loader2 aria-hidden="true" {...stylex.props(dialog.progressPulse)} /> : null}
                     {renaming ? "Saving…" : "Save title"}
                   </Button>
@@ -237,7 +237,7 @@ export function AssetDetailDrawer({
                     type="button"
                     size="sm"
                     variant="outline"
-                    {...stylex.props(dialog.buttonCompact)}
+                    xstyle={dialog.buttonCompact}
                     disabled={renaming}
                     onClick={() => setRenameDraft(null)}
                   >

@@ -1,6 +1,5 @@
 import type { ScenarioStatus } from "@simforge-oss/scenario/contracts";
 import { Clock, Loader2, CheckCheck, X } from "lucide-react";
-import * as stylex from "@stylexjs/stylex";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { styles } from "./ScenarioStatusBadge.stylex";
 
@@ -17,5 +16,5 @@ const CONFIG: Record<ScenarioStatus, StatusConfig> = {
 interface ScenarioStatusBadgeProps { status: string }
 export function ScenarioStatusBadge({ status }: ScenarioStatusBadgeProps) {
   const config = (CONFIG as Record<string, StatusConfig>)[status] ?? CONFIG.DRAFT;
-  return <Badge title={config.label} aria-label={config.label} {...stylex.props(styles.base, styles[config.tone])}>{config.icon}</Badge>;
+  return <Badge title={config.label} aria-label={config.label} xstyle={[styles.base, styles[config.tone]]}>{config.icon}</Badge>;
 }

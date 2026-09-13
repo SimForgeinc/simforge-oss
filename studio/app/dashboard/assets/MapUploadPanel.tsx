@@ -296,7 +296,7 @@ export function MapUploadPanel({
 
   return (
     <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
-      <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); chooseFiles(Array.from(event.dataTransfer.files)); }} {...stylex.props(dialog.drop)}>
+      <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); chooseFiles(Array.from(event.dataTransfer.files)); }} {...stylex.props(dialog.drop, dialog.dropPointer)}>
         <input type="file" multiple disabled={busy} {...stylex.props(dialog.srOnly)} accept=".xodr,.glb" onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         <FileUp {...stylex.props(dialog.iconAccent)} aria-hidden="true" />
         <span {...stylex.props(dialog.uploadDropLabel)}>Drop map.xodr and one GLB per layer here</span>
@@ -325,11 +325,11 @@ export function MapUploadPanel({
       ) : null}
 
       <div {...stylex.props(dialog.grid)}>
-        <label {...stylex.props(dialog.fieldLabel)}>Label<Input required minLength={3} maxLength={120} value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Downtown New Haven" {...stylex.props(dialog.fieldControl)} /></label>
-        <label {...stylex.props(dialog.fieldLabel)}>Locality<Input required minLength={2} maxLength={120} value={locality} onChange={(event) => setLocality(event.target.value)} placeholder="New Haven, Connecticut" {...stylex.props(dialog.fieldControl)} /></label>
+        <label {...stylex.props(dialog.fieldLabel)}>Label<Input required minLength={3} maxLength={120} value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Downtown New Haven" xstyle={dialog.fieldControl} /></label>
+        <label {...stylex.props(dialog.fieldLabel)}>Locality<Input required minLength={2} maxLength={120} value={locality} onChange={(event) => setLocality(event.target.value)} placeholder="New Haven, Connecticut" xstyle={dialog.fieldControl} /></label>
         <div {...stylex.props(dialog.span2)}>
           <label htmlFor={carlaFieldId} {...stylex.props(dialog.fieldLabel)}>CARLA map name, optional</label>
-          <Input id={carlaFieldId} aria-describedby={carlaHelpId} maxLength={120} value={carlaMapName} onChange={(event) => setCarlaMapName(event.target.value)} placeholder="Town10HD_Opt" {...stylex.props(dialog.fieldControl)} />
+          <Input id={carlaFieldId} aria-describedby={carlaHelpId} maxLength={120} value={carlaMapName} onChange={(event) => setCarlaMapName(event.target.value)} placeholder="Town10HD_Opt" xstyle={dialog.fieldControl} />
           <p id={carlaHelpId} {...stylex.props(dialog.helpText)}>Fill this in only when a cooked CARLA map of the same road network already exists. Leave it empty and the map version is browser-only: you can author and render scenarios in the browser, but local CARLA renders are not available for it.</p>
         </div>
       </div>

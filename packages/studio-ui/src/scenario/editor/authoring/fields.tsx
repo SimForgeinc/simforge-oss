@@ -139,7 +139,7 @@ export function NumberField({
         min={min}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        {...stylex.props(styles.input)}
+        xstyle={styles.input}
       />
     </div>
   );

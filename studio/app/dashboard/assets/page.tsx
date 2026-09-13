@@ -38,10 +38,10 @@ function GalleryShelfFallback() {
     <>
       <div {...stylex.props(assetPage.chrome)} aria-hidden="true">
         <div {...stylex.props(assetPage.measure)}>
-          <Skeleton {...stylex.props(assetPage.skeletonLabel)} />
-          <Skeleton {...stylex.props(assetPage.skeletonTitle)} />
-          <Skeleton {...stylex.props(assetPage.skeletonDescription)} />
-          <Skeleton {...stylex.props(assetPage.skeletonButton)} />
+          <Skeleton xstyle={assetPage.skeletonLabel} />
+          <Skeleton xstyle={assetPage.skeletonTitle} />
+          <Skeleton xstyle={assetPage.skeletonDescription} />
+          <Skeleton xstyle={assetPage.skeletonButton} />
         </div>
       </div>
       <div {...stylex.props(assetPage.content)}>

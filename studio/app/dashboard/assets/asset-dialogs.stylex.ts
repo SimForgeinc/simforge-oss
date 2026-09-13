@@ -22,7 +22,15 @@ export const dialog = stylex.create({
   progress: { height: "0.375rem", overflow: "hidden", borderRadius: "9999px", backgroundColor: "rgba(255,255,255,0.07)" },
   progressBar: { height: "100%", backgroundColor: ACCENT, transitionProperty: "width", transitionDuration: "150ms" },
   progressPulse: { animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
-  drop: { display: "flex", minHeight: "8rem", width: "100%", flexDirection: "column", alignItems: "center", justifyContent: "center", borderWidth: "1px", borderStyle: "dashed", borderColor: "rgba(255,255,255,0.15)", borderRadius: "0.75rem", backgroundColor: SURFACE, paddingInline: "1.5rem", textAlign: "center", transitionProperty: "border-color, background-color", transitionDuration: "150ms", ":hover": { borderColor: "rgba(232,224,68,0.4)", backgroundColor: "rgba(232,224,68,0.03)" }, ":focus-visible": { outlineWidth: "2px", outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px", boxShadow: `0 0 0 2px ${ACCENT}` } },
+  // The two dropzones share every layout/hover utility but differ in their
+  // focus treatment, so the focus states live in the two variant keys below:
+  // the asset dialog's <div> takes `focus-visible:ring-2`, the map panel's
+  // <label> takes `cursor-pointer focus-within:border-[#E8E044]`.
+  drop: { display: "flex", minHeight: "8rem", width: "100%", flexDirection: "column", alignItems: "center", justifyContent: "center", borderWidth: "1px", borderStyle: "dashed", borderColor: "rgba(255,255,255,0.15)", borderRadius: "0.75rem", backgroundColor: SURFACE, paddingInline: "1.5rem", textAlign: "center", transitionProperty: "border-color, background-color", transitionDuration: "150ms", ":hover": { borderColor: "rgba(232,224,68,0.4)", backgroundColor: "rgba(232,224,68,0.03)" } },
+  /** `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]` */
+  dropFocusRing: { ":focus-visible": { outlineWidth: "2px", outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px", boxShadow: `0 0 0 2px ${ACCENT}` } },
+  /** `cursor-pointer focus-within:border-[#E8E044] focus-within:outline-none` */
+  dropPointer: { cursor: "pointer", ":focus-within": { borderColor: ACCENT, outlineWidth: "2px", outlineStyle: "solid", outlineColor: "transparent", outlineOffset: "2px" } },
   panel: { marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" },
   card: { borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", borderRadius: "0.75rem", backgroundColor: SURFACE, padding: "1rem" },
   tabGroup: { marginTop: "1.25rem", display: "flex", width: "fit-content", borderWidth: "1px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)", borderRadius: "0.375rem", backgroundColor: SURFACE, padding: "0.25rem" },
@@ -33,7 +41,6 @@ export const dialog = stylex.create({
   // `mx-auto max-w-[1500px] border-b-0 bg-transparent px-0 sm:px-0`. Layout
   // (flex, wrap, centring, gap) stays the primitive's.
   toolbar: { maxWidth: "1500px", marginInline: "auto", borderBottomWidth: 0, backgroundColor: "transparent", paddingInline: 0 },
-  icon: { width: "1rem", height: "1rem" },
   iconSm: { width: "0.875rem", height: "0.875rem" },
   iconAccent: { marginBottom: "0.75rem", width: "1.5rem", height: "1.5rem", color: ACCENT },
   // The two "loading preview" boxes are unrelated: the drawer's is a bordered
@@ -163,9 +170,14 @@ export const dialog = stylex.create({
   clipsTitle: { fontSize: text.sizeXs, lineHeight: "1rem", color: "rgba(255,255,255,0.45)" },
   clipsText: { marginTop: "0.25rem", fontSize: text.sizeSm, lineHeight: "1.25rem", color: "rgba(255,255,255,0.7)" },
   successText: { fontSize: text.sizeSm, lineHeight: "1.25rem", fontWeight: 500, color: "#d1fae5" },
-  uploadFullButton: { width: "100%", borderColor: "rgba(255,255,255,0.1)", backgroundColor: "transparent" },
-  uploadTransparent: { borderColor: "rgba(255,255,255,0.1)", backgroundColor: "transparent" },
-  autoSize: { borderColor: "rgba(232,224,68,0.4)", backgroundColor: "transparent", color: "#E8E044", ":hover": { backgroundColor: "rgba(232,224,68,0.1)" } },
+  // These three sit on `Button variant="outline"`, whose own :hover repaints
+  // background (and, for `autoSize`, colour). `bg-transparent` / `text-…` only
+  // ever pinned the rest state in Tailwind — the variant's pseudo-class rule
+  // still won on hover — so the hover values are restated here: a caller style
+  // replaces the whole property group, conditions included.
+  uploadFullButton: { width: "100%", borderColor: "rgba(255,255,255,0.1)", backgroundColor: { default: "transparent", ":hover": "hsl(var(--accent))" } },
+  uploadTransparent: { borderColor: "rgba(255,255,255,0.1)", backgroundColor: { default: "transparent", ":hover": "hsl(var(--accent))" } },
+  autoSize: { borderColor: "rgba(232,224,68,0.4)", backgroundColor: { default: "transparent", ":hover": "rgba(232,224,68,0.1)" }, color: { default: "#E8E044", ":hover": "hsl(var(--accent-foreground))" } },
   uploadMotionGrid: { display: "grid", gap: "0.5rem", [SM]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } },
 });
 

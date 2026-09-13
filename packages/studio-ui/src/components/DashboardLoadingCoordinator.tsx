@@ -311,7 +311,7 @@ function stalledLoadingSource(source: DashboardLoadingSource): DashboardLoadingS
     icon: <CircleAlert aria-hidden="true" {...stylex.props(styles.alertIcon)} />,
     actions: (
       <Button
-        {...stylex.props(styles.reload)}
+        xstyle={styles.reload}
         onClick={() => window.location.reload()}
       >
         Reload

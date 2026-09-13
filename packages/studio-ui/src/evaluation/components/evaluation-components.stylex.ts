@@ -129,7 +129,8 @@ export const styles = stylex.create({
   iconPlain: { width: "1rem", height: "1rem" },
   width24: { width: "6rem" },
   maxXs: { maxWidth: "20rem" },
-  borderAmber: { borderColor: "rgb(245 158 11 / 0.5)", color: "rgb(217 119 6)" },
+  /** `border-amber-500/50 text-amber-600 dark:text-amber-500` — shell is permanently dark, so the dark value is folded. */
+  borderAmber: { borderColor: "rgb(245 158 11 / 0.5)", color: "rgb(245 158 11)" },
   grid2: { display: "grid", gap: "1rem", gridTemplateColumns: { default: "1fr", "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" } },
   grid3: { display: "grid", gap: "0.5rem", gridTemplateColumns: { default: "1fr", "@media (min-width: 640px)": "repeat(3, minmax(0, 1fr))" } },
   resultsGrid: { display: "grid", gap: "1.5rem", gridTemplateColumns: { default: "1fr", "@media (min-width: 1024px)": "repeat(2, minmax(0, 1fr))" } },
@@ -142,7 +143,8 @@ export const styles = stylex.create({
   targetBody: { minWidth: 0, flex: 1 },
   targetTitle: { display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", lineHeight: "1.25rem", fontWeight: 500, color: fg },
   targetDesc: { display: "block", marginTop: "0.125rem", fontSize: "0.75rem", lineHeight: "1.25rem", color: muted },
-  targetReason: { marginTop: "0.375rem", display: "flex", flexDirection: "column", gap: "0.125rem", fontSize: "0.75rem", lineHeight: "1.25rem", color: "rgb(217 119 6)" },
+  /** `... text-amber-600 dark:text-amber-500` — dark value folded (permanently dark shell). */
+  targetReason: { marginTop: "0.375rem", display: "flex", flexDirection: "column", gap: "0.125rem", fontSize: "0.75rem", lineHeight: "1.25rem", color: "rgb(245 158 11)" },
   cardTitle: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", lineHeight: "1.25rem" },
   video: { width: "100%", backgroundColor: "#000" },
   flexGap8: { display: "flex", flexWrap: "wrap", gap: "2rem" },
@@ -175,8 +177,10 @@ export const styles = stylex.create({
   artifactSize: { flexShrink: 0, fontVariantNumeric: "tabular-nums", color: muted },
   toneNeutral: { borderColor: border, color: muted },
   toneActive: { borderColor: "hsl(var(--primary) / 0.5)", color: primary },
-  toneGood: { borderColor: "rgb(16 185 129 / 0.5)", color: "rgb(5 150 105)" },
-  toneWarn: { borderColor: "rgb(245 158 11 / 0.5)", color: "rgb(217 119 6)" },
+  /** `border-emerald-500/50 text-emerald-600 dark:text-emerald-400` — dark value folded. */
+  toneGood: { borderColor: "rgb(16 185 129 / 0.5)", color: "rgb(52 211 153)" },
+  /** `border-amber-500/50 text-amber-600 dark:text-amber-500` — dark value folded. */
+  toneWarn: { borderColor: "rgb(245 158 11 / 0.5)", color: "rgb(245 158 11)" },
   toneBad: { borderColor: "hsl(var(--destructive) / 0.5)", color: "hsl(var(--destructive))" },
   quantRow: { display: "flex", flexDirection: "column", gap: "0.75rem", borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: border, paddingBlock: "1rem", ":first-child": { borderTopWidth: 0 } },
   eligibility: { display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", lineHeight: "1.25rem" },
@@ -186,4 +190,6 @@ export const styles = stylex.create({
   iconTiny: { width: "0.75rem", height: "0.75rem", marginRight: "0.25rem" },
   mutedIcon: { width: "1rem", height: "1rem", color: muted },
   spinner: { animationName: { default: spin, "@media (prefers-reduced-motion: reduce)": "none" }, animationDuration: "1s", animationIterationCount: "infinite", animationTimingFunction: "linear" },
+  /** `break-words` — long comma-joined identifier runs must wrap inside the details body. */
+  breakWords: { overflowWrap: "break-word" },
 });

@@ -32,7 +32,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle {...stylex.props(styles.cardTitle)} >Provenance</CardTitle>
+          <CardTitle xstyle={styles.cardTitle} >Provenance</CardTitle>
         </CardHeader>
         <CardContent>
           <PanelMessage>No provenance.json recorded for this policy.</PanelMessage>
@@ -65,7 +65,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle {...stylex.props(styles.cardTitle)} >Provenance</CardTitle>
+        <CardTitle xstyle={styles.cardTitle} >Provenance</CardTitle>
         <CardDescription>From the first completed episode of this policy</CardDescription>
       </CardHeader>
       <CardContent>
@@ -73,7 +73,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
           {rows.map(([label, value]) => (
             <div key={label}>
               <dt {...stylex.props(styles.labelMedium)} >{label}</dt>
-              <dd {...stylex.props(styles.textSmall)} >{value}</dd>
+              <dd {...stylex.props(styles.textSmall, styles.ddBreakAll)} >{value}</dd>
             </div>
           ))}
         </dl>
@@ -135,9 +135,9 @@ export function PolicyDetailClient({
             ] as const
           ).map(([label, value]) => (
             <Card key={label}>
-              <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+              <CardHeader xstyle={styles.cardHeaderTight} >
                 <CardDescription>{label}</CardDescription>
-                <CardTitle {...stylex.props(styles.cardTitleLarge)} >{value}</CardTitle>
+                <CardTitle xstyle={styles.cardTitleLarge} >{value}</CardTitle>
               </CardHeader>
             </Card>
           ))}
@@ -147,7 +147,7 @@ export function PolicyDetailClient({
 
         <Card>
           <CardHeader>
-            <CardTitle {...stylex.props(styles.cardTitle)} >Episodes</CardTitle>
+            <CardTitle xstyle={styles.cardTitle} >Episodes</CardTitle>
             <CardDescription>Per-scenario scores and infractions</CardDescription>
           </CardHeader>
           <CardContent>
@@ -158,12 +158,12 @@ export function PolicyDetailClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Seed</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Driving score</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Route</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Steps</TableHead>
+                    <TableHead xstyle={styles.numeric} >Seed</TableHead>
+                    <TableHead xstyle={styles.numeric} >Driving score</TableHead>
+                    <TableHead xstyle={styles.numeric} >Route</TableHead>
+                    <TableHead xstyle={styles.numeric} >Steps</TableHead>
                     <TableHead>Infractions</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Completed</TableHead>
+                    <TableHead xstyle={styles.numeric} >Completed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,14 +174,14 @@ export function PolicyDetailClient({
                           {episode.scenarioId}
                         </Link>
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >{episode.seed}</TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >{episode.seed}</TableCell>
+                      <TableCell xstyle={styles.numeric} >
                         {formatScore(episode.score?.drivingScore ?? episode.ledgerScore)}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >
                         {formatScore(episode.score?.routeCompletion ?? episode.ledgerRouteCompletion)}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >
                         {episode.score?.steps ?? "—"}
                       </TableCell>
                       <TableCell>
@@ -194,7 +194,7 @@ export function PolicyDetailClient({
                                 <Badge
                                   key={type}
                                   variant="destructive"
-                                  {...stylex.props(styles.infractionBadge)}
+                                  xstyle={styles.infractionBadge}
                                 >
                                   {type}
                                   {count > 1 ? ` ×${count}` : ""}
@@ -204,7 +204,7 @@ export function PolicyDetailClient({
                           </div>
                         )}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numericTinyMuted)} >
+                      <TableCell xstyle={styles.numericTinyMuted} >
                         {new Date(episode.completedAt).toLocaleTimeString()}
                       </TableCell>
                     </TableRow>

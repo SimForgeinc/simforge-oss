@@ -404,7 +404,7 @@ export function ModelStorePanel({ className }: { className?: string }) {
         return (
           <Card key={family} data-testid={`model-card-${family}`}>
             <CardHeader>
-              <CardTitle {...stylex.props(s.cardTitleStore)}>
+              <CardTitle xstyle={s.cardTitleStore}>
                 <HardDriveDownload aria-hidden="true" {...stylex.props(s.mutedIcon)} />
                 {entry.displayName}
                 {entry.remoteOnly ? <Badge variant="secondary">Cloud execution</Badge> : null}

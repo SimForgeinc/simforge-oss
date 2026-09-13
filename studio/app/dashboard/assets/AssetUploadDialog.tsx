@@ -458,7 +458,7 @@ export function AssetUploadDialog({
                   event.preventDefault();
                   chooseFiles(Array.from(event.dataTransfer.files));
                 }}
-                {...stylex.props(dialog.drop)}
+                {...stylex.props(dialog.drop, dialog.dropFocusRing)}
               >
                 <FileUp {...stylex.props(dialog.iconAccent)} />
                 <span {...stylex.props(dialog.uploadDropLabel)}>Drop a model and its texture files here</span>
@@ -485,7 +485,7 @@ export function AssetUploadDialog({
                       />
                       <label {...stylex.props(dialog.uploadLabel)}>
                         Scale to metres
-                        <Input value={scale} onChange={(event) => setScale(event.target.value)} inputMode="decimal" {...stylex.props(dialog.uploadField)} />
+                        <Input value={scale} onChange={(event) => setScale(event.target.value)} inputMode="decimal" xstyle={dialog.uploadField} />
                       </label>
                     </div>
                     {/* Editor-core drives every actor nose-first along +X, so a model
@@ -511,7 +511,7 @@ export function AssetUploadDialog({
                           variant="outline"
                           disabled={processing}
                           onClick={flipFacing}
-                          {...stylex.props(dialog.uploadFullButton)}
+                          xstyle={dialog.uploadFullButton}
                           title="Turn the model 180° — use it when the thumbnail faces the wrong way"
                         >
                           Flip 180°
@@ -519,7 +519,7 @@ export function AssetUploadDialog({
                       </div>
                     </div>
                     <div {...stylex.props(dialog.uploadRow)}>
-                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess} {...stylex.props(dialog.uploadTransparent)}>
+                      <Button type="button" size="sm" variant="outline" disabled={processing} onClick={reprocess} xstyle={dialog.uploadTransparent}>
                         {processing ? "Reprocessing…" : "Apply correction"}
                       </Button>
                       {/* A file states no unit, but an author knows what the thing is:
@@ -530,7 +530,7 @@ export function AssetUploadDialog({
                         variant="outline"
                         disabled={processing || autoSize === null}
                         onClick={() => autoSize && applyAutoSize(autoSize.scale)}
-                        {...stylex.props(dialog.autoSize)}
+                        xstyle={dialog.autoSize}
                         title={
                           autoSize
                             ? `Scale so it is ${autoSize.metres} m ${autoSize.axisLabel}, like ${autoSize.example}`
@@ -555,7 +555,7 @@ export function AssetUploadDialog({
               ) : null}
 
               <div {...stylex.props(dialog.uploadGrid)}>
-                <label {...stylex.props(dialog.uploadLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} {...stylex.props(dialog.uploadField)} /></label>
+                <label {...stylex.props(dialog.uploadLabel)}>Title<Input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} xstyle={dialog.uploadField} /></label>
                 {archetype === "ground" ? (
                   <SelectMenuField
                     label="Ground actor"
@@ -584,8 +584,8 @@ export function AssetUploadDialog({
                     ))}
                   </div>
                 </div>
-                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} {...stylex.props(dialog.uploadField)} /></label>
-                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Tags, comma separated<Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="street-furniture, urban" {...stylex.props(dialog.uploadField)} /></label>
+                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Description<Textarea maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} xstyle={dialog.uploadField} /></label>
+                <label {...stylex.props(dialog.uploadLabel, dialog.uploadSpan2)}>Tags, comma separated<Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="street-furniture, urban" xstyle={dialog.uploadField} /></label>
               </div>
 
               {model?.animated ? (

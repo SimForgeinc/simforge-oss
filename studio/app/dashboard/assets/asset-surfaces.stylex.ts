@@ -46,7 +46,9 @@ export const maps = stylex.create({
   pin: { flexShrink: 0, width: "0.75rem", height: "0.75rem" },
   localityText: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   id: { marginTop: "0.75rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: "10px", color: "rgba(255,255,255,0.3)" },
-  author: { marginTop: "0.75rem", width: "100%", borderColor: "rgba(255,255,255,0.1)", backgroundColor: "transparent" },
+  // On `Button variant="outline"`: `bg-transparent` pinned the rest state only,
+  // the variant's :hover still repainted the background, so it is restated.
+  author: { marginTop: "0.75rem", width: "100%", borderColor: "rgba(255,255,255,0.1)", backgroundColor: { default: "transparent", ":hover": "hsl(var(--accent))" } },
 });
 
 export const preview = stylex.create({

@@ -37,9 +37,9 @@ function PolicySummaryCard({
 }) {
   return (
     <Card data-testid={`compare-${label}`}>
-      <CardHeader {...stylex.props(styles.cardHeaderTight)} >
+      <CardHeader xstyle={styles.cardHeaderTight} >
         <CardDescription>Policy {label}</CardDescription>
-        <CardTitle {...stylex.props(styles.cardTitle)} >
+        <CardTitle xstyle={styles.cardTitle} >
           <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/policies/${policy.policyId}`}>
             {policy.policyId}
           </Link>
@@ -113,7 +113,7 @@ export function CompareClient({
 
         <Card>
           <CardHeader>
-            <CardTitle {...stylex.props(styles.cardTitle)} >Per-scenario deltas</CardTitle>
+            <CardTitle xstyle={styles.cardTitle} >Per-scenario deltas</CardTitle>
             <CardDescription>
               Score delta is B − A. Divergence is the first trace step where the ego positions
               drift apart by more than {comparison.divergenceThresholdM} m.
@@ -127,19 +127,19 @@ export function CompareClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Seed</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >A score</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >B score</TableHead>
-                    <TableHead {...stylex.props(styles.numeric)} >Δ</TableHead>
+                    <TableHead xstyle={styles.numeric} >Seed</TableHead>
+                    <TableHead xstyle={styles.numeric} >A score</TableHead>
+                    <TableHead xstyle={styles.numeric} >B score</TableHead>
+                    <TableHead xstyle={styles.numeric} >Δ</TableHead>
                     <TableHead>Divergence</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {comparison.episodes.map((episode) => (
                     <TableRow key={`${episode.scenarioId}-${episode.seed}`}>
-                      <TableCell {...stylex.props(styles.linkMedium)} >{episode.scenarioId}</TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >{episode.seed}</TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.linkMedium} >{episode.scenarioId}</TableCell>
+                      <TableCell xstyle={styles.numeric} >{episode.seed}</TableCell>
+                      <TableCell xstyle={styles.numeric} >
                         {episode.aEpisodeId ? (
                           <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.aEpisodeId}`}>
                             {formatScore(episode.aScore)}
@@ -148,7 +148,7 @@ export function CompareClient({
                           "—"
                         )}
                       </TableCell>
-                      <TableCell {...stylex.props(styles.numeric)} >
+                      <TableCell xstyle={styles.numeric} >
                         {episode.bEpisodeId ? (
                           <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.bEpisodeId}`}>
                             {formatScore(episode.bScore)}
@@ -158,20 +158,17 @@ export function CompareClient({
                         )}
                       </TableCell>
                       <TableCell
-                        {...stylex.props(
-                          styles.delta,
-                          episode.scoreDelta !== null && episode.scoreDelta > 0
+                        xstyle={[styles.delta, episode.scoreDelta !== null && episode.scoreDelta > 0
                             ? styles.deltaPositive
                             : episode.scoreDelta !== null && episode.scoreDelta < 0
                               ? styles.deltaNegative
-                              : null,
-                        )}
+                              : null]}
                       >
                         {formatDelta(episode.scoreDelta)}
                       </TableCell>
                       <TableCell>
                         {episode.divergenceStep !== null ? (
-                          <Badge variant="secondary" {...stylex.props(styles.monoTiny)} >
+                          <Badge variant="secondary" xstyle={styles.monoTiny} >
                             step {episode.divergenceStep} · {episode.divergenceTS?.toFixed(1)}s
                           </Badge>
                         ) : (
