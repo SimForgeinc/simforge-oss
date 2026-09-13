@@ -375,7 +375,12 @@ export function gateG5(
       // Present even when empty on a pass, so absence never has to be interpreted.
       failureReasons,
     },
-    passed: failureReasons.length === 0,
+    passed:
+      base.passed
+      && measurement.p95LateralM <= thresholds.stockReplayP95LateralM
+      && measurement.infractions === 0
+      && measurement.stepsCompared > 0
+      && unavailable.length === 0,
   };
 }
 

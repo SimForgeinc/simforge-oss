@@ -1,4 +1,5 @@
 "use client";
+import * as stylex from "@stylexjs/stylex";
 
 import { ComparisonLauncher } from "./ComparisonLauncher";
 import { ArrowLeft, ChevronDown } from "lucide-react";
@@ -32,6 +33,7 @@ import type {
 } from "@/app/lib/evaluation/contracts";
 import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { formatScore, PanelMessage, useJsonFetch } from "../../shared";
+import { styles } from "../../route-residuals.stylex";
 
 /** Metric ids the page shows, with the label a person reads. */
 const METRIC_LABELS: Record<string, string> = {
@@ -105,11 +107,11 @@ function ColumnCard({
 
   return (
     <Card data-testid={`compare-column-${String(index)}`}>
-      <CardHeader className="pb-2">
+      <CardHeader xstyle={styles.cardHeaderTight}>
         <CardDescription>
           {index === 0 ? "Baseline" : `Column ${String(index + 1)}`}
         </CardDescription>
-        <CardTitle className="text-base">
+        <CardTitle xstyle={styles.cardTitle}>
           {identity?.familyLabel ?? identity?.family ?? policy.policyId}
         </CardTitle>
         <CardDescription>
@@ -125,7 +127,7 @@ function ColumnCard({
             .join(" \u00b7 ")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent xstyle={styles.content4}>
         <dl className="grid grid-cols-2 gap-2">
           <div>
             <dt className="text-xs text-muted-foreground">Episodes</dt>
@@ -285,7 +287,7 @@ export function CompareClient({
   // reaches for when there is nothing to compare yet.
   if (policies.length < 2) {
     return (
-      <div className="flex h-full flex-col gap-4 overflow-y-auto p-5">
+      <div {...stylex.props(styles.content4)}>
         <PageHeader
           eyebrow={campaignId}
           title="Model comparison"
@@ -312,7 +314,7 @@ export function CompareClient({
   });
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div {...stylex.props(styles.shell)}>
       <PageHeader
         eyebrow={campaignId}
         title="Model comparison"
@@ -320,14 +322,14 @@ export function CompareClient({
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/evaluation">
-              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              <ArrowLeft {...stylex.props(styles.icon)} />
               All campaigns
             </Link>
           </Button>
         }
       />
-      <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div {...stylex.props(styles.content)}>
+        <div {...stylex.props(styles.grid3)}>
           {comparison.columns.map((policy, index) => (
             <ColumnCard
               key={`${policy.policyId}-${String(index)}`}
@@ -341,7 +343,7 @@ export function CompareClient({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Metrics</CardTitle>
+            <CardTitle xstyle={styles.cardTitle}>Metrics</CardTitle>
             <CardDescription>
               A metric is ranked only over rows where every column matched the baseline and defined
               it. Where a run saw different cameras or ran on a different runtime, its numbers are
@@ -350,16 +352,17 @@ export function CompareClient({
               two unknowns are not an agreement.
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent xstyle={styles.content4}>
             {comparison.rankings.map((ranking) => (
               <MetricRow key={ranking.metricId} ranking={ranking} columns={comparison.columns} />
             ))}
           </CardContent>
         </Card>
+          
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Per-scenario</CardTitle>
+          <CardTitle xstyle={styles.cardTitle}>Per-scenario</CardTitle>
             <CardDescription>
               Divergence is the first trace step where a column&apos;s ego drifts more than{" "}
               {String(comparison.divergenceThresholdM)} m from the baseline&apos;s.
@@ -373,9 +376,9 @@ export function CompareClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-                    <TableHead className="text-right">Seed</TableHead>
+                    <TableHead xstyle={styles.numeric}>Seed</TableHead>
                     {comparison.columns.map((policy, index) => (
-                      <TableHead key={`head-${String(index)}`} className="text-right">
+                      <TableHead key={`head-${String(index)}`} xstyle={styles.numeric}>
                         {index === 0 ? "Baseline" : `Col ${String(index + 1)}`}
                       </TableHead>
                     ))}
@@ -386,13 +389,13 @@ export function CompareClient({
                 <TableBody>
                   {comparison.episodes.map((episode) => (
                     <TableRow key={`${episode.scenarioId}-${String(episode.seed)}`}>
-                      <TableCell className="font-medium">{episode.scenarioId}</TableCell>
-                      <TableCell className="text-right font-mono">{episode.seed}</TableCell>
+                      <TableCell xstyle={styles.linkMedium}>{episode.scenarioId}</TableCell>
+                      <TableCell xstyle={styles.numeric}>{episode.seed}</TableCell>
                       {episode.cells.map((cell, index) => (
-                        <TableCell key={`cell-${String(index)}`} className="text-right font-mono">
+                        <TableCell key={`cell-${String(index)}`} xstyle={styles.numeric}>
                           {cell?.episodeId ? (
                             <Link
-                              className="hover:underline"
+                              {...stylex.props(styles.link)}
                               href={`/dashboard/evaluation/${campaignId}/episodes/${cell.episodeId}`}
                             >
                               <CellValue cell={cell} metricId="drivingScore" />

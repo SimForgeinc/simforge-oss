@@ -179,7 +179,12 @@ export async function loadEvalClip(clipDir: string): Promise<ClipAdmission> {
     try {
       info = await stat(absolute);
     } catch {
-      integrityFailures.push({ path: file.path, requirement: 'declared path is missing from the clip directory' });
+      integrityFailures.push({
+        path: file.path,
+        requirement: file.kind === 'image-sequence'
+          ? 'declared image sequence is missing from the clip directory'
+          : 'declared file is missing from the clip directory',
+      });
       continue;
     }
     if (file.kind === 'image-sequence' ? !info.isDirectory() : !info.isFile()) {
@@ -194,9 +199,11 @@ export async function loadEvalClip(clipDir: string): Promise<ClipAdmission> {
     if (digest !== file.sha256) {
       integrityFailures.push({
         path: file.path,
-        requirement: `sha256 mismatch: manifest declares ${file.sha256}, ${file.kind === 'image-sequence' ? 'sequence' : 'file'} hashes to ${digest}`,
+        requirement: file.kind === 'image-sequence'
+          ? `sha256 mismatch: manifest declares ${file.sha256}, sequence hashes to ${digest}`
+          : `sha256 mismatch: manifest declares ${file.sha256}, file hashes to ${digest}`,
       });
-    }
+  }
   }
   if (integrityFailures.length > 0) {
     throw new RefusalError({
