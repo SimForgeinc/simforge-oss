@@ -12,6 +12,8 @@ dist/
 **/3d/variants/
 *.local
 .DS_Store
+/.env.e2e.local
+/e2e/.env.e2e.local
 *.tsbuildinfo
 playwright-report/
 test-results/

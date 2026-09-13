@@ -6,6 +6,15 @@
 export const E2E_ENV = {
   /** `browser` (default) or `electron`; the launch mode the shared fixtures use. */
   mode: "SIMFORGE_E2E_MODE",
+  /** Deployed SimCloud origins used by authenticated QA flows. */
+  devOrigin: "SIMFORGE_E2E_DEV_ORIGIN",
+  stagingOrigin: "SIMFORGE_E2E_STAGING_ORIGIN",
+  cloudOrigin: "SIMFORGE_E2E_CLOUD_ORIGIN",
+  /** Shared QA identity and per-environment workspace selectors. */
+  qaEmail: "SIMFORGE_E2E_QA_EMAIL",
+  qaPassword: "SIMFORGE_E2E_QA_PASSWORD",
+  devWorkspaceId: "SIMFORGE_E2E_DEV_WORKSPACE_ID",
+  stagingWorkspaceId: "SIMFORGE_E2E_STAGING_WORKSPACE_ID",
   /** Parent directory for per-run isolated data roots; defaults to the OS temp dir. */
   dataRoot: "SIMFORGE_E2E_DATA_ROOT",
   /** Keep the isolated roots after a run instead of removing them. */

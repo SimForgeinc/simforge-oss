@@ -1,5 +1,36 @@
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join, resolve } from "node:path";
 import { defineConfig } from "@playwright/test";
 
+/**
+ * Load machine-local E2E defaults without putting credentials in the
+ * repository. Explicit process environment values always win, which keeps CI
+ * and one-off runs authoritative.
+ */
+function loadLocalE2eEnv() {
+  const configuredPath = process.env.SIMFORGE_E2E_ENV_FILE?.trim();
+  const path = configuredPath
+    ? (isAbsolute(configuredPath) ? configuredPath : resolve(configuredPath))
+    : join(homedir(), ".config", "simforge", "e2e-qa.env");
+  if (!existsSync(path)) return;
+  if ((statSync(path).mode & 0o077) !== 0) {
+    throw new Error(`Refusing insecure E2E env file permissions: ${path} (expected owner-only access)`);
+  }
+  for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const separator = line.indexOf("=");
+    if (separator <= 0) continue;
+    const name = line.slice(0, separator).trim();
+    const value = line.slice(separator + 1);
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && process.env[name] === undefined) {
+      process.env[name] = value;
+    }
+  }
+}
+
+loadLocalE2eEnv();
 /**
  * One config for every E2E project. Each test owns its Studio instance and its
  * data roots, so suites are serialised per worker rather than sharing a server:
