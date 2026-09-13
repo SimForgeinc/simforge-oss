@@ -26,6 +26,57 @@ of the two existing Three surfaces; Bevy work lands in the native lane. A
 Bevy WASM editor is gated behind the strategy-A feasibility spike and is out
 of scope for this contract version.
 
+### CityViewer map-loading observability
+
+`CityViewerStats` reports implementation telemetry separately from the frozen
+renderer wire contract. `downloads.transferredBytes` counts actual received
+bytes, including external textures and startup metadata. `loadProgress`
+reports the current stage and completed decode, texture-upload, and compile
+counts; elapsed time alone is never progress.
+
+Readiness requires road geometry and pinned coarse city tiles intersecting the
+current camera frustum to finish GPU preparation. Offscreen tiles do not gate
+startup or fetch solely to complete a whole-map bootstrap. Their resident
+fallbacks may be evicted under memory pressure; newly visible tiles load their
+coarse fallback before refinement. `requiredPendingAssets` excludes optional refinements;
+`requiredError` surfaces required download, decode, upload, compile, or memory
+admission failures. A failed compile must not publish the asset as resident.
+Consumers should poll from bootstrap start, use stage-specific idle deadlines
+and an overall deadline, and report processing as indeterminate when no byte
+denominator is available.
+Initial and reset views focus the nearest authored city tile rather than empty
+terrain bounds. WebGL context loss is a required error, including after startup;
+the React surface reports it to its host so a blank canvas cannot remain ready.
+
+
+`textureMaxDimension` selects existing compressed mip levels before GPU upload;
+it does not remove geometry or resample authored pixels. Embedders should pair
+this limit with their quality preset's memory budget. It can change atomically
+through `setAuthoringFidelity`; textures are cached separately by URL and mip
+limit. Map changes renew the decoder's cancellation signal so an aborted prior
+map cannot cancel the next map's texture requests.
+Before any image decode, the map's tile count and each GLTF's image count
+determine an initial mip budget, reserving half the memory budget for geometry,
+environment resources, and in-flight work. This avoids preparing oversized
+textures merely to discover later that the required coarse map cannot fit.
+If required coarse tiles cannot fit, the viewer estimates the footprint of
+resident and required visible tiles and lowers the mip ceiling in power-of-two steps, never
+below 128 pixels. Geometry remains required. The effective limit is reported in
+`loadProgress.textureMaxDimension`; a map that still cannot fit fails explicitly.
+Each new map starts from the user's selected preset ceiling.
+Trimmed Basis mips whose base dimensions are not divisible by four decode to
+RGBA with the same authored pixels, avoiding illegal BC GPU allocations.
+Already-transcoded BC sources retain the nearest block-aligned authored mip.
+Those legal dimensions may exceed the requested ceiling; residency accounting
+still charges their actual bytes.
+
+
+`resolveAssetUrls` optionally resolves a GLTF's external image URLs together
+before texture loading. This lets authenticated embedders batch authorization
+instead of serializing one database-backed request per image. Eight bounded
+texture requests feed four transcoder workers; encoded unused mip levels are
+removed before transcoding.
+
 ## Frozen wire identifiers
 
 `simforge.scene-state.v1` and `uniscenario.static-semantics/v1` are referenced

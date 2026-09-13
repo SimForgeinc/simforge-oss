@@ -1,4 +1,4 @@
-import { Box3, DataTexture, Group, Scene, Vector3 } from 'three';
+import { Box3, DataTexture, Group, MeshStandardMaterial, Scene, Vector3 } from 'three';
 import type { WebGLRenderer } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { TileStreamLayer, type PreparedAsset } from './streaming';
@@ -39,6 +39,50 @@ describe('essential streaming assets', () => {
     layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
     await layer.whenCompilationIdle();
     expect(build).toHaveBeenCalledOnce();
+    layer.dispose();
+  });
+
+  it('reclaims an offscreen pinned fallback and reloads it when the view returns', async () => {
+    let wanted = true;
+    const layer = new TileStreamLayer({
+      name: 'view-scoped-city',
+      renderer: { compileAsync: async () => undefined } as never,
+      scene: new Scene(),
+      defs: [{
+        id: 'tile', box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => emptyAsset(), maxConcurrent: 1,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      pinCoarsest: true,
+      want: () => wanted,
+    });
+    const load = async () => {
+      layer.update(new Vector3(), 1, 9999);
+      await Promise.resolve();
+      layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+      await layer.whenCompilationIdle();
+    };
+    await load();
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+    const visibleCandidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(visibleCandidates);
+    expect(visibleCandidates).toEqual([]);
+
+    wanted = false;
+    layer.update(new Vector3(), 1, 9999);
+    const offscreenCandidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(offscreenCandidates);
+    expect(offscreenCandidates).toHaveLength(1);
+    layer.evict(offscreenCandidates[0]!);
+    expect(layer.stats().residentAssets).toBe(0);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
+
+    wanted = true;
+    expect(layer.stats().requiredPendingAssets).toBe(1);
+    await load();
+    expect(layer.stats().residentAssets).toBe(1);
+    expect(layer.stats().requiredPendingAssets).toBe(0);
     layer.dispose();
   });
 
@@ -167,7 +211,6 @@ describe('essential streaming assets', () => {
     expect(layer.stats().pendingTextureUploads).toBe(0);
     expect(layer.stats().uploading).toBe(1);
     layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
-    expect(compileAsync).toHaveBeenCalledOnce();
     expect(layer.stats().residentAssets).toBe(0);
     expect(layer.stats().uploading).toBe(1);
 
@@ -182,5 +225,71 @@ describe('essential streaming assets', () => {
     await settled;
     expect(idle).toBe(true);
     expect(disposeAsset).toHaveBeenCalledOnce();
+  });
+
+  it('reports a required compile failure without publishing usable geometry', async () => {
+    const asset = emptyAsset();
+    const failure = new Error('shader compilation failed');
+    const onError = vi.fn();
+    const layer = new TileStreamLayer({
+      name: 'required-geometry',
+      renderer: { compileAsync: async () => { throw failure; } } as unknown as WebGLRenderer,
+      scene: new Scene(),
+      defs: [{
+        id: 'required-tile',
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => asset,
+      maxConcurrent: 1,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      pinCoarsest: true,
+      onError,
+    });
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    expect(layer.stats().residentAssets).toBe(0);
+    expect(layer.stats().requiredPendingAssets).toBeGreaterThan(0);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({ cause: failure });
+    layer.dispose();
+  });
+
+  it('rejects a completed but unlinked shader even on an optional streamed asset', async () => {
+    const asset = emptyAsset();
+    asset.resources.materials.push(new MeshStandardMaterial());
+    const onError = vi.fn();
+    const layer = new TileStreamLayer({
+      name: 'optional-geometry',
+      renderer: {
+        compileAsync: async () => undefined,
+        properties: { get: () => ({ programs: new Map([['failed', { program: {} }]]) }) },
+        getContext: () => ({
+          LINK_STATUS: 0x8b82,
+          getProgramParameter: () => false,
+          getProgramInfoLog: () => 'FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)',
+        }),
+      } as unknown as WebGLRenderer,
+      scene: new Scene(),
+      defs: [{
+        id: 'optional-tile',
+        box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        lods: [{ level: 0, file: 'tile.glb', triangles: 1, fileSize: 1, geometricError: 0 }],
+      }],
+      build: async () => asset,
+      maxConcurrent: 1,
+      pinCoarsest: false,
+      memory: { admit: () => true, maxAssetBytes: () => 100 },
+      onError,
+    });
+    layer.update(new Vector3(), 1, 9999);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    expect(layer.stats()).toMatchObject({ residentAssets: 0, compiledAssets: 0, compiling: 0, pendingBytes: 0 });
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]?.[0].message).toContain('MAX_FRAGMENT_UNIFORM_VECTORS(1024)');
+    layer.dispose();
   });
 });

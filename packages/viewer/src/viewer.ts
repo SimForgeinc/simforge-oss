@@ -3,8 +3,10 @@ import {
   Box3,
   Color,
   DirectionalLight,
+  Frustum,
   Group,
   MathUtils,
+  Matrix4,
   Mesh,
   Object3D,
   PCFSoftShadowMap,
@@ -18,7 +20,7 @@ import type { InstancedMesh, Material, Texture } from 'three';
 import { CameraRig, type CameraMode } from './camera-controls';
 import type { CameraView } from './camera-controls';
 import type { CameraControlPreferences } from './camera-drag';
-import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose } from './camera-envelope';
+import { cameraEnvelopeFromBounds, constrainCameraToEnvelope, initialEditorCameraPose, initialEditorFocus } from './camera-envelope';
 import { FrameStats, jsHeapMB } from './frame-stats';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 import {
@@ -26,7 +28,10 @@ import {
   disposeResources,
   estimateResourceBytes,
   getGLTFLoader,
+  parseMapGLTF,
+  trackedTextureDimension,
   resourceDirectory,
+  disposeTrackedLoader,
 } from './gltf';
 import { createSun } from './environment';
 import {
@@ -71,6 +76,7 @@ import {
   boxOf,
   type EvictionCandidate,
   type PreparedAsset,
+  RequiredAssetBudgetError,
   type StreamTileDef,
 } from './streaming';
 import { ViewerOverlayLayer, type ViewerOverlayState, type ViewerPoint3 } from './overlays';
@@ -117,6 +123,8 @@ const DEFAULTS = {
    * own copy on top of whatever is already resident.
    */
   byteBudget: 1.5 * 1024 * 1024 * 1024,
+  textureMaxDimension: Infinity,
+  resolveAssetUrls: null,
   maxConcurrentLoads: 2,
   uploadBudgetMs: 5,
   /** ~one 2048px texture per frame; the pacer stops as soon as this is spent. */
@@ -269,6 +277,12 @@ export class CityViewer {
   private readonly options: Required<CityViewerOptions>;
   private readonly frameStats = new FrameStats(150);
   private readonly downloadTracker = new AssetDownloadTracker();
+  private readonly cityFrustum = new Frustum();
+  private readonly cityViewProjection = new Matrix4();
+  private textureLoadAbort = new AbortController();
+  private effectiveTextureMaxDimension = Infinity;
+  private textureBudgetRecovery: Promise<void> | null = null;
+  private pendingTextureBudgetError: RequiredAssetBudgetError | null = null;
   private readonly phaseStats = {
     controls: new FrameStats(150),
     streaming: new FrameStats(150),
@@ -379,6 +393,7 @@ export class CityViewer {
       Object.entries(options).filter(([, value]) => value !== undefined),
     ) as CityViewerOptions;
     this.options = { ...DEFAULTS, baseUrl: '', ...provided };
+    this.effectiveTextureMaxDimension = this.options.textureMaxDimension;
     this.roadsOnlyFidelity = this.options.roadsOnlyFidelity;
     this.ultraLowFidelity = this.options.ultraLowFidelity || this.roadsOnlyFidelity;
 
@@ -389,6 +404,11 @@ export class CityViewer {
       alpha: false,
       stencil: false,
     });
+    this.renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+      const error = new Error(`WebGL shader compilation/linking failed: ${gl.getProgramInfoLog(program) || 'no program log'}\nVertex: ${gl.getShaderInfoLog(vertexShader) || ''}\nFragment: ${gl.getShaderInfoLog(fragmentShader) || ''}`);
+      console.error(error);
+      this.recordStreamingError(error);
+    };
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.options.maxPixelRatio));
     this.renderer.toneMapping = AgXToneMapping;
     this.renderer.toneMappingExposure = this.options.exposure;
@@ -432,10 +452,10 @@ export class CityViewer {
       ),
       maxConcurrentDerivatives: 2,
       loadDerivative: async (derivative, signal) => {
-        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath);
+        const loader = getGLTFLoader(this.renderer, this.options.ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
         const derivativeUrl = resolveUrl(this.assetBase, derivative.file);
         const buffer = await this.fetchBuffer(derivativeUrl, signal, derivative.bytes);
-        const gltf = await loader.parseAsync(buffer, resourceDirectory(derivativeUrl));
+        const gltf = await parseMapGLTF(loader, buffer, resourceDirectory(derivativeUrl));
         const root = gltf.scene;
         this.prepareTree(root);
         const resources = collectResources(root);
@@ -494,16 +514,26 @@ export class CityViewer {
   loadMap(manifestUrl: string): Promise<void> {
     const load = this.mapLoadQueue.catch(() => undefined).then(async () => {
       if (this.disposed) return;
+      this.assetVariantReloadGeneration++;
+      this.textureBudgetRecovery = null;
       if (this.mapLoaded) this.releaseMapResources();
       this.mapLoaded = true;
+      this.textureLoadAbort.abort();
+      disposeTrackedLoader(this.downloadTracker);
+      this.textureLoadAbort = new AbortController();
+      this.effectiveTextureMaxDimension = this.options.textureMaxDimension;
+      this.pendingTextureBudgetError = null;
       this.downloadTracker.reset();
+      this.streamingError = null;
       this.mapLoadActive = true;
       try {
         await this.loadMapInner(manifestUrl);
       } catch (err) {
         // dispose() aborts every in-flight request; that is not a failure.
         if (this.disposed || (err as { name?: string } | null)?.name === 'AbortError') return;
-        throw err;
+        const error = new Error(`Map bootstrap downloading/decoding failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+        this.recordStreamingError(error);
+        throw error;
       } finally {
         this.mapLoadActive = false;
       }
@@ -531,20 +561,23 @@ export class CityViewer {
     this.assetBase = url.replace(/[^/]*$/, '');
     const manifest = (await fetch(url, { signal: this.abort.signal }).then((r) => {
       if (!r.ok) throw new Error(`manifest ${r.status} ${url}`);
-      return r.json();
+      return this.readJsonResponse(r);
     })) as CityManifest;
     if (this.disposed) return;
     this.manifest = manifest;
-    this.staticSemantics = await this.loadStaticSemantics(manifest);
+    const [staticSemantics, variantManifest] = await Promise.all([
+      this.loadStaticSemantics(manifest),
+      this.loadVariantManifest(),
+    ]);
+    this.staticSemantics = staticSemantics;
+    this.variantManifest = variantManifest;
     this.capabilities = staticSemanticsCapabilities(this.staticSemantics);
-    if (this.disposed) return;
-    this.variantManifest = await this.loadVariantManifest();
     if (this.disposed) return;
 
     this.sceneBox = boundsToBox3(manifest.scene.bounds);
     const center = this.sceneBox.getCenter(new Vector3());
     const size = this.sceneBox.getSize(new Vector3());
-    this.frameCamera(center, size);
+    this.frameCamera(initialEditorFocus(center, manifest.tiles), size);
 
     const sunDir = manifest.shadowLightmap?.sunDirection ?? [-0.5, -0.6, -0.6];
     const sunTravel = new Vector3(sunDir[0] ?? -0.5, sunDir[1] ?? -0.6, sunDir[2] ?? -0.6);
@@ -589,7 +622,7 @@ export class CityViewer {
     this.refreshSkyEnvironment();
     if (this.ultraLowFidelity) this.disableEnvironment();
     this.visualResourcesPromise = atlas
-      .load(manifest, this.assetBase, this.abort.signal)
+      .load(manifest, this.assetBase, this.abort.signal, this.downloadTracker)
       .then(() => undefined);
     return this.visualResourcesPromise;
   }
@@ -698,7 +731,7 @@ export class CityViewer {
       });
       this.localEnvelopeBounds = tile ? boundsToBox3(tile.bounds) : this.sceneBox.clone();
     }
-    this.localGroundY = this.cameraGroundIndex?.sample(x, z) ?? this.sceneBox.min.y;
+    this.localGroundY = this.cameraGroundIndex?.sample(x, z) ?? this.localEnvelopeBounds?.min.y ?? this.sceneBox.min.y;
     this.localBuildingMax = Math.max(this.localGroundY, this.localEnvelopeBounds?.max.y ?? this.sceneBox.max.y);
     const localHeight = Math.max(0, this.localBuildingMax - this.localGroundY);
     this.localHeadroom = Math.max(6, Math.min(20, localHeight * 0.15));
@@ -751,7 +784,7 @@ export class CityViewer {
 
   resetCamera(): void {
     if (!this.manifest || this.sceneBox.isEmpty()) return;
-    this.frameCamera(this.sceneBox.getCenter(new Vector3()), this.sceneBox.getSize(new Vector3()));
+    this.frameCamera(initialEditorFocus(this.sceneBox.getCenter(new Vector3()), this.manifest.tiles), this.sceneBox.getSize(new Vector3()));
   }
 
   /** Frame a neighborhood and leave a persistent ground marker at its center. */
@@ -820,9 +853,18 @@ export class CityViewer {
     signal: AbortSignal,
     expectedBytes?: number | null,
   ): Promise<ArrayBuffer> {
+    const sessionId = this.downloadTracker.sessionId;
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error(`${res.status} ${url}`);
-    return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes);
+    return readResponseBufferWithProgress(res, this.downloadTracker, expectedBytes, sessionId);
+  }
+
+  private async readJsonResponse(response: Response): Promise<unknown> {
+    const decoded = this.downloadTracker.trackDecode();
+    const buffer = await readResponseBufferWithProgress(response, this.downloadTracker);
+    const value: unknown = JSON.parse(new TextDecoder().decode(buffer));
+    decoded();
+    return value;
   }
 
   private async loadVariantManifest(): Promise<CityAssetVariantManifest | null> {
@@ -830,7 +872,7 @@ export class CityViewer {
     try {
       const response = await fetch(resolveUrl(this.assetBase, relative), { signal: this.abort.signal });
       if (!response.ok) return null;
-      const value: unknown = await response.json();
+      const value = await this.readJsonResponse(response);
       return isCityAssetVariantManifest(value) ? value : null;
     } catch (error) {
       if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
@@ -849,7 +891,7 @@ export class CityViewer {
         signal: this.abort.signal,
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return parseStaticSemantics(await response.json());
+      return parseStaticSemantics(await this.readJsonResponse(response));
     } catch (error) {
       if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
       console.warn('[CityViewer] Static semantics unavailable:', error);
@@ -875,11 +917,11 @@ export class CityViewer {
       this.canvas.dataset.assetVariant = `${requiredVariant}-unavailable`;
       throw new Error(`${this.roadsOnlyFidelity ? 'Roads Only' : 'Ultra Low'} requires a ${requiredVariant} derivative for ${sourceFile}`);
     }
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
     try {
       const selectedUrl = resolveUrl(this.assetBase, selected.file);
       const buffer = await this.fetchBuffer(selectedUrl, signal, selectedBytes);
-      const parsed = await loader.parseAsync(buffer, resourceDirectory(selectedUrl));
+      const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(selectedUrl));
       this.variantLoads[selected.variant]++;
       this.canvas.dataset.assetVariant = selected.variant;
       return parsed;
@@ -888,7 +930,7 @@ export class CityViewer {
         && (error as { name?: string } | null)?.name !== 'AbortError') {
         const fallbackUrl = resolveUrl(this.assetBase, selected.fallbackFile);
         const fallback = await this.fetchBuffer(fallbackUrl, signal);
-        const parsed = await loader.parseAsync(fallback, resourceDirectory(fallbackUrl));
+        const parsed = await parseMapGLTF(loader, fallback, resourceDirectory(fallbackUrl));
         this.variantFallbacks++;
         this.variantLoads['roads-only']++;
         this.canvas.dataset.assetVariant = 'roads-only-v1-fallback';
@@ -899,7 +941,7 @@ export class CityViewer {
       this.variantFallbacks++;
       const sourceUrl = resolveUrl(this.assetBase, sourceFile);
       const source = await this.fetchBuffer(sourceUrl, signal, sourceBytes);
-      const parsed = await loader.parseAsync(source, resourceDirectory(sourceUrl));
+      const parsed = await parseMapGLTF(loader, source, resourceDirectory(sourceUrl));
       this.variantLoads.original++;
       this.canvas.dataset.assetVariant = 'original-fallback';
       return parsed;
@@ -916,10 +958,10 @@ export class CityViewer {
     const declaredKtxPath = this.variantManifest?.variants.ktx2?.runtime?.ktx2TranscoderPath ?? '';
     const ktx2TranscoderPath = this.options.ktx2TranscoderPath
       || (declaredKtxPath ? resolveUrl(this.assetBase, declaredKtxPath) : '');
-    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath);
+    const loader = getGLTFLoader(this.renderer, ktx2TranscoderPath, this.downloadTracker, this.textureLoadAbort.signal, this.effectiveTextureMaxDimension, this.options.resolveAssetUrls, this.mapTextureBudgetPerAsset());
     const fileUrl = resolveUrl(this.assetBase, file);
     const buffer = await this.fetchBuffer(fileUrl, signal, expectedBytes);
-    const parsed = await loader.parseAsync(buffer, resourceDirectory(fileUrl));
+    const parsed = await parseMapGLTF(loader, buffer, resourceDirectory(fileUrl));
     this.variantLoads[variant]++;
     this.canvas.dataset.assetVariant = variant;
     return parsed;
@@ -1008,6 +1050,7 @@ export class CityViewer {
       name: 'road-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs: [def],
       maxConcurrent: 1,
       memory: this.memory,
@@ -1058,6 +1101,7 @@ export class CityViewer {
   }
 
   private createCityLayer(manifest: CityManifest): void {
+    this.updateCityFrustum();
     const defs: StreamTileDef[] = manifest.tiles.map((tile) => ({
       id: tile.id,
       box: boxOf(tile.bounds.min, tile.bounds.max),
@@ -1067,11 +1111,12 @@ export class CityViewer {
       name: 'city-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs,
       maxConcurrent: this.options.maxConcurrentLoads,
       memory: this.memory,
       pinCoarsest: true,
-      want: () => !this.roadsOnlyFidelity,
+      want: (def) => !this.roadsOnlyFidelity && this.cityFrustum.intersectsBox(def.box),
       build: async (def, lod, signal) => {
         const gltf = await this.parseAsset(lod.file, signal, lod.fileSize);
         const root = gltf.scene;
@@ -1108,21 +1153,22 @@ export class CityViewer {
   }
 
   private async loadVegetationInstances(manifest: CityManifest): Promise<void> {
-    const tiles = manifest.vegetationTiles ?? [];
-    await Promise.all(
-      tiles.map(async (tile) => {
-        if (!tile.instanceFile) return;
+    const tiles = (manifest.vegetationTiles ?? []).values();
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (const tile of tiles) {
+        if (this.disposed || this.abort.signal.aborted) return;
+        if (!tile.instanceFile) continue;
         try {
           const res = await fetch(resolveUrl(this.assetBase, tile.instanceFile), {
             signal: this.abort.signal,
           });
-          if (!res.ok) return;
-          this.vegetationData.set(tile.id, (await res.json()) as VegetationInstanceFile);
+          if (!res.ok) continue;
+          this.vegetationData.set(tile.id, (await this.readJsonResponse(res)) as VegetationInstanceFile);
         } catch {
           /* a tile without instance data simply renders no vegetation */
         }
-      }),
-    );
+      }
+    }));
   }
 
   private createVegetationLayer(manifest: CityManifest): void {
@@ -1143,6 +1189,7 @@ export class CityViewer {
       name: 'vegetation-layer',
       renderer: this.renderer,
       scene: this.scene,
+      onError: (error) => this.recordStreamingError(error),
       defs,
       maxConcurrent: 2,
       memory: this.memory,
@@ -1296,7 +1343,14 @@ export class CityViewer {
   /** Optional per-frame hook (used by the benchmark and by integrations). */
   onFrame: ((dt: number) => void) | null = null;
 
+  private updateCityFrustum(): void {
+    this.camera.updateMatrixWorld();
+    this.cityViewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this.cityFrustum.setFromProjectionMatrix(this.cityViewProjection);
+  }
+
   private updateStreaming(cameraPos: Vector3): void {
+    this.updateCityFrustum();
     const height = this.renderer.domElement.height || 1;
     const sseScale = height / (2 * Math.tan(MathUtils.degToRad(this.camera.fov) / 2));
     this.roadLayer?.update(cameraPos, sseScale, this.options.maxScreenSpaceError);
@@ -1318,6 +1372,7 @@ export class CityViewer {
       return this.freeSpace(budget - bytes, priority);
     },
     maxAssetBytes: (): number => this.options.byteBudget * 0.45,
+    pendingBytes: (): number => Math.max(0, this.totalBytes() - this.residentBytes()),
   };
 
   private enforceBudget(): void {
@@ -1373,6 +1428,24 @@ export class CityViewer {
     const snowStreaming = snowStreamingContribution(snow);
     const sum = (pick: (s: NonNullable<typeof city>) => number): number =>
       (city ? pick(city) : 0) + (veg ? pick(veg) : 0) + (road ? pick(road) : 0);
+    const auxiliaryPending = Number(this.mapLoadActive) + this.presetTransitions
+      + this.auxiliaryLoads + snowStreaming.loading + snowStreaming.queued;
+    const streamingError = this.renderer.getContext().isContextLost()
+      ? 'WebGL context was lost; reload the map to recreate its GPU resources'
+      : this.streamingError;
+    // Body-reader gaps are not completion: queued GLBs can still reveal textures.
+    // Scope can reopen as camera selection or a preset changes.
+    const scopeSettled = this.mapLoaded && !this.disposed && !streamingError
+      && auxiliaryPending === 0
+      && sum((s) => s.loading + s.queued + s.uploading + s.pendingTextureUploads
+        + s.compiling + s.requiredPendingAssets) === 0;
+    const downloads = this.downloadTracker.snapshot(performance.now(), scopeSettled);
+    const stage = streamingError ? 'error'
+      : downloads.active > 0 ? 'downloading'
+      : sum((s) => s.pendingTextureUploads) > 0 ? 'uploading'
+      : sum((s) => s.compiling) > 0 ? 'compiling'
+      : sum((s) => s.loading + s.queued + s.uploading) + auxiliaryPending > 0 ? 'decoding'
+      : 'ready';
     return {
       fps: this.fps,
       frameMsAvg: this.frameStats.avg(),
@@ -1395,14 +1468,23 @@ export class CityViewer {
       queued: sum((s) => s.queued) + snowStreaming.queued,
       uploading: sum((s) => s.uploading),
       pendingTextureUploads: sum((s) => s.pendingTextureUploads),
-      downloads: this.downloadTracker.snapshot(),
+      downloads,
+      requiredPendingAssets: sum((s) => s.requiredPendingAssets) + auxiliaryPending,
+      loadProgress: {
+        decodedAssets: sum((s) => s.decodedAssets) + this.downloadTracker.decodedAssets,
+        uploadedTextures: sum((s) => s.uploadedTextures),
+        compiledAssets: sum((s) => s.compiledAssets),
+        stage,
+        ...(Number.isFinite(this.effectiveTextureMaxDimension) ? { textureMaxDimension: Math.min(this.effectiveTextureMaxDimension, trackedTextureDimension(this.downloadTracker)) } : {}),
+      },
       jsHeapMB: jsHeapMB(),
       cameraMode: this.controls.mode,
       renderingSuspended: this.renderingSuspended,
       ultraLowFidelity: this.ultraLowFidelity,
       roadsOnlyFidelity: this.roadsOnlyFidelity,
       roadVisible: this.roadReady && this.roadGroup.visible,
-      streamingError: this.streamingError,
+      streamingError,
+      requiredError: streamingError,
       uiTicksPerSecond: this.fps,
       surfaceMaterials: this.surfaceMaterials.report(),
       snowCover: snow,
@@ -1491,11 +1573,12 @@ export class CityViewer {
     ultraLow: boolean;
     roadsOnly: boolean;
     cinematicLighting?: boolean;
+    textureMaxDimension?: number;
   }): void {
     if (modes.cinematicLighting !== undefined) {
       this.setCinematicLighting(modes.cinematicLighting);
     }
-    this.setFidelityModes(modes.ultraLow, modes.roadsOnly);
+    this.setFidelityModes(modes.ultraLow, modes.roadsOnly, modes.textureMaxDimension);
   }
 
   /**
@@ -1522,11 +1605,16 @@ export class CityViewer {
     this.configureSunShadow();
   }
 
-  private setFidelityModes(requestedUltraLow: boolean, roadsOnly: boolean): void {
+  private setFidelityModes(requestedUltraLow: boolean, roadsOnly: boolean, requestedTextureDimension = this.options.textureMaxDimension): void {
     const enabled = requestedUltraLow || roadsOnly;
     const ultraChanged = enabled !== this.ultraLowFidelity;
     const roadsChanged = roadsOnly !== this.roadsOnlyFidelity;
-    if (!ultraChanged && !roadsChanged) return;
+    const textureDimension = Number.isFinite(requestedTextureDimension)
+      ? Math.max(128, Math.floor(requestedTextureDimension)) : Infinity;
+    const textureChanged = textureDimension !== this.options.textureMaxDimension;
+    if (!ultraChanged && !roadsChanged && !textureChanged) return;
+    this.options.textureMaxDimension = textureDimension;
+    this.effectiveTextureMaxDimension = textureDimension;
     // Restore the unweathered scene before swapping renderer-owned materials or
     // environment resources. The desired appearance is reapplied atomically at
     // the end of the transition.
@@ -1571,7 +1659,7 @@ export class CityViewer {
       if (!this.visualResourcesStarted) {
         void this.ensureVisualResources().then(() => {
           this.refreshWeatherAppearance();
-          if (!this.disposed && !this.ultraLowFidelity && this.variantManifest?.variants['geometry-only']) {
+          if (!this.disposed && !this.ultraLowFidelity && (textureChanged || this.variantManifest?.variants['geometry-only'])) {
             void this.runPresetTransition(() => this.reloadAssetVariant());
           }
         });
@@ -1581,7 +1669,7 @@ export class CityViewer {
       }
     }
     this.applyRoadsOnlyMode();
-    if (ultraChanged && this.variantManifest?.variants['geometry-only']) {
+    if (textureChanged || (ultraChanged && this.variantManifest?.variants['geometry-only'])) {
       void this.runPresetTransition(() => this.reloadAssetVariant());
     } else if (roadsChanged) {
       void this.runPresetTransition(() => this.reloadRoadsOnlyLayers());
@@ -1600,10 +1688,40 @@ export class CityViewer {
     }
   }
 
+  private mapTextureBudgetPerAsset(): number {
+    // Reserve half the budget for geometry, environment resources and work in flight.
+    return this.options.byteBudget * 0.5 / Math.max(1, (this.manifest?.tiles.length ?? 0) + 1);
+  }
+
   private recordStreamingError(error: unknown): void {
     if (this.disposed || (error as { name?: string } | null)?.name === 'AbortError') return;
+    if (error instanceof RequiredAssetBudgetError && this.textureBudgetRecovery) {
+      this.pendingTextureBudgetError = error;
+      return;
+    }
+    const activeTextureLimit = Math.min(this.effectiveTextureMaxDimension, trackedTextureDimension(this.downloadTracker));
+    if (error instanceof RequiredAssetBudgetError && !this.ultraLowFidelity && activeTextureLimit > 128) {
+      const city = this.cityLayer?.stats();
+      const residentTiles = Math.max(1, city?.residentAssets ?? 0);
+      const totalTiles = residentTiles + (city?.requiredPendingAssets ?? 0);
+      const projectedBytes = Math.max(this.options.byteBudget, this.residentBytes() * totalTiles / residentTiles);
+      const currentDimension = Number.isFinite(activeTextureLimit)
+        ? activeTextureLimit : this.renderer.capabilities.maxTextureSize;
+      const fittedDimension = 2 ** Math.floor(Math.log2(currentDimension * Math.sqrt(this.options.byteBudget / projectedBytes)));
+      this.effectiveTextureMaxDimension = Math.max(128, Math.min(currentDimension / 2, fittedDimension));
+      const recovery = this.runPresetTransition(() => this.reloadAssetVariant());
+      this.textureBudgetRecovery = recovery;
+      void recovery.then(() => {
+        if (this.textureBudgetRecovery !== recovery) return;
+        this.textureBudgetRecovery = null;
+        const pending = this.pendingTextureBudgetError;
+        this.pendingTextureBudgetError = null;
+        if (pending && pending.layer.generationId === pending.generation) this.recordStreamingError(pending);
+      });
+      return;
+    }
     this.streamingError = error instanceof Error ? error.message : String(error);
-    console.error('[city-renderer] preset transition failed', error);
+    console.error('[city-renderer] streaming failed', error);
   }
 
   private applyRoadsOnlyMode(): void {
@@ -2070,6 +2188,8 @@ export class CityViewer {
     this.disposed = true;
     cancelAnimationFrame(this.rafHandle);
     this.abort.abort();
+    this.textureLoadAbort.abort();
+    disposeTrackedLoader(this.downloadTracker);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.controls.dispose();

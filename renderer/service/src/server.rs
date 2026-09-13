@@ -1090,6 +1090,9 @@ fn render_tick(
     if let Err(error) = sync_rig(state, &cameras) {
         return WireResponse::error(i, error);
     }
+    if let Err(error) = state.app.wait_for_capture_ready() {
+        return WireResponse::error(i, format!("capture readiness: {error:#}"));
+    }
     let captured = match state.app.capture(tick_id, &capture_keys(&cameras, SERVICE_PASSES)) {
         Ok(captured) => captured,
         Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
@@ -1433,6 +1436,9 @@ fn render_bundle_op(
         if !rig.iter().any(|cam| cam.sensor_id == *sensor_id) {
             return WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig"));
         }
+    }
+    if let Err(error) = state.app.wait_for_capture_ready() {
+        return WireResponse::error(i, format!("capture readiness: {error:#}"));
     }
     let captured = match capture_bundle(state, sim_tick, &host_keys, &device_sensors) {
         Ok(captured) => captured,

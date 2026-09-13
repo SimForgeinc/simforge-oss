@@ -116,6 +116,10 @@ export interface CityViewerOptions {
   vegetationScreenSpaceError?: number;
   /** Resident geometry+texture budget in bytes (estimated GPU footprint). */
   byteBudget?: number;
+  /** Maximum authored compressed-texture mip dimension; geometry is unaffected. */
+  textureMaxDimension?: number;
+  /** Resolve external image URLs in batches before a GLTF starts loading its textures. */
+  resolveAssetUrls?: ((urls: readonly string[], signal: AbortSignal) => Promise<ReadonlyMap<string, string>>) | null;
   /** Concurrent tile fetch/parse slots. */
   maxConcurrentLoads?: number;
   /** Per-frame milliseconds spent pushing new textures to the GPU. */
@@ -239,6 +243,19 @@ export interface CityViewerStats {
   pendingTextureUploads: number;
   /** Live byte-level network telemetry for the current map or preset load. */
   downloads: import('./download-progress').AssetDownloadStats;
+  /** Required scene work only; optional LOD refinement may continue after zero. */
+  requiredPendingAssets?: number;
+  /** Terminal failure of required scene preparation, not optional refinement. */
+  requiredError?: string | null;
+  /** Completion counters never decrease during a map load, including LOD eviction. */
+  loadProgress?: {
+    decodedAssets: number;
+    uploadedTextures: number;
+    compiledAssets: number;
+    /** Effective map texture mip limit after fitting required geometry into the budget. */
+    textureMaxDimension?: number;
+    stage: 'downloading' | 'decoding' | 'uploading' | 'compiling' | 'ready' | 'error';
+  };
   jsHeapMB: number | null;
   cameraMode: 'orbit' | 'fly';
   /** True when GPU rendering and scene streaming are bypassed but integrations still tick. */

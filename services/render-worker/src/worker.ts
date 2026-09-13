@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -67,9 +68,12 @@ export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'i
   for (const input of job.inputs) {
     if (claimedInputIds.has(input.inputId)) throw new Error(`invalid duplicate claimed input ${input.inputId}`);
     claimedInputIds.add(input.inputId);
+
     const expected = expectedInputs.get(input.inputId);
-    if (!expected) throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
-    if (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes) {
+    if (!expected) {
+      throw new Error(`invalid unreferenced claimed input ${input.inputId}`);
+    }
+    if (expected && (expected.sha256 !== input.sha256 || expected.sizeBytes !== input.sizeBytes)) {
       throw new Error(`invalid claimed input metadata for ${input.inputId}`);
     }
     hasNativeMembers ||= isNativeMapMemberInputId(input.inputId);

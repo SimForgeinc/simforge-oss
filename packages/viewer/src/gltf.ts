@@ -1,8 +1,8 @@
 /// <reference path="./ktx-parse.d.ts" />
 
-import type { BufferGeometry, Material, Object3D, Texture, WebGLRenderer } from 'three';
+import type { BufferGeometry, Light, Material, Object3D, Texture, WebGLRenderer } from 'three';
 import { CompressedTexture, Mesh, RGBAFormat, RGBA_S3TC_DXT1_Format } from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
@@ -12,6 +12,8 @@ import {
   VK_FORMAT_BC7_SRGB_BLOCK,
   VK_FORMAT_UNDEFINED,
 } from 'three/addons/libs/ktx-parse.module.js';
+import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
+import type { CityViewerOptions } from './types';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -25,6 +27,34 @@ export const DEFAULT_KTX2_TRANSCODER_PATH = '/basis/';
 export function defaultKtx2TranscoderPath(): string {
   if (typeof document !== 'undefined' && document.baseURI) return new URL(DEFAULT_KTX2_TRANSCODER_PATH, document.baseURI).href;
   return DEFAULT_KTX2_TRANSCODER_PATH;
+}
+
+/** Map illumination belongs to the viewer sun/sky and semantic luminaire pool. */
+export async function parseMapGLTF(loader: GLTFLoader, buffer: ArrayBuffer, path: string): Promise<GLTF> {
+  const gltf = await loader.parseAsync(buffer, path);
+  for (const scene of gltf.scenes) scene.traverse(node => {
+    // Do not hide the node: authored mesh children must remain renderable.
+    if ((node as Light).isLight) node.layers.disableAll();
+  });
+  return gltf;
+}
+
+const linkedPrograms = new WeakSet<WebGLProgram>();
+
+/** Three's compileAsync polls completion, which does not imply successful linking. */
+export function assertMaterialsLinked(renderer: WebGLRenderer, materials: readonly Material[]): void {
+  for (const material of materials) {
+    const programs = (renderer.properties.get(material) as { programs?: Map<string, { program: WebGLProgram }> }).programs;
+    if (!programs) continue;
+    for (const { program } of programs.values()) {
+      if (linkedPrograms.has(program)) continue;
+      const gl = renderer.getContext();
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(`Shader linking failed for ${material.name || material.type}: ${gl.getProgramInfoLog(program) || 'no driver log'}`);
+      }
+      linkedPrograms.add(program);
+    }
+  }
 }
 
 interface SharedTextureEntry {
@@ -137,7 +167,10 @@ export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDim
     const mip = texture.mipmaps[first]!;
     if (Math.max(mip.width, mip.height) <= maxDimension) break;
     first++;
+
   }
+  // A cropped BC chain becomes a new base level, which must remain block-aligned.
+  // KTX2Loader also returns CompressedTexture for its uncompressed RGBA output.
   while (first > 0 && (texture as Texture).format !== RGBAFormat
     && (texture.mipmaps[first]!.width % 4 !== 0 || texture.mipmaps[first]!.height % 4 !== 0)) first--;
   if (first > 0) {
@@ -188,25 +221,30 @@ export function selectKtx2MipLevels(buffer: ArrayBuffer, maxDimension: number): 
 class SharedKTX2Loader extends KTX2Loader {
   /** Largest base level the renderer can allocate; `Infinity` until a renderer is known. */
   maxTextureDimension = Infinity;
+  tracker?: AssetDownloadTracker;
+  signal?: AbortSignal;
+  readonly resolvedUrls = new Map<string, string>();
+  private activeDownloads = 0;
+  private readonly waiting: (() => void)[] = [];
+  private disposeWhenIdle = false;
   private rgbaLoader: KTX2Loader | null = null;
 
-  override parse(buffer: ArrayBuffer, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
-    let selected: { buffer: ArrayBuffer; forceRgba: boolean };
-    try {
-      selected = selectKtx2MipLevels(buffer, this.maxTextureDimension);
-    } catch (error) {
-      onError?.(error);
-      return;
-    }
+  private disposeLoaders(): void {
+    super.dispose();
+    this.rgbaLoader?.dispose();
+    this.rgbaLoader = null;
+  }
+
+  private parseAtLimit(buffer: ArrayBuffer, maxDimension: number, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
+    const selected = selectKtx2MipLevels(buffer, maxDimension);
     if (!selected.forceRgba) {
       super.parse(selected.buffer, onLoad, onError);
       return;
     }
     if (!this.rgbaLoader) {
       this.rgbaLoader = new KTX2Loader(this.manager).setTranscoderPath(this.transcoderPath).setWorkerLimit(1);
-      // A non-block-aligned cropped base is not a legal BC texture. Decode the
-      // same authored mip pixels to RGBA instead; block-aligned images above
-      // keep their compressed format.
+      // NPOT cropped bases are not legal BC textures. Decode the same authored
+      // mip pixels to RGBA instead; retain compression for block-aligned images.
       this.rgbaLoader.workerConfig = {
         astcSupported: false, astcHDRSupported: false, etc1Supported: false,
         etc2Supported: false, dxtSupported: false, bptcSupported: false, pvrtcSupported: false,
@@ -215,6 +253,43 @@ class SharedKTX2Loader extends KTX2Loader {
     this.rgbaLoader.parse(selected.buffer, onLoad, onError);
   }
 
+  override parse(buffer: ArrayBuffer, onLoad?: (texture: CompressedTexture) => void, onError?: (error: unknown) => void): void {
+    this.parseAtLimit(buffer, this.maxTextureDimension, onLoad, onError);
+  }
+
+
+  private async fetchTracked(url: string, maxDimension: number): Promise<CompressedTexture> {
+    const tracker = this.tracker!;
+    const sessionId = tracker.sessionId;
+    const decoded = tracker.trackDecode();
+    const signal = this.signal;
+    if (this.activeDownloads >= 16) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    else this.activeDownloads++;
+    try {
+      signal?.throwIfAborted();
+      const resolvedUrl = this.resolvedUrls.get(new URL(url, document.baseURI).href) ?? url;
+      const response = await fetch(resolvedUrl, { signal, credentials: this.withCredentials ? 'include' : 'same-origin' });
+      if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
+      const buffer = await readResponseBufferWithProgress(response, tracker, undefined, sessionId);
+      signal?.throwIfAborted();
+      const texture = await new Promise<CompressedTexture>((resolve, reject) => this.parseAtLimit(buffer, maxDimension, resolve, reject));
+      if (signal?.aborted) {
+        texture.dispose();
+        signal.throwIfAborted();
+      }
+      decoded();
+      return texture;
+    } catch (cause) {
+      if (signal?.aborted) throw signal.reason;
+      throw new Error(`downloading/decoding texture ${url} failed`, { cause });
+    } finally {
+      const next = this.waiting.shift();
+      if (next) next();
+      else this.activeDownloads--;
+      if (this.activeDownloads === 0 && this.disposeWhenIdle) this.disposeLoaders();
+    }
+ 
+  }
   override load(
     url: string,
     onLoad: (texture: CompressedTexture) => void,
@@ -224,28 +299,44 @@ class SharedKTX2Loader extends KTX2Loader {
     // GLTFLoader only uses the onLoad texture; the synchronous return is
     // the Loader contract and never bound to a material.
     const placeholder = new CompressedTexture([], 0, 0, RGBA_S3TC_DXT1_Format);
-    void onProgress;
     const maxDimension = this.maxTextureDimension;
-    // The decoded levels depend on the cap, so a renderer with a different
-    // limit must not share a source cropped for another.
     sharedTextures
-      .acquire(`${url}|mip-limit=${maxDimension}`, () => new Promise<CompressedTexture>((resolve, reject) => {
-        super.load(url, (texture) => resolve(limitCompressedTextureMipmaps(texture, maxDimension)), undefined, reject);
-      }))
+      .acquire(`${url}|mip-limit=${maxDimension}`, async () => {
+        const texture = this.tracker
+          ? await this.fetchTracked(url, maxDimension)
+          : await new Promise<CompressedTexture>((resolve, reject) => {
+            super.load(url, resolve, onProgress, reject);
+          });
+        return limitCompressedTextureMipmaps(texture, maxDimension);
+      })
       .then(onLoad, (error: unknown) => onError?.(error));
     return placeholder;
   }
 
   override dispose(): void {
-    super.dispose();
-    this.rgbaLoader?.dispose();
-    this.rgbaLoader = null;
+    if (this.activeDownloads > 0) {
+      this.disposeWhenIdle = true;
+      return;
+    }
+    this.disposeLoaders();
   }
 }
 
 let sharedLoader: GLTFLoader | null = null;
 let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
+const trackedLoaders = new Map<AssetDownloadTracker, { loader: GLTFLoader; ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal; maxTextureDimension: number; resolver: CityViewerOptions['resolveAssetUrls']; textureBudgetPerAsset: number }>();
+
+export function textureDimensionForBudget(images: number, bytes: number, ceiling: number): number {
+  if (images <= 0 || !Number.isFinite(bytes)) return ceiling;
+  // Block-compressed maps use at most one byte/pixel plus a complete mip chain.
+  const fitted = 2 ** Math.floor(Math.log2(Math.sqrt(Math.max(1, bytes) * 0.75 / images)));
+  return Math.min(ceiling, Math.max(128, fitted));
+}
+
+export function trackedTextureDimension(tracker: AssetDownloadTracker): number {
+  return trackedLoaders.get(tracker)?.ktx2.maxTextureDimension ?? Infinity;
+}
 
 /**
  * One GLTFLoader for the whole app.
@@ -260,14 +351,14 @@ let sharedKtx2Path = '';
  *   renderer's `MAX_TEXTURE_SIZE` can hold, so a software GL (SwiftShader) or
  *   a small GPU never receives a `texStorage2D` it must reject.
  */
-export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = ''): GLTFLoader {
+export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal, maxTextureDimension = Infinity, resolver: CityViewerOptions['resolveAssetUrls'] = null, textureBudgetPerAsset = Infinity): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
     loader.setMeshoptDecoder(MeshoptDecoder);
     sharedLoader = loader;
   }
-  if (renderer) {
+  if (renderer && !tracker) {
     const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
     // The context's MAX_TEXTURE_SIZE; a stub renderer that reports none is unlimited.
     const maxTextureDimension = renderer.capabilities.maxTextureSize > 0 ? renderer.capabilities.maxTextureSize : Infinity;
@@ -278,11 +369,51 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '')
       sharedKtx2Path = path;
       sharedLoader.setKTX2Loader(sharedKtx2);
     }
+    sharedKtx2.maxTextureDimension = maxTextureDimension;
+  }
+  if (renderer && tracker) {
+    const path = ktx2TranscoderPath || defaultKtx2TranscoderPath();
+    let tracked = trackedLoaders.get(tracker);
+    if (!tracked || tracked.path !== path || tracked.signal !== signal || tracked.maxTextureDimension !== maxTextureDimension || tracked.resolver !== resolver || tracked.textureBudgetPerAsset !== textureBudgetPerAsset) {
+      tracked?.ktx2.dispose();
+      const ktx2 = new SharedKTX2Loader().setTranscoderPath(path).setWorkerLimit(3).detectSupport(renderer) as SharedKTX2Loader;
+      ktx2.tracker = tracker;
+      ktx2.signal = signal;
+      ktx2.maxTextureDimension = maxTextureDimension;
+      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).setKTX2Loader(ktx2);
+      loader.register(parser => ({
+        name: 'SIMFORGE_asset_urls',
+        beforeRoot: async () => {
+          ktx2.maxTextureDimension = textureDimensionForBudget(
+            parser.json.images?.length ?? 0, textureBudgetPerAsset, ktx2.maxTextureDimension,
+          );
+          if (!resolver || !signal) return;
+          const base = new URL(parser.options.path, document.baseURI);
+          const urls = [...new Set<string>((parser.json.images ?? []).flatMap((image: { uri?: string }) =>
+            image.uri && !/^(data|blob):/.test(image.uri) ? [new URL(image.uri, base).href] : []))];
+          if (urls.length === 0) return;
+          const resolved = await resolver(urls, signal);
+          signal.throwIfAborted();
+          for (const [url, target] of resolved) ktx2.resolvedUrls.set(url, target);
+        },
+      }));
+      tracked = { loader, ktx2, path, signal, maxTextureDimension, resolver, textureBudgetPerAsset };
+      trackedLoaders.set(tracker, tracked);
+    }
+    return tracked.loader;
   }
   return sharedLoader;
 }
 
+export function disposeTrackedLoader(tracker: AssetDownloadTracker): void {
+  const tracked = trackedLoaders.get(tracker);
+  trackedLoaders.delete(tracker);
+  tracked?.ktx2.dispose();
+}
+
 export function disposeSharedLoader(): void {
+  for (const { ktx2 } of trackedLoaders.values()) ktx2.dispose();
+  trackedLoaders.clear();
   sharedKtx2?.dispose();
   sharedKtx2 = null;
   sharedKtx2Path = '';

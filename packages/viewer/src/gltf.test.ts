@@ -1,5 +1,5 @@
 import type { Texture } from 'three';
-import { CompressedTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RGBAFormat, RGBA_S3TC_DXT1_Format, Group } from 'three';
+import { CompressedTexture, Light, Mesh, MeshStandardMaterial, PerspectiveCamera, PlaneGeometry, RGBAFormat, RGBA_S3TC_DXT1_Format, Group } from 'three';
 import {
   createDefaultContainer,
   KHR_SUPERCOMPRESSION_BASISLZ,
@@ -9,16 +9,20 @@ import {
   VK_FORMAT_UNDEFINED,
   write as writeKtx2,
 } from 'three/addons/libs/ktx-parse.module.js';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { VK_FORMAT_BC7_UNORM_BLOCK } from 'ktx-parse';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import {
   collectResources,
   disposeResources,
   estimateResourceBytes,
   limitCompressedTextureMipmaps,
+  parseMapGLTF,
   resourceDirectory,
   selectKtx2MipLevels,
   sharedTextures,
+  textureDimensionForBudget,
 } from './gltf';
 
 function decoded(bytes: number): CompressedTexture {
@@ -34,7 +38,57 @@ function cellWith(texture: CompressedTexture): Group {
   return group;
 }
 
-afterEach(() => sharedTextures.clear());
+afterEach(() => {
+  sharedTextures.clear();
+  vi.unstubAllGlobals();
+});
+
+describe('map lighting ownership', () => {
+  it('excludes imported lights from every camera layer without hiding their authored mesh children or changing generic loads', async () => {
+    // Three emits browser progress events while reading inline glTF buffers.
+    vi.stubGlobal('ProgressEvent', Event);
+    const document = {
+      asset: { version: '2.0' },
+      extensionsUsed: ['KHR_lights_punctual'],
+      extensions: { KHR_lights_punctual: { lights: [{ type: 'spot' }, { type: 'point' }] } },
+      scenes: [{ nodes: [0] }, { nodes: [2] }],
+      scene: 0,
+      nodes: [
+        { name: 'Street_Light', extensions: { KHR_lights_punctual: { light: 0 } }, children: [1] },
+        { name: 'Fixture', mesh: 0 },
+        { extensions: { KHR_lights_punctual: { light: 1 } } },
+      ],
+      buffers: [{ byteLength: 36, uri: 'data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA' }],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+      materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.5, 0.25, 0.75, 1], roughnessFactor: 0.4 } }],
+    };
+    const buffer = new TextEncoder().encode(JSON.stringify(document)).buffer;
+    const loader = new GLTFLoader();
+    const map = await parseMapGLTF(loader, buffer, '');
+    const generic = await loader.parseAsync(buffer, '');
+    const camera = new PerspectiveCamera();
+    camera.layers.enableAll();
+    let importedLights = 0;
+    for (const scene of map.scenes) scene.traverse(node => {
+      if ((node as Light).isLight) {
+        importedLights++;
+        expect(node.layers.test(camera.layers)).toBe(false);
+      }
+    });
+    expect(importedLights).toBe(2);
+    const fixture = map.scene.getObjectByName('Fixture') as Mesh;
+    const original = generic.scene.getObjectByName('Fixture') as Mesh;
+    expect(fixture.parent?.name).toBe('Street_Light');
+    expect(fixture.visible && fixture.parent?.visible && fixture.layers.test(camera.layers)).toBe(true);
+    expect(fixture.geometry.attributes.position?.array).toEqual(original.geometry.attributes.position?.array);
+    expect((fixture.material as MeshStandardMaterial).color).toEqual((original.material as MeshStandardMaterial).color);
+    expect((fixture.material as MeshStandardMaterial).roughness).toBe(0.4);
+    expect(generic.scene.getObjectByName('Street_Light')?.layers.test(camera.layers)).toBe(true);
+    for (const scene of [...map.scenes, ...generic.scenes]) disposeResources(collectResources(scene));
+  });
+});
 
 describe('shared KTX2 texture cache', () => {
   it('decodes a URL once and hands every requester a clone that shares the source', async () => {
@@ -90,6 +144,80 @@ describe('shared KTX2 texture cache', () => {
     const texture = await sharedTextures.acquire('images/bad.ktx2', async () => decoded(8));
     expect(texture.source).toBeDefined();
     expect(sharedTextures.stats()).toMatchObject({ textures: 1, refs: 1, misses: 2 });
+  });
+});
+
+describe('compressed texture mip budgets', () => {
+  it('fits a large map image set before allocating its authored high-detail mips', () => {
+    const imageCount = 250;
+    const bytesPerAsset = 1.5 * 1024 ** 3 * 0.5 / 28;
+    const dimension = textureDimensionForBudget(imageCount, bytesPerAsset, 2048);
+    expect(imageCount * dimension ** 2 * 4 / 3).toBeLessThanOrEqual(bytesPerAsset);
+    expect(imageCount * (dimension * 2) ** 2 * 4 / 3).toBeGreaterThan(bytesPerAsset);
+    expect(textureDimensionForBudget(imageCount, bytesPerAsset, 128)).toBe(128);
+  });
+
+  it('removes oversized encoded levels before the texture decoder sees them', () => {
+    const container = createDefaultContainer();
+    container.pixelWidth = 8;
+    container.pixelHeight = 8;
+    container.levelCount = 4;
+    container.levels = [8, 4, 2, 1].map(size => ({
+      levelData: new Uint8Array(size * size * 4).fill(size),
+      uncompressedByteLength: size * size * 4,
+    }));
+    const encoded = writeKtx2(container);
+    const selected = readKtx2(new Uint8Array(selectKtx2MipLevels(encoded.buffer as ArrayBuffer, 2).buffer));
+    expect([selected.pixelWidth, selected.pixelHeight, selected.levelCount]).toEqual([2, 2, 2]);
+    expect(selected.levels.map(level => [...level.levelData])).toEqual([
+      [...new Uint8Array(16).fill(2)], [...new Uint8Array(4).fill(1)],
+    ]);
+  });
+
+  it('decodes cropped non-block-aligned Basis mips as RGBA without resampling', () => {
+    const container = createDefaultContainer();
+    container.pixelWidth = 600;
+    container.pixelHeight = 1000;
+    container.levelCount = 4;
+    container.supercompressionScheme = 1;
+    container.levels = [0, 1, 2, 3].map(level => ({
+      levelData: new Uint8Array(16).fill(level), uncompressedByteLength: 16,
+    }));
+    const selected = selectKtx2MipLevels(writeKtx2(container).buffer as ArrayBuffer, 128);
+    const decoded = readKtx2(new Uint8Array(selected.buffer));
+    expect(selected.forceRgba).toBe(true);
+    expect([decoded.pixelWidth, decoded.pixelHeight]).toEqual([75, 125]);
+    expect([...decoded.levels[0]!.levelData]).toEqual([...new Uint8Array(16).fill(3)]);
+  });
+
+  it('retains a legal BC base when the source is already GPU-compressed', () => {
+    const container = createDefaultContainer();
+    container.vkFormat = VK_FORMAT_BC7_UNORM_BLOCK;
+    container.pixelWidth = 600;
+    container.pixelHeight = 1000;
+    container.levelCount = 4;
+    container.levels = [0, 1, 2, 3].map(level => {
+      const bytes = Math.ceil((600 >> level) / 4) * Math.ceil((1000 >> level) / 4) * 16;
+      return { levelData: new Uint8Array(bytes).fill(level), uncompressedByteLength: bytes };
+    });
+    const selected = selectKtx2MipLevels(writeKtx2(container).buffer as ArrayBuffer, 128);
+    const decoded = readKtx2(new Uint8Array(selected.buffer));
+    expect(selected.forceRgba).toBe(false);
+    expect([decoded.pixelWidth, decoded.pixelHeight]).toEqual([300, 500]);
+    expect(decoded.levels[0]!.levelData).toEqual(container.levels[1]!.levelData);
+  });
+
+  it('keeps the authored lower mip chain and charges only its actual compressed footprint', () => {
+    const texture = new CompressedTexture([
+      { data: new Uint8Array(32), width: 2048, height: 1024 },
+      { data: new Uint8Array(16), width: 1024, height: 512 },
+      { data: new Uint8Array(8), width: 512, height: 256 },
+    ], 2048, 1024, RGBA_S3TC_DXT1_Format);
+    limitCompressedTextureMipmaps(texture, 1024);
+    expect(texture.image).toEqual({ width: 1024, height: 512 });
+    expect(texture.mipmaps.map(mip => [mip.width, mip.height])).toEqual([[1024, 512], [512, 256]]);
+    expect(estimateResourceBytes({ geometries: [], materials: [], textures: [texture] })).toBe(24);
+    texture.dispose();
   });
 });
 
