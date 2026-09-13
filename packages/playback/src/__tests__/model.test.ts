@@ -75,7 +75,6 @@ function trace(documentInput = input()): SimTrace {
       // An engine-produced trace: the native sensor-limited ego controller ran it.
       ego: { controllerProfile: 'sensor-limited' },
       operationalConditions: documentInput.operationalConditions,
-      ego: { controllerProfile: 'sensor-limited' },
       // An archived trace recorded under the removed choreography backend:
       // playback reads it from provenance, so it still replays.
       physics: { mode: 'kinematic-v1', solver: 'uniscenarios-sim-engine', solverVersion: '0.1.0', substepS: 0.2, vehicleProfileDigest: null },
