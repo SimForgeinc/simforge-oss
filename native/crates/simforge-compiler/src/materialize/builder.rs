@@ -787,22 +787,32 @@ impl<'a> Materializer<'a> {
                         },
                         None,
                     ),
-                    (Some(t::SceneAbsoluteInitialRoute::WorldPath { points, stop_controls }), _) => (
-                        Route::from_polyline(points.iter().map(|p| Vec2 { x: p.x, y: -p.z })),
-                        sim::RouteSpec::Polyline {
-                            points: points
-                                .iter()
-                                .map(|p| sim::ScenePoint { x: p.x, z: p.z })
-                                .collect(),
-                            stop_controls: stop_controls.iter().map(|stop| sim::RouteStationStop {
-                                id: stop.id.clone(),
-                                s: stop.s,
-                                dwell_s: stop.dwell_s,
-                                coordination_id: stop.coordination_id.clone(),
-                            }).collect(),
-                        },
-                        None,
-                    ),
+                    (Some(t::SceneAbsoluteInitialRoute::WorldPath { points, stop_controls }), _) => {
+                        let route = Route::from_polyline(points.iter().map(|p| Vec2 { x: p.x, y: -p.z }));
+                        if let Some(stop) = stop_controls.iter().find(|stop| stop.s > route.length_m() + 1e-6) {
+                            return Err(CompileError::at(
+                                "route_station_out_of_bounds",
+                                format!("{path}.initialRoute.stopControls"),
+                                format!("stop control \"{}\" is beyond worldPath length {}", stop.id, route.length_m()),
+                            ));
+                        }
+                        (
+                            route,
+                            sim::RouteSpec::Polyline {
+                                points: points
+                                    .iter()
+                                    .map(|p| sim::ScenePoint { x: p.x, z: p.z })
+                                    .collect(),
+                                stop_controls: stop_controls.iter().map(|stop| sim::RouteStationStop {
+                                    id: stop.id.clone(),
+                                    s: stop.s,
+                                    dwell_s: stop.dwell_s,
+                                    coordination_id: stop.coordination_id.clone(),
+                                }).collect(),
+                            },
+                            None,
+                        )
+                    },
                     (_, Some(rsl)) => {
                         let lr = lane_ref
                             .as_ref()
