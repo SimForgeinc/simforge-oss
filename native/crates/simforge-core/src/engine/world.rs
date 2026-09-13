@@ -191,8 +191,12 @@ pub struct ActorSnapshot {
     pub x: f64,
     pub y: f64,
     pub heading_rad: f64,
+    /// Speed magnitude; sign it with `motion_direction` for a world velocity.
     pub speed_mps: f64,
     pub accel_mps2: f64,
+    /// Actual velocity along the body yaw, signed by the physical motion
+    /// (negative = moving backwards), not by the engaged or requested gear.
+    pub longitudinal_velocity_mps: f64,
     /// Whether the actor exists in the world at this instant.
     pub present: bool,
     /// Lane-relative lateral offset, metres (positive = left).
@@ -878,6 +882,9 @@ impl Simulation {
         let driver = self.driver_profile(spec, rules.aggression);
         let timed_route = match &spec.behavior.route {
             RouteSpec::TimedPolyline { points } => Some(TimedRoute::from_scene_points(points)),
+            RouteSpec::RecordedTrack { samples } => {
+                Some(TimedRoute::from_recorded_samples(samples))
+            }
             _ => None,
         };
         let remaining_turns = match &spec.behavior.route {
@@ -913,6 +920,11 @@ impl Simulation {
                 0.0
             } else {
                 spec.initial.speed_mps
+            },
+            longitudinal_velocity_mps: if spec.is_static {
+                0.0
+            } else {
+                spec.initial.speed_mps * motion_direction.sign()
             },
             accel_mps2: 0.0,
             lateral_offset_m: lateral,
@@ -1111,6 +1123,7 @@ impl Simulation {
             heading_rad: a.heading_rad,
             speed_mps: a.speed_mps,
             accel_mps2: a.accel_mps2,
+            longitudinal_velocity_mps: a.longitudinal_velocity_mps,
             present: a.present,
             lateral_offset_m: a.lateral_offset_m,
             lateral_rate_mps: a.lateral_rate_mps,

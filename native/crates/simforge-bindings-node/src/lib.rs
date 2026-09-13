@@ -1100,7 +1100,7 @@ pub struct JsWorldSnapshot {
     pub kinds: Vec<String>,
     pub lane_rsls: Vec<Option<String>>,
     pub present: Uint8Array,
-    /// `(N, 5)` rows `[x, z, headingRad, speedMps, s]` in the scene frame.
+    /// `(N, 6)` rows `[x, z, headingRad, speedMps, s, longitudinalSpeedMps]` in the scene frame.
     pub pose: Float64Array,
 }
 

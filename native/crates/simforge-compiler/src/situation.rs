@@ -2471,6 +2471,38 @@ fn route_kind_name(route: &RouteSpec) -> &'static str {
         RouteSpec::Follow { .. } => "follow",
         RouteSpec::Polyline { .. } => "polyline",
         RouteSpec::TimedPolyline { .. } => "timedPolyline",
+        RouteSpec::RecordedTrack { .. } => "recordedTrack",
+    }
+}
+
+/// The time span and spatial path of a route whose pose is owned by time. A
+/// single authored keyframe holds for the whole clip, so it covers any span.
+fn timed_track(route: &RouteSpec) -> Option<(f64, f64, Vec<sim::ScenePoint>)> {
+    match route {
+        RouteSpec::TimedPolyline { points } => {
+            let (first, last) = if points.len() > 1 {
+                (points[0].time_s, points[points.len() - 1].time_s)
+            } else {
+                (f64::NEG_INFINITY, f64::INFINITY)
+            };
+            Some((
+                first,
+                last,
+                points
+                    .iter()
+                    .map(|p| sim::ScenePoint { x: p.x, z: p.z })
+                    .collect(),
+            ))
+        }
+        RouteSpec::RecordedTrack { samples } => Some((
+            samples[0].time_s,
+            samples[samples.len() - 1].time_s,
+            samples
+                .iter()
+                .map(|s| sim::ScenePoint { x: s.x, z: s.z })
+                .collect(),
+        )),
+        _ => None,
     }
 }
 
@@ -2599,7 +2631,7 @@ pub fn compile_situation(
         };
         let mut intervals: Vec<AuthorityInterval> = participant.authority.clone();
         intervals.sort_by(|a, b| a.start_s.total_cmp(&b.start_s));
-        let timed = matches!(actor.behavior.route, RouteSpec::TimedPolyline { .. });
+        let timed = timed_track(&actor.behavior.route);
         let mut covered_until = 0.0;
         for (interval_index, interval) in intervals.iter().enumerate() {
             if !interval.start_s.is_finite()
@@ -2631,7 +2663,7 @@ pub fn compile_situation(
             covered_until = interval.end_s;
             let kind = interval.kind;
             let previous = interval_index.checked_sub(1).map(|i| intervals[i]);
-            if interval_index == 0 && ((kind == AuthorityKind::Recorded) != timed) {
+            if interval_index == 0 && ((kind == AuthorityKind::Recorded) != timed.is_some()) {
                 return Err(CompileError::new(
                     "authority_route_mismatch",
                     format!(
@@ -2650,13 +2682,8 @@ pub fn compile_situation(
                     format!("role {}: return to recorded motion at {}s requires a position/heading/speed continuity proof; snapping to source timing is unsupported", actor.id, interval.start_s),
                 ));
             }
-            if let (AuthorityKind::Recorded, RouteSpec::TimedPolyline { points }) =
-                (kind, &actor.behavior.route)
-            {
-                if points.len() > 1
-                    && (points[0].time_s > interval.start_s
-                        || points[points.len() - 1].time_s < interval.end_s)
-                {
+            if let (AuthorityKind::Recorded, Some((first_s, last_s, _))) = (kind, &timed) {
+                if *first_s > interval.start_s || *last_s < interval.end_s {
                     return Err(CompileError::new(
                         "authority_recording_coverage",
                         format!(
@@ -2681,7 +2708,7 @@ pub fn compile_situation(
             if previous.is_some_and(|p| p.kind == AuthorityKind::Recorded)
                 && kind != AuthorityKind::Recorded
             {
-                let RouteSpec::TimedPolyline { points } = &actor.behavior.route else {
+                let Some((_, _, points)) = &timed else {
                     return Err(CompileError::new(
                         "authority_handover_unsupported",
                         format!(
@@ -2720,10 +2747,7 @@ pub fn compile_situation(
                     until: None,
                     verb: sim::Verb::Route {
                         target: sim::RouteActionTarget::Spec(RouteSpec::Polyline {
-                            points: points
-                                .iter()
-                                .map(|p| sim::ScenePoint { x: p.x, z: p.z })
-                                .collect(),
+                            points: points.clone(),
                         }),
                         join_from_current_pose: None,
                         best_effort_world_path: None,
@@ -2738,7 +2762,7 @@ pub fn compile_situation(
                 end_s: interval.end_s,
                 interval_index,
                 handover_interaction_id,
-                route_kind: if timed && kind != AuthorityKind::Recorded {
+                route_kind: if timed.is_some() && kind != AuthorityKind::Recorded {
                     "polyline"
                 } else {
                     route_kind_name(&actor.behavior.route)
@@ -2760,7 +2784,10 @@ pub fn compile_situation(
                             !only_timed
                                 || matches!(
                                     target,
-                                    sim::RouteActionTarget::Spec(RouteSpec::TimedPolyline { .. })
+                                    sim::RouteActionTarget::Spec(
+                                        RouteSpec::TimedPolyline { .. }
+                                            | RouteSpec::RecordedTrack { .. }
+                                    )
                                 )
                         }
                         _ => false,

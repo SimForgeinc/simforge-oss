@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   CarFront,
   Clock3,
+  Gamepad2,
   Globe2,
   Lock,
   PersonStanding,
@@ -32,6 +33,8 @@ import { newTemplateId, type Interaction, type ReasoningTraceSegment } from "@si
 import {
   actionsForActor,
   interactionForAction,
+  isManualDrive,
+  MANUAL_DRIVE_ACTION_ID,
   setExclusiveCustomTimedRoute,
   type ActionDefinition,
   type EditorDocument,
@@ -77,6 +80,8 @@ import { DynamicActorCatalogIcon, isDynamicActorCatalogId } from '../regions/Dyn
 import { cn } from "../../../lib/utils";
 import { isUnconfiguredSimpleTimedRoute } from "../simple-route-status";
 import { isCustomTimedRoute } from "../simple-timed-routes";
+import { competingMotionRefusal } from "../manual-drive/authoring";
+import { notifyScenario } from "../status";
 import { TimelineCarlaCompatibilityMarker } from "./TimelineCarlaCompatibilityMarker";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelineTransportControls } from "./TimelineTransportControls";
@@ -98,7 +103,7 @@ import {
   type TimelineClipEditMode,
 } from "./v1-timeline-model";
 import {
-  TIMELINE_GLASS_SURFACE_STYLE,
+  TIMELINE_GLASS_SURFACE_CLASSNAME,
   TimelineGlassBackdrop,
 } from "./TimelineGlassSurface";
 import {
@@ -106,9 +111,6 @@ import {
 } from "../inspector/TrafficLightDetailsPanel";
 import { EditorDetailsPanel } from "../inspector/EditorDetailsPanel";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
-import * as stylex from "@stylexjs/stylex";
-import { styles } from "./V1TimelineRail.stylex";
-import { motionStyles } from "../../../stylex/motion.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -157,6 +159,8 @@ export type V1TimelineRailProps = {
   onSelectInteraction?: (interactionId: string, actorId: string) => void;
   onClearSelection?: () => void;
   onSelectSignal?: (headId: string) => void;
+  /** Opens the take recorder for an actor; the document is untouched until a take is saved. */
+  onStartManualDrive?: (actorId: string) => string | null;
   disableInteractionCreation?: boolean;
   lockSimpleTimedRoutes?: boolean;
   readOnly?: boolean;
@@ -287,6 +291,7 @@ export function V1TimelineRail({
   onSelectInteraction,
   onClearSelection,
   onSelectSignal,
+  onStartManualDrive,
   disableInteractionCreation = false,
   lockSimpleTimedRoutes = false,
   readOnly = false,
@@ -524,6 +529,25 @@ export function V1TimelineRail({
       (candidate) => candidate.id === definitionId,
     );
     if (!definition) return;
+    const actor = { id: role.id, label: actorLabels.get(role.id) ?? role.id };
+    if (definition.id === MANUAL_DRIVE_ACTION_ID) {
+      // Nothing enters the document here: the recorder opens, and only a
+      // reviewed, saved take becomes the actor's Manual drive.
+      const failure = onStartManualDrive
+        ? onStartManualDrive(role.id)
+        : "Manual drive recording is not available in this editor.";
+      if (failure) {
+        notifyScenario({ severity: "warning", source: "authoring", message: "Manual drive not started", detail: failure });
+      }
+      setContextMenu(null);
+      return;
+    }
+    const refusal = competingMotionRefusal(document, actor, definition);
+    if (refusal) {
+      notifyScenario({ severity: "warning", source: "authoring", message: "Motion is owned by a Manual drive", detail: refusal });
+      setContextMenu(null);
+      return;
+    }
     const interaction = interactionForAction(
       definition,
       role.id,
@@ -552,6 +576,12 @@ export function V1TimelineRail({
     if (readOnly || disableInteractionCreation) return;
     const otherRole = gapPeerFor(role, document.data.roles);
     if (verb === "gap" && !otherRole) return;
+    const refusal = competingMotionRefusal(document, { id: role.id, label: actorLabels.get(role.id) ?? role.id }, { verb });
+    if (refusal) {
+      notifyScenario({ severity: "warning", source: "authoring", message: "Motion is owned by a Manual drive", detail: refusal });
+      setContextMenu(null);
+      return;
+    }
     const startS = snapToTimeGrid(timeS);
     const id = uniqueTimelineInteractionId(
       `${verb}_${role.id}`,
@@ -583,7 +613,7 @@ export function V1TimelineRail({
   };
 
   const commitRange = (interaction: Interaction, range: AuthoredTimelineRange) => {
-    if (readOnly || isCustomTimedRoute(interaction)) return;
+    if (readOnly || isCustomTimedRoute(interaction) || isManualDrive(interaction)) return;
     const ranged = interactionWithAuthoredTimelineRange(interaction, range);
     document.replaceInteraction(
       interaction.id,
@@ -758,7 +788,10 @@ export function V1TimelineRail({
   return (
     <section
       ref={railRef}
-      {...stylex.props(styles.flexColTight, TIMELINE_GLASS_SURFACE_STYLE)}
+      className={cn(
+        "z-30 flex min-h-0 w-full shrink-0 flex-col text-white",
+        TIMELINE_GLASS_SURFACE_CLASSNAME,
+      )}
       data-floating="true"
       data-interaction-authoring={readOnly || disableInteractionCreation ? "disabled" : "enabled"}
       data-presentation="floating"
@@ -786,7 +819,7 @@ export function V1TimelineRail({
           <div
             aria-label="Resize timeline"
             aria-orientation="horizontal"
-            {...stylex.props(styles.absFlexMid)}
+            className="absolute left-1/2 top-0 z-40 flex h-3 w-24 -translate-x-1/2 cursor-ns-resize touch-none items-start justify-center pt-1"
             data-testid="timeline-height-resize-handle"
             onDoubleClick={() => setManualHeight(null)}
             onKeyDown={(event) => {
@@ -804,7 +837,7 @@ export function V1TimelineRail({
             role="separator"
             tabIndex={0}
           >
-            <span {...stylex.props(styles.round)} />
+            <span className="h-1 w-10 rounded-full bg-white/35 transition-colors hover:bg-[#E8E044]/70" />
           </div>
           <div
             aria-label="Resize name column"
@@ -817,7 +850,7 @@ export function V1TimelineRail({
                 ? `Name column fits its contents, ${identityWidth} pixels`
                 : `Name column ${identityWidth} pixels`
             }
-            className={stylex.props(styles.abs).className}
+            className="group absolute inset-y-0 z-40 -ml-1.5 w-3 cursor-col-resize touch-none"
             data-testid="timeline-split-resize-handle"
             data-timeline-seek-ignore="true"
             // Two press/release pairs — a human double click — are caught in
@@ -843,38 +876,38 @@ export function V1TimelineRail({
             style={{ left: `var(${IDENTITY_WIDTH_VAR})` }}
             tabIndex={0}
           >
-            <span {...stylex.props(styles.absInert)} />
+            <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/25 transition-colors group-hover:bg-[#E8E044]/80 group-focus-visible:bg-[#E8E044]" />
           </div>
           <header
-            {...stylex.props(styles.relGridTight)}
+            className="relative z-10 grid h-12 shrink-0 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] overflow-hidden rounded-t-[24px] border-b border-white/10 bg-gradient-to-r from-[#E8E044]/[0.07] via-white/[0.025] to-transparent"
             data-testid="timeline-topbar"
           >
-            <div {...stylex.props(styles.flexCenterMid)}>
+            <div className="flex min-w-0 items-center justify-center overflow-hidden border-r border-white/10">
               <div
-                {...stylex.props(styles.flexColCenter)}
+                className="flex w-max flex-col items-center justify-center gap-0.5 px-2"
                 {...{ [IDENTITY_CONTENT_ATTR]: "" }}
               >
-                <strong {...stylex.props(styles.capsBoldNowrap)}>
+                <strong className="whitespace-nowrap text-center text-[8px] font-bold uppercase tracking-[0.12em] text-[#E8E044]">
                   Timeline
                 </strong>
                 <TimelineTransportControls playback={playback} playDisabled={routeAuthoring} />
               </div>
             </div>
             <div
-              {...stylex.props(styles.relNarrowableSelfStretch)}
+              className="relative min-w-0 self-stretch cursor-pointer"
               data-testid="timeline-inline-ruler"
               data-timeline-track="ruler"
             >
               <TimelineRuler
                 choreography={choreography}
                 crashes={playback?.crashes}
-                xstyle={styles.tall}
+                className="mb-0 h-full border-b-0 bg-black/20"
               />
             </div>
           </header>
 
           <div
-            {...stylex.props(styles.absInertRaised)}
+            className="pointer-events-none absolute inset-y-0 z-20 w-px bg-[#E8E044] shadow-[0_0_10px_rgba(232,224,68,0.65)]"
             data-testid="timeline-playhead"
             style={{
               left: `calc(var(${IDENTITY_WIDTH_VAR}) + (100% - var(${IDENTITY_WIDTH_VAR})) * ${playheadPercent / 100})`,
@@ -886,7 +919,7 @@ export function V1TimelineRail({
               aria-valuemin={windowRange.startMs / 1000}
               aria-valuenow={displayedTime}
               aria-valuetext={`${displayedTime.toFixed(1)} seconds`}
-              className={stylex.props(styles.absLivePad0).className}
+              className="group pointer-events-auto absolute -left-2 inset-y-0 w-4 cursor-ew-resize touch-none bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
               data-testid="timeline-playhead-drag-handle"
               data-timeline-seek-ignore="true"
               onKeyDown={(event) => {
@@ -902,13 +935,13 @@ export function V1TimelineRail({
               role="slider"
               type="button"
             >
-              <span {...stylex.props(styles.absRound)} />
+              <span className="absolute left-1/2 top-0 size-3 -translate-x-1/2 rounded-full bg-[#E8E044] shadow-[0_0_10px_rgba(232,224,68,0.55)] transition-transform group-hover:scale-125" />
             </button>
           </div>
 
-          <div {...stylex.props(styles.relFillClip)} data-testid="semantic-timeline">
-            <div {...stylex.props(styles.absScrollYInset0)} onScroll={() => setContextMenu(null)}>
-              <div {...stylex.props(styles.minHFullPb12)}>
+          <div className="relative z-10 min-h-0 flex-1 overflow-hidden bg-black/10" data-testid="semantic-timeline">
+            <div className="absolute inset-0 overflow-y-auto" onScroll={() => setContextMenu(null)}>
+              <div className="min-h-full pb-12">
                 {signalLanes.map((lane) => (
                   <SignalRailLane
                     key={`${lane.junctionId}:${lane.controllerId}`}
@@ -980,7 +1013,7 @@ export function V1TimelineRail({
                   </Fragment>
                 ))}
                 {document.data.roles.length === 0 && signalLanes.length === 0 && !hasWorldInteractions ? (
-                  <p {...stylex.props(styles.gridCenteredXs)}>
+                  <p className="m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35">
                     {readOnly ? "No authored timeline content." : "Place an actor to start authoring the timeline."}
                   </p>
                 ) : null}
@@ -1047,46 +1080,46 @@ function SignalRailLane({
   const laneId = `${lane.junctionId}-${lane.controllerId}`;
   return (
     <div
-      {...stylex.props(styles.gridRuleB)}
+      className="grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-black/20"
       data-testid={`timeline-signal-lane-${laneId}`}
     >
-      <div {...stylex.props(styles.flexStretchRuleR)}>
+      <div className="flex min-w-0 items-stretch overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.06]">
         <div
-          {...stylex.props(styles.flexStretchSelfStretch)}
+          className="flex w-max items-stretch self-stretch"
           {...{ [IDENTITY_CONTENT_ATTR]: "" }}
         >
           {onFocus || onConfigure ? (
             <button
               aria-label={`${onFocus ? "Focus" : "Configure"} traffic light ${lane.referenceHeadId}`}
-              className={stylex.props(styles.flexCenterGap15, motionStyles.editorMotion).className}
+              className="editor-motion flex items-center gap-1.5 px-2 text-left text-[9px] text-[#E8E044] hover:bg-[#E8E044]/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#E8E044]"
               data-testid={`timeline-focus-signal-${laneId}`}
               type="button"
               onClick={onFocus ?? onConfigure}
             >
-              <TrafficCone aria-hidden="true" className={stylex.props(styles.tight).className} />
-              <span {...stylex.props(styles.nowrap)}>Light {lane.referenceHeadId}</span>
+              <TrafficCone aria-hidden="true" className="size-3 shrink-0" />
+              <span className="whitespace-nowrap">Light {lane.referenceHeadId}</span>
             </button>
           ) : (
-            <div {...stylex.props(styles.flexCenterGap152)}>
-              <TrafficCone aria-hidden="true" className={stylex.props(styles.tight).className} />
-              <span {...stylex.props(styles.nowrap)}>Lights {lane.headIds.join(", ")}</span>
+            <div className="flex items-center gap-1.5 px-2 text-[9px] text-[#E8E044]/80">
+              <TrafficCone aria-hidden="true" className="size-3 shrink-0" />
+              <span className="whitespace-nowrap">Lights {lane.headIds.join(", ")}</span>
             </div>
           )}
           {onRemoveControl ? (
             <button
               aria-label={`Remove control from traffic light ${lane.referenceHeadId}`}
-              className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
+              className="editor-motion grid w-6 shrink-0 place-items-center border-l border-white/10 text-white/35 hover:bg-red-500/15 hover:text-red-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-red-300"
               data-testid={`timeline-remove-signal-control-${laneId}`}
               onClick={onRemoveControl}
               title="Remove control"
               type="button"
             >
-              <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />
+              <Trash2 aria-hidden="true" className="size-3" />
             </button>
           ) : null}
         </div>
       </div>
-      <div {...stylex.props(styles.relClipPointer)} data-timeline-track="signal">
+      <div className="relative my-2 cursor-pointer overflow-hidden bg-white/[0.025]" data-timeline-track="signal">
         {lane.bands.map((band) => {
           const classes = indicationSwatch(band.indication);
           const authored = band.source === "authored";
@@ -1094,12 +1127,9 @@ function SignalRailLane({
           return (
             <button
               aria-label={`${indicationLabel(band.indication)}, ${band.startS.toFixed(1)} to ${band.endS.toFixed(1)} seconds, ${authored ? "authored" : selectable ? "map timing; click to take control" : "map timing"}`}
-              {...stylex.props(
-                styles.signalBand,
-                authored ? classes.fill : classes.ghost,
-                authored ? classes.border : styles.signalBandBaseline,
-                selectable ? styles.signalBandSelectable : styles.signalBandInert,
-              )}
+              className={`absolute inset-y-0 flex min-w-px items-center justify-center overflow-hidden border disabled:pointer-events-none ${
+                authored ? `${classes.fill} ${classes.border}` : `${classes.ghost} border-dashed border-white/20`
+              } ${selectable ? "cursor-pointer" : "cursor-default"}`}
               data-source={band.source}
               data-testid={`timeline-signal-band-${laneId}-${band.startS}`}
               disabled={!selectable}
@@ -1148,7 +1178,7 @@ function WorldRailLane({
   const rowCount = Math.max(1, rows.length);
   return (
     <article
-      {...stylex.props(styles.gridRuleB2)}
+      className="grid border-b border-white/10"
       data-testid="timeline-world-lane"
       style={{
         gridTemplateColumns: IDENTITY_GRID_COLUMNS,
@@ -1156,16 +1186,16 @@ function WorldRailLane({
       }}
     >
       <div
-        {...stylex.props(styles.relFlexStart)}
+        className="relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.04] text-[#E8E044]/80"
         data-testid="timeline-world-identity"
         style={{ gridColumn: 1, gridRow: `1 / span ${rowCount}` }}
       >
         <div
-          {...stylex.props(styles.flexStartGap15)}
+          className="flex w-max items-start gap-1.5 px-2 py-2"
           {...{ [IDENTITY_CONTENT_ATTR]: "" }}
         >
-          <Globe2 aria-hidden="true" className={stylex.props(styles.tight2).className} />
-          <span {...stylex.props(styles.mediumNowrap)}>Scene / world</span>
+          <Globe2 aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+          <span className="whitespace-nowrap text-[9px] font-medium">Scene / world</span>
         </div>
       </div>
       {rows.flatMap((row, rowIndex) => row.map((resolved) => (
@@ -1240,7 +1270,7 @@ function ActorRailLane({
 
   return (
     <article
-      {...stylex.props(styles.gridRuleB2)}
+      className="grid border-b border-white/10"
       data-static={staticActor ? "true" : "false"}
       data-testid={`timeline-actor-lane-${role.id}`}
       onClick={readOnly ? undefined : (event) => {
@@ -1251,17 +1281,19 @@ function ActorRailLane({
       style={{ gridTemplateColumns: IDENTITY_GRID_COLUMNS, gridTemplateRows: rowTemplate }}
     >
       <div
-        {...stylex.props(styles.identityColumn, selected ? styles.identityColumnSelected : styles.identityColumnIdle)}
+        className={`relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 ${
+          selected ? "bg-[#E8E044]/10 text-[#E8E044]" : "bg-black/20 text-white/75"
+        }`}
         data-testid={`timeline-actor-identity-${role.id}`}
         style={{ gridColumn: 1, gridRow: `1 / span ${rowCount}` }}
       >
         <div
-          {...stylex.props(styles.flexStartGap15)}
+          className="flex w-max items-start gap-1.5 px-2 py-2"
           {...{ [IDENTITY_CONTENT_ATTR]: "" }}
         >
           <button
             aria-label={`Focus actor ${actorLabel}`}
-            {...stylex.props(styles.flexCenterGap153)}
+            className="flex items-center gap-1.5 rounded-sm text-left enabled:cursor-pointer enabled:hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E8E044]"
             disabled={readOnly || (!onFocusActor && !onSelectActor)}
             onClick={(event) => {
               event.stopPropagation();
@@ -1270,7 +1302,7 @@ function ActorRailLane({
             type="button"
           >
             <TimelineActorCatalogIcon role={role} />
-            <span {...stylex.props(styles.mediumNowrap)} title={actorLabel}>
+            <span className="whitespace-nowrap text-[9px] font-medium" title={actorLabel}>
               {actorLabel}
             </span>
           </button>
@@ -1283,7 +1315,7 @@ function ActorRailLane({
           {!readOnly ? (
             <button
               aria-label={`Delete actor ${actorLabel}`}
-              {...stylex.props(styles.inlineFlexCenterMid)}
+              className="inline-flex size-4 shrink-0 items-center justify-center bg-transparent p-0 text-white/35 transition-colors hover:bg-transparent hover:text-red-300 focus-visible:bg-transparent focus-visible:text-red-300 focus-visible:outline-none"
               data-testid={`timeline-delete-${role.id}`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -1291,7 +1323,7 @@ function ActorRailLane({
               }}
               type="button"
             >
-              <Trash2 aria-hidden="true" className={stylex.props(styles.size35).className} />
+              <Trash2 aria-hidden="true" className="size-3.5" />
             </button>
           ) : null}
         </div>
@@ -1299,9 +1331,10 @@ function ActorRailLane({
 
       {staticActor && interactions.length === 0 ? (
         <div
-          {...stylex.props(styles.flexCenterCaps, styles.styleGridColumn2)}
+          className="flex cursor-pointer items-center px-2 text-[9px] uppercase tracking-[0.12em] text-white/25"
           data-testid={`timeline-static-identity-only-${role.id}`}
           data-timeline-track="interaction"
+          style={{ gridColumn: 2, gridRow: 1 }}
         >
           Static · no authored actions
         </div>
@@ -1309,12 +1342,13 @@ function ActorRailLane({
         <>
           {!staticActor && interactions.length === 0 ? (
             <div
-              {...stylex.props(styles.relPointer, styles.styleGridColumn2)}
+              className="relative cursor-pointer bg-black/15"
               data-testid={`timeline-interaction-gap-${role.id}`}
               data-timeline-track="interaction"
               onContextMenu={readOnly ? undefined : (event) => onContextMenu(event, role.id)}
+              style={{ gridColumn: 2, gridRow: 1 }}
             >
-              <span {...stylex.props(styles.absGridCentered)}>
+              <span className="absolute inset-0 grid place-items-center text-[8px] text-white/20">
                 {readOnly || interactionCreationDisabled
                   ? "No authored actions"
                   : "Right-click a gap to add an action"}
@@ -1361,23 +1395,23 @@ function ReasoningTraceLane({
   onSelect: (id: string) => void;
 }) {
   return (
-    <article {...stylex.props(styles.gridRuleB3)} data-testid="timeline-reasoning-trace-lane">
-      <div {...stylex.props(styles.flexCenterRuleR)}>
+    <article className="grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-[#E8E044]/[0.025]" data-testid="timeline-reasoning-trace-lane">
+      <div className="flex min-w-0 items-center overflow-hidden border-r border-white/10 text-[#E8E044]/80">
         <div
-          {...stylex.props(styles.flexCenterGap154)}
+          className="flex w-max items-center gap-1.5 px-2"
           {...{ [IDENTITY_CONTENT_ATTR]: "" }}
         >
-          <BrainCircuit aria-hidden="true" className={stylex.props(styles.tight).className} />
-          <span {...stylex.props(styles.capsSemiboldNowrap)}>Reasoning</span>
+          <BrainCircuit aria-hidden="true" className="size-3 shrink-0" />
+          <span className="whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.08em]">Reasoning</span>
         </div>
       </div>
       <div
-        {...stylex.props(styles.relPointer)}
+        className="relative cursor-pointer bg-black/15"
         data-timeline-track="reasoning"
         onContextMenu={readOnly ? undefined : onAdd}
       >
         {segments.length === 0 ? (
-          <span {...stylex.props(styles.absGridCentered)}>
+          <span className="absolute inset-0 grid place-items-center text-[8px] text-white/20">
             {readOnly ? 'No reasoning trace' : 'Right-click to add observation + action'}
           </span>
         ) : null}
@@ -1388,7 +1422,7 @@ function ReasoningTraceLane({
           return (
             <button
               aria-label={`Edit reasoning trace from ${segment.startS.toFixed(1)} to ${segment.endS.toFixed(1)} seconds`}
-              {...stylex.props(styles.reasoningClip, selectedId === segment.id ? styles.reasoningClipSelected : styles.reasoningClipIdle)}
+              className={`absolute inset-y-1 overflow-hidden rounded-md border px-2 text-left text-[8px] ${selectedId === segment.id ? 'border-white bg-[#E8E044] text-black ring-1 ring-white' : 'border-[#E8E044]/70 bg-[#E8E044]/25 text-[#E8E044]'}`}
               data-timeline-seek-ignore="true"
               data-testid={`reasoning-trace-clip-${segment.id}`}
               key={segment.id}
@@ -1398,7 +1432,7 @@ function ReasoningTraceLane({
               title={label}
               type="button"
             >
-              <span {...stylex.props(styles.blockTruncate)}>{label}</span>
+              <span className="block truncate">{label}</span>
             </button>
           );
         })}
@@ -1434,29 +1468,29 @@ function ReasoningTraceEditor({
       onClose={onClose}
       onDelete={readOnly ? undefined : () => onDelete(draft.id)}
       preview={(
-        <div {...stylex.props(styles.flexColCenter2)}>
-          <BrainCircuit aria-hidden="true" className={stylex.props(styles.size8Text).className} />
-          <strong {...stylex.props(styles.whiteSemibold)}>Reasoning trace</strong>
-          <span {...stylex.props(styles.textTextWhite40)}>Observation and action</span>
+        <div className="flex flex-col items-center gap-1 text-center">
+          <BrainCircuit aria-hidden="true" className="size-8 text-[#E8E044]" />
+          <strong className="text-[10px] font-semibold text-white">Reasoning trace</strong>
+          <span className="text-[8px] text-white/40">Observation and action</span>
         </div>
       )}
-      previewXstyle={styles.preview}
+      previewClassName="h-24 px-4 py-3"
       testId="scenario-reasoning-trace-panel"
     >
-      <div {...stylex.props(styles.gridCols2Gap2)}>
+      <div className="grid grid-cols-2 gap-2">
         {(['startS', 'endS'] as const).map((field) => (
-          <label {...stylex.props(styles.capsNarrowable)} key={field}>{field === 'startS' ? 'Start' : 'End'}
-            <input {...stylex.props(styles.whiteBorderedWide)} disabled={readOnly} max={clipSeconds} min={field === 'startS' ? 0 : 0.1} onChange={(event) => setDraft({ ...draft, [field]: Number(event.target.value) })} step="0.1" type="number" value={draft[field]} />
+          <label className="min-w-0 text-[8px] uppercase tracking-[0.1em] text-white/45" key={field}>{field === 'startS' ? 'Start' : 'End'}
+            <input className="mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60" disabled={readOnly} max={clipSeconds} min={field === 'startS' ? 0 : 0.1} onChange={(event) => setDraft({ ...draft, [field]: Number(event.target.value) })} step="0.1" type="number" value={draft[field]} />
           </label>
         ))}
       </div>
-      <label {...stylex.props(styles.blockCaps)}>Observation
-        <textarea {...stylex.props(styles.whiteBorderedWide2)} disabled={readOnly} onChange={(event) => setDraft({ ...draft, observation: event.target.value })} placeholder="What is happening around the camera vehicle?" value={draft.observation} />
+      <label className="block text-[8px] uppercase tracking-[0.1em] text-white/45">Observation
+        <textarea className="mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60" disabled={readOnly} onChange={(event) => setDraft({ ...draft, observation: event.target.value })} placeholder="What is happening around the camera vehicle?" value={draft.observation} />
       </label>
-      <label {...stylex.props(styles.blockCaps)}>Action
-        <textarea {...stylex.props(styles.whiteBorderedWide2)} disabled={readOnly} onChange={(event) => setDraft({ ...draft, action: event.target.value })} placeholder="What should the camera vehicle do next?" value={draft.action} />
+      <label className="block text-[8px] uppercase tracking-[0.1em] text-white/45">Action
+        <textarea className="mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60" disabled={readOnly} onChange={(event) => setDraft({ ...draft, action: event.target.value })} placeholder="What should the camera vehicle do next?" value={draft.action} />
       </label>
-      {!readOnly ? <div {...stylex.props(styles.gridRuleTCols1)}><button {...stylex.props(styles.semibold)} disabled={!Number.isFinite(draft.startS) || !Number.isFinite(draft.endS) || draft.startS < 0 || draft.endS <= draft.startS || draft.endS > clipSeconds} onClick={() => onSave(draft)} type="button">Save trace</button><button {...stylex.props(styles.flexCenterMid2)} onClick={() => onDelete(draft.id)} type="button"><Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />Delete trace</button></div> : null}
+      {!readOnly ? <div className="grid grid-cols-1 gap-1.5 border-t border-white/10 pt-3"><button className="h-8 rounded-md bg-[#E8E044] px-3 text-[10px] font-semibold text-black disabled:opacity-40" disabled={!Number.isFinite(draft.startS) || !Number.isFinite(draft.endS) || draft.startS < 0 || draft.endS <= draft.startS || draft.endS > clipSeconds} onClick={() => onSave(draft)} type="button">Save trace</button><button className="flex h-8 items-center justify-center gap-1.5 rounded-md border border-red-300/20 text-[9px] text-red-200 hover:bg-red-300/10" onClick={() => onDelete(draft.id)} type="button"><Trash2 aria-hidden="true" className="size-3" />Delete trace</button></div> : null}
     </EditorDetailsPanel>
   );
 }
@@ -1492,8 +1526,11 @@ function InteractionBand({
   const customTimedRoute = isCustomTimedRoute(interaction);
   const simpleTimedRoute = lockSimpleTimedRoutes && customTimedRoute;
   const routeNeedsSetup = simpleTimedRoute && isUnconfiguredSimpleTimedRoute(interaction);
-  const timingLocked = readOnly || customTimedRoute;
-  const endsWithScenario = interaction.verb === 'route' && (interaction.target.mode === 'customRoute' || customTimedRoute);
+  const manualDrive = isManualDrive(interaction);
+  // A manual drive is a whole-clip recording: its window is the clip, so there
+  // is nothing to move or resize, in either editor mode.
+  const timingLocked = readOnly || customTimedRoute || manualDrive;
+  const endsWithScenario = interaction.verb === 'route' && (interaction.target.mode === 'customRoute' || customTimedRoute || manualDrive);
   const editable = authoredTimelineRange(interaction);
   const shownRange = preview
     ? { startMs: preview.startS * 1000, endMs: preview.endS * 1000 }
@@ -1559,18 +1596,18 @@ function InteractionBand({
 
   return (
     <div
-      {...stylex.props(styles.relClipPointer2)}
+      className="relative cursor-pointer overflow-hidden bg-black/15"
       data-testid={`interaction-row-${interaction.id}`}
       data-timeline-track="interaction"
       onContextMenu={onOpenContextMenu}
       style={{ gridColumn: 2, gridRow: row }}
     >
-      <div {...stylex.props(styles.contents)} data-testid="interaction-track">
-        <div {...stylex.props(styles.abs2)} />
+      <div className="contents" data-testid="interaction-track">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-white/[0.06]" />
         {deadlinePercent !== null ? (
           <span
             aria-label={`Trigger deadline by ${cue?.deadlineS}s`}
-            {...stylex.props(styles.absInert2)}
+            className="pointer-events-none absolute inset-y-0 z-[5] w-px -translate-x-1/2 bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,0.45)] before:absolute before:left-1/2 before:top-0 before:size-1 before:-translate-x-1/2 before:rounded-full before:bg-amber-200"
             data-testid={`timeline-trigger-deadline-${interaction.id}`}
             role="img"
             style={{ left: `${deadlinePercent}%` }}
@@ -1578,19 +1615,17 @@ function InteractionBand({
           />
         ) : null}
         <div
-          className={stylex.props(
-            styles.clip,
+          className={`group/clip absolute inset-y-1 flex min-w-4 overflow-visible rounded-[3px] border ${
             routeNeedsSetup
-              ? styles.clipNeedsSetup
+              ? "animate-pulse border-red-300 bg-red-500/45 text-red-50 shadow-[0_0_12px_rgba(248,113,113,0.45)] motion-reduce:animate-none"
               : cue?.conflict === "conflict"
-              ? styles.clipConflict
+              ? "border-red-300 bg-red-400/25 text-red-50 shadow-[0_0_8px_rgba(252,165,165,0.2)]"
               : cue?.conflict === "possible"
-                ? styles.clipPossible
+                ? "border-amber-300/80 bg-amber-300/20 text-amber-50"
                 : resolved.armed || !editable
-              ? styles.clipArmed
-              : styles.clipAuthored,
-            selected && styles.clipSelected,
-          ).className}
+              ? "border-dashed border-[#E8E044]/60 bg-[#E8E044]/15"
+              : "border-[#E8E044]/80 bg-[#E8E044]/65 text-black"
+          } ${selected ? "z-10 ring-1 ring-white" : ""}`}
           data-conflict={cue?.conflict ?? "none"}
           data-editable={editable && !timingLocked ? "true" : "false"}
           data-locked={timingLocked ? "true" : "false"}
@@ -1602,7 +1637,9 @@ function InteractionBand({
             label,
             timingHelp,
             conflictMessage,
-            simpleTimedRoute
+            manualDrive
+              ? "Manual drive owns the whole clip; select it to record"
+              : simpleTimedRoute
               ? routeNeedsSetup
                 ? "Route setup required"
                 : "Route timing is managed by Simple mode"
@@ -1618,7 +1655,7 @@ function InteractionBand({
           {!timingLocked ? (
             <button
               aria-label={`Resize start of ${label}`}
-              className={stylex.props(styles.absTallRaised).className}
+              className="absolute -left-1.5 top-0 z-20 h-full w-3 cursor-col-resize touch-none rounded-l-sm bg-transparent before:absolute before:inset-y-1 before:left-1/2 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-white/60 before:opacity-0 before:transition-opacity hover:before:bg-[#E8E044] hover:before:opacity-100 focus-visible:outline-none focus-visible:before:bg-[#E8E044] focus-visible:before:opacity-100 group-hover/clip:before:opacity-100 disabled:cursor-not-allowed disabled:before:bg-white/25"
               data-testid={`timeline-resize-start-${interaction.id}`}
               data-timeline-seek-ignore="true"
               disabled={!editable}
@@ -1637,7 +1674,7 @@ function InteractionBand({
               : timingLocked || !editable
                 ? `Select ${label}; timing is locked`
                 : `Select and move ${label}`}
-            {...stylex.props(styles.flexCenterFill)}
+            className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden px-2 text-[8px] font-medium disabled:pointer-events-none"
             data-testid={`interaction-expand-${interaction.id}`}
             disabled={readOnly}
             onClick={readOnly ? undefined : onSelect}
@@ -1647,27 +1684,27 @@ function InteractionBand({
           >
             {cue ? (
               <span
-                {...stylex.props(styles.inlineFlexCenterTight)}
+                className="inline-flex h-3 shrink-0 items-center gap-0.5 rounded-sm border border-current/20 bg-black/15 px-0.5 text-[6px] font-semibold uppercase tracking-[0.04em]"
                 data-cause={cue.cause}
                 data-testid={`timeline-cause-${interaction.id}`}
                 title={timingHelp}
               >
                 {cue.cause === "time" ? (
-                  <Clock3 aria-hidden="true" className={stylex.props(styles.size15).className} />
+                  <Clock3 aria-hidden="true" className="size-1.5" />
                 ) : (
-                  <Zap aria-hidden="true" className={stylex.props(styles.size15).className} />
+                  <Zap aria-hidden="true" className="size-1.5" />
                 )}
                 {timelineCauseLabel(cue.cause)}
               </span>
             ) : null}
             {(!editable || timingLocked) && !simpleTimedRoute ? (
-              <Lock aria-hidden="true" className={stylex.props(styles.tight3).className} />
+              <Lock aria-hidden="true" className="size-2.5 shrink-0" />
             ) : null}
-            <span {...stylex.props(styles.truncate)}>{label}</span>
+            <span className="truncate">{label}</span>
             {conflictMessage ? (
               <AlertTriangle
                 aria-label={conflictMessage}
-                className={stylex.props(styles.tightPushRight).className}
+                className="ml-auto size-2.5 shrink-0"
                 data-testid={`timeline-conflict-${interaction.id}`}
                 role="img"
               />
@@ -1676,7 +1713,7 @@ function InteractionBand({
           {!timingLocked && !endsWithScenario ? (
             <button
               aria-label={`Resize end of ${label}`}
-              className={stylex.props(styles.absTallRaised2).className}
+              className="absolute -right-1.5 top-0 z-20 h-full w-3 cursor-col-resize touch-none rounded-r-sm bg-transparent before:absolute before:inset-y-1 before:left-1/2 before:w-0.5 before:-translate-x-1/2 before:rounded-full before:bg-white/60 before:opacity-0 before:transition-opacity hover:before:bg-[#E8E044] hover:before:opacity-100 focus-visible:outline-none focus-visible:before:bg-[#E8E044] focus-visible:before:opacity-100 group-hover/clip:before:opacity-100 disabled:cursor-not-allowed disabled:before:bg-white/25"
               data-testid={`timeline-resize-end-${interaction.id}`}
               data-timeline-seek-ignore="true"
               disabled={!editable}
@@ -1744,33 +1781,33 @@ function ContextActionMenu({
     <div
       ref={menuRef}
       aria-label={`Add interaction for ${actorLabel}`}
-      {...stylex.props(styles.fixedWhiteBordered)}
+      className="fixed z-[90] overflow-y-auto rounded-2xl border border-white/15 bg-[linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))] p-3 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72),0_0_0_1px_rgba(232,224,68,0.12)] backdrop-blur-2xl"
       data-placement="above"
       data-testid="timeline-context-menu"
       id="timeline-context-menu"
       role="menu"
       style={{ bottom, left, maxHeight, width: panelWidth }}
     >
-      <header {...stylex.props(styles.flexStartRuleB)}>
-        <span {...stylex.props(styles.gridCenteredTight2)}>
-          <Plus aria-hidden="true" className={stylex.props(styles.size4).className} />
+      <header className="mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5">
+        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]">
+          <Plus aria-hidden="true" className="size-4" />
         </span>
-        <div {...stylex.props(styles.fillNarrowable)}>
-          <p {...stylex.props(styles.capsSemibold)}>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E8E044]">
             Add at {state.timeS.toFixed(1)}s
           </p>
-          <p {...stylex.props(styles.xsTruncate)}>{actorLabel}</p>
+          <p className="mt-0.5 truncate text-xs text-white/60">{actorLabel}</p>
         </div>
         <button
           aria-label="Close action menu"
-          {...stylex.props(styles.gridCenteredLg)}
+          className="grid size-7 place-items-center rounded-lg text-lg leading-none text-white/45 hover:bg-white/10 hover:text-white"
           onClick={onClose}
           type="button"
         >
           ×
         </button>
       </header>
-      <div {...stylex.props(styles.gridGap2)}>
+      <div className="grid gap-2 sm:grid-cols-2">
         {groups.map((group) => (
           <ActionMenuGroup key={group.label} label={group.label}>
             {group.actions.map((action) => (
@@ -1779,8 +1816,9 @@ function ContextActionMenu({
                 testId={`timeline-context-add-${action.id}`}
                 onClick={() => onAdd(role, action.id, state.timeS)}
               >
-                <span {...stylex.props(styles.flexCenterGap155)}>
-                  {action.id === 'custom_route' ? <RouteIcon aria-hidden="true" className={stylex.props(styles.tight4).className} /> : null}
+                <span className="flex items-center gap-1.5">
+                  {action.id === 'custom_route' ? <RouteIcon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
+                  {action.id === MANUAL_DRIVE_ACTION_ID ? <Gamepad2 aria-hidden="true" className="size-3.5 shrink-0" /> : null}
                   <span>{action.label}</span>
                 </span>
               </ActionMenuButton>
@@ -1805,7 +1843,7 @@ function ContextActionMenu({
             Become absent
           </ActionMenuButton>
         </ActionMenuGroup>
-        <div {...stylex.props(styles.smColSpan2)}>
+        <div className="sm:col-span-2">
           <CanonicalInteractionComposer
             document={document}
             interactions={document.data.choreography.interactions}
@@ -1841,14 +1879,14 @@ function ActionMenuGroup({ label, children }: { label: string; children: React.R
   return (
     <section
       aria-label={label}
-      {...stylex.props(styles.borderedPad2)}
+      className="rounded-xl border border-white/10 bg-white/[0.035] p-2"
       data-testid={`timeline-context-group-${label.toLowerCase().replaceAll(" ", "-")}`}
       role="group"
     >
-      <h3 {...stylex.props(styles.capsSemibold2)}>
+      <h3 className="mb-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40">
         {label}
       </h3>
-      <div {...stylex.props(styles.gridCols2Gap1)}>{children}</div>
+      <div className="grid grid-cols-2 gap-1">{children}</div>
     </section>
   );
 }
@@ -1866,7 +1904,7 @@ function ActionMenuButton({
 }) {
   return (
     <button
-      {...stylex.props(styles.borderedLeftText)}
+      className="min-h-8 rounded-lg border border-transparent bg-black/20 px-2 py-1.5 text-left text-[10px] leading-tight text-white/70 hover:border-[#E8E044]/35 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
       data-testid={testId}
       data-timeline-action={timelineAction}
       onClick={onClick}
@@ -1880,42 +1918,42 @@ function ActionMenuButton({
 
 function TimelineActorCatalogIcon({ role }: { role: Role }) {
   const catalogId = catalogIdForRole(role);
-  const iconProps = stylex.props(styles.catalogIcon);
+  const className = "mt-0.5 h-3.5 w-6 shrink-0 text-[#E8E044]";
   if (catalogId && isVehicleTimelineCatalogId(catalogId)) {
     return (
-      <span aria-hidden="true" {...iconProps} data-testid={`timeline-actor-icon-${role.id}`}>
+      <span aria-hidden="true" className={className} data-testid={`timeline-actor-icon-${role.id}`}>
         <VehicleCatalogIcon id={catalogId} />
       </span>
     );
   }
   if (catalogId && isPedestrianTimelineCatalogId(catalogId)) {
     return (
-      <span aria-hidden="true" {...stylex.props(styles.tight5)} data-testid={`timeline-actor-icon-${role.id}`}>
+      <span aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[#E8E044]" data-testid={`timeline-actor-icon-${role.id}`}>
         <PedestrianCatalogIcon id={catalogId} />
       </span>
     );
   }
   if (catalogId && isObjectTimelineCatalogId(catalogId)) {
     return (
-      <span aria-hidden="true" {...iconProps} data-testid={`timeline-actor-icon-${role.id}`}>
+      <span aria-hidden="true" className={className} data-testid={`timeline-actor-icon-${role.id}`}>
         <ObjectCatalogIcon id={catalogId} />
       </span>
     );
   }
   if (catalogId && isDynamicActorCatalogId(catalogId)) {
     return (
-      <span aria-hidden="true" {...iconProps} data-testid={`timeline-actor-icon-${role.id}`}>
+      <span aria-hidden="true" className={className} data-testid={`timeline-actor-icon-${role.id}`}>
         <DynamicActorCatalogIcon id={catalogId} />
       </span>
     );
   }
   if (role.actor.class === "pedestrian") {
-    return <PersonStanding aria-hidden="true" className={stylex.props(styles.tight2).className} data-testid={`timeline-actor-icon-${role.id}`} />;
+    return <PersonStanding aria-hidden="true" className="mt-0.5 size-3 shrink-0" data-testid={`timeline-actor-icon-${role.id}`} />;
   }
   if (role.actor.class === "static_object") {
-    return <Box aria-hidden="true" className={stylex.props(styles.tight2).className} data-testid={`timeline-actor-icon-${role.id}`} />;
+    return <Box aria-hidden="true" className="mt-0.5 size-3 shrink-0" data-testid={`timeline-actor-icon-${role.id}`} />;
   }
-  return <CarFront aria-hidden="true" className={stylex.props(styles.tight2).className} data-testid={`timeline-actor-icon-${role.id}`} />;
+  return <CarFront aria-hidden="true" className="mt-0.5 size-3 shrink-0" data-testid={`timeline-actor-icon-${role.id}`} />;
 }
 
 /** Display names shown on the timeline: catalog label plus a per-label ordinal. */

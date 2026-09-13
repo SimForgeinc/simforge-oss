@@ -5,14 +5,13 @@ import { Input } from "../../../components/ui/input";
 import {
   actionsForActor,
   interactionForAction,
+  MANUAL_DRIVE_ACTION_ID,
   type EditorDocument,
 } from "@simforge-oss/editor";
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import type { Interaction } from "@simforge-oss/scenario";
+import { competingMotionRefusal } from "../manual-drive/authoring";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
-import * as stylex from "@stylexjs/stylex";
-import { styles } from "./ActionPalette.stylex";
-import { motionStyles } from "../../../stylex/motion.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -37,6 +36,7 @@ export function ActionPalette({
   interactions,
   time,
   onTimeChange,
+  onStartManualDrive,
 }: {
   document: EditorDocument;
   role: Role | null;
@@ -44,6 +44,8 @@ export function ActionPalette({
   interactions: readonly Interaction[];
   time: number;
   onTimeChange: (time: number) => void;
+  /** Opens the take recorder; the document is untouched until a take is saved. */
+  onStartManualDrive?: (actorId: string) => string | null;
 }) {
   const timeId = useId();
   const clipSeconds = document.data.choreography?.clipSeconds ?? 20;
@@ -66,8 +68,15 @@ export function ActionPalette({
   const [targetSpeedKph, setTargetSpeedKph] = useState(defaultTargetSpeed);
   useEffect(() => setTargetSpeedKph(defaultTargetSpeed), [defaultTargetSpeed, role?.id]);
 
+  const [refusal, setRefusal] = useState<string | null>(null);
+  useEffect(() => setRefusal(null), [role?.id]);
+  const actorRef = role ? { id: role.id, label: role.label ?? role.id } : null;
+
   const addDirect = (verb: "gap" | "exist", target: Interaction["target"]) => {
-    if (!role) return;
+    if (!role || !actorRef) return;
+    const blocked = competingMotionRefusal(document, actorRef, { verb });
+    setRefusal(blocked);
+    if (blocked) return;
     const continuous = verb === "gap";
     document.addInteraction({
       id: `${verb}_${role.id}_${interactions.length + 1}`,
@@ -83,15 +92,41 @@ export function ActionPalette({
     } as Interaction);
   };
 
+  const addAction = (action: (typeof actions)[number]) => {
+    if (!role || !actorRef) return;
+    if (action.id === MANUAL_DRIVE_ACTION_ID) {
+      setRefusal(onStartManualDrive
+        ? onStartManualDrive(role.id)
+        : "Manual drive recording is not available in this editor.");
+      return;
+    }
+    const blocked = competingMotionRefusal(document, actorRef, action);
+    setRefusal(blocked);
+    if (blocked) return;
+    document.addInteraction(
+      interactionForAction(
+        action === targetSpeedAction
+          ? {
+              ...action,
+              target: { ...action.target, valueKph: targetSpeedKph },
+            }
+          : action,
+        role.id,
+        time,
+        interactions.length + 1,
+      ),
+    );
+  };
+
   return (
-    <div {...stylex.props(styles.tightWhiteRuleR)}>
+    <div className="w-editor-rail shrink-0 overflow-y-auto border-r border-white/10 bg-[#0d0d0d] p-3 text-white xl:w-editor-rail-xl">
       <label
-        {...stylex.props(styles.blockCapsMicro)}
+        className="block text-micro font-semibold uppercase tracking-meta-wide text-white/45"
         htmlFor={timeId}
       >
         Add action at time
       </label>
-      <div {...stylex.props(styles.flexGap2)}>
+      <div className="mt-2 flex gap-2">
         <Input
           id={timeId}
           type="number"
@@ -100,21 +135,21 @@ export function ActionPalette({
           max={clipSeconds}
           value={time}
           onChange={(event) => onTimeChange(Number(event.target.value))}
-          xstyle={styles.xsWhite}
+          className="h-8 w-20 border-white/15 bg-white/5 text-xs text-white"
           aria-describedby={`${timeId}-range`}
         />
-        <span aria-hidden="true" {...stylex.props(styles.xsSelfCenter)}>
+        <span aria-hidden="true" className="self-center text-xs text-white/45">
           seconds
         </span>
       </div>
-      <p id={`${timeId}-range`} {...stylex.props(styles.micro)}>
+      <p id={`${timeId}-range`} className="mt-1 text-micro leading-4 text-white/35">
         Choose a time from 0 to {clipSeconds} seconds.
       </p>
       {targetSpeedAction ? (
-        <label {...stylex.props(styles.blockCapsMicro2)}>
+        <label className="mt-2 block text-micro font-semibold uppercase tracking-meta-wide text-white/45">
           Target speed (kph)
           <Input
-            xstyle={styles.xsWhite2}
+            className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white"
             data-testid="action-palette-target-speed"
             step={1}
             type="number"
@@ -127,7 +162,7 @@ export function ActionPalette({
         </label>
       ) : null}
       {role ? (
-        <div {...stylex.props(styles.mt3)}>
+        <div className="mt-3">
           <CanonicalInteractionComposer
             document={document}
             interactions={interactions}
@@ -138,27 +173,17 @@ export function ActionPalette({
           />
         </div>
       ) : null}
-      <div {...stylex.props(styles.scrollY)}>
+      {refusal ? (
+        <p className="mt-2 text-[10px] leading-4 text-amber-200" data-testid="action-palette-refusal" role="alert">
+          {refusal}
+        </p>
+      ) : null}
+      <div className="mt-2 max-h-36 overflow-y-auto">
         {actions.map((action) => (
           <PaletteButton
             key={action.id}
             testId={`action-palette-${action.id}`}
-            onClick={() =>
-              role &&
-              document.addInteraction(
-                interactionForAction(
-                  action === targetSpeedAction
-                    ? {
-                        ...action,
-                        target: { ...action.target, valueKph: targetSpeedKph },
-                      }
-                    : action,
-                  role.id,
-                  time,
-                  interactions.length + 1,
-                ),
-              )
-            }
+            onClick={() => addAction(action)}
           >
             {action.label}
           </PaletteButton>
@@ -178,11 +203,11 @@ export function ActionPalette({
           </PaletteButton>
         ) : null}
         {!role ? (
-          <p {...stylex.props(styles.xs)}>
+          <p className="text-xs text-white/40">
             Select an actor to author behavior.
           </p>
         ) : role.actor.static ? (
-          <p {...stylex.props(styles.xs)} data-testid="static-actor-action-message">
+          <p className="text-xs text-white/40" data-testid="static-actor-action-message">
             Static actors stay fixed. Turn off Static / parked to add motion.
           </p>
         ) : null}
@@ -205,7 +230,7 @@ function PaletteButton({
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className={stylex.props(styles.metaBordered, motionStyles.editorMotion).className}
+      className="editor-motion mr-1 mt-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-meta text-white/70 hover:border-[#E8E044]/60 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d0d0d]"
     >
       {children}
     </button>

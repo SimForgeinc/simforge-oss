@@ -12,15 +12,11 @@ import {
   assertControllableActor,
   authoredRoleIdForActor,
   selectAuthoredEgoActor,
+  type AuthoredDriveMode,
+  type ManualDriveRecording,
 } from './authored-world-session';
 import type { LiveWorldWorkerRequest, LiveWorldWorkerResponse } from './worker-protocol';
-import type {
-  ControlInput,
-  DriverCommand,
-  SpawnActorRequest,
-  WorldSource,
-  WorldSourceStatus,
-} from './types';
+import type { ControlInput, SpawnActorRequest, WorldSource, WorldSourceStatus } from './types';
 
 export interface WorldTransport {
   readonly sessionId: string;
@@ -41,21 +37,32 @@ export interface AuthoredWorldSource extends WorldSource {
   readonly transport: WorldTransport;
   subscribeTransport(fn: (t: WorldTransport) => void): () => void;
   readonly egoActorId: string | null;
+  readonly driveMode: AuthoredDriveMode;
   selectEgo(preferredActorId?: string | null): string | null;
   roleIdForActor(actorId: string): string | null;
-  setEgo(actorId: string | null): void;
   /**
-   * Hold the ego's pedals and wheel until the next call; `null` hands the car
-   * back to its scenario controller. Safe to call every rendered frame.
+   * The authored asset the compiler assigned this actor (`catalog:` tag),
+   * resolved once per actor id. Null for actors the document did not author
+   * with a specific asset.
    */
-  setDriverCommand(command: DriverCommand | null): void;
+  catalogIdForActor(actorId: string): string | null;
   /**
-   * Whether the runtime behind this source holds the command across physics
-   * substeps. False means the per-tick fallback is driving the car, which has
-   * no separate handbrake.
+   * Designate (or release) the ego. `take` parks the world at the document's
+   * clip end; `free` keeps the live world advancing under the ego's control.
    */
-  readonly heldDriverCommand: boolean;
+  setEgo(actorId: string | null, mode?: AuthoredDriveMode): void;
+  /**
+   * Restart the world at t = 0 and record the designated ego through the clip
+   * end. Requires an ego in `take` mode. The outcome arrives once through
+   * `subscribeTakes`; anything that rebuilds the world first cancels silently.
+   */
+  beginTake(): void;
+  subscribeTakes(fn: (event: TakeEvent) => void): () => void;
 }
+
+export type TakeEvent =
+  | { kind: 'complete'; recording: ManualDriveRecording }
+  | { kind: 'failed'; message: string };
 
 const AUTHORED_WORKER_READY_TIMEOUT_MS = 45_000;
 
@@ -63,8 +70,6 @@ export async function createAuthoredWorldSource(opts: {
   document: EditorDocument;
   map: ScenarioMapEntry;
   tickHz?: number;
-  /** Run the world past the document's clip and never park it. See the worker protocol. */
-  endless?: boolean;
 }): Promise<AuthoredWorldSource> {
   const compiler = new ScenarioWorkerClient();
   let input: SimScenarioInput;
@@ -84,13 +89,7 @@ export async function createAuthoredWorldSource(opts: {
   } finally {
     compiler.dispose();
   }
-  return new AuthoredWorkerWorldSource(
-    input,
-    opts.document,
-    opts.map,
-    opts.tickHz ?? 20,
-    opts.endless === true,
-  );
+  return new AuthoredWorkerWorldSource(input, opts.document, opts.map, opts.tickHz ?? 20);
 }
 
 let nextSessionId = 1;
@@ -100,29 +99,29 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
   private readonly decoder = new TruthStreamClient();
   private readonly input: SimScenarioInput;
   private readonly roleIdByActorId: ReadonlyMap<string, string>;
+  private readonly catalogIdByActorId: ReadonlyMap<string, string>;
   private readonly frameListeners = new Set<Parameters<WorldSource['subscribeFrames']>[0]>();
+  private readonly resetListeners = new Set<(generation: number) => void>();
   private readonly statusListeners = new Set<Parameters<WorldSource['subscribeStatus']>[0]>();
   private readonly warningListeners = new Set<(message: string) => void>();
   private readonly transportListeners = new Set<(transport: WorldTransport) => void>();
+  private readonly takeListeners = new Set<(event: TakeEvent) => void>();
   private readonly seenWarnings: string[] = [];
   private currentStatus: WorldSourceStatus = 'connecting';
   private currentError: string | null = null;
   private currentEgoActorId: string | null = null;
+  private currentDriveMode: AuthoredDriveMode = 'take';
   private transportState: { playing: boolean; inspecting: boolean; completed: boolean; time: number };
   readonly transport: WorldTransport;
   private readyTimeout: ReturnType<typeof setTimeout> | undefined;
-  /** Reported by the worker when it comes up; see the interface. */
-  heldDriverCommand = false;
 
-  constructor(
-    input: SimScenarioInput,
-    document: EditorDocument,
-    map: ScenarioMapEntry,
-    tickHz: number,
-    endless: boolean,
-  ) {
+  constructor(input: SimScenarioInput, document: EditorDocument, map: ScenarioMapEntry, tickHz: number) {
     this.input = input;
     this.roleIdByActorId = matchCompiledActorsToRoles(input, document);
+    this.catalogIdByActorId = new Map(input.actors.flatMap((actor) => {
+      const catalogId = actor.tags.find((tag) => tag.startsWith('catalog:'))?.slice('catalog:'.length);
+      return catalogId ? [[actor.id, catalogId] as const] : [];
+    }));
     this.transportState = { playing: false, inspecting: false, completed: false, time: 0 };
     const sessionId = `authored-world-${nextSessionId++}`;
     const source = this;
@@ -163,17 +162,22 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
       input,
       laneGraphUrl: map.topologyUrl,
       tickHz,
-      endless,
     } satisfies LiveWorldWorkerRequest);
   }
 
   get status(): WorldSourceStatus { return this.currentStatus; }
   get lastError(): string | null { return this.currentError; }
   get egoActorId(): string | null { return this.currentEgoActorId; }
+  get driveMode(): AuthoredDriveMode { return this.currentDriveMode; }
 
   subscribeFrames(fn: Parameters<WorldSource['subscribeFrames']>[0]): () => void {
     this.frameListeners.add(fn);
     return () => this.frameListeners.delete(fn);
+  }
+
+  subscribeResets(fn: (generation: number) => void): () => void {
+    this.resetListeners.add(fn);
+    return () => this.resetListeners.delete(fn);
   }
 
   subscribeStatus(fn: Parameters<WorldSource['subscribeStatus']>[0]): () => void {
@@ -194,6 +198,22 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     return () => this.transportListeners.delete(fn);
   }
 
+  catalogIdForActor(actorId: string): string | null {
+    return this.catalogIdByActorId.get(actorId) ?? null;
+  }
+
+  subscribeTakes(fn: (event: TakeEvent) => void): () => void {
+    this.takeListeners.add(fn);
+    return () => this.takeListeners.delete(fn);
+  }
+
+  beginTake(): void {
+    if (this.currentStatus !== 'running') throw new Error('The authored world is not running');
+    if (this.currentEgoActorId === null) throw new Error('No authored ego vehicle is selected for the take');
+    if (this.currentDriveMode !== 'take') throw new Error('A take needs the bounded drive mode');
+    this.worker.postMessage({ type: 'begin-take' } satisfies LiveWorldWorkerRequest);
+  }
+
   selectEgo(preferredActorId: string | null = null): string | null {
     const preferredCompiledActorId = preferredActorId
       ? [...this.roleIdByActorId].find(([, roleId]) => roleId === preferredActorId)?.[0] ?? preferredActorId
@@ -208,10 +228,11 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     return actor ? authoredRoleIdForActor(actor) : null;
   }
 
-  setEgo(actorId: string | null): void {
+  setEgo(actorId: string | null, mode: AuthoredDriveMode = 'take'): void {
     if (actorId !== null) assertControllableActor(this.input, actorId);
     this.currentEgoActorId = actorId;
-    this.worker.postMessage({ type: 'set-ego', actorId } satisfies LiveWorldWorkerRequest);
+    this.currentDriveMode = mode;
+    this.worker.postMessage({ type: 'set-ego', actorId, mode } satisfies LiveWorldWorkerRequest);
   }
 
   control(input: ControlInput): void {
@@ -222,17 +243,6 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     this.worker.postMessage({
       type: 'control',
       input: { ...input, actorId: this.currentEgoActorId },
-    } satisfies LiveWorldWorkerRequest);
-  }
-
-  setDriverCommand(command: DriverCommand | null): void {
-    if (this.currentStatus !== 'running') return;
-    if (this.currentEgoActorId === null) throw new Error('No authored ego vehicle is selected');
-    if (this.transportState.completed) return;
-    this.worker.postMessage({
-      type: 'driver-command',
-      actorId: this.currentEgoActorId,
-      command,
     } satisfies LiveWorldWorkerRequest);
   }
 
@@ -251,9 +261,11 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     this.worker.terminate();
     this.setStatus('closed', null);
     this.frameListeners.clear();
+    this.resetListeners.clear();
     this.statusListeners.clear();
     this.warningListeners.clear();
     this.transportListeners.clear();
+    this.takeListeners.clear();
   }
 
   private seek(seconds: number): void {
@@ -272,8 +284,11 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     if (this.currentStatus === 'closed') return;
     if (message.type === 'ready') {
       clearTimeout(this.readyTimeout);
-      this.heldDriverCommand = message.heldDriverCommand;
       if (this.currentStatus !== 'error') this.setStatus('running', null);
+      return;
+    }
+    if (message.type === 'world-reset') {
+      for (const listener of this.resetListeners) listener(message.generation);
       return;
     }
     if (message.type === 'frame') {
@@ -300,6 +315,14 @@ class AuthoredWorkerWorldSource implements AuthoredWorldSource {
     if (message.type === 'warning') {
       this.seenWarnings.push(message.message);
       for (const listener of this.warningListeners) listener(message.message);
+      return;
+    }
+    if (message.type === 'take-complete') {
+      for (const listener of this.takeListeners) listener({ kind: 'complete', recording: message.recording });
+      return;
+    }
+    if (message.type === 'take-failed') {
+      for (const listener of this.takeListeners) listener({ kind: 'failed', message: message.message });
       return;
     }
     if (message.type === 'error') {

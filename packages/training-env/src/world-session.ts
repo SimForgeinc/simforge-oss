@@ -117,7 +117,10 @@ export interface WorldActorState {
   readonly x: number;
   readonly z: number;
   readonly headingRad: number;
+  /** Speed magnitude. */
   readonly speedMps: number;
+  /** Actual longitudinal speed along the body yaw, signed by the engaged gear (negative = reversing). */
+  readonly longitudinalSpeedMps: number;
   readonly present: boolean;
   readonly s: number;
   readonly laneRsl: string | null;
@@ -189,7 +192,7 @@ export class TruthSubscription {
 
 /* ------------------------------------------------------------ the session */
 
-const WORLD_POSE_ROW = 5;
+const WORLD_POSE_ROW = 6;
 
 export class WorldSession {
   readonly native: NativeWorldSession;
@@ -235,6 +238,7 @@ export class WorldSession {
         headingRad: view.pose[base + 2]!,
         speedMps: view.pose[base + 3]!,
         s: view.pose[base + 4]!,
+        longitudinalSpeedMps: view.pose[base + 5]!,
         present: view.present[i] !== 0,
         laneRsl: view.laneRsls[i] ?? null,
       });

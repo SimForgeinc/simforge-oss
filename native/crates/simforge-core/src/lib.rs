@@ -65,8 +65,11 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// deterministic rigid-body contact response and impulse telemetry; 0.5.0
 /// added exact-time authored trajectories with collision-triggered physics
 /// handoff; 0.6.0 made timed trajectories bounded position constraints with a
-/// physics-controlled braking handoff.
-pub const ENGINE_VERSION: &str = "0.6.0";
+/// physics-controlled braking handoff; 0.7.0 added recorded tracks (verbatim
+/// pose / body yaw / signed speed replay with the gear engaged from the
+/// recorded sign), made a staged action override release a timed route, and
+/// signed the world-session truth velocity by the engaged gear.
+pub const ENGINE_VERSION: &str = "0.7.0";
 
 /// Validate canonical scenario JSON bytes into a typed document. Does not
 /// normalise; call [`SimScenarioInput::normalized`] before hashing or running.

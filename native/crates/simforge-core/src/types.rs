@@ -424,6 +424,22 @@ pub struct TimedPoint {
     pub z: f64,
 }
 
+/// One engine tick of recorded actor state, y-up scene frame. `heading_rad`
+/// is the body yaw and `speed_mps` is signed along it (negative = reversing),
+/// so the sample reproduces a stationary or reversing body exactly. `y` is
+/// the physics height as captured from the truth stream; the planar engine
+/// has none, so it is always 0 (display ground lift is not physics state).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordedSample {
+    pub time_s: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub heading_rad: f64,
+    pub speed_mps: f64,
+}
+
 /// How an actor's path through the network is specified.
 ///
 /// `Deserialize` is the plain-data form for session commands, logs and
@@ -453,6 +469,10 @@ pub enum RouteSpec {
     /// the final authored timestamp; physics takes over and brakes afterward.
     #[serde(rename_all = "camelCase")]
     TimedPolyline { points: Vec<TimedPoint> },
+    /// A take recorded from this engine: pose, body yaw and signed speed per
+    /// tick. Replayed verbatim through the final sample, then held there.
+    #[serde(rename_all = "camelCase")]
+    RecordedTrack { samples: Vec<RecordedSample> },
 }
 
 /// `follow` / `nextJunction` default walk budget, metres.
@@ -2400,7 +2420,13 @@ fn parse_dynamics(p: &mut Parser, v: &Value) -> Option<Dynamics> {
 
 /* ------------------------------------------------------------------ routes */
 
-const ROUTE_KINDS: [&str; 4] = ["lanePath", "follow", "polyline", "timedPolyline"];
+const ROUTE_KINDS: [&str; 5] = [
+    "lanePath",
+    "follow",
+    "polyline",
+    "timedPolyline",
+    "recordedTrack",
+];
 
 fn parse_route_spec_from(p: &mut Parser, m: &Map<String, Value>, kind: &str) -> Option<RouteSpec> {
     match kind {
@@ -2438,6 +2464,45 @@ fn parse_route_spec_from(p: &mut Parser, m: &Map<String, Value>, kind: &str) -> 
             });
             Some(RouteSpec::TimedPolyline { points: points? })
         }
+        "recordedTrack" => {
+            let samples = p.list_field(m, "samples", 2, usize::MAX, |p, v| {
+                let m = p.object(v)?;
+                let time_s = p.num_field(m, "timeS", Num::NON_NEG);
+                let x = p.num_field(m, "x", Num::FINITE);
+                let y = p.num_field(m, "y", Num::FINITE);
+                let z = p.num_field(m, "z", Num::FINITE);
+                let heading_rad = p.num_field(m, "headingRad", Num::FINITE);
+                let speed_mps = p.num_field(m, "speedMps", Num::FINITE);
+                Some(RecordedSample {
+                    time_s: time_s?,
+                    x: x?,
+                    y: y?,
+                    z: z?,
+                    heading_rad: heading_rad?,
+                    speed_mps: speed_mps?,
+                })
+            });
+            let samples = samples?;
+            if let Some(i) = samples.iter().position(|s| s.y != 0.0) {
+                p.issue_at(
+                    &[Seg::Key("samples"), Seg::Index(i), Seg::Key("y")],
+                    "custom",
+                    "unsupported recorded elevation: the planar engine has no height state, recorded y must be 0 (render ground placement stays map-derived)",
+                );
+                return None;
+            }
+            if let Some(i) =
+                (1..samples.len()).find(|&i| samples[i].time_s <= samples[i - 1].time_s)
+            {
+                p.issue_at(
+                    &[Seg::Key("samples"), Seg::Index(i), Seg::Key("timeS")],
+                    "custom",
+                    "recorded sample times must be strictly increasing",
+                );
+                return None;
+            }
+            Some(RouteSpec::RecordedTrack { samples })
+        }
         _ => unreachable!("discriminator validated"),
     }
 }
@@ -2458,6 +2523,7 @@ fn parse_route_action_target(p: &mut Parser, v: &Value) -> Option<RouteActionTar
             "follow",
             "polyline",
             "timedPolyline",
+            "recordedTrack",
             "nextJunction",
         ],
     )?;

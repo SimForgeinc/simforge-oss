@@ -8,7 +8,9 @@
 
 import {
   interactionDraftId,
+  isManualDrive,
   isRoadBoundMotorVehicle,
+  manualDriveInteractionId,
   type ActorRecord,
   type EditorController,
   type EditorDocument,
@@ -17,7 +19,7 @@ import {
   type NewActor,
 } from "@simforge-oss/editor";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
-import type { Interaction } from "@simforge-oss/scenario";
+import { MANUAL_DRIVE_RECORDING_VERSION, type Interaction, type ManualDriveRecording } from "@simforge-oss/scenario";
 
 export const SIMFORGE_CLIPBOARD_SCHEMA = "simcloud.simforge-oss-actors/v1";
 // historical name retained for stored-data compat
@@ -35,6 +37,23 @@ export interface ClipboardRouteClip {
   readonly points: readonly ClipboardRoutePoint[];
 }
 
+/**
+ * A recorded take, anchor-relative in x/z like a route but otherwise verbatim:
+ * elevation, heading, speed and timing are recorded facts and travel unchanged.
+ */
+export interface ClipboardManualDrive {
+  readonly label?: string;
+  readonly clipSeconds: number;
+  readonly samples: readonly {
+    readonly timeS: number;
+    readonly dx: number;
+    readonly dz: number;
+    readonly y: number;
+    readonly headingRad: number;
+    readonly speedMps: number;
+  }[];
+}
+
 export interface ClipboardActor {
   readonly catalogId: string;
   readonly dx: number;
@@ -48,6 +67,7 @@ export interface ClipboardActor {
   readonly driverProfile?: ActorRecord["driverProfile"];
   readonly static?: boolean;
   readonly routes: readonly ClipboardRouteClip[];
+  readonly manualDrive?: ClipboardManualDrive;
 }
 
 export interface SimForgeClipboardPayload {
@@ -108,7 +128,32 @@ export function buildClipboardPayload(options: {
           })),
         }];
       }),
+      ...manualDriveClip(options.interactions, actor, anchor),
     })),
+  };
+}
+
+function manualDriveClip(
+  interactions: readonly Interaction[],
+  actor: ActorRecord,
+  anchor: { x: number; z: number },
+): { manualDrive?: ClipboardManualDrive } {
+  const interaction = interactions.find((candidate) => candidate.actor === actor.id && isManualDrive(candidate));
+  if (!interaction || !isManualDrive(interaction)) return {};
+  const { recording } = interaction.target;
+  return {
+    manualDrive: {
+      ...(interaction.label === undefined ? {} : { label: interaction.label }),
+      clipSeconds: recording.clipSeconds,
+      samples: recording.samples.map((sample) => ({
+        timeS: sample.timeS,
+        dx: round3(sample.x - anchor.x),
+        dz: round3(sample.z - anchor.z),
+        y: sample.y,
+        headingRad: sample.headingRad,
+        speedMps: sample.speedMps,
+      })),
+    },
   };
 }
 
@@ -137,6 +182,17 @@ export function parseClipboardPayload(text: string): SimForgeClipboardPayload | 
       if (!Array.isArray(route.points)) return null;
       for (const point of route.points) {
         if (!isRecord(point) || typeof point.dx !== "number" || typeof point.dz !== "number") return null;
+      }
+    }
+    if (actor.manualDrive !== undefined) {
+      const drive = actor.manualDrive;
+      if (!isRecord(drive) || typeof drive.clipSeconds !== "number" || !Array.isArray(drive.samples)) return null;
+      for (const sample of drive.samples) {
+        if (
+          !isRecord(sample)
+          || typeof sample.timeS !== "number" || typeof sample.dx !== "number" || typeof sample.dz !== "number"
+          || typeof sample.y !== "number" || typeof sample.headingRad !== "number" || typeof sample.speedMps !== "number"
+        ) return null;
       }
     }
   }
@@ -179,6 +235,8 @@ export function pastedRoutePoints(
 export interface ExecutedPaste {
   readonly ids: readonly string[];
   readonly unanchored: number;
+  /** Manual drives left behind because this document's clip length differs from the recording's. */
+  readonly droppedManualDrives: number;
 }
 
 export function pastePlacementActors(payload: SimForgeClipboardPayload): GroupPlacementActor[] {
@@ -206,6 +264,7 @@ export function executePaste(options: {
   const interactions: Interaction[] = [];
   const usedIds = new Set<string>();
   let unanchored = 0;
+  let droppedManualDrives = 0;
   for (let index = 0; index < payload.actors.length; index++) {
     const source = payload.actors[index]!;
     const resolved = placements[index]!;
@@ -259,10 +318,42 @@ export function executePaste(options: {
         target: { mode: "customRoute", points: points.map(({ x, z }) => ({ x, z })) },
       } as Interaction);
     }
+    if (source.manualDrive) {
+      // A recording is only valid for the clip it was driven against. A paste
+      // into a document with another clip length keeps the actor and its
+      // routes but not the drive, and says so, rather than stretching a take.
+      if (Math.abs(source.manualDrive.clipSeconds - clipSeconds) > 1e-6) {
+        droppedManualDrives++;
+      } else {
+        const dx = resolved.x - source.dx;
+        const dz = resolved.z - source.dz;
+        const recording: ManualDriveRecording = {
+          version: MANUAL_DRIVE_RECORDING_VERSION,
+          clipSeconds: source.manualDrive.clipSeconds,
+          samples: source.manualDrive.samples.map((sample) => ({
+            timeS: sample.timeS,
+            x: round3(sample.dx + dx),
+            y: sample.y,
+            z: round3(sample.dz + dz),
+            headingRad: sample.headingRad,
+            speedMps: sample.speedMps,
+          })),
+        };
+        interactions.push({
+          id: manualDriveInteractionId(id),
+          actor: id,
+          ...(source.manualDrive.label === undefined ? {} : { label: source.manualDrive.label }),
+          verb: "route",
+          trigger: { kind: "at", t: 0 },
+          until: { kind: "at", t: clipSeconds },
+          target: { mode: "manualDrive", recording },
+        } as Interaction);
+      }
+    }
   }
   const ids = document.addWithInteractions(inputs, interactions);
   controller.setSelection(ids);
-  return { ids, unanchored };
+  return { ids, unanchored, droppedManualDrives };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

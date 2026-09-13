@@ -46,6 +46,7 @@ import { actorClassForCatalogEntry, getEntry, type CatalogActorClass, type Catal
 import { editorMapVersionId, editorSourceMapId, type MapEntry } from './map';
 import { defaultSpeedKph, isActionCompatible } from './timeline-actions';
 import { routePlaceholderOnActor } from './route-placeholder';
+import { isManualDrive, isMotionInteraction } from './manual-drive';
 
 /** Resolve sensor-derived subject identity in canonical authoring order. */
 export function sensorSubjectRole(template: Pick<ScenarioTemplateV2, 'roles'>): string | undefined {
@@ -812,6 +813,28 @@ export class EditorDocument {
               });
             }
           }
+          // A manual drive is a recorded track, so it travels with its actor the
+          // same way: rigidly in x/z, keeping every recorded elevation, heading,
+          // speed and timestamp.
+          if (Math.hypot(timedRouteDx, timedRouteDz) > 1e-6) {
+            for (const interaction of [...this.#doc.data.choreography.interactions]) {
+              if (interaction.actor !== update.id || !isManualDrive(interaction)) continue;
+              this.#doc.replaceInteraction(interaction.id, {
+                ...interaction,
+                target: {
+                  ...interaction.target,
+                  recording: {
+                    ...interaction.target.recording,
+                    samples: interaction.target.recording.samples.map((sample) => ({
+                      ...sample,
+                      x: Number((sample.x + timedRouteDx).toFixed(3)),
+                      z: Number((sample.z + timedRouteDz).toFixed(3)),
+                    })),
+                  },
+                },
+              });
+            }
+          }
         }
         this.#doc.replaceRole(update.id, role);
       }
@@ -973,6 +996,30 @@ export class EditorDocument {
     this.#transaction(() => { this.#doc.replaceInteraction(id, seeded); });
   }
 
+  /**
+   * Make one interaction the actor's only motion instruction, as one gesture.
+   *
+   * A manual drive owns the actor's motion for the whole clip, so every other
+   * speed/gap/lane/route instruction on that actor is removed in the same undo
+   * step that installs (or re-records) it. Non-motion state such as lights,
+   * horn and existence is untouched, as are all other actors.
+   */
+  replaceActorMotion(interaction: Interaction): void {
+    if (!isMotionInteraction(interaction)) throw new Error(`"${interaction.id}" is not a motion interaction`);
+    this.#transaction(() => {
+      for (const candidate of [...this.#doc.data.choreography.interactions]) {
+        if (candidate.actor === interaction.actor && candidate.id !== interaction.id && isMotionInteraction(candidate)) {
+          this.#doc.removeInteraction(candidate.id);
+        }
+      }
+      if (this.#doc.data.choreography.interactions.some((candidate) => candidate.id === interaction.id)) {
+        this.#doc.replaceInteraction(interaction.id, interaction);
+      } else {
+        this.#doc.addInteraction(interaction);
+      }
+    });
+  }
+
   /** Commit a timeline gesture's semantic edit and presentation layout as one
    * undoable/autosaved transaction. Unrelated presentation keys are retained. */
   replaceInteractionWithPresentation(
@@ -1130,7 +1177,11 @@ export class EditorDocument {
     }
   }
 
-  /** Set recorded/warm-up duration as one editor gesture. */
+  /**
+   * Set recorded/warm-up duration as one editor gesture. A recorded manual
+   * drive is left as recorded: its `clipSeconds` no longer matching the clip is
+   * exactly what validation must report, and the inspector offers Record again.
+   */
   setClip(clip: { clipSeconds?: number; warmupSeconds?: number }): void {
     this.#transaction(() => { this.#doc.setClip(clip.clipSeconds, clip.warmupSeconds); });
   }

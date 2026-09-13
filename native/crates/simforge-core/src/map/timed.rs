@@ -15,13 +15,19 @@
 //! waypoints under tyre and drivetrain limits instead of being placed on
 //! them.
 //!
+//! A `recordedTrack` is the same ownership with a different source of truth:
+//! every keyframe also carries the body yaw and signed speed the engine itself
+//! produced, so replay interpolates the recorded state linearly between ticks
+//! instead of re-deriving heading from the path. That is what keeps a
+//! stationary or reversing body facing the way it was recorded.
+//!
 //! Keyframes are stored in the engine frame; the scene-frame flip happens once
-//! in [`TimedRoute::from_scene_points`].
+//! in [`TimedRoute::from_scene_points`] / [`TimedRoute::from_recorded_samples`].
 
 use serde::{Deserialize, Serialize};
 
-use crate::math::{clamp, local_from_scene, SceneXZ, Vec2};
-use crate::types::TimedPoint;
+use crate::math::{angle_delta, clamp, local_from_scene, normalize_angle, SceneXZ, Vec2};
+use crate::types::{RecordedSample, TimedPoint};
 
 use super::route::Route;
 
@@ -31,6 +37,9 @@ pub const TIMED_ROUTE_RELEASE_RUNWAY_M: f64 = 2000.0;
 /// Samples per segment used by [`TimedRoute::kinematic_extrema`].
 const EXTREMA_SAMPLES: usize = 16;
 
+/// Clock slack when deciding whether a replay tick lands on a recorded one.
+const RECORDED_TICK_TOLERANCE_S: f64 = 1e-9;
+
 /// One absolute-time keyframe in xodr-local metres.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -39,10 +48,22 @@ pub struct TimedKeyframe {
     pub point: Vec2,
 }
 
+/// Recorded body state riding on a keyframe of a recorded take.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordedPose {
+    /// Body yaw, engine frame (identical to the scene yaw).
+    pub heading_rad: f64,
+    /// Signed longitudinal speed along the yaw; negative = reversing.
+    pub speed_mps: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TimedSample {
     pub position: Vec2,
     pub heading_rad: f64,
+    /// Signed along `heading_rad` for a recorded take; never negative for an
+    /// authored spline, whose heading already points along the motion.
     pub speed_mps: f64,
 }
 
@@ -77,24 +98,57 @@ pub struct TimedRouteExtrema {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TimedRoute {
     points: Vec<TimedKeyframe>,
+    /// Parallel to `points` for a recorded take; empty for authored keyframes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    recorded: Vec<RecordedPose>,
 }
 
 impl TimedRoute {
     pub fn new(points: Vec<TimedKeyframe>) -> Self {
-        Self { points }
+        Self {
+            points,
+            recorded: Vec::new(),
+        }
     }
 
     /// From the document's scene-frame keyframes.
     pub fn from_scene_points(points: &[TimedPoint]) -> Self {
-        Self {
-            points: points
+        Self::new(
+            points
                 .iter()
                 .map(|p| TimedKeyframe {
                     time_s: p.time_s,
                     point: local_from_scene(SceneXZ { x: p.x, z: p.z }),
                 })
                 .collect(),
+        )
+    }
+
+    /// From a take recorded in the scene frame: pose, yaw and signed speed
+    /// per tick become the authority for the whole track.
+    pub fn from_recorded_samples(samples: &[RecordedSample]) -> Self {
+        Self {
+            points: samples
+                .iter()
+                .map(|s| TimedKeyframe {
+                    time_s: s.time_s,
+                    point: local_from_scene(SceneXZ { x: s.x, z: s.z }),
+                })
+                .collect(),
+            recorded: samples
+                .iter()
+                .map(|s| RecordedPose {
+                    heading_rad: normalize_angle(s.heading_rad),
+                    speed_mps: s.speed_mps,
+                })
+                .collect(),
         }
+    }
+
+    /// Whether every keyframe carries recorded yaw and speed.
+    #[inline]
+    pub fn is_recorded(&self) -> bool {
+        !self.recorded.is_empty()
     }
 
     #[inline]
@@ -219,7 +273,11 @@ impl TimedRoute {
     /// waits at it facing the second; after the last it rests there facing
     /// along the final segment. `fallback_heading_rad` is used wherever the
     /// path has no direction (single keyframe, coincident points, zero speed).
+    /// A recorded take never needs the fallback: its yaw is part of the record.
     pub fn sample(&self, time_s: f64, fallback_heading_rad: f64) -> TimedSample {
+        if self.is_recorded() {
+            return self.sample_recorded(time_s);
+        }
         let points = &self.points;
         if points.len() == 1 {
             return TimedSample {
@@ -279,6 +337,46 @@ impl TimedRoute {
         }
     }
 
+    /// Linear interpolation of the recorded state between the two ticks that
+    /// bracket `time_s`; heading takes the shortest arc so a wrap across ±π
+    /// never spins the body. Outside the take the body rests at its end pose;
+    /// on the end samples themselves the recorded speed is reported so the
+    /// replayed trace matches the take tick for tick.
+    fn sample_recorded(&self, time_s: f64) -> TimedSample {
+        let points = &self.points;
+        let recorded = &self.recorded;
+        let last_index = points.len() - 1;
+        let end = |index: usize| TimedSample {
+            position: points[index].point,
+            heading_rad: recorded[index].heading_rad,
+            speed_mps: if (time_s - points[index].time_s).abs() <= RECORDED_TICK_TOLERANCE_S {
+                recorded[index].speed_mps
+            } else {
+                0.0
+            },
+        };
+        if time_s <= points[0].time_s {
+            return end(0);
+        }
+        if time_s >= points[last_index].time_s {
+            return end(last_index);
+        }
+        // First keyframe strictly after `time_s`; times are strictly increasing.
+        let next_index = points.partition_point(|k| k.time_s <= time_s);
+        let from = points[next_index - 1];
+        let to = points[next_index];
+        let u = clamp((time_s - from.time_s) / (to.time_s - from.time_s), 0.0, 1.0);
+        let from_pose = recorded[next_index - 1];
+        let to_pose = recorded[next_index];
+        TimedSample {
+            position: from.point + (to.point - from.point) * u,
+            heading_rad: normalize_angle(
+                from_pose.heading_rad + angle_delta(from_pose.heading_rad, to_pose.heading_rad) * u,
+            ),
+            speed_mps: from_pose.speed_mps + (to_pose.speed_mps - from_pose.speed_mps) * u,
+        }
+    }
+
     /// Timed points own pose only through their final timestamp. Once
     /// released, a freeform runway gives the motion backend somewhere to
     /// continue naturally with the terminal speed and heading instead of
@@ -309,9 +407,10 @@ impl TimedRoute {
 
     /// Peak speed and longitudinal / lateral acceleration demanded by the
     /// spline, sampled 17× per segment. `None` when the route has fewer than
-    /// two keyframes (nothing moves).
+    /// two keyframes (nothing moves) or is a recorded take, whose demands the
+    /// engine's own physics already met when it was recorded.
     pub fn kinematic_extrema(&self) -> Option<TimedRouteExtrema> {
-        if self.points.len() < 2 {
+        if self.points.len() < 2 || self.is_recorded() {
             return None;
         }
         let mut out = TimedRouteExtrema::default();
@@ -345,5 +444,104 @@ impl TimedRoute {
             }
         }
         Some(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::f64::consts::PI;
+
+    use super::*;
+    use crate::math::to_scene_xz;
+
+    fn sample(time_s: f64, x: f64, z: f64, heading_rad: f64, speed_mps: f64) -> RecordedSample {
+        RecordedSample {
+            time_s,
+            x,
+            y: 0.0,
+            z,
+            heading_rad,
+            speed_mps,
+        }
+    }
+
+    #[test]
+    fn recorded_take_reports_its_own_ticks_verbatim_and_holds_beyond_the_ends() {
+        let route = TimedRoute::from_recorded_samples(&[
+            sample(0.0, 1.0, 2.0, 0.3, 4.0),
+            sample(0.02, 1.1, 2.0, 0.35, 4.5),
+            sample(0.04, 1.2, 2.1, 0.4, 5.0),
+        ]);
+        assert!(route.is_recorded());
+        let mid = route.sample(0.02, 9.0);
+        assert_eq!(to_scene_xz(mid.position), SceneXZ { x: 1.1, z: 2.0 });
+        assert_eq!(mid.heading_rad, 0.35);
+        assert_eq!(mid.speed_mps, 4.5);
+        let last = route.sample(0.04, 9.0);
+        assert_eq!(last.speed_mps, 5.0);
+        assert_eq!(last.heading_rad, 0.4);
+        let after = route.sample(1.0, 9.0);
+        assert_eq!(after.position, last.position);
+        assert_eq!(after.heading_rad, 0.4);
+        assert_eq!(after.speed_mps, 0.0);
+        let before = route.sample(-5.0, 9.0);
+        assert_eq!(to_scene_xz(before.position), SceneXZ { x: 1.0, z: 2.0 });
+        assert_eq!(before.heading_rad, 0.3);
+        assert_eq!(before.speed_mps, 0.0);
+        assert!(route.kinematic_extrema().is_none());
+    }
+
+    #[test]
+    fn recorded_take_interpolates_between_ticks_on_the_shortest_heading_arc() {
+        let route = TimedRoute::from_recorded_samples(&[
+            sample(0.0, 0.0, 0.0, PI - 0.1, 1.0),
+            sample(1.0, 2.0, 0.0, -PI + 0.1, 3.0),
+        ]);
+        let half = route.sample(0.5, 0.0);
+        assert!(
+            (half.heading_rad.abs() - PI).abs() < 1e-9,
+            "{}",
+            half.heading_rad
+        );
+        assert!((half.speed_mps - 2.0).abs() < 1e-12);
+        assert!((to_scene_xz(half.position).x - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn recorded_take_keeps_body_yaw_while_stationary_and_reversing() {
+        // Reversing along +x with the nose pointing -x: the yaw is the
+        // recorded body yaw, the speed sign says the car is backing up.
+        let route = TimedRoute::from_recorded_samples(&[
+            sample(0.0, 0.0, 0.0, PI, 0.0),
+            sample(1.0, 0.0, 0.0, PI, 0.0),
+            sample(2.0, 2.0, 0.0, PI, -2.0),
+        ]);
+        let still = route.sample(0.5, 0.0);
+        assert_eq!(still.heading_rad, normalize_angle(PI));
+        assert_eq!(still.speed_mps, 0.0);
+        let backing = route.sample(1.5, 0.0);
+        assert_eq!(backing.heading_rad, normalize_angle(PI));
+        assert!(backing.speed_mps < 0.0);
+        assert!(to_scene_xz(backing.position).x > 0.0);
+    }
+
+    #[test]
+    fn authored_keyframes_are_unchanged_by_the_recorded_channel() {
+        let route = TimedRoute::from_scene_points(&[
+            TimedPoint {
+                time_s: 0.0,
+                x: 0.0,
+                z: 0.0,
+            },
+            TimedPoint {
+                time_s: 1.0,
+                x: 10.0,
+                z: 0.0,
+            },
+        ]);
+        assert!(!route.is_recorded());
+        assert!(route.kinematic_extrema().is_some());
+        let json = serde_json::to_value(&route).unwrap();
+        assert!(json.get("recorded").is_none());
     }
 }
