@@ -788,7 +788,18 @@ impl Simulation {
                 && plan.route_s >= station.s - 0.05
         }) {
             let state = &a.route_station_states[station_index];
-            if state.stopped_since_s.is_none() || t - state.stopped_since_s.unwrap_or(t) < station.dwell_s {
+            let group_ready = station.coordination_id.as_ref().is_none_or(|coordination_id| {
+                self.actors.iter().all(|other| {
+                    other.route_stations.iter().enumerate()
+                        .filter(|(_, peer)| peer.coordination_id.as_ref() == Some(coordination_id))
+                        .all(|(peer_index, peer)| other.route_station_states[peer_index].stopped_since_s
+                            .is_some_and(|stopped| t - stopped >= peer.dwell_s))
+                })
+            });
+            if state.stopped_since_s.is_none()
+                || t - state.stopped_since_s.unwrap_or(t) < station.dwell_s
+                || !group_ready
+            {
                 plan.speed = 0.0;
                 plan.accel = -a.speed_mps / dt;
                 plan.route_s = station.s;
@@ -1502,4 +1513,32 @@ impl Simulation {
 #[inline]
 pub(super) fn engine_err(e: impl std::fmt::Display) -> crate::error::SimEngineError {
     crate::error::SimEngineError::new(e.to_string(), Vec::new())
+}
+
+#[cfg(test)]
+mod route_station_tests {
+    use super::super::actor::{RoadControlRuntimeState, RouteStationRuntime};
+
+    fn released_at(station: &RouteStationRuntime, state: &RoadControlRuntimeState, t: f64, group_ready: bool) -> bool {
+        state.stopped_since_s.is_some_and(|start| group_ready && t - start >= station.dwell_s)
+    }
+
+    #[test]
+    fn route_station_dwells_exactly_then_resumes() {
+        let station = RouteStationRuntime { id: "stop".into(), s: 4.0, dwell_s: 2.0, coordination_id: None };
+        let state = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
+        assert!(!released_at(&station, &state, 11.999, true));
+        assert!(released_at(&station, &state, 12.0, true));
+    }
+
+    #[test]
+    fn coordinated_stations_wait_for_last_dwell() {
+        let a = RouteStationRuntime { id: "a".into(), s: 2.0, dwell_s: 1.0, coordination_id: Some("g".into()) };
+        let b = RouteStationRuntime { id: "b".into(), s: 3.0, dwell_s: 2.0, coordination_id: Some("g".into()) };
+        let sa = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
+        let sb = RoadControlRuntimeState { stopped_since_s: Some(11.0), ..Default::default() };
+        assert!(!released_at(&a, &sa, 12.0, false));
+        assert!(released_at(&a, &sa, 13.0, true));
+        assert!(released_at(&b, &sb, 13.0, true));
+    }
 }
