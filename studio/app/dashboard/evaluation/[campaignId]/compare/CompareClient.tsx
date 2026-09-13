@@ -158,11 +158,14 @@ export function CompareClient({
                         )}
                       </TableCell>
                       <TableCell
-                        xstyle={[styles.delta, episode.scoreDelta !== null && episode.scoreDelta > 0
+                        xstyle={[
+                          styles.delta,
+                          episode.scoreDelta !== null && episode.scoreDelta > 0
                             ? styles.deltaPositive
                             : episode.scoreDelta !== null && episode.scoreDelta < 0
                               ? styles.deltaNegative
-                              : null]}
+                              : null,
+                        ]}
                       >
                         {formatDelta(episode.scoreDelta)}
                       </TableCell>

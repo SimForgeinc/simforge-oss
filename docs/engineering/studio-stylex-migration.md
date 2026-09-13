@@ -296,6 +296,16 @@ reason. `className` keeps only strings StyleX cannot express — the
 viewport settings sheet — and whatever a caller passes down as its own
 public `className`.
 
+The merge is per property *group*, not per condition. A caller that declares
+`backgroundColor` at the default condition alone replaces the primitive's
+whole `backgroundColor` entry, `:hover` and `[data-state=…]` variants
+included. That is what makes a status tone pin its colour through hover the
+way the baseline `bg-X/15 hover:bg-X/15` pair did. It also means a caller that
+pinned only the rest state in Tailwind — `bg-transparent` on
+`Button variant="outline"`, where the variant's `:hover` rule still repainted
+the background — has to restate that hover value in its own key, or the state
+disappears. Those restatements carry a comment naming the variant they mirror.
+
 `layers` in `tokens.stylex.ts` holds numbers rather than strings for the same
 seam: a string token widens to `string`, which the value-checked
 `StyleXStyles` type on `xstyle` rejects for `z-index`. The emitted custom

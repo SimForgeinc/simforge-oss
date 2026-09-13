@@ -51,4 +51,10 @@ export const callerStyles = stylex.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     fontSize: "0.75rem",
   },
+  // Conflicts with `badgeVariants.default`, which declares backgroundColor at
+  // both the default and the `:hover` condition. A status tone like this pins
+  // the rest state only, and must still cancel the variant's hover fill.
+  badgeTone: {
+    backgroundColor: "rgba(107,114,128,0.15)",
+  },
 });

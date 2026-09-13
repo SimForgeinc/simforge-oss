@@ -6,7 +6,12 @@ import { render, screen } from "@testing-library/react";
 import { Button } from "../../../../src/components/ui/button";
 import { Input } from "../../../../src/components/ui/input";
 import { Tabs, TabsList } from "../../../../src/components/ui/tabs";
-import { button as buttonBase, buttonSizes } from "../../../../src/components/ui/controls.stylex";
+import { Badge } from "../../../../src/components/ui/badge";
+import {
+  badgeVariants as badgeVariantStyles,
+  button as buttonBase,
+  buttonSizes,
+} from "../../../../src/components/ui/controls.stylex";
 import { input as inputStyles } from "../../../../src/components/ui/form-controls.stylex";
 import { styles as tabsStyles } from "../../../../src/components/ui/tabs.stylex";
 import { SelectMenu } from "../../../../src/components/ui/select-menu";
@@ -40,10 +45,17 @@ import { callerStyles } from "../../../helpers/xstyle-precedence.stylex";
 const atoms = (element: HTMLElement): Set<string> =>
   new Set((element.getAttribute("class") ?? "").split(" ").filter(Boolean));
 
-const atomFor = (namespace: object, property: string): string => {
+/** Every atom a namespace compiled for one property, conditions included. */
+const atomsFor = (namespace: object, property: string): string[] => {
   const key = Object.keys(namespace).find((k) => k.startsWith(`${property}-`));
   if (!key) throw new Error(`no compiled ${property} atom`);
-  return (namespace as Record<string, string>)[key];
+  return (namespace as Record<string, string>)[key]!.split(" ").filter(Boolean);
+};
+
+const atomFor = (namespace: object, property: string): string => {
+  const atoms = atomsFor(namespace, property);
+  if (atoms.length !== 1) throw new Error(`${property} compiled ${atoms.length} atoms; use atomsFor`);
+  return atoms[0]!;
 };
 
 describe("xstyle precedence", () => {
@@ -162,5 +174,23 @@ describe("xstyle precedence", () => {
     expect(classes).toContain(atomFor(callerStyles.tooltipContent, "fontSize"));
     expect(classes).not.toContain(atomFor(tooltipStyles.content, "backgroundColor"));
     expect(classes).not.toContain(atomFor(tooltipStyles.content, "fontSize"));
+  });
+
+  /**
+   * The merge is per property *group*, not per condition: a caller that
+   * declares `backgroundColor` at the default condition alone still replaces
+   * the variant's `:hover` fill. Status badges and accent buttons rely on it —
+   * routed through `className` instead, the variant's conditional atom
+   * outranks the caller's default atom and repaints on hover.
+   */
+  it("cancels the Badge variant's hover fill when a caller pins the background", () => {
+    render(<Badge data-testid="badge" xstyle={callerStyles.badgeTone} />);
+    const classes = atoms(screen.getByTestId("badge"));
+
+    expect(classes).toContain(atomFor(callerStyles.badgeTone, "backgroundColor"));
+
+    const variantFill = atomsFor(badgeVariantStyles.default, "backgroundColor");
+    expect(variantFill.length).toBeGreaterThan(1);
+    for (const atom of variantFill) expect(classes).not.toContain(atom);
   });
 });
