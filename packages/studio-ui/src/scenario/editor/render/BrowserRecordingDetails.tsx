@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
+import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import { useVisiblePolling } from "../../../lib/use-visible-polling";
 import {
   getBrowserRecordingClient as getBrowserRecording,
@@ -102,10 +102,11 @@ export function BrowserRecordingDetails({
       </div>
       {error ? <p {...stylex.props(styles.xsDanger)} role="alert">{error}</p> : null}
       {!detail ? (
-        <WorkspacePaneLoading
+        <CloudLoadingSurface
+          scope="pane"
           xstyle={styles.minH72}
-          hint="Reading the recording timeline and generated artifacts."
-          message="Loading recording details…"
+          detail="Reading the recording timeline and generated artifacts."
+          title="Loading recording details…"
         />
       ) : (
         <>

@@ -2,8 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import {
@@ -81,10 +80,11 @@ export function ScenarioDatasetBrowser({
       {datasets.length === 0 && datasetsLoading ? (
         // A skeleton, not `null`. v2's list rendered an empty grid while loading, which reads as
         // "no datasets" to a screen reader and flashes empty for everyone else.
-        <WorkspacePaneLoading
+        <CloudLoadingSurface
+          scope="pane"
           xstyle={paneLoading.h40}
-          hint="Reading your scenario datasets."
-          message="Loading datasets"
+          detail="Reading your scenario datasets."
+          title="Loading datasets"
         />
       ) : datasets.length === 0 ? (
         <div className="border border-border bg-surface-raised px-4 py-4 text-sm text-muted-foreground">

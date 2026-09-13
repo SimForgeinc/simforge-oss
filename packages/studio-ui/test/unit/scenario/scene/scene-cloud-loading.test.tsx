@@ -2,10 +2,12 @@
 import type { ReactElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DashboardLoadingProvider } from "../../../../src/components/DashboardLoadingCoordinator";
-import { SceneLoadingTransition } from "../../../../src/scenario/scene/SceneLoadingTransition";
+import { CloudLoadingHost } from "../../../../src/components/CloudLoadingHost";
+import { CloudLoadingSurface } from "../../../../src/components/CloudLoadingSurface";
+import type { SceneLoadProgress } from "../../../../src/scenario/scene/map-load-progress";
+import { useSceneLoadingSurfaceProps } from "../../../../src/scenario/scene/scene-loading";
 import { StudioHostTestProvider } from "../../../helpers/studio-host";
-import { styles as coordinatorStyles } from "../../../../src/components/DashboardLoadingCoordinator.stylex";
+import { styles as coordinatorStyles } from "../../../../src/components/CloudLoadingHost.stylex";
 
 /** One compiled atom of a StyleX namespace, by the property it declares. */
 const atomFor = (namespace: object, property: string): string => {
@@ -22,31 +24,35 @@ vi.mock("../../../../src/components/SkyCloudBackdrop", () => ({
 
 afterEach(() => cleanup());
 
+/** The scene cover exactly as `ScenarioWorldHost` writes it. */
+function SceneCover({ progress, onRetry }: { progress: SceneLoadProgress; onRetry?: () => void }) {
+  return <CloudLoadingSurface scope="screen" {...useSceneLoadingSurfaceProps(progress, onRetry)} />;
+}
+
 /** The surface carries the cache-all-assets action, which reaches the host for the map catalog. */
 function renderTransition(element: ReactElement) {
   return render(
     <StudioHostTestProvider>
-      <DashboardLoadingProvider>{element}</DashboardLoadingProvider>
+      <CloudLoadingHost>{element}</CloudLoadingHost>
     </StudioHostTestProvider>,
   );
 }
 
-describe("SceneLoadingTransition", () => {
-  it("publishes scene progress into the dashboard surface without a portal bridge", async () => {
+describe("the scene load cover", () => {
+  it("publishes scene progress into the hosted surface without a portal bridge", async () => {
     renderTransition(
-      <SceneLoadingTransition
+      <SceneCover
         progress={{
           phase: "assets",
           percent: 89,
           message: "Loading Belmont Research Center assets",
           detail: "1 downloading…",
         }}
-        visible
       />,
     );
 
     await screen.findByText("Loading Belmont Research Center assets");
-    const surface = screen.getByTestId("dashboard-loading-surface");
+    const surface = screen.getByTestId("cloud-loading-surface");
     expect(surface.parentElement).not.toBe(document.body);
     expect(surface.getAttribute("data-load-kind")).toBe("scene");
     expect(surface.getAttribute("data-load-phase")).toBe("assets");
@@ -62,7 +68,7 @@ describe("SceneLoadingTransition", () => {
 
   it("shows exact transfer progress and calls out a stalled asset", async () => {
     renderTransition(
-      <SceneLoadingTransition
+      <SceneCover
         progress={{
           phase: "assets",
           percent: 61,
@@ -76,11 +82,10 @@ describe("SceneLoadingTransition", () => {
             stalledFor: "8s",
           },
         }}
-        visible
       />,
     );
 
-    const telemetry = await screen.findByTestId("dashboard-loading-telemetry");
+    const telemetry = await screen.findByTestId("cloud-loading-telemetry");
     expect(telemetry.textContent).toContain("37.0 MB / 400 MB");
     expect(telemetry.textContent).toContain("0 B/s");
     expect(telemetry.textContent).toContain("No bytes received for 8s");
@@ -89,7 +94,7 @@ describe("SceneLoadingTransition", () => {
   it("publishes an actionable error through the same surface", async () => {
     const retry = vi.fn();
     renderTransition(
-      <SceneLoadingTransition
+      <SceneCover
         onRetry={retry}
         progress={{
           phase: "error",
@@ -97,7 +102,6 @@ describe("SceneLoadingTransition", () => {
           message: "Belmont could not load",
           detail: "The manifest request failed.",
         }}
-        visible
       />,
     );
 

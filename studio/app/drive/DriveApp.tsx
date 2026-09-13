@@ -20,6 +20,7 @@ import {
   type ManualDriveTakeUnavailableReason,
 } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { defaultAuthoringQuality } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import type { StudioMapEntry } from "@simforge-oss/studio-host";
 import { studioHost } from "@/app/lib/host";
 import type { ScenarioAuthoringQuality } from "@/app/lib/scenario/contracts";
@@ -101,7 +102,13 @@ export function DriveApp() {
   }, [take]);
 
   if (takeBoundary.state === "loading") {
-    return <div {...stylex.props(manualTake.boundary)} role="status">Loading the manual drive take…</div>;
+    return (
+      <CloudLoadingSurface
+        detail="Reading the take and the map it was recorded against."
+        scope="screen"
+        title="Loading the manual drive take…"
+      />
+    );
   }
   if (takeBoundary.state === "unavailable") {
     return (

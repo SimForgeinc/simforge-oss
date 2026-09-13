@@ -12,8 +12,7 @@ import {
   Play,
   Plus,
 } from "lucide-react";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import type { ScenarioDocumentSummaryDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
@@ -217,10 +216,11 @@ export function ScenarioScenarioRail({
           </p>
         ) : null}
         {loading && documents.length === 0 ? (
-          <WorkspacePaneLoading
+          <CloudLoadingSurface
+          scope="pane"
             xstyle={paneLoading.h52}
-            hint="Reading scenarios in this dataset."
-            message="Loading scenarios"
+            detail="Reading scenarios in this dataset."
+            title="Loading scenarios"
           />
         ) : documents.length === 0 ? (
           <p className="px-1 py-2 text-meta text-white/75">

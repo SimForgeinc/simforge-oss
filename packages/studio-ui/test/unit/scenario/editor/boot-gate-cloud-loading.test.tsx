@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { DashboardLoadingProvider } from "../../../../src/components/DashboardLoadingCoordinator";
+import { CloudLoadingHost } from "../../../../src/components/CloudLoadingHost";
 import { ScenarioBootGate } from "../../../../src/scenario/editor/status/ScenarioBootGate";
 import { useScenarioNotificationStore } from "../../../../src/scenario/editor/status/notification-store";
 
@@ -23,12 +23,12 @@ describe("ScenarioBootGate cloud loading", () => {
     });
 
     render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <ScenarioBootGate />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    const gate = screen.getByTestId("dashboard-loading-surface");
+    const gate = screen.getByTestId("cloud-loading-surface");
     // "screen" scope is the blocker contract: the surface takes the whole viewport rather
     // than sitting inside a pane, and it reports itself as busy work rather than an error.
     expect(gate.getAttribute("data-cloud-loading-scope")).toBe("screen");
@@ -51,12 +51,12 @@ describe("ScenarioBootGate cloud loading", () => {
     });
 
     render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <ScenarioBootGate />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    const gate = screen.getByTestId("dashboard-loading-surface");
+    const gate = screen.getByTestId("cloud-loading-surface");
     expect(screen.getByRole("alert")).toBe(gate);
     expect(gate.getAttribute("data-load-kind")).toBe("boot");
     // An actionable failure still covers the viewport, but it stops claiming to be busy and

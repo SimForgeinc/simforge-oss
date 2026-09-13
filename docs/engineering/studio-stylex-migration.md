@@ -91,7 +91,7 @@ is authored: the shared primitives in `src/components/stylex` hold their
 anyway. It is how a reader finds a surface's styles, it is what the `*.stylex`
 subpath exports are named from, and a module that exists only to hold styles
 should say so. Name a component's style module after the component
-(`WorkspacePaneLoading.stylex.ts`); name a family-shared module after the
+(`CloudLoadingHost.stylex.ts`); name a family-shared module after the
 family.
 
 ### How the CSS is produced
@@ -112,6 +112,18 @@ StyleX compiles ahead of time, so something must transform the
   `create` calls untouched and the app-side transform handles them. The package
   therefore ships no precompiled StyleX CSS, and a consumer outside this app
   would need the same Babel/PostCSS wiring.
+- `studio/desktop/build-shell-pages.mjs` is the third consumer of the same
+  options. The Electron shell shows two pages before the Next host answers,
+  loaded from `app.asar` with `loadFile` — no bundler, no React, no StyleX at
+  runtime — and they must be the product's loading screen, not a copy of it.
+  So the script compiles `CloudLoadingSurface` with `stylexBabelConfig`,
+  server-renders it, and writes `starting.html`, `host-exited.html` and
+  `cloud-loading.css` (the atomic rules plus the `:root`/`.dark` custom
+  properties lifted from `styles.css`) into `studio/desktop`. The output is
+  committed, because unpackaged Studio loads those pages straight from that
+  directory; re-run `pnpm -F @simforge-oss/studio desktop:pages` after
+  changing the surface, its backdrop or the tokens they read, and
+  `--check` reports a stale committed copy.
 
 `packages/studio-ui/vitest.config.ts` compiles StyleX before tests import it,
 and it matches the way the app does rather than by filename: any `.ts`/`.tsx`
@@ -524,7 +536,7 @@ verbatim wherever no token had that exact value.
 | `dropdown` | 100 | pickers and menus — `ScenarioMapPickerDialog`, still a `z-[100]` residual |
 | `tutorial`, `tutorialTop` | 140, 150 | interactive tutorial overlays and guides |
 | `dialog`, `dialogTop` | 200, 220 | app dialogs and their scrims; `RenderingBenchmark` at the top of the band |
-| `loading`, `loadingTop` | 240, 250 | `CloudLoadingSurface`, `DashboardLoadingCoordinator` |
+| `loading`, `loadingTop` | 240, 250 | `CloudLoadingSurface`, `CloudLoadingHost` |
 | `topbar` | 260 | `AppTopBar` |
 | `appSwitcher`, `appSwitcherTop` | 300, 310 | app-switcher scrim and content |
 | `mapTooltip` | 1000 | map hover readouts and pinned popups |

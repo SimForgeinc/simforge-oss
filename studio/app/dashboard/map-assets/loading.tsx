@@ -1,5 +1,14 @@
-import { RouteLoading } from "@simforge-oss/studio-ui/components/ui/sim-loader";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 
 export default function MapAssetsLoading() {
-  return <RouteLoading label="Maps" detail="Loading map library…" />;
+  return (
+    <CloudLoadingSurface
+      detail="Opening maps in your workspace."
+      priority={11}
+      progress={null}
+      progressLabel="Cloud workspace"
+      scope="screen"
+      title="Loading map library…"
+    />
+  );
 }

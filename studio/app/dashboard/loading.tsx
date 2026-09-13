@@ -1,5 +1,14 @@
-import { RouteLoading } from "@simforge-oss/studio-ui/components/ui/sim-loader";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 
 export default function DashboardLoading() {
-  return <RouteLoading depth={0} label="Dashboard" detail="Loading your workspace…" />;
+  return (
+    <CloudLoadingSurface
+      detail="Opening dashboard in your workspace."
+      priority={10}
+      progress={null}
+      progressLabel="Cloud workspace"
+      scope="screen"
+      title="Loading your workspace…"
+    />
+  );
 }

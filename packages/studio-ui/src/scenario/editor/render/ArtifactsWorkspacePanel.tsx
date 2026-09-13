@@ -5,7 +5,7 @@ import type { DisplayArtifact, PresignedArtifact, WorkspaceArtifact } from "@sim
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "../../../components/ui/input";
-import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
+import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import { SelectMenuField } from "../../../components/ui/select-menu";
 import { useScenarioNotification } from "../status";
 import { RenderArtifactList } from "./RenderArtifactList";
@@ -141,10 +141,11 @@ export function ArtifactsWorkspacePanel() {
 
       <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {loading && artifacts.length === 0 ? (
-          <WorkspacePaneLoading
+          <CloudLoadingSurface
+          scope="pane"
             xstyle={styles.minH64}
-            hint="Indexing the outputs available in this workspace."
-            message="Loading artifacts…"
+            detail="Indexing the outputs available in this workspace."
+            title="Loading artifacts…"
           />
         ) : (
           <RenderArtifactList

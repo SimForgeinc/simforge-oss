@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Database, LoaderCircle } from "lucide-react";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
@@ -78,9 +79,11 @@ export function DatasetExportWorkspace() {
           </div>
           <div {...stylex.props(styles.datasetScroll)}>
             {loading && datasets.length === 0 ? (
-              <div {...stylex.props(styles.loading)} role="status" aria-live="polite">
-                <LoaderCircle {...stylex.props(styles.iconMedium, styles.iconSpin)} aria-hidden="true" /> Loading datasets…
-              </div>
+              <CloudLoadingSurface
+                detail="Reading the datasets in this workspace."
+                scope="pane"
+                title="Loading datasets…"
+              />
             ) : error ? (
               <div {...stylex.props(styles.error)}>{error}</div>
             ) : datasets.length === 0 ? (

@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { colors } from "../stylex/tokens.stylex";
 
 /** The property list Tailwind's `transition-colors` compiles to. */
 const TRANSITION_COLORS =
@@ -6,7 +7,7 @@ const TRANSITION_COLORS =
 
 export const styles = stylex.create({
   alertIcon: { width: "1.25rem", height: "1.25rem" },
-  reload: { marginTop: "1.5rem", height: "2.5rem", borderRadius: "9999px", backgroundColor: "#E8E044", paddingInline: "1.25rem", color: "black", ":hover": { backgroundColor: "#f1ea55" } },
+  reload: { marginTop: "1.5rem", height: "2.5rem", borderRadius: "9999px", backgroundColor: colors.accent, paddingInline: "1.25rem", color: "black", ":hover": { backgroundColor: colors.accentHover } },
   /**
    * `!z-[250] transition-colors ease-out motion-reduce:transition-none`
    *

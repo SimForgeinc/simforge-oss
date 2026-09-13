@@ -3,7 +3,7 @@
  *
  * The list, rail, scene, dataset and review surfaces are still authored in
  * Tailwind, but the controls they hand their overrides to — `Button`,
- * `Badge`, `Input`, `WorkspacePaneLoading`, `CloudActivityIndicator` — are
+ * `Badge`, `Input`, `CloudLoadingSurface`, `CloudActivityIndicator` — are
  * compiled by StyleX. A StyleX atom is guarded by `:not(#\#)` three times over
  * and therefore outranks a plain utility class at every stylesheet position,
  * so an override passed as `className` is dropped rather than applied. These
@@ -94,8 +94,9 @@ export const menu = stylex.create({
 });
 
 /**
- * `WorkspacePaneLoading` declares its own `min-height: 5rem`; a pane that
- * reserves more room while it loads has to say so through `xstyle`.
+ * `CloudLoadingSurface`'s `pane` scope declares its own `min-height: 12rem`; a
+ * pane that reserves a different amount of room while it loads says so
+ * through `xstyle`.
  */
 export const paneLoading = stylex.create({
   /** `min-h-24` */

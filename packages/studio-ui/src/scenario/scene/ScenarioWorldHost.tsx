@@ -24,7 +24,8 @@ import {
   type SceneLoadProgress,
   type SceneLoadProgressTracker,
 } from "./map-load-progress";
-import { SceneLoadingTransition } from "./SceneLoadingTransition";
+import { useSceneLoadingSurfaceProps } from "./scene-loading";
+import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import { authoringRuntimeReady } from "@simforge-oss/editor";
 
 /**
@@ -33,8 +34,8 @@ import { authoringRuntimeReady } from "@simforge-oss/editor";
  * The per-preset `uploadBudgetMs` / `uploadPixelsPerFrame` exist to keep the
  * frame rate smooth while tiles stream in mid-session — a real concern once
  * someone is panning around the map. During the initial load they protect the
- * smoothness of a scene nobody can see: `SceneLoadingTransition` is an opaque
- * cover until the transition reaches `idle`.
+ * smoothness of a scene nobody can see: the scene's `CloudLoadingSurface` is an
+ * opaque cover until the transition reaches `idle`.
  *
  * Measured on Belmont at the `minimal` preset (0.5 ms / 256k pixels per frame),
  * a warm reload finished downloading and decoding every tile 4.5 s in, then sat
@@ -411,6 +412,23 @@ export function ScenarioWorldHost({
     });
   }, [effectiveTarget, error, loadedMapVersionId, streaming, transitionPhase]);
 
+  const sceneLoading = useSceneLoadingSurfaceProps(
+    loadProgress,
+    transitionPhase === "error"
+      ? () => {
+          const current = targetRef.current ?? retainedTargetRef.current;
+          if (!current) return;
+          transitionGenerationRef.current += 1;
+          setError(null);
+          setLoadedMapVersionId(null);
+          progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
+          setLoadProgress(initialSceneLoadProgress(current.label));
+          updateTransitionPhase("loading");
+          setRetryNonce((value) => value + 1);
+        }
+      : null,
+  );
+
   return (
     <div
       className={cn("relative overflow-hidden bg-background", className)}
@@ -622,21 +640,9 @@ export function ScenarioWorldHost({
           transitionPhase === "idle" ? "opacity-0" : "opacity-100",
         )}
       />
-      <SceneLoadingTransition
-        visible={transitionPhase !== "idle"}
-        progress={loadProgress}
-        onRetry={transitionPhase === "error" ? () => {
-          const current = targetRef.current ?? retainedTargetRef.current;
-          if (!current) return;
-          transitionGenerationRef.current += 1;
-          setError(null);
-          setLoadedMapVersionId(null);
-          progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
-          setLoadProgress(initialSceneLoadProgress(current.label));
-          updateTransitionPhase("loading");
-          setRetryNonce((value) => value + 1);
-        } : null}
-      />
+      {transitionPhase !== "idle" ? (
+        <CloudLoadingSurface scope="screen" {...sceneLoading} />
+      ) : null}
     </div>
   );
 }

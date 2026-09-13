@@ -41,9 +41,13 @@
         "types": "./dist/components/CarlaCompatibilityPill.d.ts",
         "default": "./dist/components/CarlaCompatibilityPill.js"
       },
-      "./components/DashboardLoadingCoordinator": {
-        "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
-        "default": "./dist/components/DashboardLoadingCoordinator.js"
+      "./components/CloudLoadingHost": {
+        "types": "./dist/components/CloudLoadingHost.d.ts",
+        "default": "./dist/components/CloudLoadingHost.js"
+      },
+      "./components/CloudLoadingSurface": {
+        "types": "./dist/components/CloudLoadingSurface.d.ts",
+        "default": "./dist/components/CloudLoadingSurface.js"
       },
       "./components/MapAssetCacheStorage": {
         "types": "./dist/components/MapAssetCacheStorage.d.ts",
@@ -108,10 +112,6 @@
       "./components/ui/sheet": {
         "types": "./dist/components/ui/sheet.d.ts",
         "default": "./dist/components/ui/sheet.js"
-      },
-      "./components/ui/sim-loader": {
-        "types": "./dist/components/ui/sim-loader.d.ts",
-        "default": "./dist/components/ui/sim-loader.js"
       },
       "./components/ui/skeleton": {
         "types": "./dist/components/ui/skeleton.d.ts",
@@ -443,10 +443,15 @@
       "types": "./dist/components/CarlaCompatibilityPill.d.ts",
       "default": "./dist/components/CarlaCompatibilityPill.js"
     },
-    "./components/DashboardLoadingCoordinator": {
-      "development": "./src/components/DashboardLoadingCoordinator.tsx",
-      "types": "./dist/components/DashboardLoadingCoordinator.d.ts",
-      "default": "./dist/components/DashboardLoadingCoordinator.js"
+    "./components/CloudLoadingHost": {
+      "development": "./src/components/CloudLoadingHost.tsx",
+      "types": "./dist/components/CloudLoadingHost.d.ts",
+      "default": "./dist/components/CloudLoadingHost.js"
+    },
+    "./components/CloudLoadingSurface": {
+      "development": "./src/components/CloudLoadingSurface.tsx",
+      "types": "./dist/components/CloudLoadingSurface.d.ts",
+      "default": "./dist/components/CloudLoadingSurface.js"
     },
     "./components/MapAssetCacheStorage": {
       "development": "./src/components/MapAssetCacheStorage.tsx",
@@ -527,11 +532,6 @@
       "development": "./src/components/ui/sheet.tsx",
       "types": "./dist/components/ui/sheet.d.ts",
       "default": "./dist/components/ui/sheet.js"
-    },
-    "./components/ui/sim-loader": {
-      "development": "./src/components/ui/sim-loader.tsx",
-      "types": "./dist/components/ui/sim-loader.d.ts",
-      "default": "./dist/components/ui/sim-loader.js"
     },
     "./components/ui/skeleton": {
       "development": "./src/components/ui/skeleton.tsx",

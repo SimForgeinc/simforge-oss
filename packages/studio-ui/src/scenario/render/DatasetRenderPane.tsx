@@ -3,7 +3,7 @@
 import { useStudioHost } from "../../host";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
 import { DocumentRenderWorkspace } from "../editor/render/DocumentRenderWorkspace";
 
@@ -101,9 +101,10 @@ export function DatasetRenderPane({
       data-testid="scenario-dataset-render-pane"
     >
       {loading || !document ? (
-        <WorkspacePaneLoading
-          hint="Preparing the saved scenario and its render history."
-          message="Loading scenario renders"
+        <CloudLoadingSurface
+          scope="pane"
+          detail="Preparing the saved scenario and its render history."
+          title="Loading scenario renders"
         />
       ) : error ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">

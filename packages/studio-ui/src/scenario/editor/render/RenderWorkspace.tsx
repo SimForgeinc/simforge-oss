@@ -5,7 +5,7 @@ import { StudioHostRequestError, type ScenarioValidationRunDto } from "@simforge
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderOpen, PanelRightClose, RefreshCw, Sparkles, Undo2, EyeOff } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
+import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import { useVisiblePolling } from "../../../lib/use-visible-polling";
 import { listBrowserRecordingsClient as listBrowserRecordings } from "../../../lib/scenario/recording-client";
 import { useScenarioNotification } from "../status";
@@ -494,10 +494,11 @@ export function RenderWorkspace({
           ) : null}
 
           {loading && entries.length === 0 ? (
-            <WorkspacePaneLoading
+            <CloudLoadingSurface
+          scope="pane"
               xstyle={styles.minH72}
-              hint="Reading render jobs, recordings, and esmini replays."
-              message="Loading renders…"
+              detail="Reading render jobs, recordings, and esmini replays."
+              title="Loading renders…"
             />
           ) : visibleEntries.length === 0 ? (
             <div {...stylex.props(styles.flexColCenter)}>

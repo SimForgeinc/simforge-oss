@@ -6,7 +6,7 @@ import type * as Viewer from "@simforge-oss/viewer";
 import { ScenarioWorldHost } from "../../src/scenario/scene/ScenarioWorldHost";
 import { saveRenderingPreference } from "../../src/components/rendering-preference";
 import { ScenarioWorkspaceStatusProvider } from "../../src/scenario/editor/status";
-import { DashboardLoadingProvider } from "../../src/components/DashboardLoadingCoordinator";
+import { CloudLoadingHost } from "../../src/components/CloudLoadingHost";
 import { StudioHostTestProvider } from "../helpers/studio-host";
 
 const {
@@ -114,7 +114,7 @@ const second = {
 function wrap(ui: ReactNode) {
   return (
     <StudioHostTestProvider>
-      <DashboardLoadingProvider>{ui}</DashboardLoadingProvider>
+      <CloudLoadingHost>{ui}</CloudLoadingHost>
     </StudioHostTestProvider>
   );
 }
@@ -256,13 +256,13 @@ describe("persistent SimForge world host", () => {
     );
 
     await waitFor(() => expect(loads).toHaveBeenLastCalledWith(second.manifestUrl));
-    expect(view.getByTestId("dashboard-loading-surface")).toBeTruthy();
+    expect(view.getByTestId("cloud-loading-surface")).toBeTruthy();
     expect(view.getByText("Loading Two")).toBeTruthy();
     expect(view.getByText("Preparing the map definition…")).toBeTruthy();
 
     completeMapLoad();
     await waitFor(() =>
-      expect(view.queryByTestId("dashboard-loading-surface")).toBeNull(),
+      expect(view.queryByTestId("cloud-loading-surface")).toBeNull(),
     );
   });
 

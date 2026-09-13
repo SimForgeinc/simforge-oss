@@ -2,12 +2,11 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  DASHBOARD_LOADING_STALL_MS,
-  DashboardLoadingProvider,
-  dashboardRouteLoadingSource,
-  useDashboardLoadingSource,
-  type DashboardLoadingSource,
-} from "../../../src/components/DashboardLoadingCoordinator";
+  CLOUD_LOADING_STALL_MS,
+  CloudLoadingHost,
+} from "../../../src/components/CloudLoadingHost";
+import { CloudLoadingSurface } from "../../../src/components/CloudLoadingSurface";
+import type { CloudLoadingSource } from "../../../src/components/cloud-loading-context";
 
 vi.mock("../../../src/components/SkyCloudBackdrop", () => ({
   SkyCloudBackdrop: ({ className }: { className?: string }) => (
@@ -15,9 +14,28 @@ vi.mock("../../../src/components/SkyCloudBackdrop", () => ({
   ),
 }));
 
-function SourceProbe({ source }: { source: DashboardLoadingSource | null }) {
-  useDashboardLoadingSource(source);
-  return null;
+/** What a route segment's `loading.tsx` publishes. */
+function routeSource(label: string, detail: string, priority = 11): CloudLoadingSource {
+  return {
+    kind: "route",
+    title: detail,
+    detail: `Opening ${label.toLowerCase()} in your workspace.`,
+    eyebrow: "SimForge",
+    progress: null,
+    progressLabel: "Cloud workspace",
+    priority,
+  };
+}
+
+/** A screen-scoped surface written the way every consumer writes one. */
+function SourceProbe({ source }: { source: CloudLoadingSource | null }) {
+  if (!source) return null;
+  const { severity, actions, ...rest } = source;
+  return (
+    <CloudLoadingSurface {...rest} role={severity === "error" ? "alert" : "status"} scope="screen">
+      {actions}
+    </CloudLoadingSurface>
+  );
 }
 
 afterEach(() => {
@@ -26,13 +44,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("DashboardLoadingProvider", () => {
+describe("CloudLoadingHost", () => {
   it("keeps one surface and cloud canvas through a route-to-scene handoff", async () => {
-    const route = dashboardRouteLoadingSource({
-      label: "Maps",
-      detail: "Loading map library…",
-    });
-    const scene: DashboardLoadingSource = {
+    const route = routeSource("Maps", "Loading map library…");
+    const scene: CloudLoadingSource = {
       kind: "scene",
       title: "Preparing Belmont Research Center",
       detail: "Starting the renderer and loading map metadata…",
@@ -41,65 +56,62 @@ describe("DashboardLoadingProvider", () => {
       phase: "resolving",
     };
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={route} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
     await screen.findByText("Loading map library…");
-    const surface = screen.getByTestId("dashboard-loading-surface");
+    const surface = screen.getByTestId("cloud-loading-surface");
     const canvas = screen.getByTestId("coordinator-cloud-canvas");
 
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={scene} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
     await screen.findByText("Preparing Belmont Research Center");
-    expect(screen.getByTestId("dashboard-loading-surface")).toBe(surface);
+    expect(screen.getByTestId("cloud-loading-surface")).toBe(surface);
     expect(screen.getByTestId("coordinator-cloud-canvas")).toBe(canvas);
-    expect(screen.getAllByTestId("dashboard-loading-surface")).toHaveLength(1);
+    expect(screen.getAllByTestId("cloud-loading-surface")).toHaveLength(1);
   });
 
   it("chooses errors, editor boot, scene, then route in that order", async () => {
-    const route = dashboardRouteLoadingSource({
-      label: "Maps",
-      detail: "Loading map library…",
-    });
-    const scene: DashboardLoadingSource = {
+    const route = routeSource("Maps", "Loading map library…");
+    const scene: CloudLoadingSource = {
       kind: "scene",
       title: "Loading scene",
       progress: 50,
     };
-    const boot: DashboardLoadingSource = {
+    const boot: CloudLoadingSource = {
       kind: "boot",
       title: "Preparing editor",
       progress: 70,
     };
-    const error: DashboardLoadingSource = {
+    const error: CloudLoadingSource = {
       kind: "scene",
       title: "Scene failed",
       severity: "error",
     };
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={route} />
         <SourceProbe source={scene} />
         <SourceProbe source={boot} />
         <SourceProbe source={error} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
     await screen.findByText("Scene failed");
     expect(screen.getByRole("alert")).toBeTruthy();
 
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={route} />
         <SourceProbe source={scene} />
         <SourceProbe source={boot} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
     await screen.findByText("Preparing editor");
   });
@@ -112,46 +124,43 @@ describe("DashboardLoadingProvider", () => {
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation((handle) =>
       window.clearTimeout(handle),
     );
-    const scene: DashboardLoadingSource = {
+    const scene: CloudLoadingSource = {
       kind: "scene",
       title: "Loading scene",
       progress: 80,
     };
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={scene} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
-    const surface = screen.getByTestId("dashboard-loading-surface");
+    const surface = screen.getByTestId("cloud-loading-surface");
     act(() => vi.advanceTimersByTime(1_000));
 
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={null} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
     act(() => vi.advanceTimersToNextTimer());
     expect(surface.getAttribute("aria-hidden")).toBe("true");
-    expect(screen.getByTestId("dashboard-loading-surface")).toBe(surface);
+    expect(screen.getByTestId("cloud-loading-surface")).toBe(surface);
 
     act(() => vi.runOnlyPendingTimers());
-    expect(screen.queryByTestId("dashboard-loading-surface")).toBeNull();
+    expect(screen.queryByTestId("cloud-loading-surface")).toBeNull();
   });
 
   it("surfaces an error with a reload action when a route source stalls", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const route = dashboardRouteLoadingSource({
-      label: "Scenarios",
-      detail: "Loading Scenarios",
-    });
+    const route = routeSource("Scenarios", "Loading Scenarios");
     render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={route} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1));
     expect(screen.queryByRole("alert")).toBeNull();
 
     act(() => vi.advanceTimersByTime(1));
@@ -168,28 +177,22 @@ describe("DashboardLoadingProvider", () => {
 
   it("restarts the stall window whenever the source content changes", async () => {
     vi.useFakeTimers();
-    const first = dashboardRouteLoadingSource({
-      label: "Scenarios",
-      detail: "Loading Scenarios",
-    });
+    const first = routeSource("Scenarios", "Loading Scenarios");
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={first} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1_000));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1_000));
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe
-          source={dashboardRouteLoadingSource({
-            label: "Dashboard",
-            detail: "Loading Dashboard",
-          })}
+          source={routeSource("Dashboard", "Loading Dashboard")}
         />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1_000));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1_000));
     expect(screen.queryByRole("alert")).toBeNull();
 
     act(() => vi.advanceTimersByTime(1_000));
@@ -202,9 +205,9 @@ describe("DashboardLoadingProvider", () => {
     let visibility: DocumentVisibilityState = "visible";
     vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
     render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={{ kind: "scene", title: "Finishing a map", progress: 90 }} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
     act(() => vi.advanceTimersByTime(20_000));
@@ -212,13 +215,13 @@ describe("DashboardLoadingProvider", () => {
       visibility = "hidden";
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => {
       visibility = "visible";
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 20_001));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 20_001));
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole("alert")).toBeTruthy();
@@ -229,27 +232,27 @@ describe("DashboardLoadingProvider", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let visibility: DocumentVisibilityState = "hidden";
     vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
-    const source: DashboardLoadingSource = { kind: "scene", title: "Preparing a map", progress: 10 };
+    const source: CloudLoadingSource = { kind: "scene", title: "Preparing a map", progress: 10 };
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={source} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
     expect(screen.queryByRole("alert")).toBeNull();
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={{ ...source, progress: 20 }} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => {
       visibility = "visible";
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1));
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole("alert")).toBeTruthy();
@@ -257,7 +260,7 @@ describe("DashboardLoadingProvider", () => {
 
   it("treats a cooperative stage heartbeat as progress", () => {
     vi.useFakeTimers();
-    const source = (activityToken: number): DashboardLoadingSource => ({
+    const source = (activityToken: number): CloudLoadingSource => ({
       kind: "scene",
       title: "Finishing Belmont Research Center",
       detail: "Checking the completed scene and preparing the first frame…",
@@ -265,18 +268,18 @@ describe("DashboardLoadingProvider", () => {
       activityToken,
     });
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={source(0)} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 5_000));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 5_000));
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={source(1)} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 5_000));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 5_000));
 
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -289,23 +292,20 @@ describe("DashboardLoadingProvider", () => {
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation((handle) =>
       window.clearTimeout(handle),
     );
-    const route = dashboardRouteLoadingSource({
-      label: "Scenarios",
-      detail: "Loading Scenarios",
-    });
+    const route = routeSource("Scenarios", "Loading Scenarios");
     const view = render(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={route} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
 
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS - 1_000));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS - 1_000));
     view.rerender(
-      <DashboardLoadingProvider>
+      <CloudLoadingHost>
         <SourceProbe source={null} />
-      </DashboardLoadingProvider>,
+      </CloudLoadingHost>,
     );
-    act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_STALL_MS * 2));
+    act(() => vi.advanceTimersByTime(CLOUD_LOADING_STALL_MS * 2));
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

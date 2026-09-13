@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { control } from "./scenario-controls.stylex";
-import { RouteLoading } from "../components/ui/sim-loader";
+import { CloudLoadingSurface } from "../components/CloudLoadingSurface";
 import { CopyableErrorMessage } from "./list/CopyableErrorMessage";
 import { ScenarioWorkspaceErrorState } from "./editor/status";
 
@@ -19,20 +19,38 @@ type RouteErrorProps = {
   reset: () => void;
 };
 
+/**
+ * A route segment's cover. `priority` is the segment's depth above the route
+ * band: while a nested segment resolves both loaders are mounted, and the
+ * deeper one's message is the specific one.
+ */
 export function ScenarioIndexLoading() {
-  return <RouteLoading label="Scenarios" detail="Loading your scenarios…" />;
+  return <ScenarioRouteLoading detail="Loading your scenarios…" label="scenarios" priority={11} />;
 }
 
 export function ScenarioDatasetLoading() {
-  return <RouteLoading depth={2} label="Scenarios" detail="Loading dataset scenarios…" />;
+  return <ScenarioRouteLoading detail="Loading dataset scenarios…" label="scenarios" priority={12} />;
 }
 
 export function ScenarioEditorLoading() {
-  return <RouteLoading depth={2} label="Scenario editor" detail="Preparing the editor…" />;
+  return <ScenarioRouteLoading detail="Preparing the editor…" label="scenario editor" priority={12} />;
 }
 
 export function ScenarioReviewLoading() {
-  return <RouteLoading depth={2} label="Review queue" detail="Loading scenarios to review…" />;
+  return <ScenarioRouteLoading detail="Loading scenarios to review…" label="review queue" priority={12} />;
+}
+
+function ScenarioRouteLoading({ detail, label, priority }: { detail: string; label: string; priority: number }) {
+  return (
+    <CloudLoadingSurface
+      detail={`Opening ${label} in your workspace.`}
+      priority={priority}
+      progress={null}
+      progressLabel="Cloud workspace"
+      scope="screen"
+      title={detail}
+    />
+  );
 }
 
 /**

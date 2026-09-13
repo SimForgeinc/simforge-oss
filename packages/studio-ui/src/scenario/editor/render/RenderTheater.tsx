@@ -4,9 +4,8 @@ import { useStudioHost } from "../../../host";
 import type { PresignedArtifact } from "@simforge-oss/studio-host";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Camera, CircleStop, EyeOff } from "lucide-react";
-import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import { useVisiblePolling } from "../../../lib/use-visible-polling";
-import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
 import { RenderArtifactList } from "./RenderArtifactList";
 import { RenderParityEvidencePanel } from "./RenderParityEvidence";
 import { PostprocessPanel } from "./PostprocessPanel";
@@ -242,10 +241,11 @@ export function RenderTheater({
       </header>
 
       {!detail ? (
-        <WorkspacePaneLoading
+        <CloudLoadingSurface
+          scope="pane"
           xstyle={styles.fillShrinkable}
-          hint="Reading the render job, its attempts and its files."
-          message="Loading render…"
+          detail="Reading the render job, its attempts and its files."
+          title="Loading render…"
         />
       ) : (
         <div {...stylex.props(styles.gridFillClip)}>

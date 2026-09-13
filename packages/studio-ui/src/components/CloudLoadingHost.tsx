@@ -1,13 +1,10 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "./DashboardLoadingCoordinator.stylex";
+import { styles } from "./CloudLoadingHost.stylex";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -15,54 +12,44 @@ import {
   type ReactNode,
 } from "react";
 import { CircleAlert } from "lucide-react";
-import type { CloudLoadingTelemetry } from "./CloudLoadingSurface";
 import { CloudLoadingSurface } from "./CloudLoadingSurface";
+import {
+  CloudLoadingContext,
+  type CloudLoadingKind,
+  type CloudLoadingSource,
+} from "./cloud-loading-context";
 import { cn } from "../lib/utils";
 import { VisibleClock } from "../lib/visible-clock";
 import { Button } from "./ui/button";
 
 /**
+ * The one place a viewport-scoped `CloudLoadingSurface` is painted.
+ *
+ * Every `scope="screen"` surface below this provider publishes itself rather
+ * than rendering (see `cloud-loading-context.ts`), so a route loader handing
+ * over to the scene loader is one surface changing its text, not two surfaces
+ * — and the cloud field's WebGL context survives the handoff. The host also
+ * owns what no single surface can know: which of several concurrent sources
+ * wins, the exit animation after the last one leaves, and the stall watchdog.
+ */
+
+/**
  * Maximum visible time a byte-identical loading source may report no progress before
  * the overlay offers recovery instead of silently covering Studio forever.
  */
-export const DASHBOARD_LOADING_STALL_MS = 45_000;
+export const CLOUD_LOADING_STALL_MS = 45_000;
 
 const EXIT_MS = 900;
 const ROUTE_ENTRY_DELAY_MS = 180;
-const ROUTE_PRIORITY = 10;
-
-export type DashboardLoadingKind = "route" | "scene" | "boot";
-
-export type DashboardLoadingSource = {
-  kind: DashboardLoadingKind;
-  title: string;
-  detail?: string | null;
-  eyebrow?: string;
-  progress?: number | null;
-  progressLabel?: string;
-  progressValueLabel?: string;
-  /** Cooperative liveness signal for long stages whose visible progress is coarse. */
-  activityToken?: string | number;
-  telemetry?: CloudLoadingTelemetry | null;
-  phase?: string;
-  priority?: number;
-  severity?: "loading" | "error";
-  icon?: ReactNode;
-  actions?: ReactNode;
-};
+/** The band a `kind: "route"` source competes in; a deeper segment adds to it. */
+export const ROUTE_PRIORITY = 10;
 
 type RegisteredSource = {
   order: number;
-  source: DashboardLoadingSource;
+  source: CloudLoadingSource;
 };
 
-type DashboardLoadingContextValue = {
-  setSource: (id: string, source: DashboardLoadingSource | null) => void;
-};
-
-const DashboardLoadingContext = createContext<DashboardLoadingContextValue | null>(null);
-
-const INITIAL_ROUTE_SOURCE: DashboardLoadingSource = {
+const INITIAL_ROUTE_SOURCE: CloudLoadingSource = {
   kind: "route",
   title: "Loading your workspace…",
   detail: "Opening the dashboard in your workspace.",
@@ -72,7 +59,7 @@ const INITIAL_ROUTE_SOURCE: DashboardLoadingSource = {
   priority: ROUTE_PRIORITY,
 };
 
-export function DashboardLoadingProvider({ children }: { children: ReactNode }) {
+export function CloudLoadingHost({ children }: { children: ReactNode }) {
   const [sources, setSources] = useState<Map<string, RegisteredSource>>(() => new Map());
   const [hydrating, setHydrating] = useState(true);
   const orderRef = useRef(0);
@@ -97,18 +84,18 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
         : rawCandidate,
     [rawCandidate, stalled],
   );
-  const [renderedSource, setRenderedSource] = useState<DashboardLoadingSource>(
+  const [renderedSource, setRenderedSource] = useState<CloudLoadingSource>(
     INITIAL_ROUTE_SOURCE,
   );
   const [mounted, setMounted] = useState(true);
   const [visible, setVisible] = useState(true);
-  const [entryKind, setEntryKind] = useState<DashboardLoadingKind>("route");
+  const [entryKind, setEntryKind] = useState<CloudLoadingKind>("route");
   const exitTimerRef = useRef<number | null>(null);
   const exitFrameRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef(now());
 
   const setSource = useCallback(
-    (id: string, source: DashboardLoadingSource | null) => {
+    (id: string, source: CloudLoadingSource | null) => {
       setSources((current) => {
         const existing = current.get(id);
         if (!source && !existing) return current;
@@ -147,13 +134,13 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
       setStalled(true);
       const [kind, title] = stallSignature.split("\u0000");
       console.error(
-        `Dashboard loading stalled: ${kind} source "${title}" made no progress for ${Math.round(DASHBOARD_LOADING_STALL_MS / 1000)}s.`,
+        `Cloud loading stalled: ${kind} source "${title}" made no progress for ${Math.round(CLOUD_LOADING_STALL_MS / 1000)}s.`,
       );
     };
     const schedule = () => {
       window.clearTimeout(timer);
       if (clock.visible) {
-        timer = window.setTimeout(expire, Math.max(0, DASHBOARD_LOADING_STALL_MS - clock.now()));
+        timer = window.setTimeout(expire, Math.max(0, CLOUD_LOADING_STALL_MS - clock.now()));
       }
     };
     const clock = new VisibleClock(schedule);
@@ -207,104 +194,65 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
   const enteringScene = visible && entryKind === "scene";
 
   return (
-    <DashboardLoadingContext.Provider value={contextValue}>
+    <CloudLoadingContext.Provider value={contextValue}>
       {children}
       {mounted ? (
-        <CloudLoadingSurface
-          ariaBusy={visible && !failed}
-          ariaHidden={!visible}
-          backdropClassName={
-            visible
-              ? enteringScene
-                ? "scene-loader-cloud-enter"
-                : undefined
-              : "scene-loader-cloud-exit"
-          }
-          className={cn(
-            entryKind === "route" && "route-loading",
-            enteringScene && "dashboard-scene-loading-enter",
-          )}
-          xstyle={[
-            styles.overlay,
-            visible ? styles.overlayVisible : styles.overlayHidden,
-          ]}
-          style={{ transitionDuration: "900ms" }}
-          contentTestId="dashboard-loading-content"
-          contentWrapClassName={
-            visible
-              ? enteringScene
-                ? "scene-loader-content-enter"
-                : undefined
-              : "scene-loader-content-exit"
-          }
-          dataLoadKind={renderedSource.kind}
-          dataLoadPhase={renderedSource.phase}
-          dataTransitionState={visible ? "covering" : "revealing"}
-          detail={renderedSource.detail}
-          eyebrow={renderedSource.eyebrow ?? "SimForge"}
-          icon={renderedSource.icon}
-          progress={failed ? undefined : renderedSource.progress}
-          progressLabel={renderedSource.progressLabel}
-          progressValueLabel={renderedSource.progressValueLabel}
-          role={failed ? "alert" : "status"}
-          scope="screen"
-          telemetry={renderedSource.telemetry}
-          telemetryTestId="dashboard-loading-telemetry"
-          testId="dashboard-loading-surface"
-          title={renderedSource.title}
-        >
-          {renderedSource.actions}
-        </CloudLoadingSurface>
+        // The painted instance sits under an empty context: without it the
+        // surface would publish itself straight back to this host.
+        <CloudLoadingContext.Provider value={null}>
+          <CloudLoadingSurface
+            ariaBusy={visible && !failed}
+            ariaHidden={!visible}
+            backdropClassName={
+              visible
+                ? enteringScene
+                  ? "scene-loader-cloud-enter"
+                  : undefined
+                : "scene-loader-cloud-exit"
+            }
+            className={cn(
+              entryKind === "route" && "route-loading",
+              enteringScene && "dashboard-scene-loading-enter",
+            )}
+            xstyle={[
+              styles.overlay,
+              visible ? styles.overlayVisible : styles.overlayHidden,
+            ]}
+            style={{ transitionDuration: "900ms" }}
+            contentWrapClassName={
+              visible
+                ? enteringScene
+                  ? "scene-loader-content-enter"
+                  : undefined
+                : "scene-loader-content-exit"
+            }
+            dataTransitionState={visible ? "covering" : "revealing"}
+            detail={renderedSource.detail}
+            eyebrow={renderedSource.eyebrow ?? "SimForge"}
+            icon={renderedSource.icon}
+            kind={renderedSource.kind}
+            phase={renderedSource.phase}
+            progress={failed ? undefined : renderedSource.progress}
+            progressLabel={renderedSource.progressLabel}
+            progressValueLabel={renderedSource.progressValueLabel}
+            role={failed ? "alert" : "status"}
+            scope="screen"
+            telemetry={renderedSource.telemetry}
+            title={renderedSource.title}
+          >
+            {renderedSource.actions}
+          </CloudLoadingSurface>
+        </CloudLoadingContext.Provider>
       ) : null}
-    </DashboardLoadingContext.Provider>
+    </CloudLoadingContext.Provider>
   );
 }
 
-export function useDashboardLoadingSource(
-  source: DashboardLoadingSource | null,
-): void {
-  const coordinator = useContext(DashboardLoadingContext);
-  const reactId = useId();
-  const sourceId = `dashboard-loading-${reactId}`;
-  const sourceRef = useRef(source);
-  sourceRef.current = source;
-
-  useLayoutEffect(() => {
-    if (!coordinator) return;
-    coordinator.setSource(sourceId, sourceRef.current);
-    return () => coordinator.setSource(sourceId, null);
-  }, [coordinator, sourceId]);
-
-  useLayoutEffect(() => {
-    coordinator?.setSource(sourceId, source);
-  }, [coordinator, source, sourceId]);
-}
-
-export function dashboardRouteLoadingSource({
-  label,
-  detail,
-  depth = 1,
-}: {
-  label: string;
-  detail: string;
-  depth?: number;
-}): DashboardLoadingSource {
-  return {
-    kind: "route",
-    title: detail,
-    detail: `Opening ${label.toLowerCase()} in your workspace.`,
-    eyebrow: "SimForge",
-    progress: null,
-    progressLabel: "Cloud workspace",
-    priority: ROUTE_PRIORITY + depth,
-  };
-}
-
-function stalledLoadingSource(source: DashboardLoadingSource): DashboardLoadingSource {
+function stalledLoadingSource(source: CloudLoadingSource): CloudLoadingSource {
   return {
     kind: source.kind,
     title: "Loading is taking longer than expected",
-    detail: `“${source.title}” has made no progress for ${Math.round(DASHBOARD_LOADING_STALL_MS / 1000)} seconds. Reload to try again; if this keeps happening, report it with the current address.`,
+    detail: `“${source.title}” has made no progress for ${Math.round(CLOUD_LOADING_STALL_MS / 1000)} seconds. Reload to try again; if this keeps happening, report it with the current address.`,
     eyebrow: "SimForge interrupted",
     severity: "error",
     priority: 100,
@@ -322,7 +270,7 @@ function stalledLoadingSource(source: DashboardLoadingSource): DashboardLoadingS
 
 function highestPrioritySource(
   sources: Map<string, RegisteredSource>,
-): DashboardLoadingSource | null {
+): CloudLoadingSource | null {
   let selected: RegisteredSource | null = null;
   for (const candidate of sources.values()) {
     if (!selected || compareSources(candidate, selected) > 0) selected = candidate;
@@ -336,7 +284,7 @@ function compareSources(left: RegisteredSource, right: RegisteredSource): number
   return leftPriority === rightPriority ? left.order - right.order : leftPriority - rightPriority;
 }
 
-function sourcePriority(source: DashboardLoadingSource): number {
+function sourcePriority(source: CloudLoadingSource): number {
   if (source.severity === "error") return 100;
   if (source.priority !== undefined) return source.priority;
   switch (source.kind) {
@@ -347,8 +295,8 @@ function sourcePriority(source: DashboardLoadingSource): number {
 }
 
 function loadingSourcesEqual(
-  left: DashboardLoadingSource,
-  right: DashboardLoadingSource,
+  left: CloudLoadingSource,
+  right: CloudLoadingSource,
 ): boolean {
   return (
     left.kind === right.kind

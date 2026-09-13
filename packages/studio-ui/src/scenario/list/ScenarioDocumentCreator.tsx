@@ -10,8 +10,7 @@ import type {
 } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import { cn } from "../../lib/utils";
 import { list, paneLoading } from "../scenario-controls.stylex";
 import {
@@ -286,10 +285,11 @@ export function ScenarioDocumentCreator({
         ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto" data-testid="scenario-document-list">
           {documentsLoading && documents.length === 0 ? (
-            <WorkspacePaneLoading
+            <CloudLoadingSurface
+          scope="pane"
               xstyle={paneLoading.h24}
-              hint="Reading scenarios and their saved revisions."
-              message="Loading scenarios"
+              detail="Reading scenarios and their saved revisions."
+              title="Loading scenarios"
             />
           ) : documents.length === 0 ? (
             <div className="border-b border-white/10 px-3 py-4 text-sm text-muted-foreground">

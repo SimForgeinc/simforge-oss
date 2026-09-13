@@ -15,7 +15,7 @@ import {
 import type {
   ScenarioAuthoringQuality,
 } from "../../lib/scenario/contracts";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import {
   indexedEditorHeightSampler,
   useEditorRuntime,
@@ -65,7 +65,7 @@ import {
   sceneLoadProgressFromSnapshot,
   type SceneLoadProgressTracker,
 } from "../scene/map-load-progress";
-import { SceneLoadingTransition } from "../scene/SceneLoadingTransition";
+import { useSceneLoadingSurfaceProps } from "../scene/scene-loading";
 import { EditorHeader } from "./regions/EditorHeader";
 import { EditorModeBanner } from "./regions/EditorModeBanner";
 import { PlacementCursorHint } from "./regions/PlacementCursorHint";
@@ -914,6 +914,12 @@ export function ScenarioEditorSurface({
     actorLabel: manualDriveActorLabel,
   });
 
+  const localSceneLoading = useSceneLoadingSurfaceProps(
+    localMapLoadError
+      ? failedSceneLoadProgress(map.label, localMapLoadError)
+      : localLoadProgress,
+  );
+
   return (
     <EditorConfigurationBlockProvider blocked={Boolean(sharedPlayback?.inspecting)}>
       <EditorOverlayProvider
@@ -1086,13 +1092,8 @@ export function ScenarioEditorSurface({
           </div>
         ) : null}
       />
-      {!externalWorld ? (
-        <SceneLoadingTransition
-          visible={!sceneReady || localMapLoadError !== null}
-          progress={localMapLoadError
-            ? failedSceneLoadProgress(map.label, localMapLoadError)
-            : localLoadProgress}
-        />
+      {!externalWorld && (!sceneReady || localMapLoadError !== null) ? (
+        <CloudLoadingSurface scope="screen" {...localSceneLoading} />
       ) : null}
 
       <EditorOverlayHost

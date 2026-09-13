@@ -2,7 +2,7 @@
 
 import type { PresignedArtifact } from "@simforge-oss/studio-host";
 import { useEffect, useState } from "react";
-import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
+import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderParityEvidence.stylex";
 
@@ -183,10 +183,11 @@ export function RenderParityEvidencePanel({
   }
   if (!evidence) {
     return (
-      <WorkspacePaneLoading
+      <CloudLoadingSurface
+          scope="pane"
         xstyle={styles.minH56}
-        hint="Comparing the rendered behavior with the saved scenario."
-        message="Reading CARLA behavior evidence…"
+        detail="Comparing the rendered behavior with the saved scenario."
+        title="Reading CARLA behavior evidence…"
       />
     );
   }

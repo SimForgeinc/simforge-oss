@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ClipboardCheck, RefreshCw } from "lucide-react";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import { useSetPageTitle } from "../../components/TopBarSlot";
 import { VideoPreviewTile } from "../../components/VideoPreviewTile";
 import { Badge } from "../../components/ui/badge";
@@ -250,10 +249,11 @@ export function ScenarioReviewQueue() {
 
       <div className="flex-1 px-5 py-5 sm:px-6">
         {loading ? (
-          <WorkspacePaneLoading
+          <CloudLoadingSurface
+          scope="pane"
             xstyle={paneLoading.h420}
-            hint="Collecting unrated scenarios from this workspace."
-            message="Loading the review queue…"
+            detail="Collecting unrated scenarios from this workspace."
+            title="Loading the review queue…"
           />
         ) : items.length === 0 ? (
           <EmptyState

@@ -11,8 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
+import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/CloudLoadingSurface";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
@@ -175,10 +174,11 @@ export function ScenarioDatasetRail({
         ) : null}
 
         {loading && datasets.length === 0 ? (
-          <WorkspacePaneLoading
+          <CloudLoadingSurface
+          scope="pane"
             xstyle={paneLoading.h52}
-            hint="Reading this workspace."
-            message="Loading datasets"
+            detail="Reading this workspace."
+            title="Loading datasets"
           />
         ) : datasets.length === 0 ? (
           <div className="px-1.5 py-6 text-center">
