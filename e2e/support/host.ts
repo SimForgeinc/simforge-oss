@@ -54,7 +54,7 @@ async function reserveLoopbackPort(): Promise<number> {
   }
 }
 
-async function waitForHostRecord(context: E2eContext, child: ChildProcess, deadline: number): Promise<LocalHostState> {
+async function waitForHostRecord(context: E2eContext, child: ChildProcess, port: number, deadline: number): Promise<LocalHostState> {
   const env = { SIMFORGE_CLOUD_ROOT: context.dataRoot };
   while (Date.now() < deadline) {
     if (child.exitCode !== null || child.signalCode !== null) {
@@ -64,7 +64,11 @@ async function waitForHostRecord(context: E2eContext, child: ChildProcess, deadl
       );
     }
     const state = await readLocalHostState(env);
-    if (state !== null) return state;
+    // A concurrent launch over the same data root can still see the first
+    // host's record while its own supervisor is starting. Only accept the
+    // record for the port reserved by this launch; otherwise the caller would
+    // accidentally reuse the first host's URL and control token.
+    if (state !== null && state.port === port) return state;
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
   throw new Error(`The Studio supervisor did not publish ${LOCAL_HOST_STATE_FILE} within the readiness deadline`);
@@ -107,7 +111,7 @@ export async function startLocalHost(context: E2eContext, options: StartLocalHos
   };
   const deadline = Date.now() + (options.readyTimeoutMs ?? (hostMode === "dev" ? 300_000 : 120_000));
   try {
-    const state = await waitForHostRecord(context, child, deadline);
+    const state = await waitForHostRecord(context, child, port, deadline);
     const ready = await waitForLocalHostReady(state.baseUrl, {
       timeoutMs: Math.max(1_000, deadline - Date.now()),
       headers: { authorization: `Bearer ${state.controlToken}` },
@@ -120,6 +124,7 @@ export async function startLocalHost(context: E2eContext, options: StartLocalHos
     throw error;
   }
 }
+
 
 /**
  * The production browser bootstrap: exchange the control token for a one-use
