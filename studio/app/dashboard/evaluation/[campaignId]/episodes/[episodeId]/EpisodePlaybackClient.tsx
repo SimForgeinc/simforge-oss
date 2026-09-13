@@ -67,7 +67,7 @@ function EgoSpeedChart({
         onSeek(Math.round(fraction * (ticks.length - 1)));
       }}
     >
-      <text x={6} y={14} {...stylex.props(styles.tinyMuted)}>
+      <text x={6} y={14} {...stylex.props(styles.svgCaptionTiny)}>
         ego speed (m/s), max {maxSpeed.toFixed(1)}
       </text>
       <path d={path} fill="none" stroke="hsl(160 84% 39%)" strokeWidth={1.6} />
@@ -126,7 +126,7 @@ function PathPlot({ ticks, cursor }: { ticks: EvalViewTick[]; cursor: number }) 
       {...stylex.props(styles.chartStatic)}
       data-testid="path-plot"
     >
-      <text x={6} y={14} {...stylex.props(styles.tinyMuted)}>
+      <text x={6} y={14} {...stylex.props(styles.svgCaptionTiny)}>
         top-down path (m)
       </text>
       <path
@@ -284,7 +284,7 @@ export function EpisodePlaybackClient({
                           ] as const
                         ).map(([label, value]) => (
                           <div key={label}>
-                            <dt {...stylex.props(styles.tinyMuted)}>{label}</dt>
+                            <dt {...stylex.props(styles.tinyLabel)}>{label}</dt>
                             <dd>{value}</dd>
                           </div>
                         ))
@@ -398,7 +398,7 @@ export function EpisodePlaybackClient({
                         <span {...stylex.props(styles.monoSmall)}>{event.type}</span>
                         <Badge
                           variant={event.severity === "infraction" ? "destructive" : "secondary"}
-                          xstyle={styles.tinyMuted}
+                          xstyle={styles.tinyBadge}
                         >
                           {event.severity}
                         </Badge>

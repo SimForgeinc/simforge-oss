@@ -55,7 +55,7 @@ function PolicySummaryCard({
             ] as const
           ).map(([term, value]) => (
             <div key={term}>
-              <dt {...stylex.props(styles.tinyMuted)} >{term}</dt>
+              <dt {...stylex.props(styles.xsMuted)} >{term}</dt>
               <dd {...stylex.props(styles.mono)} >{value}</dd>
             </div>
           ))}
@@ -175,7 +175,7 @@ export function CompareClient({
                             step {episode.divergenceStep} · {episode.divergenceTS?.toFixed(1)}s
                           </Badge>
                         ) : (
-                          <span {...stylex.props(styles.tinyMuted)} >
+                          <span {...stylex.props(styles.xsMuted)} >
                             {episode.aEpisodeId && episode.bEpisodeId ? "none" : "incomplete pair"}
                           </span>
                         )}

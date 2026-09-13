@@ -59,7 +59,7 @@ export function SelectMenu({
           <ChevronDown aria-hidden="true" {...stylex.props(styles.icon)} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} {...mergeStyleProps(stylex.props(styles.content), contentClassName)}>
+      <DropdownMenuContent align={align} xstyle={styles.content} className={contentClassName}>
         <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
           {normalized.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value} disabled={option.disabled}>

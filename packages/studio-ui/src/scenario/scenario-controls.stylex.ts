@@ -181,6 +181,7 @@ export const list = stylex.create({
     paddingBlock: 0,
     fontFamily: text.fontMeta,
     fontSize: "8px",
+    lineHeight: "inherit",
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
     color: "rgb(252 165 165)",
@@ -260,6 +261,7 @@ export const chip = stylex.create({
     fontSize: "10px",
     fontWeight: 700,
     textTransform: "uppercase",
+    lineHeight: "inherit",
     letterSpacing: "0.16em",
   },
   /** `bg-foreground text-background hover:bg-foreground/90` */
@@ -360,6 +362,7 @@ export const dataset = stylex.create({
     paddingInline: 0,
     fontFamily: CHIP_FONT,
     fontSize: "10px",
+    lineHeight: "inherit",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.16em",
@@ -436,9 +439,9 @@ export const rail = stylex.create({
 /** `scenario/review` — the review queue's badges and saving indicator. */
 export const review = stylex.create({
   /** `text-[10px]` */
-  tagBadge: { fontSize: "10px" },
+  tagBadge: { fontSize: "10px", lineHeight: "inherit" },
   /** `font-mono text-[10px]` */
-  idBadge: { fontFamily: text.fontMono, fontSize: "10px" },
+  idBadge: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" },
   /** `ml-1 text-xs text-muted-foreground` */
   saving: {
     marginLeft: "0.25rem",

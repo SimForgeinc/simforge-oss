@@ -27,6 +27,7 @@ export const styles = stylex.create({
     backgroundColor: { default: "transparent", ":hover": "rgb(255 255 255 / 0.05)" },
     paddingInline: "0.75rem",
     fontSize: "11px",
+    lineHeight: "inherit",
     color: { default: "rgb(255 255 255 / 0.75)", ":hover": "rgb(255 255 255 / 1)" },
   },
 
@@ -39,6 +40,7 @@ export const styles = stylex.create({
     backgroundColor: { default: "#E8E044", ":hover": "#f1ea55" },
     paddingInline: "0.75rem",
     fontSize: "11px",
+    lineHeight: "inherit",
     color: "black",
   },
 
@@ -51,6 +53,7 @@ export const styles = stylex.create({
     backgroundColor: { default: null, ":hover": "transparent" },
     paddingInline: "0.75rem",
     fontSize: "11px",
+    lineHeight: "inherit",
     color: { default: "rgb(255 255 255 / 0.6)", ":hover": "rgb(255 255 255 / 1)" },
   },
 });

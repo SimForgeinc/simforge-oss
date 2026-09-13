@@ -1706,6 +1706,7 @@ export const styles = stylex.create({
     flexShrink: 0,
     fontFamily: "var(--font-mono), ui-monospace, monospace",
     fontSize: "10px",
+    lineHeight: "inherit",
   },
   /**
    * mb-3 flex items-center gap-3
@@ -5218,6 +5219,7 @@ export const styles = stylex.create({
     paddingBlock: "0",
     fontFamily: "var(--font-mono), ui-monospace, monospace",
     fontSize: "10px",
+    lineHeight: "inherit",
   },
   /**
    * flex flex-wrap items-center gap-1 px-1
@@ -5270,6 +5272,7 @@ export const styles = stylex.create({
     paddingInline: "0.375rem",
     paddingBlock: "0",
     fontSize: "11px",
+    lineHeight: "inherit",
     fontWeight: 400,
     color: "hsl(var(--foreground))",
   },
@@ -5282,6 +5285,7 @@ export const styles = stylex.create({
     paddingInline: "0.375rem",
     paddingBlock: "0",
     fontSize: "11px",
+    lineHeight: "inherit",
     fontWeight: 400,
     color: "hsl(var(--muted-foreground))",
   },
@@ -5450,6 +5454,7 @@ export const styles = stylex.create({
     paddingInline: "0.5rem",
     paddingBlock: "0.125rem",
     fontSize: "9px",
+    lineHeight: "inherit",
     color: "hsl(var(--foreground))",
   },
   /**

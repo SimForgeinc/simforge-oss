@@ -1,6 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 import { text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
+const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
+
 export const styles = stylex.create({
   shell: { display: "flex", height: "100%", flexDirection: "column", overflowY: "auto" },
   content: { display: "flex", flexDirection: "column", gap: "1.25rem", paddingInline: "1.25rem", paddingBlock: "1.25rem", "@media (min-width: 640px)": { paddingInline: "1.5rem" } },
@@ -16,8 +18,24 @@ export const styles = stylex.create({
   dlMetrics: { display: "grid", columnGap: "2rem", rowGap: ".25rem", fontSize: ".75rem", lineHeight: "1rem", "@media (min-width: 640px)": { gridTemplateColumns: "repeat(3,minmax(0,1fr))" } },
   cardStack3: { display: "flex", flexDirection: "column", gap: ".75rem" }, cardStack3Top: { display: "flex", flexDirection: "column", gap: ".75rem", paddingTop: "1.25rem" },
   cardHeaderTight: { paddingBottom: ".5rem" }, cardTitle: { fontSize: "1rem", lineHeight: "1.5rem" }, cardTitleSmall: { fontSize: ".875rem", lineHeight: "1.25rem", fontWeight: 600, color: "hsl(var(--foreground))" }, cardTitleLarge: { fontFamily: text.fontMono, fontSize: "1.5rem", lineHeight: "2rem" },
-  mono: { fontFamily: text.fontMono }, monoSmall: { fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem" }, monoTiny: { fontFamily: text.fontMono, fontSize: ".625rem", lineHeight: ".875rem" },
-  muted: { color: "hsl(var(--muted-foreground))" }, tinyMuted: { fontSize: ".625rem", lineHeight: ".875rem", color: "hsl(var(--muted-foreground))" }, label: { fontSize: ".75rem", lineHeight: "1rem", textTransform: "uppercase", letterSpacing: ".025em", color: "hsl(var(--muted-foreground))" }, labelMedium: { fontSize: ".75rem", lineHeight: "1rem", fontWeight: 500, color: "hsl(var(--muted-foreground))" },
+  mono: { fontFamily: text.fontMono }, monoSmall: { fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem" },
+  /** `font-mono text-[10px]` replaced the Badge's entire `text-xs` utility, including its leading. */
+  monoTiny: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" },
+  muted: { color: "hsl(var(--muted-foreground))" },
+  /** `text-[10px] text-muted-foreground` — the reasoning note. */
+  tinyMuted: { fontSize: "10px", color: "hsl(var(--muted-foreground))" },
+  // SVG paint: `fill-muted-foreground` on the two chart captions. `color` would
+  // leave the glyphs on the UA default fill.
+  svgCaptionTiny: { fontSize: "10px", fill: "hsl(var(--muted-foreground))" },
+  /** `text-[10px] uppercase text-muted-foreground` — the ego-state <dt>s. */
+  tinyLabel: { fontSize: "10px", textTransform: "uppercase", color: "hsl(var(--muted-foreground))" },
+  /** `text-[10px]` alone — it rides a `Badge` variant, which owns the colour. */
+  tinyBadge: { fontSize: "10px", lineHeight: "inherit" },
+  /** `text-xs text-muted-foreground` — the named scale, which carries its own leading. */
+  xsMuted: { fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" },
+  /** `text-xs leading-5 text-muted-foreground` — same scale, looser leading for the run notes. */
+  xsMutedRelaxed: { fontSize: ".75rem", lineHeight: "1.25rem", color: "hsl(var(--muted-foreground))" },
+  label: { fontSize: ".75rem", lineHeight: "1rem", textTransform: "uppercase", letterSpacing: ".025em", color: "hsl(var(--muted-foreground))" }, labelMedium: { fontSize: ".75rem", lineHeight: "1rem", fontWeight: 500, color: "hsl(var(--muted-foreground))" },
   textSmall: { fontSize: ".875rem", lineHeight: "1.25rem" }, link: { ":hover": { textDecorationLine: "underline" } }, linkMedium: { fontWeight: 500, ":hover": { textDecorationLine: "underline" } },
   /** `mt-0.5 break-all text-foreground` — provenance <dd>s hold unbroken digests/ids that must break anywhere. */
   ddBreakAll: { marginTop: ".125rem", wordBreak: "break-all", color: "hsl(var(--foreground))" },
@@ -27,8 +45,8 @@ export const styles = stylex.create({
   /** `text-emerald-600 dark:text-emerald-400` — the shell is permanently dark, so the dark value is folded. */
   deltaPositive: { color: "rgb(52,211,153)" }, deltaNegative: { color: "hsl(var(--destructive))" },
   icon: { width: "1rem", height: "1rem", marginRight: ".375rem" }, iconBare: { width: "1rem", height: "1rem" }, iconTopShrink: { marginTop: ".125rem", width: "1rem", height: "1rem", flexShrink: 0 },
-  spinnerSm: { width: ".875rem", height: ".875rem", animationName: "spin", animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite", color: "hsl(var(--muted-foreground))" },
-  spinnerPlain: { width: "1rem", height: "1rem", animationName: "spin", animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
+  spinnerSm: { width: ".875rem", height: ".875rem", animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite", color: "hsl(var(--muted-foreground))" },
+  spinnerPlain: { width: "1rem", height: "1rem", animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
   flexWrap: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: ".75rem" }, controls: { display: "flex", alignItems: "center", gap: ".75rem" }, range: { width: "100%", accentColor: "hsl(var(--primary))" }, time: { width: "11rem", flexShrink: 0, textAlign: "right", fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" },
   chart: { width: "100%", cursor: "crosshair", userSelect: "none", borderRadius: ".375rem", borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))", backgroundColor: "hsl(var(--muted) / .3)" }, chartStatic: { width: "100%", borderRadius: ".375rem", borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))", backgroundColor: "hsl(var(--muted) / .3)" },
   section: { display: "flex", flexDirection: "column", rowGap: ".5rem" }, resultBox: { display: "flex", alignItems: "flex-start", gap: ".5rem", borderRadius: ".375rem", paddingInline: ".75rem", paddingBlock: ".5rem", fontSize: ".875rem", lineHeight: "1.25rem", borderWidth: 1, borderStyle: "solid" },
@@ -41,5 +59,5 @@ export const styles = stylex.create({
    * variant's hover value is restated here rather than dropped.
    */
   promotedBadge: { backgroundColor: { default: "rgba(16,185,129,.15)", ":hover": "hsl(var(--primary) / 0.8)" }, color: "rgb(52,211,153)" },
-  list: { display: "flex", flexDirection: "column", rowGap: ".375rem" }, event: { display: "flex", alignItems: "center", gap: ".75rem", borderRadius: ".375rem", borderWidth: 1, borderStyle: "solid", borderColor: "transparent", paddingInline: ".5rem", paddingBlock: ".25rem", fontSize: ".875rem", lineHeight: "1.25rem" }, reached: { backgroundColor: "hsl(var(--muted) / .5)" }, unreached: { opacity: .5 }, dot: { width: ".5rem", height: ".5rem", flexShrink: 0, borderRadius: "9999px" }, eventPosition: { fontFamily: text.fontMono, fontSize: ".625rem", lineHeight: ".875rem", color: "hsl(var(--muted-foreground))" }, infractionBadge: { fontFamily: text.fontMono, fontSize: ".625rem", lineHeight: ".875rem" }, frames: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: ".5rem" }, image: { width: "100%", borderRadius: ".25rem", borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))" }, centerCaption: { marginTop: ".25rem", textAlign: "center" }, whitespace: { whiteSpace: "pre-wrap", fontSize: ".875rem", lineHeight: "1.5rem", color: "hsl(var(--foreground))" }, actionData: { borderRadius: ".375rem", backgroundColor: "hsl(var(--muted) / .4)", padding: ".5rem", fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" }, outputList: { borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))", fontSize: ".75rem", lineHeight: "1rem" }, outputItem: { paddingInline: ".75rem", paddingBlock: ".5rem", fontFamily: text.fontMono, color: "hsl(var(--muted-foreground))", borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border))" },
+  list: { display: "flex", flexDirection: "column", rowGap: ".375rem" }, event: { display: "flex", alignItems: "center", gap: ".75rem", borderRadius: ".375rem", borderWidth: 1, borderStyle: "solid", borderColor: "transparent", paddingInline: ".5rem", paddingBlock: ".25rem", fontSize: ".875rem", lineHeight: "1.25rem" }, reached: { backgroundColor: "hsl(var(--muted) / .5)" }, unreached: { opacity: .5 }, dot: { width: ".5rem", height: ".5rem", flexShrink: 0, borderRadius: "9999px" }, eventPosition: { fontFamily: text.fontMono, fontSize: "10px", color: "hsl(var(--muted-foreground))" }, infractionBadge: { fontFamily: text.fontMono, fontSize: "10px", lineHeight: "inherit" }, frames: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: ".5rem" }, image: { width: "100%", borderRadius: ".25rem", borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))" }, centerCaption: { marginTop: ".25rem", textAlign: "center" }, whitespace: { whiteSpace: "pre-wrap", fontSize: ".875rem", lineHeight: "1.5rem", color: "hsl(var(--foreground))" }, actionData: { borderRadius: ".375rem", backgroundColor: "hsl(var(--muted) / .4)", padding: ".5rem", fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" }, outputList: { borderWidth: 1, borderStyle: "solid", borderColor: "hsl(var(--border))", fontSize: ".75rem", lineHeight: "1rem" }, outputItem: { paddingInline: ".75rem", paddingBlock: ".5rem", fontFamily: text.fontMono, color: "hsl(var(--muted-foreground))", borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: "hsl(var(--border))" },
 });

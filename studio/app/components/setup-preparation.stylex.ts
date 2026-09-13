@@ -61,7 +61,7 @@ export const setup = stylex.create({
   spinIcon: { animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },
   gate: { height: "100%", minHeight: 0 },
   gateHidden: { visibility: "hidden" },
-  compactButton: { height: "2rem", display: "inline-flex", alignItems: "center", gap: space.sm, borderRadius: radii.full, borderColor: "rgba(232,224,68,0.3)", backgroundColor: "rgba(232,224,68,0.1)", paddingInline: space.lg, fontSize: "11px", color: colors.accent },
+  compactButton: { height: "2rem", display: "inline-flex", alignItems: "center", gap: space.sm, borderRadius: radii.full, borderColor: "rgba(232,224,68,0.3)", backgroundColor: "rgba(232,224,68,0.1)", paddingInline: space.lg, fontSize: "11px", lineHeight: "inherit", color: colors.accent },
   primaryButton: { height: "3rem", flex: 1, borderRadius: radii.full, backgroundColor: colors.accent, color: colors.accentText },
   secondaryButton: { height: "3rem", borderRadius: radii.full },
   iconSmall: { width: "0.875rem", height: "0.875rem" },

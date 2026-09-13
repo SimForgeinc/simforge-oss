@@ -158,6 +158,7 @@ export const card = stylex.create({
     paddingInline: "0.375rem",
     paddingBlock: 0,
     fontSize: "10px",
+    lineHeight: "inherit",
     color: colors.primary,
   },
   // size-3 animate-pulse

@@ -157,12 +157,20 @@ export const driveText = stylex.defineVars({
   fontMeta: "var(--font-meta), ui-monospace, monospace",
   fontMono: "var(--font-mono), ui-monospace, monospace",
 
-  /** 9px — the model tag, and only that. */
-  sizeTag: "0.5625rem",
-  /** 10px — unit captions and secondary instrument numbers. */
-  sizeMicro: "0.625rem",
-  /** 11px — every HUD label and toggle. */
-  sizeMeta: "0.6875rem",
+  /**
+   * The instrument type sizes, in px on purpose.
+   *
+   * These came from Tailwind arbitrary values (`text-[9px]`, `text-[10px]`,
+   * `text-[11px]`), and px is part of the value: a HUD number sits beside a
+   * live 3D scene at a fixed pixel size, and must not grow with the reader's
+   * root font size the way a rem would.
+   */
+  /** The model tag, and only that. */
+  sizeTag: "9px",
+  /** Unit captions and secondary instrument numbers. */
+  sizeMicro: "10px",
+  /** Every HUD label and toggle. */
+  sizeMeta: "11px",
 
   /** Tracking for uppercase instrument type, which is illegible without it. */
   trackTag: "0.12em",

@@ -186,7 +186,7 @@ export function PolicyDetailClient({
                       </TableCell>
                       <TableCell>
                         {Object.keys(episode.score?.infractions ?? {}).length === 0 ? (
-                          <span {...stylex.props(styles.tinyMuted)} >none</span>
+                          <span {...stylex.props(styles.xsMuted)} >none</span>
                         ) : (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: ".25rem" }} >
                             {Object.entries(episode.score?.infractions ?? {}).map(

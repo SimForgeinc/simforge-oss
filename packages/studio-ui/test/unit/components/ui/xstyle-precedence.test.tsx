@@ -8,6 +8,7 @@ import { Input } from "../../../../src/components/ui/input";
 import { Tabs, TabsList } from "../../../../src/components/ui/tabs";
 import { Badge } from "../../../../src/components/ui/badge";
 import {
+  badge as badgeBase,
   badgeVariants as badgeVariantStyles,
   button as buttonBase,
   buttonSizes,
@@ -34,6 +35,8 @@ import {
 } from "../../../../src/components/ui/tooltip";
 import { styles as tooltipStyles } from "../../../../src/components/ui/tooltip.stylex";
 import { callerStyles } from "../../../helpers/xstyle-precedence.stylex";
+import { CarlaCompatibilityPill } from "../../../../src/components/CarlaCompatibilityPill";
+import { styles as pillStyles } from "../../../../src/components/CarlaCompatibilityPill.stylex";
 
 /**
  * A caller's styles have to beat the primitive's own on every property they
@@ -192,5 +195,31 @@ describe("xstyle precedence", () => {
     const variantFill = atomsFor(badgeVariantStyles.default, "backgroundColor");
     expect(variantFill.length).toBeGreaterThan(1);
     for (const atom of variantFill) expect(classes).not.toContain(atom);
+  });
+
+  /**
+   * The seam has a real consumer, and it is the one that regressed: routed
+   * through `className`, the pill kept the Badge variant's fill, text colour
+   * and border, and the base's `text-xs` and `px-2.5`, because every atom
+   * survived onto the element and stylesheet order picked the winner.
+   */
+  it("lets CarlaCompatibilityPill replace the Badge's padding, size and status colours", () => {
+    render(
+      <CarlaCompatibilityPill
+        compatibility={{ status: "native", blueprintId: "vehicle.tesla.model3", dimensionalAgreement: "exact" }}
+      />,
+    );
+    const classes = atoms(screen.getByTitle(/vehicle\.tesla\.model3/));
+
+    for (const property of ["paddingInline", "paddingBlock", "fontSize"] as const) {
+      expect(classes).toContain(atomFor(pillStyles.small, property));
+      expect(classes).not.toContain(atomFor(badgeBase.base, property));
+    }
+    for (const property of ["backgroundColor", "color", "borderColor"] as const) {
+      for (const atom of atomsFor(pillStyles.native, property)) expect(classes).toContain(atom);
+      for (const atom of atomsFor(badgeVariantStyles.secondary, property)) {
+        expect(classes).not.toContain(atom);
+      }
+    }
   });
 });

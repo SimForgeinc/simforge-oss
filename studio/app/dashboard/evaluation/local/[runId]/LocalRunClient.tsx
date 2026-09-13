@@ -183,7 +183,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
                     </div>
                   ))}
                 </dl>
-                <p {...stylex.props(styles.tinyMuted)} >
+                <p {...stylex.props(styles.xsMutedRelaxed)} >
                   {manifest.scored
                     ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or AlpaSim benchmark number."
                     : "This run is not scored: no reference future was available, so the numbers above are not a driving score."}
@@ -217,7 +217,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
                     </li>
                   ))}
                 </ul>
-                <p {...stylex.props(styles.tinyMuted)} >
+                <p {...stylex.props(styles.xsMutedRelaxed)} >
                   The run writes `result.json` (simforge.eval-result-manifest/v1) last, as its
                   completion marker — the same document a cloud run produces.
                 </p>

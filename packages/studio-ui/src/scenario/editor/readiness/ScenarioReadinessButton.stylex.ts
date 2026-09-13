@@ -74,6 +74,7 @@ export const styles = stylex.create({
     paddingTop: space.md,
     paddingBottom: space.md,
     fontSize: "11px",
+    lineHeight: "inherit",
   },
   // font-mono text-[9px] text-muted-foreground
   monoMuted: {

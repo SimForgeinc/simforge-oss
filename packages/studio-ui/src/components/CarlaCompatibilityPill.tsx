@@ -1,6 +1,4 @@
-import * as stylex from "@stylexjs/stylex";
 import { Badge } from "./ui/badge";
-import { mergeStyleProps } from "./stylex/surface";
 import { styles } from "./CarlaCompatibilityPill.stylex";
 import {
   CARLA_COMPATIBILITY_HINT,
@@ -32,14 +30,18 @@ export function CarlaCompatibilityPill({
       variant={compatibility.status === "browser-only" ? "outline" : "secondary"}
       data-carla-compatibility={compatibility.status}
       title={`${CARLA_COMPATIBILITY_HINT[compatibility.status]} ${detail}`}
-      {...mergeStyleProps(
-        stylex.props(
-          styles.root,
-          size === "sm" ? styles.small : styles.medium,
-          STATUS_STYLE[compatibility.status],
-        ),
-        undefined,
-      )}
+      /**
+       * `xstyle`, not `className`: Badge applies its own base and variant
+       * styles, and StyleX can only merge two style sets that reach it as
+       * styles. Through `className` both atom sets survive onto the element
+       * and the stylesheet's order decides each property, which loses the
+       * pill's padding, size and status colours to the Badge variant.
+       */
+      xstyle={[
+        styles.root,
+        size === "sm" ? styles.small : styles.medium,
+        STATUS_STYLE[compatibility.status],
+      ]}
     >
       <span>{CARLA_COMPATIBILITY_LABEL[compatibility.status]}</span>
     </Badge>
