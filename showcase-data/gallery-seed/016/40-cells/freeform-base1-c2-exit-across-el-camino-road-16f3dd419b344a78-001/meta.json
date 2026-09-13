@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-c2-exit-across-el-camino-road-16f3dd419b344a78-001",
+ "briefId": "c2-exit-across",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "0bc6ef7a56020eaa469ab76429ad6eae7b5b8fc1c3ea5cb72cff268eaa2d8e2f",
+ "map": "el-camino-road",
+ "site": "16f3dd419b344a78",
+ "draw": 1,
+ "seed": "1c193cd81b8b843c",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 3.567,
+  "tMinClearance": 8.56
+ },
+ "notes": "brief: A vehicle crosses the ego lane to reach an exit."
+}

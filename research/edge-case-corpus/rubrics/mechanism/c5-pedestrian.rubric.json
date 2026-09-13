@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the ego must pass the pedestrian with positive body clearance",
+   "id": "R-vru-clearance",
+   "kind": "unsupported",
+   "reason": "a clearance criterion needs a concrete actor pair, and the VRU role id varies across briefs in this category; true OBB clearance is enforced by gate C3 instead",
+   "required": false
+  }
+ ],
+ "intentId": "C5.pedestrian",
+ "originalIntent": "Euro NCAP VRU AEB CPFA/CPNA/CPNC protocols. The pedestrian target crosses the ego path; the acceptance band is a near miss, and a contact is a failure of the scenario, not a success. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Pedestrian crossing conflict: the VRU must enter the ego path and the ego must not strike it",
+ "version": 1
+}

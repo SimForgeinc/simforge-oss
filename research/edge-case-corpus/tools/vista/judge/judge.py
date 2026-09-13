@@ -31,7 +31,7 @@ import gate as G
 
 MODEL = 'gpt-5.6-luna'
 EFFORT = 'medium'
-ENDPOINT = 'https://api.openai.com/v1/responses'
+ENDPOINT = os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1').rstrip('/') + '/responses'
 
 RUBRIC_VERSION = 'vista-independent-judge/v1'
 

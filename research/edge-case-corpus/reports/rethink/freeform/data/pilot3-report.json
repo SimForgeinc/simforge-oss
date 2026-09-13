@@ -1,0 +1,1226 @@
+{
+ "gate": "freeform full-schema authoring (gpt-5.6-luna, effort medium)",
+ "stream": "freeform",
+ "runId": "pilot3",
+ "arm": "pilot3",
+ "runDir": "/tmp/tgr-freeform-pilot3",
+ "model": "gpt-5.6-luna",
+ "effort": "medium",
+ "endpoint": "http://127.0.0.1:4141/v1",
+ "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+ "mapsUsed": [
+  "yale-street",
+  "belmont-research-center",
+  "el-camino-road",
+  "easterbrook-discovery-school",
+  "richmond-field-station"
+ ],
+ "gateHashBefore": "GATE-HASH TRIPWIRE: PASS -- frozen gate v1 1a08698e95fca4bc / v2 3823182614e5a5ba unchanged",
+ "gateHashAfter": "GATE-HASH TRIPWIRE: PASS -- frozen gate v1 1a08698e95fca4bc / v2 3823182614e5a5ba unchanged",
+ "briefs": 5,
+ "admitted": 1,
+ "admissionRate": 0.2,
+ "probeDraws": 4,
+ "draws": 10,
+ "maxSites": 10,
+ "budgets": {
+  "validate": 3,
+  "site": 2,
+  "revise": 3
+ },
+ "keepCells": 6,
+ "perCategory": {
+  "C13.control": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C2.cut-in-merge": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C3.intersection": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C5.pedestrian": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C9.hazard": {
+   "total": 1,
+   "admitted": 1
+  }
+ },
+ "categoriesCovered": 1,
+ "firstFailureAcrossRejected": {
+  "C3": 24,
+  "C2": 10,
+  "C5": 2,
+  "template_invalid": 1
+ },
+ "usageTotal": {
+  "input_tokens": 460609,
+  "output_tokens": 111852,
+  "total_tokens": 572461,
+  "calls": 32
+ },
+ "wallSeconds": 1135.7,
+ "censusAggAllCells": {
+  "cells": 550,
+  "censusVersion": 1,
+  "actorsMoving": {
+   "mean": 1.0255,
+   "median": 1.0,
+   "max": 3
+  },
+  "laneChangesExecuted": {
+   "mean": 0.0127,
+   "median": 0.0,
+   "max": 1
+  },
+  "swerveEvents": {
+   "mean": 0.0364,
+   "median": 0.0,
+   "max": 2
+  },
+  "signalPhaseChanges": {
+   "mean": 0.2545,
+   "median": 0.0,
+   "max": 6
+  },
+  "interactingPairs": {
+   "mean": 0.9527,
+   "median": 1.0,
+   "max": 3
+  },
+  "speedVarianceEgoPath": {
+   "mean": 11.8097,
+   "median": 10.1858,
+   "max": 55.3909
+  },
+  "hardBrakeEvents": {
+   "mean": 0.5309,
+   "median": 0.0,
+   "max": 4
+  },
+  "authoredEventsFired": {
+   "mean": 4.0636,
+   "median": 3.0,
+   "max": 10
+  },
+  "actorCount": {
+   "mean": 2.0364,
+   "median": 2.0,
+   "max": 3
+  },
+  "ambientCount": {
+   "mean": 0,
+   "median": 0.0,
+   "max": 0
+  },
+  "authoredEventsFireRate": 0.75,
+  "authoredEventsTotal": {
+   "mean": 5.4182
+  },
+  "shareCellsWith_laneChangesExecuted": 0.0127,
+  "shareCellsWith_swerveEvents": 0.0327,
+  "shareCellsWith_signalPhaseChanges": 0.0545,
+  "shareCellsWith_hardBrakeEvents": 0.3564
+ },
+ "censusAggPassingCells": {
+  "cells": 31,
+  "censusVersion": 1,
+  "actorsMoving": {
+   "mean": 1.9032,
+   "median": 1,
+   "max": 3
+  },
+  "laneChangesExecuted": {
+   "mean": 0.1935,
+   "median": 0,
+   "max": 1
+  },
+  "swerveEvents": {
+   "mean": 0.3548,
+   "median": 0,
+   "max": 1
+  },
+  "signalPhaseChanges": {
+   "mean": 0,
+   "median": 0,
+   "max": 0
+  },
+  "interactingPairs": {
+   "mean": 1.7097,
+   "median": 1,
+   "max": 3
+  },
+  "speedVarianceEgoPath": {
+   "mean": 23.2555,
+   "median": 6.0389,
+   "max": 45.6479
+  },
+  "hardBrakeEvents": {
+   "mean": 2.129,
+   "median": 2,
+   "max": 4
+  },
+  "authoredEventsFired": {
+   "mean": 6.8065,
+   "median": 5,
+   "max": 9
+  },
+  "actorCount": {
+   "mean": 2.4516,
+   "median": 2,
+   "max": 3
+  },
+  "ambientCount": {
+   "mean": 0,
+   "median": 0,
+   "max": 0
+  },
+  "authoredEventsFireRate": 1.0,
+  "authoredEventsTotal": {
+   "mean": 6.8065
+  },
+  "shareCellsWith_laneChangesExecuted": 0.1935,
+  "shareCellsWith_swerveEvents": 0.3548,
+  "shareCellsWith_signalPhaseChanges": 0.0,
+  "shareCellsWith_hardBrakeEvents": 0.9032
+ },
+ "cellsRoot": "/tmp/tgr-freeform-pilot3/cells",
+ "rows": [
+  {
+   "id": "c5-bus-stop-emergence",
+   "category": "C5.pedestrian",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/r0.template.json",
+     "validationErrors": 6
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/v1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/s2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 40
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "arrival_unconverged": 32
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/r3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/s5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "fallback_to_last_valid",
+     "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/s2.template.json",
+     "reason": "no_sites"
+    }
+   ],
+   "cells": 400,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {},
+   "refusalCodes": {
+    "arrival_unconverged": 400
+   },
+   "outdir": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/final-1786904686883",
+   "template": "/tmp/tgr-freeform-pilot3/c5-bus-stop-emergence/s2.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "5c46a393be3c1871da066b3dfb3b28f0048b9f332b79f2b72315151f2e07ec82",
+   "usage": {
+    "input_tokens": 85859,
+    "output_tokens": 21979,
+    "total_tokens": 107838,
+    "calls": 6
+   },
+   "wallS": 519.4,
+   "repairPools": {
+    "validate": 2,
+    "site": 2,
+    "revise": 1
+   },
+   "schemaErrorRounds": 2,
+   "cellsExported": [],
+   "censusAggAll": {
+    "cells": 0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c2-weave",
+   "category": "C2.cut-in-merge",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/s1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 5
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 16,
+      "feasibleCells": 16,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 7,
+       "C3": 5
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/s3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 22
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 36,
+      "feasibleCells": 36,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 4,
+       "C5": 32
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 2
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C5": 8
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c2-weave/r5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 2
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 4,
+      "maps": 1,
+      "sites": 2,
+      "firstFailure": {
+       "C3": 2,
+       "C5": 2
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 20,
+   "feasibleCells": 20,
+   "passingCells": 14,
+   "maps": 1,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C3": 4,
+    "C5": 2
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-pilot3/c2-weave/final-1786904806231",
+   "template": "/tmp/tgr-freeform-pilot3/c2-weave/r5.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "aa0ee0c5b0723e0687c550d600b755a18d42d73fcd93f4b2cd487d80a4d7b050",
+   "usage": {
+    "input_tokens": 87563,
+    "output_tokens": 25731,
+    "total_tokens": 113294,
+    "calls": 6
+   },
+   "wallS": 637.1,
+   "repairPools": {
+    "validate": 0,
+    "site": 2,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-000",
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-002",
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-004",
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-005",
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-007",
+    "freeform-pilot3-c2-weave-belmont-research-center-06ac7a58ff047584-008"
+   ],
+   "censusAggAll": {
+    "cells": 20,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 3,
+     "median": 3.0,
+     "max": 3
+    },
+    "laneChangesExecuted": {
+     "mean": 0.35,
+     "median": 0.0,
+     "max": 1
+    },
+    "swerveEvents": {
+     "mean": 0.4,
+     "median": 0.0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 2.5,
+     "median": 2.5,
+     "max": 3
+    },
+    "speedVarianceEgoPath": {
+     "mean": 44.9921,
+     "median": 45.005,
+     "max": 45.8917
+    },
+    "hardBrakeEvents": {
+     "mean": 3.45,
+     "median": 3.0,
+     "max": 4
+    },
+    "authoredEventsFired": {
+     "mean": 8.5,
+     "median": 9.0,
+     "max": 9
+    },
+    "actorCount": {
+     "mean": 3,
+     "median": 3.0,
+     "max": 3
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.9444,
+    "authoredEventsTotal": {
+     "mean": 9
+    },
+    "shareCellsWith_laneChangesExecuted": 0.35,
+    "shareCellsWith_swerveEvents": 0.4,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 14,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 3,
+     "median": 3.0,
+     "max": 3
+    },
+    "laneChangesExecuted": {
+     "mean": 0.4286,
+     "median": 0.0,
+     "max": 1
+    },
+    "swerveEvents": {
+     "mean": 0.5714,
+     "median": 1.0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 2.5714,
+     "median": 3.0,
+     "max": 3
+    },
+    "speedVarianceEgoPath": {
+     "mean": 45.0073,
+     "median": 45.0567,
+     "max": 45.6479
+    },
+    "hardBrakeEvents": {
+     "mean": 3.5714,
+     "median": 4.0,
+     "max": 4
+    },
+    "authoredEventsFired": {
+     "mean": 9,
+     "median": 9.0,
+     "max": 9
+    },
+    "actorCount": {
+     "mean": 3,
+     "median": 3.0,
+     "max": 3
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 9
+    },
+    "shareCellsWith_laneChangesExecuted": 0.4286,
+    "shareCellsWith_swerveEvents": 0.5714,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   }
+  },
+  {
+   "id": "c3-ltap-ld",
+   "category": "C3.intersection",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/r0.template.json",
+     "validationErrors": 7
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/v1.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/v2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/s3.template.json",
+     "validationErrors": 4
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c3-ltap-ld/s5.template.json",
+     "validationErrors": 2
+    }
+   ],
+   "admitted": false,
+   "error": "template_invalid",
+   "detail": [
+    "params.deconflictionTtcS [schema_invalid]: unrecognized key \"deconflictionTtcS\"; unknown fields belong under \"extensions\"",
+    "params.responseTtcS [schema_invalid]: unrecognized key \"responseTtcS\"; unknown fields belong under \"extensions\""
+   ],
+   "usage": {
+    "input_tokens": 84220,
+    "output_tokens": 17282,
+    "total_tokens": 101502,
+    "calls": 6
+   },
+   "wallS": 350.0,
+   "repairPools": {
+    "validate": 3,
+    "site": 2,
+    "revise": 0
+   },
+   "schemaErrorRounds": 4
+  },
+  {
+   "id": "c13b-preemption",
+   "category": "C13.control",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/r0.template.json",
+     "validationErrors": 5
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/v1.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/v2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/s3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 12
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 16,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 4,
+       "C3": 7,
+       "C5": 1
+      },
+      "refusalCodes": {
+       "arrival_unconverged": 4,
+       "signal_unbindable": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 6
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 12,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 3,
+       "C3": 4,
+       "C5": 1
+      },
+      "refusalCodes": {
+       "signal_unbindable": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/r5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 6
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 1,
+       "C3": 7
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/r6.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/v7.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 3
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 4,
+       "C3": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 30,
+   "feasibleCells": 30,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 10,
+    "C3": 20
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-pilot3/c13b-preemption/final-1786905189656",
+   "template": "/tmp/tgr-freeform-pilot3/c13b-preemption/v7.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "85246b6d8ce5f7cdc7c7b4ab19fba57bf019d5c8b3962cc37d57856e3e94a3cd",
+   "usage": {
+    "input_tokens": 118105,
+    "output_tokens": 28507,
+    "total_tokens": 146612,
+    "calls": 8
+   },
+   "wallS": 667.1,
+   "repairPools": {
+    "validate": 3,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 3,
+   "cellsExported": [
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-000",
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-001",
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-002",
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-003",
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-004",
+    "freeform-pilot3-c13b-preemption-richmond-field-station-2f8912fcfaf77622-005"
+   ],
+   "censusAggAll": {
+    "cells": 30,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.8,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 4.6667,
+     "median": 5.0,
+     "max": 6
+    },
+    "interactingPairs": {
+     "mean": 0.8,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 40.2869,
+     "median": 33.4805,
+     "max": 55.3909
+    },
+    "hardBrakeEvents": {
+     "mean": 2.1333,
+     "median": 2.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 10,
+     "median": 10.0,
+     "max": 10
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 10
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 1.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c9b-spill",
+   "category": "C9.hazard",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/r0.template.json",
+     "validationErrors": 6
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/v1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 32
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 2,
+       "C4": 4,
+       "C5": 30
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 42
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 3,
+       "C3": 4,
+       "C5": 29
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 51
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 35,
+       "C3": 1,
+       "C4": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-pilot3/c9b-spill/s5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 2,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C1": 8,
+       "C2": 26,
+       "C5": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 500,
+   "feasibleCells": 500,
+   "passingCells": 17,
+   "maps": 3,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 50,
+    "C2": 380,
+    "C4": 5,
+    "C5": 48
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-pilot3/c9b-spill/final-1786905222349",
+   "template": "/tmp/tgr-freeform-pilot3/c9b-spill/s5.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "1e7470c6f89dd42b2a66060191670bf1dd235c7f3428b64cde4041c75f552231",
+   "usage": {
+    "input_tokens": 84862,
+    "output_tokens": 18353,
+    "total_tokens": 103215,
+    "calls": 6
+   },
+   "wallS": 616.3,
+   "repairPools": {
+    "validate": 1,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [
+    "freeform-pilot3-c9b-spill-belmont-research-center-13c8e9b55cde09e9-000",
+    "freeform-pilot3-c9b-spill-easterbrook-discovery-school-02d38ad9ac882f15-000",
+    "freeform-pilot3-c9b-spill-el-camino-road-1bdacbabb98ca5e4-003",
+    "freeform-pilot3-c9b-spill-belmont-research-center-13c8e9b55cde09e9-003",
+    "freeform-pilot3-c9b-spill-easterbrook-discovery-school-02d38ad9ac882f15-001",
+    "freeform-pilot3-c9b-spill-el-camino-road-1bdacbabb98ca5e4-007"
+   ],
+   "censusAggAll": {
+    "cells": 500,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 0.9,
+     "median": 1.0,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.024,
+     "median": 0.0,
+     "max": 2
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0.9,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 8.7738,
+     "median": 9.6779,
+     "max": 22.0184
+    },
+    "hardBrakeEvents": {
+     "mean": 0.318,
+     "median": 0.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 3.53,
+     "median": 3.0,
+     "max": 5
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.706,
+    "authoredEventsTotal": {
+     "mean": 5
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.02,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.292
+   },
+   "censusAggPassing": {
+    "cells": 17,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1,
+     "median": 1,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.1765,
+     "median": 0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 5.3423,
+     "median": 5.5874,
+     "max": 6.0844
+    },
+    "hardBrakeEvents": {
+     "mean": 0.9412,
+     "median": 1,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 5,
+     "median": 5,
+     "max": 5
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 5
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.1765,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.8235
+   }
+  }
+ ]
+}

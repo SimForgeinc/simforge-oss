@@ -1,0 +1,1382 @@
+{
+ "gate": "deterministic authoring path",
+ "split": "DEV",
+ "briefs": 73,
+ "admitted": 55,
+ "admissionRate": 0.7534,
+ "draws": 10,
+ "maxSites": 10,
+ "perCategory": {
+  "C1.car-following": {
+   "total": 5,
+   "admitted": 4
+  },
+  "C10.oncoming": {
+   "total": 5,
+   "admitted": 3
+  },
+  "C11.parking": {
+   "total": 5,
+   "admitted": 2
+  },
+  "C12.school": {
+   "total": 4,
+   "admitted": 4
+  },
+  "C13.control": {
+   "total": 4,
+   "admitted": 1
+  },
+  "C14.loss-of-control": {
+   "total": 4,
+   "admitted": 4
+  },
+  "C15.adversarial": {
+   "total": 5,
+   "admitted": 4
+  },
+  "C2.cut-in-merge": {
+   "total": 5,
+   "admitted": 5
+  },
+  "C3.intersection": {
+   "total": 7,
+   "admitted": 5
+  },
+  "C4.roundabout": {
+   "total": 4,
+   "admitted": 4
+  },
+  "C5.pedestrian": {
+   "total": 5,
+   "admitted": 4
+  },
+  "C6.cyclist-ptw": {
+   "total": 5,
+   "admitted": 5
+  },
+  "C7.occlusion": {
+   "total": 5,
+   "admitted": 5
+  },
+  "C8.workzone": {
+   "total": 5,
+   "admitted": 0
+  },
+  "C9.hazard": {
+   "total": 5,
+   "admitted": 5
+  }
+ },
+ "categoriesCovered": 14,
+ "firstFailureAcrossRejected": {
+  "C5": 934,
+  "C2": 629,
+  "C3": 574,
+  "C4": 524,
+  "C6": 63,
+  "C1": 30
+ },
+ "rows": [
+  {
+   "id": "c1-lead-stopped",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "cells": 320,
+   "feasibleCells": 220,
+   "passingCells": 42,
+   "maps": 5,
+   "sites": 17,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 90,
+    "C4": 26,
+    "C5": 62
+   },
+   "outdir": "/tmp/tg-auth-c1-lead-stopped-1786847308975"
+  },
+  {
+   "id": "c1-tailgated-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 163,
+   "maps": 5,
+   "sites": 19,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 52,
+    "C4": 1,
+    "C5": 4
+   },
+   "outdir": "/tmp/tg-auth-c1-tailgated-brake-1786847308979"
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 21,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 14,
+    "C4": 3,
+    "C5": 36
+   },
+   "outdir": "/tmp/tg-auth-c2-cut-out-reveals-1786847308981"
+  },
+  {
+   "id": "c3-occluded-uncontrolled",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 240,
+   "passingCells": 11,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 46,
+    "C3": 154,
+    "C4": 11,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c3-occluded-uncontrolled-1786847315959"
+  },
+  {
+   "id": "c3-allway-stop",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 1,
+   "maps": 1,
+   "sites": 1,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 10,
+    "C3": 53,
+    "C5": 6
+   },
+   "outdir": "/tmp/tg-auth-c3-allway-stop-1786847323863"
+  },
+  {
+   "id": "c5-bus-stop-emergence",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 78,
+   "maps": 5,
+   "sites": 19,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 16,
+    "C4": 71,
+    "C5": 129
+   },
+   "outdir": "/tmp/tg-auth-c5-bus-stop-emergence-1786847327000"
+  },
+  {
+   "id": "c5-hesitate",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 66,
+   "maps": 5,
+   "sites": 18,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 7,
+    "C3": 5,
+    "C4": 129,
+    "C5": 93
+   },
+   "outdir": "/tmp/tg-auth-c5-hesitate-1786847334868"
+  },
+  {
+   "id": "c6-contraflow",
+   "category": "C6.cyclist-ptw",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 75,
+   "maps": 5,
+   "sites": 18,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 8,
+    "C3": 13,
+    "C4": 95,
+    "C5": 109
+   },
+   "outdir": "/tmp/tg-auth-c6-contraflow-1786847342850"
+  },
+  {
+   "id": "c8-taper-merge",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "cells": 420,
+   "feasibleCells": 59,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 39,
+    "C5": 20
+   },
+   "outdir": "/tmp/tg-auth-c8-taper-merge-1786847344291"
+  },
+  {
+   "id": "c8-construction-junction",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "cells": 420,
+   "feasibleCells": 60,
+   "passingCells": 3,
+   "maps": 1,
+   "sites": 1,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 38,
+    "C5": 19
+   },
+   "outdir": "/tmp/tg-auth-c8-construction-junction-1786847349520"
+  },
+  {
+   "id": "c9-animal",
+   "category": "C9.hazard",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 136,
+   "maps": 5,
+   "sites": 19,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 65,
+    "C4": 10,
+    "C5": 9
+   },
+   "outdir": "/tmp/tg-auth-c9-animal-1786847353601"
+  },
+  {
+   "id": "c9-post-crest",
+   "category": "C9.hazard",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 124,
+   "maps": 5,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 69,
+    "C4": 12,
+    "C5": 15
+   },
+   "outdir": "/tmp/tg-auth-c9-post-crest-1786847357544"
+  },
+  {
+   "id": "c10-bend-encroach",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 13,
+   "maps": 2,
+   "sites": 5,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 7,
+    "C2": 171,
+    "C3": 24,
+    "C4": 48,
+    "C5": 37
+   },
+   "outdir": "/tmp/tg-auth-c10-bend-encroach-1786847359051"
+  },
+  {
+   "id": "c10-wrong-way",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 20,
+   "maps": 3,
+   "sites": 6,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 17,
+    "C2": 159,
+    "C3": 11,
+    "C4": 67,
+    "C5": 26
+   },
+   "outdir": "/tmp/tg-auth-c10-wrong-way-1786847372194"
+  },
+  {
+   "id": "c11-backing-out",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 3,
+   "maps": 2,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 46,
+    "C4": 25,
+    "C5": 216
+   },
+   "outdir": "/tmp/tg-auth-c11-backing-out-1786847377084"
+  },
+  {
+   "id": "c11-double-park",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 15,
+   "maps": 2,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 49,
+    "C4": 24,
+    "C5": 202
+   },
+   "outdir": "/tmp/tg-auth-c11-double-park-1786847377382"
+  },
+  {
+   "id": "c12-crossing-guard",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 78,
+   "maps": 5,
+   "sites": 15,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 14,
+    "C3": 10,
+    "C4": 116,
+    "C5": 82
+   },
+   "outdir": "/tmp/tg-auth-c12-crossing-guard-1786847387432"
+  },
+  {
+   "id": "c15-shedding-load",
+   "category": "C15.adversarial",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 24,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 5,
+    "C3": 18,
+    "C4": 2,
+    "C5": 31
+   },
+   "outdir": "/tmp/tg-auth-c15-shedding-load-1786847394188"
+  },
+  {
+   "id": "c4-exit-cut",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 250,
+   "passingCells": 10,
+   "maps": 3,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 25,
+    "C3": 176,
+    "C4": 9,
+    "C5": 20
+   },
+   "outdir": "/tmp/tg-auth-c4-exit-cut-1786847394974"
+  },
+  {
+   "id": "c7-parked-row-veh",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 53,
+   "maps": 5,
+   "sites": 10,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 11,
+    "C3": 36,
+    "C4": 158,
+    "C5": 42
+   },
+   "outdir": "/tmp/tg-auth-c7-parked-row-veh-1786847401454"
+  },
+  {
+   "id": "c7-double-parked-truck",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 53,
+   "maps": 5,
+   "sites": 12,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 12,
+    "C3": 26,
+    "C4": 159,
+    "C5": 50
+   },
+   "outdir": "/tmp/tg-auth-c7-double-parked-truck-1786847402043"
+  },
+  {
+   "id": "c14-third-party-spin",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 156,
+   "maps": 5,
+   "sites": 17,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 47,
+    "C4": 11,
+    "C5": 6
+   },
+   "outdir": "/tmp/tg-auth-c14-third-party-spin-1786847417994"
+  },
+  {
+   "id": "c1-ccrm",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 126,
+   "maps": 5,
+   "sites": 14,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 68,
+    "C4": 8,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c1-ccrm-1786847418759"
+  },
+  {
+   "id": "c2-weave",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 19,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 7,
+    "C3": 15,
+    "C4": 3,
+    "C5": 36
+   },
+   "outdir": "/tmp/tg-auth-c2-weave-1786847423203"
+  },
+  {
+   "id": "c2-exit-across",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 18,
+   "maps": 2,
+   "sites": 6,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 5,
+    "C3": 15,
+    "C4": 3,
+    "C5": 39
+   },
+   "outdir": "/tmp/tg-auth-c2-exit-across-1786847431038"
+  },
+  {
+   "id": "c3-ltap-ld",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 250,
+   "passingCells": 11,
+   "maps": 2,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 35,
+    "C3": 157,
+    "C4": 9,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c3-ltap-ld-1786847438916"
+  },
+  {
+   "id": "c3-left-hook-ptw",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 250,
+   "passingCells": 21,
+   "maps": 3,
+   "sites": 6,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 20,
+    "C3": 161,
+    "C4": 23,
+    "C5": 15
+   },
+   "outdir": "/tmp/tg-auth-c3-left-hook-ptw-1786847439172"
+  },
+  {
+   "id": "c5-reversing-ped",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 13,
+    "C4": 108,
+    "C5": 117,
+    "C6": 62
+   },
+   "outdir": "/tmp/tg-auth-c5-reversing-ped-1786847439308"
+  },
+  {
+   "id": "c6-cbna",
+   "category": "C6.cyclist-ptw",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 58,
+   "maps": 5,
+   "sites": 17,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 31,
+    "C4": 101,
+    "C5": 104
+   },
+   "outdir": "/tmp/tg-auth-c6-cbna-1786847452868"
+  },
+  {
+   "id": "c8-narrowing",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "cells": 420,
+   "feasibleCells": 54,
+   "passingCells": 5,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 32,
+    "C5": 17
+   },
+   "outdir": "/tmp/tg-auth-c8-narrowing-1786847468183"
+  },
+  {
+   "id": "c13-rail-crossing",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 230,
+   "passingCells": 2,
+   "maps": 1,
+   "sites": 1,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 27,
+    "C3": 172,
+    "C4": 7,
+    "C5": 12
+   },
+   "outdir": "/tmp/tg-auth-c13-rail-crossing-1786847469582"
+  },
+  {
+   "id": "c15-protest",
+   "category": "C15.adversarial",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 19,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 8,
+    "C3": 17,
+    "C4": 1,
+    "C5": 35
+   },
+   "outdir": "/tmp/tg-auth-c15-protest-1786847469809"
+  },
+  {
+   "id": "c13b-yellow-late",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "cells": 110,
+   "feasibleCells": 90,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 11,
+    "C3": 79
+   },
+   "outdir": "/tmp/tg-auth-c13b-yellow-late-1786847476622"
+  },
+  {
+   "id": "c13b-preemption",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "cells": 110,
+   "feasibleCells": 80,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 3,
+    "C3": 77
+   },
+   "outdir": "/tmp/tg-auth-c13b-preemption-1786847476697"
+  },
+  {
+   "id": "c13b-rail-gate-down",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 250,
+   "passingCells": 12,
+   "maps": 2,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 15,
+    "C3": 171,
+    "C4": 21,
+    "C5": 11
+   },
+   "outdir": "/tmp/tg-auth-c13b-rail-gate-down-1786847486567"
+  },
+  {
+   "id": "c4b-entry-conflict",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 240,
+   "passingCells": 8,
+   "maps": 2,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 29,
+    "C3": 145,
+    "C4": 15,
+    "C5": 23
+   },
+   "outdir": "/tmp/tg-auth-c4b-entry-conflict-1786847487048"
+  },
+  {
+   "id": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 30,
+   "maps": 4,
+   "sites": 8,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 25,
+    "C3": 159,
+    "C4": 18,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c4b-ped-at-exit-1786847495359"
+  },
+  {
+   "id": "c4b-cyclist-circulating",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 17,
+   "maps": 3,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 40,
+    "C2": 16,
+    "C3": 154,
+    "C4": 4,
+    "C5": 29
+   },
+   "outdir": "/tmp/tg-auth-c4b-cyclist-circulating-1786847515898"
+  },
+  {
+   "id": "c6b-cyclist-left-turn",
+   "category": "C6.cyclist-ptw",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 28,
+   "maps": 5,
+   "sites": 10,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 10,
+    "C3": 14,
+    "C4": 159,
+    "C5": 89
+   },
+   "outdir": "/tmp/tg-auth-c6b-cyclist-left-turn-1786847516530"
+  },
+  {
+   "id": "c6b-ptw-lane-split-brake",
+   "category": "C6.cyclist-ptw",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 74,
+   "maps": 5,
+   "sites": 19,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 4,
+    "C3": 15,
+    "C4": 118,
+    "C5": 89
+   },
+   "outdir": "/tmp/tg-auth-c6b-ptw-lane-split-brake-1786847524705"
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 56,
+   "maps": 4,
+   "sites": 15,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 11,
+    "C3": 21,
+    "C4": 136,
+    "C5": 76
+   },
+   "outdir": "/tmp/tg-auth-c6b-cargo-bike-1786847531032"
+  },
+  {
+   "id": "c3b-blocked-box",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 270,
+   "passingCells": 15,
+   "maps": 3,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 40,
+    "C2": 45,
+    "C3": 145,
+    "C4": 7,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c3b-blocked-box-1786847540747"
+  },
+  {
+   "id": "c3b-turning-truck",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 240,
+   "passingCells": 7,
+   "maps": 2,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 24,
+    "C3": 164,
+    "C4": 17,
+    "C5": 8
+   },
+   "outdir": "/tmp/tg-auth-c3b-turning-truck-1786847545991"
+  },
+  {
+   "id": "c3b-late-yield",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "cells": 330,
+   "feasibleCells": 250,
+   "passingCells": 15,
+   "maps": 2,
+   "sites": 4,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 28,
+    "C3": 152,
+    "C4": 19,
+    "C5": 16
+   },
+   "outdir": "/tmp/tg-auth-c3b-late-yield-1786847546894"
+  },
+  {
+   "id": "c12b-child-between-cars",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 33,
+   "maps": 5,
+   "sites": 10,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 13,
+    "C3": 21,
+    "C4": 150,
+    "C5": 83
+   },
+   "outdir": "/tmp/tg-auth-c12b-child-between-cars-1786847568944"
+  },
+  {
+   "id": "c12b-scooter-child",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 65,
+   "maps": 5,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 13,
+    "C3": 9,
+    "C4": 117,
+    "C5": 96
+   },
+   "outdir": "/tmp/tg-auth-c12b-scooter-child-1786847574158"
+  },
+  {
+   "id": "c12b-bus-departs",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 65,
+   "maps": 5,
+   "sites": 15,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 12,
+    "C3": 12,
+    "C4": 113,
+    "C5": 98
+   },
+   "outdir": "/tmp/tg-auth-c12b-bus-departs-1786847575584"
+  },
+  {
+   "id": "c14b-oversteer",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 143,
+   "maps": 5,
+   "sites": 17,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 55,
+    "C4": 11,
+    "C5": 11
+   },
+   "outdir": "/tmp/tg-auth-c14b-oversteer-1786847583699"
+  },
+  {
+   "id": "c14b-wet-braking",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 135,
+   "maps": 5,
+   "sites": 14,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 65,
+    "C4": 11,
+    "C5": 9
+   },
+   "outdir": "/tmp/tg-auth-c14b-wet-braking-1786847589490"
+  },
+  {
+   "id": "c14b-gravel",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 171,
+   "maps": 5,
+   "sites": 20,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 24,
+    "C4": 15,
+    "C5": 10
+   },
+   "outdir": "/tmp/tg-auth-c14b-gravel-1786847590893"
+  },
+  {
+   "id": "c9b-ladder",
+   "category": "C9.hazard",
+   "family": "longitudinal_lead",
+   "cells": 320,
+   "feasibleCells": 220,
+   "passingCells": 41,
+   "maps": 5,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 72,
+    "C4": 45,
+    "C5": 62
+   },
+   "outdir": "/tmp/tg-auth-c9b-ladder-1786847602899"
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "longitudinal_lead",
+   "cells": 320,
+   "feasibleCells": 220,
+   "passingCells": 50,
+   "maps": 5,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 70,
+    "C4": 55,
+    "C5": 45
+   },
+   "outdir": "/tmp/tg-auth-c9b-open-door-parked-1786847609855"
+  },
+  {
+   "id": "c9b-spill",
+   "category": "C9.hazard",
+   "family": "longitudinal_lead",
+   "cells": 320,
+   "feasibleCells": 220,
+   "passingCells": 37,
+   "maps": 5,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 66,
+    "C4": 51,
+    "C5": 66
+   },
+   "outdir": "/tmp/tg-auth-c9b-spill-1786847611245"
+  },
+  {
+   "id": "c7b-van-hides-ped",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 32,
+   "maps": 5,
+   "sites": 11,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 17,
+    "C3": 15,
+    "C4": 175,
+    "C5": 61
+   },
+   "outdir": "/tmp/tg-auth-c7b-van-hides-ped-1786847617662"
+  },
+  {
+   "id": "c7b-truck-hides-oncoming",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 52,
+   "maps": 5,
+   "sites": 13,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 9,
+    "C3": 28,
+    "C4": 163,
+    "C5": 48
+   },
+   "outdir": "/tmp/tg-auth-c7b-truck-hides-oncoming-1786847625639"
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 60,
+   "maps": 5,
+   "sites": 13,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 4,
+    "C3": 30,
+    "C4": 159,
+    "C5": 47
+   },
+   "outdir": "/tmp/tg-auth-c7b-bus-shelter-1786847627527"
+  },
+  {
+   "id": "c10b-bend-cut",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 11,
+   "maps": 2,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 8,
+    "C2": 184,
+    "C3": 10,
+    "C4": 67,
+    "C5": 20
+   },
+   "outdir": "/tmp/tg-auth-c10b-bend-cut-1786847631998"
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 3,
+   "maps": 1,
+   "sites": 1,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 204,
+    "C3": 9,
+    "C4": 74,
+    "C5": 10
+   },
+   "outdir": "/tmp/tg-auth-c10b-distracted-drift-1786847640853"
+  },
+  {
+   "id": "c10b-overtaking-truck",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 7,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 186,
+    "C3": 12,
+    "C4": 67,
+    "C5": 18
+   },
+   "outdir": "/tmp/tg-auth-c10b-overtaking-truck-1786847642884"
+  },
+  {
+   "id": "c11b-reverse-bay",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 6,
+   "maps": 1,
+   "sites": 4,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 41,
+    "C4": 26,
+    "C5": 217
+   },
+   "outdir": "/tmp/tg-auth-c11b-reverse-bay-1786847648810"
+  },
+  {
+   "id": "c11b-pedestrian-behind",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 38,
+    "C4": 46,
+    "C5": 205,
+    "C6": 1
+   },
+   "outdir": "/tmp/tg-auth-c11b-pedestrian-behind-1786847657134"
+  },
+  {
+   "id": "c11b-parked-protrude",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 49,
+    "C4": 41,
+    "C5": 196
+   },
+   "outdir": "/tmp/tg-auth-c11b-parked-protrude-1786847659741"
+  },
+  {
+   "id": "c15b-road-rage",
+   "category": "C15.adversarial",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 20,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 4,
+    "C3": 16,
+    "C4": 2,
+    "C5": 38
+   },
+   "outdir": "/tmp/tg-auth-c15b-road-rage-1786847665476"
+  },
+  {
+   "id": "c15b-debris-thrown",
+   "category": "C15.adversarial",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 12,
+   "maps": 1,
+   "sites": 5,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 1,
+    "C3": 18,
+    "C5": 49
+   },
+   "outdir": "/tmp/tg-auth-c15b-debris-thrown-1786847674009"
+  },
+  {
+   "id": "c15b-stalled-blocking",
+   "category": "C15.adversarial",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 21,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 15,
+    "C4": 2,
+    "C5": 36
+   },
+   "outdir": "/tmp/tg-auth-c15b-stalled-blocking-1786847674875"
+  },
+  {
+   "id": "c1b-multi-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 170,
+   "maps": 5,
+   "sites": 20,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 39,
+    "C4": 7,
+    "C5": 4
+   },
+   "outdir": "/tmp/tg-auth-c1b-multi-brake-1786847676525"
+  },
+  {
+   "id": "c1b-slow-truck",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "cells": 350,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {},
+   "outdir": "/tmp/tg-auth-c1b-slow-truck-1786847680600"
+  },
+  {
+   "id": "c2b-cut-in-truck",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 21,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 2,
+    "C3": 14,
+    "C5": 43
+   },
+   "outdir": "/tmp/tg-auth-c2b-cut-in-truck-1786847681785"
+  },
+  {
+   "id": "c2b-slip-road",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "cells": 90,
+   "feasibleCells": 80,
+   "passingCells": 24,
+   "maps": 2,
+   "sites": 7,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 15,
+    "C4": 2,
+    "C5": 33
+   },
+   "outdir": "/tmp/tg-auth-c2b-slip-road-1786847688560"
+  },
+  {
+   "id": "c5b-runner",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 65,
+   "maps": 4,
+   "sites": 16,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 7,
+    "C3": 19,
+    "C4": 113,
+    "C5": 96
+   },
+   "outdir": "/tmp/tg-auth-c5b-runner-1786847689339"
+  },
+  {
+   "id": "c5b-phone-distracted",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 40,
+   "maps": 5,
+   "sites": 13,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 18,
+    "C3": 9,
+    "C4": 139,
+    "C5": 94
+   },
+   "outdir": "/tmp/tg-auth-c5b-phone-distracted-1786847696556"
+  },
+  {
+   "id": "c8b-lane-shift",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "cells": 420,
+   "feasibleCells": 32,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 13,
+    "C5": 15
+   },
+   "outdir": "/tmp/tg-auth-c8b-lane-shift-1786847696676"
+  },
+  {
+   "id": "c8b-plant-crossing",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "cells": 420,
+   "feasibleCells": 42,
+   "passingCells": 5,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 22,
+    "C5": 15
+   },
+   "outdir": "/tmp/tg-auth-c8b-plant-crossing-1786847703782"
+  }
+ ]
+}

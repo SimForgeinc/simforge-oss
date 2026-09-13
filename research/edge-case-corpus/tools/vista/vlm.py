@@ -1,10 +1,24 @@
-"""The only permitted model: gpt-5.6-luna, reasoning effort medium. Text and vision."""
+"""Model client for the lane. Text and vision.
+
+Default model gpt-5.6-luna at reasoning effort medium: that is W7's frozen configuration and the
+one the published baselines are comparable against, so an unset environment reproduces it exactly.
+
+VISTA_MODEL / VISTA_EFFORT override both, for the W8 model-by-effort sweep and the W9 production
+arm, on the owner's explicit instruction to relax the single-model restriction.
+
+WARNING -- vision: the omp auth-gateway serves Anthropic models through this same responses shape
+but SILENTLY DROPS input_image: claude-opus-5 and claude-fable-5 answer "I don't see an image" on
+0/4 colour probes while still reporting status=completed. Any vision path (the blind judge,
+loccritic) must therefore stay on an openai-codex model -- luna and sol score 4/4, terra 3/4 (it
+sees the image but calls pure red "orange"). Run tools/gates/assert_vision.py before trusting a
+vision result on a non-default model; it exits non-zero rather than degrading silently.
+"""
 import os, json, base64, time
 import httpx
 
-MODEL = 'gpt-5.6-luna'
-EFFORT = 'medium'
-URL = 'https://api.openai.com/v1/responses'
+MODEL = os.environ.get('VISTA_MODEL', 'gpt-5.6-luna')
+EFFORT = os.environ.get('VISTA_EFFORT', 'medium')
+URL = os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1').rstrip('/') + '/responses'
 
 
 def _content(prompt, images):

@@ -1,0 +1,72 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Emergent probe: signal blackout over dense ambient traffic — does a four-way stop emerge?",
+    "description": "Bonus probe (rethink stream C). Ego approaches a signalized 4-arm junction through dense ambient traffic; at t=2 s every head of the junction is set to 'off' via @world set signal:feature:*:{ego,opposing,left,right}.phase. Engine dark-fallback semantics (signals.ts authorityAt) degrade every dark head to a coordinated all-way stop (one coordinationId per junction), so the registered question is whether an implicit four-way-stop NEGOTIATION emerges in the ambient population: alternating entries, yield-stops, hesitation deadlocks — mined with the pre-registered M3 thresholds.",
+    "createdAt": "2026-08-16T00:00:00.000Z",
+    "modifiedAt": "2026-08-16T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "emergent.signal-blackout",
+    "tags": ["emergent", "harvest", "ambient", "junction", "blackout", "negotiation"],
+    "author": "agent/rethink-emergent",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "emergent-blackout",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 5], "essentiality": "required" },
+      "runwayUpstreamM": { "value": [40, null], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [80, null], "essentiality": "required" }
+    },
+    "features": [
+      {
+        "id": "blackout-junction", "kind": "junction", "essentiality": "required",
+        "atM": { "value": [0, 0], "essentiality": "required" },
+        "arms": { "value": [4, 4], "essentiality": "required" },
+        "control": { "value": ["signalized"], "essentiality": "required" },
+        "egoTurn": { "value": ["straight"], "essentiality": "required" }
+      }
+    ],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 8, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle arriving at the darkened junction",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": -45, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.55 * lane.speedLimitKph, 18, 38)"
+    }
+  ],
+  "props": [],
+  "choreography": {
+    "clipSeconds": 20,
+    "warmupSeconds": 2,
+    "interactions": [
+      {
+        "id": "blackout-ego", "label": "ego-approach head goes dark",
+        "actor": "@world", "verb": "set", "trigger": { "kind": "at", "t": 2 },
+        "target": { "key": "signal:feature:blackout-junction:ego.phase", "value": "off" }
+      },
+      {
+        "id": "blackout-opposing", "label": "opposing head goes dark",
+        "actor": "@world", "verb": "set", "trigger": { "kind": "at", "t": 2 },
+        "target": { "key": "signal:feature:blackout-junction:opposing.phase", "value": "off" }
+      },
+      {
+        "id": "blackout-left", "label": "left-arm head goes dark",
+        "actor": "@world", "verb": "set", "trigger": { "kind": "at", "t": 2 },
+        "target": { "key": "signal:feature:blackout-junction:left.phase", "value": "off" }
+      },
+      {
+        "id": "blackout-right", "label": "right-arm head goes dark",
+        "actor": "@world", "verb": "set", "trigger": { "kind": "at", "t": 2 },
+        "target": { "key": "signal:feature:blackout-junction:right.phase", "value": "off" }
+      }
+    ]
+  },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

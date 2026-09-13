@@ -103,15 +103,15 @@ and have the agent check separation BEFORE simulating, and measure how much of t
 
 ## 3. The repo
 
-**Path:** `/Users/maikyon/Documents/Programming/SimForge`
+**Path:** `/Users/maikyon/Documents/Programming/UniScenarios`
 It is a TypeScript monorepo. **Every package's `main` points at `src/index.ts` and the CLI registers the
 `tsx` ESM loader — there is NO build step and no `dist/`.** Editing a `.ts` file takes effect on the next
-CLI invocation immediately. (Verify with `head -20 packages/cli/bin/simforge.js`.)
+CLI invocation immediately. (Verify with `head -20 packages/cli/bin/uniscenarios.js`.)
 
 ### CLI
 ```bash
-cd /Users/maikyon/Documents/Programming/SimForge
-node packages/cli/bin/simforge.js <command>
+cd /Users/maikyon/Documents/Programming/UniScenarios
+node packages/cli/bin/uniscenarios.js <command>
 ```
 Commands: `maps list`, `locations find|get|resolve`, `template validate`, `sites match`, `instantiate`,
 `simulate`, `debug`, `validate`, `evaluate`, `evidence verify`, `export`, `catalog create|verify|batch`,
@@ -126,7 +126,7 @@ Useful invocations:
 - `batch` runs a template across sites x draws; it is CPU-bound node and is the wall-clock bottleneck.
 
 ### Maps and geometry (what you render from)
-`/Users/maikyon/Documents/Programming/SimForge/dev-assets/<mapId>/topology-index.json.gz` — gunzip + json. Key `lanes` is a **dict keyed by `rsl`**
+`/Users/maikyon/Documents/Programming/UniScenarios/dev-assets/<mapId>/topology-index.json.gz` — gunzip + json. Key `lanes` is a **dict keyed by `rsl`**
 (NOT a list). Each lane has `polyline` (list of `{x,y}`), `representativeWidthM`, `laneType`
 (`driving|sidewalk|shoulder|parking`), `isJunction`, `junctionId`, `predecessors`, `successors`,
 `speedLimitKph`. Yale alone has 1141 lanes.
@@ -135,7 +135,7 @@ Also `derived/topology-derived.json.gz` and `derived/locations.json.gz`.
 The 5 maps: ['yale-street', 'belmont-research-center', 'el-camino-road', 'easterbrook-discovery-school', 'richmond-field-station']
 
 ### A working renderer already exists
-`/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/tools/vista/render.py` — headless matplotlib top-down renderer. It draws lanes coloured by type,
+`/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/tools/vista/render.py` — headless matplotlib top-down renderer. It draws lanes coloured by type,
 junction surfaces, the ego lane highlighted, a metre grid, and actor OBBs. It returns the
 **pixel<->world transform**, plus:
 - `world_from_pixel(view, px, py)` — invert the render transform
@@ -165,31 +165,31 @@ yourself from oriented bounding boxes using `x, y, headingRad` and the actor dim
 `minPET` is a *prediction* and is ~0 by construction for arrival-solved near misses. Do not trust it.
 
 ### An admitted example to copy the SHAPE of (not the content)
-`/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/templates/expA-child-dartout-two-cars.template.json`
+`/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/templates/expA-child-dartout-two-cars.template.json`
 Note especially: a crossing VRU is bound `kind:"relative_to", ref:"ego"` with a `dsM` expression, and the
 criticality comes from a **solver-owned `arrival` trigger** (`syncWith:"ego"`, `ttc:"param.arrivalTtc"`).
 
 ### Schemas worth knowing
-`packages/scenario/src/schema/v2/interactions.ts` has a first-class
+`packages/scenario-model/src/schema/v2/interactions.ts` has a first-class
 **`route` target `mode:"nearMiss"`** — a *re-solved, contact-free crossing intent* that stays valid when
 the target route, speed or site changes. Prefer it over hand-rolled polylines.
-`packages/engine/src/schema/input.ts` has the trigger union: `at`, `after`, `when` (with a mandatory
+`packages/sim-engine/src/schema/input.ts` has the trigger union: `at`, `after`, `when` (with a mandatory
 `byLatest` and `ifNever`), and `arrival` (with `syncWith` + exactly one of `ttc`/`deltaT`).
 
 ---
 
 ## 4. The frozen contract — you MUST obey this
 
-Full text: `/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/agent-authoring/LANE-CONTRACT.md`
+Full text: `/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/agent-authoring/LANE-CONTRACT.md`
 
 ### 4.1 Briefs and split (frozen, do not modify)
 The authoring unit is a **brief**: one sentence of natural language, e.g. *"A child runs into the road
 from between two parked vehicles."*
-- `/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/agent-authoring/brief-corpus.json` — tranche 1, **92 briefs**, split sha256 `dd4f360c16fd416f`,
+- `/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/agent-authoring/brief-corpus.json` — tranche 1, **92 briefs**, split sha256 `dd4f360c16fd416f`,
   **DEV 32 / HELDOUT 60**.
-- `/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/agent-authoring/brief-corpus-tranche2.json` — tranche 2, **116 briefs**, split sha256 `9327be880d9673a1`,
+- `/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/agent-authoring/brief-corpus-tranche2.json` — tranche 2, **116 briefs**, split sha256 `9327be880d9673a1`,
   **DEV 41 / HELDOUT 75**, weighted toward the categories that were empty.
-- `/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/agent-authoring/brief-corpus-full.json` — all **208 briefs**, 15 categories.
+- `/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/agent-authoring/brief-corpus-full.json` — all **208 briefs**, 15 categories.
 
 **DEV may be used to develop the algorithm. HELDOUT is authored ONCE, through a surface frozen by hash,
 with zero per-brief tuning.** Report the generalization gap (DEV admission rate minus HELDOUT).
@@ -222,7 +222,7 @@ Each archetype gets an **intent rubric pre-registered by sha256 BEFORE authoring
 only by passing it. Never relax a rubric.
 
 ### 4.5 Resource budget
-10 CPU cores. `simforge batch` is CPU-bound node. Use <= 8 parallel workers; oversubscribing makes
+10 CPU cores. `uniscenarios batch` is CPU-bound node. Use <= 8 parallel workers; oversubscribing makes
 everything slower, it does not help.
 
 ---
@@ -269,7 +269,7 @@ itself an encounter; it needs a second actor whose movement the phase provokes.
 
 **Do not treat this as settled. Two measurements disagree and it is the highest-value open question.**
 
-Report: `/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/DEFECT-D1-relative-dsM.json`
+Report: `/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/DEFECT-D1-relative-dsM.json`
 
 A role declared `kind:"relative_to", ref:"ego", dsM:+G` should sit G metres ahead of the ego.
 Measured at **trace t=0**, geometric forward projection onto the ego heading:
@@ -286,7 +286,7 @@ Statistically linked to the dominant failure: C2 failures start a median **8.1 m
 - A sub-agent measured the **instance** (materializer output, before simulation) on its own minimal
   2-role template and found placement **exact**: 20.7->20.6, 29.4->29.4, max error 0.4 m, correlation
   ~1.0. It concluded the gap is destroyed during the engine's **2 s warm-up** (unrecorded in the trace),
-  and was heading into `packages/engine` to find it.
+  and was heading into `packages/sim-engine` to find it.
 - I measured the instance on **my** template (built through the existing `ScenarioBuilder.place_actor`)
   and found placement already wrong: median error 10.9 m, correlation 0.06, capped near 13.6 m. Removing
   the extra role constraints (`requiredSameSegmentAs`, `requiredHeadingRelation`) did **not** help.
@@ -295,7 +295,7 @@ So it is either (i) warm-up dynamics, (ii) something the existing authoring surf
 **Measure it yourself, at BOTH the instance level and trace t=0, and settle it.**
 
 **A candidate cause I found by reading, and a patch I applied (UNVALIDATED — review it):**
-`packages/compiler/src/materialize.ts`, `coverTarget()`. The chain-extension loop
+`packages/scenario-materializer/src/materialize.ts`, `coverTarget()`. The chain-extension loop
 **only ever prepended predecessors** (`[chosen.rsl, ...current]`) — it extends *backwards* only. A role
 authored AHEAD of its reference projects past `route.lengthM` and `projectPoint` **clamps** there;
 prepending predecessors can never reach it, so the realised gap collapses to whatever runway the chain
@@ -308,7 +308,7 @@ successor instead of prepending a predecessor, choosing by smallest turn angle. 
 clean. **But placement was still capped at ~13.6 m in my probe afterwards, and the CLI uses `tsx` so the
 edit WAS live.** So either the patch is insufficient, or the cause is elsewhere.
 **Review this patch critically and revert it if it is not justified — I do not want an unvalidated engine
-change sitting in the tree.** `git diff packages/compiler/src/materialize.ts`
+change sitting in the tree.** `git diff packages/scenario-materializer/src/materialize.ts`
 
 ---
 
@@ -338,7 +338,7 @@ change sitting in the tree.** `git diff packages/compiler/src/materialize.ts`
 
 ## 8. Your workspace and deliverables
 
-Work in **`/Users/maikyon/Documents/Programming/SimForge/research/edge-case-corpus/tools/vista/`** inside the existing repo — do not fork the monorepo; you need its CLI, its
+Work in **`/Users/maikyon/Documents/Programming/UniScenarios/research/edge-case-corpus/tools/vista/`** inside the existing repo — do not fork the monorepo; you need its CLI, its
 map assets and its engine. Keep your own code in that directory. `render.py` is already there.
 If you change anything under `packages/`, it must be a **general** fix with a test, never a special case.
 
@@ -369,8 +369,8 @@ failure this project is built to avoid.
 A dedicated git worktree has been set up for you. **Work there, not in the main checkout.**
 
 ```
-WORKTREE : /Users/michaelvu-simforge/Documents/Programming/SimForge-vista          <- yours, branch `vista-lane`
-MAIN     : /Users/maikyon/Documents/Programming/SimForge   <- another agent is actively running batches here. DO NOT WRITE.
+WORKTREE : /Users/michaelvu-simforge/Documents/Programming/UniScenarios-vista          <- yours, branch `vista-lane`
+MAIN     : /Users/maikyon/Documents/Programming/UniScenarios   <- another agent is actively running batches here. DO NOT WRITE.
 ```
 
 It is a real separate checkout sharing the same git history, so your `packages/` edits cannot affect the
@@ -379,14 +379,14 @@ build step**, so any edit under `packages/` is live in the *next* CLI call anywh
 
 ### What is already wired for you (verified working)
 - `dev-assets` -> symlink to the shared 7.9 GB map store (read-only; do not copy or write).
-  Verified: `node packages/cli/bin/simforge.js maps list` returns all 5 maps from inside the worktree.
+  Verified: `node packages/cli/bin/uniscenarios.js maps list` returns all 5 maps from inside the worktree.
 - `node_modules` -> symlinked from main (root + every package), so no install needed for the TS side.
-- **Python venv at `/Users/michaelvu-simforge/Documents/Programming/SimForge-vista/.venv`** with matplotlib, httpx, numpy, pillow.
-  Use `/Users/michaelvu-simforge/Documents/Programming/SimForge-vista/.venv/bin/python`. If you hit
+- **Python venv at `/Users/michaelvu-simforge/Documents/Programming/UniScenarios-vista/.venv`** with matplotlib, httpx, numpy, pillow.
+  Use `/Users/michaelvu-simforge/Documents/Programming/UniScenarios-vista/.venv/bin/python`. If you hit
   `ValueError: Key backend: 'module://matplotlib_inline...'`, do `os.environ.pop('MPLBACKEND', None)`
   before importing matplotlib, then `matplotlib.use("Agg")`.
 - My uncommitted source fixes are copied in (`isKnownPropCatalogId` in
-  `packages/compiler/src/prop-dims.ts` + tests; `trace/min-clearance.ts`,
+  `packages/scenario-materializer/src/prop-dims.ts` + tests; `trace/min-clearance.ts`,
   `trace/realized-pet.ts` + tests).
 - `research/edge-case-corpus/` contains the frozen inputs: both brief corpora, the lane contract, the
   admission diagnosis, the D1 defect report, `ALGORITHM.md`, `render.py`, and the gold example template.
@@ -395,7 +395,7 @@ Verified end-to-end in the worktree: `render_site()` produced a PNG and `nearest
 view centre back to `{'rsl': '1:0:-2', 's': 40.24, 'tFrac': 0.0, 'distanceM': 0.0}` — exact.
 
 ### Rules that keep the two lanes from colliding
-1. **Never write to `/Users/maikyon/Documents/Programming/SimForge`.** Read from it if you must; write only inside your worktree.
+1. **Never write to `/Users/maikyon/Documents/Programming/UniScenarios`.** Read from it if you must; write only inside your worktree.
 2. **Write run outputs to `/tmp/vista-<attempt>-<briefId>/`.** The other lane owns `/tmp/run*-<briefId>`
    and `/tmp/toolrun-*`. Never reuse a directory between attempts — a previous run overwrote its own
    evidence and two admitted archetypes had to be withdrawn.
@@ -403,7 +403,7 @@ view centre back to `{'rsl': '1:0:-2', 's': 40.24, 'tFrac': 0.0, 'distanceM': 0.
    The main checkout's `tools/` already holds 122 `<briefId>.rubric.json` files from the other lane and
    the brief IDs are identical, so writing there would silently clobber pre-registered rubrics — which
    would destroy the very thing requirement C protects.
-4. **Cap yourself at 4-6 parallel `simforge batch` workers.** 10 cores total, shared with the other
+4. **Cap yourself at 4-6 parallel `uniscenarios batch` workers.** 10 cores total, shared with the other
    lane; `batch` is CPU-bound node and oversubscribing slows both lanes.
 5. **Commit on your branch** (`vista-lane`) whenever you want a checkpoint. Do not merge to `main`.
 6. If you change anything under `packages/`, it must be a **general** fix with a test that fails first.

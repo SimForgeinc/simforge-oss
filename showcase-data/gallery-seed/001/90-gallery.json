@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/001/40-cells/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/instance.json",
+    "judge": "gallery-seed/001/40-cells/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7",
+    "trace": "gallery-seed/001/40-cells/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/trace.json.gz",
+    "video": "gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4"
+  },
+  "brief": "The blue ego vehicle follows a curved approach ramp into a large signal-free intersection and begins a left turn onto the main diagonal road. Several cyclists or scooters move on surrounding approaches, while green vehicles and violet motorcycles travel along the main road; the ego enters after a crossing green vehicle has cleared, with no collision or close conflict.",
+  "cellId": "emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7",
+  "dynamism": 7.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 4.281,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 6.62
+  },
+  "headline": "/artifacts/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4",
+  "id": "seed-001",
+  "jobId": "seed-001",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.46,
+        3.34,
+        4.36,
+        5.82,
+        8.72,
+        11.64,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 16.0,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 679,
+        "reasoning": 578
+      }
+    },
+    "cellId": "emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7",
+    "confidence": 0.84,
+    "defects": [],
+    "dynamism": 7.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle follows a curved approach ramp into a large signal-free intersection and begins a left turn onto the main diagonal road. Several cyclists or scooters move on surrounding approaches, while green vehicles and violet motorcycles travel along the main road; the ego enters after a crossing green vehicle has cleared, with no collision or close conflict.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "33d0f1cd8c4f4e0c435ee51db601b8aeb55270ba2494e392f583f1b2f926d293",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "yale-street",
+  "maps": [
+    "yale-street"
+  ],
+  "media": "/artifacts/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.84,
+    "dynamism": 7.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-h2",
+  "timings": {
+    "render2dWallS": 1.254
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/001/60-render2d/emergent-h2-ml.dense32.s7-yale-street-40a54393-0-p7c01bdb7/rollout.mp4"
+}

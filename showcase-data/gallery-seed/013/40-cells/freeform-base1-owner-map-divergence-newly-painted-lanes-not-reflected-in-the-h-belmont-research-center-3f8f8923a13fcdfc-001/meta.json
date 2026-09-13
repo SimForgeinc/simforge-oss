@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h-belmont-research-center-3f8f8923a13fcdfc-001",
+ "briefId": "owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "a74b674da22d504d5fbaf173688dac172e595ea7dc0bb95b2c2511a3441bb772",
+ "map": "belmont-research-center",
+ "site": "3f8f8923a13fcdfc",
+ "draw": 1,
+ "seed": "155bce63c05289e4",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 0.0,
+  "tMinClearance": 15.44
+ },
+ "notes": "brief: Newly painted lanes not reflected in the HD map"
+}

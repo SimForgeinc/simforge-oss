@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000",
+ "briefId": "c3b-late-yield",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "c871daf42d236efe14109dc5a0395485c82ecd4026ed99552adbda817c161364",
+ "map": "richmond-field-station",
+ "site": "6bb6028740ba8bac",
+ "draw": 0,
+ "seed": "979dccbcb14fd337",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 4.584,
+  "tMinClearance": 4.84
+ },
+ "notes": "brief: A vehicle yields late and encroaches into the ego path."
+}

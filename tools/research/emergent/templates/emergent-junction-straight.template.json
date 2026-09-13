@@ -1,0 +1,47 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Emergent harvest: ego straight through a junction in dense ambient traffic",
+    "description": "World scaffolding for emergence harvesting (rethink stream C, supersedes worldgen world-junction 30s clip that is runway_insufficient off easterbrook: measured 398.2 m needed vs 235.9 m available on yale-street). NO scripted challenger, NO scripted conflict; all dynamics come from the seeded reactive ambient population. Clip 16 s and ego <=38 kph keep speed*clip inside typical junction-site runway. Traces are mined offline (pre-registered PREREG M3 thresholds) for near-critical encounters between ANY actor pair.",
+    "createdAt": "2026-08-16T00:00:00.000Z",
+    "modifiedAt": "2026-08-16T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "emergent.junction-straight",
+    "tags": ["emergent", "harvest", "ambient", "junction"],
+    "author": "agent/rethink-emergent",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "emergent-junction-straight",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 5], "essentiality": "required" },
+      "runwayUpstreamM": { "value": [40, null], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [80, null], "essentiality": "required" }
+    },
+    "features": [
+      {
+        "id": "harvest-junction", "kind": "junction", "essentiality": "required",
+        "atM": { "value": [0, 0], "essentiality": "required" },
+        "arms": { "value": [3, 4], "essentiality": "required" },
+        "control": { "value": ["signalized", "all_way_stop", "minor_stop", "yield", "uncontrolled"], "essentiality": "preferred", "weight": 1 },
+        "egoTurn": { "value": ["straight"], "essentiality": "required" }
+      }
+    ],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle crossing the junction",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": -35, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.55 * lane.speedLimitKph, 18, 38)"
+    }
+  ],
+  "props": [],
+  "choreography": { "clipSeconds": 16, "warmupSeconds": 2, "interactions": [] },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

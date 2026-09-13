@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/010/40-cells/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/instance.json",
+    "judge": "gallery-seed/010/40-cells/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0",
+    "trace": "gallery-seed/010/40-cells/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/trace.json.gz",
+    "video": "gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4"
+  },
+  "brief": "c3 left hook ptw",
+  "cellId": "emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0",
+  "dynamism": 7.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 1.5,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 10.68
+  },
+  "headline": "/artifacts/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4",
+  "id": "seed-010",
+  "jobId": "seed-010",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.2,
+        3.28,
+        6.54,
+        8.12,
+        9.12,
+        9.82,
+        12
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 12.56,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 475,
+        "reasoning": 367
+      }
+    },
+    "cellId": "emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0",
+    "confidence": 0.86,
+    "defects": [],
+    "dynamism": 7.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle follows a winding access road through several bends and junctions while multiple green cars travel on nearby or intersecting lanes. It slows or adjusts its path around a green car crossing ahead, and a violet motorcycle approaches from behind and overtakes the ego and another car without contact. All actors remain on the roadway and the clip ends without a collision.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "f17b3ebf0ba745a02f53e7771f85e386e797243315126634fc3f77c71523dfb9",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "el-camino-road",
+  "maps": [
+    "el-camino-road"
+  ],
+  "media": "/artifacts/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.86,
+    "dynamism": 7.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-pair1",
+  "timings": {
+    "render2dWallS": 0.908
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/010/60-render2d/emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0/rollout.mp4"
+}

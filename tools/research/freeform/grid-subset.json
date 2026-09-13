@@ -1,0 +1,40 @@
+{
+ "kind": "freeform-grid-subset",
+ "seed": 20260817,
+ "ids": [
+  "c10b-distracted-drift",
+  "c11-backing-out",
+  "c12b-scooter-child",
+  "c13-rail-crossing",
+  "c15b-road-rage",
+  "c2b-cut-in-truck",
+  "c3b-late-yield",
+  "c4b-ped-at-exit",
+  "c6b-cyclist-left-turn",
+  "owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic",
+  "owner-erratic-behavior-driver-drifting-across-a-lane-while-textin",
+  "owner-map-divergence-faded-lane-markings",
+  "owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b",
+  "owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder",
+  "owner-weather-physics-fog-causing-sensor-disagreement"
+ ],
+ "dev": [
+  "c12b-scooter-child",
+  "c2b-cut-in-truck",
+  "c4b-ped-at-exit",
+  "c15b-road-rage",
+  "c6b-cyclist-left-turn",
+  "c10b-distracted-drift",
+  "c13-rail-crossing",
+  "c11-backing-out",
+  "c3b-late-yield"
+ ],
+ "owner": [
+  "owner-weather-physics-fog-causing-sensor-disagreement",
+  "owner-erratic-behavior-driver-drifting-across-a-lane-while-textin",
+  "owner-map-divergence-faded-lane-markings",
+  "owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b",
+  "owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic",
+  "owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder"
+ ]
+}

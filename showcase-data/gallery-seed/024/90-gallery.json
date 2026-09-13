@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/024/40-cells/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/instance.json",
+    "judge": "gallery-seed/024/40-cells/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1",
+    "trace": "gallery-seed/024/40-cells/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/trace.json.gz",
+    "video": "gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4"
+  },
+  "brief": "owner sudden hazards person chasing a dog into the road",
+  "cellId": "vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1",
+  "dynamism": 4.0,
+  "engine": "vista",
+  "gate": {
+    "clearanceM": 2.226,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 6.84
+  },
+  "headline": "/artifacts/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4",
+  "id": "seed-024",
+  "jobId": "seed-024",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        1.3,
+        1.8,
+        2.9,
+        4.36,
+        8.72,
+        11.64,
+        16
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 12.45,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 603,
+        "reasoning": 516
+      }
+    },
+    "cellId": "vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1",
+    "confidence": 0.88,
+    "defects": [],
+    "dynamism": 4.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle follows a curving single-lane road toward a junction. A pedestrian and an orange cyclist or scooter rider cross ahead from right to left and clear the ego's path; the ego continues through the intersection without contact or abrupt maneuvering.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "4ee790e2d5b04ea2686100666a3523525fa7f2a3e9bf95fa9f27cb1c3d05b601",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "belmont-research-center",
+  "maps": [
+    "belmont-research-center"
+  ],
+  "media": "/artifacts/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.88,
+    "dynamism": 4.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-vista-main1",
+  "timings": {
+    "render2dWallS": 0.641
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/024/60-render2d/vista2-main1-owner-sudden-hazards-person-chasing-a-dog-into-the-road-belmont-research-center-49ef0a61-1/rollout.mp4"
+}

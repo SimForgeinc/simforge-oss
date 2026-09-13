@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.46,
+      2.9,
+      4.16,
+      5.16,
+      8.72,
+      11.64,
+      16
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 22.57,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 828,
+      "reasoning": 725
+    }
+  },
+  "cellId": "emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec",
+  "confidence": 0.91,
+  "defects": [
+    "overlap"
+  ],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle drives through the branching junction, passes a green vehicle at very close quarters, and then turns onto a side lane. Several green vehicles circulate through the surrounding lanes while orange cyclists or scooters also move through the area; by the final frame, multiple green vehicles crowd the upper junction and visibly intersect one another.",
+  "model": "gpt-5.6-sol",
+  "plausible": false,
+  "rawResponseSha256": "fda41582a27f608f8c333be4ea62a330ab2df43e6f7da9f46111951f5b8571c4",
+  "realism": 4.0,
+  "visionAsserted": true
+}

@@ -1,0 +1,252 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "vista2-c9-animal",
+      "templateVersion": 2,
+      "templateDigest": "8ff7f7fee15f92ac",
+      "mapId": "easterbrook-discovery-school",
+      "matcherIndexDigest": "7006e23d34d3b5c23268f8c21e39fc2adaec303fd5d2e65cb618325fb869f32f",
+      "engineGraphDigest": "ae48d9dbee5577e7e8506f99ab7dc242f5bcbb13f55dc686344dcfc1068638e0",
+      "siteId": "1fb7eb4659797988",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "71ca0cc47ba776b37b0c632fdc4a77fad9a89ab7f1ccbf3b588e26636a556646",
+      "drawIndex": 1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "1fb7eb4659797988#1",
+    "archetype": "C9.hazard",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "1fb7eb4659797988",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_2b013686f39e0fc4",
+      "entryLaneRsl": "16:0:1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "every required adjacency present along the corridor",
+        "139.67 m of runway available, 120 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 1)"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "deer",
+        "actorKind": "animal",
+        "roleKind": "relative_to",
+        "laneRsl": "11200:0:1",
+        "spawnS": 110.00000696139136,
+        "initialSpeedMps": 6.944444444444445,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "11301:0:1",
+        "spawnS": 39.99998208709634,
+        "initialSpeedMps": 13.88888888888889,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "d92ccbe87611616e05c46ce5be261603ed8938b083facefd86fc0d4ba3f91906",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "easterbrook-discovery-school",
+    "clipSeconds": 16,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "71ca0cc47ba776b3",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "deer",
+        "kind": "animal",
+        "dims": {
+          "l": 1.76,
+          "w": 0.46,
+          "h": 1.62
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "11200:0:1",
+            "s": 29.66106538212678,
+            "tFrac": 1
+          },
+          "pose": {
+            "x": 214.13422830707975,
+            "z": 338.50496890100214,
+            "headingRad": -2.3898011688200755
+          },
+          "speedMps": 6.944444444444445
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "16:0:1",
+              "12109:0:1",
+              "15:0:1",
+              "11301:0:1",
+              "20:0:1",
+              "11200:0:1",
+              "13:0:2",
+              "205:0:2",
+              "12:0:2",
+              "11272:0:2"
+            ]
+          },
+          "cruiseSpeedMps": 6.944444444444445
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:deer",
+          "class:animal",
+          "binding:relative_to",
+          "catalog:animal.deer"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "11301:0:1",
+            "s": 9.424058036737819,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 220.71904826743102,
+            "z": 266.73712375743884,
+            "headingRad": -1.7427839498488193
+          },
+          "speedMps": 13.88888888888889
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "16:0:1",
+              "12109:0:1",
+              "15:0:1",
+              "11301:0:1",
+              "20:0:1",
+              "11200:0:1",
+              "13:0:2",
+              "205:0:2",
+              "12:0:2",
+              "11272:0:2",
+              "11:0:2",
+              "11748:1:1",
+              "11748:0:1"
+            ]
+          },
+          "cruiseSpeedMps": 13.88888888888889
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "i11",
+        "actorId": "deer",
+        "trigger": {
+          "kind": "at",
+          "t": 3.2
+        },
+        "verb": "route",
+        "target": {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 214.1342335986628,
+              "z": 338.50496436761915
+            },
+            {
+              "x": 211.3863769548861,
+              "z": 335.5659178130565
+            },
+            {
+              "x": 208.63852031110937,
+              "z": 332.62687125849385
+            }
+          ]
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

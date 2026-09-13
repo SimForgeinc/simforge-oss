@@ -1,0 +1,3704 @@
+{
+ "gate": "freeform full-schema authoring (gpt-5.6-sol, effort medium)",
+ "stream": "freeform",
+ "runId": "grid-g1-sol-medium",
+ "arm": "grid-g1-sol-medium",
+ "runDir": "/tmp/tgr-freeform-grid-g1-sol-medium",
+ "model": "gpt-5.6-sol",
+ "effort": "medium",
+ "endpoint": "http://127.0.0.1:4141/v1",
+ "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+ "mapsUsed": [
+  "yale-street",
+  "belmont-research-center",
+  "el-camino-road",
+  "easterbrook-discovery-school",
+  "richmond-field-station"
+ ],
+ "gateHashBefore": "GATE-HASH TRIPWIRE: PASS -- frozen gate v1 1a08698e95fca4bc / v2 3823182614e5a5ba unchanged",
+ "gateHashAfter": "GATE-HASH TRIPWIRE: PASS -- frozen gate v1 1a08698e95fca4bc / v2 3823182614e5a5ba unchanged",
+ "briefs": 15,
+ "admitted": 2,
+ "admissionRate": 0.1333,
+ "probeDraws": 4,
+ "draws": 6,
+ "maxSites": 6,
+ "budgets": {
+  "validate": 3,
+  "site": 2,
+  "revise": 3
+ },
+ "keepCells": 6,
+ "perCategory": {
+  "C10.oncoming": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C11.parking": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C12.school": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C13.control": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C15.adversarial": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C2.cut-in-merge": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C3.intersection": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C4.roundabout": {
+   "total": 1,
+   "admitted": 0
+  },
+  "C6.cyclist-ptw": {
+   "total": 1,
+   "admitted": 0
+  },
+  "OWNER.control-anomalies": {
+   "total": 1,
+   "admitted": 1
+  },
+  "OWNER.erratic-behavior": {
+   "total": 1,
+   "admitted": 0
+  },
+  "OWNER.map-divergence": {
+   "total": 1,
+   "admitted": 0
+  },
+  "OWNER.occlusion-visibility": {
+   "total": 1,
+   "admitted": 0
+  },
+  "OWNER.sudden-hazards": {
+   "total": 1,
+   "admitted": 0
+  },
+  "OWNER.weather-physics": {
+   "total": 1,
+   "admitted": 1
+  }
+ },
+ "categoriesCovered": 2,
+ "firstFailureAcrossRejected": {
+  "C5": 300,
+  "C2": 264,
+  "C4": 207,
+  "C3": 99,
+  "C1": 44
+ },
+ "usageTotal": {
+  "input_tokens": 1165828,
+  "output_tokens": 380102,
+  "total_tokens": 1545930,
+  "calls": 80
+ },
+ "wallSeconds": 1881.8,
+ "censusAggAllCells": {
+  "cells": 1170,
+  "censusVersion": 1,
+  "actorsMoving": {
+   "mean": 1.5427,
+   "median": 2.0,
+   "max": 2
+  },
+  "laneChangesExecuted": {
+   "mean": 0.0026,
+   "median": 0.0,
+   "max": 1
+  },
+  "swerveEvents": {
+   "mean": 0.0564,
+   "median": 0.0,
+   "max": 2
+  },
+  "signalPhaseChanges": {
+   "mean": 0.2923,
+   "median": 0.0,
+   "max": 3
+  },
+  "interactingPairs": {
+   "mean": 0.9949,
+   "median": 1.0,
+   "max": 3
+  },
+  "speedVarianceEgoPath": {
+   "mean": 36.0763,
+   "median": 42.1663,
+   "max": 64.6407
+  },
+  "hardBrakeEvents": {
+   "mean": 1.7316,
+   "median": 2.0,
+   "max": 5
+  },
+  "authoredEventsFired": {
+   "mean": 6.4376,
+   "median": 6.0,
+   "max": 13
+  },
+  "actorCount": {
+   "mean": 2.0821,
+   "median": 2.0,
+   "max": 4
+  },
+  "ambientCount": {
+   "mean": 0,
+   "median": 0.0,
+   "max": 0
+  },
+  "authoredEventsFireRate": 0.9136,
+  "authoredEventsTotal": {
+   "mean": 7.0462
+  },
+  "shareCellsWith_laneChangesExecuted": 0.0026,
+  "shareCellsWith_swerveEvents": 0.0547,
+  "shareCellsWith_signalPhaseChanges": 0.2103,
+  "shareCellsWith_hardBrakeEvents": 0.9342
+ },
+ "censusAggPassingCells": {
+  "cells": 52,
+  "censusVersion": 1,
+  "actorsMoving": {
+   "mean": 2,
+   "median": 2.0,
+   "max": 2
+  },
+  "laneChangesExecuted": {
+   "mean": 0,
+   "median": 0.0,
+   "max": 0
+  },
+  "swerveEvents": {
+   "mean": 0.0577,
+   "median": 0.0,
+   "max": 1
+  },
+  "signalPhaseChanges": {
+   "mean": 1.2115,
+   "median": 0.0,
+   "max": 3
+  },
+  "interactingPairs": {
+   "mean": 1,
+   "median": 1.0,
+   "max": 1
+  },
+  "speedVarianceEgoPath": {
+   "mean": 39.8427,
+   "median": 40.7736,
+   "max": 53.3966
+  },
+  "hardBrakeEvents": {
+   "mean": 1.7885,
+   "median": 2.0,
+   "max": 3
+  },
+  "authoredEventsFired": {
+   "mean": 9.0962,
+   "median": 10.0,
+   "max": 11
+  },
+  "actorCount": {
+   "mean": 2,
+   "median": 2.0,
+   "max": 2
+  },
+  "ambientCount": {
+   "mean": 0,
+   "median": 0.0,
+   "max": 0
+  },
+  "authoredEventsFireRate": 1.0,
+  "authoredEventsTotal": {
+   "mean": 9.0962
+  },
+  "shareCellsWith_laneChangesExecuted": 0.0,
+  "shareCellsWith_swerveEvents": 0.0577,
+  "shareCellsWith_signalPhaseChanges": 0.4808,
+  "shareCellsWith_hardBrakeEvents": 1.0
+ },
+ "cellsRoot": "/tmp/tgr-freeform-grid-g1-sol-medium/cells",
+ "rows": [
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 27
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 32,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 12,
+       "C4": 4,
+       "C5": 12
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 30
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 32,
+      "passingCells": 4,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 28
+      },
+      "refusalCodes": {
+       "role_semantic_projection_failed": 8
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 42
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 4,
+       "C3": 2,
+       "C4": 14,
+       "C5": 20
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/r3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 14
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 24,
+      "passingCells": 2,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 8,
+       "C3": 4,
+       "C5": 10
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 60,
+   "feasibleCells": 48,
+   "passingCells": 2,
+   "maps": 1,
+   "sites": 1,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 24,
+    "C3": 6,
+    "C5": 16
+   },
+   "refusalCodes": {
+    "role_semantic_projection_failed": 12
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/final-1786917787533",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c10b-distracted-drift/v4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "03c74bea4c63cabf554dd0145196f578946e816d1d8dc4f2912b94e23a40999a",
+   "usage": {
+    "input_tokens": 73001,
+    "output_tokens": 24098,
+    "total_tokens": 97099,
+    "calls": 5
+   },
+   "wallS": 595.9,
+   "repairPools": {
+    "validate": 1,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-richmond-field-station-5ed360b99ab1862a-000",
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-richmond-field-station-5ed360b99ab1862a-002",
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-belmont-research-center-2c72ba4ae0997099-000",
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-el-camino-road-1bdacbabb98ca5e4-000",
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-richmond-field-station-21f74d6ed678906d-000",
+    "freeform-grid-g1-sol-medium-c10b-distracted-drift-belmont-research-center-2c72ba4ae0997099-001"
+   ],
+   "censusAggAll": {
+    "cells": 48,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.875,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0.875,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 25.9331,
+     "median": 23.3768,
+     "max": 47.2675
+    },
+    "hardBrakeEvents": {
+     "mean": 2.5208,
+     "median": 2.0,
+     "max": 5
+    },
+    "authoredEventsFired": {
+     "mean": 7.625,
+     "median": 8.0,
+     "max": 8
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.9531,
+    "authoredEventsTotal": {
+     "mean": 8
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 2,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 10.8935,
+     "median": 10.8935,
+     "max": 10.9265
+    },
+    "hardBrakeEvents": {
+     "mean": 3,
+     "median": 3.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 8,
+     "median": 8.0,
+     "max": 8
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 8
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   }
+  },
+  {
+   "id": "c11-backing-out",
+   "category": "C11.parking",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/r0.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/v1.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/v2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 35
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "arrival_unconverged": 40
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/r3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 48
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 8,
+       "C2": 8,
+       "C3": 16,
+       "C4": 8
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/r5.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "fallback_to_last_valid",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/v4.template.json",
+     "reason": "template_invalid"
+    }
+   ],
+   "cells": 174,
+   "feasibleCells": 174,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 24,
+    "C2": 30,
+    "C3": 36,
+    "C4": 84
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/final-1786917831877",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c11-backing-out/v4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "b1699c81795500dcc86127e9b13b15c6b4a121483ba034523ecbee86797dec26",
+   "usage": {
+    "input_tokens": 85838,
+    "output_tokens": 23512,
+    "total_tokens": 109350,
+    "calls": 6
+   },
+   "wallS": 679.6,
+   "repairPools": {
+    "validate": 3,
+    "site": 0,
+    "revise": 2
+   },
+   "schemaErrorRounds": 4,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c11-backing-out-belmont-research-center-18ec29436f8b8afc-000",
+    "freeform-grid-g1-sol-medium-c11-backing-out-easterbrook-discovery-school-2247fa01d2590274-000",
+    "freeform-grid-g1-sol-medium-c11-backing-out-el-camino-road-01765e5ed70765a9-000",
+    "freeform-grid-g1-sol-medium-c11-backing-out-richmond-field-station-275c2e185b1011dc-000",
+    "freeform-grid-g1-sol-medium-c11-backing-out-yale-street-079c5359e1f4ec06-000",
+    "freeform-grid-g1-sol-medium-c11-backing-out-belmont-research-center-18ec29436f8b8afc-001"
+   ],
+   "censusAggAll": {
+    "cells": 174,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 0.8621,
+     "median": 1.0,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.069,
+     "median": 0.0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0.7586,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 12.9124,
+     "median": 14.0177,
+     "max": 43.0826
+    },
+    "hardBrakeEvents": {
+     "mean": 1.2759,
+     "median": 1.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 5,
+     "median": 5.0,
+     "max": 5
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.7143,
+    "authoredEventsTotal": {
+     "mean": 7
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.069,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.7241
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c12b-scooter-child",
+   "category": "C12.school",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage with a parked school bus and a child approaching from the verge.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 8,
+       "C2": 4,
+       "C4": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage using a marked crossing, a parked school bus, and a pickup row.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 12
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 36,
+      "feasibleCells": 36,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 12,
+       "C3": 9,
+       "C4": 11,
+       "C5": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage with a parked school bus, a pickup row, and a child entering from the verge.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/r2.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage with a parked school bus, a pickup row, and a child entering from the verge.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/v3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 31
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 4,
+       "C5": 36
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage using a parked school bus, pickup vehicles, and a child entering at an existing crossing.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 12
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "arrival_unconverged": 28
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 66,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {},
+   "refusalCodes": {
+    "arrival_unconverged": 66
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/final-1786917803796",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c12b-scooter-child/r4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "The available maps have no signed school-zone feature, so the scenario honestly approximates a school frontage using a parked school bus, pickup vehicles, and a child entering at an existing crossing.",
+   "templateSha256": "b9c31e13a0d9306bf16c850e60f98765d44ff42f8d90474b56d2674e3de11ea0",
+   "usage": {
+    "input_tokens": 73517,
+    "output_tokens": 26483,
+    "total_tokens": 100000,
+    "calls": 5
+   },
+   "wallS": 603.0,
+   "repairPools": {
+    "validate": 1,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [],
+   "censusAggAll": {
+    "cells": 0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c13-rail-crossing",
+   "category": "C13.control",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no rail crossings, so this nearest honest approximation uses an authored flashing-red roadside control at a portable stop line, with a scripted lead vehicle stopping as the ego approaches; no tracks or crossing gate are implied.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 55
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C3": 1,
+       "C5": 39
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no rail crossings, so this nearest honest approximation uses an authored flashing-red roadside control at a portable stop line, with a scripted lead vehicle stopping as the ego approaches; no tracks or crossing gate are implied.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 59
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 9,
+       "C5": 31
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no rail crossings, so this nearest honest approximation uses an authored flashing-red roadside control and stop line that activate as the ego approaches; no tracks or crossing gate are implied.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C3": 2,
+       "C5": 38
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no rail crossings, so this nearest honest approximation uses an authored flashing-red roadside control and stop line that activate as the ego approaches; no tracks or crossing gate are implied.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 1,
+       "C5": 39
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 180,
+   "feasibleCells": 180,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 8,
+    "C2": 36,
+    "C5": 136
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/final-1786917731543",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c13-rail-crossing/r3.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "The available maps contain no rail crossings, so this nearest honest approximation uses an authored flashing-red roadside control and stop line that activate as the ego approaches; no tracks or crossing gate are implied.",
+   "templateSha256": "53671a15154feef86565320dd00a157f2c4887f153a8ff5da4ab44fd79b072dd",
+   "usage": {
+    "input_tokens": 56869,
+    "output_tokens": 20782,
+    "total_tokens": 77651,
+    "calls": 4
+   },
+   "wallS": 581.6,
+   "repairPools": {
+    "validate": 0,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-belmont-research-center-08209fc20f9c82d9-000",
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-easterbrook-discovery-school-309c73a1eda6bb8c-000",
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-el-camino-road-0017c4f3b2e2aedb-000",
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-richmond-field-station-11085642017db6f8-000",
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-yale-street-00514244980b1ecc-000",
+    "freeform-grid-g1-sol-medium-c13-rail-crossing-belmont-research-center-08209fc20f9c82d9-001"
+   ],
+   "censusAggAll": {
+    "cells": 180,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.9611,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 43.2872,
+     "median": 48.1813,
+     "max": 64.6407
+    },
+    "hardBrakeEvents": {
+     "mean": 2.8389,
+     "median": 3.0,
+     "max": 4
+    },
+    "authoredEventsFired": {
+     "mean": 5.8889,
+     "median": 6.0,
+     "max": 6
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.9815,
+    "authoredEventsTotal": {
+     "mean": 6
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 1.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c15b-road-rage",
+   "category": "C15.adversarial",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/r0.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/v1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 7
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 20,
+      "feasibleCells": 20,
+      "passingCells": 1,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 6,
+       "C3": 4,
+       "C4": 2,
+       "C5": 7
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 10
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 24,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 7,
+       "C3": 5,
+       "C5": 12
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 6
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 16,
+      "feasibleCells": 16,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 8,
+       "C3": 4,
+       "C4": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 2
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 4,
+       "C3": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 12,
+   "feasibleCells": 12,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 6,
+    "C3": 6
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/final-1786917763249",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c15b-road-rage/r4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "a2d4ad6a164754ce22155891f9ba933dec6d507506932daa23e965483d236c80",
+   "usage": {
+    "input_tokens": 73378,
+    "output_tokens": 25800,
+    "total_tokens": 99178,
+    "calls": 5
+   },
+   "wallS": 561.6,
+   "repairPools": {
+    "validate": 1,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c15b-road-rage-belmont-research-center-ce902bc8b2e5ba65-000",
+    "freeform-grid-g1-sol-medium-c15b-road-rage-el-camino-road-380e57562ddb40d3-000",
+    "freeform-grid-g1-sol-medium-c15b-road-rage-belmont-research-center-ce902bc8b2e5ba65-001",
+    "freeform-grid-g1-sol-medium-c15b-road-rage-el-camino-road-380e57562ddb40d3-001",
+    "freeform-grid-g1-sol-medium-c15b-road-rage-belmont-research-center-ce902bc8b2e5ba65-002",
+    "freeform-grid-g1-sol-medium-c15b-road-rage-el-camino-road-380e57562ddb40d3-002"
+   ],
+   "censusAggAll": {
+    "cells": 12,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.5,
+     "median": 0.5,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "speedVarianceEgoPath": {
+     "mean": 27.5268,
+     "median": 27.4541,
+     "max": 28.7279
+    },
+    "hardBrakeEvents": {
+     "mean": 1.9167,
+     "median": 2.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 13,
+     "median": 13.0,
+     "max": 13
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 13
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.5,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c2b-cut-in-truck",
+   "category": "C2.cut-in-merge",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 16,
+       "C3": 4,
+       "C5": 8
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 12
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 24,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 20,
+       "C4": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 6
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 20,
+      "feasibleCells": 20,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 12,
+       "C3": 4,
+       "C5": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 2
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 4,
+       "C5": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 12,
+   "feasibleCells": 12,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 6,
+    "C5": 6
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/final-1786917739289",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c2b-cut-in-truck/r3.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "813d32001c39f17d68bf3c21861a792a25c5b12f2310246613bce10686e922fc",
+   "usage": {
+    "input_tokens": 58857,
+    "output_tokens": 24072,
+    "total_tokens": 82929,
+    "calls": 4
+   },
+   "wallS": 536.4,
+   "repairPools": {
+    "validate": 0,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-easterbrook-discovery-school-5d06c6905fdf75c6-000",
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-el-camino-road-97d6f4d7844c2805-000",
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-easterbrook-discovery-school-5d06c6905fdf75c6-001",
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-el-camino-road-97d6f4d7844c2805-001",
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-easterbrook-discovery-school-5d06c6905fdf75c6-002",
+    "freeform-grid-g1-sol-medium-c2b-cut-in-truck-el-camino-road-97d6f4d7844c2805-002"
+   ],
+   "censusAggAll": {
+    "cells": 12,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0.25,
+     "median": 0.0,
+     "max": 1
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 55.6058,
+     "median": 55.5879,
+     "max": 61.5791
+    },
+    "hardBrakeEvents": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 7.25,
+     "median": 7.0,
+     "max": 9
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.6591,
+    "authoredEventsTotal": {
+     "mean": 11
+    },
+    "shareCellsWith_laneChangesExecuted": 0.25,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.5
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c3b-late-yield",
+   "category": "C3.intersection",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 24
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 24,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 8,
+       "C3": 12,
+       "C5": 4
+      },
+      "refusalCodes": {
+       "movement_priority_missing": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 26
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 8,
+       "C3": 4,
+       "C5": 16
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/r2.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/v3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 26
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 8,
+       "C3": 5,
+       "C5": 15
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/r5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 3
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 12,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C3": 4,
+       "C5": 4
+      },
+      "refusalCodes": {
+       "movement_stop_missing": 4
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 18,
+   "feasibleCells": 12,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C3": 6,
+    "C5": 6
+   },
+   "refusalCodes": {
+    "movement_stop_missing": 6
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/final-1786918492504",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c3b-late-yield/r5.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "ad4e79cc6c44a618c9951f9f32512aa12c491fbb820cf28c187031e09b01d1be",
+   "usage": {
+    "input_tokens": 89305,
+    "output_tokens": 29532,
+    "total_tokens": 118837,
+    "calls": 6
+   },
+   "wallS": 753.7,
+   "repairPools": {
+    "validate": 2,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 2,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c3b-late-yield-richmond-field-station-f8c4dccf74052a15-000",
+    "freeform-grid-g1-sol-medium-c3b-late-yield-yale-street-0533c572057bab44-000",
+    "freeform-grid-g1-sol-medium-c3b-late-yield-richmond-field-station-f8c4dccf74052a15-001",
+    "freeform-grid-g1-sol-medium-c3b-late-yield-yale-street-0533c572057bab44-001",
+    "freeform-grid-g1-sol-medium-c3b-late-yield-richmond-field-station-f8c4dccf74052a15-002",
+    "freeform-grid-g1-sol-medium-c3b-late-yield-yale-street-0533c572057bab44-002"
+   ],
+   "censusAggAll": {
+    "cells": 12,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0.5,
+     "median": 0.5,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 34.5478,
+     "median": 34.5457,
+     "max": 55.6512
+    },
+    "hardBrakeEvents": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 10,
+     "median": 10.0,
+     "max": 12
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.8333,
+    "authoredEventsTotal": {
+     "mean": 12
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crossing immediately beyond an ordinary junction as the ego exits straight through it.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/r0.template.json",
+     "validationErrors": 3
+    },
+    {
+     "kind": "repair",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crossing immediately beyond an ordinary junction as the ego exits straight through it.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/v1.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "light",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crossing immediately beyond an ordinary junction as the ego exits straight through it.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/v2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crosses immediately beyond an ordinary junction while the ego leaves on the reference path.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/s3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "near_miss_trigger_unresolved": 40
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crosses immediately beyond an ordinary junction while the ego leaves on the reference path.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "arrival_unconverged": 40
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crosses immediately beyond an ordinary junction while the ego leaves on the reference path.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/r5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 3,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 4,
+       "C3": 9,
+       "C4": 4,
+       "C5": 20
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crosses the exit immediately beyond an ordinary uncontrolled junction as the ego leaves.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/r6.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 51
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "near_miss_trigger_unresolved": 40
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 162,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {},
+   "refusalCodes": {
+    "near_miss_trigger_unresolved": 162
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/final-1786918489401",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c4b-ped-at-exit/r6.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "The available maps contain no roundabouts, so this uses the nearest honest approximation: a pedestrian crosses the exit immediately beyond an ordinary uncontrolled junction as the ego leaves.",
+   "templateSha256": "1423b6f73bdcbfe44c4d5e73376106fd0aa3a7bf844fbba418b0b693aecfbfc3",
+   "usage": {
+    "input_tokens": 101363,
+    "output_tokens": 29147,
+    "total_tokens": 130510,
+    "calls": 7
+   },
+   "wallS": 728.7,
+   "repairPools": {
+    "validate": 2,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 2,
+   "cellsExported": [],
+   "censusAggAll": {
+    "cells": 0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "c6b-cyclist-left-turn",
+   "category": "C6.cyclist-ptw",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/r0.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/v1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/s2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 51
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 24,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 12,
+       "C4": 5,
+       "C5": 7
+      },
+      "refusalCodes": {
+       "movement_priority_missing": 8,
+       "arrival_unconverged": 4,
+       "arrival_conflict_unclosed": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/r3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 38
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C3": 12,
+       "C5": 12
+      },
+      "refusalCodes": {
+       "arrival_unconverged": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/r5.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/v6.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 38
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C3": 11,
+       "C4": 6,
+       "C5": 11
+      },
+      "refusalCodes": {
+       "arrival_unconverged": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/r7.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 37
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C3": 2,
+       "C4": 7,
+       "C5": 15
+      },
+      "refusalCodes": {
+       "arrival_unconverged": 4
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 138,
+   "feasibleCells": 126,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C1": 12,
+    "C3": 39,
+    "C4": 21,
+    "C5": 54
+   },
+   "refusalCodes": {
+    "arrival_unconverged": 12
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/final-1786918521489",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/c6b-cyclist-left-turn/r7.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "aac301c042a013a444aada27c5f6df538870384511a77f30a65c4c8999a67176",
+   "usage": {
+    "input_tokens": 115472,
+    "output_tokens": 31547,
+    "total_tokens": 147019,
+    "calls": 8
+   },
+   "wallS": 764.4,
+   "repairPools": {
+    "validate": 3,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 3,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-belmont-research-center-168d99114fc19164-000",
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-el-camino-road-15ad73df5327e807-000",
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-richmond-field-station-365442a336ffe473-000",
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-yale-street-16b448cfc1dc3502-000",
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-belmont-research-center-168d99114fc19164-001",
+    "freeform-grid-g1-sol-medium-c6b-cyclist-left-turn-el-camino-road-15ad73df5327e807-001"
+   ],
+   "censusAggAll": {
+    "cells": 126,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.9048,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.1667,
+     "median": 0.0,
+     "max": 2
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 0.8571,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 25.9511,
+     "median": 24.0396,
+     "max": 47.1874
+    },
+    "hardBrakeEvents": {
+     "mean": 1.1667,
+     "median": 1.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 1.5,
+     "median": 1.5,
+     "max": 2
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.75,
+    "authoredEventsTotal": {
+     "mean": 2
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.1587,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.9048
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic",
+   "category": "OWNER.control-anomalies",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/s1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 16
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 20,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C2": 1,
+       "C3": 4,
+       "C5": 11
+      },
+      "refusalCodes": {
+       "arrival_conflict_unclosed": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 16
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 20,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C1": 4,
+       "C5": 16
+      },
+      "refusalCodes": {
+       "arrival_conflict_unclosed": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 16
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 20,
+      "passingCells": 4,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C1": 4,
+       "C5": 12
+      },
+      "refusalCodes": {
+       "arrival_conflict_unclosed": 4
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 16
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": true,
+      "cells": 24,
+      "feasibleCells": 20,
+      "passingCells": 9,
+      "maps": 2,
+      "sites": 3,
+      "firstFailure": {
+       "C1": 4,
+       "C3": 3,
+       "C5": 4
+      },
+      "refusalCodes": {
+       "arrival_conflict_unclosed": 4
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 78,
+   "feasibleCells": 66,
+   "passingCells": 25,
+   "maps": 3,
+   "sites": 5,
+   "admitted": true,
+   "firstFailure": {
+    "C1": 6,
+    "C3": 5,
+    "C4": 6,
+    "C5": 24
+   },
+   "refusalCodes": {
+    "arrival_conflict_unclosed": 6,
+    "signal_unbindable": 6
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/final-1786918345115",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic/r4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "c7775ca051d1e230968d606fad770b1ced516eae3bafad8ae69630f07f879c57",
+   "usage": {
+    "input_tokens": 74415,
+    "output_tokens": 23620,
+    "total_tokens": 98035,
+    "calls": 5
+   },
+   "wallS": 557.0,
+   "repairPools": {
+    "validate": 0,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-el-camino-road-4be28ad3b2e9dff1-000",
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-richmond-field-station-f2d21edb1fb90cd4-000",
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-yale-street-1e94406b9b13f954-000",
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-el-camino-road-4be28ad3b2e9dff1-001",
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-richmond-field-station-f2d21edb1fb90cd4-001",
+    "freeform-grid-g1-sol-medium-owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic-yale-street-1e94406b9b13f954-001"
+   ],
+   "censusAggAll": {
+    "cells": 66,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.9091,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 2.4545,
+     "median": 2.0,
+     "max": 3
+    },
+    "interactingPairs": {
+     "mean": 0.9091,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 35.8816,
+     "median": 40.6124,
+     "max": 42.6737
+    },
+    "hardBrakeEvents": {
+     "mean": 1.0909,
+     "median": 1.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 11,
+     "median": 11.0,
+     "max": 11
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 11
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 1.0,
+    "shareCellsWith_hardBrakeEvents": 0.9091
+   },
+   "censusAggPassing": {
+    "cells": 25,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 2.52,
+     "median": 3,
+     "max": 3
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 37.4125,
+     "median": 40.6596,
+     "max": 41.073
+    },
+    "hardBrakeEvents": {
+     "mean": 1.24,
+     "median": 1,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 11,
+     "median": 11,
+     "max": 11
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 11
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 1.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   }
+  },
+  {
+   "id": "owner-erratic-behavior-driver-drifting-across-a-lane-while-textin",
+   "category": "OWNER.erratic-behavior",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 3
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 8,
+      "feasibleCells": 8,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 8
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 33,
+       "C4": 7
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 59
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 40
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 59
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 32,
+       "C4": 8
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 180,
+   "feasibleCells": 180,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 162,
+    "C4": 18
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/final-1786918285522",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-erratic-behavior-driver-drifting-across-a-lane-while-textin/r3.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "1f91b9a9143d25005c71b363bbfa6e8f2e0227d0b18653d3d340d5520e1f5dd5",
+   "usage": {
+    "input_tokens": 56970,
+    "output_tokens": 19924,
+    "total_tokens": 76894,
+    "calls": 4
+   },
+   "wallS": 499.3,
+   "repairPools": {
+    "validate": 0,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-belmont-research-center-06ac7a58ff047584-000",
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-easterbrook-discovery-school-08ce57efdc904479-000",
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-13953eae8f13cedc-000",
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-richmond-field-station-1f085ab7b59ed814-000",
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-yale-street-1c7c3ec35c4a162a-000",
+    "freeform-grid-g1-sol-medium-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-belmont-research-center-06ac7a58ff047584-001"
+   ],
+   "censusAggAll": {
+    "cells": 180,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 48.7667,
+     "median": 54.2308,
+     "max": 54.9681
+    },
+    "hardBrakeEvents": {
+     "mean": 1.1,
+     "median": 1.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 8,
+     "median": 8.0,
+     "max": 8
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 8
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "owner-map-divergence-faded-lane-markings",
+   "category": "OWNER.map-divergence",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and authoring schema do not expose road-paint condition, so faded markings are approximated honestly by a wet, low-contrast multilane corridor and a scripted boundary-tracking drift toward an adjacent vehicle.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 4
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 16,
+      "feasibleCells": 16,
+      "passingCells": 2,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 1,
+       "C3": 7,
+       "C5": 6
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and authoring schema do not expose road-paint condition, so faded lane markings are approximated honestly by low-contrast wet-road conditions and a scripted lane-boundary tracking drift on a real multilane corridor.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 0
+    },
+    {
+     "kind": "site_repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and schema do not expose lane-paint condition, so faded markings are approximated honestly with low-contrast wet-road conditions and an authored drift toward the centerline on a real two-way corridor.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/s2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 49
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 16,
+       "C3": 4,
+       "C4": 16,
+       "C5": 4
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and schema do not expose lane-paint condition, so faded markings are approximated honestly by wet, low-contrast conditions and an authored centerline-tracking error on a single-lane-per-direction corridor.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 43
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 4,
+       "C3": 8,
+       "C4": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and schema do not expose lane-paint condition, so faded markings are approximated honestly by wet, low-contrast conditions and an authored centerline-tracking error on a two-way corridor.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/r4.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The maps and schema do not expose lane-paint condition, so faded markings are approximated honestly by wet, low-contrast conditions and an authored centerline-tracking error on a two-way corridor.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/v5.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 46
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 20,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C3": 4,
+       "C4": 6,
+       "C5": 10
+      },
+      "refusalCodes": {
+       "arrival_unconverged": 12,
+       "role_semantic_projection_failed": 8
+      },
+      "error": null
+     }
+    }
+   ],
+   "cells": 168,
+   "feasibleCells": 72,
+   "passingCells": 8,
+   "maps": 2,
+   "sites": 2,
+   "admitted": false,
+   "firstFailure": {
+    "C3": 6,
+    "C4": 24,
+    "C5": 34
+   },
+   "refusalCodes": {
+    "arrival_unconverged": 60,
+    "role_semantic_projection_failed": 36
+   },
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/final-1786918629540",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-map-divergence-faded-lane-markings/v5.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "The maps and schema do not expose lane-paint condition, so faded markings are approximated honestly by wet, low-contrast conditions and an authored centerline-tracking error on a two-way corridor.",
+   "templateSha256": "2647466ae181917c419f00ed5e08306899f71104b5a2bc124f146269e2969753",
+   "usage": {
+    "input_tokens": 89617,
+    "output_tokens": 32124,
+    "total_tokens": 121741,
+    "calls": 6
+   },
+   "wallS": 765.1,
+   "repairPools": {
+    "validate": 1,
+    "site": 1,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-el-camino-road-db32449c045b014e-000",
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-yale-street-0cab2cd5c98c8f55-001",
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-el-camino-road-db32449c045b014e-001",
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-yale-street-0cab2cd5c98c8f55-002",
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-el-camino-road-db32449c045b014e-002",
+    "freeform-grid-g1-sol-medium-owner-map-divergence-faded-lane-markings-el-camino-road-db32449c045b014e-003"
+   ],
+   "censusAggAll": {
+    "cells": 72,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.3333,
+     "median": 0.0,
+     "max": 2
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 22.2661,
+     "median": 20.5242,
+     "max": 56.6844
+    },
+    "hardBrakeEvents": {
+     "mean": 1.75,
+     "median": 2.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 7.7778,
+     "median": 10.0,
+     "max": 10
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.7778,
+    "authoredEventsTotal": {
+     "mean": 10
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.3194,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 0.9306
+   },
+   "censusAggPassing": {
+    "cells": 8,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.375,
+     "median": 0.0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 28.1296,
+     "median": 22.4598,
+     "max": 49.8613
+    },
+    "hardBrakeEvents": {
+     "mean": 2.75,
+     "median": 3.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 10,
+     "median": 10.0,
+     "max": 10
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 10
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.375,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   }
+  },
+  {
+   "id": "owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b",
+   "category": "OWNER.occlusion-visibility",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 0,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {},
+      "refusalCodes": {
+       "actor_catalog_class_mismatch": 28
+      },
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and an opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C5": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and an opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/r2.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and an opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/v3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C5": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and an opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/r4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C5": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 48,
+   "feasibleCells": 48,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C2": 6,
+    "C5": 42
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/final-1786918855367",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b/r4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "Only one available map contains a mapped crest, so portability prevents requiring a true hill crest; this uses a mapped occlusion zone and an opaque roadside sight screen as the nearest honest approximation to stopped traffic hidden beyond a vertical sight break.",
+   "templateSha256": "e7b715bb8bc7838909c2d548abd0aeaff423dde9ddf5cb1489ceb2e93c9ae964",
+   "usage": {
+    "input_tokens": 72223,
+    "output_tokens": 21861,
+    "total_tokens": 94084,
+    "calls": 5
+   },
+   "wallS": 568.9,
+   "repairPools": {
+    "validate": 1,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 1,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-belmont-research-center-3862391672f82172-000",
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-el-camino-road-d484118743abe0a4-000",
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-richmond-field-station-7cd364484b56426a-000",
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-yale-street-0204d2f22d8a2a18-000",
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-belmont-research-center-3862391672f82172-001",
+    "freeform-grid-g1-sol-medium-owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b-el-camino-road-d484118743abe0a4-001"
+   ],
+   "censusAggAll": {
+    "cells": 48,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 2.75,
+     "median": 3.0,
+     "max": 3
+    },
+    "speedVarianceEgoPath": {
+     "mean": 43.8951,
+     "median": 46.837,
+     "max": 53.1171
+    },
+    "hardBrakeEvents": {
+     "mean": 1.125,
+     "median": 1.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 4,
+     "median": 4.0,
+     "max": 4
+    },
+    "actorCount": {
+     "mean": 4,
+     "median": 4.0,
+     "max": 4
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 4
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder",
+   "category": "OWNER.sudden-hazards",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no verified freeway-class corridors, so this uses a high-speed suburban or campus corridor with a shoulder-preferred edge as the nearest honest approximation.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/r0.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 12
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 32,
+      "feasibleCells": 32,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 2,
+       "C4": 30
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no verified freeway-class corridors, so this uses a high-speed suburban or campus corridor with a shoulder-preferred edge as the nearest honest approximation.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/r1.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 11
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 40
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no verified freeway-class corridors, so this uses a high-speed suburban or campus corridor with a shoulder-preferred edge as the nearest honest approximation.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/r2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 8
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 28,
+      "feasibleCells": 28,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 28
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": "The available maps have no verified freeway-class corridors, so this uses a high-speed suburban or campus corridor with a shoulder-preferred edge as the nearest honest approximation.",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/r3.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 10
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 24,
+      "feasibleCells": 24,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C4": 24
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    }
+   ],
+   "cells": 60,
+   "feasibleCells": 60,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "admitted": false,
+   "firstFailure": {
+    "C4": 54,
+    "C5": 6
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/final-1786918931533",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder/r3.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": "The available maps have no verified freeway-class corridors, so this uses a high-speed suburban or campus corridor with a shoulder-preferred edge as the nearest honest approximation.",
+   "templateSha256": "f0904ef2ef2122b4da2d7460a486f609003af6d082e4651147dff5e14724f3ce",
+   "usage": {
+    "input_tokens": 57694,
+    "output_tokens": 23846,
+    "total_tokens": 81540,
+    "calls": 4
+   },
+   "wallS": 587.1,
+   "repairPools": {
+    "validate": 0,
+    "site": 0,
+    "revise": 3
+   },
+   "schemaErrorRounds": 0,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-easterbrook-discovery-school-1604f0d7d8dd0875-000",
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1bdacbabb98ca5e4-000",
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-richmond-field-station-27694a73a0d3bf15-000",
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-easterbrook-discovery-school-1604f0d7d8dd0875-001",
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1bdacbabb98ca5e4-001",
+    "freeform-grid-g1-sol-medium-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-richmond-field-station-27694a73a0d3bf15-001"
+   ],
+   "censusAggAll": {
+    "cells": 60,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 57.8104,
+     "median": 60.1987,
+     "max": 60.6321
+    },
+    "hardBrakeEvents": {
+     "mean": 1.1,
+     "median": 1.0,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 12,
+     "median": 12.0,
+     "max": 12
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 12
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 0
+   }
+  },
+  {
+   "id": "owner-weather-physics-fog-causing-sensor-disagreement",
+   "category": "OWNER.weather-physics",
+   "rounds": [
+    {
+     "kind": "author",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/r0.template.json",
+     "validationErrors": 3
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/v1.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/v2.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 0,
+      "maps": 0,
+      "sites": 0,
+      "firstFailure": {
+       "C2": 11,
+       "C5": 29
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/r3.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "repair",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/v4.template.json",
+     "validationErrors": 0,
+     "sitesMatched": 60
+    },
+    {
+     "kind": "probe",
+     "result": {
+      "admitted": false,
+      "cells": 40,
+      "feasibleCells": 40,
+      "passingCells": 4,
+      "maps": 1,
+      "sites": 1,
+      "firstFailure": {
+       "C2": 10,
+       "C5": 26
+      },
+      "refusalCodes": {},
+      "error": null
+     }
+    },
+    {
+     "kind": "revise",
+     "ambient": "off",
+     "ambientSettleS": 0.0,
+     "structureNote": null,
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/r5.template.json",
+     "validationErrors": 1
+    },
+    {
+     "kind": "fallback_to_last_valid",
+     "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/v4.template.json",
+     "reason": "template_invalid"
+    }
+   ],
+   "cells": 180,
+   "feasibleCells": 180,
+   "passingCells": 17,
+   "maps": 3,
+   "sites": 3,
+   "admitted": true,
+   "firstFailure": {
+    "C2": 31,
+    "C3": 6,
+    "C4": 11,
+    "C5": 115
+   },
+   "refusalCodes": {},
+   "outdir": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/final-1786919050158",
+   "template": "/tmp/tgr-freeform-grid-g1-sol-medium/owner-weather-physics-fog-causing-sensor-disagreement/v4.template.json",
+   "ambient": "off",
+   "ambientSettleS": 0.0,
+   "structureNote": null,
+   "templateSha256": "24a2efed760295168b148503c4dbfaca67d2c7d5cb4212e1785517bd97070c56",
+   "usage": {
+    "input_tokens": 87309,
+    "output_tokens": 23754,
+    "total_tokens": 111063,
+    "calls": 6
+   },
+   "wallS": 591.6,
+   "repairPools": {
+    "validate": 3,
+    "site": 0,
+    "revise": 2
+   },
+   "schemaErrorRounds": 4,
+   "cellsExported": [
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-belmont-research-center-00c157d19c621405-000",
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-richmond-field-station-8c3ed07cde30ec23-000",
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-yale-street-413e2ee53096d0d8-000",
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-belmont-research-center-00c157d19c621405-001",
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-richmond-field-station-8c3ed07cde30ec23-001",
+    "freeform-grid-g1-sol-medium-owner-weather-physics-fog-causing-sensor-disagreement-yale-street-413e2ee53096d0d8-001"
+   ],
+   "censusAggAll": {
+    "cells": 180,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 1.9,
+     "median": 2.0,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0.0167,
+     "median": 0.0,
+     "max": 1
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1.0,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 43.9947,
+     "median": 52.7304,
+     "max": 59.005
+    },
+    "hardBrakeEvents": {
+     "mean": 2.5,
+     "median": 3.0,
+     "max": 3
+    },
+    "authoredEventsFired": {
+     "mean": 5.8111,
+     "median": 6.0,
+     "max": 6
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2.0,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0.0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 0.9685,
+    "authoredEventsTotal": {
+     "mean": 6
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0167,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   },
+   "censusAggPassing": {
+    "cells": 17,
+    "censusVersion": 1,
+    "actorsMoving": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "laneChangesExecuted": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "swerveEvents": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "signalPhaseChanges": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "interactingPairs": {
+     "mean": 1,
+     "median": 1,
+     "max": 1
+    },
+    "speedVarianceEgoPath": {
+     "mean": 52.3345,
+     "median": 52.0642,
+     "max": 53.3966
+    },
+    "hardBrakeEvents": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "authoredEventsFired": {
+     "mean": 6,
+     "median": 6,
+     "max": 6
+    },
+    "actorCount": {
+     "mean": 2,
+     "median": 2,
+     "max": 2
+    },
+    "ambientCount": {
+     "mean": 0,
+     "median": 0,
+     "max": 0
+    },
+    "authoredEventsFireRate": 1.0,
+    "authoredEventsTotal": {
+     "mean": 6
+    },
+    "shareCellsWith_laneChangesExecuted": 0.0,
+    "shareCellsWith_swerveEvents": 0.0,
+    "shareCellsWith_signalPhaseChanges": 0.0,
+    "shareCellsWith_hardBrakeEvents": 1.0
+   }
+  }
+ ]
+}

@@ -1,0 +1,1863 @@
+{
+ "model": "gpt-5.6-luna",
+ "effort": "low",
+ "pipeline": {
+  "file": "tools/gates/author_llm.py",
+  "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb"
+ },
+ "n": 20,
+ "admitted": 13,
+ "admissionRate": 0.65,
+ "authorErrorCount": 0,
+ "firstFailureCells": {
+  "C1": 370,
+  "C2": 594,
+  "C5": 1193,
+  "C3": 499,
+  "C4": 820
+ },
+ "wallS": 445.8,
+ "usageTotals": {
+  "llmCalls": 36,
+  "llmWallS": 327.3,
+  "inputTokens": 48958,
+  "outputTokens": 15725,
+  "reasoningTokens": 10969
+ },
+ "determinismRepeats": [
+  {
+   "id": "c1-lead-hard-brake",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "3c60de32332c4eefff0b6a4ab46f91732bc390008a2a93ca9c8ead07b0cf00e5",
+   "shaSecond": "ec820f4cdf5bf64841d7af2cbf0f4aee681e105b5b89d987c861181cf9d5d28e"
+  },
+  {
+   "id": "c1-stop-and-go",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "56683e329091079c45d49f089162d98bc06de2caff670b19c7bebd68ea127cba",
+   "shaSecond": "472f184f74dbfddb68eb4e94ef66e7cdd4e70764a25020d92d953abfde857e05"
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "bbda1fb37c07d155db3e93eafdb34e1b09e7cdd5925ceb603c70dac72f5fcf10",
+   "shaSecond": "9a152ba62e34e6d609a25611997b69a1087e730605b69ba87db81feb423906e6"
+  },
+  {
+   "id": "c11-contested-spot",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": "c5744e2245b0ae0b032658b8a4249527e1fd2cd0698103ed520d0e1408fb2084",
+   "shaSecond": "8bf4d839ac28d65c7e11f2d2fa5aec46b023a1b48baf9a6bae73ac81c15ed2f8"
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "26fcc73144b9e7afebf842482bf0c277c184e840d30ab2bc38dc2e678b4ade66",
+   "shaSecond": "b22a9855a511c1dc8b2224f92f2786046cabf5a7f2eceb780de94d962f3220a9"
+  }
+ ],
+ "rows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 350,
+   "feasibleCells": 230,
+   "passingCells": 140,
+   "maps": 5,
+   "sites": 14,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 60,
+    "C5": 10
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 86.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.8,
+    "inputTokens": 1271,
+    "outputTokens": 483,
+    "reasoningTokens": 340
+   },
+   "templateSha": "3c60de32332c4eefff0b6a4ab46f91732bc390008a2a93ca9c8ead07b0cf00e5",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c1-lead-hard-brake-1786853966657",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "leadBrakes": true,
+     "gapM": [
+      26,
+      34
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "brakeAtS": [
+      3.2,
+      4.4
+     ],
+     "rationale": "A normally spaced ego follows a moving sedan in flowing traffic, which brakes hard under Euro NCAP CCRb while the ego responds after a human-like reaction delay."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 310,
+   "feasibleCells": 190,
+   "passingCells": 127,
+   "maps": 4,
+   "sites": 16,
+   "firstFailure": {
+    "C2": 36,
+    "C5": 27
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 63.9,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 19.5,
+    "inputTokens": 2766,
+    "outputTokens": 926,
+    "reasoningTokens": 621
+   },
+   "templateSha": "56683e329091079c45d49f089162d98bc06de2caff670b19c7bebd68ea127cba",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c1-stop-and-go-1786853959694",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 18,
+     "leadBrakes": true,
+     "gapM": [
+      28,
+      42
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.3
+     ],
+     "brakeAtS": [
+      3.0,
+      4.0
+     ],
+     "corridorSpeedKph": [
+      65,
+      75
+     ],
+     "rationale": "Represent stop-and-go traffic with a slowly moving lead that brakes hard after moving off, while late ego response creates a critical but collision-free rear-end encounter."
+    },
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 18,
+     "leadBrakes": true,
+     "gapM": [
+      28,
+      42
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.3
+     ],
+     "brakeAtS": [
+      3.0,
+      4.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Represent stop-and-go traffic on a normally hostable corridor with a slowly moving lead that brakes hard after moving off, while late ego response creates a critical but collision-free rear-end encounter."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 350,
+   "feasibleCells": 270,
+   "passingCells": 10,
+   "maps": 1,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 97,
+    "C3": 58,
+    "C4": 71,
+    "C5": 24
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 97.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 19.6,
+    "inputTokens": 2861,
+    "outputTokens": 978,
+    "reasoningTokens": 689
+   },
+   "templateSha": "bbda1fb37c07d155db3e93eafdb34e1b09e7cdd5925ceb603c70dac72f5fcf10",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c10b-distracted-drift-1786853974751",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "oncomingStartM": [
+      90,
+      120
+     ],
+     "eventLeadS": [
+      1.8,
+      2.4
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "A sedan drifts across the centreline late on an ordinary posted-speed corridor, creating a critical but avoidable closing conflict."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 30,
+     "oncomingStartM": [
+      130,
+      160
+     ],
+     "eventLeadS": [
+      1.0,
+      1.6
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.5
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A sedan drifts across the centreline late on an ordinary posted-speed corridor, with a longer initial separation and lower closing speed allowing the conflict to develop after trace startup while the late reaction preserves a critical but avoidable encounter."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 14,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 1,
+    "C4": 9,
+    "C5": 256
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 108.8,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 25.1,
+    "inputTokens": 2776,
+    "outputTokens": 1261,
+    "reasoningTokens": 998
+   },
+   "templateSha": "c5744e2245b0ae0b032658b8a4249527e1fd2cd0698103ed520d0e1408fb2084",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c11-contested-spot-1786853982843",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      36,
+      44
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.1
+     ],
+     "eventLeadS": [
+      2.4,
+      3.2
+     ],
+     "rationale": "A sedan pulls out from a kerbside parking space as the ego vehicle approaches, representing two vehicles contesting the same space while preserving a late but collision-free conflict."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 65,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 6,
+     "gapM": [
+      48,
+      62
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.0
+     ],
+     "eventLeadS": [
+      2.8,
+      3.6
+     ],
+     "rationale": "A sedan pulls out from a kerbside parking space into the ego path as the ego vehicle approaches, giving the ego enough runway to drive while preserving a late, collision-free conflict across ordinary corridor sites."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 47,
+   "maps": 4,
+   "sites": 12,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 42,
+    "C3": 7,
+    "C4": 74,
+    "C5": 110
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 46.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.3,
+    "inputTokens": 1258,
+    "outputTokens": 331,
+    "reasoningTokens": 208
+   },
+   "templateSha": "26fcc73144b9e7afebf842482bf0c277c184e840d30ab2bc38dc2e678b4ade66",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c12-stop-arm-bus-1786853950940",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.child_walking",
+     "conflictS": 55,
+     "vruSpeedKph": [
+      4,
+      7
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Represent the school-bus stop-arm event on an ordinary hostable corridor as a child pedestrian crossing into the ego lane with a late release, preserving a critical but collision-free encounter."
+    }
+   ]
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 90,
+   "feasibleCells": 90,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C1": 40,
+    "C2": 3,
+    "C3": 37,
+    "C4": 10
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 93.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 17.6,
+    "inputTokens": 2842,
+    "outputTokens": 894,
+    "reasoningTokens": 608
+   },
+   "templateSha": "cb869f7af57c36726f5a1e9b591e00c9eed3fec0bf1c58296c944f15907afb6f",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c13b-stop-sign-rolling-1786854040185",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      15,
+      25
+     ],
+     "conflictS": [
+      55,
+      75
+     ],
+     "junctionControl": "stop",
+     "arrivalTtcS": [
+      0.9,
+      1.5
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A sedan rolls through a stop sign and reaches the junction conflict point just before the ego vehicle crosses."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      10,
+      18
+     ],
+     "conflictS": [
+      85,
+      115
+     ],
+     "junctionControl": "stop",
+     "arrivalTtcS": [
+      0.4,
+      1.0
+     ],
+     "reactAtTtcS": [
+      0.8,
+      1.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A sedan rolls through a stop sign and reaches a distant junction conflict point shortly before the ego arrives, creating a late, close but avoidable crossing conflict across ordinary high-speed corridors."
+    }
+   ]
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 310,
+   "feasibleCells": 190,
+   "passingCells": 107,
+   "maps": 4,
+   "sites": 12,
+   "firstFailure": {
+    "C2": 66,
+    "C4": 8,
+    "C5": 9
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 98.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.8,
+    "inputTokens": 1258,
+    "outputTokens": 363,
+    "reasoningTokens": 242
+   },
+   "templateSha": "db5beae976eaa134eaa671a102a8c39a1943ae3496f279f2416e0ada7da27ab1",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c14-friction-patch-1786854045443",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": [
+      55,
+      65
+     ],
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      25,
+      40
+     ],
+     "leadBrakes": true,
+     "gapM": [
+      24,
+      42
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.1
+     ],
+     "brakeAtS": [
+      3.0,
+      4.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A moving sedan ahead loses traction on a friction patch and brakes hard, creating a late rear-end hazard for the ego vehicle."
+    }
+   ]
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 53,
+   "maps": 5,
+   "sites": 15,
+   "firstFailure": {
+    "C2": 10,
+    "C3": 7,
+    "C4": 127,
+    "C5": 103
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 79.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 12.6,
+    "inputTokens": 1264,
+    "outputTokens": 609,
+    "reasoningTokens": 516
+   },
+   "templateSha": "e1dd5fd4f0d5fb3bf267f2de2d914d18dc2454b5857796082e6520ddaa1d5137",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c15-curb-standing-1786854060905",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 40,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": 3,
+     "conflictS": 120,
+     "eventLeadS": 4.0,
+     "reactAtTtcS": 3.5,
+     "rationale": "Negative control: a pedestrian remains at the kerb and does not enter the ego lane, so no crossing conflict is intended."
+    }
+   ]
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 280,
+   "feasibleCells": 200,
+   "passingCells": 17,
+   "maps": 3,
+   "sites": 3,
+   "firstFailure": {
+    "C2": 1,
+    "C3": 3,
+    "C4": 50,
+    "C5": 129
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 79.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 11.8,
+    "inputTokens": 1261,
+    "outputTokens": 535,
+    "reasoningTokens": 399
+   },
+   "templateSha": "c414ed51aa38c0c9ec06295062be0083bd4f6f403f54693ff73735bd16b830b9",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c2-cut-out-reveals-1786854079786",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 0,
+     "challengerStatic": true,
+     "gapM": [
+      50,
+      65
+     ],
+     "reactAtTtcS": [
+      1.4,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Represent the lead vehicle cutting out late to reveal a genuinely stopped sedan in the ego lane, with a critical but recoverable rear-end approach."
+    }
+   ]
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 21,
+   "maps": 2,
+   "sites": 5,
+   "firstFailure": {
+    "C3": 1,
+    "C4": 1,
+    "C5": 27
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 41.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.9,
+    "inputTokens": 1259,
+    "outputTokens": 249,
+    "reasoningTokens": 131
+   },
+   "templateSha": "6cbfa1fdc83301823c32c15ea97e762b070220f9886d938718184888df50ba77",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c2-lane-drop-1786854066782",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": [
+      55,
+      65
+     ],
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      30,
+      45
+     ],
+     "gapM": [
+      18,
+      32
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A slower vehicle from the lane that drops merges late into the ego lane on an ordinary posted-speed corridor, creating a critical but avoidable lateral conflict."
+    }
+   ]
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 230,
+   "passingCells": 2,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 90,
+    "C2": 50,
+    "C3": 46,
+    "C4": 24,
+    "C5": 18
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 30,
+    "arrival_conflict_unclosed": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 143.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 19.6,
+    "inputTokens": 2864,
+    "outputTokens": 989,
+    "reasoningTokens": 731
+   },
+   "templateSha": "f8a1d7b96fadd58ec92f1d7b52d4991c493968815299b56a083401c346ad4cb5",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c3-ltap-od-1786854137246",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "The ego turns left across the path of an oncoming through sedan at an ordinary junction with a deliberately late conflict arrival."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.7,
+      1.2
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "The ego turns left across a slower oncoming through sedan at an ordinary junction, with a converged near-simultaneous arrival and late avoidance release that preserves a close but collision-free conflict."
+    }
+   ]
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 4,
+   "maps": 1,
+   "sites": 1,
+   "firstFailure": {
+    "C1": 80,
+    "C2": 20,
+    "C3": 147,
+    "C4": 3,
+    "C5": 6
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 146.8,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 18.4,
+    "inputTokens": 2910,
+    "outputTokens": 923,
+    "reasoningTokens": 602
+   },
+   "templateSha": "08a78b948ec4135e5bc0fca04e54d788f3062382c42b76dc9e5c0624cd36b5a9",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c3b-permissive-left-1786854144561",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "conflictS": [
+      40,
+      60
+     ],
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      1.2,
+      2.0
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "The ego begins a permissive left turn across an oncoming sedan's path as the available gap closes, creating a late but avoidable junction conflict."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "conflictS": [
+      65,
+      100
+     ],
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.8,
+      1.5
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "rationale": "The ego makes a permissive left turn across a slower oncoming sedan whose initially acceptable gap closes late at a well-formed junction conflict, producing a close but avoidable encounter after the ego has begun driving."
+    }
+   ]
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "admitted": false,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 70,
+    "C2": 24,
+    "C3": 114,
+    "C4": 18,
+    "C5": 30
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 151.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 19.4,
+    "inputTokens": 2913,
+    "outputTokens": 873,
+    "reasoningTokens": 630
+   },
+   "templateSha": "0ad37046f4dfc885bc0bacf99ce8a20f5f4bff6153d59882de6c4b3864a99a3c",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c4b-mini-roundabout-1786854158501",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "conflictS": [
+      70,
+      90
+     ],
+     "arrivalTtcS": [
+      0.3,
+      0.8
+     ],
+     "junctionControl": "any",
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "Represent the unavailable mini-roundabout as a near-simultaneous sedan conflict at an ordinary hostable junction, preserving the intended crossing hazard without forcing contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 35,
+     "conflictS": [
+      45,
+      65
+     ],
+     "arrivalTtcS": [
+      0.8,
+      1.5
+     ],
+     "junctionControl": "any",
+     "reactAtTtcS": [
+      1.0,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Represent the unavailable mini-roundabout as a near-simultaneous sedan conflict at a closer ordinary junction, allowing the encounter to mature after the trace starts while late reaction produces a critical but non-contacting hazard across hostable corridors."
+    }
+   ]
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 49,
+   "maps": 5,
+   "sites": 9,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 64,
+    "C3": 13,
+    "C4": 62,
+    "C5": 102
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 56.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.2,
+    "inputTokens": 1259,
+    "outputTokens": 283,
+    "reasoningTokens": 165
+   },
+   "templateSha": "2c5756a3bff46a5090866306c5c33a800cdb89bbe7c33d2a829934757a5c991e",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c5-adult-midblock-1786854125797",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "vruSpeedKph": [
+      4,
+      6
+     ],
+     "conflictS": [
+      55,
+      75
+     ],
+     "eventLeadS": [
+      1.8,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "An adult pedestrian enters the ego lane mid-block on an ordinary posted-speed corridor with sufficient lead time for a late but collision-free critical response."
+    }
+   ]
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 57,
+   "maps": 5,
+   "sites": 11,
+   "firstFailure": {
+    "C1": 20,
+    "C2": 42,
+    "C3": 17,
+    "C4": 78,
+    "C5": 86
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 62.6,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.0,
+    "inputTokens": 1262,
+    "outputTokens": 325,
+    "reasoningTokens": 190
+   },
+   "templateSha": "52116d36a9f01d02b4ed862010db6f7b8fcdb631ed41d613255327eef4a9745e",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c5-multiple-threat-1786854136452",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "gapM": [
+      18,
+      28
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.1
+     ],
+     "eventLeadS": [
+      1.8,
+      2.6
+     ],
+     "conflictS": [
+      55,
+      75
+     ],
+     "vruSpeedKph": [
+      4,
+      7
+     ],
+     "occluder": "occluder.covered_car",
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "An adult pedestrian emerges from behind a stopped vehicle in the adjacent lane and is revealed shortly before crossing the ego lane on an ordinary corridor."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 280,
+   "feasibleCells": 200,
+   "passingCells": 94,
+   "maps": 4,
+   "sites": 17,
+   "firstFailure": {
+    "C2": 63,
+    "C3": 7,
+    "C4": 12,
+    "C5": 24
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 99.6,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 12.8,
+    "inputTokens": 1264,
+    "outputTokens": 619,
+    "reasoningTokens": 516
+   },
+   "templateSha": "df47ccd0e985a8f8d4c5e5e742003acd069d1f88392f2ebfa2bbfaf44a1e825d",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c6b-cargo-bike-1786854211419",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      55,
+      70
+     ],
+     "reactAtTtcS": [
+      2.2,
+      2.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A slow cargo bicycle travels in and effectively blocks the ego lane, producing a late rear-end conflict on an ordinary narrow corridor while preserving clearance and portability."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 7,
+   "maps": 2,
+   "sites": 4,
+   "firstFailure": {
+    "C3": 7,
+    "C4": 1,
+    "C5": 35
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 44.4,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.0,
+    "inputTokens": 1264,
+    "outputTokens": 291,
+    "reasoningTokens": 172
+   },
+   "templateSha": "e2d1bcc7d0348fcc96c954e20e5f119c3d0b99b41e5ebed0eddd0beca10c8fac",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c6b-cyclist-ahead-swerve-1786854193306",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": [
+      50,
+      60
+     ],
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": [
+      15,
+      25
+     ],
+     "gapM": [
+      20,
+      35
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.2
+     ],
+     "eventLeadS": [
+      2.0,
+      3.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "A cyclist traveling ahead in the adjacent lane swerves around a roadside drain and enters the ego lane late enough to create a critical but collision-free lateral conflict."
+    }
+   ]
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 64,
+   "maps": 5,
+   "sites": 11,
+   "firstFailure": {
+    "C2": 15,
+    "C3": 35,
+    "C4": 154,
+    "C5": 32
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 63.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.4,
+    "inputTokens": 1257,
+    "outputTokens": 331,
+    "reasoningTokens": 203
+   },
+   "templateSha": "f73c7ad75f7c3935461f493f59cdae0d49a4c394b64edaec4e0b26e45cc3d103",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c7b-bus-shelter-1786854250656",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": [
+      50,
+      60
+     ],
+     "challengerCatalog": "pedestrian.adult_walking",
+     "conflictS": [
+      45,
+      75
+     ],
+     "vruSpeedKph": [
+      4,
+      7
+     ],
+     "occluder": "street.bus_shelter",
+     "eventLeadS": [
+      1.5,
+      2.5
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A pedestrian emerges from behind a bus shelter shortly before crossing an ordinary corridor, creating a late but avoidable conflict for the ego."
+    }
+   ]
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "admitted": false,
+   "cells": 420,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {},
+   "refusalCodes": {
+    "closure_lane_too_narrow": 200,
+    "closure_exceeds_route": 90,
+    "unknown_site": 130
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 51.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 12.7,
+    "inputTokens": 2833,
+    "outputTokens": 628,
+    "reasoningTokens": 358
+   },
+   "templateSha": "be369c5a335726ddb7a8430aee08eb7b07bc003dcb46188e3d1eea1979fdf9b1",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c8-worker-intrusion-1786854251759",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "eventLeadS": [
+      1.5,
+      2.5
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "worksStartM": [
+      35,
+      50
+     ],
+     "worksLengthM": [
+      25,
+      40
+     ],
+     "closedWidthM": [
+      3.0,
+      3.5
+     ],
+     "workerSpeedKph": [
+      3,
+      5
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A signed lane closure shifts ego traffic beside the work area while a worker steps into the live lane late enough to create a critical but avoidable near-conflict without contact."
+    },
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "eventLeadS": [
+      1.5,
+      2.5
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.6
+     ],
+     "worksStartM": [
+      20,
+      35
+     ],
+     "worksLengthM": [
+      15,
+      25
+     ],
+     "closedWidthM": [
+      3.5,
+      4.5
+     ],
+     "workerSpeedKph": [
+      3,
+      5
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A signed lane closure with a solver-hostable width and compact route footprint shifts ego traffic beside the work area while a worker steps into the live lane late enough to create a critical but avoidable near-conflict without contact."
+    }
+   ]
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "parking_pullout",
+   "admitted": true,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 7,
+   "maps": 2,
+   "sites": 3,
+   "firstFailure": {
+    "C4": 118,
+    "C5": 165
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 78.8,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 18.8,
+    "inputTokens": 2837,
+    "outputTokens": 818,
+    "reasoningTokens": 535
+   },
+   "templateSha": "fc4d80824b2fc2ca53b6e43db9dc53a3920a70f7e64d4f5bbae6717cec37cab6",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c9b-open-door-parked-1786854275014",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      18,
+      28
+     ],
+     "reactAtTtcS": [
+      1.4,
+      1.9
+     ],
+     "eventLeadS": [
+      2.0,
+      2.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Model the opening door as the nearest hostable proxy: a parked sedan begins a shallow pullout from the kerbside bay into the ego path, creating a late lateral hazard without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 4,
+     "gapM": [
+      38,
+      65
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "eventLeadS": [
+      0.8,
+      1.5
+     ],
+     "rationale": "Model the opening door as a slowly moving parked sedan pulling shallowly from the kerb into the ego lane, using a wider initial gap and relaxed corridor requirements so the late lateral conflict occurs after the trace has developed without forcing contact."
+    }
+   ]
+  }
+ ],
+ "repeatRows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 121,
+   "maps": 5,
+   "sites": 14,
+   "firstFailure": {
+    "C2": 65,
+    "C4": 3,
+    "C5": 11
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 66.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.6,
+    "inputTokens": 1271,
+    "outputTokens": 493,
+    "reasoningTokens": 366
+   },
+   "templateSha": "ec820f4cdf5bf64841d7af2cbf0f4aee681e105b5b89d987c861181cf9d5d28e",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c1-lead-hard-brake-1786854340711",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": [
+      55,
+      60
+     ],
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": [
+      42,
+      48
+     ],
+     "leadBrakes": true,
+     "gapM": [
+      25,
+      35
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.2
+     ],
+     "brakeAtS": [
+      3.2,
+      4.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "A sedan traveling slightly below the ego speed brakes hard in flowing traffic while the ego follows at a normal headway and responds after a human-like reaction delay."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 310,
+   "feasibleCells": 190,
+   "passingCells": 119,
+   "maps": 4,
+   "sites": 13,
+   "firstFailure": {
+    "C2": 45,
+    "C5": 26
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 62.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.0,
+    "inputTokens": 1262,
+    "outputTokens": 452,
+    "reasoningTokens": 296
+   },
+   "templateSha": "472f184f74dbfddb68eb4e94ef66e7cdd4e70764a25020d92d953abfde857e05",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c1-stop-and-go-1786854339296",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 25,
+     "leadBrakes": true,
+     "gapM": [
+      30,
+      45
+     ],
+     "reactAtTtcS": [
+      1.8,
+      2.4
+     ],
+     "brakeAtS": [
+      3.2,
+      4.5
+     ],
+     "corridorSpeedKph": [
+      60,
+      75
+     ],
+     "rationale": "A moving lead in stop-and-go traffic brakes hard toward a stop, then resumes movement, creating a realistic late rear-end conflict for the closing ego vehicle."
+    }
+   ]
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": "oncoming",
+   "admitted": false,
+   "cells": 430,
+   "feasibleCells": 300,
+   "passingCells": 10,
+   "maps": 1,
+   "sites": 2,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 158,
+    "C3": 34,
+    "C4": 56,
+    "C5": 32
+   },
+   "refusalCodes": {
+    "unknown_site": 130
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 68.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 13.7,
+    "inputTokens": 2849,
+    "outputTokens": 669,
+    "reasoningTokens": 462
+   },
+   "templateSha": "9a152ba62e34e6d609a25611997b69a1087e730605b69ba87db81feb423906e6",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c10b-distracted-drift-1786854342144",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "oncomingStartM": [
+      85,
+      105
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      80
+     ],
+     "rationale": "A sedan drifting across the centreline creates a late, critical oncoming conflict on an ordinary posted-speed corridor while preserving clearance for collision-free avoidance across multiple maps."
+    },
+    {
+     "family": "oncoming",
+     "egoSpeedKph": 65,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 40,
+     "oncomingStartM": [
+      115,
+      145
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.4
+     ],
+     "rationale": "A sedan drifts across the centreline on an ordinary hostable corridor, with a farther initial separation and late reaction window to produce a post-warm-up critical, collision-free avoidance conflict across multiple maps."
+    }
+   ]
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 450,
+   "feasibleCells": 290,
+   "passingCells": 8,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C4": 50,
+    "C5": 232
+   },
+   "refusalCodes": {
+    "unknown_site": 160
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 69.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 14.8,
+    "inputTokens": 2839,
+    "outputTokens": 743,
+    "reasoningTokens": 475
+   },
+   "templateSha": "8bf4d839ac28d65c7e11f2d2fa5aec46b023a1b48baf9a6bae73ac81c15ed2f8",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c11-contested-spot-1786854344836",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      18,
+      28
+     ],
+     "reactAtTtcS": [
+      1.1,
+      1.5
+     ],
+     "eventLeadS": [
+      1.8,
+      2.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "An ego vehicle approaches a kerbside parking space as a second sedan pulls out to contest it, entering the ego path with late avoidance."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 8,
+     "gapM": [
+      32,
+      48
+     ],
+     "reactAtTtcS": [
+      0.9,
+      1.2
+     ],
+     "eventLeadS": [
+      1.2,
+      1.8
+     ],
+     "rationale": "An ego vehicle approaches a kerbside parking space as a second sedan pulls out to contest it, with a widened initial gap delaying the conflict and late avoidance preserving a critical but collision-free encounter across ordinary corridors."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 45,
+   "maps": 4,
+   "sites": 11,
+   "firstFailure": {
+    "C1": 30,
+    "C2": 52,
+    "C3": 12,
+    "C4": 56,
+    "C5": 105
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 62.4,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 12.9,
+    "inputTokens": 1258,
+    "outputTokens": 659,
+    "reasoningTokens": 516
+   },
+   "templateSha": "b22a9855a511c1dc8b2224f92f2786046cabf5a7f2eceb780de94d962f3220a9",
+   "outdir": "/tmp/tg-w8-gpt-5.6-luna-low-c12-stop-arm-bus-1786854341363",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "pedestrian.child_walking",
+     "eventLeadS": [
+      1.8,
+      2.6
+     ],
+     "conflictS": [
+      45,
+      85
+     ],
+     "vruSpeedKph": [
+      4,
+      7
+     ],
+     "occluder": "street.bus_shelter",
+     "reactAtTtcS": [
+      1.8,
+      2.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      70
+     ],
+     "rationale": "Represent the unavailable school-zone bus-stop behavior on an ordinary posted-speed corridor as children emerging from behind a roadside bus-shelter proxy after the stop-arm warning, with late reveal creating a critical but collision-free crossing conflict."
+    }
+   ]
+  }
+ ]
+}

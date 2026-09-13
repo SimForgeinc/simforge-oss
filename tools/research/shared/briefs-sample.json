@@ -1,0 +1,904 @@
+{
+ "kind": "rethink-briefs-sample",
+ "version": 1,
+ "seed": 20260816,
+ "generator": "tools/research/shared/make_briefs_sample.py",
+ "sources": {
+  "devCorpus": "research/edge-case-corpus/agent-authoring/brief-corpus-full.json",
+  "ownerList": "research/edge-case-corpus/OWNER-EDGE-CASES.md",
+  "inventory": "tools/gates/structure-inventory.json"
+ },
+ "devAllocationByCategory": {
+  "C1.car-following": 2,
+  "C10.oncoming": 2,
+  "C11.parking": 2,
+  "C12.school": 2,
+  "C13.control": 2,
+  "C14.loss-of-control": 2,
+  "C15.adversarial": 2,
+  "C2.cut-in-merge": 2,
+  "C3.intersection": 3,
+  "C4.roundabout": 1,
+  "C5.pedestrian": 2,
+  "C6.cyclist-ptw": 2,
+  "C7.occlusion": 2,
+  "C8.workzone": 2,
+  "C9.hazard": 2
+ },
+ "dev": [
+  {
+   "id": "c10b-bend-cut",
+   "category": "C10.oncoming",
+   "brief": "An oncoming vehicle cuts the apex of a bend."
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "brief": "An oncoming vehicle drifts across the centreline."
+  },
+  {
+   "id": "c11-backing-out",
+   "category": "C11.parking",
+   "brief": "A vehicle backs out of a parking space into the ego path."
+  },
+  {
+   "id": "c11b-parked-protrude",
+   "category": "C11.parking",
+   "brief": "A badly parked vehicle protrudes into the running lane."
+  },
+  {
+   "id": "c12b-child-between-cars",
+   "category": "C12.school",
+   "brief": "A child emerges between queued cars near a school."
+  },
+  {
+   "id": "c12b-scooter-child",
+   "category": "C12.school",
+   "brief": "A child on a scooter enters the road near a school."
+  },
+  {
+   "id": "c13-rail-crossing",
+   "category": "C13.control",
+   "brief": "A rail crossing activates as the ego approaches."
+  },
+  {
+   "id": "c13b-yellow-late",
+   "category": "C13.control",
+   "brief": "The signal turns yellow as the ego reaches the point where it can neither stop nor clear."
+  },
+  {
+   "id": "c14b-gravel",
+   "category": "C14.loss-of-control",
+   "brief": "A vehicle loses traction on gravel at a junction mouth."
+  },
+  {
+   "id": "c14b-oversteer",
+   "category": "C14.loss-of-control",
+   "brief": "A vehicle ahead oversteers on a bend into the ego path."
+  },
+  {
+   "id": "c15b-debris-thrown",
+   "category": "C15.adversarial",
+   "brief": "An object falls from a vehicle ahead."
+  },
+  {
+   "id": "c15b-road-rage",
+   "category": "C15.adversarial",
+   "brief": "An aggressive vehicle weaves around the ego."
+  },
+  {
+   "id": "c1b-multi-brake",
+   "category": "C1.car-following",
+   "brief": "A chain of vehicles brakes in sequence ahead."
+  },
+  {
+   "id": "c1b-slow-truck",
+   "category": "C1.car-following",
+   "brief": "A slow truck is encountered at closing speed."
+  },
+  {
+   "id": "c2-exit-across",
+   "category": "C2.cut-in-merge",
+   "brief": "A vehicle crosses the ego lane to reach an exit."
+  },
+  {
+   "id": "c2b-cut-in-truck",
+   "category": "C2.cut-in-merge",
+   "brief": "A truck cuts in ahead of the ego and slows."
+  },
+  {
+   "id": "c3-allway-stop",
+   "category": "C3.intersection",
+   "brief": "Two vehicles negotiate an all-way stop and both proceed."
+  },
+  {
+   "id": "c3-left-hook-ptw",
+   "category": "C3.intersection",
+   "brief": "The ego turns left across an oncoming motorcycle."
+  },
+  {
+   "id": "c3b-late-yield",
+   "category": "C3.intersection",
+   "brief": "A vehicle yields late and encroaches into the ego path."
+  },
+  {
+   "id": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "brief": "A pedestrian crosses at the roundabout exit as the ego leaves."
+  },
+  {
+   "id": "c5-hesitate",
+   "category": "C5.pedestrian",
+   "brief": "A pedestrian starts crossing, hesitates, then continues."
+  },
+  {
+   "id": "c5-reversing-ped",
+   "category": "C5.pedestrian",
+   "brief": "A pedestrian walks behind a reversing vehicle."
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "brief": "A slow cargo bike blocks the ego lane on a narrow street."
+  },
+  {
+   "id": "c6b-cyclist-left-turn",
+   "category": "C6.cyclist-ptw",
+   "brief": "A cyclist turns left across the ego path."
+  },
+  {
+   "id": "c7-double-parked-truck",
+   "category": "C7.occlusion",
+   "brief": "A pedestrian steps out from behind a double-parked truck."
+  },
+  {
+   "id": "c7-parked-row-veh",
+   "category": "C7.occlusion",
+   "brief": "A vehicle emerges from behind a row of parked cars."
+  },
+  {
+   "id": "c8-construction-junction",
+   "category": "C8.workzone",
+   "brief": "Construction occupies part of an intersection with plant, barriers and a flagger."
+  },
+  {
+   "id": "c8-taper-merge",
+   "category": "C8.workzone",
+   "brief": "A lane-closure taper forces traffic to merge in front of the ego."
+  },
+  {
+   "id": "c9-animal",
+   "category": "C9.hazard",
+   "brief": "An animal crosses into the ego path."
+  },
+  {
+   "id": "c9b-ladder",
+   "category": "C9.hazard",
+   "brief": "A ladder lies across the ego lane."
+  }
+ ],
+ "owner": [
+  {
+   "id": "owner-adversarial-multi--human-drivers-testing-an-av-by-cutting-in-",
+   "category": "OWNER.adversarial-multi-agent",
+   "brief": "Human drivers testing an AV by cutting in aggressively",
+   "group": "Adversarial / multi-agent",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-adversarial-multi--human-intentionally-confusing-an-av",
+   "category": "OWNER.adversarial-multi-agent",
+   "brief": "Human intentionally confusing an AV",
+   "group": "Adversarial / multi-agent",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-adversarial-multi--ride-share-curb-chaos",
+   "category": "OWNER.adversarial-multi-agent",
+   "brief": "Ride-share curb chaos",
+   "group": "Adversarial / multi-agent",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-control-anomalies-flashing-yellow-arrows-changing-turn-logic",
+   "category": "OWNER.control-anomalies",
+   "brief": "Flashing yellow arrows changing turn logic",
+   "group": "Control anomalies",
+   "requires": [
+    "junction_signalized"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-control-anomalies-police-manually-directing-traffic-against-",
+   "category": "OWNER.control-anomalies",
+   "brief": "Police manually directing traffic against a signal",
+   "group": "Control anomalies",
+   "requires": [
+    "junction_signalized"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-control-anomalies-snow-covered-lane-markings",
+   "category": "OWNER.control-anomalies",
+   "brief": "Snow-covered lane markings",
+   "group": "Control anomalies",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-erratic-behavior-aggressive-tailgating",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Aggressive tailgating",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-erratic-behavior-driver-drifting-across-a-lane-while-textin",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Driver drifting across a lane while texting",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-erratic-behavior-scooter-weaving-between-cars",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Scooter weaving between cars",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-map-divergence-faded-lane-markings",
+   "category": "OWNER.map-divergence",
+   "brief": "Faded lane markings",
+   "group": "Map divergence",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-map-divergence-misaligned-lane-reflectors",
+   "category": "OWNER.map-divergence",
+   "brief": "Misaligned lane reflectors",
+   "group": "Map divergence",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h",
+   "category": "OWNER.map-divergence",
+   "brief": "Newly painted lanes not reflected in the HD map",
+   "group": "Map divergence",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-negotiation-right--double-parked-vehicles-forcing-informal-la",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Double-parked vehicles forcing informal lane negotiation",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "parking_zone"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-negotiation-right--pedestrian-will-they-won-t-they-crossing-m",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Pedestrian will-they-won't-they crossing mid-block",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "crossing"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-occlusion-visibili-blind-crest-of-hill-with-stopped-traffic-b",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Blind crest of hill with stopped traffic beyond",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "crest",
+    "occlusion_zone"
+   ],
+   "notPortable": [
+    "crest"
+   ]
+  },
+  {
+   "id": "owner-occlusion-visibili-snowbanks-narrowing-the-roadway",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Snowbanks narrowing the roadway",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Driver reversing on a freeway shoulder",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-sudden-hazards-person-chasing-a-dog-into-the-road",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Person chasing a dog into the road",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-weather-physics-fog-causing-sensor-disagreement",
+   "category": "OWNER.weather-physics",
+   "brief": "Fog causing sensor disagreement",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  },
+  {
+   "id": "owner-weather-physics-snow-accumulation-altering-road-geometry",
+   "category": "OWNER.weather-physics",
+   "brief": "Snow accumulation altering road geometry",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "notPortable": []
+  }
+ ],
+ "ownerExcluded": [
+  {
+   "id": "owner-negotiation-right--narrow-residential-streets-with-parked-car",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Narrow residential streets with parked cars on both sides",
+   "group": "Negotiation / right-of-way",
+   "reason": "missing_structures",
+   "missing": [
+    "kerbside_parking_residential"
+   ],
+   "requires": [
+    "kerbside_parking_residential",
+    "parking_zone"
+   ]
+  },
+  {
+   "id": "owner-negotiation-right--school-bus-loading-or-unloading-with-unpre",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "School bus loading or unloading with unpredictable kids",
+   "group": "Negotiation / right-of-way",
+   "reason": "missing_structures",
+   "missing": [
+    "school_zone"
+   ],
+   "requires": [
+    "bus_stop",
+    "school_zone"
+   ]
+  },
+  {
+   "id": "owner-negotiation-right--driver-backing-out-of-driveway-without-cle",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Driver backing out of driveway without clear visibility",
+   "group": "Negotiation / right-of-way",
+   "reason": "missing_structures",
+   "missing": [
+    "driveway"
+   ],
+   "requires": [
+    "driveway",
+    "parking_zone"
+   ]
+  },
+  {
+   "id": "owner-occlusion-visibili-construction-barriers-creating-visual-tunn",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Construction barriers creating visual tunnels",
+   "group": "Occlusion / visibility",
+   "reason": "missing_structures",
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "requires": [
+    "occlusion_zone",
+    "work_zone_suitable"
+   ]
+  },
+  {
+   "id": "owner-occlusion-visibili-parked-cars-hiding-a-running-child",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Parked cars hiding a running child",
+   "group": "Occlusion / visibility",
+   "reason": "missing_structures",
+   "missing": [
+    "school_zone"
+   ],
+   "requires": [
+    "occlusion_zone",
+    "parking_zone",
+    "school_zone"
+   ]
+  },
+  {
+   "id": "owner-control-anomalies-construction-worker-using-hand-signals",
+   "category": "OWNER.control-anomalies",
+   "brief": "Construction worker using hand signals",
+   "group": "Control anomalies",
+   "reason": "missing_structures",
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "requires": [
+    "junction_signalized",
+    "work_zone_suitable"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-gas-stations-with-cars-moving-in-all-direc",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Gas stations with cars moving in all directions",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "plain_corridor"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-drive-thru-lanes-crossing-pedestrian-walkw",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Drive-thru lanes crossing pedestrian walkways",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "crossing"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-drop-off-zones-at-airports",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Drop-off zones at airports",
+   "group": "Unstructured spaces",
+   "reason": "missing_structures",
+   "missing": [
+    "school_zone"
+   ],
+   "requires": [
+    "school_zone"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-rv-campgrounds",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "RV campgrounds",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "plain_corridor"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-private-roads-with-non-standard-markings",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Private roads with non-standard markings",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "plain_corridor"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-dirt-or-gravel-lots-with-no-lane-markings",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Dirt or gravel lots with no lane markings",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "plain_corridor"
+   ]
+  },
+  {
+   "id": "owner-unstructured-space-event-overflow-parking-on-grass-fields",
+   "category": "OWNER.unstructured-spaces",
+   "brief": "Event overflow parking on grass fields",
+   "group": "Unstructured spaces",
+   "reason": "unstructured_space",
+   "requires": [
+    "parking_zone"
+   ]
+  },
+  {
+   "id": "owner-map-divergence-private-driveway-mistaken-for-a-road",
+   "category": "OWNER.map-divergence",
+   "brief": "Private driveway mistaken for a road",
+   "group": "Map divergence",
+   "reason": "missing_structures",
+   "missing": [
+    "driveway"
+   ],
+   "requires": [
+    "driveway"
+   ]
+  },
+  {
+   "id": "owner-dense-contexts-school-arrival-and-departure-areas",
+   "category": "OWNER.dense-contexts",
+   "brief": "School arrival and departure areas",
+   "group": "Dense contexts",
+   "reason": "missing_structures",
+   "missing": [
+    "school_zone"
+   ],
+   "requires": [
+    "school_zone"
+   ]
+  },
+  {
+   "id": "owner-dense-contexts-parking-lot-navigation-with-heavy-traffic",
+   "category": "OWNER.dense-contexts",
+   "brief": "Parking lot navigation with heavy traffic",
+   "group": "Dense contexts",
+   "reason": "missing_structures",
+   "missing": [
+    "parking_aisle"
+   ],
+   "requires": [
+    "parking_aisle",
+    "parking_zone"
+   ]
+  },
+  {
+   "id": "owner-dense-contexts-accident-or-construction-blocking-normal-p",
+   "category": "OWNER.dense-contexts",
+   "brief": "Accident or construction blocking normal path",
+   "group": "Dense contexts",
+   "reason": "missing_structures",
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "requires": [
+    "work_zone_suitable"
+   ]
+  },
+  {
+   "id": "owner-adversarial-multi--robot-delivery-carts-crossing-the-street",
+   "category": "OWNER.adversarial-multi-agent",
+   "brief": "Robot delivery carts crossing the street",
+   "group": "Adversarial / multi-agent",
+   "requires": [
+    "crossing"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-adversarial-multi--other-avs-behaving-hyper-cautiously",
+   "category": "OWNER.adversarial-multi-agent",
+   "brief": "Other AVs behaving hyper-cautiously",
+   "group": "Adversarial / multi-agent",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-control-anomalies-stoplight-blackout-becoming-an-implicit-fo",
+   "category": "OWNER.control-anomalies",
+   "brief": "Stoplight blackout becoming an implicit four-way stop",
+   "group": "Control anomalies",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-control-anomalies-reversible-commuter-lanes",
+   "category": "OWNER.control-anomalies",
+   "brief": "Reversible commuter lanes",
+   "group": "Control anomalies",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-control-anomalies-detours-with-unclear-signage",
+   "category": "OWNER.control-anomalies",
+   "brief": "Detours with unclear signage",
+   "group": "Control anomalies",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-cyclist-swerving-unpredictably",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Cyclist swerving unpredictably",
+   "group": "Erratic behavior",
+   "requires": [
+    "bike_lane"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-pedestrian-walking-while-staring-at-a-phon",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Pedestrian walking while staring at a phone",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-elderly-pedestrian-moving-slowly-mid-inter",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Elderly pedestrian moving slowly mid-intersection",
+   "group": "Erratic behavior",
+   "requires": [
+    "junction_any"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-motorcycle-lane-splitting-at-high-speed",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Motorcycle lane splitting at high speed",
+   "group": "Erratic behavior",
+   "requires": [
+    "bike_lane"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-road-rage-behavior",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Road rage behavior",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-erratic-behavior-driver-exiting-a-vehicle-into-a-traffic-la",
+   "category": "OWNER.erratic-behavior",
+   "brief": "Driver exiting a vehicle into a traffic lane",
+   "group": "Erratic behavior",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-map-divergence-temporary-road-widening",
+   "category": "OWNER.map-divergence",
+   "brief": "Temporary road widening",
+   "group": "Map divergence",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-negotiation-right--unprotected-left-turn-across-dense-traffic",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Unprotected left turn across dense traffic",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "junction_any"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-negotiation-right--drivers-waving-you-through-against-right-o",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Drivers waving you through against right-of-way",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-negotiation-right--four-way-stops-with-hesitant-or-aggressive",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Four-way stops with hesitant or aggressive drivers",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-negotiation-right--highway-zipper-merge-where-drivers-refuse-",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Highway zipper merge where drivers refuse to cooperate",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-negotiation-right--funeral-processions-or-police-escorts-igno",
+   "category": "OWNER.negotiation-right-of-way",
+   "brief": "Funeral processions or police escorts ignoring normal rules",
+   "group": "Negotiation / right-of-way",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-occlusion-visibili-box-truck-blocking-right-turn-sight-line",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Box truck blocking right turn sight line",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-occlusion-visibili-dense-rain-fog-or-glare-at-sunset",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Dense rain fog or glare at sunset",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-occlusion-visibili-flashing-emergency-lights-overwhelming-cam",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Flashing emergency lights overwhelming camera exposure",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-occlusion-visibili-large-suv-blocking-view-of-crosswalk",
+   "category": "OWNER.occlusion-visibility",
+   "brief": "Large SUV blocking view of crosswalk",
+   "group": "Occlusion / visibility",
+   "requires": [
+    "crossing",
+    "occlusion_zone"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-sudden-hazards-animal-darting-into-the-freeway",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Animal darting into the freeway",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-sudden-hazards-tire-debris-in-lane",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Tire debris in lane",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-sudden-hazards-rolling-runaway-shopping-cart",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Rolling runaway shopping cart",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-sudden-hazards-mattress-or-ladder-falling-off-a-truck",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Mattress or ladder falling off a truck",
+   "group": "Sudden hazards",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-sudden-hazards-car-doing-an-illegal-u-turn-in-an-intersec",
+   "category": "OWNER.sudden-hazards",
+   "brief": "Car doing an illegal U-turn in an intersection",
+   "group": "Sudden hazards",
+   "requires": [
+    "junction_any"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-weather-physics-black-ice",
+   "category": "OWNER.weather-physics",
+   "brief": "Black ice",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-weather-physics-hydroplaning-onset",
+   "category": "OWNER.weather-physics",
+   "brief": "Hydroplaning onset",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-weather-physics-flash-flooding",
+   "category": "OWNER.weather-physics",
+   "brief": "Flash flooding",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  },
+  {
+   "id": "owner-weather-physics-sudden-crosswinds",
+   "category": "OWNER.weather-physics",
+   "brief": "Sudden crosswinds",
+   "group": "Weather / physics",
+   "requires": [
+    "plain_corridor"
+   ],
+   "reason": "over_quota"
+  }
+ ],
+ "counts": {
+  "dev": 30,
+  "owner": 20,
+  "ownerExcluded": 47
+ }
+}

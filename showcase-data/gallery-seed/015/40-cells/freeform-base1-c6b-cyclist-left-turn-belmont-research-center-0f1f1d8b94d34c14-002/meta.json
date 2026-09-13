@@ -1,0 +1,18 @@
+{
+ "cellId": "freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+ "briefId": "c6b-cyclist-left-turn",
+ "stream": "freeform",
+ "arm": "baseline",
+ "templateSha256": "05f743ccfc11352f5590d1a95791318d7ce6cf610272d4ac60a039303a0e1cc2",
+ "map": "belmont-research-center",
+ "site": "0f1f1d8b94d34c14",
+ "draw": 2,
+ "seed": "edf60a6271db6883",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 0.872,
+  "tMinClearance": 7.62
+ },
+ "notes": "brief: A cyclist turns left across the ego path."
+}

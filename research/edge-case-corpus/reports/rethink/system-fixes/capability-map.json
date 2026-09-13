@@ -1,0 +1,987 @@
+{
+ "summary": {
+  "oracle-rejected": 45,
+  "accepted": 2,
+  "render-refused": 3,
+  "author-unsupported": 5,
+  "gate-rejected": 11,
+  "infra-quota": 1
+ },
+ "cases": [
+  {
+   "case": "unprotected-left-dense",
+   "title": "Unprotected left turn across dense traffic",
+   "stopClass": "oracle-rejected",
+   "attempts": 13,
+   "furthest": "3d-ok",
+   "video2d": "showcase-data/jobs/52fc92cd-6cd8-4949-a1f1-bbc4aa10e452/60-render2d/el-camino-road-5fa984f01741bcdd-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/52fc92cd-6cd8-4949-a1f1-bbc4aa10e452/65-render3d/el-camino-road-5fa984f01741bcdd-0/rollout.mp4",
+   "defects": [
+    "render.camera.exposure",
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.realism",
+    "scenario.sequence"
+   ]
+  },
+  {
+   "case": "four-way-stop-behavior",
+   "title": "Four-way stops with hesitant or aggressive drivers",
+   "stopClass": "oracle-rejected",
+   "attempts": 7,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/b87076f1-2f9a-48e0-a09b-15add44aab4e/60-render2d/yale-street-deca78fa3ccee63a-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/20f8d178-5ca4-48f0-81ce-896c288df5f3/65-render3d/belmont-research-center-86ce228f2f7307f5-0/rollout.mp4",
+   "defects": [
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "wave-through",
+   "title": "Drivers waving you through against right-of-way",
+   "stopClass": "oracle-rejected",
+   "attempts": 6,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/f6bc79b9-50bc-412e-baba-bdc701147e74/60-render2d/yale-street-00ea130c85533a0e-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "midblock-will-they",
+   "title": "Pedestrian will-they-won't-they crossing mid-block",
+   "stopClass": "accepted",
+   "attempts": 9,
+   "furthest": "accepted",
+   "video2d": "showcase-data/jobs/8bbf74db-6f04-4c27-a283-6e825d7fd195/60-render2d/easterbrook-discovery-school-0c86da910ad602f4-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/8bbf74db-6f04-4c27-a283-6e825d7fd195/65-render3d/easterbrook-discovery-school-0c86da910ad602f4-0/rollout.mp4",
+   "defects": []
+  },
+  {
+   "case": "double-park-negotiation",
+   "title": "Double-parked vehicles forcing informal lane negotiation",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/61d97502-150f-46ad-b6b5-ec2d7762c1c7/60-render2d/belmont-research-center-6e9c354214a21450-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/7afb0049-8836-4c6f-bfb2-55bfcf7d1e54/65-render3d/el-camino-road-8437936101037474-1/rollout.mp4",
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence"
+   ]
+  },
+  {
+   "case": "narrow-residential-parking",
+   "title": "Narrow residential streets with parked cars on both sides",
+   "stopClass": "render-refused",
+   "attempts": 4,
+   "furthest": "semantic-2d",
+   "video2d": "showcase-data/jobs/0aaf3a8a-5f6e-4f44-a0dd-dc15af2aacef/60-render2d/belmont-research-center-8d75feef5a550e31-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/ab6948e5-c30f-4364-9a0b-b61e06f35e82/65-render3d/belmont-research-center-49a4092d647940bc-0/rollout.mp4",
+   "defects": [
+    "render.camera.composition_failed",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "hostile-zipper-merge",
+   "title": "Highway zipper merge where drivers refuse to cooperate",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "none",
+   "video2d": "showcase-data/jobs/0da885e1-2401-4860-8375-dcf1abbf5f3b/60-render2d/belmont-research-center-8efdf10fe79e5efa-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/0da885e1-2401-4860-8375-dcf1abbf5f3b/65-render3d/easterbrook-discovery-school-32415d7e3a7f0d9a-1/rollout.mp4",
+   "defects": []
+  },
+  {
+   "case": "school-bus-kids",
+   "title": "School bus loading or unloading with unpredictable kids",
+   "stopClass": "author-unsupported",
+   "attempts": 4,
+   "furthest": "submitted",
+   "video2d": null,
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "blind-driveway-backing",
+   "title": "Driver backing out of driveway without clear visibility",
+   "stopClass": "author-unsupported",
+   "attempts": 4,
+   "furthest": "submitted",
+   "video2d": null,
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "procession-escort",
+   "title": "Funeral processions or police escorts ignoring normal rules",
+   "stopClass": "author-unsupported",
+   "attempts": 4,
+   "furthest": "submitted",
+   "video2d": null,
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "suv-crosswalk-occlusion",
+   "title": "Large SUV blocking view of crosswalk",
+   "stopClass": "author-unsupported",
+   "attempts": 4,
+   "furthest": "submitted",
+   "video2d": null,
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "box-truck-turn-occlusion",
+   "title": "Box truck blocking right turn sight line",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "blind-crest-queue",
+   "title": "Blind crest of hill with stopped traffic beyond",
+   "stopClass": "author-unsupported",
+   "attempts": 4,
+   "furthest": "submitted",
+   "video2d": null,
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "construction-visual-tunnel",
+   "title": "Construction barriers creating visual tunnels",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "gate-pass",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "parked-car-running-child",
+   "title": "Parked cars hiding a running child",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/0187df33-9b89-4a39-98ec-45d5aae128e1/60-render2d/belmont-research-center-4228dbe22cb70a54-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "rain-fog-sunset-glare",
+   "title": "Dense rain fog or glare at sunset",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/9435c6c5-bfa2-48b7-87ae-2f81f8e6d8a0/60-render2d/el-camino-road-00e4130b14e67597-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "snowbank-narrowing",
+   "title": "Snowbanks narrowing the roadway",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "gate-pass",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "emergency-light-exposure",
+   "title": "Flashing emergency lights overwhelming camera exposure",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/c531a6e6-9630-448c-8cfd-520b86674655/60-render2d/el-camino-road-319064ff79a3fdb5-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "manual-police-direction",
+   "title": "Police manually directing traffic against a signal",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "worker-hand-signals",
+   "title": "Construction worker using hand signals",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/690b07aa-567a-4f3f-8629-8871e602757c/60-render2d/el-camino-road-722429e550c22f01-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "flashing-yellow-arrow",
+   "title": "Flashing yellow arrows changing turn logic",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/5fb60d11-ebd5-43de-ac68-e3a6db277c44/60-render2d/el-camino-road-0510ea79df5b6b2a-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "reversible-lanes",
+   "title": "Reversible commuter lanes",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/1a631428-75c6-40e1-baeb-51a7e333dc24/60-render2d/el-camino-road-13079aeb77f41914-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "unclear-detour",
+   "title": "Detours with unclear signage",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/dcd76a1a-a586-4db2-94ed-fbefbe88a530/60-render2d/belmont-research-center-0e4fc45129ab663d-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "signal-blackout-four-way",
+   "title": "Stoplight blackout becoming an implicit four-way stop",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/e22afbf9-c0d5-4aa1-bd39-b8515d0341cb/60-render2d/el-camino-road-5793974709238693-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "snow-covered-markings",
+   "title": "Snow-covered lane markings",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/cd5817d8-ec74-4a4e-b091-4a461104af80/60-render2d/belmont-research-center-00cb1b9f87096b5a-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "gas-station-chaos",
+   "title": "Gas stations with cars moving in all directions",
+   "stopClass": "oracle-rejected",
+   "attempts": 6,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/bd2e3c97-8a46-4725-afcd-addf2fb7fce2/60-render2d/easterbrook-discovery-school-230fa38a82f3a763-2/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "drive-thru-pedestrian",
+   "title": "Drive-thru lanes crossing pedestrian walkways",
+   "stopClass": "oracle-rejected",
+   "attempts": 6,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/d28a767a-8dfd-49a7-9c4f-6d09d7cee012/60-render2d/belmont-research-center-049745278722c3ba-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "airport-dropoff",
+   "title": "Drop-off zones at airports",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/e45da35b-3a3e-47c2-aa98-cc7b617f667f/60-render2d/yale-street-1ba49d71c048323d-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "rv-campground",
+   "title": "RV campgrounds",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/261ad55f-a07a-4fa0-96f4-c50165eff094/60-render2d/belmont-research-center-087a918d372f1c84-1/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "private-road-markings",
+   "title": "Private roads with non-standard markings",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/a21dcd84-7677-4b88-9084-283e2e0bfa14/60-render2d/el-camino-road-04bf0d856f0c1298-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.actor.frozen_tail",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "unmarked-dirt-lot",
+   "title": "Dirt or gravel lots with no lane markings",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "gate-pass",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "grass-overflow-parking",
+   "title": "Event overflow parking on grass fields",
+   "stopClass": "gate-rejected",
+   "attempts": 6,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "tire-debris",
+   "title": "Tire debris in lane",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/1f61cf9e-f643-4c5b-be8b-5ab08a4c23e2/60-render2d/belmont-research-center-151077c19efcea0c-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.actor.frozen_tail",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "falling-cargo",
+   "title": "Mattress or ladder falling off a truck",
+   "stopClass": "oracle-rejected",
+   "attempts": 6,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/10c01b1f-c0c2-4f89-bea2-c8275ad9c6c6/60-render2d/belmont-research-center-09f07c39921d0c10-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "freeway-animal",
+   "title": "Animal darting into the freeway",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/e6408861-1567-49d1-9d4c-cabac0ead712/60-render2d/belmont-research-center-6c270ea92d0138ba-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "dog-chase",
+   "title": "Person chasing a dog into the road",
+   "stopClass": "render-refused",
+   "attempts": 4,
+   "furthest": "semantic-2d",
+   "video2d": "showcase-data/jobs/6f2632ac-61fd-4c7a-9443-5482efe3208a/60-render2d/belmont-research-center-2f94935c3cdf5ebd-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "capture.transient_browser_failure",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "illegal-intersection-uturn",
+   "title": "Car doing an illegal U-turn in an intersection",
+   "stopClass": "gate-rejected",
+   "attempts": 5,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "freeway-shoulder-reversing",
+   "title": "Driver reversing on a freeway shoulder",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "gate-pass",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation",
+    "simulation.actor.frozen_tail",
+    "simulation.actor.off_road"
+   ]
+  },
+  {
+   "case": "runaway-shopping-cart",
+   "title": "Rolling runaway shopping cart",
+   "stopClass": "oracle-rejected",
+   "attempts": 5,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/689c6b60-c00a-4141-8829-40468e451cdc/60-render2d/el-camino-road-049e5fafec43edbc-1/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "fast-lane-splitting",
+   "title": "Motorcycle lane splitting at high speed",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/88d71002-208d-4c5f-bfae-74c7917179ad/60-render2d/belmont-research-center-462544d600044644-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "vehicle-door-traffic",
+   "title": "Driver exiting a vehicle into a traffic lane",
+   "stopClass": "oracle-rejected",
+   "attempts": 5,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/b4c8a7fc-76a9-4654-941d-35fb7ebf1e78/60-render2d/belmont-research-center-063d2fac46193078-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "aggressive-tailgating",
+   "title": "Aggressive tailgating",
+   "stopClass": "accepted",
+   "attempts": 3,
+   "furthest": "accepted",
+   "video2d": "showcase-data/jobs/7ad5c120-857d-49b8-a481-1cd4388be31e/60-render2d/belmont-research-center-03dee4ca4994eb51-2/rollout.mp4",
+   "video3d": "showcase-data/jobs/7ad5c120-857d-49b8-a481-1cd4388be31e/65-render3d/el-camino-road-007e78a669ea9f3e-1/rollout.mp4",
+   "defects": [
+    "scenario.plausibility"
+   ]
+  },
+  {
+   "case": "road-rage",
+   "title": "Road rage behavior",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/71181589-b327-4703-90e0-0ea8dee10f84/60-render2d/el-camino-road-2ac426dbe942e6c1-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "texting-lane-drift",
+   "title": "Driver drifting across a lane while texting",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/f7531a6e-fe35-4033-a6d3-4c9532a287a4/60-render2d/belmont-research-center-999d8b97835adc21-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.actor.frozen_tail",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "unpredictable-cyclist",
+   "title": "Cyclist swerving unpredictably",
+   "stopClass": "render-refused",
+   "attempts": 5,
+   "furthest": "semantic-2d",
+   "video2d": "showcase-data/jobs/0c48e1e1-123b-4392-b6ee-5bf9a47a403d/60-render2d/belmont-research-center-152ee4972e2e75e7-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "capture.transient_browser_failure",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence"
+   ]
+  },
+  {
+   "case": "weaving-scooter",
+   "title": "Scooter weaving between cars",
+   "stopClass": "oracle-rejected",
+   "attempts": 5,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/73a21603-fa7b-44f1-a245-a69c430c0ec3/60-render2d/belmont-research-center-142a7e054b2ee4eb-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence"
+   ]
+  },
+  {
+   "case": "phone-pedestrian",
+   "title": "Pedestrian walking while staring at a phone",
+   "stopClass": "oracle-rejected",
+   "attempts": 5,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/ee5155dd-05e3-460d-a861-f00849d6c918/60-render2d/belmont-research-center-0c7bf0114c71ae03-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "slow-elderly-crossing",
+   "title": "Elderly pedestrian moving slowly mid-intersection",
+   "stopClass": "gate-rejected",
+   "attempts": 5,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "stale-hd-map-lanes",
+   "title": "Newly painted lanes not reflected in the HD map",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/0d79b9e7-7361-4ce9-b8aa-4aafb0f011f0/60-render2d/el-camino-road-0a4f2db0edb517f2-1/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "temporary-widening",
+   "title": "Temporary road widening",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/5bffa6b4-dab3-4f05-af40-07a646ec59b4/60-render2d/belmont-research-center-1fea85ba972fdabf-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "faded-markings",
+   "title": "Faded lane markings",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/4baafd59-94b7-47b5-8ff0-cbe042d25922/60-render2d/belmont-research-center-1aab6cd65a6281c1-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "misaligned-reflectors",
+   "title": "Misaligned lane reflectors",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/f63f21a7-8c98-4a20-80d8-fab731a68593/60-render2d/el-camino-road-2fa5c92d64b68230-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "driveway-road-confusion",
+   "title": "Private driveway mistaken for a road",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/7caad2d4-e4d8-4b63-9d1e-189075460c0f/60-render2d/easterbrook-discovery-school-0650385fa3745d11-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "adversarial-cutin",
+   "title": "Human drivers testing an AV by cutting in aggressively",
+   "stopClass": "gate-rejected",
+   "attempts": 5,
+   "furthest": "cells-ok",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation"
+   ]
+  },
+  {
+   "case": "hyper-cautious-av",
+   "title": "Other AVs behaving hyper-cautiously",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/ee622506-6350-4642-92ba-880b21883b00/60-render2d/el-camino-road-0363e8b55793d55f-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "intentional-av-confusion",
+   "title": "Human intentionally confusing an AV",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/45a7018e-c6e0-47f2-91a5-ac0c1fcf3bdc/60-render2d/belmont-research-center-051e0f79ac62db86-2/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "rideshare-curb-chaos",
+   "title": "Ride-share curb chaos",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/0113af03-1cc2-4432-ba08-dc233d42faec/60-render2d/belmont-research-center-2886766155e456fe-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "delivery-robot-crossing",
+   "title": "Robot delivery carts crossing the street",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/8b4e69ef-5116-4342-be5d-4d939fd413e6/60-render2d/belmont-research-center-0ea29ac43a41852d-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "hydroplaning",
+   "title": "Hydroplaning onset",
+   "stopClass": "gate-rejected",
+   "attempts": 4,
+   "furthest": "gate-pass",
+   "video2d": null,
+   "video3d": null,
+   "defects": [
+    "scenario.no_eligible_simulation",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "black-ice",
+   "title": "Black ice",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/c843dcac-8273-4562-9867-807d5e40fbf5/60-render2d/belmont-research-center-06acf0e28b9edcd7-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.actor.frozen_tail",
+    "simulation.actor.off_road",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "crosswinds",
+   "title": "Sudden crosswinds",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/7047c277-46ae-40a3-82b2-d99f827c86b1/60-render2d/belmont-research-center-0c88769dadec3968-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence"
+   ]
+  },
+  {
+   "case": "flash-flooding",
+   "title": "Flash flooding",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/6f0ba9cc-80e6-4ea4-8711-9420dd22472f/60-render2d/belmont-research-center-0377dd2eb0475086-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "snow-road-geometry",
+   "title": "Snow accumulation altering road geometry",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/e78900cb-0966-4482-a737-fe0473592d5b/60-render2d/yale-street-024d9887043ca1ab-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger",
+    "simulation.interaction.aborted"
+   ]
+  },
+  {
+   "case": "fog-sensor-disagreement",
+   "title": "Fog causing sensor disagreement",
+   "stopClass": "infra-quota",
+   "attempts": 5,
+   "furthest": "2d-ok",
+   "video2d": "showcase-data/jobs/94287200-ff8d-4c70-995d-a6e1418e2f09/60-render2d/yale-street-0080a7945cb9e2e4-0/rollout.mp4",
+   "video3d": null,
+   "defects": []
+  },
+  {
+   "case": "school-arrival",
+   "title": "School arrival and departure areas",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/ac7ea9bb-c3d2-4c4a-973a-06a9c841ae49/60-render2d/el-camino-road-ef88e0fe96f58e39-0/rollout.mp4",
+   "video3d": null,
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "busy-parking-lot",
+   "title": "Parking lot navigation with heavy traffic",
+   "stopClass": "oracle-rejected",
+   "attempts": 4,
+   "furthest": "semantic-reviewed",
+   "video2d": "showcase-data/jobs/b6b67654-6dd7-4dfc-ae79-5ecfaf638d32/60-render2d/belmont-research-center-21c6564303784a9a-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/4a4a52ef-45c6-4e40-b5a9-1f08d123c77f/65-render3d/easterbrook-discovery-school-10e512537b8f7598-0/rollout.mp4",
+   "defects": [
+    "scenario.actors",
+    "scenario.mechanism",
+    "scenario.plausibility",
+    "scenario.sequence",
+    "scenario.trigger"
+   ]
+  },
+  {
+   "case": "blocked-normal-path",
+   "title": "Accident or construction blocking normal path",
+   "stopClass": "oracle-rejected",
+   "attempts": 18,
+   "furthest": "3d-ok",
+   "video2d": "showcase-data/jobs/38a19fd2-df37-48c9-8f2f-e7a25d82f519/60-render2d/belmont-research-center-0779b0baa0857f36-0/rollout.mp4",
+   "video3d": "showcase-data/jobs/38a19fd2-df37-48c9-8f2f-e7a25d82f519/65-render3d/belmont-research-center-0779b0baa0857f36-0/rollout.mp4",
+   "defects": [
+    "capture.duration",
+    "judge.uncertain",
+    "render.asset.grounding",
+    "render.asset.lod",
+    "render.asset.material",
+    "render.asset.missing",
+    "render.camera.exposure",
+    "scenario.mechanism",
+    "scenario.realism",
+    "scenario.sequence",
+    "simulation.collision"
+   ]
+  }
+ ]
+}

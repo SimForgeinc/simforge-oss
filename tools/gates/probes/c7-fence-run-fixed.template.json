@@ -1,0 +1,225 @@
+{
+ "scenarioVersion": 2,
+ "metricSubject": "ego",
+ "meta": {
+  "name": "c7-fence-run (fixed)",
+  "description": "A VRU hidden behind a roadside occluder steps into the ego path. The arms differ only in whether occluder and VRU can be placed off the carriageway in metres. crossLeadS is set to the band in which the hidden-then-revealed structure actually occurs: a sweep showed revealed_before_conflict at 0.45 for [1.4,3.4], 0.47 for [2.2,4.2] and 0.78 for [2.8,4.8]. Below that band the VRU is still behind the occluder at the conflict instant, so no reveal can occur by construction. The band is identical in both arms.",
+  "createdAt": "2026-08-15T00:00:00.000Z",
+  "modifiedAt": "2026-08-15T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "c7-fence-run.fixed",
+  "tags": [
+   "c7",
+   "occlusion",
+   "fixed"
+  ],
+  "author": "agent/training-grade-lane",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "occluderS",
+    "type": "continuous",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     45,
+     80
+    ],
+    "default": 60,
+    "distribution": "uniform"
+   },
+   {
+    "id": "vruSpeedKph",
+    "type": "continuous",
+    "unit": "kph",
+    "tier": 1,
+    "range": [
+     4.0,
+     9.0
+    ],
+    "default": 6.0,
+    "distribution": "uniform"
+   },
+   {
+    "id": "crossLeadS",
+    "type": "continuous",
+    "unit": "s",
+    "tier": 1,
+    "range": [
+     2.8,
+     4.8
+    ],
+    "default": 3.8,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "noon"
+ },
+ "anchor": {
+  "id": "c7-fence-run-fixed",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     2
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     30,
+     70
+    ],
+    "essentiality": "required"
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     4
+    ],
+    "essentiality": "required"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     200,
+     null
+    ],
+    "essentiality": "required"
+   }
+  },
+  "features": [],
+  "policy": {
+   "allowMirror": false,
+   "maxSitesPerMap": 6,
+   "diversity": "moderate",
+   "minScore": 0.5
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "vehicle under test",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "pose": {
+    "laneOffset": 0,
+    "s": 0,
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": 40.0
+  },
+  {
+   "id": "vru",
+   "kind": "on_reference",
+   "label": "pedestrian hidden behind the roadside occluder",
+   "actor": {
+    "class": "pedestrian",
+    "catalogId": "pedestrian.adult_walking"
+   },
+   "pose": {
+    "laneOffset": 0,
+    "s": "param.occluderS",
+    "lateralM": -3.5,
+    "lateralRef": "verge",
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": 0
+  }
+ ],
+ "props": [
+  {
+   "id": "hedge",
+   "catalogId": "occluder.fence_run",
+   "label": "roadside occluder",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": "param.occluderS",
+    "lateralM": -2.1,
+    "lateralRef": "verge",
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1,
+   "occludes": {
+    "observer": "ego",
+    "target": "vru"
+   }
+  }
+ ],
+ "choreography": {
+  "clipSeconds": 16,
+  "warmupSeconds": 2.0,
+  "interactions": [
+   {
+    "id": "vru-steps-out",
+    "actor": "vru",
+    "verb": "route",
+    "trigger": {
+     "kind": "at",
+     "t": "clamp(param.occluderS / 11.1111 - param.crossLeadS, 0.2, 12)"
+    },
+    "target": {
+     "mode": "polyline",
+     "points": [
+      {
+       "laneOffset": 0,
+       "s": "param.occluderS",
+       "lateralM": -3.5,
+       "lateralRef": "verge",
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": "param.occluderS + 2.2",
+       "lateralM": -0.2,
+       "lateralRef": "verge",
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": "param.occluderS + 3.4",
+       "tFrac": 0,
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": "param.occluderS + 4.6",
+       "tFrac": 1,
+       "headingOffsetRad": 0
+      }
+     ]
+    }
+   },
+   {
+    "id": "vru-walks",
+    "actor": "vru",
+    "verb": "speed",
+    "trigger": {
+     "kind": "at",
+     "t": "clamp(param.occluderS / 11.1111 - param.crossLeadS, 0.2, 12)"
+    },
+    "target": {
+     "mode": "absolute",
+     "valueKph": "param.vruSpeedKph"
+    },
+    "dynamics": {
+     "shape": "linear",
+     "constraint": "rate",
+     "value": 2.0
+    }
+   }
+  ]
+ },
+ "invariants": []
+}

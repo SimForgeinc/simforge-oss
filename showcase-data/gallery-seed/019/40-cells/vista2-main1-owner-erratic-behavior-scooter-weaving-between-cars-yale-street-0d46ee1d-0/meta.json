@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-owner-erratic-behavior-scooter-weaving-between-cars-yale-street-0d46ee1d-0",
+ "briefId": "owner-erratic-behavior-scooter-weaving-between-cars",
+ "stream": "vista",
+ "templateSha256": "2bd4e7d62f6c398029c6e16b026244401d68dde166e8add9fd604c623a5afa6c",
+ "map": "yale-street",
+ "site": "0d46ee1d456b2ab6",
+ "draw": 0,
+ "seed": "3f271bb8a3fd16b1",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.079,
+  "tMinClearance": 16
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

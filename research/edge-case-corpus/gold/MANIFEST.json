@@ -1,5 +1,5 @@
 {
- "kind": "simforge-gold-corpus",
+ "kind": "uniscenarios-gold-corpus",
  "version": 1,
  "count": 20,
  "gates": [

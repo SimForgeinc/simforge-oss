@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0",
+ "briefId": "c5-reversing-ped",
+ "stream": "vista",
+ "templateSha256": "06aae4c64304a4448cf2c26c285985cb67493683ab6eaee8602c540fed300d91",
+ "map": "el-camino-road",
+ "site": "7244fda071e0051d",
+ "draw": 0,
+ "seed": "a78cb3a001be5ef0",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 0.664,
+  "tMinClearance": 3.94
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

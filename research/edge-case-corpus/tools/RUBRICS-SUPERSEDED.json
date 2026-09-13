@@ -1,0 +1,8 @@
+{
+ "id": "per-brief-rubrics-superseded",
+ "supersededAt": "2026-08-16T01:10:14.565563+00:00",
+ "what": "The 259 research/edge-case-corpus/tools/*.rubric.json files are SUPERSEDED as an operative rubric set by research/edge-case-corpus/rubrics/mechanism/ (15 files, pre-registered in PREREGISTRATION.json).",
+ "why": "All 259 have identical structure and exactly two criteria -- R-clearance (centre_distance >= 0.5 m) and R-nocoll -- both already enforced more strictly by gate C3 (true OBB clearance <= 5.0 m) and C5 (zero collisions). Their originalIntent reads \"Assembled from the agent require() calls\". They pre-register nothing about any mechanism and cannot reject anything the gate would not already reject. Measured: on a replay of the 98-archetype gold corpus they accepted 92 and the mechanism rubrics rejected 28 of those.",
+ "retained": "The files are NOT deleted. They are pre-registrations from earlier rounds and are part of this project's evidence trail; superseding them is honest, deleting them would destroy the record that they existed and what they said.",
+ "count": 259
+}

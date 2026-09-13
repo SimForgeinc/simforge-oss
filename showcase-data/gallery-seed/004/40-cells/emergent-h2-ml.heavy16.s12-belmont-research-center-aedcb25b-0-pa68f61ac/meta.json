@@ -1,0 +1,17 @@
+{
+ "cellId": "emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0-pa68f61ac",
+ "briefId": "emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0",
+ "stream": "emergent",
+ "kind": "tag-strip-promotion",
+ "counterpart": "ambient:v1:d9259a2da68f61ac",
+ "map": "center",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.291,
+  "tMinClearance": 5.72
+ },
+ "verdict": "accept",
+ "band": "critical",
+ "notes": "tag-strip promoted cell; parent=emergent-h2-ml.heavy16.s12-belmont-research-center-aedcb25b-0; gate=PASS"
+}

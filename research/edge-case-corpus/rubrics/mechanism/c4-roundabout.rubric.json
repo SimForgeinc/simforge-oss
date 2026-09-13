@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "path_ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the conflict must occur at a roundabout entry rather than anywhere on the ring",
+   "id": "R-entry-geometry",
+   "kind": "unsupported",
+   "reason": "no criterion binds a conflict to a named junction feature",
+   "required": false
+  }
+ ],
+ "intentId": "C4.roundabout",
+ "originalIntent": "NHTSA pre-crash typology 28 plus UK TRL roundabout entry studies: the conflict is at entry, between an entering and a circulating vehicle, and is characterised by PET at the give-way line. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Roundabout entry/circulating conflict: the ego must yield to or be challenged by circulating traffic",
+ "version": 1
+}

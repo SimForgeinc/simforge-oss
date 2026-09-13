@@ -1,0 +1,171 @@
+{
+ "scenarioVersion": 2,
+ "metricSubject": "ego",
+ "meta": {
+  "name": "C2 probe obstacle/fixed: stopped vehicle in lane",
+  "description": "Frozen W1 probe: ego closes on a challenger authored at a requested gap and brakes at a pre-registered TTC. The two arms differ ONLY by the W1 representation fix.",
+  "createdAt": "2026-08-15T00:00:00.000Z",
+  "modifiedAt": "2026-08-15T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "probe.c2.obstacle.fixed",
+  "tags": [
+   "probe",
+   "c2",
+   "obstacle",
+   "fixed"
+  ],
+  "author": "agent/training-grade-lane",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "initialGapM",
+    "type": "continuous",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     26,
+     60
+    ],
+    "default": 42,
+    "distribution": "uniform"
+   },
+   {
+    "id": "brakeAtTtcS",
+    "type": "continuous",
+    "unit": "s",
+    "tier": 1,
+    "range": [
+     1.8,
+     3.2
+    ],
+    "default": 2.4,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "noon"
+ },
+ "anchor": {
+  "id": "c2probe-obstacle-fixed",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     8
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     40,
+     80
+    ],
+    "essentiality": "required"
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     6
+    ],
+    "essentiality": "required"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     300,
+     null
+    ],
+    "essentiality": "required"
+   }
+  },
+  "features": [],
+  "policy": {
+   "allowMirror": false,
+   "maxSitesPerMap": 6,
+   "diversity": "moderate",
+   "minScore": 0.5
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "vehicle under test",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "pose": {
+    "laneOffset": 0,
+    "s": 30,
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": 40.0
+  },
+  {
+   "id": "chal",
+   "kind": "relative_to",
+   "label": "stopped vehicle in lane",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan",
+    "static": true
+   },
+   "requiredSameSegmentAs": "ego",
+   "requiredHeadingRelation": {
+    "role": "ego",
+    "relation": "parallel",
+    "maxErrorDeg": 10
+   },
+   "ref": "ego",
+   "dLane": 0,
+   "dsM": "param.initialGapM + 22.2222",
+   "tFrac": 0,
+   "headingOffsetRad": 0,
+   "initialSpeedKph": "0"
+  }
+ ],
+ "props": [],
+ "choreography": {
+  "clipSeconds": 18,
+  "warmupSeconds": 2.0,
+  "interactions": [
+   {
+    "id": "ego-holds-course",
+    "actor": "ego",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.collisionAvoidance",
+     "value": false
+    }
+   },
+   {
+    "id": "ego-brakes",
+    "actor": "ego",
+    "verb": "speed",
+    "trigger": {
+     "kind": "at",
+     "t": "clamp(param.initialGapM / 11.1111 - param.brakeAtTtcS, 0.2, 12)"
+    },
+    "target": {
+     "mode": "stop"
+    },
+    "dynamics": {
+     "shape": "linear",
+     "constraint": "rate",
+     "value": 6.0
+    }
+   }
+  ]
+ },
+ "invariants": []
+}

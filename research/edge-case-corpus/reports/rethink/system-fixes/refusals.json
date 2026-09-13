@@ -1,0 +1,112 @@
+[
+ {
+  "case": "midblock-will-they",
+  "class": "other",
+  "message": "renderer is not capture-ready: WebGL context is lost"
+ },
+ {
+  "case": "double-park-negotiation",
+  "class": "stacked-decks",
+  "message": "stacked road surfaces are elevation-ambiguous (4.276m separation)"
+ },
+ {
+  "case": "box-truck-turn-occlusion",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.actor.frozen_tail, simulation.collision.contract_violation]"
+ },
+ {
+  "case": "construction-visual-tunnel",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.collision.contract_violation, simulation.interaction.aborted]"
+ },
+ {
+  "case": "rain-fog-sunset-glare",
+  "class": "other",
+  "message": "unknown"
+ },
+ {
+  "case": "snowbank-narrowing",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.interaction.aborted]"
+ },
+ {
+  "case": "snow-covered-markings",
+  "class": "camera-composition",
+  "message": "incident composition failed at t=3.5 for every searched camera: snow_lead(inFrame=false,sceneryClear=true,blocker=null)"
+ },
+ {
+  "case": "unmarked-dirt-lot",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.interaction.aborted]"
+ },
+ {
+  "case": "grass-overflow-parking",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.actor.frozen_tail, simulation.collision.contract_violation]"
+ },
+ {
+  "case": "tire-debris",
+  "class": "stacked-decks",
+  "message": "stacked road surfaces are elevation-ambiguous (2.551m separation)"
+ },
+ {
+  "case": "dog-chase",
+  "class": "other",
+  "message": "renderer is not capture-ready: WebGL context is lost"
+ },
+ {
+  "case": "illegal-intersection-uturn",
+  "class": "camera-composition",
+  "message": "incident composition failed at t=2.96 for every searched camera: ego(inFrame=true,sceneryClear=false,blocker=vegetation)"
+ },
+ {
+  "case": "freeway-shoulder-reversing",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.actor.frozen_tail, simulation.actor.off_road]"
+ },
+ {
+  "case": "fast-lane-splitting",
+  "class": "stacked-decks",
+  "message": "stacked road surfaces are elevation-ambiguous (2.332m separation)"
+ },
+ {
+  "case": "texting-lane-drift",
+  "class": "stacked-decks",
+  "message": "stacked road surfaces are elevation-ambiguous (1.841m separation)"
+ },
+ {
+  "case": "unpredictable-cyclist",
+  "class": "stacked-decks",
+  "message": "stacked road surfaces are elevation-ambiguous (0.825m separation)"
+ },
+ {
+  "case": "weaving-scooter",
+  "class": "camera-composition",
+  "message": "incident composition failed at t=4.64 for every searched camera: chal(inFrame=false,sceneryClear=true,blocker=null)"
+ },
+ {
+  "case": "slow-elderly-crossing",
+  "class": "no-conflict-pair",
+  "message": "evidence integrity failed: metric pair must name exactly two input actors; got "
+ },
+ {
+  "case": "adversarial-cutin",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.actor.frozen_tail, simulation.collision.contract_violation]"
+ },
+ {
+  "case": "hydroplaning",
+  "class": "no-conflict-pair",
+  "message": "evidence integrity failed: metric pair must name exactly two input actors; got "
+ },
+ {
+  "case": "black-ice",
+  "class": "camera-composition",
+  "message": "incident composition failed at t=3.5 for every searched camera: ego(inFrame=false,sceneryClear=false,blocker=city), ice_lead(inFrame=false,sceneryClear=true,blocker=null)"
+ },
+ {
+  "case": "fog-sensor-disagreement",
+  "class": "preflight-invalid",
+  "message": "scenario render preflight rejected: trace-physical-validity [simulation.interaction.aborted]"
+ }
+]

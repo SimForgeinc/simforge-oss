@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "tyre utilisation must reach the friction limit during the event",
+   "id": "R-friction-limited",
+   "kind": "unsupported",
+   "reason": "per-tick tyre utilisation is in the trace but the rubric vocabulary has no criterion over it",
+   "required": false
+  }
+ ],
+ "intentId": "C14.loss-of-control",
+ "originalIntent": "UN R13-H stability requirements and ISO 3888-2 double lane change. The mechanism is the vehicle exceeding available friction, so a \"loss of control\" with no lateral excursion is a normal manoeuvre on a slippery-looking road. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Loss of control: the vehicle dynamics themselves must be the mechanism",
+ "version": 1
+}

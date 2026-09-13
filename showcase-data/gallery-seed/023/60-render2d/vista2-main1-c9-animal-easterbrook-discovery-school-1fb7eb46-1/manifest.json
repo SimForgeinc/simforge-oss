@@ -1,0 +1,319 @@
+{
+  "kind": "trace-render-manifest",
+  "manifestVersion": 1,
+  "generatedAt": null,
+  "deterministic": true,
+  "renderer": "scripts/render-trace.mjs@2",
+  "redact": false,
+  "underlay": {
+    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school",
+    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/topology-index.json.gz",
+    "topologySha256": "7006e23d34d3b5c23268f8c21e39fc2adaec303fd5d2e65cb618325fb869f32f",
+    "topologyMapName": "easterbrook-discovery-school_20260410-191436",
+    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/derived/locations.json.gz",
+    "locationsSha256": "86af807f8b9fd79e1c633d86fe4d6f4e97816b1417b23de25b2e1d7ec37aa40a",
+    "laneCount": 563,
+    "crosswalkCount": 13,
+    "crosswalksApproximate": true
+  },
+  "scenarioId": "vista2-c9-animal",
+  "instanceId": "1fb7eb4659797988#1",
+  "mapId": "easterbrook-discovery-school",
+  "inputHash": "d92ccbe87611616e05c46ce5be261603ed8938b083facefd86fc0d4ba3f91906",
+  "traceDigest": "080c7edaff74028df22cd7620a6fcb5f1cbb2ed9355c9b10c5c88d19b3a10829",
+  "inputActorIds": [
+    "deer",
+    "ego"
+  ],
+  "traceActorIds": [
+    "deer",
+    "ego"
+  ],
+  "actorCount": 2,
+  "integrity": {
+    "manifestInputHashMatches": true,
+    "traceInputHashMatches": true,
+    "actorIdsExactMatch": true
+  },
+  "metrics": {
+    "clippedCriticality": false,
+    "collisions": [],
+    "criticalitySamples": {
+      "pathTTC": [],
+      "pet": [
+        {
+          "conflictX": [
+            210.928876,
+            210.820266,
+            210.710186,
+            210.600559,
+            210.490974,
+            210.383186,
+            210.27669,
+            210.173321,
+            210.072232,
+            209.977004,
+            209.884584,
+            209.797605,
+            209.716323,
+            209.641532,
+            209.573155,
+            209.511581,
+            209.457528,
+            209.411897,
+            209.374461
+          ],
+          "conflictY": [
+            -335.478544,
+            -335.559742,
+            -335.637236,
+            -335.712177,
+            -335.783216,
+            -335.851299,
+            -335.914975,
+            -335.975319,
+            -336.030572,
+            -336.083748,
+            -336.130806,
+            -336.173829,
+            -336.212411,
+            -336.246768,
+            -336.276241,
+            -336.30073,
+            -336.320542,
+            -336.336249,
+            -336.347541
+          ],
+          "firstActor": [
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer",
+            "deer"
+          ],
+          "pair": [
+            "deer",
+            "ego"
+          ],
+          "secondActor": [
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego",
+            "ego"
+          ],
+          "t": [
+            3.22,
+            3.24,
+            3.26,
+            3.28,
+            3.3,
+            3.32,
+            3.34,
+            3.36,
+            3.38,
+            3.4,
+            3.42,
+            3.44,
+            3.46,
+            3.48,
+            3.5,
+            3.52,
+            3.54,
+            3.56,
+            3.58
+          ],
+          "value": [
+            0.090036,
+            0.11805,
+            0.148673,
+            0.182577,
+            0.22039,
+            0.260127,
+            0.300692,
+            0.342805,
+            0.385911,
+            0.428939,
+            0.472134,
+            0.514532,
+            0.558945,
+            0.600183,
+            0.64009,
+            0.677225,
+            0.712043,
+            0.747675,
+            0.777199
+          ]
+        }
+      ],
+      "ttc": [
+        {
+          "pair": [
+            "deer",
+            "ego"
+          ],
+          "t": [
+            3.2
+          ],
+          "value": [
+            1.124102
+          ]
+        }
+      ]
+    },
+    "declaredOcclusion": [],
+    "minDistance": [
+      {
+        "minDistanceM": 4.73855,
+        "pair": [
+          "deer",
+          "ego"
+        ],
+        "t": 3.58
+      }
+    ],
+    "minPET": {
+      "conflictPoint": {
+        "x": 210.928876,
+        "y": -335.478544
+      },
+      "firstActor": "deer",
+      "pair": [
+        "deer",
+        "ego"
+      ],
+      "secondActor": "ego",
+      "t": 3.22,
+      "value": 0.090036
+    },
+    "minPathTTC": null,
+    "minTTC": {
+      "pair": [
+        "deer",
+        "ego"
+      ],
+      "t": 3.2,
+      "value": 1.124102
+    },
+    "occluderIneffective": [],
+    "requiredDecelMax": {
+      "deer": 0,
+      "ego": 5.120755
+    },
+    "revealToConflict": null,
+    "ticksSimulated": 801,
+    "triggerNeverFired": []
+  },
+  "frameTimes": [
+    2.2,
+    2.7,
+    3.2,
+    3.7
+  ],
+  "frames": [
+    {
+      "index": 110,
+      "t": 2.2,
+      "camera": {
+        "x": 215.1512,
+        "y": -320.9954,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-000.svg",
+      "png": "frame-000.png",
+      "svgSha256": "33d223ab208183a75a9ffc017413fd6618a2edca066d781341a2fdc1e2c274da",
+      "pngSha256": "d36e9ce621cb7ebc23d131e0ccfff98706453a11450c66923d4f697a5c04d25a"
+    },
+    {
+      "index": 135,
+      "t": 2.7,
+      "camera": {
+        "x": 214.6627,
+        "y": -325.7533,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-001.svg",
+      "png": "frame-001.png",
+      "svgSha256": "4641311b920234c7ff8287ea6b60f958c0020ae13ae1bd816802fca1d0b2d6d4",
+      "pngSha256": "212b4b03271aef0519e06730b7ff8c47e477ad25e421ba6ef4b39672cfb86324"
+    },
+    {
+      "index": 160,
+      "t": 3.2,
+      "camera": {
+        "x": 214.3179,
+        "y": -329.2443,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-002.svg",
+      "png": "frame-002.png",
+      "svgSha256": "989fb0bb6d18a3ed1ac5646d4ec21ab0f8e432ccfc8521222d949ff6c381be4d",
+      "pngSha256": "9285db179dff1fd82b592772a90e35ba15b26da567e4f88330f20daa8e20b896"
+    },
+    {
+      "index": 185,
+      "t": 3.7,
+      "camera": {
+        "x": 213.7695,
+        "y": -331.3152,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-003.svg",
+      "png": "frame-003.png",
+      "svgSha256": "7526f42bfdbf057d1625c7db136e1e767228fd4f674ba9022838ca675c9ccc18",
+      "pngSha256": "e6148054121161b72bdf38f391ac4ce936b8927def4a22996bbd83a83bd66b65"
+    }
+  ],
+  "video": {
+    "file": "trace-render.mp4",
+    "fps": 12,
+    "width": 960,
+    "height": 600,
+    "sha256": "f5b147987d363384ad01cd410086ae993ab9bd89f6a1007e6683793e55fa9532"
+  },
+  "inputs": {
+    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/instance.json",
+    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/trace.json.gz",
+    "traceFileSha256": "98377437e64783168505f4fc510602b53f8669a7e0ca231c1b8108bc1893c7cf"
+  }
+}

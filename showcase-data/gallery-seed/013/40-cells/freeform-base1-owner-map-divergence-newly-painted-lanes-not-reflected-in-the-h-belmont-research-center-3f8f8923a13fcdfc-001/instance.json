@@ -1,0 +1,275 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "owner-map-divergence-newly-painted-lanes-not-reflected-in-th",
+      "templateVersion": 2,
+      "templateDigest": "82a468f304226987",
+      "mapId": "belmont-research-center",
+      "matcherIndexDigest": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+      "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+      "siteId": "3f8f8923a13fcdfc",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "155bce63c05289e4788d351b8ad57a118f6035718274b1360c40c25fb5576132",
+      "drawIndex": 1,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "3f8f8923a13fcdfc#1",
+    "archetype": "w7.lateral.owner-map-divergence-newly-painted-lanes-not-reflected-in-the-h",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "3f8f8923a13fcdfc",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_19203a2820e2cf55",
+      "entryLaneRsl": "1330:0:1",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "corridor.curvatureDegPer10m holds over the whole interval (worst 0.73)",
+        "318.48 m of runway available, 260 m needed",
+        "corridor.speedLimitKph holds over the whole interval (worst 64)",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+      ]
+    },
+    "params": {
+      "values": {
+        "initialGapM": 20.20626170746982,
+        "cutLeadS": 1.88039904050529,
+        "reactAtTtcS": 1.7178535066545009
+      },
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "chal",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "61:0:2",
+        "spawnS": 31.317421110661893,
+        "initialSpeedMps": 9.722222222222223,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "1330:0:1",
+        "spawnS": 48.941916446533,
+        "initialSpeedMps": 15.277777777777779,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "cc2bc687cc1b979e780c4e7c9285665ed40706956d1316d7c9cbe74ecfa0957e",
+    "feasible": true,
+    "issues": [],
+    "initialInteractionOutcomes": [
+      {
+        "interactionId": "ego-inattentive",
+        "actorId": "ego",
+        "verb": "set",
+        "timeS": 0,
+        "outcome": "executed",
+        "basis": "folded_initial_state"
+      }
+    ],
+    "notes": [
+      {
+        "path": "roles.ego.route",
+        "reason": "lane chain extended upstream by 1 lane(s) to reach the site-evaluated spawn at frame s=0.0 m",
+        "impact": "informational"
+      }
+    ]
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "belmont-research-center",
+    "clipSeconds": 18,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "155bce63c05289e4",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "chal",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "61:0:2",
+            "s": 54.171365286478384,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -36.79583425851298,
+            "z": 221.92586261531545,
+            "headingRad": 1.6128802069102586
+          },
+          "speedMps": 9.722222222222223
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "1330:0:1",
+              "61:0:2",
+              "168:0:1",
+              "91:0:2",
+              "607:0:1",
+              "80:0:-2",
+              "205:0:-1",
+              "46:0:-2",
+              "1271:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 9.722222222222223
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:chal",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "1330:0:1",
+            "s": 30.361066092753536,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": -30.40144420961096,
+            "z": 252.41359374483204,
+            "headingRad": 1.714832050092402
+          },
+          "speedMps": 15.277777777777779
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": false,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "99:0:2",
+              "1330:0:1",
+              "61:0:2",
+              "168:0:1",
+              "91:0:2",
+              "607:0:1",
+              "80:0:-2",
+              "205:0:-1",
+              "46:0:-2",
+              "1271:0:-1",
+              "41:0:-2"
+            ]
+          },
+          "cruiseSpeedMps": 15.277777777777779
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "chal-cuts-in",
+        "actorId": "chal",
+        "trigger": {
+          "kind": "at",
+          "t": 1.7566989700551932
+        },
+        "verb": "changeLane",
+        "target": {
+          "mode": "actorLane",
+          "actorId": "ego"
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "rate",
+          "value": 1.6
+        }
+      },
+      {
+        "id": "ego-reacts",
+        "actorId": "ego",
+        "trigger": {
+          "kind": "at",
+          "t": 1.9192445039059822
+        },
+        "verb": "set",
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": true
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

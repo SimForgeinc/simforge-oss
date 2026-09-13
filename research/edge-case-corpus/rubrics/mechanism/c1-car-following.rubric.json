@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "the lead must decelerate at the authored rate, not merely be slow",
+   "id": "R-lead-decel-profile",
+   "kind": "unsupported",
+   "reason": "the rubric vocabulary has no criterion over another actor's deceleration profile",
+   "required": false
+  }
+ ],
+ "intentId": "C1.car-following",
+ "originalIntent": "Euro NCAP AEB Car-to-Car Rear (CCRs stationary / CCRb braking) protocol: the conflict is a closing rear-end with a decelerating or stationary lead. A rear-end scenario in which TTC never falls below ~2.5 s is a following manoeuvre, not a conflict. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Rear-end conflict with a lead vehicle: the ego must face a genuine stopping demand and stop short",
+ "version": 1
+}

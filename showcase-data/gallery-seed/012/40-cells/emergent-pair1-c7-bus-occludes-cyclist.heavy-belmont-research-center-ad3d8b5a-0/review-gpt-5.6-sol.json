@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.2,
+      2.72,
+      5.46,
+      6.82,
+      7.82,
+      8.32,
+      10
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 11.27,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 548,
+      "reasoning": 456
+    }
+  },
+  "cellId": "emergent-pair1-c7-bus-occludes-cyclist.heavy-belmont-research-center-ad3d8b5a-0",
+  "confidence": 0.84,
+  "defects": [],
+  "dynamism": 7.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle rounds the loop, turns onto the main road, and proceeds eastward. A green vehicle heads south and exits early, while several other green vehicles maneuver near the junction ahead; an orange cyclist or scooter travels in the opposite direction and passes the ego without contact.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "ff114914cf24a6446ccec519eb82fe21fbab1db6b55d37737ce6416cc1026e39",
+  "realism": 8.0,
+  "visionAsserted": true
+}

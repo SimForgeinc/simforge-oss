@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "framesUsed": [
+      0,
+      1.64,
+      4.9,
+      8,
+      9,
+      10,
+      13.1,
+      18
+    ],
+    "judgeVersion": "footage-judge-v1",
+    "latencyS": 7.51,
+    "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+    "strategy": "spread8",
+    "tokens": {
+      "in": 4294,
+      "out": 332,
+      "reasoning": 238
+    }
+  },
+  "cellId": "freeform-base1-c6b-cyclist-left-turn-belmont-research-center-0f1f1d8b94d34c14-002",
+  "confidence": 0.94,
+  "defects": [],
+  "dynamism": 4.0,
+  "effort": "medium",
+  "mechanismObserved": "The blue ego vehicle drives south along the winding road, turns left from its perspective onto the eastbound road, and passes an orange cyclist or scooter traveling west in the opposite lane. The two pass safely without contact, after which the ego continues east and begins turning north at a later intersection.",
+  "model": "gpt-5.6-sol",
+  "plausible": true,
+  "rawResponseSha256": "a787630408b86504c19cdb4c30a81b711b113f57139da1cd8eeaf9ba2e5d3e50",
+  "realism": 8.0,
+  "visionAsserted": true
+}

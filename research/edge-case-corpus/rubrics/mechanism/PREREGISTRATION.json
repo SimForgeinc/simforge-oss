@@ -1,0 +1,74 @@
+{
+ "id": "mechanism-rubrics-v2",
+ "preRegisteredAt": "2026-08-16T01:09:31.383552+00:00",
+ "replaces": "259 per-brief *.rubric.json files under research/edge-case-corpus/tools/, all with identical structure and exactly two criteria (R-clearance centre_distance >= 0.5 m, R-nocoll), both already enforced more strictly by gate C3 (true OBB clearance <= 5.0 m) and C5 (zero collisions). They pre-registered nothing about any mechanism and could not reject anything the gate would not already reject.",
+ "vocabulary": "packages/sim-engine/src/trace/intent-rubric.ts, evaluated by `uniscenarios evaluate <trace> --rubric <file>` -- executable, not prose.",
+ "policy": "One rubric per taxonomy category. Bands are taken from published protocols (Euro NCAP CCRs/CCRb/CPFA/CPNA/CPNCO/CBNA, UN R157, UN R13-H, ISO 3888-2, NHTSA pre-crash typology, MUTCD Part 6) and were fixed BEFORE any replay. What the vocabulary cannot express is recorded as an explicit `unsupported` criterion rather than quietly dropped.",
+ "count": 15,
+ "rubrics": {
+  "C1.car-following": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c1-car-following.rubric.json",
+   "sha256": "cba99336438ebd39f0fb1bf61995585f9513c721875b27b048485ffc030589bc"
+  },
+  "C2.cut-in-merge": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c2-cut-in-merge.rubric.json",
+   "sha256": "ca9a1415b0636e37a91ace34e918223873b35bf90bb4e27b5e85bad86da013db"
+  },
+  "C3.intersection": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c3-intersection.rubric.json",
+   "sha256": "6c9fcf3e2344e4f17b63562fbbbc8b450d724d32cfdfb0db71943888ed00311d"
+  },
+  "C4.roundabout": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c4-roundabout.rubric.json",
+   "sha256": "9f72b84d5de25b4f25274f44dc607a9de60b353818284a656624de36c1f5fd60"
+  },
+  "C5.pedestrian": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c5-pedestrian.rubric.json",
+   "sha256": "14ed1d9d27050ba4f89983ec1af10ffbcfe2011a2bdee9e15f7f344a17c280dd"
+  },
+  "C6.cyclist-ptw": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c6-cyclist-ptw.rubric.json",
+   "sha256": "0929db6347f713996a35c5d9d91254db01eaa24cc7fe22fd700f8ade28699b25"
+  },
+  "C7.occlusion": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c7-occlusion.rubric.json",
+   "sha256": "df651b146b9c7d015fb0b03da120c3a32b77c40ab3acced227532f15307bd15a"
+  },
+  "C8.workzone": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c8-workzone.rubric.json",
+   "sha256": "f61ea55cdaf6b492c049768614f85e19e778aa261798633d75d67b3474640b70"
+  },
+  "C9.hazard": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c9-hazard.rubric.json",
+   "sha256": "6fa74dd70d51d41d2dbce90fe0e10321cc73cc6c0f955f3cc96b508ac7cda14f"
+  },
+  "C10.oncoming": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c10-oncoming.rubric.json",
+   "sha256": "7d8c560636c583cf7f073ca36f43f39d9ab3a8a9d6ac47262e1e885e7760b607"
+  },
+  "C11.parking": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c11-parking.rubric.json",
+   "sha256": "b1b6638c7ee83b50c6945711bfbd61045a311ded8a9a6b243a4284bb10ee3591"
+  },
+  "C12.school": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c12-school.rubric.json",
+   "sha256": "b9672b566f115d36eaa4a6668de277a31faef3f0a7beb30190088613d77701eb"
+  },
+  "C13.control": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c13-control.rubric.json",
+   "sha256": "fee2cfb65d62218069e1666de1e1f12366f83b50111dde04d98946927e7a3e48"
+  },
+  "C14.loss-of-control": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c14-loss-of-control.rubric.json",
+   "sha256": "95ccc7f5078a385cc1cfb3e5f2510a68d9c31ac5ba0a99bd7bd30d433aa3ef52"
+  },
+  "C15.adversarial": {
+   "file": "research/edge-case-corpus/rubrics/mechanism/c15-adversarial.rubric.json",
+   "sha256": "d4fa6f28fba3d75e9b6309f597b9e03f31a5274696da303095ffe57755c40ee4"
+  }
+ },
+ "supersedes": {
+  "id": "mechanism-rubrics-v1",
+  "reason": "v1 C5.pedestrian carried a clearance criterion with pair [\"ego\",\"*\"]. There is no such actor, so the criterion evaluated as UNCHECKED and an unchecked required criterion rejects: five C5 archetypes were rejected with pass:3 fail:0. That is a defect in the rubric, not a finding about the corpus, and it is recorded rather than quietly fixed. v2 replaces it with an explicit `unsupported` criterion; true OBB clearance is already enforced by gate C3."
+ }
+}

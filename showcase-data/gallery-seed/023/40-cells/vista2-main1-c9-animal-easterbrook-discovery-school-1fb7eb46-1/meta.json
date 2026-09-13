@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1",
+ "briefId": "c9-animal",
+ "stream": "vista",
+ "templateSha256": "c2d2f8362547b81152960f07cdc2c3514054c67634437e544d99d1e7788a6dbc",
+ "map": "easterbrook-discovery-school",
+ "site": "1fb7eb4659797988",
+ "draw": 1,
+ "seed": "71ca0cc47ba776b3",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 0.777,
+  "tMinClearance": 5
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

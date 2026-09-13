@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 0.8,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 4.0,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C11.parking",
+ "originalIntent": "NHTSA pre-crash typology 1-3 (backing, parking). Speeds are low, so TTC is a weak metric and clearance carries the discrimination. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Parking manoeuvre conflict: low speed, small clearances, and a real encroachment",
+ "version": 1
+}

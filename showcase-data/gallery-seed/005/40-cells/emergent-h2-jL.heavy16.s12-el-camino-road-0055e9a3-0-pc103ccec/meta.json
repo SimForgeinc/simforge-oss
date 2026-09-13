@@ -1,0 +1,17 @@
+{
+ "cellId": "emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0-pc103ccec",
+ "briefId": "emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0",
+ "stream": "emergent",
+ "kind": "tag-strip-promotion",
+ "counterpart": "ambient:v1:b0b8a35ac103ccec",
+ "map": "road",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 1.291,
+  "tMinClearance": 5.08
+ },
+ "verdict": "accept",
+ "band": "critical",
+ "notes": "tag-strip promoted cell; parent=emergent-h2-jL.heavy16.s12-el-camino-road-0055e9a3-0; gate=PASS"
+}

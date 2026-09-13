@@ -1,0 +1,1016 @@
+{
+ "model": "claude-opus-5",
+ "effort": "medium",
+ "pipeline": {
+  "file": "tools/gates/author_llm.py",
+  "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb"
+ },
+ "n": 20,
+ "admitted": 2,
+ "admissionRate": 0.1,
+ "authorErrorCount": 17,
+ "firstFailureCells": {
+  "C4": 130,
+  "C5": 435,
+  "C2": 1
+ },
+ "wallS": 114.4,
+ "usageTotals": {
+  "llmCalls": 32,
+  "llmWallS": 256.5,
+  "inputTokens": 62010,
+  "outputTokens": 14759,
+  "reasoningTokens": 0
+ },
+ "determinismRepeats": [
+  {
+   "id": "c1-lead-hard-brake",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  },
+  {
+   "id": "c1-stop-and-go",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  },
+  {
+   "id": "c11-contested-spot",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": false,
+   "shaFirst": "6d6d4fd6681f1b69b59087fa0a516a85b4ffa9f8ece022b864079c17be963d59",
+   "shaSecond": "9eea1695b1109a6d35c36844488cf32daee00ed34e980fd56544774788a12d3d"
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  }
+ ],
+ "rows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 7.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.1,
+    "inputTokens": 2071,
+    "outputTokens": 487,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 7.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.0,
+    "inputTokens": 2057,
+    "outputTokens": 510,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 8.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.2,
+    "inputTokens": 2050,
+    "outputTokens": 441,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": true,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 8,
+   "maps": 3,
+   "sites": 4,
+   "firstFailure": {
+    "C4": 77,
+    "C5": 205
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 33.2,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 13.7,
+    "inputTokens": 4698,
+    "outputTokens": 950,
+    "reasoningTokens": 0
+   },
+   "templateSha": "6d6d4fd6681f1b69b59087fa0a516a85b4ffa9f8ece022b864079c17be963d59",
+   "outdir": "/tmp/tg-w8-claude-opus-5-medium-c11-contested-spot-1786860192424",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 12,
+     "gapM": [
+      20,
+      36
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Since the maps host no parking aisles, the contest for a kerbside space is authored as its nearest hostable mechanism: a kerbside vehicle claims the bay by pulling out into the ego's path just as the approaching ego closes on the same spot, with a late avoidance release for criticality and a gap/lead window wide enough to avoid forced contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 10,
+     "gapM": [
+      42,
+      68
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.7
+     ],
+     "corridorSpeedKph": [
+      25,
+      90
+     ],
+     "rationale": "The contest for a kerbside space is hosted as a parked vehicle claiming the bay by pulling out into the ego's path, now with a much longer approach gap so the closest approach develops well after 2.5 s (C2), a shorter event lead and later avoidance release so a real braking demand appears (C4), and an unrestricted corridor speed window so all five maps' sites qualify."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 10.9,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 10.9,
+    "inputTokens": 2046,
+    "outputTokens": 623,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 6.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.0,
+    "inputTokens": 2048,
+    "outputTokens": 375,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 8.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.0,
+    "inputTokens": 2053,
+    "outputTokens": 526,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 12.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 12.7,
+    "inputTokens": 2056,
+    "outputTokens": 863,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 9.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.7,
+    "inputTokens": 2062,
+    "outputTokens": 678,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 6.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.5,
+    "inputTokens": 2051,
+    "outputTokens": 406,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 8.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.2,
+    "inputTokens": 2053,
+    "outputTokens": 484,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 9.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.3,
+    "inputTokens": 2051,
+    "outputTokens": 511,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 27.1,
+   "usage": {
+    "llmCalls": 3,
+    "llmWallS": 19.0,
+    "inputTokens": 2055,
+    "outputTokens": 491,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 10.6,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 8.6,
+    "inputTokens": 2049,
+    "outputTokens": 266,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 5.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 5.2,
+    "inputTokens": 2062,
+    "outputTokens": 381,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 8.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.7,
+    "inputTokens": 2059,
+    "outputTokens": 599,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 8.6,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.6,
+    "inputTokens": 2058,
+    "outputTokens": 525,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 6.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 6.0,
+    "inputTokens": 2051,
+    "outputTokens": 368,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "admitted": false,
+   "cells": 420,
+   "feasibleCells": 0,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {},
+   "refusalCodes": {
+    "closure_lane_too_narrow": 204,
+    "closure_exceeds_route": 86,
+    "unknown_site": 130
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 26.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 15.5,
+    "inputTokens": 4761,
+    "outputTokens": 1067,
+    "reasoningTokens": 0
+   },
+   "templateSha": "d5d6ac627dcc6085e24a8df6a24c0b1584b7dcf3550a08dac6ffdf607e17349a",
+   "outdir": "/tmp/tg-w8-claude-opus-5-medium-c8-worker-intrusion-1786860225299",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "workzone",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "pedestrian.adult_walking"
+     ],
+     "worksStartM": [
+      45,
+      70
+     ],
+     "worksLengthM": [
+      30,
+      55
+     ],
+     "closedWidthM": [
+      3.0,
+      3.5
+     ],
+     "workerSpeedKph": [
+      4.0,
+      6.5
+     ],
+     "eventLeadS": [
+      1.3,
+      2.1
+     ],
+     "reactAtTtcS": [
+      1.3,
+      1.9
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "On a solved MUTCD lane-closure taper at 50 kph, a road worker steps at walking pace out of the coned work area into the live running lane roughly 1.3-2.1 s before ego arrives, with ego avoidance released only at ~1.3-1.9 s TTC so the encounter reaches the critical band without forcing contact."
+    },
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "pedestrian.adult_walking"
+     ],
+     "worksStartM": [
+      35,
+      55
+     ],
+     "worksLengthM": [
+      14,
+      26
+     ],
+     "closedWidthM": [
+      1.8,
+      2.4
+     ],
+     "workerSpeedKph": [
+      4.5,
+      7.0
+     ],
+     "eventLeadS": [
+      0.9,
+      1.5
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Shrink the closure footprint (narrower closed width, shorter works length, nearer start) so the MUTCD solver can actually place the taper on ordinary 60-90 kph corridors, and at 55 kph let the worker step into the live lane only 0.9-1.5 s ahead with ego avoidance released at ~1.0-1.4 s TTC so real braking demand is generated without contact."
+    }
+   ]
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "parking_pullout",
+   "admitted": true,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 6,
+   "maps": 2,
+   "sites": 3,
+   "firstFailure": {
+    "C2": 1,
+    "C4": 53,
+    "C5": 230
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 37.0,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 17.1,
+    "inputTokens": 4705,
+    "outputTokens": 1218,
+    "reasoningTokens": 0
+   },
+   "templateSha": "3d960d607fa1d776197bf3faee4247856ef8168c390ead6051c96912924d7fd2",
+   "outdir": "/tmp/tg-w8-claude-opus-5-medium-c9b-open-door-parked-1786860233317",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 6,
+     "gapM": [
+      28,
+      52
+     ],
+     "eventLeadS": [
+      1.0,
+      2.0
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A door opening is authored as the nearest hostable mechanism on these maps: a kerbside parked vehicle intruding slowly (6 kph) into the ego lane just 1-2 s before ego arrival from a 28-52 m gap, with avoidance released at 1.4-2.2 s TTC so the trace reaches the critical band without contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 8,
+     "gapM": [
+      46,
+      72
+     ],
+     "eventLeadS": [
+      1.1,
+      1.9
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      25,
+      90
+     ],
+     "rationale": "A door swinging into the running lane is hosted as a kerbside vehicle intruding slowly (8 kph) into the ego path 1.1-1.9 s before arrival, but now from a 46-72 m gap at 55 kph so closest approach lands well after 2.5 s (C2), with avoidance released later at 1.2-1.8 s TTC to force a real braking demand without contact (C4/C5), and the corridor requirement opened to 25-90 kph to recover map and site portability."
+    }
+   ]
+  }
+ ],
+ "repeatRows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 9.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.7,
+    "inputTokens": 2071,
+    "outputTokens": 439,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 10.3,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 10.3,
+    "inputTokens": 2057,
+    "outputTokens": 562,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 7.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 7.2,
+    "inputTokens": 2050,
+    "outputTokens": 262,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 2,
+   "firstFailure": {
+    "C4": 12,
+    "C5": 274
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 40.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 20.1,
+    "inputTokens": 4690,
+    "outputTokens": 1135,
+    "reasoningTokens": 0
+   },
+   "templateSha": "9eea1695b1109a6d35c36844488cf32daee00ed34e980fd56544774788a12d3d",
+   "outdir": "/tmp/tg-w8-claude-opus-5-medium-c11-contested-spot-1786860273083",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 12,
+     "gapM": [
+      26,
+      46
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Two vehicles contesting one kerbside bay is hosted as the nearest supported mechanism on an ordinary corridor: a rival vehicle lunges out of the parking bay into the ego's path just as the ego arrives to claim the same space, with a late-released ego reaction so the encounter reaches the critical band without contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 10,
+     "gapM": [
+      42,
+      72
+     ],
+     "eventLeadS": [
+      1.6,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.3,
+      1.9
+     ],
+     "rationale": "Two vehicles contesting one kerbside bay is hosted as a rival vehicle lunging out of the parking bay into the ego's path; the gap is widened and the challenger slowed so closest approach develops well after 2.5 s, the ego reaction is released late enough to force a real braking demand without contact, and the corridor posted-speed filter is dropped so every ordinary corridor site on all five maps can host it."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 13.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 13.2,
+    "inputTokens": 2046,
+    "outputTokens": 592,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  }
+ ]
+}

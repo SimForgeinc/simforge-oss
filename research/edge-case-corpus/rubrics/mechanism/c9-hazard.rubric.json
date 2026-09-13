@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C9.hazard",
+ "originalIntent": "NHTSA pre-crash typology 10-12 (object/animal in road). The hazard must be in the travelled way and reached at a TTC that demands action. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Static or shed hazard in the ego path: the ego must face a real avoidance demand",
+ "version": 1
+}

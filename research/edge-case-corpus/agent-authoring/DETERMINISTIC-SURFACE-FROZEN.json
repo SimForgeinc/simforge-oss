@@ -1,0 +1,24 @@
+{
+ "id": "deterministic-authoring-surface-v1",
+ "frozenAt": "2026-08-16T02:28:22.167170+00:00",
+ "file": "tools/gates/author_corpus.py",
+ "sha256": "b94c9dd68b1d591a230e5ecfe8c1272da88dfa163de2112dd5d590ce35634783",
+ "policy": "Developed on DEV only. HELDOUT is authored ONCE through this exact file, with zero per-brief tuning and no further edits. Any change after this point invalidates the generalization gap and must be re-frozen and re-reported.",
+ "runConfiguration": {
+  "draws": 10,
+  "maxSites": 10,
+  "maps": "all five",
+  "gate": "physical gate v2"
+ },
+ "families": [
+  "longitudinal_lead",
+  "crossing_vru",
+  "occluded_vru",
+  "junction_conflict",
+  "lateral_incursion",
+  "oncoming",
+  "parking_pullout",
+  "workzone"
+ ],
+ "notComparableTo": "the published 0.466 DEV baseline, which was produced by a different (LLM tool-authoring) surface that is not on disk. This is a separate algorithm measured against the same frozen gate and the same frozen split."
+}

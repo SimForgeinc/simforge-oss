@@ -1,0 +1,3665 @@
+{
+ "gate": "brief-to-map feasibility pre-check (W6)",
+ "portabilityClause": {
+  "minMaps": 2,
+  "minSites": 3
+ },
+ "blindSevenAgreement": 0.8571,
+ "blindSevenAgreementPortableReading": 0.7143,
+ "blindSeven": [
+  {
+   "id": "blind-crest-queue",
+   "blind": "8/8",
+   "label": true,
+   "precheck": true,
+   "missing": []
+  },
+  {
+   "id": "c4g-circulating-sudden-stop",
+   "blind": "8/8",
+   "label": true,
+   "precheck": false,
+   "missing": [
+    "roundabout"
+   ]
+  },
+  {
+   "id": "low-friction-stop-slide",
+   "blind": "8/8",
+   "label": true,
+   "precheck": true,
+   "missing": []
+  },
+  {
+   "id": "c1g-illegal-u-turn",
+   "blind": "7/8",
+   "label": true,
+   "precheck": true,
+   "missing": []
+  },
+  {
+   "id": "c11g-hidden-child",
+   "blind": "1/8",
+   "label": false,
+   "precheck": false,
+   "missing": [
+    "kerbside_parking_residential",
+    "school_zone"
+   ]
+  },
+  {
+   "id": "c11g-indicator-mislead",
+   "blind": "1/8",
+   "label": false,
+   "precheck": false,
+   "missing": [
+    "parking_aisle"
+   ]
+  },
+  {
+   "id": "parked-vans-narrow-road",
+   "blind": "1/8",
+   "label": false,
+   "precheck": false,
+   "missing": [
+    "kerbside_parking_residential"
+   ]
+  }
+ ],
+ "structureInventory": {
+  "plain_corridor": {
+   "sites": 256,
+   "maps": 5,
+   "perMap": {
+    "yale-street": 64,
+    "belmont-research-center": 64,
+    "el-camino-road": 64,
+    "easterbrook-discovery-school": 25,
+    "richmond-field-station": 39
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "multilane_same_dir": {
+   "sites": 51,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 17,
+    "belmont-research-center": 4,
+    "el-camino-road": 26,
+    "easterbrook-discovery-school": 4
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "wide_lane_for_closure": {
+   "sites": 223,
+   "maps": 5,
+   "perMap": {
+    "yale-street": 49,
+    "belmont-research-center": 63,
+    "el-camino-road": 64,
+    "easterbrook-discovery-school": 15,
+    "richmond-field-station": 32
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "junction_any": {
+   "sites": 294,
+   "maps": 5,
+   "perMap": {
+    "yale-street": 64,
+    "belmont-research-center": 64,
+    "el-camino-road": 64,
+    "easterbrook-discovery-school": 38,
+    "richmond-field-station": 64
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "junction_signalized": {
+   "sites": 23,
+   "maps": 3,
+   "perMap": {
+    "yale-street": 15,
+    "el-camino-road": 5,
+    "richmond-field-station": 3
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "junction_stop": {
+   "sites": 72,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 19,
+    "belmont-research-center": 22,
+    "easterbrook-discovery-school": 25,
+    "richmond-field-station": 6
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "multilane_junction": {
+   "sites": 54,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 22,
+    "belmont-research-center": 5,
+    "el-camino-road": 26,
+    "easterbrook-discovery-school": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "roundabout": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "crossing": {
+   "sites": 5,
+   "maps": 5,
+   "perMap": {
+    "yale-street": 1,
+    "belmont-research-center": 1,
+    "el-camino-road": 1,
+    "easterbrook-discovery-school": 1,
+    "richmond-field-station": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "parking_zone": {
+   "sites": 95,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 14,
+    "belmont-research-center": 36,
+    "el-camino-road": 40,
+    "richmond-field-station": 5
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "parking_aisle": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "kerbside_parking_residential": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "bike_lane": {
+   "sites": 52,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 21,
+    "belmont-research-center": 9,
+    "el-camino-road": 16,
+    "easterbrook-discovery-school": 6
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "bus_stop": {
+   "sites": 2,
+   "maps": 2,
+   "perMap": {
+    "yale-street": 1,
+    "richmond-field-station": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "school_zone": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "work_zone_suitable": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "crest": {
+   "sites": 1,
+   "maps": 1,
+   "perMap": {
+    "el-camino-road": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "occlusion_zone": {
+   "sites": 28,
+   "maps": 4,
+   "perMap": {
+    "yale-street": 3,
+    "belmont-research-center": 3,
+    "el-camino-road": 20,
+    "richmond-field-station": 2
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  },
+  "rail_crossing": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "satisfiesPortability": false,
+   "matchable": false,
+   "reason": "feature kind \"rail_crossing\" is not matchable; the whole feature is dropped \u2014 this required clause is unmatchable, so no site can be checked against it"
+  },
+  "driveway": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "merge_or_diverge": {
+   "sites": 2,
+   "maps": 2,
+   "perMap": {
+    "easterbrook-discovery-school": 1,
+    "richmond-field-station": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "oncoming_lane": {
+   "sites": 206,
+   "maps": 5,
+   "perMap": {
+    "yale-street": 37,
+    "belmont-research-center": 64,
+    "el-camino-road": 64,
+    "easterbrook-discovery-school": 17,
+    "richmond-field-station": 24
+   },
+   "matchable": true,
+   "satisfiesPortability": true
+  }
+ },
+ "structuresTheMapsCannotHost": {
+  "roundabout": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "parking_aisle": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "kerbside_parking_residential": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "bus_stop": {
+   "sites": 2,
+   "maps": 2,
+   "perMap": {
+    "yale-street": 1,
+    "richmond-field-station": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "school_zone": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "work_zone_suitable": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "crest": {
+   "sites": 1,
+   "maps": 1,
+   "perMap": {
+    "el-camino-road": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "rail_crossing": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "satisfiesPortability": false,
+   "matchable": false,
+   "reason": "feature kind \"rail_crossing\" is not matchable; the whole feature is dropped \u2014 this required clause is unmatchable, so no site can be checked against it"
+  },
+  "driveway": {
+   "sites": 0,
+   "maps": 0,
+   "perMap": {},
+   "matchable": true,
+   "satisfiesPortability": false
+  },
+  "merge_or_diverge": {
+   "sites": 2,
+   "maps": 2,
+   "perMap": {
+    "easterbrook-discovery-school": 1,
+    "richmond-field-station": 1
+   },
+   "matchable": true,
+   "satisfiesPortability": false
+  }
+ },
+ "corpus": {
+  "briefs": 208,
+  "infeasible": 48,
+  "byCategory": {
+   "C8.workzone": {
+    "total": 14,
+    "infeasible": 14,
+    "missing": {
+     "work_zone_suitable": 14
+    }
+   },
+   "C12.school": {
+    "total": 12,
+    "infeasible": 12,
+    "missing": {
+     "school_zone": 12
+    }
+   },
+   "C4.roundabout": {
+    "total": 10,
+    "infeasible": 10,
+    "missing": {
+     "roundabout": 10
+    }
+   },
+   "C11.parking": {
+    "total": 13,
+    "infeasible": 5,
+    "missing": {
+     "driveway": 1,
+     "parking_aisle": 3,
+     "kerbside_parking_residential": 1
+    }
+   },
+   "C13.control": {
+    "total": 14,
+    "infeasible": 3,
+    "missing": {
+     "rail_crossing": 2,
+     "work_zone_suitable": 1
+    }
+   },
+   "C7.occlusion": {
+    "total": 14,
+    "infeasible": 2,
+    "missing": {
+     "school_zone": 1,
+     "driveway": 1
+    }
+   },
+   "C10.oncoming": {
+    "total": 13,
+    "infeasible": 1,
+    "missing": {
+     "kerbside_parking_residential": 1
+    }
+   },
+   "C5.pedestrian": {
+    "total": 16,
+    "infeasible": 1,
+    "missing": {
+     "school_zone": 1
+    }
+   },
+   "C3.intersection": {
+    "total": 21,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C2.cut-in-merge": {
+    "total": 15,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C6.cyclist-ptw": {
+    "total": 15,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C1.car-following": {
+    "total": 14,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C9.hazard": {
+    "total": 14,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C15.adversarial": {
+    "total": 13,
+    "infeasible": 0,
+    "missing": {}
+   },
+   "C14.loss-of-control": {
+    "total": 10,
+    "infeasible": 0,
+    "missing": {}
+   }
+  }
+ },
+ "perBrief": [
+  {
+   "id": "c1-lead-stopped",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-brake-check",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-queue-tail",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-tailgated-brake",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c2-cut-in-brake",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c2-parking-cut-in",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c2-merge-gap-collapse",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2-blind-spot",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c3-cross-traffic-violation",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3-red-light-late",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any",
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c3-right-hook-cyclist",
+   "category": "C3.intersection",
+   "requires": [
+    "bike_lane",
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3-occluded-uncontrolled",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c3-allway-stop",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_stop"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_stop": 72
+   }
+  },
+  {
+   "id": "c5-cpnco-dartout",
+   "category": "C5.pedestrian",
+   "requires": [
+    "parking_zone",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_zone": 95,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "requires": [
+    "multilane_same_dir",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c5-bus-stop-emergence",
+   "category": "C5.pedestrian",
+   "requires": [
+    "bus_stop"
+   ],
+   "missing": [],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bus_stop": 2
+   }
+  },
+  {
+   "id": "c5-hesitate",
+   "category": "C5.pedestrian",
+   "requires": [
+    "crossing"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5
+   }
+  },
+  {
+   "id": "c5-crossing-far-side",
+   "category": "C5.pedestrian",
+   "requires": [
+    "crossing"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5
+   }
+  },
+  {
+   "id": "c6-cyclist-crossing",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "crossing"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "crossing": 5
+   }
+  },
+  {
+   "id": "c6-dooring",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c6-contraflow",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c6-ptw-filtering",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c8-taper-merge",
+   "category": "C8.workzone",
+   "requires": [
+    "merge_or_diverge",
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2,
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-flagger-alternating",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-shifted-alignment",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-construction-junction",
+   "category": "C8.workzone",
+   "requires": [
+    "junction_any",
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "junction_any": 294,
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c9-disabled-vehicle",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9-debris",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9-animal",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9-post-crest",
+   "category": "C9.hazard",
+   "requires": [
+    "crest"
+   ],
+   "missing": [],
+   "notPortable": [
+    "crest"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crest": 1
+   }
+  },
+  {
+   "id": "c10-bend-encroach",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10-wrong-way",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10-overtake-oncoming",
+   "category": "C10.oncoming",
+   "requires": [
+    "multilane_same_dir",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c11-backing-out",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11-driveway",
+   "category": "C11.parking",
+   "requires": [
+    "driveway",
+    "parking_zone"
+   ],
+   "missing": [
+    "driveway"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "driveway": 0,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11-double-park",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c12-ball-then-child",
+   "category": "C12.school",
+   "requires": [
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12-crossing-guard",
+   "category": "C12.school",
+   "requires": [
+    "crossing",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12-school-dropoff",
+   "category": "C12.school",
+   "requires": [
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c13-yellow-dilemma",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13-officer-override",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c15-phantom-brake",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15-shedding-load",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c4-entry-yield",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4-exit-cut",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c7-parked-row-veh",
+   "category": "C7.occlusion",
+   "requires": [
+    "occlusion_zone",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c7-double-parked-truck",
+   "category": "C7.occlusion",
+   "requires": [
+    "occlusion_zone",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c7-bus-occludes-cyclist",
+   "category": "C7.occlusion",
+   "requires": [
+    "bike_lane",
+    "bus_stop",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bike_lane": 52,
+    "bus_stop": 2,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7-hedge-corner",
+   "category": "C7.occlusion",
+   "requires": [
+    "crossing",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7-queue-occludes",
+   "category": "C7.occlusion",
+   "requires": [
+    "crossing",
+    "multilane_same_dir",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5,
+    "multilane_same_dir": 51,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7-crest-occludes",
+   "category": "C7.occlusion",
+   "requires": [
+    "crest",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [
+    "crest"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crest": 1,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14-third-party-spin",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-ccrm",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1-crest-queue",
+   "category": "C1.car-following",
+   "requires": [
+    "crest"
+   ],
+   "missing": [],
+   "notPortable": [
+    "crest"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crest": 1
+   }
+  },
+  {
+   "id": "c2-weave",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c2-ramp-merge",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2-exit-across",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c3-ltap-ld",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3-scp",
+   "category": "C3.intersection",
+   "requires": [
+    "crossing",
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5,
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3-left-hook-ptw",
+   "category": "C3.intersection",
+   "requires": [
+    "bike_lane",
+    "junction_any",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "junction_any": 294,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c3-dilemma",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c3-ev-crossing",
+   "category": "C3.intersection",
+   "requires": [
+    "crossing",
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5,
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c5-cpna",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5-cpfa",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5-reversing-ped",
+   "category": "C5.pedestrian",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c5-crowd",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c6-cbna",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6-cyclist-right-hook",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6-escooter",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c8-moving-workzone",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-narrowing",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8-night-zone",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c9-accident-scene",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9-fallen-cargo",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c10-narrow-road",
+   "category": "C10.oncoming",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c10-ego-overtake",
+   "category": "C10.oncoming",
+   "requires": [
+    "multilane_same_dir",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11-aisle-conflict",
+   "category": "C11.parking",
+   "requires": [
+    "parking_aisle",
+    "parking_zone"
+   ],
+   "missing": [
+    "parking_aisle"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_aisle": 0,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "requires": [
+    "bus_stop",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bus_stop": 2,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c13-signal-outage",
+   "category": "C13.control",
+   "requires": [
+    "junction_any",
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13-rail-crossing",
+   "category": "C13.control",
+   "requires": [
+    "crossing",
+    "rail_crossing"
+   ],
+   "missing": [
+    "rail_crossing"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "rail_crossing": 0
+   }
+  },
+  {
+   "id": "c15-convoy",
+   "category": "C15.adversarial",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c15-protest",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c13b-yellow-late",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-red-runner-cross",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-flashing-red",
+   "category": "C13.control",
+   "requires": [
+    "junction_any",
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-protected-left-ends",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-preemption",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-stale-green",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c13b-temp-signal-workzone",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized",
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "junction_signalized": 23,
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "requires": [
+    "junction_stop"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_stop": 72
+   }
+  },
+  {
+   "id": "c13b-rail-gate-down",
+   "category": "C13.control",
+   "requires": [
+    "crossing",
+    "rail_crossing"
+   ],
+   "missing": [
+    "rail_crossing"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "rail_crossing": 0
+   }
+  },
+  {
+   "id": "c13b-officer-directs",
+   "category": "C13.control",
+   "requires": [
+    "junction_signalized"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_signalized": 23
+   }
+  },
+  {
+   "id": "c4b-entry-conflict",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-exit-blocked",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-multilane-weave",
+   "category": "C4.roundabout",
+   "requires": [
+    "multilane_same_dir",
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-ped-at-exit",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-cyclist-circulating",
+   "category": "C4.roundabout",
+   "requires": [
+    "bike_lane",
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bike_lane": 52,
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-truck-offtrack",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-failure-to-yield",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "requires": [
+    "roundabout"
+   ],
+   "missing": [
+    "roundabout"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "roundabout": 0
+   }
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6b-cyclist-left-turn",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c6b-ptw-overtake",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c6b-cyclist-junction-straight",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane",
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c6b-cyclist-pavement-entry",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6b-ptw-lane-split-brake",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6b-cyclist-group",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c3b-ltap-occluded",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any",
+    "occlusion_zone",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "occlusion_zone": 28,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c3b-right-on-red",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3b-cross-fast",
+   "category": "C3.intersection",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c3b-two-stage-left",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3b-blocked-box",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3b-turning-truck",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c3b-simultaneous-left",
+   "category": "C3.intersection",
+   "requires": [
+    "junction_any",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c3b-ped-on-turn",
+   "category": "C3.intersection",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c3b-late-yield",
+   "category": "C3.intersection",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c12b-bus-loading",
+   "category": "C12.school",
+   "requires": [
+    "bus_stop",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bus_stop": 2,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-guard-steps-out",
+   "category": "C12.school",
+   "requires": [
+    "crossing",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-child-between-cars",
+   "category": "C12.school",
+   "requires": [
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-scooter-child",
+   "category": "C12.school",
+   "requires": [
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-double-parked-school",
+   "category": "C12.school",
+   "requires": [
+    "parking_zone",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_zone": 95,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-crowd-crossing",
+   "category": "C12.school",
+   "requires": [
+    "crossing",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-reversing-parent",
+   "category": "C12.school",
+   "requires": [
+    "parking_zone",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_zone": 95,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c12b-bus-departs",
+   "category": "C12.school",
+   "requires": [
+    "bus_stop",
+    "multilane_same_dir",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bus_stop": 2,
+    "multilane_same_dir": 51,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c14b-oversteer",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-wet-braking",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-blowout",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-avoidance-swerve",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-jackknife",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-gravel",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "junction_any"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "junction_any": 294
+   }
+  },
+  {
+   "id": "c14b-ice-patch",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c14b-overcorrect",
+   "category": "C14.loss-of-control",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-stopped-truck-crest",
+   "category": "C9.hazard",
+   "requires": [
+    "crest"
+   ],
+   "missing": [],
+   "notPortable": [
+    "crest"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crest": 1
+   }
+  },
+  {
+   "id": "c9b-ladder",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-pothole-swerve",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-deer",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-flood",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c9b-recovery-truck",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c9b-spill",
+   "category": "C9.hazard",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c7b-van-hides-ped",
+   "category": "C7.occlusion",
+   "requires": [
+    "crossing",
+    "occlusion_zone",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5,
+    "occlusion_zone": 28,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c7b-truck-hides-oncoming",
+   "category": "C7.occlusion",
+   "requires": [
+    "occlusion_zone",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c7b-wall-corner",
+   "category": "C7.occlusion",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "requires": [
+    "bus_stop",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [
+    "bus_stop"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "bus_stop": 2,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7b-parked-row-child",
+   "category": "C7.occlusion",
+   "requires": [
+    "parking_zone",
+    "school_zone"
+   ],
+   "missing": [
+    "school_zone"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_zone": 95,
+    "school_zone": 0
+   }
+  },
+  {
+   "id": "c7b-hedge-driveway",
+   "category": "C7.occlusion",
+   "requires": [
+    "driveway",
+    "occlusion_zone"
+   ],
+   "missing": [
+    "driveway"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "driveway": 0,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7b-queue-hides-cyclist",
+   "category": "C7.occlusion",
+   "requires": [
+    "bike_lane",
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52,
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c7b-skip-container",
+   "category": "C7.occlusion",
+   "requires": [
+    "occlusion_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28
+   }
+  },
+  {
+   "id": "c10b-overtake-into-ego",
+   "category": "C10.oncoming",
+   "requires": [
+    "multilane_same_dir",
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51,
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-wide-load",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-parked-both-sides",
+   "category": "C10.oncoming",
+   "requires": [
+    "kerbside_parking_residential",
+    "oncoming_lane",
+    "parking_zone"
+   ],
+   "missing": [
+    "kerbside_parking_residential"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "kerbside_parking_residential": 0,
+    "oncoming_lane": 206,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c10b-bend-cut",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-night-dazzle",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-tractor",
+   "category": "C10.oncoming",
+   "requires": [
+    "oncoming_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "oncoming_lane": 206
+   }
+  },
+  {
+   "id": "c10b-overtaking-truck",
+   "category": "C10.oncoming",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c11b-reverse-bay",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-pedestrian-behind",
+   "category": "C11.parking",
+   "requires": [
+    "occlusion_zone",
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "occlusion_zone": 28,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-tight-aisle",
+   "category": "C11.parking",
+   "requires": [
+    "parking_aisle",
+    "parking_zone"
+   ],
+   "missing": [
+    "parking_aisle"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_aisle": 0,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-delivery-blocks",
+   "category": "C11.parking",
+   "requires": [
+    "parking_aisle",
+    "parking_zone"
+   ],
+   "missing": [
+    "parking_aisle"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "parking_aisle": 0,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-pulling-out-fast",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-trolley",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-kerbside-loading",
+   "category": "C11.parking",
+   "requires": [
+    "kerbside_parking_residential",
+    "oncoming_lane",
+    "parking_zone"
+   ],
+   "missing": [
+    "kerbside_parking_residential"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "kerbside_parking_residential": 0,
+    "oncoming_lane": 206,
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c11b-parked-protrude",
+   "category": "C11.parking",
+   "requires": [
+    "parking_zone"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "parking_zone": 95
+   }
+  },
+  {
+   "id": "c15b-brake-test",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-blocking-pair",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-cut-and-slow",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-road-rage",
+   "category": "C15.adversarial",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c15b-debris-thrown",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-stalled-blocking",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-tailgate-flash",
+   "category": "C15.adversarial",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c15b-swerve-bait",
+   "category": "C15.adversarial",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c1b-queue-crest",
+   "category": "C1.car-following",
+   "requires": [
+    "crest"
+   ],
+   "missing": [],
+   "notPortable": [
+    "crest"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crest": 1
+   }
+  },
+  {
+   "id": "c1b-lead-swerve-brake",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1b-multi-brake",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1b-slow-truck",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1b-lead-stalls",
+   "category": "C1.car-following",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c1b-following-motorcycle",
+   "category": "C1.car-following",
+   "requires": [
+    "bike_lane"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "bike_lane": 52
+   }
+  },
+  {
+   "id": "c2b-aggressive-merge",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2b-zip-merge-fail",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2b-cut-in-truck",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c2b-lane-ends",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2b-slip-road",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "merge_or_diverge"
+   ],
+   "missing": [],
+   "notPortable": [
+    "merge_or_diverge"
+   ],
+   "feasible": true,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "merge_or_diverge": 2
+   }
+  },
+  {
+   "id": "c2b-double-cutin",
+   "category": "C2.cut-in-merge",
+   "requires": [
+    "multilane_same_dir"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "multilane_same_dir": 51
+   }
+  },
+  {
+   "id": "c5b-umbrella",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5b-runner",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5b-dog-walker",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5b-wheelchair",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5b-phone-distracted",
+   "category": "C5.pedestrian",
+   "requires": [
+    "plain_corridor"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "plain_corridor": 256
+   }
+  },
+  {
+   "id": "c5b-crossing-late",
+   "category": "C5.pedestrian",
+   "requires": [
+    "crossing"
+   ],
+   "missing": [],
+   "notPortable": [],
+   "feasible": true,
+   "feasibleAndPortable": true,
+   "siteCounts": {
+    "crossing": 5
+   }
+  },
+  {
+   "id": "c8b-lane-shift",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8b-flagger-stops",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8b-worker-in-lane",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8b-mobile-works",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8b-cones-narrow",
+   "category": "C8.workzone",
+   "requires": [
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "work_zone_suitable": 0
+   }
+  },
+  {
+   "id": "c8b-plant-crossing",
+   "category": "C8.workzone",
+   "requires": [
+    "crossing",
+    "work_zone_suitable"
+   ],
+   "missing": [
+    "work_zone_suitable"
+   ],
+   "notPortable": [],
+   "feasible": false,
+   "feasibleAndPortable": false,
+   "siteCounts": {
+    "crossing": 5,
+    "work_zone_suitable": 0
+   }
+  }
+ ],
+ "pass": true
+}

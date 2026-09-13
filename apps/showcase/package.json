@@ -1,0 +1,11 @@
+{
+  "name": "@simforge-oss/showcase",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --check server/index.mjs && node --check server/pipeline.mjs && node --check server/failures.mjs && node --check server/campaign.mjs",
+    "start": "node server/index.mjs",
+    "test": "node --test server/*.test.mjs"
+  }
+}

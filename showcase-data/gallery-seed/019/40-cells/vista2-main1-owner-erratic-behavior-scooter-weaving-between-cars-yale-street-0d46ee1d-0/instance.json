@@ -1,0 +1,507 @@
+{
+  "kind": "scenario-instance",
+  "version": 1,
+  "manifest": {
+    "kind": "scenario-instance-manifest",
+    "manifestVersion": 1,
+    "replayKey": {
+      "templateId": "vista2-owner-erratic-behavior-scooter-weaving-between-cars",
+      "templateVersion": 2,
+      "templateDigest": "1a97e55b1a3eb96d",
+      "mapId": "yale-street",
+      "matcherIndexDigest": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
+      "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+      "siteId": "0d46ee1d456b2ab6",
+      "matcherVersion": "1.0.0",
+      "solverVersion": "0.4.0",
+      "paramSeed": "3f271bb8a3fd16b106baf8a27fdb160bd4353698dafa3733067cdd6d779912a6",
+      "drawIndex": 0,
+      "ambientProfileHash": "none"
+    },
+    "instanceId": "0d46ee1d456b2ab6#0",
+    "archetype": "OWNER.erratic-behavior",
+    "negativeControl": false,
+    "metricSubject": "ego",
+    "operationalVariant": null,
+    "site": {
+      "siteId": "0d46ee1d456b2ab6",
+      "score": 1,
+      "verdict": "exact",
+      "originFeatureId": "seg_36cc4bd2a9bd8117",
+      "entryLaneRsl": "83:0:-3",
+      "egoTurn": null,
+      "degradationSummary": "Exact match: every clause and role bound without relaxation.",
+      "matchedReasons": [
+        "648.95 m of runway available, 120 m needed",
+        "corridor.throughLanesSameDir holds over the whole interval (worst 3)"
+      ]
+    },
+    "params": {
+      "values": {},
+      "categorical": {},
+      "rejectedConstraints": []
+    },
+    "actors": [
+      {
+        "id": "car_front_left",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "19:0:-2",
+        "spawnS": 116.1963495136192,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "car_rear_left",
+        "actorKind": "car",
+        "roleKind": "relative_to",
+        "laneRsl": "758:0:-1",
+        "spawnS": 83.47804687697655,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "ego",
+        "actorKind": "car",
+        "roleKind": "on_reference",
+        "laneRsl": "83:0:-3",
+        "spawnS": 39.999951784659714,
+        "initialSpeedMps": 13.88888888888889,
+        "bindingStatus": "bound"
+      },
+      {
+        "id": "scooter",
+        "actorKind": "scooter",
+        "roleKind": "relative_to",
+        "laneRsl": "755:0:-1",
+        "spawnS": 94.99993784128907,
+        "initialSpeedMps": 11.11111111111111,
+        "bindingStatus": "bound"
+      }
+    ],
+    "props": [],
+    "arrival": [],
+    "inputHash": "c5ccdab223c6fe6ba7b607e9c7c68eac08d372ad2fdc27f265bfdeddaf5251ca",
+    "feasible": true,
+    "issues": [
+      {
+        "code": "decel_budget_exceeded",
+        "severity": "warning",
+        "path": "interactions.i4.dynamics",
+        "reason": "implies 6.00 m/s² of braking, above the 5.5 m/s² comfort limit",
+        "detail": {
+          "impliedDecel": 6,
+          "budget": 5.5
+        }
+      }
+    ],
+    "initialInteractionOutcomes": [],
+    "notes": []
+  },
+  "input": {
+    "schemaVersion": 1,
+    "mapId": "yale-street",
+    "clipSeconds": 16,
+    "warmupSeconds": 2,
+    "dt": 0.02,
+    "seed": "3f271bb8a3fd16b1",
+    "physics": {
+      "mode": "dynamic-v1"
+    },
+    "operationalConditions": {
+      "weather": "clear",
+      "timeOfDay": "day",
+      "traffic": "moderate",
+      "visibility": "unrestricted",
+      "effects": {
+        "visibilityRangeM": 1000,
+        "frictionScale": 1,
+        "trafficSpeedFactor": 1
+      }
+    },
+    "metricSubject": "ego",
+    "actors": [
+      {
+        "id": "car_front_left",
+        "kind": "car",
+        "dims": {
+          "l": 4.05,
+          "w": 1.75,
+          "h": 1.46
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "19:0:-2",
+            "s": 6.093129897157851,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 845.833957311659,
+            "z": -1629.3796936836784,
+            "headingRad": 2.5544257935393544
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "83:0:-2",
+              "758:0:-1",
+              "19:0:-2",
+              "830:0:-2",
+              "20:0:-2",
+              "309:0:-1",
+              "76:0:1",
+              "904:0:1",
+              "75:0:1",
+              "292:0:1",
+              "74:0:1",
+              "925:0:1",
+              "58:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:car_front_left",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.hatchback"
+        ]
+      },
+      {
+        "id": "car_rear_left",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "758:0:-1",
+            "s": 18.731637439345477,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 874.2278660424533,
+            "z": -1613.245819371977,
+            "headingRad": 2.6916178846959036
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "83:0:-2",
+              "758:0:-1",
+              "19:0:-2",
+              "830:0:-2",
+              "20:0:-2",
+              "309:0:-1",
+              "76:0:1",
+              "904:0:1",
+              "75:0:1",
+              "292:0:1",
+              "74:0:1",
+              "925:0:1",
+              "58:0:-1"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:car_rear_left",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "car",
+        "dims": {
+          "l": 4.7,
+          "w": 1.82,
+          "h": 1.45
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "83:0:-3",
+            "s": 39.999951784659714,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 912.7964417897595,
+            "z": -1592.8237053553225,
+            "headingRad": 2.563179186456897
+          },
+          "speedMps": 13.88888888888889
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "83:0:-3",
+              "755:0:-1",
+              "19:0:-4",
+              "830:0:-4",
+              "20:0:-4",
+              "305:0:-1",
+              "25:0:-3",
+              "1289:0:-1",
+              "18:0:-6",
+              "377:0:-1",
+              "114:0:-3",
+              "549:0:-1",
+              "105:0:-4",
+              "461:0:-1",
+              "22:0:-3",
+              "1003:0:-3",
+              "23:0:-3",
+              "877:0:-1",
+              "47:0:-4",
+              "1327:0:-1",
+              "32:0:-4",
+              "192:0:-1",
+              "15:0:-3"
+            ]
+          },
+          "cruiseSpeedMps": 13.88888888888889
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:ego",
+          "class:car",
+          "driver-profile:lawful",
+          "binding:on_reference",
+          "catalog:vehicle.sedan"
+        ]
+      },
+      {
+        "id": "scooter",
+        "kind": "scooter",
+        "dims": {
+          "l": 1.35,
+          "w": 0.68,
+          "h": 1.35
+        },
+        "initial": {
+          "laneRef": {
+            "rsl": "755:0:-1",
+            "s": 30.245590076389362,
+            "tFrac": 0
+          },
+          "pose": {
+            "x": 866.8918322180491,
+            "z": -1623.1181607196236,
+            "headingRad": 2.556699789213958
+          },
+          "speedMps": 11.11111111111111
+        },
+        "behavior": {
+          "rules": {
+            "obeySignals": true,
+            "yield": true,
+            "yieldToVehicles": true,
+            "yieldToPedestrians": true,
+            "collisionAvoidance": true,
+            "aggression": 0.5,
+            "speedFactor": 1
+          },
+          "route": {
+            "kind": "lanePath",
+            "lanes": [
+              "83:0:-3",
+              "755:0:-1",
+              "19:0:-4",
+              "830:0:-4",
+              "20:0:-4",
+              "305:0:-1",
+              "25:0:-3",
+              "1289:0:-1",
+              "18:0:-6",
+              "377:0:-1",
+              "114:0:-3",
+              "549:0:-1",
+              "105:0:-4",
+              "461:0:-1",
+              "22:0:-3",
+              "1003:0:-3",
+              "23:0:-3",
+              "877:0:-1",
+              "47:0:-4",
+              "1327:0:-1",
+              "32:0:-4",
+              "192:0:-1",
+              "15:0:-3"
+            ]
+          },
+          "cruiseSpeedMps": 11.11111111111111
+        },
+        "presentAtStart": true,
+        "static": false,
+        "tags": [
+          "role:scooter",
+          "class:scooter",
+          "driver-profile:lawful",
+          "binding:relative_to",
+          "catalog:vehicle.mobility_scooter"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "i1",
+        "actorId": "scooter",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 11.11111111111111
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 3
+        }
+      },
+      {
+        "id": "i2",
+        "actorId": "scooter",
+        "trigger": {
+          "kind": "at",
+          "t": 0.5
+        },
+        "verb": "changeLane",
+        "target": {
+          "mode": "left",
+          "count": 1
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "time",
+          "value": 1.2
+        }
+      },
+      {
+        "id": "i3",
+        "actorId": "scooter",
+        "trigger": {
+          "kind": "at",
+          "t": 2.2
+        },
+        "verb": "changeLane",
+        "target": {
+          "mode": "right",
+          "count": 1
+        },
+        "dynamics": {
+          "shape": "sinusoidal",
+          "constraint": "time",
+          "value": 1.2
+        }
+      },
+      {
+        "id": "i4",
+        "actorId": "scooter",
+        "trigger": {
+          "kind": "at",
+          "t": 3.2
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "stop"
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 6
+        }
+      },
+      {
+        "id": "i5",
+        "actorId": "car_rear_left",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 11.11111111111111
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 3
+        }
+      },
+      {
+        "id": "i6",
+        "actorId": "car_front_left",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "verb": "speed",
+        "target": {
+          "mode": "absolute",
+          "value": 11.11111111111111
+        },
+        "dynamics": {
+          "shape": "linear",
+          "constraint": "rate",
+          "value": 3
+        }
+      }
+    ],
+    "signalPrograms": [],
+    "roadControls": [],
+    "surfacePatches": [],
+    "laneClosures": [],
+    "props": [],
+    "occluders": [],
+    "occlusionPairs": [],
+    "nearMissCriteria": []
+  }
+}

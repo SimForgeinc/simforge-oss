@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0",
+ "briefId": "owner-map-divergence-faded-lane-markings",
+ "stream": "vista",
+ "templateSha256": "1cf97e4e0b07b2b5df7ce2ebc041a412600e0062cce2b3e9c4ae2ac2d187d810",
+ "map": "yale-street",
+ "site": "14b2d76619f7e143",
+ "draw": 0,
+ "seed": "f537cff4a09d832c",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.421,
+  "tMinClearance": 16
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

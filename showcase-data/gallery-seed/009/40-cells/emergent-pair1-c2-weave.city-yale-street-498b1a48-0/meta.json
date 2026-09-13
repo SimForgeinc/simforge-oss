@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c2-weave.city-yale-street-498b1a48-0",
+ "briefId": "c2-weave",
+ "stream": "emergent",
+ "templateSha256": "f16c7738f7641ffbc2c5d42f20618bc94576296b616308950c78294e2c6e4900",
+ "arm": "city",
+ "map": "yale-street",
+ "site": "498b1a48fda9b60d",
+ "draw": 0,
+ "seed": "85b740c64c2135a5db653d121c68c7b5b657455687287db0b223c0778f514e2a",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 4.876,
+  "tMinClearance": 6.02
+ },
+ "notes": "arm(i) paired cell; arm=city; band=critical; ambient=32"
+}

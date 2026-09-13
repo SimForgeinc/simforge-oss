@@ -1,0 +1,20 @@
+{
+ "cellId": "emergent-pair1-c3-left-hook-ptw.light-el-camino-road-09eae1a1-0",
+ "briefId": "c3-left-hook-ptw",
+ "stream": "emergent",
+ "templateSha256": "09555887f4272b44f30190abb6e78405f904d87c37c934750f958d8f66eee3ba",
+ "arm": "light",
+ "map": "el-camino-road",
+ "site": "09eae1a17570797c",
+ "draw": 0,
+ "seed": "a53c7ba255c332b73447b2b1c31c6c846fdbdfc405cae8a94bb38b577a0bc3c1",
+ "ambientSeed": "pairseed1",
+ "settleS": 20,
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 1.5,
+  "tMinClearance": 10.68
+ },
+ "notes": "arm(i) paired cell; arm=light; band=critical; ambient=20"
+}

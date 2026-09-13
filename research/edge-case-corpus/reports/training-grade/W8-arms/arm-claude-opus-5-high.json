@@ -1,0 +1,1348 @@
+{
+ "model": "claude-opus-5",
+ "effort": "high",
+ "pipeline": {
+  "file": "tools/gates/author_llm.py",
+  "sha256": "538200ab824701d072402b993af6216e81c4d5502de50cc7b8bfd25aa8cfdebb"
+ },
+ "n": 20,
+ "admitted": 9,
+ "admissionRate": 0.45,
+ "authorErrorCount": 9,
+ "firstFailureCells": {
+  "C1": 118,
+  "C2": 394,
+  "C4": 607,
+  "C5": 759,
+  "C3": 153
+ },
+ "wallS": 243.5,
+ "usageTotals": {
+  "llmCalls": 32,
+  "llmWallS": 521.8,
+  "inputTokens": 67521,
+  "outputTokens": 36022,
+  "reasoningTokens": 0
+ },
+ "determinismRepeats": [
+  {
+   "id": "c1-lead-hard-brake",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": false,
+   "shaFirst": "b1b53e85741f41d80ebd2cf16d8f42710809336b5d668eb0c83d4df5920715aa",
+   "shaSecond": null
+  },
+  {
+   "id": "c1-stop-and-go",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  },
+  {
+   "id": "c11-contested-spot",
+   "templateIdentical": false,
+   "admittedFirst": true,
+   "admittedSecond": true,
+   "shaFirst": "b5775aae4c40ec2c0d7f1af37b52a4f90d1ca0e26af4dc02f471a803d5f17b37",
+   "shaSecond": "56c2d3dfe26d8380c1fc7290251c6e2cc483373bfbd5d600d0d95407c26e4778"
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "templateIdentical": false,
+   "admittedFirst": false,
+   "admittedSecond": false,
+   "shaFirst": null,
+   "shaSecond": null
+  }
+ ],
+ "rows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 113,
+   "maps": 5,
+   "sites": 15,
+   "firstFailure": {
+    "C1": 3,
+    "C2": 68,
+    "C4": 1,
+    "C5": 15
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 33.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 8.7,
+    "inputTokens": 2071,
+    "outputTokens": 599,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b1b53e85741f41d80ebd2cf16d8f42710809336b5d668eb0c83d4df5920715aa",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c1-lead-hard-brake-1786860302113",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 60,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 50,
+     "challengerStatic": false,
+     "leadBrakes": true,
+     "gapM": [
+      20,
+      32
+     ],
+     "brakeAtS": [
+      3.0,
+      4.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      1.9
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Euro NCAP CCRb in flowing traffic: ego at 60 kph trails a 50 kph sedan at a normal ~2 s headway (20-32 m) that brakes hard after t=3-4 s, with ego avoidance released only at 1.3-1.9 s TTC to model human reaction delay, keeping minTTC well under 3 s and requiredDecel high without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 20.4,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 20.4,
+    "inputTokens": 2057,
+    "outputTokens": 1436,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 16.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 16.0,
+    "inputTokens": 2050,
+    "outputTokens": 1048,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "parking_pullout",
+   "admitted": true,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 4,
+   "maps": 2,
+   "sites": 3,
+   "firstFailure": {
+    "C4": 108,
+    "C5": 178
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 73.7,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 43.2,
+    "inputTokens": 4686,
+    "outputTokens": 2950,
+    "reasoningTokens": 0
+   },
+   "templateSha": "b5775aae4c40ec2c0d7f1af37b52a4f90d1ca0e26af4dc02f471a803d5f17b37",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c11-contested-spot-1786860338419",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 10,
+     "gapM": [
+      40,
+      58
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No parking aisle exists on these maps, so the two-cars-contest-one-space brief is hosted as its nearest legal mechanism: ego closes on a kerbside bay it is about to take while the occupant vehicle simultaneously claims the gap and pulls out across its path, with a 40-58 m gap at 50 kph keeping closest approach past t=2.5 s and a 1.4-2.2 s late-release window driving minTTC under 3 s without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 9,
+     "gapM": [
+      44,
+      60
+     ],
+     "eventLeadS": [
+      0.9,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      25,
+      90
+     ],
+     "rationale": "The contested-space brief is hosted as a kerbside pullout that claims the bay in front of the ego: the corridor requirement is opened to the full 25-90 kph band so every published site qualifies (fixing the 1-map/1-site portability short), ego is raised to 55 kph with a 44-60 m gap so closest approach still lands past t=2.5 s, and the pullout is made genuinely surprising by dropping the challenger to 9 kph (it lingers across the lane instead of clearing it) with a 0.9-1.8 s event lead and a 1.3-2.0 s late release, which forces real braking demand for C4 while staying above the contact threshold that was costing cells to C5."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 14.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 14.8,
+    "inputTokens": 2046,
+    "outputTokens": 938,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c13b-stop-sign-rolling",
+   "category": "C13.control",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 17.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 17.7,
+    "inputTokens": 2048,
+    "outputTokens": 1345,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c14-friction-patch",
+   "category": "C14.loss-of-control",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 200,
+   "passingCells": 96,
+   "maps": 5,
+   "sites": 12,
+   "firstFailure": {
+    "C1": 15,
+    "C2": 76,
+    "C5": 13
+   },
+   "refusalCodes": {
+    "unknown_site": 120
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 36.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 10.8,
+    "inputTokens": 2053,
+    "outputTokens": 771,
+    "reasoningTokens": 0
+   },
+   "templateSha": "cb1a163a4a0fb5d618228f4a61f68f0d3a6d9422f70220f08f8c490389b12e5d",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c14-friction-patch-1786860323535",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 45,
+     "challengerStatic": false,
+     "leadBrakes": true,
+     "gapM": [
+      16,
+      28
+     ],
+     "brakeAtS": [
+      3.0,
+      4.2
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.1
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A traction loss on a friction patch is hosted as the nearest admissible mechanism on an ordinary corridor: a moving lead sedan that abruptly sheds speed (CCRb-style hard deceleration) directly ahead of a 55 kph ego at a 16-28 m gap, with the ego's avoidance released late (TTC 1.4-2.1 s) so the trace reaches the critical band without contact."
+    }
+   ]
+  },
+  {
+   "id": "c15-curb-standing",
+   "category": "C15.adversarial",
+   "family": "crossing_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 19,
+   "maps": 4,
+   "sites": 8,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 83,
+    "C3": 6,
+    "C4": 80,
+    "C5": 102
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 53.4,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 25.1,
+    "inputTokens": 2056,
+    "outputTokens": 1734,
+    "reasoningTokens": 0
+   },
+   "templateSha": "80b69152e16cb9c3b422c9ae5a3fc612c7b0ef76f4871400abd738800e6a0a44",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c15-curb-standing-1786860340045",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "crossing_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "conflictS": [
+      45,
+      75
+     ],
+     "eventLeadS": [
+      1.0,
+      1.6
+     ],
+     "vruSpeedKph": [
+      3.0,
+      4.5
+     ],
+     "reactAtTtcS": [
+      1.6,
+      2.4
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A literally non-crossing kerbside pedestrian can never satisfy the frozen gate (C3 clearance <= 5 m, C4, C5 band=critical), so this negative control is authored as its nearest hostable surrogate: a hesitant adult who lingers at the kerb and makes a single slow, minimal step (0.8-2.0 m of lateral travel at 3-4.5 kph, released only 1.0-1.6 s before ego arrival) that grazes the lane edge without ever reaching the ego's path, yielding a genuine near-miss the corpus can score against true crossing cases."
+    }
+   ]
+  },
+  {
+   "id": "c2-cut-out-reveals",
+   "category": "C2.cut-in-merge",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 280,
+   "feasibleCells": 200,
+   "passingCells": 78,
+   "maps": 4,
+   "sites": 14,
+   "firstFailure": {
+    "C3": 4,
+    "C4": 45,
+    "C5": 73
+   },
+   "refusalCodes": {
+    "unknown_site": 80
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 46.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 18.4,
+    "inputTokens": 2062,
+    "outputTokens": 1280,
+    "reasoningTokens": 0
+   },
+   "templateSha": "29117bc34847da17312753f9305b6498f4705b46901e9b75a59c1b141f853ec5",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c2-cut-out-reveals-1786860347507",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerStatic": true,
+     "challengerSpeedKph": 0,
+     "gapM": [
+      52,
+      70
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.1
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "The cut-out-reveal is hosted as a genuinely stopped in-lane sedan whose hazard information reaches the ego only late (reactAtTtcS 1.5-2.1 s), which is the physical signature of a lead peeling away at the last moment; ego speed 55 kph keeps the C2/C4 gap window ~19 m wide so gapM 52-70 m yields a critical band without contact."
+    }
+   ]
+  },
+  {
+   "id": "c2-lane-drop",
+   "category": "C2.cut-in-merge",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 17.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 17.8,
+    "inputTokens": 2051,
+    "outputTokens": 1262,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c3-ltap-od",
+   "category": "C3.intersection",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 11.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 11.2,
+    "inputTokens": 2053,
+    "outputTokens": 741,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c3b-permissive-left",
+   "category": "C3.intersection",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 11.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 11.8,
+    "inputTokens": 2051,
+    "outputTokens": 780,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c4b-mini-roundabout",
+   "category": "C4.roundabout",
+   "family": "junction_conflict",
+   "admitted": true,
+   "cells": 330,
+   "feasibleCells": 260,
+   "passingCells": 9,
+   "maps": 2,
+   "sites": 3,
+   "firstFailure": {
+    "C1": 70,
+    "C2": 2,
+    "C3": 123,
+    "C4": 19,
+    "C5": 37
+   },
+   "refusalCodes": {
+    "unknown_site": 60,
+    "arrival_unconverged": 10
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 81.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 33.3,
+    "inputTokens": 4843,
+    "outputTokens": 2474,
+    "reasoningTokens": 0
+   },
+   "templateSha": "7e803ce9326f839daea927fbc97cd832728c9833c5ccd0ea77931f4cf22c1904",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c4b-mini-roundabout-1786860401178",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 30,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.8,
+      1.6
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.1
+     ],
+     "eventLeadS": [
+      1.0,
+      2.2
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No mini roundabout exists on the five maps, so the simultaneous-arrival yield conflict is hosted as its nearest ordinary-corridor equivalent: a 30 kph conflicting vehicle reaching the junction 0.8-1.6 s ahead of a 45 kph ego at an unrestricted-control intersection, with late avoidance release so the encounter reaches the critical band without contact."
+    },
+    {
+     "family": "junction_conflict",
+     "egoSpeedKph": 45,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 25,
+     "junctionControl": "any",
+     "arrivalTtcS": [
+      0.6,
+      1.2
+     ],
+     "reactAtTtcS": [
+      1.0,
+      1.7
+     ],
+     "eventLeadS": [
+      1.6,
+      3.0
+     ],
+     "corridorSpeedKph": [
+      25,
+      90
+     ],
+     "rationale": "The mini roundabout is hosted as its nearest ordinary-corridor equivalent, a genuinely simultaneous junction arrival: the challenger is slowed to 25 kph and its arrival lead tightened to 0.6-1.2 s so it is still occupying the conflict box as the 45 kph ego reaches it (fixing the dominant C3 clearance-too-large failures), the longer 1.6-3.0 s event lead pushes closest approach past t=2.5 s for C2, the tighter reactAtTtcS forces a real braking demand for C4 while staying clear of contact, and the corridor speed requirement is opened to 25-90 kph so the solver can place the scene on more maps and sites."
+    }
+   ]
+  },
+  {
+   "id": "c5-adult-midblock",
+   "category": "C5.pedestrian",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 9.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.0,
+    "inputTokens": 2049,
+    "outputTokens": 632,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c5-multiple-threat",
+   "category": "C5.pedestrian",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 57,
+   "maps": 5,
+   "sites": 11,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 78,
+    "C3": 7,
+    "C4": 71,
+    "C5": 77
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 37.5,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 9.8,
+    "inputTokens": 2062,
+    "outputTokens": 736,
+    "reasoningTokens": 0
+   },
+   "templateSha": "6e600b4a15da8d6f49c77fd192f2f69153431d74bf230f05ae678780b47f3318",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c5-multiple-threat-1786860378334",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "occluder": "occluder.covered_car",
+     "conflictS": [
+      45,
+      70
+     ],
+     "vruSpeedKph": [
+      5,
+      9
+     ],
+     "eventLeadS": [
+      1.6,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A pedestrian hidden behind a stopped kerbside vehicle in the adjacent lane is revealed only 1.6-2.6 s before ego arrival at a 45-70 m conflict point, so the 50 kph ego's governor cannot see the hazard early and is released late (TTC 1.3-2.0 s) into a critical but collision-free evasive brake."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cargo-bike",
+   "category": "C6.cyclist-ptw",
+   "family": "longitudinal_lead",
+   "admitted": true,
+   "cells": 320,
+   "feasibleCells": 220,
+   "passingCells": 135,
+   "maps": 5,
+   "sites": 18,
+   "firstFailure": {
+    "C2": 26,
+    "C3": 1,
+    "C4": 56,
+    "C5": 2
+   },
+   "refusalCodes": {
+    "unknown_site": 100
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 75.3,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 43.2,
+    "inputTokens": 4723,
+    "outputTokens": 3018,
+    "reasoningTokens": 0
+   },
+   "templateSha": "54601a2bc8911912c8e24d22bdf97ba5f7d98e53d6927c55f086597864c93870",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c6b-cargo-bike-1786860416485",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 11,
+     "challengerStatic": false,
+     "leadBrakes": false,
+     "gapM": [
+      34,
+      46
+     ],
+     "reactAtTtcS": [
+      1.5,
+      2.1
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A slow cargo bike effectively blocks the running lane, so ego at 55 kph closes at ~12 m/s on a 11 kph bicycle from a 34-46 m gap and is only released to avoid at 1.5-2.1 s TTC, which forces requiredDecel above 1.5 m/s^2 and minTTC under 3 s while keeping closest approach past 2.5 s and clear of contact."
+    },
+    {
+     "family": "longitudinal_lead",
+     "egoSpeedKph": 52,
+     "challengerCatalog": "vehicle.bicycle",
+     "challengerSpeedKph": 12,
+     "challengerStatic": false,
+     "leadBrakes": false,
+     "gapM": [
+      48,
+      64
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.7
+     ],
+     "corridorSpeedKph": [
+      55,
+      90
+     ],
+     "rationale": "The slow cargo bike still blocks the running lane, but the ego now closes at only ~11 m/s (52 vs 12 kph) from a 48-64 m gap so the conflict matures at 4.3-5.8 s (fixing the dominant C2 early-closest-approach failures), while the avoidance release is tightened to 1.2-1.7 s TTC to guarantee a 4-5 m/s^2 braking demand and minTTC well under 3 s without contact, and the corridor requirement is widened to 55-90 kph to pick up more sites and maps."
+    }
+   ]
+  },
+  {
+   "id": "c6b-cyclist-ahead-swerve",
+   "category": "C6.cyclist-ptw",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 15.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 15.8,
+    "inputTokens": 2058,
+    "outputTokens": 1066,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c7b-bus-shelter",
+   "category": "C7.occlusion",
+   "family": "occluded_vru",
+   "admitted": true,
+   "cells": 500,
+   "feasibleCells": 300,
+   "passingCells": 66,
+   "maps": 5,
+   "sites": 12,
+   "firstFailure": {
+    "C1": 10,
+    "C2": 60,
+    "C3": 12,
+    "C4": 103,
+    "C5": 49
+   },
+   "refusalCodes": {
+    "unknown_site": 200
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 36.7,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 10.3,
+    "inputTokens": 2051,
+    "outputTokens": 704,
+    "reasoningTokens": 0
+   },
+   "templateSha": "f926b6698d7125beeb31343e439ebae9f14ef0fed58969af239cd1dc9ea83ba9",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c7b-bus-shelter-1786860384624",
+   "rounds": [
+    "author",
+    "probe"
+   ],
+   "decisions": [
+    {
+     "family": "occluded_vru",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "pedestrian.adult_walking",
+     "occluder": "street.bus_shelter",
+     "conflictS": [
+      48,
+      72
+     ],
+     "vruSpeedKph": [
+      4.5,
+      7.5
+     ],
+     "eventLeadS": [
+      1.6,
+      2.6
+     ],
+     "reactAtTtcS": [
+      1.3,
+      1.9
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "An adult pedestrian waits fully screened by a kerbside bus shelter and steps into the ego lane only 1.6-2.6 s before ego arrival, so the hazard is revealed late enough to drive minTTC under 3 s at 50 kph while the 4.5-7.5 kph walk pace and 1.3-1.9 s reaction release keep the encounter clear of contact."
+    }
+   ]
+  },
+  {
+   "id": "c8-worker-intrusion",
+   "category": "C8.workzone",
+   "family": "workzone",
+   "admitted": false,
+   "cells": 420,
+   "feasibleCells": 48,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C4": 35,
+    "C5": 13
+   },
+   "refusalCodes": {
+    "closure_lane_too_narrow": 230,
+    "unknown_site": 130,
+    "closure_exceeds_route": 12
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 38.5,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 18.3,
+    "inputTokens": 4795,
+    "outputTokens": 1401,
+    "reasoningTokens": 0
+   },
+   "templateSha": "5210b3c1b53bbb154ea3b9481905c115e90ba141097cc89afa1df39565ad7bfb",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c8-worker-intrusion-1786860404557",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "workzone",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "pedestrian.adult_walking"
+     ],
+     "worksStartM": [
+      60,
+      90
+     ],
+     "worksLengthM": [
+      30,
+      60
+     ],
+     "closedWidthM": [
+      3.0,
+      3.6
+     ],
+     "workerSpeedKph": [
+      4,
+      7
+     ],
+     "eventLeadS": [
+      1.3,
+      2.1
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A solved MUTCD taper shifts ego into the open lane at 50 kph while a hi-vis worker steps off the closed side into the running lane roughly 1.3-2.1 s before ego arrival, with avoidance released at 1.4-2.0 s TTC so the trace reaches the critical band (minTTC <= 3 s, requiredDecel well above 1.5 m/s^2) without forcing contact, and the >=60 kph corridor window keeps the template hostable on all five maps."
+    },
+    {
+     "family": "workzone",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "pedestrian.adult_walking"
+     ],
+     "worksStartM": [
+      55,
+      85
+     ],
+     "worksLengthM": [
+      25,
+      45
+     ],
+     "closedWidthM": [
+      1.8,
+      2.5
+     ],
+     "workerSpeedKph": [
+      5,
+      8
+     ],
+     "eventLeadS": [
+      0.9,
+      1.5
+     ],
+     "reactAtTtcS": [
+      1.1,
+      1.6
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "Narrowing the authored closure to 1.8-2.5 m lets the MUTCD solver actually place the taper on the maps' standard lanes (killing the closure_lane_too_narrow refusals), while raising ego to 55 kph and pulling the worker's step-out to 0.9-1.5 s lead with avoidance released at 1.1-1.6 s TTC forces a genuine requiredDecel well above 1.5 m/s^2 and minTTC under 3 s without driving the window into contact."
+    }
+   ]
+  },
+  {
+   "id": "c9b-open-door-parked",
+   "category": "C9.hazard",
+   "family": "parking_pullout",
+   "admitted": false,
+   "cells": 440,
+   "feasibleCells": 290,
+   "passingCells": 0,
+   "maps": 0,
+   "sites": 0,
+   "firstFailure": {
+    "C2": 1,
+    "C4": 89,
+    "C5": 200
+   },
+   "refusalCodes": {
+    "unknown_site": 150
+   },
+   "error": null,
+   "detail": null,
+   "wallS": 59.1,
+   "usage": {
+    "llmCalls": 2,
+    "llmWallS": 32.5,
+    "inputTokens": 4776,
+    "outputTokens": 2512,
+    "reasoningTokens": 0
+   },
+   "templateSha": "47ac7d0c29fbc10f8792783dc1b32b951526cdbe61a7b23fb48930386da9d818",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c9b-open-door-parked-1786860441434",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 7,
+     "gapM": [
+      34,
+      52
+     ],
+     "eventLeadS": [
+      1.2,
+      2.2
+     ],
+     "reactAtTtcS": [
+      1.3,
+      2.0
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "A kerbside door-opening has no native family, so it is authored as the nearest hostable mechanism: a parked sedan/SUV/van at a kerbside bay intruding into the ego lane at near-walking speed (7 kph, door-swing-like) with a 1.2-2.2 s lead and a 34-52 m gap at 50 kph, with avoidance released at 1.3-2.0 s TTC so the trace reaches the critical band (minTTC <= 3.0 s, requiredDecel >= 1.5 m/s^2) without forcing contact."
+    },
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 55,
+     "challengerCatalog": [
+      "vehicle.sedan",
+      "vehicle.suv",
+      "vehicle.van"
+     ],
+     "challengerSpeedKph": 10,
+     "gapM": [
+      44,
+      64
+     ],
+     "eventLeadS": [
+      0.9,
+      1.6
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "rationale": "Door-opening is hosted as its nearest mechanism, a kerbside vehicle intruding into the ego lane: ego raised to 55 kph with a 44-64 m gap so the closest approach develops well after 2.5 s (fixing C2), the intrusion sharpened to 10 kph with a 0.9-1.6 s lead and avoidance released at only 1.2-1.8 s TTC so the ego is genuinely surprised and must brake hard (fixing C4/C5 trivially-safe), while staying above the contact threshold, and the corridor speed requirement is dropped entirely so every ordinary 60+ kph corridor on all five maps can host it.",
+     "corridorSpeedKph": [
+      55,
+      90
+     ]
+    }
+   ]
+  }
+ ],
+ "repeatRows": [
+  {
+   "id": "c1-lead-hard-brake",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 19.0,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 19.0,
+    "inputTokens": 2071,
+    "outputTokens": 1439,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c1-stop-and-go",
+   "category": "C1.car-following",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 19.1,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 19.1,
+    "inputTokens": 2057,
+    "outputTokens": 1377,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c10b-distracted-drift",
+   "category": "C10.oncoming",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 15.2,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 15.2,
+    "inputTokens": 2050,
+    "outputTokens": 970,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  },
+  {
+   "id": "c11-contested-spot",
+   "category": "C11.parking",
+   "family": "lateral_incursion",
+   "admitted": true,
+   "cells": 50,
+   "feasibleCells": 50,
+   "passingCells": 36,
+   "maps": 2,
+   "sites": 5,
+   "firstFailure": {
+    "C4": 6,
+    "C5": 8
+   },
+   "refusalCodes": {},
+   "error": null,
+   "detail": null,
+   "wallS": 73.6,
+   "usage": {
+    "llmCalls": 3,
+    "llmWallS": 59.6,
+    "inputTokens": 4656,
+    "outputTokens": 3753,
+    "reasoningTokens": 0
+   },
+   "templateSha": "56c2d3dfe26d8380c1fc7290251c6e2cc483373bfbd5d600d0d95407c26e4778",
+   "outdir": "/tmp/tg-w8-claude-opus-5-high-c11-contested-spot-1786860524752",
+   "rounds": [
+    "author",
+    "probe",
+    "revise"
+   ],
+   "decisions": [
+    {
+     "family": "parking_pullout",
+     "egoSpeedKph": 50,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 9,
+     "gapM": [
+      38,
+      54
+     ],
+     "eventLeadS": [
+      1.4,
+      2.4
+     ],
+     "reactAtTtcS": [
+      1.4,
+      2.1
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "No parking aisle exists on these maps, so the contested-bay dispute is hosted as its nearest ordinary-corridor mechanism: the vehicle already holding the kerbside bay lunges out to block the rival just as ego arrives, giving a late-revealed lateral intrusion at 50 kph with a gap window long enough for closest approach to land well after t=2.5 s and a reaction release late enough to force required decel above 1.5 m/s^2 without contact."
+    },
+    {
+     "family": "lateral_incursion",
+     "egoSpeedKph": 55,
+     "challengerCatalog": "vehicle.sedan",
+     "challengerSpeedKph": 18,
+     "gapM": [
+      40,
+      58
+     ],
+     "eventLeadS": [
+      1.0,
+      1.8
+     ],
+     "reactAtTtcS": [
+      1.2,
+      1.8
+     ],
+     "corridorSpeedKph": [
+      60,
+      90
+     ],
+     "rationale": "These maps have no parking aisle and almost no kerbside-bay sites, so the contested-space dispute is re-hosted as its nearest portable ordinary-corridor mechanism -- a rival driver in the adjacent lane lunging across ego's lane to beat ego to the same kerbside spot -- with the challenger slowed to 18 kph so the cut-in leaves a genuinely slow obstacle ahead (closing ~10 m/s, required decel ~3-4 m/s^2 rather than the near-zero demand of the 9 kph pullout), a 40-58 m gap that keeps closest approach well past t=2.5 s, and a 1.0-1.8 s event lead with a 1.2-1.8 s reaction release that drives minTTC under 3.0 s without forcing contact."
+    }
+   ]
+  },
+  {
+   "id": "c12-stop-arm-bus",
+   "category": "C12.school",
+   "family": null,
+   "admitted": false,
+   "cells": null,
+   "feasibleCells": null,
+   "passingCells": null,
+   "maps": null,
+   "sites": null,
+   "firstFailure": null,
+   "refusalCodes": null,
+   "error": "unhandled",
+   "detail": "cannot use 'list' as a dict key (unhashable type: 'list')",
+   "wallS": 20.8,
+   "usage": {
+    "llmCalls": 1,
+    "llmWallS": 20.8,
+    "inputTokens": 2046,
+    "outputTokens": 1056,
+    "reasoningTokens": 0
+   },
+   "templateSha": null,
+   "outdir": null,
+   "rounds": [],
+   "decisions": []
+  }
+ ]
+}

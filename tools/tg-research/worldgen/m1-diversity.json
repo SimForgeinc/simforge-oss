@@ -1,0 +1,159 @@
+{
+ "runId": "1786862298178",
+ "base": "/tmp/tgr-worldgen-m1-1786862298178",
+ "site": "03e3ab1fd2b77fbc",
+ "nSeeds": 20,
+ "J_spawn_mean": 0.0434,
+ "J_occ_mean": 0.4843,
+ "J_spawn_minmax": [
+  0.0,
+  0.2353
+ ],
+ "actorCounts": [
+  6,
+  7,
+  8,
+  9,
+  9,
+  9,
+  9,
+  10,
+  10,
+  10,
+  11,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13,
+  14,
+  15,
+  17
+ ],
+ "distinctActorCounts": 11,
+ "identicalWorldPairs": 0,
+ "verdict": "GO",
+ "worlds": [
+  {
+   "seed": 1,
+   "actorCount": 10,
+   "elapsedS": 6.44,
+   "inputHash": "748b7f8fde8c019e5aa42d77c6f6e60426162f48e9167915abbcf5b479ae9481"
+  },
+  {
+   "seed": 2,
+   "actorCount": 7,
+   "elapsedS": 5.93,
+   "inputHash": "389ed3ed714047111dd2feb9ec9377c8b1d9768121d19610c314b51124503431"
+  },
+  {
+   "seed": 3,
+   "actorCount": 12,
+   "elapsedS": 8.92,
+   "inputHash": "fe921ac450350e4a4dc8f9e1a82919fbc7727f12bebeac6aca0091e6be85e67c"
+  },
+  {
+   "seed": 4,
+   "actorCount": 9,
+   "elapsedS": 5.98,
+   "inputHash": "9782672f0d41c34debdc4fb673db06aadac8bf39e1ec0a648bd31d46bb8f18cf"
+  },
+  {
+   "seed": 5,
+   "actorCount": 12,
+   "elapsedS": 7.94,
+   "inputHash": "37d99d0bd2772c0905cb28ce595680f47c7740c04a6202500a12760c088a8290"
+  },
+  {
+   "seed": 6,
+   "actorCount": 11,
+   "elapsedS": 8.3,
+   "inputHash": "cd3a4b47b3a7e8965a55209d0dcd653f7007bcf22d7fda400f36f8b04f32f6dc"
+  },
+  {
+   "seed": 7,
+   "actorCount": 17,
+   "elapsedS": 12.61,
+   "inputHash": "0a73da6267a7fd0e3b821210e128cd5599fa562a9fd1773bb615b65c0006e5bb"
+  },
+  {
+   "seed": 8,
+   "actorCount": 15,
+   "elapsedS": 9.52,
+   "inputHash": "1b0f408bcfc54ae713b007b35af2558ce9cdb7f2b5cc2130ab8d197a8bc9802d"
+  },
+  {
+   "seed": 9,
+   "actorCount": 6,
+   "elapsedS": 4.18,
+   "inputHash": "7730bb67a65db7238125659369eb8a34f799d7eadc74153098298eeaab0a0818"
+  },
+  {
+   "seed": 10,
+   "actorCount": 11,
+   "elapsedS": 7.86,
+   "inputHash": "939f276d68a5ae3966a56a3babb37c8fd4eea4d39f83b24946facb80ca8f8ed6"
+  },
+  {
+   "seed": 11,
+   "actorCount": 10,
+   "elapsedS": 6.69,
+   "inputHash": "0a420c8cfbf05bb845bde52e72e9cfbe21168e0f7163893b4bbc5466f3fa6b52"
+  },
+  {
+   "seed": 12,
+   "actorCount": 8,
+   "elapsedS": 4.66,
+   "inputHash": "3e97f3a1f8d5babf352913720ea768aecb463e2352b34a1ed22fc4f3a74bbcb3"
+  },
+  {
+   "seed": 13,
+   "actorCount": 11,
+   "elapsedS": 6.73,
+   "inputHash": "75321ba0da98751e013fb2514b06d4f1331addb3c935858ae974e41f7884cce4"
+  },
+  {
+   "seed": 14,
+   "actorCount": 9,
+   "elapsedS": 7.41,
+   "inputHash": "c12cf1929b7aabb4da0e662f69d29587db8520dafaf60332e53879cfdc4bcdf4"
+  },
+  {
+   "seed": 15,
+   "actorCount": 13,
+   "elapsedS": 9.76,
+   "inputHash": "2b92dd7b9568f0f4fe1240140068541fcbc785e6a9a6d7d065dccb0402d7791a"
+  },
+  {
+   "seed": 16,
+   "actorCount": 10,
+   "elapsedS": 8.18,
+   "inputHash": "e9e876427edcd0852c69eb4846c0bc0bc2743f386129e634d532f67cb137a436"
+  },
+  {
+   "seed": 17,
+   "actorCount": 14,
+   "elapsedS": 9.76,
+   "inputHash": "cfc3ec461af4bf554a0af18a088bbe7bf4b9ec24b6c62b920901a5b534d64025"
+  },
+  {
+   "seed": 18,
+   "actorCount": 9,
+   "elapsedS": 6.11,
+   "inputHash": "7534db232d38d95cc5180a7be1baa1a4b23a4e6deb7ee50590ad7742278acc8b"
+  },
+  {
+   "seed": 19,
+   "actorCount": 9,
+   "elapsedS": 7.05,
+   "inputHash": "2be5e667cf3aeb119dd791b406858e3bc7856dce4da6fca5f0dc36955af6c207"
+  },
+  {
+   "seed": 20,
+   "actorCount": 13,
+   "elapsedS": 9.18,
+   "inputHash": "c92f9a9fa2458687fd19dd3fcc2c4b6b01c65276ad2871d2d099d6432fa6971c"
+  }
+ ]
+}

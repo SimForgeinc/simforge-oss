@@ -1,0 +1,1783 @@
+{
+ "preRegistration": "research/edge-case-corpus/W8-MODEL-EFFORT-EXPERIMENT.md (+AMENDMENT 1 and the arm-count ratification commit 687a54ef)",
+ "sample": {
+  "seed": 8,
+  "n": 20,
+  "briefIds": [
+   "c1-lead-hard-brake",
+   "c1-stop-and-go",
+   "c10b-distracted-drift",
+   "c11-contested-spot",
+   "c12-stop-arm-bus",
+   "c13b-stop-sign-rolling",
+   "c14-friction-patch",
+   "c15-curb-standing",
+   "c2-cut-out-reveals",
+   "c2-lane-drop",
+   "c3-ltap-od",
+   "c3b-permissive-left",
+   "c4b-mini-roundabout",
+   "c5-adult-midblock",
+   "c5-multiple-threat",
+   "c6b-cargo-bike",
+   "c6b-cyclist-ahead-swerve",
+   "c7b-bus-shelter",
+   "c8-worker-intrusion",
+   "c9b-open-door-parked"
+  ],
+  "extraSlotCategories": [
+   "C3.intersection",
+   "C5.pedestrian",
+   "C2.cut-in-merge",
+   "C6.cyclist-ptw",
+   "C1.car-following"
+  ],
+  "determinismRepeatIds": [
+   "c1-lead-hard-brake",
+   "c1-stop-and-go",
+   "c10b-distracted-drift",
+   "c11-contested-spot",
+   "c12-stop-arm-bus"
+  ]
+ },
+ "armsPresent": [
+  "claude-fable-5/high",
+  "claude-fable-5/low",
+  "claude-fable-5/max",
+  "claude-fable-5/medium",
+  "claude-fable-5/xhigh",
+  "claude-opus-5/high",
+  "claude-opus-5/low",
+  "claude-opus-5/max",
+  "claude-opus-5/medium",
+  "claude-opus-5/xhigh",
+  "claude-sonnet-5/high",
+  "claude-sonnet-5/low",
+  "claude-sonnet-5/max",
+  "claude-sonnet-5/medium",
+  "claude-sonnet-5/xhigh",
+  "gpt-5.6-luna/high",
+  "gpt-5.6-luna/low",
+  "gpt-5.6-luna/max",
+  "gpt-5.6-luna/medium",
+  "gpt-5.6-luna/xhigh",
+  "gpt-5.6-sol/high",
+  "gpt-5.6-sol/low",
+  "gpt-5.6-sol/max",
+  "gpt-5.6-sol/medium",
+  "gpt-5.6-sol/xhigh",
+  "gpt-5.6-terra/high",
+  "gpt-5.6-terra/low",
+  "gpt-5.6-terra/max",
+  "gpt-5.6-terra/medium",
+  "gpt-5.6-terra/xhigh"
+ ],
+ "armsMissing": [],
+ "integrityNote": "research/edge-case-corpus/reports/training-grade/W8-ARM-INTEGRITY-NOTE.md",
+ "metricA_raw_preRegistered": {
+  "claude-fable-5": {
+   "high": {
+    "admitted": 12,
+    "n": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ]
+   },
+   "low": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "max": {
+    "admitted": 14,
+    "n": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ]
+   },
+   "medium": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "xhigh": {
+    "admitted": 12,
+    "n": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ]
+   }
+  },
+  "claude-opus-5": {
+   "high": {
+    "admitted": 9,
+    "n": 20,
+    "rate": 0.45,
+    "ci95": [
+     0.2582,
+     0.6579
+    ]
+   },
+   "low": {
+    "admitted": 1,
+    "n": 20,
+    "rate": 0.05,
+    "ci95": [
+     0.0089,
+     0.2361
+    ]
+   },
+   "max": {
+    "admitted": 0,
+    "n": 20,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.1611
+    ]
+   },
+   "medium": {
+    "admitted": 2,
+    "n": 20,
+    "rate": 0.1,
+    "ci95": [
+     0.0279,
+     0.301
+    ]
+   },
+   "xhigh": {
+    "admitted": 10,
+    "n": 20,
+    "rate": 0.5,
+    "ci95": [
+     0.2993,
+     0.7007
+    ]
+   }
+  },
+  "claude-sonnet-5": {
+   "high": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "low": {
+    "admitted": 11,
+    "n": 20,
+    "rate": 0.55,
+    "ci95": [
+     0.3421,
+     0.7418
+    ]
+   },
+   "max": {
+    "admitted": 1,
+    "n": 20,
+    "rate": 0.05,
+    "ci95": [
+     0.0089,
+     0.2361
+    ]
+   },
+   "medium": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "xhigh": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   }
+  },
+  "gpt-5.6-luna": {
+   "high": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "low": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "max": {
+    "admitted": 9,
+    "n": 20,
+    "rate": 0.45,
+    "ci95": [
+     0.2582,
+     0.6579
+    ]
+   },
+   "medium": {
+    "admitted": 14,
+    "n": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ]
+   },
+   "xhigh": {
+    "admitted": 12,
+    "n": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ]
+   }
+  },
+  "gpt-5.6-sol": {
+   "high": {
+    "admitted": 15,
+    "n": 20,
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ]
+   },
+   "low": {
+    "admitted": 15,
+    "n": 20,
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ]
+   },
+   "max": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "medium": {
+    "admitted": 14,
+    "n": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ]
+   },
+   "xhigh": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   }
+  },
+  "gpt-5.6-terra": {
+   "high": {
+    "admitted": 14,
+    "n": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ]
+   },
+   "low": {
+    "admitted": 14,
+    "n": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ]
+   },
+   "max": {
+    "admitted": 0,
+    "n": 20,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.1611
+    ]
+   },
+   "medium": {
+    "admitted": 13,
+    "n": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ]
+   },
+   "xhigh": {
+    "admitted": 12,
+    "n": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ]
+   }
+  }
+ },
+ "metricB_admissionAmongUsableArtifacts": {
+  "claude-fable-5": {
+   "high": {
+    "admitted": 12,
+    "usableN": 18,
+    "rate": 0.6667,
+    "ci95": [
+     0.4375,
+     0.8372
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 13,
+    "usableN": 17,
+    "rate": 0.7647,
+    "ci95": [
+     0.5274,
+     0.9044
+    ],
+    "tinyDenominator": false
+   },
+   "max": {
+    "admitted": 14,
+    "usableN": 18,
+    "rate": 0.7778,
+    "ci95": [
+     0.5479,
+     0.91
+    ],
+    "tinyDenominator": false
+   },
+   "medium": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "xhigh": {
+    "admitted": 12,
+    "usableN": 17,
+    "rate": 0.7059,
+    "ci95": [
+     0.4687,
+     0.8672
+    ],
+    "tinyDenominator": false
+   }
+  },
+  "claude-opus-5": {
+   "high": {
+    "admitted": 9,
+    "usableN": 11,
+    "rate": 0.8182,
+    "ci95": [
+     0.523,
+     0.9486
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 1,
+    "usableN": 3,
+    "rate": 0.3333,
+    "ci95": [
+     0.0615,
+     0.7923
+    ],
+    "tinyDenominator": true
+   },
+   "max": {
+    "admitted": 0,
+    "usableN": 3,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.5615
+    ],
+    "tinyDenominator": true
+   },
+   "medium": {
+    "admitted": 2,
+    "usableN": 3,
+    "rate": 0.6667,
+    "ci95": [
+     0.2077,
+     0.9385
+    ],
+    "tinyDenominator": true
+   },
+   "xhigh": {
+    "admitted": 10,
+    "usableN": 14,
+    "rate": 0.7143,
+    "ci95": [
+     0.4535,
+     0.8828
+    ],
+    "tinyDenominator": false
+   }
+  },
+  "claude-sonnet-5": {
+   "high": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 11,
+    "usableN": 20,
+    "rate": 0.55,
+    "ci95": [
+     0.3421,
+     0.7418
+    ],
+    "tinyDenominator": false
+   },
+   "max": {
+    "admitted": 1,
+    "usableN": 1,
+    "rate": 1.0,
+    "ci95": [
+     0.2065,
+     1.0
+    ],
+    "tinyDenominator": true
+   },
+   "medium": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "xhigh": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   }
+  },
+  "gpt-5.6-luna": {
+   "high": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "max": {
+    "admitted": 9,
+    "usableN": 16,
+    "rate": 0.5625,
+    "ci95": [
+     0.3318,
+     0.769
+    ],
+    "tinyDenominator": false
+   },
+   "medium": {
+    "admitted": 14,
+    "usableN": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "tinyDenominator": false
+   },
+   "xhigh": {
+    "admitted": 12,
+    "usableN": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "tinyDenominator": false
+   }
+  },
+  "gpt-5.6-sol": {
+   "high": {
+    "admitted": 15,
+    "usableN": 20,
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 15,
+    "usableN": 20,
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ],
+    "tinyDenominator": false
+   },
+   "max": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "medium": {
+    "admitted": 14,
+    "usableN": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "tinyDenominator": false
+   },
+   "xhigh": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   }
+  },
+  "gpt-5.6-terra": {
+   "high": {
+    "admitted": 14,
+    "usableN": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "tinyDenominator": false
+   },
+   "low": {
+    "admitted": 14,
+    "usableN": 20,
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "tinyDenominator": false
+   },
+   "max": {
+    "admitted": 0,
+    "usableN": 0,
+    "rate": null,
+    "ci95": [
+     0.0,
+     1.0
+    ],
+    "tinyDenominator": true
+   },
+   "medium": {
+    "admitted": 13,
+    "usableN": 20,
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "tinyDenominator": false
+   },
+   "xhigh": {
+    "admitted": 12,
+    "usableN": 20,
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "tinyDenominator": false
+   }
+  }
+ },
+ "authorFailures": {
+  "claude-fable-5": {
+   "high": {
+    "authorErrors": 2,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "low": {
+    "authorErrors": 3,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "max": {
+    "authorErrors": 2,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "medium": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "xhigh": {
+    "authorErrors": 3,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   }
+  },
+  "claude-opus-5": {
+   "high": {
+    "authorErrors": 9,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "low": {
+    "authorErrors": 17,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "max": {
+    "authorErrors": 17,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "medium": {
+    "authorErrors": 17,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   },
+   "xhigh": {
+    "authorErrors": 6,
+    "attempts": 20,
+    "errorKinds": [
+     "unhandled"
+    ]
+   }
+  },
+  "claude-sonnet-5": {
+   "high": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "low": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "max": {
+    "authorErrors": 19,
+    "attempts": 20,
+    "errorKinds": [
+     "author_call_failed"
+    ]
+   },
+   "medium": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "xhigh": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   }
+  },
+  "gpt-5.6-luna": {
+   "high": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "low": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "max": {
+    "authorErrors": 4,
+    "attempts": 20,
+    "errorKinds": [
+     "author_call_failed"
+    ]
+   },
+   "medium": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "xhigh": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   }
+  },
+  "gpt-5.6-sol": {
+   "high": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "low": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "max": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "medium": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "xhigh": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   }
+  },
+  "gpt-5.6-terra": {
+   "high": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "low": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "max": {
+    "authorErrors": 20,
+    "attempts": 20,
+    "errorKinds": [
+     "author_call_failed"
+    ]
+   },
+   "medium": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   },
+   "xhigh": {
+    "authorErrors": 0,
+    "attempts": 20,
+    "errorKinds": []
+   }
+  }
+ },
+ "unplannedFinding_reliability": {
+  "perModel": {
+   "gpt-5.6-luna": {
+    "failed": 4,
+    "attempts": 100
+   },
+   "gpt-5.6-sol": {
+    "failed": 0,
+    "attempts": 100
+   },
+   "gpt-5.6-terra": {
+    "failed": 20,
+    "attempts": 100
+   },
+   "claude-opus-5": {
+    "failed": 66,
+    "attempts": 100
+   },
+   "claude-fable-5": {
+    "failed": 10,
+    "attempts": 100
+   },
+   "claude-sonnet-5": {
+    "failed": 19,
+    "attempts": 100
+   }
+  },
+  "statement": "Reliability, not quality, is the largest measured difference between models: sol completed 100/100 attempts; claude-opus-5 failed 66/100 (HTTP-level author_call_failed on codex arms, unhandled exceptions on Anthropic arms). Not a pre-registered hypothesis; reported as an unplanned finding."
+ },
+ "costPerArm": {
+  "claude-fable-5/high": {
+   "inputTokens": 77688,
+   "outputTokens": 23838,
+   "reasoningTokens": 0,
+   "llmCalls": 35,
+   "wallS": 250.6,
+   "cost": 25442415.599999998
+  },
+  "claude-fable-5/low": {
+   "inputTokens": 69704,
+   "outputTokens": 9388,
+   "reasoningTokens": 0,
+   "llmCalls": 32,
+   "wallS": 199.0,
+   "cost": 15739308.0
+  },
+  "claude-fable-5/max": {
+   "inputTokens": 59542,
+   "outputTokens": 126629,
+   "reasoningTokens": 0,
+   "llmCalls": 51,
+   "wallS": 536.1,
+   "cost": 99806273.10000001
+  },
+  "claude-fable-5/medium": {
+   "inputTokens": 77636,
+   "outputTokens": 15827,
+   "reasoningTokens": 0,
+   "llmCalls": 35,
+   "wallS": 239.5,
+   "cost": 22384388.5
+  },
+  "claude-fable-5/xhigh": {
+   "inputTokens": 72456,
+   "outputTokens": 41400,
+   "reasoningTokens": 0,
+   "llmCalls": 33,
+   "wallS": 272.0,
+   "cost": 30968832.0
+  },
+  "claude-opus-5/high": {
+   "inputTokens": 67521,
+   "outputTokens": 36022,
+   "reasoningTokens": 0,
+   "llmCalls": 32,
+   "wallS": 243.5,
+   "cost": 25212720.5
+  },
+  "claude-opus-5/low": {
+   "inputTokens": 61842,
+   "outputTokens": 8708,
+   "reasoningTokens": 0,
+   "llmCalls": 29,
+   "wallS": 82.9,
+   "cost": 5848595.0
+  },
+  "claude-opus-5/max": {
+   "inputTokens": 91501,
+   "outputTokens": 337113,
+   "reasoningTokens": 0,
+   "llmCalls": 41,
+   "wallS": 1551.9,
+   "cost": 665166066.6
+  },
+  "claude-opus-5/medium": {
+   "inputTokens": 62010,
+   "outputTokens": 14759,
+   "reasoningTokens": 0,
+   "llmCalls": 32,
+   "wallS": 114.4,
+   "cost": 8782373.6
+  },
+  "claude-opus-5/xhigh": {
+   "inputTokens": 67380,
+   "outputTokens": 93020,
+   "reasoningTokens": 0,
+   "llmCalls": 31,
+   "wallS": 449.7,
+   "cost": 72131880.0
+  },
+  "claude-sonnet-5/high": {
+   "inputTokens": 82742,
+   "outputTokens": 67944,
+   "reasoningTokens": 0,
+   "llmCalls": 37,
+   "wallS": 363.6,
+   "cost": 54789429.6
+  },
+  "claude-sonnet-5/low": {
+   "inputTokens": 84732,
+   "outputTokens": 9387,
+   "reasoningTokens": 0,
+   "llmCalls": 38,
+   "wallS": 220.7,
+   "cost": 20772063.3
+  },
+  "claude-sonnet-5/max": {
+   "inputTokens": 205360,
+   "outputTokens": 1199168,
+   "reasoningTokens": 0,
+   "llmCalls": 100,
+   "wallS": 2736.7,
+   "cost": 3843771777.6
+  },
+  "claude-sonnet-5/medium": {
+   "inputTokens": 85069,
+   "outputTokens": 19965,
+   "reasoningTokens": 0,
+   "llmCalls": 38,
+   "wallS": 274.9,
+   "cost": 28873846.599999998
+  },
+  "claude-sonnet-5/xhigh": {
+   "inputTokens": 95662,
+   "outputTokens": 237494,
+   "reasoningTokens": 0,
+   "llmCalls": 42,
+   "wallS": 920.1,
+   "cost": 306536835.6
+  },
+  "gpt-5.6-luna/high": {
+   "inputTokens": 50593,
+   "outputTokens": 90702,
+   "reasoningTokens": 85205,
+   "llmCalls": 37,
+   "wallS": 727.8,
+   "cost": 102834501.0
+  },
+  "gpt-5.6-luna/low": {
+   "inputTokens": 48958,
+   "outputTokens": 15725,
+   "reasoningTokens": 10969,
+   "llmCalls": 36,
+   "wallS": 445.8,
+   "cost": 28835681.400000002
+  },
+  "gpt-5.6-luna/max": {
+   "inputTokens": 39550,
+   "outputTokens": 296028,
+   "reasoningTokens": 291872,
+   "llmCalls": 30,
+   "wallS": 4942.8,
+   "cost": 1658694938.4
+  },
+  "gpt-5.6-luna/medium": {
+   "inputTokens": 50792,
+   "outputTokens": 27039,
+   "reasoningTokens": 21797,
+   "llmCalls": 37,
+   "wallS": 478.2,
+   "cost": 37218784.199999996
+  },
+  "gpt-5.6-luna/xhigh": {
+   "inputTokens": 47609,
+   "outputTokens": 194000,
+   "reasoningTokens": 188945,
+   "llmCalls": 35,
+   "wallS": 931.9,
+   "cost": 225155427.1
+  },
+  "gpt-5.6-sol/high": {
+   "inputTokens": 45915,
+   "outputTokens": 51122,
+   "reasoningTokens": 46496,
+   "llmCalls": 34,
+   "wallS": 437.5,
+   "cost": 42453687.5
+  },
+  "gpt-5.6-sol/low": {
+   "inputTokens": 49121,
+   "outputTokens": 13961,
+   "reasoningTokens": 8743,
+   "llmCalls": 36,
+   "wallS": 251.7,
+   "cost": 15877739.399999999
+  },
+  "gpt-5.6-sol/max": {
+   "inputTokens": 45976,
+   "outputTokens": 305747,
+   "reasoningTokens": 300906,
+   "llmCalls": 35,
+   "wallS": 1897.6,
+   "cost": 667429564.8
+  },
+  "gpt-5.6-sol/medium": {
+   "inputTokens": 48998,
+   "outputTokens": 24320,
+   "reasoningTokens": 19174,
+   "llmCalls": 36,
+   "wallS": 276.2,
+   "cost": 20250431.599999998
+  },
+  "gpt-5.6-sol/xhigh": {
+   "inputTokens": 47426,
+   "outputTokens": 82141,
+   "reasoningTokens": 77349,
+   "llmCalls": 35,
+   "wallS": 586.3,
+   "cost": 75965132.1
+  },
+  "gpt-5.6-terra/high": {
+   "inputTokens": 48925,
+   "outputTokens": 42497,
+   "reasoningTokens": 38381,
+   "llmCalls": 36,
+   "wallS": 513.2,
+   "cost": 46917770.400000006
+  },
+  "gpt-5.6-terra/low": {
+   "inputTokens": 47498,
+   "outputTokens": 17471,
+   "reasoningTokens": 13281,
+   "llmCalls": 35,
+   "wallS": 270.8,
+   "cost": 17593605.2
+  },
+  "gpt-5.6-terra/max": {
+   "inputTokens": 1264,
+   "outputTokens": 8837,
+   "reasoningTokens": 8789,
+   "llmCalls": 3,
+   "wallS": 6160.4,
+   "cost": 62226200.4
+  },
+  "gpt-5.6-terra/medium": {
+   "inputTokens": 47440,
+   "outputTokens": 20189,
+   "reasoningTokens": 16163,
+   "llmCalls": 35,
+   "wallS": 310.4,
+   "cost": 20992041.599999998
+  },
+  "gpt-5.6-terra/xhigh": {
+   "inputTokens": 48932,
+   "outputTokens": 99074,
+   "reasoningTokens": 94831,
+   "llmCalls": 36,
+   "wallS": 597.5,
+   "cost": 88433585.0
+  }
+ },
+ "authoringDeterminism": {
+  "perArm": {
+   "claude-fable-5/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 2
+   },
+   "claude-fable-5/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "claude-fable-5/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 3
+   },
+   "claude-fable-5/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-fable-5/xhigh": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 2
+   },
+   "claude-opus-5/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "claude-opus-5/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "claude-opus-5/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-opus-5/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "claude-opus-5/xhigh": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-sonnet-5/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-sonnet-5/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-sonnet-5/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "claude-sonnet-5/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "claude-sonnet-5/xhigh": {
+    "identical": 1,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-luna/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "gpt-5.6-luna/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-luna/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 2
+   },
+   "gpt-5.6-luna/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "gpt-5.6-luna/xhigh": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-sol/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "gpt-5.6-sol/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-sol/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-sol/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-sol/xhigh": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 1
+   },
+   "gpt-5.6-terra/high": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 2
+   },
+   "gpt-5.6-terra/low": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-terra/max": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-terra/medium": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   },
+   "gpt-5.6-terra/xhigh": {
+    "identical": 0,
+    "n": 5,
+    "admissionFlips": 0
+   }
+  },
+  "total": {
+   "identical": 1,
+   "n": 150,
+   "admissionFlips": 20
+  },
+  "statement": "LLM authoring at fixed effort is NOT deterministic; measured, not assumed."
+ },
+ "hypotheses": {
+  "H1_effortRaisesAdmission": {
+   "perModel": {
+    "gpt-5.6-luna": {
+     "rawRates": [
+      0.65,
+      0.7,
+      0.65,
+      0.6,
+      0.45
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.65,
+      0.7,
+      0.65,
+      0.6,
+      0.5625
+     ],
+     "usableMonotoneIncreasing": false
+    },
+    "gpt-5.6-sol": {
+     "rawRates": [
+      0.75,
+      0.7,
+      0.75,
+      0.65,
+      0.65
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.75,
+      0.7,
+      0.75,
+      0.65,
+      0.65
+     ],
+     "usableMonotoneIncreasing": false
+    },
+    "gpt-5.6-terra": {
+     "rawRates": [
+      0.7,
+      0.65,
+      0.7,
+      0.6,
+      0.0
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.7,
+      0.65,
+      0.7,
+      0.6
+     ],
+     "usableMonotoneIncreasing": false
+    },
+    "claude-opus-5": {
+     "rawRates": [
+      0.05,
+      0.1,
+      0.45,
+      0.5,
+      0.0
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.3333,
+      0.6667,
+      0.8182,
+      0.7143,
+      0.0
+     ],
+     "usableMonotoneIncreasing": false
+    },
+    "claude-fable-5": {
+     "rawRates": [
+      0.65,
+      0.65,
+      0.6,
+      0.6,
+      0.7
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.7647,
+      0.65,
+      0.6667,
+      0.7059,
+      0.7778
+     ],
+     "usableMonotoneIncreasing": false
+    },
+    "claude-sonnet-5": {
+     "rawRates": [
+      0.55,
+      0.65,
+      0.65,
+      0.65,
+      0.05
+     ],
+     "rawMonotoneIncreasing": false,
+     "usableRates": [
+      0.55,
+      0.65,
+      0.65,
+      0.65,
+      1.0
+     ],
+     "usableMonotoneIncreasing": true
+    }
+   },
+   "verdict": "FALSIFIED: on admission-among-usable-artifacts every clean-error-record model trends flat or DOWNWARD with effort (luna 0.65->0.56, sol 0.75->0.65, terra 0.70->0.60 over a ~17-30x rise in reasoning tokens); the only apparent rise (claude-opus-5) is its error rate falling, on denominators of 3-14. On the raw pre-registered metric no model is monotone increasing either. CIs at n=20 are wide, but no upward trend exists for them to fail to support."
+  },
+  "H2_rankStableAcrossEffort": {
+   "rankByEffort": {
+    "low": [
+     "gpt-5.6-sol",
+     "gpt-5.6-terra",
+     "claude-fable-5",
+     "gpt-5.6-luna",
+     "claude-sonnet-5",
+     "claude-opus-5"
+    ],
+    "medium": [
+     "gpt-5.6-luna",
+     "gpt-5.6-sol",
+     "claude-fable-5",
+     "claude-sonnet-5",
+     "gpt-5.6-terra",
+     "claude-opus-5"
+    ],
+    "high": [
+     "gpt-5.6-sol",
+     "gpt-5.6-terra",
+     "claude-sonnet-5",
+     "gpt-5.6-luna",
+     "claude-fable-5",
+     "claude-opus-5"
+    ],
+    "xhigh": [
+     "claude-sonnet-5",
+     "gpt-5.6-sol",
+     "claude-fable-5",
+     "gpt-5.6-luna",
+     "gpt-5.6-terra",
+     "claude-opus-5"
+    ],
+    "max": [
+     "claude-fable-5",
+     "gpt-5.6-sol",
+     "gpt-5.6-luna",
+     "claude-sonnet-5",
+     "claude-opus-5",
+     "gpt-5.6-terra"
+    ]
+   },
+   "verdict": "PARTIAL: among the codex models sol > terra > luna holds at low/medium/high on both metrics, but every pairwise CI overlaps at n=20, and at xhigh/max the ordering is scrambled by reliability failures. The data does not support a stable rank claim beyond \"sol is never worse\"."
+  },
+  "H3_effortHelpsSpatialCriteria": {
+   "firstFailureShareByEffort": {
+    "low": {
+     "C1": 0.0732,
+     "C2": 0.2405,
+     "C3": 0.1292,
+     "C4": 0.214,
+     "C5": 0.3431
+    },
+    "medium": {
+     "C1": 0.0702,
+     "C2": 0.2352,
+     "C3": 0.1327,
+     "C4": 0.2211,
+     "C5": 0.3407
+    },
+    "high": {
+     "C1": 0.063,
+     "C2": 0.1751,
+     "C3": 0.1431,
+     "C4": 0.2595,
+     "C5": 0.3593
+    },
+    "xhigh": {
+     "C1": 0.0622,
+     "C2": 0.1877,
+     "C3": 0.141,
+     "C4": 0.2362,
+     "C5": 0.3728
+    },
+    "max": {
+     "C1": 0.0732,
+     "C2": 0.1477,
+     "C3": 0.1334,
+     "C4": 0.2177,
+     "C5": 0.428
+    }
+   },
+   "c2PlusC4ShareByEffort": {
+    "low": 0.4545,
+    "medium": 0.4563,
+    "high": 0.4346,
+    "xhigh": 0.4239,
+    "max": 0.3654
+   },
+   "verdict": "NOT SUPPORTED: the C2+C4 share of first failures is roughly flat across effort ({\"low\": 0.4545, \"medium\": 0.4563, \"high\": 0.4346, \"xhigh\": 0.4239, \"max\": 0.3654}); effort does not preferentially fix the multi-step spatial criteria."
+  }
+ },
+ "w9Selection": {
+  "primaryMetric": "raw gate admission / 20 (pre-registered; counts author failures as non-admissions)",
+  "topArm": {
+   "model": "gpt-5.6-sol",
+   "effort": "low",
+   "rate": 0.75,
+   "ci95": [
+    0.5313,
+    0.8881
+   ],
+   "cost": 15877739.399999999
+  },
+  "ciOverlapCandidates": [
+   {
+    "model": "claude-fable-5",
+    "effort": "low",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 15739308.0
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "effort": "low",
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ],
+    "cost": 15877739.399999999
+   },
+   {
+    "model": "gpt-5.6-terra",
+    "effort": "low",
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "cost": 17593605.2
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "effort": "medium",
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "cost": 20250431.599999998
+   },
+   {
+    "model": "claude-sonnet-5",
+    "effort": "low",
+    "rate": 0.55,
+    "ci95": [
+     0.3421,
+     0.7418
+    ],
+    "cost": 20772063.3
+   },
+   {
+    "model": "gpt-5.6-terra",
+    "effort": "medium",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 20992041.599999998
+   },
+   {
+    "model": "claude-fable-5",
+    "effort": "medium",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 22384388.5
+   },
+   {
+    "model": "claude-opus-5",
+    "effort": "high",
+    "rate": 0.45,
+    "ci95": [
+     0.2582,
+     0.6579
+    ],
+    "cost": 25212720.5
+   },
+   {
+    "model": "claude-fable-5",
+    "effort": "high",
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "cost": 25442415.599999998
+   },
+   {
+    "model": "gpt-5.6-luna",
+    "effort": "low",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 28835681.400000002
+   },
+   {
+    "model": "claude-sonnet-5",
+    "effort": "medium",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 28873846.599999998
+   },
+   {
+    "model": "claude-fable-5",
+    "effort": "xhigh",
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "cost": 30968832.0
+   },
+   {
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "cost": 37218784.199999996
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "rate": 0.75,
+    "ci95": [
+     0.5313,
+     0.8881
+    ],
+    "cost": 42453687.5
+   },
+   {
+    "model": "gpt-5.6-terra",
+    "effort": "high",
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "cost": 46917770.400000006
+   },
+   {
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 54789429.6
+   },
+   {
+    "model": "claude-opus-5",
+    "effort": "xhigh",
+    "rate": 0.5,
+    "ci95": [
+     0.2993,
+     0.7007
+    ],
+    "cost": 72131880.0
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "effort": "xhigh",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 75965132.1
+   },
+   {
+    "model": "gpt-5.6-terra",
+    "effort": "xhigh",
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "cost": 88433585.0
+   },
+   {
+    "model": "claude-fable-5",
+    "effort": "max",
+    "rate": 0.7,
+    "ci95": [
+     0.481,
+     0.8545
+    ],
+    "cost": 99806273.10000001
+   },
+   {
+    "model": "gpt-5.6-luna",
+    "effort": "high",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 102834501.0
+   },
+   {
+    "model": "gpt-5.6-luna",
+    "effort": "xhigh",
+    "rate": 0.6,
+    "ci95": [
+     0.3866,
+     0.7812
+    ],
+    "cost": 225155427.1
+   },
+   {
+    "model": "claude-sonnet-5",
+    "effort": "xhigh",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 306536835.6
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "effort": "max",
+    "rate": 0.65,
+    "ci95": [
+     0.4329,
+     0.8188
+    ],
+    "cost": 667429564.8
+   },
+   {
+    "model": "gpt-5.6-luna",
+    "effort": "max",
+    "rate": 0.45,
+    "ci95": [
+     0.2582,
+     0.6579
+    ],
+    "cost": 1658694938.4
+   }
+  ],
+  "costDefinition": "cost = (inputTokens + outputTokens) * arm wall seconds. Anthropic thinking tokens are folded into outputTokens by the gateway (they rise 9k->337k with effort), so families are comparable; wall seconds carry >40% co-tenancy noise, so sub-2x differences are not evidence.",
+  "literalCheapestOverlappingArm": {
+   "model": "claude-fable-5",
+   "effort": "low",
+   "rate": 0.65,
+   "cost": 15739308.0
+  },
+  "appliedRule": "top rate wins; exact rate ties -> cheaper; a CI-overlapping candidate displaces the top only when cheaper by more than 2x (beyond wall-clock co-tenancy noise). Stated before W9 ran.",
+  "selected": {
+   "model": "gpt-5.6-sol",
+   "effort": "low",
+   "rate": 0.75,
+   "ci95": [
+    0.5313,
+    0.8881
+   ],
+   "cost": 15877739.399999999
+  }
+ }
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "uniscenarios.showcase-qualification.v1",
+  "id": "qualification-3x10",
+  "title": "Pre-restart qualification: three cases, ten attempts each",
+  "methodology": "production",
+  "attemptsPerCase": 10,
+  "breadthConfig": "apps/showcase/campaigns/breadth.json",
+  "goldManifest": "apps/showcase/campaigns/reviewer-gold.json",
+  "reviewContract": {
+    "version": "showcase-acceptance-contract-v1",
+    "sha256": "ab1ab5408b022bee6c0fefc66a3cd981c5b58d1318ce88bd698d8c7ad1df5f7f",
+    "reviewVersion": "showcase-3d-review-v5"
+  },
+  "cases": [
+    {
+      "id": "blocked-normal-path",
+      "breadthCaseId": "blocked-normal-path",
+      "family": "workzone",
+      "title": "Accident or construction blocking normal path"
+    },
+    {
+      "id": "unprotected-left-dense",
+      "breadthCaseId": "unprotected-left-dense",
+      "family": "junction_conflict",
+      "title": "Unprotected left turn across dense traffic"
+    },
+    {
+      "id": "crossing-VRU",
+      "breadthCaseId": "midblock-will-they",
+      "family": "crossing_vru",
+      "title": "Pedestrian will-they-won't-they crossing mid-block"
+    }
+  ],
+  "exit": {
+    "semanticYieldMin": 0.3,
+    "casesMeetingYieldMin": 2,
+    "reviewerFlipRateMax": 0.15,
+    "maxOperationalFailures": 0,
+    "reviewRepetitions": 3,
+    "minimumGoldLabels": 12
+  },
+  "notes": [
+    "semanticYield counts attempts whose contract decision has semanticAccepted true, over attempts that reached a decision. Operational failures are never a semantic verdict and stay out of the denominator; they are gated separately by maxOperationalFailures.",
+    "Attempt evidence authority follows the pipeline: 75-product.json is the deliverable decision, 62-semantic2d.json is the semantic source evidence it quotes, and 95-benchmark.json supplies the stage and funnel facts.",
+    "crossing-VRU keeps the qualification-facing name while breadthCaseId names the lowercase campaign slug that a runner submits.",
+    "The exit evaluator refuses to run against calibration produced from a different gold manifest, a superseded review contract hash, or a different repetition count."
+  ]
+}

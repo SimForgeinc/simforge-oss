@@ -1,0 +1,294 @@
+{
+  "id": "edge-cases-oxalpha",
+  "targetValidVideos": 1,
+  "methodology": "production",
+  "authorModel": "openrouter/stealth/ox-alpha",
+  "authorEffort": "high",
+  "reviewModel": "gpt-5.6-sol",
+  "reviewEffort": "medium",
+  "runtime": {
+    "maxActiveJobs": 32,
+    "intervalMs": 10000,
+    "submissionRecoveryMs": 300000,
+    "submissionRampPerHeartbeat": 4,
+    "loadPausePerCpu": 2.5,
+    "maxGenerationAttempts": 2,
+    "providerFailureThreshold": 3,
+    "retryBackoffMs": 30000,
+    "maxRetryBackoffMs": 900000,
+    "providerProbeMaxAgeMs": 1800000,
+    "providerTrialTimeoutMs": 3600000
+  },
+  "cases": [
+    {
+      "id": "unprotected-left-dense",
+      "title": "Unprotected left turn across dense traffic",
+      "priority": 90
+    },
+    {
+      "id": "four-way-stop-behavior",
+      "title": "Four-way stops with hesitant or aggressive drivers"
+    },
+    {
+      "id": "wave-through",
+      "title": "Drivers waving you through against right-of-way"
+    },
+    {
+      "id": "midblock-will-they",
+      "title": "Pedestrian will-they-won't-they crossing mid-block"
+    },
+    {
+      "id": "double-park-negotiation",
+      "title": "Double-parked vehicles forcing informal lane negotiation"
+    },
+    {
+      "id": "narrow-residential-parking",
+      "title": "Narrow residential streets with parked cars on both sides"
+    },
+    {
+      "id": "hostile-zipper-merge",
+      "title": "Highway zipper merge where drivers refuse to cooperate"
+    },
+    {
+      "id": "school-bus-kids",
+      "title": "School bus loading or unloading with unpredictable kids"
+    },
+    {
+      "id": "blind-driveway-backing",
+      "title": "Driver backing out of driveway without clear visibility"
+    },
+    {
+      "id": "procession-escort",
+      "title": "Funeral processions or police escorts ignoring normal rules"
+    },
+    {
+      "id": "suv-crosswalk-occlusion",
+      "title": "Large SUV blocking view of crosswalk"
+    },
+    {
+      "id": "box-truck-turn-occlusion",
+      "title": "Box truck blocking right turn sight line"
+    },
+    {
+      "id": "blind-crest-queue",
+      "title": "Blind crest of hill with stopped traffic beyond"
+    },
+    {
+      "id": "construction-visual-tunnel",
+      "title": "Construction barriers creating visual tunnels"
+    },
+    {
+      "id": "parked-car-running-child",
+      "title": "Parked cars hiding a running child"
+    },
+    {
+      "id": "rain-fog-sunset-glare",
+      "title": "Dense rain fog or glare at sunset"
+    },
+    {
+      "id": "snowbank-narrowing",
+      "title": "Snowbanks narrowing the roadway"
+    },
+    {
+      "id": "emergency-light-exposure",
+      "title": "Flashing emergency lights overwhelming camera exposure"
+    },
+    {
+      "id": "manual-police-direction",
+      "title": "Police manually directing traffic against a signal"
+    },
+    {
+      "id": "worker-hand-signals",
+      "title": "Construction worker using hand signals"
+    },
+    {
+      "id": "flashing-yellow-arrow",
+      "title": "Flashing yellow arrows changing turn logic"
+    },
+    {
+      "id": "reversible-lanes",
+      "title": "Reversible commuter lanes"
+    },
+    {
+      "id": "unclear-detour",
+      "title": "Detours with unclear signage"
+    },
+    {
+      "id": "signal-blackout-four-way",
+      "title": "Stoplight blackout becoming an implicit four-way stop"
+    },
+    {
+      "id": "snow-covered-markings",
+      "title": "Snow-covered lane markings"
+    },
+    {
+      "id": "gas-station-chaos",
+      "title": "Gas stations with cars moving in all directions"
+    },
+    {
+      "id": "drive-thru-pedestrian",
+      "title": "Drive-thru lanes crossing pedestrian walkways"
+    },
+    {
+      "id": "airport-dropoff",
+      "title": "Drop-off zones at airports"
+    },
+    {
+      "id": "rv-campground",
+      "title": "RV campgrounds"
+    },
+    {
+      "id": "private-road-markings",
+      "title": "Private roads with non-standard markings"
+    },
+    {
+      "id": "unmarked-dirt-lot",
+      "title": "Dirt or gravel lots with no lane markings"
+    },
+    {
+      "id": "grass-overflow-parking",
+      "title": "Event overflow parking on grass fields"
+    },
+    {
+      "id": "tire-debris",
+      "title": "Tire debris in lane"
+    },
+    {
+      "id": "falling-cargo",
+      "title": "Mattress or ladder falling off a truck"
+    },
+    {
+      "id": "freeway-animal",
+      "title": "Animal darting into the freeway"
+    },
+    {
+      "id": "dog-chase",
+      "title": "Person chasing a dog into the road"
+    },
+    {
+      "id": "illegal-intersection-uturn",
+      "title": "Car doing an illegal U-turn in an intersection"
+    },
+    {
+      "id": "freeway-shoulder-reversing",
+      "title": "Driver reversing on a freeway shoulder"
+    },
+    {
+      "id": "runaway-shopping-cart",
+      "title": "Rolling runaway shopping cart"
+    },
+    {
+      "id": "fast-lane-splitting",
+      "title": "Motorcycle lane splitting at high speed"
+    },
+    {
+      "id": "vehicle-door-traffic",
+      "title": "Driver exiting a vehicle into a traffic lane"
+    },
+    {
+      "id": "aggressive-tailgating",
+      "title": "Aggressive tailgating"
+    },
+    {
+      "id": "road-rage",
+      "title": "Road rage behavior"
+    },
+    {
+      "id": "texting-lane-drift",
+      "title": "Driver drifting across a lane while texting"
+    },
+    {
+      "id": "unpredictable-cyclist",
+      "title": "Cyclist swerving unpredictably"
+    },
+    {
+      "id": "weaving-scooter",
+      "title": "Scooter weaving between cars"
+    },
+    {
+      "id": "phone-pedestrian",
+      "title": "Pedestrian walking while staring at a phone"
+    },
+    {
+      "id": "slow-elderly-crossing",
+      "title": "Elderly pedestrian moving slowly mid-intersection"
+    },
+    {
+      "id": "stale-hd-map-lanes",
+      "title": "Newly painted lanes not reflected in the HD map"
+    },
+    {
+      "id": "temporary-widening",
+      "title": "Temporary road widening"
+    },
+    {
+      "id": "faded-markings",
+      "title": "Faded lane markings"
+    },
+    {
+      "id": "misaligned-reflectors",
+      "title": "Misaligned lane reflectors"
+    },
+    {
+      "id": "driveway-road-confusion",
+      "title": "Private driveway mistaken for a road"
+    },
+    {
+      "id": "adversarial-cutin",
+      "title": "Human drivers testing an AV by cutting in aggressively"
+    },
+    {
+      "id": "hyper-cautious-av",
+      "title": "Other AVs behaving hyper-cautiously"
+    },
+    {
+      "id": "intentional-av-confusion",
+      "title": "Human intentionally confusing an AV"
+    },
+    {
+      "id": "rideshare-curb-chaos",
+      "title": "Ride-share curb chaos"
+    },
+    {
+      "id": "delivery-robot-crossing",
+      "title": "Robot delivery carts crossing the street"
+    },
+    {
+      "id": "hydroplaning",
+      "title": "Hydroplaning onset"
+    },
+    {
+      "id": "black-ice",
+      "title": "Black ice"
+    },
+    {
+      "id": "crosswinds",
+      "title": "Sudden crosswinds"
+    },
+    {
+      "id": "flash-flooding",
+      "title": "Flash flooding"
+    },
+    {
+      "id": "snow-road-geometry",
+      "title": "Snow accumulation altering road geometry"
+    },
+    {
+      "id": "fog-sensor-disagreement",
+      "title": "Fog causing sensor disagreement"
+    },
+    {
+      "id": "school-arrival",
+      "title": "School arrival and departure areas"
+    },
+    {
+      "id": "busy-parking-lot",
+      "title": "Parking lot navigation with heavy traffic"
+    },
+    {
+      "id": "blocked-normal-path",
+      "title": "Accident or construction blocking normal path",
+      "priority": 100
+    }
+  ]
+}

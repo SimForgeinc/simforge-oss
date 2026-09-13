@@ -1,0 +1,203 @@
+{
+ "id": "training-grade-lane",
+ "status": "BLOCKED",
+ "writtenAt": "2026-08-16T01:23:21.778208+00:00",
+ "branch": "training-grade-lane",
+ "headCommitAtWrite": "d0bd09cdf396d1a722f65bb0c10fa0b6cecb4f18",
+ "blocker": {
+  "id": "TG-BLOCK-1",
+  "what": "No gpt-5.6-luna credential is reachable in this environment.",
+  "evidence": [
+   "op whoami -> [ERROR] no account found for filter",
+   "op item get be2othhp7cx3frton4ehddtthq --format json -> No accounts configured for use with 1Password CLI.",
+   "~/.config/op/config has \"accounts\": null; op 2.32.1 is installed",
+   "env | grep -icE 'openai|api_key|luna' -> 0"
+  ],
+  "blocks": [
+   "W7 authoring of DEV and HELDOUT",
+   "blind per-scenario judge (axis 3 mechanism provenance, axis 4 plausibility)",
+   "corpus-layout judge verdict"
+  ],
+  "needed": "A FRESHLY ISSUED gpt-5.6-luna key exported as OPENAI_API_KEY. Per the brief's credential-hygiene rule no key found on disk was searched for or reused.",
+  "doesNotBlock": "W1, W2, W3, W4 and W6 -- their exit criteria are deterministic engine probes."
+ },
+ "secondObstacleForW7": {
+  "id": "TG-BLOCK-2",
+  "what": "The round-6 authoring surface is not on disk, so even with a key an authoring run would not be like-for-like against the 0.466 baseline.",
+  "evidence": [
+   "agent-authoring/TOOL-SURFACE-FROZEN.json freezes 16 ops at tooldoc sha256 acd3b247746af7ab",
+   "tools/scenario_tools.py defines 12 of them; solve, preregister, catalog_search, narrow_lane, reroute_ego and shift_ego_alignment are absent",
+   "CATALOG, cli() and load_trace() are undefined free names, so every op raises NameError",
+   "round6/results.json records solved params (initialGapM, arrivalTtc, conflictLeadM) that the on-disk place_actor cannot express: its non-conflicting branch hard-codes s: -12",
+   "agent-authoring/CHECKPOINT.json: 'the runner is pure Python in the notebook'"
+  ]
+ },
+ "scorecard": {
+  "W1_warmup_compensation": {
+   "verdict": "PASS",
+   "C2ShareOfFailures": {
+    "baselineArm": 0.4497,
+    "fixedArm": 0.0245,
+    "required": "< 0.10",
+    "censusBaseline": 0.293
+   },
+   "gapCorrelationR": {
+    "baselineArm": 0.9472,
+    "fixedArm": 0.9853,
+    "required": "> 0.90"
+   },
+   "medianAbsGapErrorM": {
+    "baselineArm": 15.556,
+    "fixedArm": 0.002
+   },
+   "probePassRate": {
+    "baselineArm": 0.055,
+    "fixedArm": 0.185
+   },
+   "cells": 200,
+   "maps": 5,
+   "evidence": "research/edge-case-corpus/reports/training-grade/W1-c2-probe.json"
+  },
+  "W2_verge_lateral_placement": {
+   "verdict": "PASS",
+   "provenShareStrict": {
+    "fixedArm": [
+     0.56,
+     0.84
+    ],
+    "required": ">= 0.50",
+    "archetypesMeeting": 5
+   },
+   "mapsPerArchetype": 5,
+   "sitesPerArchetype": [
+    23,
+    30
+   ],
+   "archetypesPassingGateV2": {
+    "value": 5,
+    "required": ">= 5"
+   },
+   "medianOccluderVruSeparationM": {
+    "baselineArm": 0.0,
+    "fixedArm": 1.4
+   },
+   "evidence": "research/edge-case-corpus/reports/training-grade/W2-occlusion-probe.json"
+  },
+  "W3_lane_closure": {
+   "verdict": "SPLIT",
+   "egoIntoDeviceContacts": {
+    "baseline": "45/60 (0.75)",
+    "handAuthoredDetour": "15/60 (0.25)",
+    "solvedClosure": "0/100",
+    "required": "0 on a 40-cell probe",
+    "cellsWhereEgoDrove": 62,
+    "result": "MET"
+   },
+   "workZoneArchetypeAdmitted": {
+    "admitted": 0,
+    "maps": 0,
+    "sites": 0,
+    "required": ">= 2 maps and >= 3 sites",
+    "result": "NOT MET",
+    "bindingCriterion": "C4 deceleration demand, 19/180 cells"
+   },
+   "evidence": "research/edge-case-corpus/reports/training-grade/W3-workzone-probe.json"
+  },
+  "W4_mechanism_rubrics": {
+   "verdict": "PASS",
+   "rubricFiles": {
+    "value": 15,
+    "required": "<= 20"
+   },
+   "preRegistrationDrift": 0,
+   "newlyRejectedArchetypes": {
+    "value": 28,
+    "required": ">= 1"
+   },
+   "archetypesReplayed": 98,
+   "tracesEvaluated": 303,
+   "acceptedByBoth": 64,
+   "evidence": "research/edge-case-corpus/reports/training-grade/W4-rubric-replay.json"
+  },
+  "W5_solver_objective": {
+   "verdict": "NOT ATTEMPTED",
+   "reason": "FORBIDDEN pending human review"
+  },
+  "W6_feasibility_precheck": {
+   "verdict": "PASS",
+   "blindSevenAgreement": {
+    "value": 0.8571,
+    "required": ">= 0.85"
+   },
+   "blindSevenAgreementPortableReading": 0.7143,
+   "briefsNamingAnAbsentStructure": "48 / 208",
+   "categoriesBlockedOutright": {
+    "C8.workzone": "14/14",
+    "C12.school": "12/12",
+    "C4.roundabout": "10/10"
+   },
+   "deliverable": "research/edge-case-corpus/MAP-INVENTORY-GAPS.md",
+   "evidence": "research/edge-case-corpus/reports/training-grade/W6-precheck.json"
+  },
+  "W7_frozen_run": {
+   "verdict": "BLOCKED (deterministic half completed)",
+   "completed": {
+    "regateOfPublishedCorpus": {
+     "archetypes": 98,
+     "tracesEvaluated": 303,
+     "survived": 83,
+     "DEV": {
+      "admitted": 31,
+      "n": 36,
+      "rate": 0.8611
+     },
+     "HELDOUT": {
+      "admitted": 52,
+      "n": 62,
+      "rate": 0.8387
+     },
+     "generalizationGap": 0.0224,
+     "pValue": 0.7665,
+     "categoriesCovered": 15,
+     "firstFailureAmongRejected": {
+      "C2": 15,
+      "C6": 1
+     },
+     "impliedCorrectedBaseline": {
+      "DEV": 0.401,
+      "HELDOUT": 0.341,
+      "wasPublished": {
+       "DEV": 0.466,
+       "HELDOUT": 0.407
+      }
+     }
+    }
+   },
+   "outstanding": [
+    "author DEV and HELDOUT once through a hash-frozen surface",
+    "blind per-scenario judge",
+    "corpus-layout judge verdict"
+   ],
+   "evidence": "research/edge-case-corpus/reports/training-grade/W7-regate.json"
+  }
+ },
+ "gateIntegrity": {
+  "verify_gate_hash": "PASS on every continuation",
+  "gateV1Sha256": "1a08698e95fca4bc97bd192ac2199be27b13e43ba066a654ee513d0f74f44c2d",
+  "gateV2Sha256": "3823182614e5a5ba48db3dec06d09bbc178e874483f13f43176c32b930d79754",
+  "relaxations": "none; the only gate change was the TG-G1 CORRECTION, which is a tightening",
+  "proofTheTripwireFires": "attacked in a throwaway copy with a code relaxation (C3 5.0 -> 8.0) and a manifest tamper (C3 <= 5.0 m -> <= 9.0 m); both detected, exit 1"
+ },
+ "defectsFound": {
+  "TG-B0": "the built CLI could not spawn batch workers at all -- every `uniscenarios batch` died before simulating a cell. Fixed generally; failing test first.",
+  "TG-A1": "an actor authored initialSpeedKph:0 is driven to 20 kph by warm-up. Breaks every parked/stopped/disabled actor. Fix is the representation actor.static:true.",
+  "TG-A2": "a site-dependent dsM expression re-triggers the materialize.ts:665-680 structural-pass hazard and clamps: median error 11.051 m vs 0.003 m for a constant.",
+  "TG-G1": "an unsound broad-phase cull in the closest-approach search reported the t=0 separation as the closest approach for any closing trajectory. Fixed here with regression tests; STILL PRESENT in tools/vista/gate.py:206, which produced the published baseline.",
+  "B1": "confirmed exact: roadControlSchema.kind was z.literal('stop') only. Now addressed by SimScenarioInput.laneClosures + ScenarioTemplateV2.closures."
+ },
+ "preExistingFailuresNotCausedHere": {
+  "cliFullSuite": "62 failed / 260 passed, IDENTICAL before and after every change in this lane (verified by reverting the changed packages to the pre-change commit and re-running). The brief's 'unit tests: pnpm test exit 0' gate cannot be met in this worktree for reasons that predate this lane.",
+  "sanctionedGreenSet": "pnpm --filter @uniscenarios/cli test:portable -> 35/35 passed"
+ },
+ "nextAction": "Obtain a freshly issued gpt-5.6-luna key, then rebuild the authoring surface and run W7. Report any new authoring number as NOT comparable to 0.466, and use the TG-G1-corrected baseline (DEV 0.401 / HELDOUT 0.341) as the reference."
+}

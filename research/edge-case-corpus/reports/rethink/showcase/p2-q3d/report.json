@@ -1,0 +1,460 @@
+{
+  "url": "http://127.0.0.1:5199/?map=belmont-research-center",
+  "chromeArgs": [
+    "--use-gl=angle",
+    "--use-angle=vulkan",
+    "--enable-features=Vulkan"
+  ],
+  "minTiles": 20,
+  "gl": {
+    "vendor": "Google Inc. (NVIDIA)",
+    "renderer": "ANGLE (NVIDIA, Vulkan 1.4.329 (NVIDIA NVIDIA GeForce RTX 5080 (0x00002C02)), NVIDIA)",
+    "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+  },
+  "startupMs": 10196,
+  "startupStats": {
+    "fps": 15.182899716986627,
+    "frameMsAvg": 65.86357142840113,
+    "frameMsP50": 64.39999997615814,
+    "frameMsP95": 100,
+    "frameMsP99": 100,
+    "frameMsMax": 100,
+    "frameTimeCounts": {
+      "over16_7": 133,
+      "over25": 131,
+      "over33_3": 129,
+      "over50": 113
+    },
+    "phases": {
+      "controlsMsAvg": 0.13857143265860422,
+      "streamingMsAvg": 0.20214285680225919,
+      "uploadsMsAvg": 4.527857145241328,
+      "renderMsAvg": 11.635000000681195,
+      "integrationMsAvg": 0
+    },
+    "drawCalls": 313,
+    "triangles": 5258724,
+    "programs": 19,
+    "residentTiles": 32,
+    "residentAssets": 33,
+    "residentBytes": 573260335.9999998,
+    "pendingBytes": 239148340.26666665,
+    "byteBudget": 1073741824,
+    "loading": 2,
+    "queued": 59,
+    "uploading": 4,
+    "jsHeapMB": 235.76751613616943,
+    "cameraMode": "orbit",
+    "renderingSuspended": false,
+    "ultraLowFidelity": false,
+    "roadsOnlyFidelity": false,
+    "roadVisible": true,
+    "streamingError": null,
+    "uiTicksPerSecond": 15.182899716986627,
+    "surfaceMaterials": {
+      "profile": "original",
+      "registeredMaterials": 234,
+      "enhancedMaterials": 0,
+      "preservedMarkings": 30,
+      "unknownMaterials": 193,
+      "conflictingMaterials": 4,
+      "byClass": {
+        "asphalt": 2,
+        "grass": 2,
+        "concrete": 3,
+        "curb": 4,
+        "marking": 30,
+        "unknown": 193
+      },
+      "unknownExamples": [
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_(2)_0_Sign :: sign-_7524775b-6656-416c-b28c-595aeddc48ec_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_0_Sign :: sign-_c8724fa6-e963-477f-9c7d-de930d0fd56c_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_0_Sign :: sign-_36626e60-07c7-494f-b022-57ff1dff43f2_front_png_Sign :: 43f27f70",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(2)_0_Sign :: sign-_b8a2cb12-1c24-4214-b2f3-b83542b38a48_front_png_Sign :: 44fdc790",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(3)_0_Sign :: sign-_40d6b257-e53a-420f-8608-bb761136d078_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_0_Sign :: sign-_42e0adfc-5499-4d6e-b030-18267141ad8f_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_0_Sign :: sign-_033071ea-96e3-46ac-b67f-d3d7187c5aa7_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/LampPost01/LampPost01_1 :: SanDiegoProps_ncl1_138 :: 816dd2d1",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/MetalFencePost01_Prop :: metal_post_Prop :: 8ecd5223",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/ParkingBlocks_Lg01 :: SanDiegoProps :: 3ed35e82",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Prop_Prop/Prop_Prop_2 :: Metal1_Prop :: 7766fb12",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/RailBracket01_Prop :: steel_bracket_Prop :: 5b47daa2"
+      ],
+      "lastApplyMs": 0.09999990463256836,
+      "shaderVariants": 0,
+      "pack": {
+        "id": "uniscenarios-procedural-surfaces",
+        "version": "1.0.0",
+        "author": "UniScenarios",
+        "license": "Apache-2.0",
+        "source": "packages/city-renderer/src/surface-materials.ts",
+        "externalAssets": []
+      }
+    },
+    "assetVariants": {
+      "manifest": true,
+      "loaded": {
+        "original": 36,
+        "geometry-only": 1,
+        "roads-only": 0,
+        "ktx2": 0
+      },
+      "fallbacks": 0
+    }
+  },
+  "settledStats": {
+    "fps": 15.479077446984158,
+    "frameMsAvg": 64.60333333333334,
+    "frameMsP50": 63.199999928474426,
+    "frameMsP95": 100,
+    "frameMsP99": 100,
+    "frameMsMax": 100,
+    "frameTimeCounts": {
+      "over16_7": 149,
+      "over25": 149,
+      "over33_3": 149,
+      "over50": 129
+    },
+    "phases": {
+      "controlsMsAvg": 0.10333333492279052,
+      "streamingMsAvg": 0.17066666444142659,
+      "uploadsMsAvg": 1.5460000006357828,
+      "renderMsAvg": 5.801333328088124,
+      "integrationMsAvg": 0
+    },
+    "drawCalls": 373,
+    "triangles": 18199673,
+    "programs": 20,
+    "residentTiles": 61,
+    "residentAssets": 83,
+    "residentBytes": 1075648479.9999995,
+    "pendingBytes": 0,
+    "byteBudget": 1073741824,
+    "loading": 0,
+    "queued": 0,
+    "uploading": 0,
+    "jsHeapMB": 457.4436368942261,
+    "cameraMode": "orbit",
+    "renderingSuspended": false,
+    "ultraLowFidelity": false,
+    "roadsOnlyFidelity": false,
+    "roadVisible": true,
+    "streamingError": null,
+    "uiTicksPerSecond": 15.479077446984158,
+    "surfaceMaterials": {
+      "profile": "original",
+      "registeredMaterials": 443,
+      "enhancedMaterials": 0,
+      "preservedMarkings": 30,
+      "unknownMaterials": 401,
+      "conflictingMaterials": 4,
+      "byClass": {
+        "asphalt": 2,
+        "grass": 2,
+        "concrete": 4,
+        "curb": 4,
+        "marking": 30,
+        "unknown": 401
+      },
+      "unknownExamples": [
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_(2)_0_Sign :: sign-_7524775b-6656-416c-b28c-595aeddc48ec_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_0_Sign :: sign-_c8724fa6-e963-477f-9c7d-de930d0fd56c_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_0_Sign :: sign-_36626e60-07c7-494f-b022-57ff1dff43f2_front_png_Sign :: 43f27f70",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(2)_0_Sign :: sign-_b8a2cb12-1c24-4214-b2f3-b83542b38a48_front_png_Sign :: 44fdc790",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(3)_0_Sign :: sign-_40d6b257-e53a-420f-8608-bb761136d078_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_0_Sign :: sign-_42e0adfc-5499-4d6e-b030-18267141ad8f_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_0_Sign :: sign-_033071ea-96e3-46ac-b67f-d3d7187c5aa7_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/LampPost01/LampPost01_1 :: SanDiegoProps_ncl1_138 :: 816dd2d1",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/MetalFencePost01_Prop :: metal_post_Prop :: 8ecd5223",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/ParkingBlocks_Lg01 :: SanDiegoProps :: 3ed35e82",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Prop_Prop/Prop_Prop_2 :: Metal1_Prop :: 7766fb12",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/RailBracket01_Prop :: steel_bracket_Prop :: 5b47daa2"
+      ],
+      "lastApplyMs": 0.10000002384185791,
+      "shaderVariants": 0,
+      "pack": {
+        "id": "uniscenarios-procedural-surfaces",
+        "version": "1.0.0",
+        "author": "UniScenarios",
+        "license": "Apache-2.0",
+        "source": "packages/city-renderer/src/surface-materials.ts",
+        "externalAssets": []
+      }
+    },
+    "assetVariants": {
+      "manifest": true,
+      "loaded": {
+        "original": 82,
+        "geometry-only": 1,
+        "roads-only": 0,
+        "ktx2": 0
+      },
+      "fallbacks": 0
+    }
+  },
+  "streetStats": {
+    "fps": 15.40009445421422,
+    "frameMsAvg": 64.9346666653951,
+    "frameMsP50": 63.89999997615814,
+    "frameMsP95": 100,
+    "frameMsP99": 100,
+    "frameMsMax": 100,
+    "frameTimeCounts": {
+      "over16_7": 149,
+      "over25": 148,
+      "over33_3": 148,
+      "over50": 131
+    },
+    "phases": {
+      "controlsMsAvg": 0.11200000047683716,
+      "streamingMsAvg": 0.16400000254313152,
+      "uploadsMsAvg": 1.5999999992052714,
+      "renderMsAvg": 5.551333328882853,
+      "integrationMsAvg": 0
+    },
+    "drawCalls": 103,
+    "triangles": 2989696,
+    "programs": 20,
+    "residentTiles": 52,
+    "residentAssets": 68,
+    "residentBytes": 920779996.6666664,
+    "pendingBytes": 130200128,
+    "byteBudget": 1073741824,
+    "loading": 0,
+    "queued": 26,
+    "uploading": 7,
+    "jsHeapMB": 283.1440134048462,
+    "cameraMode": "orbit",
+    "renderingSuspended": false,
+    "ultraLowFidelity": false,
+    "roadsOnlyFidelity": false,
+    "roadVisible": true,
+    "streamingError": null,
+    "uiTicksPerSecond": 15.40009445421422,
+    "surfaceMaterials": {
+      "profile": "original",
+      "registeredMaterials": 427,
+      "enhancedMaterials": 0,
+      "preservedMarkings": 30,
+      "unknownMaterials": 385,
+      "conflictingMaterials": 4,
+      "byClass": {
+        "asphalt": 2,
+        "grass": 2,
+        "concrete": 4,
+        "curb": 4,
+        "marking": 30,
+        "unknown": 385
+      },
+      "unknownExamples": [
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_(2)_0_Sign :: sign-_7524775b-6656-416c-b28c-595aeddc48ec_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_0_Sign :: sign-_c8724fa6-e963-477f-9c7d-de930d0fd56c_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_0_Sign :: sign-_36626e60-07c7-494f-b022-57ff1dff43f2_front_png_Sign :: 43f27f70",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(2)_0_Sign :: sign-_b8a2cb12-1c24-4214-b2f3-b83542b38a48_front_png_Sign :: 44fdc790",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(3)_0_Sign :: sign-_40d6b257-e53a-420f-8608-bb761136d078_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_0_Sign :: sign-_42e0adfc-5499-4d6e-b030-18267141ad8f_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_0_Sign :: sign-_033071ea-96e3-46ac-b67f-d3d7187c5aa7_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/LampPost01/LampPost01_1 :: SanDiegoProps_ncl1_138 :: 816dd2d1",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/MetalFencePost01_Prop :: metal_post_Prop :: 8ecd5223",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/ParkingBlocks_Lg01 :: SanDiegoProps :: 3ed35e82",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Prop_Prop/Prop_Prop_2 :: Metal1_Prop :: 7766fb12",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/RailBracket01_Prop :: steel_bracket_Prop :: 5b47daa2"
+      ],
+      "lastApplyMs": 0.10000002384185791,
+      "shaderVariants": 0,
+      "pack": {
+        "id": "uniscenarios-procedural-surfaces",
+        "version": "1.0.0",
+        "author": "UniScenarios",
+        "license": "Apache-2.0",
+        "source": "packages/city-renderer/src/surface-materials.ts",
+        "externalAssets": []
+      }
+    },
+    "assetVariants": {
+      "manifest": true,
+      "loaded": {
+        "original": 92,
+        "geometry-only": 1,
+        "roads-only": 0,
+        "ktx2": 0
+      },
+      "fallbacks": 0
+    }
+  },
+  "interaction": {
+    "layers": {
+      "vegetation": {
+        "before": 103,
+        "after": 89,
+        "dropped": 14
+      },
+      "city": {
+        "before": 103,
+        "after": 56,
+        "dropped": 47
+      }
+    },
+    "orbit": {
+      "before": [
+        12.8718221523377,
+        4.582889914602561,
+        -57.18727172726754
+      ],
+      "after": [
+        12.8718221523377,
+        4.913823285951619,
+        -57.18727172726754
+      ]
+    },
+    "fly": {
+      "before": [
+        12.8718221523377,
+        4.913823285951619,
+        -57.18727172726754
+      ],
+      "after": [
+        37.788032298068444,
+        4.529786185907804,
+        -50.22024816520023
+      ]
+    }
+  },
+  "finalStats": {
+    "fps": 15.265311107151478,
+    "frameMsAvg": 65.50799999952316,
+    "frameMsP50": 63.100000023841865,
+    "frameMsP95": 100,
+    "frameMsP99": 100,
+    "frameMsMax": 100,
+    "frameTimeCounts": {
+      "over16_7": 149,
+      "over25": 149,
+      "over33_3": 148,
+      "over50": 122
+    },
+    "phases": {
+      "controlsMsAvg": 0.002666666507720947,
+      "streamingMsAvg": 0.2153333338101705,
+      "uploadsMsAvg": 2.0139999993642173,
+      "renderMsAvg": 7.860666665236155,
+      "integrationMsAvg": 0
+    },
+    "drawCalls": 86,
+    "triangles": 362313,
+    "programs": 20,
+    "residentTiles": 32,
+    "residentAssets": 45,
+    "residentBytes": 731118817.333333,
+    "pendingBytes": 245912452.26666665,
+    "byteBudget": 1073741824,
+    "loading": 4,
+    "queued": 45,
+    "uploading": 4,
+    "jsHeapMB": 274.3329658508301,
+    "cameraMode": "orbit",
+    "renderingSuspended": false,
+    "ultraLowFidelity": false,
+    "roadsOnlyFidelity": false,
+    "roadVisible": true,
+    "streamingError": null,
+    "uiTicksPerSecond": 15.265311107151478,
+    "surfaceMaterials": {
+      "profile": "original",
+      "registeredMaterials": 295,
+      "enhancedMaterials": 0,
+      "preservedMarkings": 30,
+      "unknownMaterials": 253,
+      "conflictingMaterials": 4,
+      "byClass": {
+        "asphalt": 2,
+        "grass": 2,
+        "concrete": 4,
+        "curb": 4,
+        "marking": 30,
+        "unknown": 253
+      },
+      "unknownExamples": [
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_(2)_0_Sign :: sign-_7524775b-6656-416c-b28c-595aeddc48ec_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_(2)_0_Sign :: sign-_c8724fa6-e963-477f-9c7d-de930d0fd56c_front_png_Sign :: 3912d71c",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(2)_0_Sign :: sign-_36626e60-07c7-494f-b022-57ff1dff43f2_front_png_Sign :: 43f27f70",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(2)_0_Sign :: sign-_b8a2cb12-1c24-4214-b2f3-b83542b38a48_front_png_Sign :: 44fdc790",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_(3)_0_Sign :: sign-_40d6b257-e53a-420f-8608-bb761136d078_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_(3)_0_Sign :: sign-_42e0adfc-5499-4d6e-b030-18267141ad8f_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Concorse_DR_0_Sign :: sign-_033071ea-96e3-46ac-b67f-d3d7187c5aa7_front_png_Sign :: a7d68b30",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/LampPost01/LampPost01_1 :: SanDiegoProps_ncl1_138 :: 816dd2d1",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/MetalFencePost01_Prop :: metal_post_Prop :: 8ecd5223",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/ParkingBlocks_Lg01 :: SanDiegoProps :: 3ed35e82",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/Prop_Prop/Prop_Prop_2 :: Metal1_Prop :: 7766fb12",
+        "road/FbxScene_Belmont_Office_Park_Belmont_CA_C_1/RailBracket01_Prop :: steel_bracket_Prop :: 5b47daa2"
+      ],
+      "lastApplyMs": 0.10000002384185791,
+      "shaderVariants": 0,
+      "pack": {
+        "id": "uniscenarios-procedural-surfaces",
+        "version": "1.0.0",
+        "author": "UniScenarios",
+        "license": "Apache-2.0",
+        "source": "packages/city-renderer/src/surface-materials.ts",
+        "externalAssets": []
+      }
+    },
+    "assetVariants": {
+      "manifest": true,
+      "loaded": {
+        "original": 142,
+        "geometry-only": 1,
+        "roads-only": 0,
+        "ktx2": 0
+      },
+      "fallbacks": 0
+    }
+  },
+  "bench": {
+    "avgFps": 14.080204030104028,
+    "p50FrameMs": 63.5,
+    "p95FrameMs": 134.40000009536743,
+    "p99FrameMs": 178.89999997615814,
+    "maxFrameMs": 188,
+    "minFps": 5.319148936170213,
+    "drawCalls": 923,
+    "residentBytes": 879044320.6666664,
+    "frames": 212,
+    "durationMs": 15056.600000023842,
+    "frameTimeCounts": {
+      "over16_7": 207,
+      "over25": 205,
+      "over33_3": 202,
+      "over50": 168
+    },
+    "orbit": {
+      "frames": 209,
+      "durationMs": 15056.600000023842,
+      "p50FrameMs": 63.5,
+      "p95FrameMs": 134.40000009536743,
+      "p99FrameMs": 178.89999997615814,
+      "maxFrameMs": 188,
+      "over33_3": 202,
+      "over50": 168
+    },
+    "phases": {
+      "controlsMsAvg": 0,
+      "streamingMsAvg": 0.18666666666666668,
+      "uploadsMsAvg": 1.8899999976158142,
+      "renderMsAvg": 8.235999999841054,
+      "integrationMsAvg": 0
+    },
+    "capturedAt": "2026-08-17T03:44:54.822Z",
+    "renderingSuspended": false,
+    "displayFps": 14.080204030104028,
+    "uiFrameP95Ms": 134.40000009536743,
+    "simulationTicksPerSecond": null,
+    "cpuUtilizationProxy": 14.677503338933155,
+    "ultraLowFidelity": false,
+    "roadsOnlyFidelity": false
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [
+    "warning: THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "uniscenarios.scenario-render-preflight.v1",
+  "verdict": "pass",
+  "gates": [
+    {
+      "id": "four-distinct-incident-phases",
+      "status": "pass",
+      "evidence": [
+        {
+          "phase": "pre-event",
+          "index": 165,
+          "t": 3.3
+        },
+        {
+          "phase": "reveal",
+          "index": 175,
+          "t": 3.5
+        },
+        {
+          "phase": "conflict",
+          "index": 242,
+          "t": 4.84
+        },
+        {
+          "phase": "aftermath",
+          "index": 267,
+          "t": 5.34
+        }
+      ]
+    },
+    {
+      "id": "incident-pair-present-in-aftermath",
+      "status": "pass",
+      "evidence": {
+        "metricPair": [
+          "ego",
+          "reversingVan"
+        ],
+        "aftermathT": 5.34,
+        "presence": {
+          "ego": true,
+          "reversingVan": true
+        },
+        "rationale": "An aftermath frame must show the incident participants; despawning at conflict is a visible teleport."
+      }
+    }
+  ],
+  "selectedFrames": [
+    {
+      "phase": "pre-event",
+      "targetT": 3.3,
+      "index": 165,
+      "t": 3.3
+    },
+    {
+      "phase": "reveal",
+      "targetT": 3.5,
+      "index": 175,
+      "t": 3.5
+    },
+    {
+      "phase": "conflict",
+      "targetT": 4.84,
+      "index": 242,
+      "t": 4.84
+    },
+    {
+      "phase": "aftermath",
+      "targetT": 5.34,
+      "index": 267,
+      "t": 5.34
+    }
+  ],
+  "scenarioId": "1fe43cbbb2e2fe0c#2",
+  "mapId": "belmont-research-center",
+  "inputHash": "08c8d8e449b4e606bb6c3cc24279340590de94fc45a368502043ad27b53cb185",
+  "traceDigest": "f5c6f6fb111b2e58bcb33be126fc2480cbaac9c3443c13aa60c89f633ca8c1c1",
+  "countsTowardScenarioCoverage": false
+}

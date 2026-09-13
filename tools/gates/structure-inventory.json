@@ -1,0 +1,229 @@
+{
+ "plain_corridor": {
+  "sites": 256,
+  "maps": 5,
+  "perMap": {
+   "yale-street": 64,
+   "belmont-research-center": 64,
+   "el-camino-road": 64,
+   "easterbrook-discovery-school": 25,
+   "richmond-field-station": 39
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "multilane_same_dir": {
+  "sites": 51,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 17,
+   "belmont-research-center": 4,
+   "el-camino-road": 26,
+   "easterbrook-discovery-school": 4
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "wide_lane_for_closure": {
+  "sites": 223,
+  "maps": 5,
+  "perMap": {
+   "yale-street": 49,
+   "belmont-research-center": 63,
+   "el-camino-road": 64,
+   "easterbrook-discovery-school": 15,
+   "richmond-field-station": 32
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "junction_any": {
+  "sites": 294,
+  "maps": 5,
+  "perMap": {
+   "yale-street": 64,
+   "belmont-research-center": 64,
+   "el-camino-road": 64,
+   "easterbrook-discovery-school": 38,
+   "richmond-field-station": 64
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "junction_signalized": {
+  "sites": 23,
+  "maps": 3,
+  "perMap": {
+   "yale-street": 15,
+   "el-camino-road": 5,
+   "richmond-field-station": 3
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "junction_stop": {
+  "sites": 72,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 19,
+   "belmont-research-center": 22,
+   "easterbrook-discovery-school": 25,
+   "richmond-field-station": 6
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "multilane_junction": {
+  "sites": 54,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 22,
+   "belmont-research-center": 5,
+   "el-camino-road": 26,
+   "easterbrook-discovery-school": 1
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "roundabout": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "crossing": {
+  "sites": 5,
+  "maps": 5,
+  "perMap": {
+   "yale-street": 1,
+   "belmont-research-center": 1,
+   "el-camino-road": 1,
+   "easterbrook-discovery-school": 1,
+   "richmond-field-station": 1
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "parking_zone": {
+  "sites": 95,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 14,
+   "belmont-research-center": 36,
+   "el-camino-road": 40,
+   "richmond-field-station": 5
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "parking_aisle": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "kerbside_parking_residential": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "bike_lane": {
+  "sites": 52,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 21,
+   "belmont-research-center": 9,
+   "el-camino-road": 16,
+   "easterbrook-discovery-school": 6
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "bus_stop": {
+  "sites": 2,
+  "maps": 2,
+  "perMap": {
+   "yale-street": 1,
+   "richmond-field-station": 1
+  },
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "school_zone": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "work_zone_suitable": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "crest": {
+  "sites": 1,
+  "maps": 1,
+  "perMap": {
+   "el-camino-road": 1
+  },
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "occlusion_zone": {
+  "sites": 28,
+  "maps": 4,
+  "perMap": {
+   "yale-street": 3,
+   "belmont-research-center": 3,
+   "el-camino-road": 20,
+   "richmond-field-station": 2
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ },
+ "rail_crossing": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "satisfiesPortability": false,
+  "matchable": false,
+  "reason": "feature kind \"rail_crossing\" is not matchable; the whole feature is dropped \u2014 this required clause is unmatchable, so no site can be checked against it"
+ },
+ "driveway": {
+  "sites": 0,
+  "maps": 0,
+  "perMap": {},
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "merge_or_diverge": {
+  "sites": 2,
+  "maps": 2,
+  "perMap": {
+   "easterbrook-discovery-school": 1,
+   "richmond-field-station": 1
+  },
+  "matchable": true,
+  "satisfiesPortability": false
+ },
+ "oncoming_lane": {
+  "sites": 206,
+  "maps": 5,
+  "perMap": {
+   "yale-street": 37,
+   "belmont-research-center": 64,
+   "el-camino-road": 64,
+   "easterbrook-discovery-school": 17,
+   "richmond-field-station": 24
+  },
+  "matchable": true,
+  "satisfiesPortability": true
+ }
+}

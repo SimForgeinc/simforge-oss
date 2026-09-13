@@ -1,0 +1,17 @@
+{
+ "cellId": "vista2-main1-c4b-ped-at-exit-belmont-research-center-30fb80fe-1",
+ "briefId": "c4b-ped-at-exit",
+ "stream": "vista",
+ "templateSha256": "231397a6b880cc3c885f9ff3c4f477c4a953e0df36c0e9189902f774506ec910",
+ "map": "belmont-research-center",
+ "site": "30fb80feb87f145c",
+ "draw": 1,
+ "seed": "931e8defe902286e",
+ "gate": {
+  "pass": true,
+  "firstFailure": null,
+  "clearanceM": 2.038,
+  "tMinClearance": 16
+ },
+ "notes": "vista2 visual closed-loop authoring; final emit of episode"
+}

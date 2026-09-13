@@ -1,0 +1,539 @@
+{
+ "arms": [
+  {
+   "arm": "grid-g1-luna-high",
+   "model": "gpt-5.6-luna",
+   "effort": "high",
+   "briefs": 15,
+   "admitted": 2,
+   "admissionRate": 0.1333,
+   "admissionCI95": [
+    0.037,
+    0.379
+   ],
+   "validityRate": 0.9333,
+   "validity": "14/15",
+   "firstFailures": {
+    "C4": 315,
+    "C5": 302,
+    "C2": 239,
+    "C3": 107,
+    "C1": 106,
+    "template_invalid": 1
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.5098,
+     "laneChangesExecuted": 0.0626,
+     "swerveEvents": 0.0241,
+     "signalPhaseChanges": 0.0271,
+     "interactingPairs": 0.9977,
+     "hardBrakeEvents": 1.5535,
+     "actorCount": 2.095,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.0116,
+     "signalPhaseChanges": 0,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 1.9651,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1326,
+    "cellsPassing": 86,
+    "authoredEventsFireRateAll": 0.9271
+   },
+   "tokens": 2118279,
+   "calls": 92,
+   "wallSeconds": 3399.5,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-luna-high/report.json"
+  },
+  {
+   "arm": "grid-g1-luna-low",
+   "model": "gpt-5.6-luna",
+   "effort": "low",
+   "briefs": 15,
+   "admitted": 0,
+   "admissionRate": 0.0,
+   "admissionCI95": [
+    0.0,
+    0.204
+   ],
+   "validityRate": 0.6667,
+   "validity": "10/15",
+   "firstFailures": {
+    "C2": 260,
+    "C5": 228,
+    "C3": 189,
+    "C4": 160,
+    "C1": 121,
+    "template_invalid": 5
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.4937,
+     "laneChangesExecuted": 0.001,
+     "swerveEvents": 0.0323,
+     "signalPhaseChanges": 0.05,
+     "interactingPairs": 0.7573,
+     "hardBrakeEvents": 1.624,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0,
+     "signalPhaseChanges": 0,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 2,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 960,
+    "cellsPassing": 2,
+    "authoredEventsFireRateAll": 0.9088
+   },
+   "tokens": 1575042,
+   "calls": 96,
+   "wallSeconds": 2170.5,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-luna-low/report.json"
+  },
+  {
+   "arm": "grid-g1-luna-medium",
+   "model": "gpt-5.6-luna",
+   "effort": "medium",
+   "briefs": 15,
+   "admitted": 0,
+   "admissionRate": 0.0,
+   "admissionCI95": [
+    0.0,
+    0.204
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C2": 425,
+    "C5": 337,
+    "C3": 318,
+    "C1": 175,
+    "C4": 128,
+    "no_sites": 1
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.5043,
+     "laneChangesExecuted": 0.0296,
+     "swerveEvents": 0.0159,
+     "signalPhaseChanges": 0.2208,
+     "interactingPairs": 0.8268,
+     "hardBrakeEvents": 1.2857,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0,
+     "signalPhaseChanges": 0,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 2.3333,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1386,
+    "cellsPassing": 3,
+    "authoredEventsFireRateAll": 0.9208
+   },
+   "tokens": 1824145,
+   "calls": 104,
+   "wallSeconds": 3189.5,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-luna-medium/report.json"
+  },
+  {
+   "arm": "grid-g1-sol-high",
+   "model": "gpt-5.6-sol",
+   "effort": "high",
+   "briefs": 15,
+   "admitted": 2,
+   "admissionRate": 0.1333,
+   "admissionCI95": [
+    0.037,
+    0.379
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C5": 358,
+    "C3": 143,
+    "C4": 39,
+    "C1": 30,
+    "C2": 22
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.5123,
+     "laneChangesExecuted": 0.0105,
+     "swerveEvents": 0.0128,
+     "signalPhaseChanges": 0.3396,
+     "interactingPairs": 0.923,
+     "hardBrakeEvents": 1.5998,
+     "actorCount": 2.126,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 1.3333,
+     "laneChangesExecuted": 0.08,
+     "swerveEvents": 0,
+     "signalPhaseChanges": 0.52,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 1.2933,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 857,
+    "cellsPassing": 75,
+    "authoredEventsFireRateAll": 0.8957
+   },
+   "tokens": 1861993,
+   "calls": 81,
+   "wallSeconds": 2825.5,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-sol-high/report.json"
+  },
+  {
+   "arm": "grid-g1-sol-low",
+   "model": "gpt-5.6-sol",
+   "effort": "low",
+   "briefs": 15,
+   "admitted": 1,
+   "admissionRate": 0.0667,
+   "admissionCI95": [
+    0.012,
+    0.298
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C4": 494,
+    "C3": 239,
+    "C5": 230,
+    "C2": 139,
+    "C1": 90
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.4382,
+     "laneChangesExecuted": 0.0858,
+     "swerveEvents": 0.0807,
+     "signalPhaseChanges": 0.3924,
+     "interactingPairs": 0.9528,
+     "hardBrakeEvents": 1.6323,
+     "actorCount": 2.1177,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.0526,
+     "signalPhaseChanges": 0,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 2.2105,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1376,
+    "cellsPassing": 19,
+    "authoredEventsFireRateAll": 0.894
+   },
+   "tokens": 1626457,
+   "calls": 91,
+   "wallSeconds": 1621.1,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-sol-low/report.json"
+  },
+  {
+   "arm": "grid-g1-sol-medium",
+   "model": "gpt-5.6-sol",
+   "effort": "medium",
+   "briefs": 15,
+   "admitted": 2,
+   "admissionRate": 0.1333,
+   "admissionCI95": [
+    0.037,
+    0.379
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C5": 300,
+    "C2": 264,
+    "C4": 207,
+    "C3": 99,
+    "C1": 44
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.5427,
+     "laneChangesExecuted": 0.0026,
+     "swerveEvents": 0.0564,
+     "signalPhaseChanges": 0.2923,
+     "interactingPairs": 0.9949,
+     "hardBrakeEvents": 1.7316,
+     "actorCount": 2.0821,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.0577,
+     "signalPhaseChanges": 1.2115,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 1.7885,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1170,
+    "cellsPassing": 52,
+    "authoredEventsFireRateAll": 0.9136
+   },
+   "tokens": 1545930,
+   "calls": 80,
+   "wallSeconds": 1881.8,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-sol-medium/report.json"
+  },
+  {
+   "arm": "grid-g1-terra-high",
+   "model": "gpt-5.6-terra",
+   "effort": "high",
+   "briefs": 15,
+   "admitted": 3,
+   "admissionRate": 0.2,
+   "admissionCI95": [
+    0.07,
+    0.452
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C5": 536,
+    "C3": 150,
+    "C1": 120,
+    "C4": 59,
+    "C2": 45
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.5128,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.0991,
+     "signalPhaseChanges": 0.1577,
+     "interactingPairs": 0.8919,
+     "hardBrakeEvents": 1.5203,
+     "actorCount": 2.1351,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 1.7063,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.2448,
+     "signalPhaseChanges": 0.2937,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 1.3497,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1332,
+    "cellsPassing": 143,
+    "authoredEventsFireRateAll": 0.8349
+   },
+   "tokens": 1692950,
+   "calls": 85,
+   "wallSeconds": 2206.5,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "33f77081a14142f56b950d0c4b789a65a2ebaf0ae0ba3d8e68ead67940c2c01d",
+   "report": "/tmp/tgr-freeform-grid-g1-terra-high/report.json"
+  },
+  {
+   "arm": "grid-g1-terra-low",
+   "model": "gpt-5.6-terra",
+   "effort": "low",
+   "briefs": 15,
+   "admitted": 4,
+   "admissionRate": 0.2667,
+   "admissionCI95": [
+    0.109,
+    0.52
+   ],
+   "validityRate": 1.0,
+   "validity": "15/15",
+   "firstFailures": {
+    "C5": 417,
+    "C4": 232,
+    "C3": 220,
+    "C2": 149,
+    "C1": 89
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.4018,
+     "laneChangesExecuted": 0.0012,
+     "swerveEvents": 0.0203,
+     "signalPhaseChanges": 0.2507,
+     "interactingPairs": 0.9266,
+     "hardBrakeEvents": 1.511,
+     "actorCount": 2.1075,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 1.9264,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.0429,
+     "signalPhaseChanges": 0.1104,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 2.135,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1675,
+    "cellsPassing": 163,
+    "authoredEventsFireRateAll": 0.9333
+   },
+   "tokens": 1359018,
+   "calls": 80,
+   "wallSeconds": 1458.3,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-terra-low/report.json"
+  },
+  {
+   "arm": "grid-g1-terra-medium",
+   "model": "gpt-5.6-terra",
+   "effort": "medium",
+   "briefs": 15,
+   "admitted": 2,
+   "admissionRate": 0.1333,
+   "admissionCI95": [
+    0.037,
+    0.379
+   ],
+   "validityRate": 0.9333,
+   "validity": "14/15",
+   "firstFailures": {
+    "C3": 213,
+    "C5": 210,
+    "C2": 138,
+    "C1": 96,
+    "C4": 79,
+    "template_invalid": 1
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.6292,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0.1011,
+     "signalPhaseChanges": 0.3539,
+     "interactingPairs": 0.7341,
+     "hardBrakeEvents": 1.9223,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2,
+     "laneChangesExecuted": 0,
+     "swerveEvents": 0,
+     "signalPhaseChanges": 0.5056,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 2.1124,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 1068,
+    "cellsPassing": 89,
+    "authoredEventsFireRateAll": 0.9692
+   },
+   "tokens": 1341826,
+   "calls": 76,
+   "wallSeconds": 1264.6,
+   "draws": 6,
+   "maxSites": 6,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-grid-g1-terra-medium/report.json"
+  }
+ ],
+ "effort": {
+  "perModel": [
+   {
+    "model": "gpt-5.6-luna",
+    "admittedLowMedHigh": [
+     0,
+     0,
+     2
+    ],
+    "tokensLowMedHigh": [
+     1575042,
+     1824145,
+     2118279
+    ],
+    "nonDecreasing": true,
+    "positiveLowToHigh": true
+   },
+   {
+    "model": "gpt-5.6-sol",
+    "admittedLowMedHigh": [
+     1,
+     2,
+     2
+    ],
+    "tokensLowMedHigh": [
+     1626457,
+     1545930,
+     1861993
+    ],
+    "nonDecreasing": true,
+    "positiveLowToHigh": true
+   },
+   {
+    "model": "gpt-5.6-terra",
+    "admittedLowMedHigh": [
+     4,
+     2,
+     3
+    ],
+    "tokensLowMedHigh": [
+     1359018,
+     1341826,
+     1692950
+    ],
+    "nonDecreasing": false,
+    "positiveLowToHigh": false
+   }
+  ],
+  "H_freedom_effort": {
+   "criterion": "non-decreasing low->med->high per model AND strictly positive low->high delta for >=2 of 3 models",
+   "positiveModels": 2,
+   "supported": false
+  }
+ }
+}

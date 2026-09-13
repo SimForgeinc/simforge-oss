@@ -1,0 +1,21 @@
+{
+  "name": "showcase-web",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "mock": "node scripts/mock-server.mjs"
+  },
+  "dependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "preact": "^10.27.2",
+    "vite": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

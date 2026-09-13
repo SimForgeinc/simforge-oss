@@ -1,0 +1,362 @@
+{
+  "kind": "trace-render-manifest",
+  "manifestVersion": 1,
+  "generatedAt": null,
+  "deterministic": true,
+  "renderer": "scripts/render-trace.mjs@2",
+  "redact": false,
+  "underlay": {
+    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center",
+    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center/topology-index.json.gz",
+    "topologySha256": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
+    "topologyMapName": "belmont-research-center_20260410-184713",
+    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center/derived/locations.json.gz",
+    "locationsSha256": "63c129b5103e6bb0dfd8209207dab4d6bd29882ab04e68ea9672fe3acfa79346",
+    "laneCount": 970,
+    "crosswalkCount": 10,
+    "crosswalksApproximate": true
+  },
+  "scenarioId": "kerbside-parking-reverse-conflict",
+  "instanceId": "1fdc6c5d1af31298#0",
+  "mapId": "belmont-research-center",
+  "inputHash": "bbdd4649e8657998f26200862ab12a93bc8f348b840195218de681730dadbc08",
+  "traceDigest": "a0c64f0cc9c63971b95e97bf839aa9a23bccad6e245a07741ef5e367360132d1",
+  "inputActorIds": [
+    "ambient:v1:00c538aee6000404",
+    "ambient:v1:0d83ce479f726e92",
+    "ambient:v1:0dab6d1d08dfef18",
+    "ambient:v1:13b06406cbddd9bb",
+    "ambient:v1:1b4b664cd4cdda9d",
+    "ambient:v1:1ee30996a26236c0",
+    "ambient:v1:2dfde3d8bc1b4213",
+    "ambient:v1:322f91cd456492f0",
+    "ambient:v1:39f02b854f6cf89d",
+    "ambient:v1:3d407b030ff9ff52",
+    "ambient:v1:40c3f59d4975ac17",
+    "ambient:v1:4123c48983cf233a",
+    "ambient:v1:4214ce02f991b0c7",
+    "ambient:v1:42332d9a5ab99d3e",
+    "ambient:v1:4fcfcf05880090ad",
+    "ambient:v1:5666d36590c314f7",
+    "ambient:v1:57228e3c2c08d60b",
+    "ambient:v1:655c101e9575a61c",
+    "ambient:v1:6a0f187f9f15de20",
+    "ambient:v1:6bbe9050959726e4",
+    "ambient:v1:79709e30a6370db7",
+    "ambient:v1:8ba2195bfeafc8d8",
+    "ambient:v1:9012c3ed7e936fc1",
+    "ambient:v1:916949fd103f81b8",
+    "ambient:v1:924a70e747b652ea",
+    "ambient:v1:93a7d3ed45745551",
+    "ambient:v1:9ba9e4d715a73b43",
+    "ambient:v1:9d9e39ee60b55d68",
+    "ambient:v1:a3be18244a51257c",
+    "ambient:v1:b4d9cd576d8de1ad",
+    "ambient:v1:c5bceee42ef2cdc3",
+    "ambient:v1:e0603eb41ce854b2",
+    "ambient:v1:e3ebbbfd50d4c54d",
+    "ambient:v1:ed1174f95d952d05",
+    "ambient:v1:efc513d7b1b831c4",
+    "ambient:v1:f496d183d0e32d2c",
+    "ambient:v1:f4999bc67a3d9364",
+    "ambient:v1:f6ad74e994e7c544",
+    "ambient:v1:fb14881eb4e434c6",
+    "ambient:v1:fe66a2f42e2c9cb6",
+    "ego",
+    "reversing_vehicle"
+  ],
+  "traceActorIds": [
+    "ambient:v1:00c538aee6000404",
+    "ambient:v1:0d83ce479f726e92",
+    "ambient:v1:0dab6d1d08dfef18",
+    "ambient:v1:13b06406cbddd9bb",
+    "ambient:v1:1b4b664cd4cdda9d",
+    "ambient:v1:1ee30996a26236c0",
+    "ambient:v1:2dfde3d8bc1b4213",
+    "ambient:v1:322f91cd456492f0",
+    "ambient:v1:39f02b854f6cf89d",
+    "ambient:v1:3d407b030ff9ff52",
+    "ambient:v1:40c3f59d4975ac17",
+    "ambient:v1:4123c48983cf233a",
+    "ambient:v1:4214ce02f991b0c7",
+    "ambient:v1:42332d9a5ab99d3e",
+    "ambient:v1:4fcfcf05880090ad",
+    "ambient:v1:5666d36590c314f7",
+    "ambient:v1:57228e3c2c08d60b",
+    "ambient:v1:655c101e9575a61c",
+    "ambient:v1:6a0f187f9f15de20",
+    "ambient:v1:6bbe9050959726e4",
+    "ambient:v1:79709e30a6370db7",
+    "ambient:v1:8ba2195bfeafc8d8",
+    "ambient:v1:9012c3ed7e936fc1",
+    "ambient:v1:916949fd103f81b8",
+    "ambient:v1:924a70e747b652ea",
+    "ambient:v1:93a7d3ed45745551",
+    "ambient:v1:9ba9e4d715a73b43",
+    "ambient:v1:9d9e39ee60b55d68",
+    "ambient:v1:a3be18244a51257c",
+    "ambient:v1:b4d9cd576d8de1ad",
+    "ambient:v1:c5bceee42ef2cdc3",
+    "ambient:v1:e0603eb41ce854b2",
+    "ambient:v1:e3ebbbfd50d4c54d",
+    "ambient:v1:ed1174f95d952d05",
+    "ambient:v1:efc513d7b1b831c4",
+    "ambient:v1:f496d183d0e32d2c",
+    "ambient:v1:f4999bc67a3d9364",
+    "ambient:v1:f6ad74e994e7c544",
+    "ambient:v1:fb14881eb4e434c6",
+    "ambient:v1:fe66a2f42e2c9cb6",
+    "ego",
+    "reversing_vehicle"
+  ],
+  "actorCount": 42,
+  "integrity": {
+    "manifestInputHashMatches": true,
+    "traceInputHashMatches": true,
+    "actorIdsExactMatch": true
+  },
+  "metrics": {
+    "clippedCriticality": false,
+    "collisions": [
+      {
+        "a": "ambient:v1:1b4b664cd4cdda9d",
+        "b": "ambient:v1:3d407b030ff9ff52",
+        "t": 1.138209
+      },
+      {
+        "a": "ambient:v1:4123c48983cf233a",
+        "b": "ambient:v1:9d9e39ee60b55d68",
+        "t": 2.958685
+      },
+      {
+        "a": "ambient:v1:6a0f187f9f15de20",
+        "b": "ambient:v1:fb14881eb4e434c6",
+        "t": 3.538506
+      },
+      {
+        "a": "ambient:v1:322f91cd456492f0",
+        "b": "ambient:v1:9012c3ed7e936fc1",
+        "t": 6.757785
+      },
+      {
+        "a": "ambient:v1:322f91cd456492f0",
+        "b": "ambient:v1:42332d9a5ab99d3e",
+        "t": 6.977835
+      },
+      {
+        "a": "ambient:v1:3d407b030ff9ff52",
+        "b": "ambient:v1:57228e3c2c08d60b",
+        "t": 7.859131
+      }
+    ],
+    "criticalitySamples": {
+      "pathTTC": [],
+      "pet": [],
+      "ttc": [
+        {
+          "pair": [
+            "ego",
+            "reversing_vehicle"
+          ],
+          "t": [
+            2.04,
+            2.06,
+            2.08,
+            2.1,
+            2.12,
+            2.14,
+            2.16,
+            2.18,
+            2.2,
+            2.22,
+            2.24,
+            2.26,
+            2.28,
+            2.3,
+            2.32,
+            2.34,
+            2.36,
+            2.38,
+            2.4,
+            2.42
+          ],
+          "value": [
+            1.497371,
+            1.373733,
+            1.262722,
+            1.163089,
+            1.073665,
+            0.996312,
+            0.96817,
+            0.940745,
+            0.913966,
+            0.887763,
+            0.862064,
+            0.836803,
+            0.811916,
+            0.787352,
+            0.76306,
+            0.738991,
+            0.715097,
+            0.69135,
+            0.667741,
+            0.644265
+          ]
+        }
+      ]
+    },
+    "declaredOcclusion": [],
+    "minDistance": [
+      {
+        "minDistanceM": 3.413213,
+        "pair": [
+          "ego",
+          "reversing_vehicle"
+        ],
+        "t": 2.42
+      }
+    ],
+    "minPET": null,
+    "minPathTTC": null,
+    "minTTC": {
+      "pair": [
+        "ego",
+        "reversing_vehicle"
+      ],
+      "t": 2.42,
+      "value": 0.644265
+    },
+    "occluderIneffective": [],
+    "requiredDecelMax": {
+      "ambient:v1:00c538aee6000404": 1.872067,
+      "ambient:v1:0d83ce479f726e92": 0,
+      "ambient:v1:0dab6d1d08dfef18": 0.00001,
+      "ambient:v1:13b06406cbddd9bb": 0,
+      "ambient:v1:1b4b664cd4cdda9d": 0.52244,
+      "ambient:v1:1ee30996a26236c0": 0.581527,
+      "ambient:v1:2dfde3d8bc1b4213": 0.000055,
+      "ambient:v1:322f91cd456492f0": 0.569638,
+      "ambient:v1:39f02b854f6cf89d": 1.94358,
+      "ambient:v1:3d407b030ff9ff52": 5.838274,
+      "ambient:v1:40c3f59d4975ac17": 1.433395,
+      "ambient:v1:4123c48983cf233a": 0,
+      "ambient:v1:4214ce02f991b0c7": 0,
+      "ambient:v1:42332d9a5ab99d3e": 0.229269,
+      "ambient:v1:4fcfcf05880090ad": 1.648649,
+      "ambient:v1:5666d36590c314f7": 0.244728,
+      "ambient:v1:57228e3c2c08d60b": 2.359444,
+      "ambient:v1:655c101e9575a61c": 2.238368,
+      "ambient:v1:6a0f187f9f15de20": 0.445726,
+      "ambient:v1:6bbe9050959726e4": 0,
+      "ambient:v1:79709e30a6370db7": 0.0617,
+      "ambient:v1:8ba2195bfeafc8d8": 0,
+      "ambient:v1:9012c3ed7e936fc1": 5.066619,
+      "ambient:v1:916949fd103f81b8": 0,
+      "ambient:v1:924a70e747b652ea": 1.485415,
+      "ambient:v1:93a7d3ed45745551": 0,
+      "ambient:v1:9ba9e4d715a73b43": 0.722416,
+      "ambient:v1:9d9e39ee60b55d68": 0.657011,
+      "ambient:v1:a3be18244a51257c": 0,
+      "ambient:v1:b4d9cd576d8de1ad": 0.109563,
+      "ambient:v1:c5bceee42ef2cdc3": 0.191071,
+      "ambient:v1:e0603eb41ce854b2": 0,
+      "ambient:v1:e3ebbbfd50d4c54d": 0.100669,
+      "ambient:v1:ed1174f95d952d05": 0,
+      "ambient:v1:efc513d7b1b831c4": 1.160565,
+      "ambient:v1:f496d183d0e32d2c": 0,
+      "ambient:v1:f4999bc67a3d9364": 0.897181,
+      "ambient:v1:f6ad74e994e7c544": 0.189059,
+      "ambient:v1:fb14881eb4e434c6": 5.965643,
+      "ambient:v1:fe66a2f42e2c9cb6": 0.273507,
+      "ego": 0,
+      "reversing_vehicle": 0
+    },
+    "revealToConflict": null,
+    "ticksSimulated": 401,
+    "triggerNeverFired": []
+  },
+  "frameTimes": [
+    1.42,
+    1.92,
+    2.42,
+    2.92
+  ],
+  "frames": [
+    {
+      "index": 71,
+      "t": 1.42,
+      "camera": {
+        "x": -176.6955,
+        "y": 11.1158,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-000.svg",
+      "png": "frame-000.png",
+      "svgSha256": "5221cb26f5e04284284b09b5208dd4f7f8c8ae05b7855cb3127668409b314bcd",
+      "pngSha256": "018e150ef959c13002d75d685d31662c7140ee8fa6db8ee306ed14433f8f88ad"
+    },
+    {
+      "index": 96,
+      "t": 1.92,
+      "camera": {
+        "x": -170.319,
+        "y": 11.1359,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-001.svg",
+      "png": "frame-001.png",
+      "svgSha256": "a739ce28ff161c81461e51a21102c2d8726679aa698cd2c1dd10bf2149db72f5",
+      "pngSha256": "fe39b91e28257b9059da5ad572880f36506989178efe72599cb67c181db0e8fb"
+    },
+    {
+      "index": 121,
+      "t": 2.42,
+      "camera": {
+        "x": -163.974,
+        "y": 11.257,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-002.svg",
+      "png": "frame-002.png",
+      "svgSha256": "025737b7904783c8b971bd4af782a067f5eb93a444ea3f952d5d7378372b3cc2",
+      "pngSha256": "8212b7833f5cedf6be706b81a8a9ea79c0693efba0ccbce47ed3d7afcc413e99"
+    },
+    {
+      "index": 146,
+      "t": 2.92,
+      "camera": {
+        "x": -157.664,
+        "y": 11.6559,
+        "basis": "follow-ego",
+        "pair": [
+          "ego"
+        ]
+      },
+      "svg": "frame-003.svg",
+      "png": "frame-003.png",
+      "svgSha256": "3a0bacba5acde01952a9bbdee8a36788c8d1bff7ce20dcd569b279b265a9c470",
+      "pngSha256": "ccceeba2ca3bdbf2da879593ee0e9238a0ab7411dd426979fa6891e8343a6f4c"
+    }
+  ],
+  "video": {
+    "file": "trace-render.mp4",
+    "fps": 12,
+    "width": 960,
+    "height": 600,
+    "sha256": "eb033877a0a99bcf49e8137618ea418cc0757220fa62725d631be2a1cc7bd5d2"
+  },
+  "inputs": {
+    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/instance.json",
+    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/trace.json.gz",
+    "traceFileSha256": "57abb9ea5247303f28d785abed9b6f5af77ba8c00bf4ed0659435f6dfc94b89d"
+  }
+}

@@ -1,0 +1,36 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 3.0,
+   "metric": "path_ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "description": "both actors must occupy the same conflict area within the PET window",
+   "id": "R-conflict-point",
+   "kind": "unsupported",
+   "reason": "zone_occupancy needs concrete map coordinates, which a portable rubric must not carry",
+   "required": false
+  }
+ ],
+ "intentId": "C3.intersection",
+ "originalIntent": "NHTSA pre-crash typology 27-31 (straight crossing paths, left turn across path). The discriminating metric for a crossing conflict is post-encroachment time, not headway; a junction encounter with PET above ~2.5 s is ordinary give-way behaviour. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Path-crossing conflict at a junction: the crossing must be a genuine arrival conflict",
+ "version": 1
+}

@@ -1,0 +1,154 @@
+{
+ "scenarioVersion": 2,
+ "metricSubject": "ego",
+ "meta": {
+  "name": "work zone lane closure (baseline)",
+  "description": "MUTCD merging taper closing the ego lane. Measures ego-into-device contacts.",
+  "createdAt": "2026-08-15T00:00:00.000Z",
+  "modifiedAt": "2026-08-15T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "probe.w3.baseline",
+  "tags": [
+   "probe",
+   "w3",
+   "workzone",
+   "baseline"
+  ],
+  "author": "agent/training-grade-lane",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "egoSpeedKph",
+    "type": "continuous",
+    "unit": "kph",
+    "tier": 1,
+    "range": [
+     30,
+     45
+    ],
+    "default": 38,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "noon"
+ },
+ "anchor": {
+  "id": "wz-baseline",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     2
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     30,
+     70
+    ],
+    "essentiality": "required"
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     4
+    ],
+    "essentiality": "required"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     240,
+     null
+    ],
+    "essentiality": "required"
+   }
+  },
+  "features": [],
+  "policy": {
+   "allowMirror": false,
+   "maxSitesPerMap": 4,
+   "diversity": "moderate",
+   "minScore": 0.5
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "vehicle under test",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "pose": {
+    "laneOffset": 0,
+    "s": 0,
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "param.egoSpeedKph"
+  }
+ ],
+ "props": [
+  {
+   "id": "wz-taper",
+   "catalogId": "construction.traffic_cone",
+   "label": "MUTCD merging taper L=33 m",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": 60.0,
+    "tFrac": -0.95,
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1,
+   "repeat": {
+    "count": 5,
+    "spacingM": 6.1,
+    "tFracStep": 0.38
+   }
+  },
+  {
+   "id": "wz-board",
+   "catalogId": "construction.arrow_board",
+   "label": "arrow board at taper head",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": 54.0,
+    "tFrac": -0.9,
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1
+  },
+  {
+   "id": "wz-advance",
+   "catalogId": "construction.sign_road_work",
+   "label": "advance warning sign",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": 15.0,
+    "tFrac": -1.0,
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1
+  }
+ ],
+ "choreography": {
+  "clipSeconds": 16,
+  "warmupSeconds": 2.0,
+  "interactions": []
+ },
+ "invariants": []
+}

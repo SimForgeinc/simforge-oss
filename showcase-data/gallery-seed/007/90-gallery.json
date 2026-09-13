@@ -1,0 +1,79 @@
+{
+  "admitted": true,
+  "admittedCells": 1,
+  "artifacts": {
+    "instance": "gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/instance.json",
+    "judge": "gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/review-gpt-5.6-sol.json",
+    "render2d": "gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0",
+    "trace": "gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/trace.json.gz",
+    "video": "gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4"
+  },
+  "brief": "c11 backing out",
+  "cellId": "emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0",
+  "dynamism": 8.0,
+  "engine": "emergent",
+  "gate": {
+    "clearanceM": 0.538,
+    "firstFailure": null,
+    "pass": true,
+    "tMinClearance": 3.24
+  },
+  "headline": "/artifacts/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4",
+  "headlineArtifact": "/artifacts/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4",
+  "headlineVideo": "/artifacts/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4",
+  "id": "seed-007",
+  "jobId": "seed-007",
+  "judge": {
+    "_meta": {
+      "framesUsed": [
+        0,
+        0.92,
+        1.42,
+        2.18,
+        2.92,
+        4.36,
+        5.82,
+        8
+      ],
+      "judgeVersion": "footage-judge-v1",
+      "latencyS": 9.97,
+      "promptSha256": "498a4e28342ae5030a87405a203c86eafedec80a9016fd0dc03aa5797e3b6861",
+      "strategy": "spread8",
+      "tokens": {
+        "in": 4294,
+        "out": 407,
+        "reasoning": 317
+      }
+    },
+    "cellId": "emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0",
+    "confidence": 0.86,
+    "defects": [],
+    "dynamism": 8.0,
+    "effort": "medium",
+    "mechanismObserved": "The blue ego vehicle travels steadily rightward along the main road while a green vehicle passes in the opposite direction. An orange cyclist or scooter follows the curved side ramp, and several other green vehicles negotiate the surrounding ramps and junction ahead. Traffic remains separated and no collision occurs.",
+    "model": "gpt-5.6-sol",
+    "plausible": true,
+    "rawResponseSha256": "bf3c01ded47fbe25ef7233b6c0fe42c8dd5c728e2b8641d5920809d87ee7d827",
+    "realism": 8.0,
+    "visionAsserted": true
+  },
+  "map": "belmont-research-center",
+  "maps": [
+    "belmont-research-center"
+  ],
+  "media": "/artifacts/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4",
+  "realism": 8.0,
+  "scores": {
+    "confidence": 0.86,
+    "dynamism": 8.0,
+    "plausible": true,
+    "realism": 8.0
+  },
+  "source": "gallery-seed",
+  "sourceCorpus": "tgr-emergent-pair1",
+  "timings": {
+    "render2dWallS": 0.815
+  },
+  "totalCells": 1,
+  "video": "/artifacts/gallery-seed/007/60-render2d/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/rollout.mp4"
+}

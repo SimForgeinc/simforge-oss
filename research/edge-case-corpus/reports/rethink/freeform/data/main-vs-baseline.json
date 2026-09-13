@@ -1,0 +1,119 @@
+{
+ "arms": [
+  {
+   "arm": "baseline",
+   "model": "gpt-5.6-luna",
+   "effort": "medium",
+   "briefs": 50,
+   "admitted": 40,
+   "admissionRate": 0.8,
+   "admissionCI95": [
+    0.67,
+    0.888
+   ],
+   "validityRate": 1.0,
+   "validity": "50/50",
+   "firstFailures": {
+    "C3": 595,
+    "C2": 218,
+    "C1": 210,
+    "C4": 208,
+    "C5": 89
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.7965,
+     "laneChangesExecuted": 0.0217,
+     "swerveEvents": 0.0705,
+     "signalPhaseChanges": 0.1926,
+     "interactingPairs": 0.9122,
+     "hardBrakeEvents": 1.6701,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 1.9326,
+     "laneChangesExecuted": 0.0092,
+     "swerveEvents": 0.085,
+     "signalPhaseChanges": 0,
+     "interactingPairs": 1,
+     "hardBrakeEvents": 1.9799,
+     "actorCount": 2,
+     "ambientCount": 0
+    },
+    "cellsAll": 13034,
+    "cellsPassing": 2388,
+    "authoredEventsFireRateAll": 0.9975
+   },
+   "tokens": 138244,
+   "calls": 67,
+   "wallSeconds": 2335.8,
+   "draws": 10,
+   "maxSites": 10,
+   "surfaceSha256": "c5fb6a8086f67d402cb149e7d846dbd6fbcd6b606e35b1f92d3da5ff271cfecb",
+   "report": "/tmp/tgr-freeform-base1/report.json"
+  },
+  {
+   "arm": "freedom",
+   "model": "gpt-5.6-terra",
+   "effort": "low",
+   "briefs": 50,
+   "admitted": 9,
+   "admissionRate": 0.18,
+   "admissionCI95": [
+    0.098,
+    0.308
+   ],
+   "validityRate": 0.98,
+   "validity": "49/50",
+   "firstFailures": {
+    "C5": 2576,
+    "C2": 1654,
+    "C3": 1545,
+    "C4": 1483,
+    "C1": 559,
+    "template_invalid": 1
+   },
+   "census": {
+    "allCells": {
+     "actorsMoving": 1.7738,
+     "laneChangesExecuted": 0.0239,
+     "swerveEvents": 0.0805,
+     "signalPhaseChanges": 0.1418,
+     "interactingPairs": 0.9698,
+     "hardBrakeEvents": 1.9546,
+     "actorCount": 2.1491,
+     "ambientCount": 0
+    },
+    "passingCells": {
+     "actorsMoving": 2.3047,
+     "laneChangesExecuted": 0.0111,
+     "swerveEvents": 0.1427,
+     "signalPhaseChanges": 0.2645,
+     "interactingPairs": 1.4404,
+     "hardBrakeEvents": 2.4765,
+     "actorCount": 2.3075,
+     "ambientCount": 0
+    },
+    "cellsAll": 10930,
+    "cellsPassing": 722,
+    "authoredEventsFireRateAll": 0.9333
+   },
+   "tokens": 4693912,
+   "calls": 276,
+   "wallSeconds": 3991.3,
+   "draws": 10,
+   "maxSites": 10,
+   "surfaceSha256": "33f77081a14142f56b950d0c4b789a65a2ebaf0ae0ba3d8e68ead67940c2c01d",
+   "report": "/tmp/tgr-freeform-main1/report.json"
+  }
+ ],
+ "effort": {
+  "perModel": [],
+  "H_freedom_effort": {
+   "criterion": "non-decreasing low->med->high per model AND strictly positive low->high delta for >=2 of 3 models",
+   "positiveModels": 0,
+   "supported": false
+  }
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  }
+ ],
+ "intentId": "C6.cyclist-ptw",
+ "originalIntent": "Euro NCAP VRU AEB Bicyclist protocols (CBNA nearside adult, CBFA farside, CBLA longitudinal). A cyclist conflict is distinguished from a pedestrian one by the closing speed, so the band is tighter, not looser. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Cyclist or powered-two-wheeler conflict: a narrow VRU in or entering the ego path",
+ "version": 1
+}

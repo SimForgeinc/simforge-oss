@@ -1,0 +1,40 @@
+{
+ "seed": 8,
+ "n": 20,
+ "briefIds": [
+  "c1-lead-hard-brake",
+  "c1-stop-and-go",
+  "c10b-distracted-drift",
+  "c11-contested-spot",
+  "c12-stop-arm-bus",
+  "c13b-stop-sign-rolling",
+  "c14-friction-patch",
+  "c15-curb-standing",
+  "c2-cut-out-reveals",
+  "c2-lane-drop",
+  "c3-ltap-od",
+  "c3b-permissive-left",
+  "c4b-mini-roundabout",
+  "c5-adult-midblock",
+  "c5-multiple-threat",
+  "c6b-cargo-bike",
+  "c6b-cyclist-ahead-swerve",
+  "c7b-bus-shelter",
+  "c8-worker-intrusion",
+  "c9b-open-door-parked"
+ ],
+ "extraSlotCategories": [
+  "C3.intersection",
+  "C5.pedestrian",
+  "C2.cut-in-merge",
+  "C6.cyclist-ptw",
+  "C1.car-following"
+ ],
+ "determinismRepeatIds": [
+  "c1-lead-hard-brake",
+  "c1-stop-and-go",
+  "c10b-distracted-drift",
+  "c11-contested-spot",
+  "c12-stop-arm-bus"
+ ]
+}

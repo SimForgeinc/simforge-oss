@@ -1,0 +1,47 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "World probe: ego crosses a signalized junction through ambient traffic",
+    "description": "Minimal world scaffolding for emergence mining: ego approaches and crosses a signalized junction with NO scripted challenger and NO scripted conflict. All dynamics come from the seeded reactive ambient population (signal obedience, yielding, queue settling). Traces are mined offline for near-critical encounters between ANY actor pair.",
+    "createdAt": "2026-08-15T00:00:00.000Z",
+    "modifiedAt": "2026-08-15T00:00:00.000Z",
+    "appVersion": "uniscenarios/0.0.1",
+    "archetype": "worldgen.junction-cross",
+    "tags": ["worldgen", "emergence", "ambient", "junction", "signalized"],
+    "author": "agent/tg-research-worldgen",
+    "negativeControl": false
+  },
+  "params": { "declarations": [], "constraints": [] },
+  "environment": { "weather": "clear", "timeOfDay": "noon" },
+  "anchor": {
+    "id": "worldgen-junction",
+    "corridor": {
+      "throughLanesSameDir": { "value": [1, 5], "essentiality": "required" },
+      "runwayUpstreamM": { "value": [40, null], "essentiality": "required" },
+      "runwayDownstreamM": { "value": [40, null], "essentiality": "required" }
+    },
+    "features": [
+      {
+        "id": "world-junction", "kind": "junction", "essentiality": "required",
+        "atM": { "value": [0, 0], "essentiality": "required" },
+        "arms": { "value": [3, 4], "essentiality": "required" },
+        "control": { "value": ["signalized", "all_way_stop", "minor_stop", "yield", "uncontrolled"], "essentiality": "preferred", "weight": 1 },
+        "egoTurn": { "value": ["straight"], "essentiality": "required" }
+      }
+    ],
+    "policy": { "allowMirror": false, "maxSitesPerMap": 12, "diversity": "moderate", "minScore": 0.4 }
+  },
+  "roles": [
+    {
+      "id": "ego", "kind": "on_reference", "label": "probe vehicle crossing the junction",
+      "actor": { "class": "car", "catalogId": "vehicle.sedan" },
+      "pose": { "laneOffset": 0, "s": -35, "tFrac": 0, "headingOffsetRad": 0 },
+      "initialSpeedKph": "clamp(0.7 * lane.speedLimitKph, 25, 50)"
+    }
+  ],
+  "props": [],
+  "choreography": { "clipSeconds": 30, "warmupSeconds": 2, "interactions": [] },
+  "invariants": [],
+  "variants": [],
+  "metricSubject": "ego"
+}

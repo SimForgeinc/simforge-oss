@@ -1,0 +1,37 @@
+{
+ "criteria": [
+  {
+   "actorId": "ego",
+   "id": "R-ego-drives",
+   "kind": "speed_band",
+   "minMps": 2.0,
+   "required": true
+  },
+  {
+   "id": "R-no-collision",
+   "kind": "collision",
+   "maxCount": 0,
+   "required": true
+  },
+  {
+   "id": "R-criticality",
+   "kind": "criticality",
+   "maxS": 2.5,
+   "metric": "ttc",
+   "minS": 0.2,
+   "required": true
+  },
+  {
+   "id": "R-occlusion-proven",
+   "kind": "occlusion",
+   "observer": "ego",
+   "outcome": "blocked_then_revealed",
+   "required": true,
+   "target": "vru"
+  }
+ ],
+ "intentId": "C7.occlusion",
+ "originalIntent": "Euro NCAP VRU AEB CPNCO (obstructed pedestrian) protocol. This is the criterion the whole category exists for: an \"occlusion\" scenario in which the sight line was never blocked is a plain dart-out that has been mislabelled. Round 6 admitted ten such archetypes. Bands are pre-registered from published test protocols, not fitted to observed results.",
+ "title": "Occluded emergence: the target must be genuinely hidden and then revealed before the conflict",
+ "version": 1
+}
