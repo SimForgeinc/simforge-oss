@@ -13,7 +13,7 @@ export function competingMotionRefusal(
   actor: { readonly id: string; readonly label: string },
   candidate: Pick<Interaction, "verb">,
 ): string | null {
-  if (!isMotionInteraction(candidate) || !manualDriveFor(document.data, actor.id)) return null;
+  if (!isMotionInteraction(candidate) || !document.data?.choreography || !manualDriveFor(document.data, actor.id)) return null;
   return `${actor.label} is driven manually for the whole clip. Delete its Manual drive, or record it again, before adding other motion.`;
 }
 
