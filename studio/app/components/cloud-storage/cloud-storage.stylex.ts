@@ -15,7 +15,7 @@ export const styles = stylex.create({
   notice: { display: "flex", alignItems: "flex-start", gap: space.md, borderWidth: "1px", borderStyle: "solid", borderColor: "color-mix(in srgb, #f59e0b 40%, transparent)", borderRadius: radii.md, backgroundColor: "color-mix(in srgb, #f59e0b 10%, transparent)", paddingInline: space.lg, paddingBlock: space.md, fontSize: text.sizeSm, lineHeight: "1.25rem", color: "#fde68a" },
   noticeSuccess: { borderColor: "color-mix(in srgb, #10b981 40%, transparent)", backgroundColor: "color-mix(in srgb, #10b981 10%, transparent)", color: "#a7f3d0" },
   noticeIcon: { marginTop: "0.125rem", width: "1rem", height: "1rem", flexShrink: 0 },
-  sectionGrid: { display: "grid", gap: space.lg, [LG]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } },
+  sectionGrid: { display: "grid", gap: space.xl, [LG]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } },
   card: { display: "flex", minHeight: "12rem", flexDirection: "column", borderWidth: "1px", borderStyle: "solid", borderColor: `color-mix(in srgb, ${colors.border} 70%, transparent)`, borderRadius: radii.lg, backgroundColor: "color-mix(in srgb, hsl(var(--card)) 25%, transparent)" },
   cardHeader: { display: "flex", alignItems: "center", gap: space.md, borderBottomWidth: "1px", borderBottomStyle: "solid", borderBottomColor: `color-mix(in srgb, ${colors.border} 70%, transparent)`, paddingInline: space.xl, paddingBlock: space.lg },
   cardIcon: { color: colors.mutedForeground },

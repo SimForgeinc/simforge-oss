@@ -126,7 +126,7 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
-                  <dt {...stylex.props(styles.label)} >{label}</dt>
+                  <dt {...stylex.props(styles.labelMedium)} >{label}</dt>
                   <dd {...stylex.props(styles.monoSmall)} >{value}</dd>
                 </div>
               ))}
@@ -143,9 +143,9 @@ export function VersionDetailClient({ versionId }: { versionId: string }) {
             )}
           >
             {result.kind === "promoted" ? (
-              <ShieldCheck {...stylex.props(styles.iconBare)} />
+              <ShieldCheck {...stylex.props(styles.iconTopShrink)} />
             ) : (
-              <ShieldAlert {...stylex.props(styles.iconBare)} />
+              <ShieldAlert {...stylex.props(styles.iconTopShrink)} />
             )}
             <span>
               {result.kind === "promoted"

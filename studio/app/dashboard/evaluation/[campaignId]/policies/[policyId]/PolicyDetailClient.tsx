@@ -72,7 +72,7 @@ function ProvenanceCard({ detail }: { detail: EvalPolicyDetail }) {
         <dl {...stylex.props(styles.dlProvenance)} >
           {rows.map(([label, value]) => (
             <div key={label}>
-              <dt {...stylex.props(styles.label)} >{label}</dt>
+              <dt {...stylex.props(styles.labelMedium)} >{label}</dt>
               <dd {...stylex.props(styles.textSmall)} >{value}</dd>
             </div>
           ))}

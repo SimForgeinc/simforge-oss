@@ -413,7 +413,7 @@ export const onboarding = stylex.create({
     paddingTop: space.xl,
     borderTopWidth: 1,
     borderTopStyle: "solid",
-    borderTopColor: colors.line,
+    borderTopColor: "rgba(255,255,255,0.1)",
     fontSize: "0.75rem",
     lineHeight: "1rem",
   },

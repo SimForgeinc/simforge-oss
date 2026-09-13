@@ -70,7 +70,6 @@ export const dialog = stylex.create({
   uploadLocality: { marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: text.sizeXs, lineHeight: "1rem", color: "rgba(255,255,255,0.45)" },
   uploadWarnTitle: { fontSize: text.sizeSm, lineHeight: "1.25rem", fontWeight: 600, color: "#fef3c7" },
   uploadWarnNote: { marginTop: "0.25rem", fontSize: text.sizeXs, lineHeight: "1.25rem", color: "rgba(254,243,199,0.7)" },
-  mutedText: { fontSize: text.sizeXs, lineHeight: "1rem", color: "rgba(255,255,255,0.4)" },
   tagList: { display: "flex", flexWrap: "wrap", gap: "0.375rem" },
   tag: { borderWidth: "1px", borderStyle: "solid", borderColor: "hsl(var(--border))", borderRadius: "9999px", paddingInline: "0.625rem", paddingBlock: "0.25rem", fontSize: text.sizeXs, lineHeight: "1rem", color: "hsl(var(--muted-foreground))" },
   sectionHeading: { fontSize: text.sizeXs, lineHeight: "1rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "hsl(var(--muted-foreground))" },

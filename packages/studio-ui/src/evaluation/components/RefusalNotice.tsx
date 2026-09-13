@@ -31,7 +31,7 @@ export function RefusalNotice({
   return (
     <div role={tone === "info" ? undefined : "alert"} className={cn(root.className, className)} style={root.style} data-testid="refusal-notice">
       <div {...stylex.props(s.flexNoAlignGap3)}>
-        <Icon aria-hidden="true" {...stylex.props(s.icon, toneStyles.icon)} />
+        <Icon aria-hidden="true" {...stylex.props(s.mt05, s.icon, toneStyles.icon)} />
         <div {...stylex.props(s.min0, s.flex1, s.stack2)}>
           <p {...stylex.props(s.textSm, s.fontSemibold)}>{title}</p>
           {reasons.length > 0 ? <ul {...stylex.props(s.section1, s.textSm, s.leading6, s.textMuted)}>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul> : null}

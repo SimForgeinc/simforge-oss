@@ -229,7 +229,7 @@ export function EpisodePlaybackClient({
         ) : (
           <>
             <Card>
-              <CardContent {...stylex.props(styles.content4)}>
+              <CardContent xstyle={styles.cardStack3Top}>
                 <EgoSpeedChart
                   ticks={ticks}
                   events={payload.events}
@@ -307,7 +307,7 @@ export function EpisodePlaybackClient({
                       : "—"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent {...stylex.props(styles.content4)}>
+                <CardContent xstyle={styles.cardStack3}>
                   <p {...stylex.props(styles.whitespace)}>
                     {reasoning
                       ? reasoning.value

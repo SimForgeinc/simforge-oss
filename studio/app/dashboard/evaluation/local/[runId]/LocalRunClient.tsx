@@ -134,7 +134,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               ) : null}
               <span {...stylex.props(styles.monoSmall, styles.muted)} >{run.id}</span>
               {live ? (
-                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerSm)} />
               ) : null}
             </div>
 
@@ -224,7 +224,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               </section>
             ) : live ? (
               <p {...stylex.props(styles.controls, styles.muted)} >
-                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerPlain)} />
                 Waiting for the local worker to lease and execute this run. Closing this page does
                 not stop it.
               </p>
@@ -232,7 +232,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
           </>
         ) : error === null ? (
           <p {...stylex.props(styles.controls, styles.muted)} >
-            <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+            <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerPlain)} />
             Loading run…
           </p>
         ) : null}

@@ -450,7 +450,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
                         <div {...stylex.props(styles.truncate)}>{recipeLabel(job.recipe, job.format)}</div>
                         <div {...stylex.props(styles.jobMeta)}>{shortId(job.id, 12)} · {formatJobTime(job.createdAt)}</div>
                       </div>
-                      <span {...stylex.props(styles.status, exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
+                      <span {...stylex.props(styles.statusSmall, exportStatusStyle(job.status))}>{exportStatusLabel(job.status, job.phase)}</span>
                     </div>
                     {job.errorMessage ? <div {...stylex.props(styles.jobError)}>{job.errorMessage}</div> : null}
                     <div {...stylex.props(styles.jobBottom)}>

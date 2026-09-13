@@ -9,7 +9,7 @@ export const styles = stylex.create({
   section: { borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,.1)", paddingTop: "2rem" },
   eyebrow: { fontFamily: "var(--font-meta)", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", color: "rgba(255,255,255,.4)" },
   heading: { marginTop: "0.25rem", fontSize: text.sizeLg, lineHeight: "1.75rem", fontWeight: 600 },
-  copy: { marginTop: "0.5rem", fontSize: text.sizeSm, lineHeight: 1.5, color: "rgba(255,255,255,.55)" },
+  copy: { marginTop: "0.5rem", fontSize: text.sizeSm, lineHeight: "1.5rem", color: "rgba(255,255,255,.55)" },
   action: { marginTop: "1rem", height: "2.5rem", gap: "0.5rem", borderRadius: "9999px", borderColor: "rgba(255,255,255,.15)", backgroundColor: "transparent", color: "#fff", ":hover": { backgroundColor: "rgba(255,255,255,.05)" } },
   icon: { width: "1rem", height: "1rem" },
   // border-t border-white/10 pt-8

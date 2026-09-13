@@ -12,7 +12,7 @@ export const styles = stylex.create({
     gap: "0.5rem",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: colors.border,
+    borderColor: "hsl(var(--input))",
     borderRadius: radii.md,
     paddingInline: "0.75rem",
     textAlign: "left",
