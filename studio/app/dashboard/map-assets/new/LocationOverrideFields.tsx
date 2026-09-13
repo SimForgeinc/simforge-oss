@@ -30,7 +30,7 @@ export function LocationOverrideFields({
             value={city}
             onChange={(e) => onCityChange(e.target.value)}
             placeholder="e.g. San Jose"
-            className={stylex.props(styles.s_297).className}
+            xstyle={styles.s_297}
           />
         </div>
         <div>
@@ -39,7 +39,7 @@ export function LocationOverrideFields({
             value={state}
             onChange={(e) => onStateChange(e.target.value)}
             placeholder="e.g. California"
-            className={stylex.props(styles.s_297).className}
+            xstyle={styles.s_297}
           />
         </div>
         <div>
@@ -48,7 +48,7 @@ export function LocationOverrideFields({
             value={country}
             onChange={(e) => onCountryChange(e.target.value)}
             placeholder="e.g. United States"
-            className={stylex.props(styles.s_297).className}
+            xstyle={styles.s_297}
           />
         </div>
       </div>

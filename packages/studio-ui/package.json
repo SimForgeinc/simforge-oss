@@ -53,6 +53,10 @@
         "types": "./dist/components/SkyCloudBackdrop.d.ts",
         "default": "./dist/components/SkyCloudBackdrop.js"
       },
+      "./components/SkyCloudBackdrop.stylex": {
+        "types": "./dist/components/SkyCloudBackdrop.stylex.d.ts",
+        "default": "./dist/components/SkyCloudBackdrop.stylex.js"
+      },
       "./components/TopBarSlot": {
         "types": "./dist/components/TopBarSlot.d.ts",
         "default": "./dist/components/TopBarSlot.js"
@@ -449,6 +453,11 @@
       "development": "./src/components/SkyCloudBackdrop.tsx",
       "types": "./dist/components/SkyCloudBackdrop.d.ts",
       "default": "./dist/components/SkyCloudBackdrop.js"
+    },
+    "./components/SkyCloudBackdrop.stylex": {
+      "development": "./src/components/SkyCloudBackdrop.stylex.ts",
+      "types": "./dist/components/SkyCloudBackdrop.stylex.d.ts",
+      "default": "./dist/components/SkyCloudBackdrop.stylex.js"
     },
     "./components/TopBarSlot": {
       "development": "./src/components/TopBarSlot.tsx",

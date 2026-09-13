@@ -28,9 +28,27 @@ import { DYNAMIC_ACTOR_CATALOG_IDS } from '../../../../src/scenario/editor/regio
 
 afterEach(() => {
   cleanup();
+  for (const dock of [...document.querySelectorAll('[data-testid="floating-timeline-layer"]')]) {
+    dock.remove();
+  }
   try { window.localStorage.clear(); } catch { /* jsdom storage may be disabled. */ }
   vi.mocked(registerCarlaObjects).mockResolvedValue([]);
 });
+
+/**
+ * A stand-in for the floating timeline dock, sized so the rail has something
+ * to measure. `afterEach` takes it down, so a failing assertion cannot leave it
+ * behind and change what the next test measures.
+ */
+function mountTimelineDock(height: number) {
+  const dock = document.createElement("div");
+  dock.dataset.testid = "floating-timeline-layer";
+  Object.defineProperty(dock, "getBoundingClientRect", {
+    value: () => ({ height, width: 900, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }),
+  });
+  document.body.appendChild(dock);
+  return dock;
+}
 
 describe("ActorLibraryRail", () => {
   it("assigns supported actors to library sections and intentionally repeats static cars", () => {
@@ -156,12 +174,11 @@ describe("ActorLibraryRail", () => {
     expect(screen.queryByTestId("tool-timeline")).toBeNull();
     const sidebar = screen.getByTestId("editor-tool-sidebar");
     const rail = screen.getByTestId("editor-tool-rail");
-    expect(sidebar.className).toContain("h-full");
-    expect(sidebar.className).toContain("items-center");
-    expect(sidebar.className).not.toMatch(/\bpl-/);
-    expect(sidebar.className).not.toMatch(/\bpt-/);
-    expect(sidebar.className).not.toMatch(/\bpb-/);
-    expect(sidebar.className).not.toContain("absolute");
+    // The sidebar owns no geometry of its own: it is the plain full-height
+    // flex box that centres the rail/panel row, and everything it must produce
+    // is observable on the rail and the row instead of in its class list.
+    expect(sidebar.getAttribute("style")).toBeNull();
+    expect(sidebar.contains(rail)).toBe(true);
     expect(rail.style.height).toBe("");
     expect(rail.style.position).toBe("");
     expect(rail.dataset.visualSurface).toBe("glass");
@@ -215,7 +232,8 @@ describe("ActorLibraryRail", () => {
     expect(drawer.style.borderRadius).toBe("0 26px 26px 0");
     expect(drawer.style.borderLeftWidth).toBe("0px");
     expect(drawer.style.flexDirection).toBe("column");
-    expect(drawer.className).not.toContain("fixed");
+    // In flow inside the sidebar, not a panel floating over the canvas.
+    expect(drawer.style.position).toBe("relative");
     // The rail drops its right shoulder so rail and panel read as one rectangle.
     expect(rail.style.borderRadius).not.toBe("0 22px 22px 0");
     expect(rail.style.borderRightWidth).toBe("1px");
@@ -502,7 +520,6 @@ describe("ActorLibraryRail", () => {
     expect(tooltip.getAttribute("role")).toBe("tooltip");
     // `fixed`, so the rail's own clipped rounded frame cannot cut it off.
     expect(tooltip.style.position).toBe("fixed");
-    expect(tooltip.className).toContain("actor-rail-tooltip");
 
     fireEvent.mouseLeave(screen.getByTestId("tool-weather"));
     expect(screen.queryByTestId("tool-tooltip")).toBeNull();
@@ -518,12 +535,7 @@ describe("ActorLibraryRail", () => {
   // timeline dock therefore caps the pair's row instead of pinning either
   // surface to a computed height.
   it("expands sideways from a centered rail, clear of the floating timeline dock", () => {
-    const dock = document.createElement("div");
-    dock.dataset.testid = "floating-timeline-layer";
-    Object.defineProperty(dock, "getBoundingClientRect", {
-      value: () => ({ height: 240, width: 900, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }),
-    });
-    document.body.appendChild(dock);
+    mountTimelineDock(240);
     const controller = { cancel: vi.fn() };
     render(
       <ActorLibraryRail
@@ -545,9 +557,9 @@ describe("ActorLibraryRail", () => {
     // Neither surface pins its own height, so nothing is pushed to the top.
     expect(drawer.style.height).toBe("");
     expect(rail.style.height).toBe("");
-    expect(screen.getByTestId("editor-tool-sidebar").className).toContain("items-center");
-    expect(screen.getByTestId("editor-tool-sidebar").className).not.toContain("items-start");
-    dock.remove();
+    // The rail stays where the cursor left it: the row is capped, not pinned,
+    // and the sidebar centres it. Both max-heights above are the observable
+    // half of that; neither surface takes a height of its own.
   });
 
   it("reserves a timeline that streams in after the resting rail mounts", async () => {
@@ -561,17 +573,11 @@ describe("ActorLibraryRail", () => {
     const row = screen.getByTestId("editor-tool-row");
     expect(row.style.maxHeight).toBe("calc(100% - 18px)");
 
-    const dock = document.createElement("div");
-    dock.dataset.testid = "floating-timeline-layer";
-    Object.defineProperty(dock, "getBoundingClientRect", {
-      value: () => ({ height: 240, width: 900, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }),
-    });
-    document.body.appendChild(dock);
+    mountTimelineDock(240);
 
     await waitFor(() => {
       expect(row.style.maxHeight).toBe("calc(100% - 270px)");
     });
-    dock.remove();
   });
 
   it("edits weather and traffic from the same rail, without a placement controller", () => {

@@ -17,6 +17,7 @@ export const styles = stylex.create({
     paddingInline: "0.75rem",
     textAlign: "left",
     fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineWidth: { default: null, ":focus-visible": "2px" },
     outlineColor: { default: null, ":focus-visible": colors.ring },

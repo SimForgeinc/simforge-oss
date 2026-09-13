@@ -52,26 +52,41 @@ function mount(element: React.ReactNode): MountedApp {
   };
 }
 
+function query(selector: string, index = 0): HTMLElement {
+  const element = document.body.querySelectorAll(selector)[index];
+  if (!(element instanceof HTMLElement)) throw new Error(`no element matched ${selector} at ${index}`);
+  return element;
+}
+
+function classesFor(element: React.ReactNode, selector: string, index = 0): string[] {
+  const app = mount(element);
+  const classes = Array.from(query(selector, index).classList);
+  app.unmount();
+  return classes;
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
 
 describe("DropdownMenu", () => {
-  it("renders the trigger and open content with base classes", () => {
+  it("renders the trigger and the open menu", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuTrigger data-testid="menu-trigger">Open</DropdownMenuTrigger>
-        <DropdownMenuContent className="custom-content">Menu item</DropdownMenuContent>
+        <DropdownMenuContent>Menu item</DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain('data-testid="menu-trigger"');
-    expect(html).toContain("Open");
-    expect(html).toContain("custom-content");
-    expect(html).toContain("min-w-[8rem]");
-    expect(html).toContain("shadow-lg");
-    expect(html).toContain("Menu item");
+    const trigger = query('[data-testid="menu-trigger"]');
+    const menu = query('[role="menu"]');
+
+    expect(trigger.textContent).toBe("Open");
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(trigger.getAttribute("data-state")).toBe("open");
+    expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
+    expect(menu.getAttribute("data-state")).toBe("open");
+    expect(menu.textContent).toContain("Menu item");
 
     app.unmount();
   });
@@ -86,64 +101,42 @@ describe("DropdownMenu", () => {
         </DropdownMenuPortal>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("Grouped item");
-
-    app.unmount();
-  });
-});
-
-describe("DropdownMenuSubTrigger", () => {
-  it("renders inset padding and chevron icon", () => {
-    const app = mount(
-      <DropdownMenu open>
-        <DropdownMenuContent>
-          <DropdownMenuSub open>
-            <DropdownMenuSubTrigger inset className="sub-trigger">
-              More
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>Nested</DropdownMenuSubContent>
-          </DropdownMenuSub>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-    const html = document.body.innerHTML;
-
-    expect(html).toContain("sub-trigger");
-    expect(html).toContain("pl-8");
-    expect(html).toContain("ml-auto");
-    expect(html).toContain("More");
+    expect(query('[role="group"]').textContent).toBe("Grouped item");
 
     app.unmount();
   });
 });
 
-describe("DropdownMenuSubContent", () => {
-  it("renders nested content classes", () => {
+describe("DropdownMenuSub", () => {
+  it("renders a sub trigger that opens a nested menu", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
           <DropdownMenuSub open>
-            <DropdownMenuSubTrigger>More</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="custom-sub">Nested item</DropdownMenuSubContent>
+            <DropdownMenuSubTrigger inset>More</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>Nested item</DropdownMenuSubContent>
           </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("custom-sub");
-    expect(html).toContain("shadow-lg");
-    expect(html).toContain("overflow-hidden");
-    expect(html).toContain("Nested item");
+    const subTrigger = query('[role="menuitem"][aria-haspopup="menu"]');
+    const menus = document.body.querySelectorAll('[role="menu"]');
+
+    expect(subTrigger.textContent).toBe("More");
+    expect(subTrigger.getAttribute("aria-expanded")).toBe("true");
+    expect(subTrigger.querySelector("svg")).not.toBeNull();
+    expect(menus).toHaveLength(2);
+    expect(menus[1].textContent).toContain("Nested item");
 
     app.unmount();
   });
+
 });
 
 describe("DropdownMenuItem", () => {
-  it("renders item classes with inset and disabled props", () => {
+  it("renders a menu item that reports its disabled state", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
@@ -153,119 +146,148 @@ describe("DropdownMenuItem", () => {
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("pl-8");
-    expect(html).toContain("data-[disabled]:opacity-50");
-    expect(html).toContain('data-testid="menu-item"');
-    expect(html).toContain("Item");
+    const item = query('[role="menuitem"]');
+
+    expect(item.getAttribute("data-testid")).toBe("menu-item");
+    expect(item.textContent).toBe("Item");
+    expect(item.getAttribute("aria-disabled")).toBe("true");
+    expect(item.getAttribute("data-disabled")).toBe("");
 
     app.unmount();
+  });
+
+  it("indents inset items differently from flush items", () => {
+    const flush = classesFor(
+      <DropdownMenu open>
+        <DropdownMenuContent>
+          <DropdownMenuItem>Item</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+      '[role="menuitem"]'
+    );
+    const inset = classesFor(
+      <DropdownMenu open>
+        <DropdownMenuContent>
+          <DropdownMenuItem inset>Item</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+      '[role="menuitem"]'
+    );
+
+    expect(inset).not.toEqual(flush);
   });
 });
 
 describe("DropdownMenuCheckboxItem", () => {
-  it("renders checkbox padding, indicator container, and text", () => {
-    const app = mount(
+  it("reports its checked state and shows an indicator only when checked", () => {
+    const checkedApp = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
-          <DropdownMenuCheckboxItem checked className="checkbox-item">
-            Checked item
-          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem checked>Checked item</DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("checkbox-item");
-    expect(html).toContain("pl-8");
-    expect(html).toContain("absolute left-2");
-    expect(html).toContain("h-4 w-4");
-    expect(html).toContain("Checked item");
+    const checked = query('[role="menuitemcheckbox"]');
 
-    app.unmount();
+    expect(checked.getAttribute("aria-checked")).toBe("true");
+    expect(checked.getAttribute("data-state")).toBe("checked");
+    expect(checked.textContent).toContain("Checked item");
+    expect(checked.querySelector("svg")).not.toBeNull();
+
+    checkedApp.unmount();
+
+    const uncheckedApp = mount(
+      <DropdownMenu open>
+        <DropdownMenuContent>
+          <DropdownMenuCheckboxItem checked={false}>Unchecked item</DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+
+    const unchecked = query('[role="menuitemcheckbox"]');
+
+    expect(unchecked.getAttribute("aria-checked")).toBe("false");
+    expect(unchecked.getAttribute("data-state")).toBe("unchecked");
+    expect(unchecked.querySelector("svg")).toBeNull();
+
+    uncheckedApp.unmount();
   });
 });
 
 describe("DropdownMenuRadioItem", () => {
-  it("renders radio group items with indicator icon", () => {
+  it("marks only the selected radio item as checked", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
           <DropdownMenuRadioGroup value="alpha">
-            <DropdownMenuRadioItem value="alpha" className="radio-item">
-              Alpha
-            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="alpha">Alpha</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="beta">Beta</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("radio-item");
-    expect(html).toContain("h-2 w-2");
-    expect(html).toContain("fill-current");
-    expect(html).toContain("Alpha");
+    const [alpha, beta] = Array.from(document.body.querySelectorAll('[role="menuitemradio"]'));
+
+    expect(alpha.getAttribute("aria-checked")).toBe("true");
+    expect(alpha.getAttribute("data-state")).toBe("checked");
+    expect(alpha.textContent).toContain("Alpha");
+    expect(alpha.querySelector("svg")).not.toBeNull();
+    expect(beta.getAttribute("aria-checked")).toBe("false");
+    expect(beta.querySelector("svg")).toBeNull();
 
     app.unmount();
   });
 });
 
 describe("DropdownMenuLabel", () => {
-  it("renders label classes with optional inset", () => {
+  it("renders non-interactive label text", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
-          <DropdownMenuLabel inset className="menu-label">
-            Actions
-          </DropdownMenuLabel>
+          <DropdownMenuLabel inset>Actions</DropdownMenuLabel>
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("menu-label");
-    expect(html).toContain("px-2");
-    expect(html).toContain("font-semibold");
-    expect(html).toContain("pl-8");
-    expect(html).toContain("Actions");
+    const menu = query('[role="menu"]');
+    const label = menu.firstElementChild;
+
+    expect(label?.textContent).toBe("Actions");
+    expect(label?.hasAttribute("role")).toBe(false);
 
     app.unmount();
   });
 });
 
 describe("DropdownMenuSeparator", () => {
-  it("renders separator classes", () => {
+  it("renders a horizontal separator", () => {
     const app = mount(
       <DropdownMenu open>
         <DropdownMenuContent>
-          <DropdownMenuSeparator className="menu-separator" />
+          <DropdownMenuSeparator />
         </DropdownMenuContent>
       </DropdownMenu>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("menu-separator");
-    expect(html).toContain("-mx-1");
-    expect(html).toContain("h-px");
-    expect(html).toContain("bg-muted");
+    expect(query('[role="separator"]').getAttribute("aria-orientation")).toBe("horizontal");
 
     app.unmount();
   });
 });
 
 describe("DropdownMenuShortcut", () => {
-  it("renders shortcut text and classes", () => {
-    const html = renderToString(
-      <DropdownMenuShortcut className="custom-shortcut" data-testid="shortcut">
-        CMD+K
-      </DropdownMenuShortcut>
+  it("renders shortcut text in a span with forwarded attributes", () => {
+    const template = document.createElement("template");
+    template.innerHTML = renderToString(
+      <DropdownMenuShortcut data-testid="shortcut">CMD+K</DropdownMenuShortcut>
     );
+    const shortcut = template.content.firstElementChild!;
 
-    expect(html).toContain("ml-auto");
-    expect(html).toContain("tracking-widest");
-    expect(html).toContain("custom-shortcut");
-    expect(html).toContain('data-testid="shortcut"');
-    expect(html).toContain("CMD+K");
+    expect(shortcut.tagName).toBe("SPAN");
+    expect(shortcut.textContent).toBe("CMD+K");
+    expect(shortcut.getAttribute("data-testid")).toBe("shortcut");
   });
 });

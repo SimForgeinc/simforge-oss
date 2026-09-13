@@ -3,14 +3,15 @@ import {
   CARLA_COMPATIBILITY_LABEL,
   type CarlaCompatibility,
 } from "../../../lib/scenario/carla-compatibility";
-import { cn } from "../../../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TimelineCarlaCompatibilityMarker.stylex";
 
-const UNAVAILABLE_DOT_CLASS: Record<
+const UNAVAILABLE_DOT_STYLE: Record<
   Exclude<CarlaCompatibility["status"], "native">,
-  string
+  stylex.StyleXStyles
 > = {
-  "generated-pack": "bg-amber-300",
-  "browser-only": "bg-slate-400",
+  "generated-pack": styles.dotGeneratedPack,
+  "browser-only": styles.dotBrowserOnly,
 };
 
 /**
@@ -34,20 +35,17 @@ export function TimelineCarlaCompatibilityMarker({
   return (
     <span
       aria-label={`${actorLabel}: ${label}`}
-      className="pointer-events-none inline-flex size-3.5 shrink-0 items-center justify-center"
+      {...stylex.props(styles.inlineFlexCenterMid)}
       data-carla-compatibility={compatibility.status}
       role="img"
       title={`${label}: ${detail}`}
     >
       {compatibility.status === "native" ? (
-        <CarlaReadyMark className="size-3.5" testId="timeline-carla-ready-logo" />
+        <CarlaReadyMark xstyle={styles.size35} testId="timeline-carla-ready-logo" />
       ) : (
         <span
           aria-hidden="true"
-          className={cn(
-            "size-1.5 rounded-full ring-1 ring-black/40",
-            UNAVAILABLE_DOT_CLASS[compatibility.status],
-          )}
+          {...stylex.props(styles.round, UNAVAILABLE_DOT_STYLE[compatibility.status])}
         />
       )}
     </span>

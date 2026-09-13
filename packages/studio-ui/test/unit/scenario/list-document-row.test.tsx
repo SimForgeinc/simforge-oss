@@ -7,6 +7,19 @@ import type { ScenarioDocumentSummaryDto } from "../../../src/lib/scenario/contr
 import { ScenarioDocumentRow } from "../../../src/scenario/list/ScenarioDocumentRow";
 import { ScenarioRating } from "../../../src/scenario/list/ScenarioRating";
 import { StudioHostTestProvider } from "../../helpers/studio-host";
+import { renderInk } from "../../../src/scenario/scenario-controls.stylex";
+
+/**
+ * The render button's traffic-light ink, as the class the compiler emitted for
+ * it. Asserted through the style object rather than a literal class name: the
+ * contract is "this state paints that colour", and the colour travels as an
+ * `xstyle` atom the caller and the component agree on.
+ */
+const inkAtom = (namespace: object): string => {
+  const key = Object.keys(namespace).find((k) => k.startsWith("color-"));
+  if (!key) throw new Error("no compiled color atom");
+  return (namespace as Record<string, string>)[key];
+};
 
 function summary(
   overrides: Partial<ScenarioDocumentSummaryDto> = {},
@@ -236,7 +249,7 @@ describe("ScenarioDocumentRow", () => {
     it("reports a missing render", async () => {
       const html = renderRow();
       expect(html).toContain('data-render-state="missing"');
-      expect(html).toContain("text-red-400");
+      expect(html).toContain(inkAtom(renderInk.none));
     });
 
     // The state text moved out of `title` and into the tooltip, so that the
@@ -253,13 +266,13 @@ describe("ScenarioDocumentRow", () => {
     it("reports a completed render", () => {
       const html = renderRow({ document: summary({ hasRender: true }) });
       expect(html).toContain('data-render-state="complete"');
-      expect(html).toContain("text-green-400");
+      expect(html).toContain(inkAtom(renderInk.complete));
     });
 
     it("reports a running render, which outranks a previous success", () => {
       const html = renderRow({ document: summary({ hasRender: true }), renderInProgress: true });
       expect(html).toContain('data-render-state="running"');
-      expect(html).toContain("text-yellow-400");
+      expect(html).toContain(inkAtom(renderInk.running));
     });
   });
 

@@ -22,6 +22,8 @@ import type {
   ScenarioGalleryItemDto,
   ScenarioRenderJobState,
 } from "@simforge-oss/studio-host";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./PostprocessPanel.stylex";
 
 /**
  * Cosmos augment (#139, #144) and VLM annotate (#140, #145), reshaped onto v2's control plane.
@@ -120,12 +122,12 @@ export function PostprocessPanel({
   const vlmChildren = children.filter((child) => child.jobMode === "vlm_annotate");
 
   return (
-    <section className="flex flex-col gap-3 border-t render-hairline pt-4">
-      <div className="flex items-center gap-2">
-        <h4 className="text-micro font-semibold uppercase tracking-meta text-muted-foreground">
+    <section {...stylex.props(styles.flexColRuleT)}>
+      <div {...stylex.props(styles.flexCenterGap2)}>
+        <h4 {...stylex.props(styles.capsMicroMuted)}>
           Postprocess
         </h4>
-        <div className="ml-auto flex items-center gap-1">
+        <div {...stylex.props(styles.flexCenterPushRight)}>
           <Button
             disabled={Boolean(blocked)}
             onClick={() => setOpenMode((current) => (current === "cosmos_augment" ? null : "cosmos_augment"))}
@@ -133,7 +135,7 @@ export function PostprocessPanel({
             title={blocked ?? undefined}
             variant="outline"
           >
-            <Sparkles aria-hidden="true" className="size-3.5" />
+            <Sparkles aria-hidden="true" className={stylex.props(styles.size35).className} />
             Cosmos
           </Button>
           <Button
@@ -143,13 +145,13 @@ export function PostprocessPanel({
             title={blocked ?? undefined}
             variant="outline"
           >
-            <Bot aria-hidden="true" className="size-3.5" />
+            <Bot aria-hidden="true" className={stylex.props(styles.size35).className} />
             VLM
           </Button>
         </div>
       </div>
 
-      {blocked ? <p className="text-micro text-muted-foreground">{blocked}</p> : null}
+      {blocked ? <p {...stylex.props(styles.microMuted)}>{blocked}</p> : null}
 
       {openMode && !blocked ? (
         <PostprocessForm
@@ -175,19 +177,19 @@ export function PostprocessPanel({
 function ChildList({ items, title }: { items: ScenarioGalleryItemDto[]; title: string }) {
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1">
-      <h5 className="text-micro uppercase tracking-meta text-muted-foreground">
+    <div {...stylex.props(styles.flexColGap1)}>
+      <h5 {...stylex.props(styles.capsMicroMuted2)}>
         {title} · {items.length}
       </h5>
-      <ul className="render-divide divide-y render-glass border">
-        {items.map((child) => (
-          <li className="flex flex-col gap-1 px-2.5 py-2" key={child.id}>
-            <div className="flex items-center gap-2">
+      <ul {...stylex.props(styles.borderedDivided)}>
+        {items.map((child, index) => (
+          <li {...stylex.props(styles.flexColGap12, index > 0 && styles.rowDivided)} key={child.id}>
+            <div {...stylex.props(styles.flexCenterGap2)}>
               <RenderStateChip state={child.jobState} />
-              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+              <span {...stylex.props(styles.fillXsInk)}>
                 {child.modelFamily ?? "—"}
               </span>
-              <span className="shrink-0 text-micro text-muted-foreground">
+              <span {...stylex.props(styles.tightMicroMuted)}>
                 {child.artifactCount} {child.artifactCount === 1 ? "file" : "files"}
               </span>
             </div>
@@ -196,7 +198,7 @@ function ChildList({ items, title }: { items: ScenarioGalleryItemDto[]; title: s
               progressPercent={child.progressPercent}
               state={child.jobState}
             />
-            <span className="text-micro text-muted-foreground">
+            <span {...stylex.props(styles.microMuted)}>
               {formatTimestamp(child.createdAt)}
             </span>
           </li>
@@ -274,52 +276,52 @@ function PostprocessForm({
 
   return (
     <form
-      className="flex flex-col gap-2 render-glass border p-2.5"
+      {...stylex.props(styles.flexColBordered)}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <p className="text-micro font-semibold uppercase tracking-meta text-muted-foreground">
+      <p {...stylex.props(styles.capsMicroMuted)}>
         {copy.title}
       </p>
       <SelectMenuField
         label="Source clip"
-        labelClassName="text-micro uppercase tracking-meta"
+        labelXstyle={styles.fieldMetaLabel}
         onChange={setSourceArtifactId}
         options={sourceOptions}
         value={sourceArtifactId}
       />
       <SelectMenuField
         label="Model"
-        labelClassName="text-micro uppercase tracking-meta"
+        labelXstyle={styles.fieldMetaLabel}
         onChange={setModelFamily}
         options={copy.families}
         value={modelFamily}
       />
-      <label className="flex flex-col gap-1">
-        <span className="text-micro uppercase tracking-meta text-muted-foreground">
+      <label {...stylex.props(styles.flexColGap1)}>
+        <span {...stylex.props(styles.capsMicroMuted2)}>
           {copy.promptLabel}
         </span>
         <Textarea
-          className="min-h-16 text-xs"
+          xstyle={styles.xs}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={copy.promptHint}
           value={prompt}
         />
       </label>
       {mode === "cosmos_augment" ? (
-        <label className="flex flex-col gap-1">
-          <span className="text-micro uppercase tracking-meta text-muted-foreground">Guidance</span>
+        <label {...stylex.props(styles.flexColGap1)}>
+          <span {...stylex.props(styles.capsMicroMuted2)}>Guidance</span>
           <Input
-            className="h-8 text-xs"
+            xstyle={styles.xs2}
             inputMode="numeric"
             onChange={(event) => setGuidance(event.target.value)}
             value={guidance}
           />
         </label>
       ) : null}
-      <Button className="self-start" disabled={!canSubmit} size="sm" type="submit">
+      <Button xstyle={styles.selfStart} disabled={!canSubmit} size="sm" type="submit">
         {busy ? "Queueing…" : `${copy.verb} render`}
       </Button>
     </form>

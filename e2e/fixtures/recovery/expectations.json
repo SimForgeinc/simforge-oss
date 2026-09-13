@@ -1,0 +1,100 @@
+{
+  "schema": "simforge.e2e.recovery-expectations/v1",
+  "comment": [
+    "Negative/recovery expectations for e2e/flows/recovery-security.spec.ts. Kept as data so",
+    "a renamed error code or a reworded refusal is a fixture edit with a diff rather than a",
+    "string buried in an assertion.",
+    "Every entry names the production source the code comes from, because these are product",
+    "contracts (route bodies, CLI exit codes), not harness inventions."
+  ],
+  "sessionGate": {
+    "source": "studio/app/api/simforge/host/session/route.ts",
+    "unauthorizedCode": "host_control_unauthorized",
+    "replayedTicketCode": "browser_ticket_invalid",
+    "invalidTargetCode": "invalid_browser_target",
+    "rejectedTargets": [
+      "../../etc/passwd",
+      "/../../etc/passwd",
+      "https://attacker.invalid/dashboard",
+      "//attacker.invalid/dashboard",
+      "http://127.0.0.1:1/dashboard"
+    ],
+    "acceptedTarget": "/dashboard/scenario"
+  },
+  "cliContract": {
+    "source": "AGENTS.md — CLI contract",
+    "comment": [
+      "exit 1 = the command could not run, exit 2 = it ran and found the input wrong.",
+      "stderr carries {code, reason, path?, detail?}; stdout is the result document."
+    ],
+    "failureExits": [1, 2],
+    "structuredErrorFields": ["code", "reason"],
+    "successReceiptPatterns": ["\"installed\"\\s*:\\s*true", "\"ok\"\\s*:\\s*true", "\"verified\"\\s*:\\s*true"]
+  },
+  "registryDenial": {
+    "comment": "A private map served by an unauthorized registry must refuse before anything is cached.",
+    "status": 403,
+    "body": { "error": "map_registry_forbidden", "message": "This registry does not authorize the requested map." },
+    "reasonTerms": ["403", "forbidden", "unauthor", "registry", "denied"]
+  },
+  "transferIntegrity": {
+    "comment": [
+      "Two distinct transfer faults with the same required outcome: nothing installed and no",
+      "promoted partial. The truncated case aborts mid-body; the corrupt case serves complete",
+      "bytes that do not match the advertised digest."
+    ],
+    "truncatedBodyBytes": 64,
+    "declaredContentLength": 4096,
+    "corruptDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "partialArtifactSuffixes": [".part", ".tmp", ".download"],
+    "integrityReasonTerms": ["digest", "hash", "checksum", "verif", "truncat", "incomplete", "unexpected end"]
+  },
+  "storageRefusal": {
+    "comment": [
+      "A cache root that cannot hold the corpus must be refused with the path in the message.",
+      "A regular file used as a parent directory gives a deterministic ENOTDIR on every OS and",
+      "for every uid, unlike a chmod-based read-only directory which root ignores."
+    ],
+    "reasonTerms": ["notdir", "not a directory", "cache", "directory", "enoent", "eacces", "permission"]
+  },
+  "renderJobs": {
+    "source": "studio/app/api/simforge/render-jobs",
+    "invalidSubmissionCode": "invalid_render_job",
+    "unknownJobCode": "render_job_not_found",
+    "capacityCode": "local_job_limit_reached",
+    "unpreparedMapCode": "native_map_not_prepared",
+    "workerFailureCodes": ["lease_expired", "worker_error", "compile_failed", "upload_failed", "parity_threshold_failed"]
+  },
+  "modelRuns": {
+    "source": "packages/cli/src/commands/models.ts, studio/app/api/simforge/local-runs/[runId]/result/route.ts",
+    "unknownRunCode": "model_run_not_found",
+    "missingResultCode": "result_not_available",
+    "rejectedResultPathCode": "result_path_rejected",
+    "notInstalledState": "not_installed",
+    "verifySchema": "simforge.models-verify/v1",
+    "cancelSchema": "simforge.models-cancel/v1",
+    "offeredFamilies": ["alpamayo-1", "alpamayo-1.5", "alpamayo-2-super"],
+    "unknownFamilyCode": "unknown_model_family"
+  },
+  "jobs": {
+    "source": "studio/app/api/simforge/jobs/[jobId]/route.ts",
+    "unknownJobCode": "job_not_found"
+  },
+  "validationRuns": {
+    "source": "studio/app/api/simforge/validation-runs/route.ts",
+    "invalidBodyCode": "invalid_validation_run",
+    "unknownRevisionCode": "revision_not_found"
+  },
+  "secretHygiene": {
+    "comment": [
+      "The control token is a per-start secret. Production code states it never appears in a URL,",
+      "browser history or referrer, and that the session cookie value is derived from it rather",
+      "than being it. These are the assertions that hold that line.",
+      "The decoy below is a synthetic, non-production value; no real credential belongs in E2E."
+    ],
+    "decoySecret": "e2e-decoy-not-a-real-credential-0000000000",
+    "decoyEnvVar": "SIMFORGE_E2E_DECOY_TOKEN",
+    "redactionPlaceholder": "[redacted]",
+    "forbiddenUrlTerms": ["ticket=", "token="]
+  }
+}

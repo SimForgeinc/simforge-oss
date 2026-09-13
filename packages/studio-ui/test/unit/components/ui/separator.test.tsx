@@ -4,49 +4,44 @@ import { describe, it, expect } from "vitest";
 import { renderToString } from "react-dom/server";
 import { Separator } from "../../../../src/components/ui/separator";
 
+function render(element: React.ReactElement): HTMLElement {
+  const template = document.createElement("template");
+  template.innerHTML = renderToString(element);
+  const root = template.content.firstElementChild;
+  if (!(root instanceof HTMLElement)) throw new Error("expected a rendered element");
+  return root;
+}
+
 describe("Separator", () => {
-  it("renders without crashing", () => {
-    const html = renderToString(<Separator />);
-    expect(html).toBeTruthy();
+  it("is horizontal and decorative by default", () => {
+    const separator = render(<Separator />);
+
+    expect(separator.getAttribute("data-orientation")).toBe("horizontal");
+    expect(separator.getAttribute("role")).toBe("none");
   });
 
-  it("applies horizontal size classes by default", () => {
-    const html = renderToString(<Separator />);
-    expect(html).toContain("h-[1px]");
-    expect(html).toContain("w-full");
+  it("reports a vertical orientation when asked for one", () => {
+    expect(render(<Separator orientation="vertical" />).getAttribute("data-orientation")).toBe("vertical");
   });
 
-  it("applies vertical size classes when orientation is vertical", () => {
-    const html = renderToString(<Separator orientation="vertical" />);
-    expect(html).toContain("h-full");
-    expect(html).toContain("w-[1px]");
+  it("styles itself differently per orientation", () => {
+    const horizontal = Array.from(render(<Separator />).classList);
+    const vertical = Array.from(render(<Separator orientation="vertical" />).classList);
+
+    expect(vertical).not.toEqual(horizontal);
   });
 
-  it("applies base shrink-0 and bg-border classes", () => {
-    const html = renderToString(<Separator />);
-    expect(html).toContain("shrink-0");
-    expect(html).toContain("bg-border");
+  it("exposes separator semantics when it is not decorative", () => {
+    const horizontal = render(<Separator decorative={false} />);
+    const vertical = render(<Separator decorative={false} orientation="vertical" />);
+
+    expect(horizontal.getAttribute("role")).toBe("separator");
+    expect(horizontal.getAttribute("aria-orientation")).toBeNull();
+    expect(vertical.getAttribute("role")).toBe("separator");
+    expect(vertical.getAttribute("aria-orientation")).toBe("vertical");
   });
 
-  it("merges a custom className", () => {
-    const html = renderToString(<Separator className="my-separator" />);
-    expect(html).toContain("my-separator");
-  });
-
-  it("passes through arbitrary HTML attributes", () => {
-    const html = renderToString(<Separator data-testid="divider" />);
-    expect(html).toContain('data-testid="divider"');
-  });
-
-  it("renders as decorative by default (sets role=none or aria-hidden)", () => {
-    // When decorative=true, Radix renders role="none" or aria-hidden
-    const html = renderToString(<Separator decorative={true} />);
-    // decorative separators have no semantic role; Radix omits role="separator"
-    expect(html).not.toContain('role="separator"');
-  });
-
-  it("renders with role separator when not decorative", () => {
-    const html = renderToString(<Separator decorative={false} />);
-    expect(html).toContain('role="separator"');
+  it("forwards arbitrary DOM attributes", () => {
+    expect(render(<Separator data-testid="divider" />).getAttribute("data-testid")).toBe("divider");
   });
 });

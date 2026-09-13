@@ -10,6 +10,9 @@ import {
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import type { Interaction } from "@simforge-oss/scenario";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActionPalette.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -81,14 +84,14 @@ export function ActionPalette({
   };
 
   return (
-    <div className="w-editor-rail shrink-0 overflow-y-auto border-r border-white/10 bg-[#0d0d0d] p-3 text-white xl:w-editor-rail-xl">
+    <div {...stylex.props(styles.tightWhiteRuleR)}>
       <label
-        className="block text-micro font-semibold uppercase tracking-meta-wide text-white/45"
+        {...stylex.props(styles.blockCapsMicro)}
         htmlFor={timeId}
       >
         Add action at time
       </label>
-      <div className="mt-2 flex gap-2">
+      <div {...stylex.props(styles.flexGap2)}>
         <Input
           id={timeId}
           type="number"
@@ -97,21 +100,21 @@ export function ActionPalette({
           max={clipSeconds}
           value={time}
           onChange={(event) => onTimeChange(Number(event.target.value))}
-          className="h-8 w-20 border-white/15 bg-white/5 text-xs text-white"
+          xstyle={styles.xsWhite}
           aria-describedby={`${timeId}-range`}
         />
-        <span aria-hidden="true" className="self-center text-xs text-white/45">
+        <span aria-hidden="true" {...stylex.props(styles.xsSelfCenter)}>
           seconds
         </span>
       </div>
-      <p id={`${timeId}-range`} className="mt-1 text-micro leading-4 text-white/35">
+      <p id={`${timeId}-range`} {...stylex.props(styles.micro)}>
         Choose a time from 0 to {clipSeconds} seconds.
       </p>
       {targetSpeedAction ? (
-        <label className="mt-2 block text-micro font-semibold uppercase tracking-meta-wide text-white/45">
+        <label {...stylex.props(styles.blockCapsMicro2)}>
           Target speed (kph)
           <Input
-            className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white"
+            xstyle={styles.xsWhite2}
             data-testid="action-palette-target-speed"
             step={1}
             type="number"
@@ -124,7 +127,7 @@ export function ActionPalette({
         </label>
       ) : null}
       {role ? (
-        <div className="mt-3">
+        <div {...stylex.props(styles.mt3)}>
           <CanonicalInteractionComposer
             document={document}
             interactions={interactions}
@@ -135,7 +138,7 @@ export function ActionPalette({
           />
         </div>
       ) : null}
-      <div className="mt-2 max-h-36 overflow-y-auto">
+      <div {...stylex.props(styles.scrollY)}>
         {actions.map((action) => (
           <PaletteButton
             key={action.id}
@@ -175,11 +178,11 @@ export function ActionPalette({
           </PaletteButton>
         ) : null}
         {!role ? (
-          <p className="text-xs text-white/40">
+          <p {...stylex.props(styles.xs)}>
             Select an actor to author behavior.
           </p>
         ) : role.actor.static ? (
-          <p className="text-xs text-white/40" data-testid="static-actor-action-message">
+          <p {...stylex.props(styles.xs)} data-testid="static-actor-action-message">
             Static actors stay fixed. Turn off Static / parked to add motion.
           </p>
         ) : null}
@@ -202,7 +205,7 @@ function PaletteButton({
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className="editor-motion mr-1 mt-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-meta text-white/70 hover:border-[#E8E044]/60 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d0d0d]"
+      className={stylex.props(styles.metaBordered, motionStyles.editorMotion).className}
     >
       {children}
     </button>

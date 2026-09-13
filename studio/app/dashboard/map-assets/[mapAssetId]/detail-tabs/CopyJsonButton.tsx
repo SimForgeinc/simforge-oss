@@ -10,7 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 interface CopyJsonButtonProps {
   /** Object serialised to pretty-printed JSON on click. */
@@ -22,8 +21,6 @@ interface CopyJsonButtonProps {
    * something more specific (e.g. "Copy results as JSON") for clarity.
    */
   label?: string;
-  /** Extra classes for the button. */
-  className?: string;
 }
 
 /**
@@ -38,7 +35,6 @@ export function CopyJsonButton({
   payload,
   disabled = false,
   label = "Copy as JSON",
-  className,
 }: CopyJsonButtonProps) {
   const [copied, setCopied] = useState(false);
   const clipboardAvailable =
@@ -70,7 +66,7 @@ export function CopyJsonButton({
             onClick={handleCopy}
             disabled={disabled || !clipboardAvailable}
             aria-label={label}
-            className={stylex.props(styles.u_927, styles.u_928, styles.u_929, styles.u_951, styles.u_933, styles.u_970).className}
+            className={stylex.props(styles.copyJsonButton).className}
           >
             {copied ? (
               <Check className={stylex.props(styles.s_808).className} aria-hidden="true" />

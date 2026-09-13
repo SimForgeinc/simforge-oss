@@ -7,6 +7,8 @@ import { CarlaCompatibilityPill } from "../../../components/CarlaCompatibilityPi
 import type { CarlaCompatibility } from "../../../lib/scenario/carla-compatibility";
 import type { GalleryAssetSummary } from "../../../lib/asset-gallery/contracts";
 import { resolveGalleryCatalogIds } from "../../../lib/asset-gallery/editor-bridge";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./GalleryAssetPanel.stylex";
 
 const PAGE_SIZE = 24;
 const CATALOG_DRAG_TYPE = "application/x-simforge-catalog-id";
@@ -149,27 +151,23 @@ export function GalleryAssetPanel({
   };
 
   return (
-    <div className="space-y-3" data-testid="gallery-asset-panel">
-      <p className="text-[9px] leading-relaxed text-white/45">
+    <div data-testid="gallery-asset-panel">
+      <p {...stylex.props(styles.relaxed, styles.stackedLg)}>
         Gallery models render in the browser and browser-recorded renders, not in CARLA.
       </p>
       <input
         aria-label="Search asset gallery"
-        className="h-8 w-full rounded-md border border-white/15 bg-black/25 px-2.5 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
+        {...stylex.props(styles.whiteBorderedWide, styles.stackedLg)}
         placeholder="Search asset gallery…"
         type="search"
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
       />
-      <div aria-label="Gallery ownership" className="flex gap-1" role="group">
+      <div aria-label="Gallery ownership" {...stylex.props(styles.flexGap1, styles.stackedLg)} role="group">
         {([false, true] as const).map((owned) => (
           <button
             aria-pressed={mine === owned}
-            className={`rounded-full border px-2.5 py-1 text-[9px] ${
-              mine === owned
-                ? "border-[#d56d27] bg-[#5a3521] text-[#ffd2b2]"
-                : "border-white/10 bg-white/[0.04] text-white/55"
-            }`}
+            {...stylex.props(styles.ownershipChip, mine === owned ? styles.ownershipChipActive : styles.ownershipChipIdle)}
             key={String(owned)}
             type="button"
             onClick={() => setMine(owned)}
@@ -180,22 +178,20 @@ export function GalleryAssetPanel({
       </div>
 
       {visibleItems.length ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div {...stylex.props(styles.gridCols2Gap2, styles.stackedLg)}>
           {visibleItems.map((asset) => {
             const available = resolved.has(asset.catalogId);
             const active = state?.placing === asset.catalogId;
             return (
               <div
-                className={`group relative overflow-hidden rounded-md border bg-white/[0.04] ${
-                  active ? "border-[#f08a43] bg-[#4a3020]" : "border-white/10"
-                }`}
+                {...stylex.props(styles.tile, active ? styles.tileActive : styles.tileIdle)}
                 key={asset.catalogId}
                 title={asset.description ?? asset.title}
               >
                 <div
                   aria-disabled={!available}
                   aria-label={`Place ${asset.title}`}
-                  className={`cursor-grab outline-none ${available ? "" : "cursor-wait opacity-60"}`}
+                  {...stylex.props(styles.tileGrip, !available && styles.tileGripWaiting)}
                   draggable={available}
                   role="button"
                   tabIndex={0}
@@ -211,19 +207,19 @@ export function GalleryAssetPanel({
                   {/* eslint-disable-next-line @next/next/no-img-element -- short-lived presigned S3 thumbnail; see AssetGalleryClient */}
                   <img
                     alt=""
-                    className="aspect-square w-full bg-black/20 object-contain"
+                    {...stylex.props(styles.wideSquareContain)}
                     draggable={false}
                     loading="lazy"
                     src={asset.thumbnailUrl}
                   />
-                  <div className="min-w-0 px-2 py-1.5">
-                    <strong className="block truncate text-[10px] font-semibold text-white/85">
+                  <div {...stylex.props(styles.narrowable)}>
+                    <strong {...stylex.props(styles.blockSemiboldTruncate)}>
                       {asset.title}
                     </strong>
-                    <span className="block truncate text-[8px] text-white/40">
+                    <span {...stylex.props(styles.blockTruncate)}>
                       v{asset.version} · {asset.dims.l.toFixed(1)} × {asset.dims.w.toFixed(1)} m
                     </span>
-                    <div className="mt-1.5">
+                    <div {...stylex.props(styles.mt15)}>
                       <CarlaCompatibilityPill compatibility={GALLERY_COMPATIBILITY} size="sm" />
                     </div>
                   </div>
@@ -231,31 +227,29 @@ export function GalleryAssetPanel({
                 <button
                   aria-label={`${favorites.has(asset.catalogId) ? "Remove" : "Add"} ${asset.title} ${favorites.has(asset.catalogId) ? "from" : "to"} favorites`}
                   aria-pressed={favorites.has(asset.catalogId)}
-                  className={`absolute right-1 top-1 grid size-6 place-items-center rounded bg-black/55 text-sm ${
-                    favorites.has(asset.catalogId) ? "text-amber-300" : "text-white/55"
-                  }`}
+                  {...stylex.props(styles.favoriteToggle, favorites.has(asset.catalogId) ? styles.favoriteToggleOn : styles.favoriteToggleOff)}
                   type="button"
                   onClick={() => onFavorite(asset.catalogId)}
                 >
                   {favorites.has(asset.catalogId) ? "★" : "☆"}
                 </button>
                 {armingId === asset.catalogId ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-[#f08a43]" />
+                  <span {...stylex.props(styles.absPulsing)} />
                 ) : null}
               </div>
             );
           })}
         </div>
       ) : !loading ? (
-        <div className="py-16 text-center text-[10px] text-white/45">
+        <div {...stylex.props(styles.centerText, styles.stackedLg)}>
           No gallery assets match this view.
         </div>
       ) : null}
 
-      {error ? <p className="text-[9px] leading-relaxed text-red-300">{error}</p> : null}
+      {error ? <p {...stylex.props(styles.relaxed2, styles.stackedLg)}>{error}</p> : null}
       {nextCursor ? (
         <button
-          className="w-full rounded-md border border-white/10 bg-white/[0.05] py-2 text-[10px] text-white/65 disabled:opacity-50"
+          {...stylex.props(styles.borderedWide, styles.stackedLg)}
           disabled={loading}
           type="button"
           onClick={() => void loadMore()}
@@ -263,7 +257,7 @@ export function GalleryAssetPanel({
           {loading ? "Loading…" : "Load 24 more"}
         </button>
       ) : loading ? (
-        <p className="py-2 text-center text-[9px] text-white/40">Loading gallery…</p>
+        <p {...stylex.props(styles.centerText2, styles.stackedLg)}>Loading gallery…</p>
       ) : null}
     </div>
   );

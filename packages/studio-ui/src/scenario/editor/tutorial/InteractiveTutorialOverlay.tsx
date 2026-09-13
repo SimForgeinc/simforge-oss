@@ -17,6 +17,8 @@ import {
   type InteractiveAction,
   type InteractiveStep,
 } from "./interactive-tutorial-programs";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./InteractiveTutorialOverlay.stylex";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -180,12 +182,12 @@ export function InteractiveTutorialOverlay({
   };
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[130]" data-testid="interactive-tutorial-overlay">
-      <div aria-hidden="true" className="absolute inset-0 bg-black/20" />
+    <div {...stylex.props(styles.fixedInertInset0)} data-testid="interactive-tutorial-overlay">
+      <div aria-hidden="true" {...stylex.props(styles.absInset0)} />
       {rect && step.selector !== '[data-tutorial="canvas"]' ? (
         <div
           aria-hidden="true"
-          className="absolute border-2 border-[#E8E044] shadow-[0_0_0_4px_rgba(232,224,68,0.16),0_0_24px_rgba(232,224,68,0.3)]"
+          {...stylex.props(styles.abs)}
           data-testid="interactive-tutorial-spotlight"
           style={{
             top: rect.top - 4,
@@ -198,7 +200,7 @@ export function InteractiveTutorialOverlay({
       <div
         aria-labelledby="interactive-tutorial-title"
         aria-live="polite"
-        className="pointer-events-auto absolute w-[min(360px,calc(100vw-24px))] border border-[#E8E044]/55 bg-[#11120f]/95 p-4 text-white shadow-2xl backdrop-blur-xl focus:outline-none"
+        {...stylex.props(styles.absWhiteBordered)}
         data-action={step.action}
         data-testid="interactive-tutorial-card"
         ref={cardRef}
@@ -206,39 +208,39 @@ export function InteractiveTutorialOverlay({
         style={cardPosition(step.card)}
         tabIndex={-1}
       >
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#E8E044]">
+        <div {...stylex.props(styles.flexStartGap3)}>
+          <div {...stylex.props(styles.fillNarrowable)}>
+            <p {...stylex.props(styles.capsMonoBold)}>
               {step.eyebrow} · Step {index + 1} of {steps.length}
             </p>
-            <h2 className="mt-1.5 text-base font-semibold" id="interactive-tutorial-title">
+            <h2 {...stylex.props(styles.semiboldBase)} id="interactive-tutorial-title">
               {step.title}
             </h2>
           </div>
           <button
             aria-label="Exit interactive tutorial"
-            className="grid size-7 shrink-0 place-items-center text-white/55 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+            {...stylex.props(styles.gridCenteredTight)}
             onClick={onClose}
             type="button"
           >
-            <X aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
         </div>
-        <p className="mt-2 text-xs leading-5 text-white/60">{step.body}</p>
-        <div className="mt-4 flex items-center gap-2 border border-[#E8E044]/30 bg-[#E8E044]/[0.08] px-3 py-2.5">
+        <p {...stylex.props(styles.xs)}>{step.body}</p>
+        <div {...stylex.props(styles.flexCenterBordered)}>
           {step.action === "finish" ? (
-            <Check aria-hidden="true" className="size-4 shrink-0 text-[#E8E044]" />
+            <Check aria-hidden="true" className={stylex.props(styles.tight).className} />
           ) : (
-            <span aria-hidden="true" className="size-2 shrink-0 animate-pulse rounded-full bg-[#E8E044] motion-reduce:animate-none" />
+            <span aria-hidden="true" {...stylex.props(styles.tightRoundPulsing)} />
           )}
-          <strong className="text-xs font-medium text-[#E8E044]">{step.prompt}</strong>
+          <strong {...stylex.props(styles.xsMedium)}>{step.prompt}</strong>
         </div>
         {step.action === "finish" ? (
-          <Button className="mt-4 h-8 w-full" onClick={finish} size="sm" type="button">
+          <Button xstyle={styles.wide} onClick={finish} size="sm" type="button">
             Continue authoring
           </Button>
         ) : (
-          <p className="mt-3 text-[10px] leading-4 text-white/40">
+          <p {...stylex.props(styles.mt3TextLeading4)}>
             There is no Next button—complete the highlighted action to continue.
           </p>
         )}

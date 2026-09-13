@@ -5,7 +5,6 @@ import { styles } from "../map-assets.stylex";
 import { useRef, useState } from "react";
 import { AlertCircle, Palette, Trash2, Upload } from "lucide-react";
 import { Switch } from "@simforge-oss/studio-ui/components/ui/switch";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   MAX_UPLOAD_BYTES,
   MAX_USER_GEOJSON_THICKNESS,
@@ -216,10 +215,7 @@ export function UserGeoJsonSection({
                           onSetColor(layer.id, c);
                           setOpenColorId(null);
                         }}
-                        className={cn(
-                          "size-4 rounded-full ring-1 ring-inset ring-black/20 transition-transform hover:scale-110",
-                          layer.color === c && "ring-2 ring-foreground",
-                        )}
+                        className={stylex.props(styles.colorSwatch, layer.color === c && styles.colorSwatchSelected).className}
                         style={{ backgroundColor: c }}
                         aria-label={`Set color ${c}`}
                         aria-pressed={layer.color === c}

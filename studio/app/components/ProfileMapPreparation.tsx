@@ -114,7 +114,7 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
           <div {...stylex.props(setup.notice)} data-testid="profile-map-preparation-account-notice" data-cloud-state={cloudState}>
             <Cloud {...stylex.props(setup.noticeIcon)} aria-hidden="true" />
             <p {...stylex.props(setup.noticeText)}>Richmond Field Station is available without an account. Connect to SimCloud for other published maps.</p>
-            <Button xstyle={setup.compactButton} variant="outline" disabled={cloud.loading || cloudState === "connecting"} onClick={() => void cloud.connect()}><ExternalLink {...stylex.props(setup.iconSmall)} aria-hidden="true" />{cloudState === "connecting" ? "Waiting for approval…" : "Connect to SimCloud"}</Button>
+            <Button xstyle={setup.compactButton} variant="outline" disabled={cloud.loading || cloudState === "connecting"} onClick={() => void cloud.connect()}><ExternalLink {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />{cloudState === "connecting" ? "Waiting for approval…" : "Connect to SimCloud"}</Button>
           </div>
         ) : null}
         {cloud.error ? <p {...stylex.props(setup.error)} role="alert">{cloud.error}</p> : null}

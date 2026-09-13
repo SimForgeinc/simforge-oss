@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import { cn } from "../../../lib/utils";
 import type { V1TimelineBrowserPlayback } from "./V1TimelineRail";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TimelineTransportControls.stylex";
 
 export function TimelineTransportControls({
   playback,
@@ -20,10 +22,7 @@ export function TimelineTransportControls({
 
   return (
     <div
-      className={cn(
-        "flex items-center gap-1 text-white",
-        className,
-      )}
+      className={cn(stylex.props(styles.flexCenterWhite).className, className)}
       data-testid="timeline-transport-controls"
     >
       <TransportButton
@@ -35,9 +34,9 @@ export function TimelineTransportControls({
         }}
       >
         {playing ? (
-          <Square aria-hidden="true" className="size-2.5 fill-current" />
+          <Square aria-hidden="true" className={stylex.props(styles.size25FillCurrent).className} />
         ) : (
-          <Play aria-hidden="true" className="size-3 fill-current" />
+          <Play aria-hidden="true" className={stylex.props(styles.size3FillCurrent).className} />
         )}
       </TransportButton>
       <TransportButton
@@ -45,7 +44,7 @@ export function TimelineTransportControls({
         label="Reset scenario"
         onClick={() => playback?.onReset()}
       >
-        <RotateCcw aria-hidden="true" className="size-3" />
+        <RotateCcw aria-hidden="true" className={stylex.props(styles.size3).className} />
       </TransportButton>
     </div>
   );
@@ -65,7 +64,7 @@ function TransportButton({
   return (
     <Button
       aria-label={label}
-      className="size-6 rounded-none border-0 bg-transparent p-0 text-white shadow-none hover:bg-transparent enabled:hover:text-[#E8E044] disabled:text-white/25"
+      xstyle={styles.whitePad0}
       disabled={disabled}
       onClick={onClick}
       size="icon"

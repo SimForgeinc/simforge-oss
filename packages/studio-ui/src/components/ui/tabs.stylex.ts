@@ -21,6 +21,7 @@ export const styles = stylex.create({
     paddingInline: "0.75rem",
     paddingBlock: "0.25rem",
     fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
     fontWeight: 500,
     transitionProperty: "all",
     transitionDuration: "150ms",

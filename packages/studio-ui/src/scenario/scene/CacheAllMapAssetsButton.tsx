@@ -7,6 +7,7 @@ import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { MapAssetCacheStorage, formatCacheBytes } from "../../components/MapAssetCacheStorage";
 import { readRenderingPreference } from "../../components/rendering-preference"
 import { Button } from "../../components/ui/button";
+import { control, scene } from "../scenario-controls.stylex";
 import {
   cacheProfileMapPlan,
   createProfileMapPlan,
@@ -64,14 +65,14 @@ export function CacheAllMapAssetsButton() {
   return (
     <div className="mt-7 border-t border-white/10 pt-4" data-testid="cache-all-map-assets">
       <Button
-        className="h-auto min-h-10 w-full justify-start rounded-full border border-[#E8E044] bg-[#E8E044] px-4 py-2 text-left text-xs font-semibold text-neutral-950 shadow-[0_0_24px_rgba(232,224,68,0.16)] hover:bg-[#F3EB4F] hover:text-black focus-visible:ring-[#E8E044] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+        xstyle={scene.cacheAll}
         disabled={state === "planning" || state === "downloading" || state === "complete"}
         onClick={() => void start()}
         type="button"
         variant="ghost"
       >
         {state === "planning" || state === "downloading" ? (
-          <CloudActivityIndicator iconClassName="size-4 text-neutral-950" />
+          <CloudActivityIndicator iconXstyle={scene.cacheAllSpinner} />
         ) : state === "complete" ? (
           <Check className="size-4 shrink-0" aria-hidden="true" />
         ) : (
@@ -91,7 +92,7 @@ export function CacheAllMapAssetsButton() {
       </Button>
       {error ? <p className="mt-2 px-3 text-xs leading-5 text-red-300" role="alert">{error}</p> : null}
       <MapAssetCacheStorage
-        className="mt-4"
+        xstyle={control.spaceAbove4}
         refreshKey={state}
         onCleared={() => {
           setState("idle");

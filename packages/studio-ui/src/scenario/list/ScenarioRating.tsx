@@ -5,6 +5,7 @@ import type { ScenarioRatingAggregateDto } from "../../lib/scenario/contracts";
 import { Badge } from "../../components/ui/badge";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { cn } from "../../lib/utils";
+import { list } from "../scenario-controls.stylex";
 
 /**
  * The 1–5 star widget, ported one-to-one from v1's `ScenarioRating`.
@@ -76,7 +77,7 @@ export function ScenarioRating({
       {aggregate?.reviewState === "rejected" ? (
         <Badge
           variant="outline"
-          className="h-4 rounded-full border-red-400/40 bg-red-400/10 px-1.5 py-0 font-meta text-[8px] uppercase tracking-meta-narrow text-red-300"
+          xstyle={list.rejectedBadge}
         >
           Rejected (&lt;4)
         </Badge>

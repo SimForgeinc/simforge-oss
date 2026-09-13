@@ -21,6 +21,8 @@ import {
 
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import { uniqueTimelineInteractionId } from "./v1-timeline-model";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./CanonicalInteractionComposer.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 type TriggerKind = Trigger["kind"];
@@ -255,17 +257,17 @@ export function CanonicalInteractionComposer({
 
   return (
     <fieldset
-      className="grid gap-2 rounded-xl border border-[#E8E044]/20 bg-[#E8E044]/[0.04] p-2"
+      {...stylex.props(styles.gridBorderedGap2)}
       data-testid={`${testIdPrefix}-composer`}
     >
-      <legend className="px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#E8E044]">
+      <legend {...stylex.props(styles.capsSemibold)}>
         All interactions
       </legend>
-      <label className="grid gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/45">
+      <label {...stylex.props(styles.gridCapsSemibold)}>
         Target
         <select
           aria-label="Canonical interaction target"
-          className="min-h-8 rounded-lg border border-white/15 bg-black/40 px-2 text-[10px] font-normal normal-case tracking-normal text-white"
+          {...stylex.props(styles.whiteBorderedNormalCase)}
           data-testid={`${testIdPrefix}-target`}
           value={variant.id}
           onChange={(event) => setVariantId(event.currentTarget.value)}
@@ -277,11 +279,11 @@ export function CanonicalInteractionComposer({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/45">
+      <label {...stylex.props(styles.gridCapsSemibold)}>
         Starts
         <select
           aria-label="Canonical interaction trigger"
-          className="min-h-8 rounded-lg border border-white/15 bg-black/40 px-2 text-[10px] font-normal normal-case tracking-normal text-white"
+          {...stylex.props(styles.whiteBorderedNormalCase)}
           data-testid={`${testIdPrefix}-trigger`}
           value={triggerKind}
           onChange={(event) => setTriggerKind(event.currentTarget.value as TriggerKind)}
@@ -292,11 +294,11 @@ export function CanonicalInteractionComposer({
         </select>
       </label>
       {needsDynamics ? (
-        <label className="grid gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/45">
+        <label {...stylex.props(styles.gridCapsSemibold)}>
           Transition
           <select
             aria-label="Canonical interaction dynamics"
-            className="min-h-8 rounded-lg border border-white/15 bg-black/40 px-2 text-[10px] font-normal normal-case tracking-normal text-white"
+            {...stylex.props(styles.whiteBorderedNormalCase)}
             data-testid={`${testIdPrefix}-dynamics`}
             value={dynamicsIndex}
             onChange={(event) => setDynamicsIndex(Number(event.currentTarget.value))}
@@ -310,7 +312,7 @@ export function CanonicalInteractionComposer({
         </label>
       ) : null}
       <button
-        className="min-h-8 rounded-lg border border-[#E8E044]/35 bg-[#E8E044]/10 px-2 text-[10px] font-semibold text-[#E8E044] hover:bg-[#E8E044]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+        {...stylex.props(styles.semiboldBordered)}
         data-testid={`${testIdPrefix}-add`}
         aria-describedby={unavailableReason ? availabilityId : undefined}
         disabled={Boolean(unavailableReason)}
@@ -320,7 +322,7 @@ export function CanonicalInteractionComposer({
         Add {variantLabel(variant)}
       </button>
       {unavailableReason ? (
-        <p className="text-[9px] leading-4 text-amber-200/80" id={availabilityId}>
+        <p {...stylex.props(styles.textLeading4TextAmber20080)} id={availabilityId}>
           {unavailableReason}
         </p>
       ) : null}

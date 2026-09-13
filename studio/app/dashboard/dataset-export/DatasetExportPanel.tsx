@@ -420,7 +420,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
             })}
           </div>
           <div {...stylex.props(styles.queueRow)}>
-            <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props(styles.button, styles.primaryButton)}>
+            <button type="button" onClick={() => void handleQueue()} disabled={queueing} {...stylex.props(styles.button, styles.queueButton)}>
               {queueing ? <LoaderCircle {...stylex.props(styles.iconMedium, styles.iconSpin)} /> : <PackagePlus {...stylex.props(styles.iconMedium)} />}
               Queue export
             </button>
@@ -429,7 +429,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
         </div>
         <aside {...stylex.props(styles.jobs)}>
           <div {...stylex.props(styles.jobsHeader)}>
-            <span {...stylex.props(styles.monoLabel, styles.textMuted)}>Export jobs</span>
+            <span {...stylex.props(styles.monoLabel, styles.mutedColor)}>Export jobs</span>
             <span {...stylex.props(styles.count)}>{jobs.length}</span>
           </div>
           {error && jobs.length > 0 ? <div {...stylex.props(styles.error)}>{error}</div> : null}
@@ -454,7 +454,7 @@ export function DatasetExportPanel({ datasetId }: { datasetId: string }) {
                     </div>
                     {job.errorMessage ? <div {...stylex.props(styles.jobError)}>{job.errorMessage}</div> : null}
                     <div {...stylex.props(styles.jobBottom)}>
-                      <span {...stylex.props(styles.subtleMono)}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
+                      <span {...stylex.props(styles.snapshotMono)}>Snapshot {shortId(job.datasetSnapshotId, 8)}</span>
                       <button type="button" onClick={() => void handleDownload(job)} disabled={!downloadable || downloadingId === job.id} {...stylex.props(styles.downloadButton)}>
                         {downloadingId === job.id ? <LoaderCircle {...stylex.props(styles.iconSmall, styles.iconSpin)} /> : <Download {...stylex.props(styles.iconSmall)} />} Download
                       </button>

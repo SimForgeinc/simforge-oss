@@ -32,6 +32,7 @@ import {
 } from "@simforge-oss/playback";
 import { cn } from "../../lib/utils";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
+import { scene } from "../scenario-controls.stylex";
 import { renderableMaps } from "./mapCatalog";
 import { mapSupportsScenarioPreview } from "./previewPolicy";
 import { useIdleStreetTour } from "./useIdleStreetTour";
@@ -324,7 +325,7 @@ export function ScenarioIdleScene({
       {message && active ? (
         sceneLoading ? (
           <CloudActivityIndicator
-            className="pointer-events-none absolute right-4 top-4 z-10 text-xs text-white/70"
+            xstyle={scene.idleStatus}
             label={message}
             testId="scenario-idle-status"
           />

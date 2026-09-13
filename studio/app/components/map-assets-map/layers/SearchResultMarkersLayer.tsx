@@ -91,11 +91,10 @@ export function SearchResultMarkersLayer({
             longitude={m.lng}
             latitude={m.lat}
             anchor="bottom"
-            style={{
-              pointerEvents: interactive ? "auto" : "none",
-              cursor: interactive ? "pointer" : "default",
-              zIndex: hovered ? 2 : 1,
-            }}
+            {...stylex.props(
+              interactive ? styles.markerInteractive : styles.markerInert,
+              hovered ? styles.markerAbove : styles.markerBelow,
+            )}
             onClick={
               interactive
                 ? (event) => {

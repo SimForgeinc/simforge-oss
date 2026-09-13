@@ -133,8 +133,8 @@ describe("InteractionTrack", () => {
     const exact = renderToStaticMarkup(
       <InteractionTrack resolved={resolved({ armed: false })} window={WINDOW} />,
     );
-    expect(armed).toMatch(/border-dashed/);
-    expect(exact).not.toMatch(/border-dashed/);
+    expect(armed).toMatch(/data-armed="true"/);
+    expect(exact).toMatch(/data-armed="false"/);
   });
 
   it("never emits a negative width for an inverted range", () => {

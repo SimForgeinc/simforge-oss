@@ -3,7 +3,6 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Loader2 } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
 import { CandidateLocationCard } from "./CandidateLocationCard";
 
@@ -36,7 +35,7 @@ export function CandidateLocationsSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           Candidate Locations
           {candidateLocations.length > 0 && (

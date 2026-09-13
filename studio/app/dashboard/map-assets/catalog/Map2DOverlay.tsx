@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles, bridge } from "../map-assets.stylex";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
@@ -57,9 +57,9 @@ export function Map2DOverlay({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={stylex.props(styles.s_197).className} />
+        <DialogPrimitive.Overlay className={stylex.props(styles.s_197).className + " " + bridge.s_197} />
         <DialogPrimitive.Content
-          className={stylex.props(styles.s_198).className}
+          className={stylex.props(styles.s_198).className + " " + bridge.s_198}
           data-testid="map-gallery-2d-overlay"
         >
           <DialogPrimitive.Title className={stylex.props(styles.s_997).className}>

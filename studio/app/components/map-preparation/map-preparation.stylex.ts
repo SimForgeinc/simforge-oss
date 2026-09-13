@@ -35,7 +35,7 @@ export const preparation = stylex.create({
   row: {
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: colors.line,
+    borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
     paddingInline: space.lg,
@@ -56,7 +56,7 @@ export const preparation = stylex.create({
   },
   rowLabel: {
     minWidth: 0,
-    flexGrow: 1,
+    flex: 1,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -66,7 +66,7 @@ export const preparation = stylex.create({
   },
   rowBytes: {
     fontFamily: text.fontMono,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     color: "rgba(255, 255, 255, 0.4)",
   },
   rowActions: {

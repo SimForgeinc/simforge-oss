@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScenarioDatasetDto } from "../../src/lib/scenario/contracts";
 import { ScenarioDatasetRail } from "../../src/scenario/rail/ScenarioDatasetRail";
+import { rail as railStyles } from "../../src/scenario/scenario-controls.stylex";
 
 /**
  * The datasets rail — the left pane of the datasets page.
@@ -80,6 +81,26 @@ function row(datasetId: string): HTMLButtonElement {
   return element;
 }
 
+/** One compiled atom of a StyleX namespace, by the property it declares. */
+const atomFor = (namespace: object, property: string): string => {
+  const key = Object.keys(namespace).find((k) => k.startsWith(`${property}-`));
+  if (!key) throw new Error(`no compiled ${property} atom`);
+  return (namespace as Record<string, string>)[key];
+};
+
+/**
+ * The create action carries the rail's accent footer style — centered, on the
+ * accent fill, in the heavy meta weight — as the atoms the compiler emitted for
+ * `rail.footerAction`, rather than as literal class text.
+ */
+function expectPrimaryCreateAction(create: HTMLElement): void {
+  for (const property of ["justifyContent", "backgroundColor", "fontWeight"]) {
+    expect(create.className).toContain(
+      atomFor(railStyles.footerAction, property),
+    );
+  }
+}
+
 afterEach(cleanup);
 
 describe("ScenarioDatasetRail", () => {
@@ -108,9 +129,7 @@ describe("ScenarioDatasetRail", () => {
       header?.contains(screen.getByTestId("scenario-new-dataset")),
     ).toBe(true);
     const create = screen.getByTestId("scenario-new-dataset");
-    expect(create.className).toContain("justify-center");
-    expect(create.className).toContain("bg-[#E8E044]");
-    expect(create.className).toContain("font-bold");
+    expectPrimaryCreateAction(create);
     expect(header?.nextElementSibling?.className).toContain("scenario-glass-scrollbar");
   });
 
@@ -201,10 +220,9 @@ describe("ScenarioDatasetRail", () => {
 
   it("presents new dataset as the centered primary action", () => {
     renderRail();
-    const create = screen.getByRole("button", { name: /New dataset/ });
-    expect(create.className).toContain("justify-center");
-    expect(create.className).toContain("bg-[#E8E044]");
-    expect(create.className).toContain("font-bold");
+    expectPrimaryCreateAction(
+      screen.getByRole("button", { name: /New dataset/ }),
+    );
   });
 
   it("disables a row while that dataset is busy, without disabling the others", () => {

@@ -21,6 +21,8 @@ import {
   numeric,
   type ConditionKind,
 } from "./trigger-defaults";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TriggerControls.stylex";
 
 const PHASES = [
   "green",
@@ -88,8 +90,8 @@ export function TriggerControls({
     commit(buildDefaultScenarioTrigger(next, actor, peer, references));
 
   return (
-    <fieldset className="min-w-0 space-y-2 text-meta">
-      <legend className="font-semibold uppercase tracking-wider text-muted-foreground">
+    <fieldset {...stylex.props(styles.metaNarrowable)}>
+      <legend {...stylex.props(styles.capsMutedSemibold)}>
         {label}
       </legend>
       <SelectMenu
@@ -105,10 +107,11 @@ export function TriggerControls({
             disabled: item === "after" && references.length === 0,
           })),
         ]}
-        className="h-8 text-xs"
+        xstyle={[styles.xs, styles.stackedMd]}
       />
       {!value ? null : value.kind === "at" ? (
         <NumberField
+          xstyle={styles.stackedMd}
           label="Time (s)"
           value={numeric(value.t)}
           onChange={(t) => commit({ ...value, t })}
@@ -116,6 +119,7 @@ export function TriggerControls({
       ) : value.kind === "after" ? (
         <>
           <SelectMenuField
+            fieldXstyle={styles.stackedMd}
             label="Referenced action"
             value={value.of}
             options={references.map((item) => ({
@@ -123,9 +127,10 @@ export function TriggerControls({
               label: item.label ?? item.id,
             }))}
             onChange={(of) => commit({ ...value, of })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
           <SelectMenuField
+            fieldXstyle={styles.stackedMd}
             label="Referenced event"
             value={value.event ?? "start"}
             options={[
@@ -136,9 +141,10 @@ export function TriggerControls({
               ...value,
               event: event as "start" | "end",
             })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
           <NumberField
+            xstyle={styles.stackedMd}
             label="Delay (s)"
             value={numeric(value.delayS)}
             onChange={(delayS) => commit({ ...value, delayS })}
@@ -147,6 +153,7 @@ export function TriggerControls({
       ) : value.kind === "arrival" ? (
         <>
           <SelectMenuField
+            fieldXstyle={styles.stackedMd}
             label="Arriving actor"
             value={value.of}
             options={roles.map((role) => ({
@@ -154,9 +161,10 @@ export function TriggerControls({
               label: role.label ?? role.id,
             }))}
             onChange={(of) => commit({ ...value, of })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
           <SelectMenuField
+            fieldXstyle={styles.stackedMd}
             label="Synchronize with"
             value={value.syncWith}
             options={roles.map((role) => ({
@@ -164,15 +172,17 @@ export function TriggerControls({
               label: role.label ?? role.id,
             }))}
             onChange={(syncWith) => commit({ ...value, syncWith })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
           <PointRefControls
+            xstyle={styles.stackedMd}
             label="Arrival point"
             value={value.at}
             roles={roles.map((role) => role.id)}
             onChange={(at) => commit({ ...value, at })}
           />
           <SelectMenuField
+            fieldXstyle={styles.stackedMd}
             label="Arrival timing"
             value={value.ttc !== undefined ? "ttc" : "deltaT"}
             options={[
@@ -184,9 +194,10 @@ export function TriggerControls({
                 ? { kind: "arrival", of: value.of, at: value.at, syncWith: value.syncWith, ttc: 0 }
                 : { kind: "arrival", of: value.of, at: value.at, syncWith: value.syncWith, deltaT: 0 },
             )}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
           <NumberField
+            xstyle={styles.stackedMd}
             label={value.ttc !== undefined ? "TTC (s)" : "Arrival offset (s)"}
             value={numeric(value.ttc ?? value.deltaT)}
             onChange={(number) =>
@@ -244,14 +255,15 @@ function WhenControls({
           value: kind,
           label: kind.replace("_", " "),
         }))}
-        className="h-8 text-xs"
+        xstyle={[styles.xs, styles.stackedMd]}
       />
       <ConditionControls
+        xstyle={styles.stackedMd}
         value={value.condition}
         roles={roles}
         onChange={(condition) => onChange({ ...value, condition })}
       />
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, styles.stackedMd)}>
         <NumberField
           label="Deadline (s)"
           value={numeric(value.byLatest)}
@@ -267,7 +279,7 @@ function WhenControls({
           onChange={(ifNever) =>
             onChange({ ...value, ifNever: ifNever as "skip" | "fire" })
           }
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
       </div>
     </>
@@ -279,20 +291,24 @@ function ConditionControls({
   value,
   roles,
   onChange,
+  xstyle,
 }: {
   value: Condition;
   roles: string[];
   onChange: (value: Condition) => void;
+  /** Stack spacing from the caller; see `stackedMd` in the style module. */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const fallbackActor = roles[0] ?? "actor";
   const fallbackPeer = roles.find((role) => role !== fallbackActor) ?? fallbackActor;
   if (value.kind === "and" || value.kind === "or") {
     return (
-      <fieldset className="space-y-2 border border-border bg-muted/20 p-2">
-        <legend className="px-1 text-muted-foreground">{value.kind.toUpperCase()} conditions</legend>
+      <fieldset {...stylex.props(styles.borderedPad2, xstyle)}>
+        <legend {...stylex.props(styles.muted)}>{value.kind.toUpperCase()} conditions</legend>
         {value.operands.map((operand, index) => (
-          <div className="space-y-2 border border-border/70 p-2" key={index}>
+          <div {...stylex.props(styles.borderedPad22, styles.stackedMd)} key={index}>
             <SelectMenuField
+              fieldXstyle={styles.stackedMd}
               label={`Condition ${index + 1} type`}
               value={operand.kind}
               options={LEAF_CONDITION_KINDS.map((kind) => ({ value: kind, label: kind.replace("_", " ") }))}
@@ -302,9 +318,10 @@ function ConditionControls({
                   ? buildDefaultScenarioCondition(kind as LeafCondition["kind"], fallbackActor, fallbackPeer) as LeafCondition
                   : item),
               })}
-              className="h-8 text-xs"
+              xstyle={styles.xs}
             />
             <ConditionControls
+              xstyle={styles.stackedMd}
               value={operand}
               roles={roles}
               onChange={(condition) => onChange({
@@ -319,9 +336,10 @@ function ConditionControls({
   }
   if (value.kind === "not") {
     return (
-      <fieldset className="space-y-2 border border-border bg-muted/20 p-2">
-        <legend className="px-1 text-muted-foreground">NOT condition</legend>
+      <fieldset {...stylex.props(styles.borderedPad2, xstyle)}>
+        <legend {...stylex.props(styles.muted)}>NOT condition</legend>
         <SelectMenuField
+          fieldXstyle={styles.stackedMd}
           label="Negated condition type"
           value={value.operand.kind}
           options={LEAF_CONDITION_KINDS.map((kind) => ({ value: kind, label: kind.replace("_", " ") }))}
@@ -329,9 +347,10 @@ function ConditionControls({
             ...value,
             operand: buildDefaultScenarioCondition(kind as LeafCondition["kind"], fallbackActor, fallbackPeer) as LeafCondition,
           })}
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
         <ConditionControls
+          xstyle={styles.stackedMd}
           value={value.operand}
           roles={roles}
           onChange={(operand) => onChange({ ...value, operand: operand as LeafCondition })}
@@ -350,7 +369,7 @@ function ConditionControls({
       value={selected}
       options={roleOptions}
       onChange={(role) => onChange(update(role))}
-      className="h-8 text-xs"
+      xstyle={styles.xs}
     />
   );
   const opField = (
@@ -362,13 +381,13 @@ function ConditionControls({
       value={selected}
       options={[...COMPARISONS]}
       onChange={(op) => onChange(update(op as (typeof COMPARISONS)[number]))}
-      className="h-8 text-xs"
+      xstyle={styles.xs}
     />
   );
 
   if (value.kind === "distance") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("From", value.from, (from) => ({ ...value, from }))}
         <PointRefControls
           label="To point"
@@ -387,7 +406,7 @@ function ConditionControls({
             ...value,
             measure: measure as "alongLane" | "euclidean",
           })}
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
         {opField(value.op, (op) => ({ ...value, op }))}
         <NumberField
@@ -409,7 +428,7 @@ function ConditionControls({
   }
   if (value.kind === "ttc" || value.kind === "headway") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Actor", value.of, (of) => ({ ...value, of }))}
         {roleField("To", value.to, (to) => ({ ...value, to }))}
         {opField(value.op, (op) => ({ ...value, op }))}
@@ -423,7 +442,7 @@ function ConditionControls({
   }
   if (value.kind === "reaches") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Actor", value.of, (of) => ({ ...value, of }))}
         <PointRefControls
           label="Region"
@@ -441,7 +460,7 @@ function ConditionControls({
   }
   if (value.kind === "speed") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Actor", value.of, (of) => ({ ...value, of }))}
         {opField(value.op, (op) => ({ ...value, op }))}
         <NumberField
@@ -454,7 +473,7 @@ function ConditionControls({
   }
   if (value.kind === "signal") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         <SignalRefControls
           value={value.signal}
           onChange={(signal) => onChange({ ...value, signal })}
@@ -466,7 +485,7 @@ function ConditionControls({
           onChange={(phase) =>
             onChange({ ...value, phase: phase as typeof value.phase })
           }
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
         <OptionalNumberField
           label="Minimum duration (s)"
@@ -482,7 +501,7 @@ function ConditionControls({
   }
   if (value.kind === "visible") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Observer", value.of, (of) => ({ ...value, of }))}
         {roleField("Target", value.to, (to) => ({ ...value, to }))}
         <SelectMenuField
@@ -496,7 +515,7 @@ function ConditionControls({
             ...value,
             visible: visibility === "visible",
           })}
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
         <NumberField
           label="Visible fraction"
@@ -513,7 +532,7 @@ function ConditionControls({
   }
   if (value.kind === "standstill") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Actor", value.of, (of) => ({ ...value, of }))}
         <NumberField
           label="Duration (s)"
@@ -525,7 +544,7 @@ function ConditionControls({
   }
   if (value.kind === "detected") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
         {roleField("Object", value.of, (of) => ({ ...value, of }))}
         {roleField("Detected by", value.by, (by) => ({ ...value, by }))}
         <SelectMenuField
@@ -536,7 +555,7 @@ function ConditionControls({
             { value: "not_detected", label: "Not detected" },
           ]}
           onChange={(next) => onChange({ ...value, detected: next === "detected" })}
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
         <TextField
           label="Sensor (optional)"
@@ -547,14 +566,14 @@ function ConditionControls({
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div {...stylex.props(styles.gridCols2Gap2, xstyle)}>
       {roleField("Actor", value.of, (of) => ({ ...value, of }))}
       <SelectMenuField
         label="Collides with"
         value={value.with}
         options={["any", ...roleOptions]}
         onChange={(next) => onChange({ ...value, with: next })}
-        className="h-8 text-xs"
+        xstyle={styles.xs}
       />
     </div>
   );
@@ -565,17 +584,20 @@ function PointRefControls({
   value,
   roles,
   onChange,
+  xstyle,
 }: {
   label: string;
   value: PointRef;
   roles: string[];
   onChange: (value: PointRef) => void;
+  /** Stack spacing from the caller; see `stackedMd` in the style module. */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const role = roles[0] ?? "actor";
   const mode = "role" in value ? "role" : "feature" in value ? "feature" : "pose";
   return (
-    <fieldset className="col-span-2 grid grid-cols-2 gap-2 border border-border/70 p-2">
-      <legend className="px-1 text-muted-foreground">{label}</legend>
+    <fieldset {...stylex.props(styles.gridBorderedCols2)}>
+      <legend {...stylex.props(styles.muted)}>{label}</legend>
       <SelectMenuField
         label="Reference type"
         value={mode}
@@ -591,7 +613,7 @@ function PointRefControls({
               ? { feature: "feature", at: "entry" }
               : { pose: { s: 0, laneOffset: 0, tFrac: 0, headingOffsetRad: 0 } },
         )}
-        className="h-8 text-xs"
+        xstyle={styles.xs}
       />
       {mode === "role" ? (
         <SelectMenuField
@@ -599,7 +621,7 @@ function PointRefControls({
           value={(value as { role: string }).role}
           options={roles.length ? roles : [role]}
           onChange={(nextRole) => onChange({ role: nextRole })}
-          className="h-8 text-xs"
+          xstyle={styles.xs}
         />
       ) : mode === "feature" ? (
         <>
@@ -619,7 +641,7 @@ function PointRefControls({
               ...(value as Extract<PointRef, { feature: string }>),
               at: at as "entry" | "center" | "exit",
             })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
         </>
       ) : (
@@ -657,8 +679,8 @@ function PointRefControls({
 function SignalRefControls({ value, onChange }: { value: SignalRef; onChange: (value: SignalRef) => void }) {
   const mode = "handle" in value ? "handle" : "feature" in value ? "feature" : "control";
   return (
-    <fieldset className="col-span-2 grid grid-cols-2 gap-2 border border-border/70 p-2">
-      <legend className="px-1 text-muted-foreground">Signal reference</legend>
+    <fieldset {...stylex.props(styles.gridBorderedCols2)}>
+      <legend {...stylex.props(styles.muted)}>Signal reference</legend>
       <SelectMenuField
         label="Reference type"
         value={mode}
@@ -674,7 +696,7 @@ function SignalRefControls({ value, onChange }: { value: SignalRef; onChange: (v
               ? { feature: "feature", approach: "subject" }
               : { control: "signal-1" },
         )}
-        className="h-8 text-xs"
+        xstyle={styles.xs}
       />
       {mode === "handle" ? (
         <TextField label="Signal handle" value={(value as { handle: string }).handle} onChange={(handle) => onChange({ handle })} />
@@ -688,7 +710,7 @@ function SignalRefControls({ value, onChange }: { value: SignalRef; onChange: (v
             value={(value as Extract<SignalRef, { feature: string }>).approach}
             options={["subject", "opposing", "left", "right"]}
             onChange={(approach) => onChange({ ...(value as Extract<SignalRef, { feature: string }>), approach: approach as "subject" | "opposing" | "left" | "right" })}
-            className="h-8 text-xs"
+            xstyle={styles.xs}
           />
         </>
       )}
@@ -708,10 +730,10 @@ function OptionalNumberField({
   onChange: (value: number | undefined) => void;
 }) {
   return (
-    <label className="block min-w-0 text-muted-foreground">
+    <label {...stylex.props(styles.blockMutedNarrowable)}>
       {label}
       <Input
-        className="mt-1 h-8"
+        xstyle={styles.mt1H8}
         min={min}
         step={0.1}
         type="number"

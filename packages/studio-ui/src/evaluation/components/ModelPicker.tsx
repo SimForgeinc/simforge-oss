@@ -120,7 +120,7 @@ export function ModelPicker({
                 {formatBytes(candidate.approxWeightsBytes)} weights ·{" "}
                 {uploadedVideo ? "trajectory + reasoning" : candidate.capabilities.vqa ? "trajectory + text" : "trajectory only"}
               </span>
-              <span {...stylex.props(s.rowTight)}>
+              <span {...stylex.props(s.flexWrapGap15)}>
                 {cloudOnly || candidate.remoteOnly ? (
                   <Badge variant="secondary">Cloud execution</Badge>
                 ) : (
@@ -135,7 +135,7 @@ export function ModelPicker({
         })}
       </div>
 
-      <div {...stylex.props(s.familyGrid2)}>
+      <div {...stylex.props(s.familyGrid2Gap4)}>
         <div {...stylex.props(s.stack15)}>
           <label {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)} htmlFor="quant">
             Precision
@@ -154,11 +154,11 @@ export function ModelPicker({
         </div>
 
         <dl {...stylex.props(s.space1, s.textXs, s.textMuted)}>
-          <div {...stylex.props(s.rowTight)}>
+          <div {...stylex.props(s.flexNoAlignGap2)}>
             <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Revision</dt>
             <dd {...stylex.props(s.min0, s.truncate, s.mono, s.textFg)}>{entry.weightsRevision}</dd>
           </div>
-          <div {...stylex.props(s.rowTight)}>
+          <div {...stylex.props(s.flexNoAlignGap2)}>
             <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>Cameras</dt>
             <dd {...stylex.props(s.textFg)}>
               {uploadedVideo
@@ -168,7 +168,7 @@ export function ModelPicker({
                   : `variable, default [${entry.cameras.default.join(", ")}]`}
             </dd>
           </div>
-          <div {...stylex.props(s.rowTight)}>
+          <div {...stylex.props(s.flexNoAlignGap2)}>
             <dt {...stylex.props(s.width24, s.shrink0, s.uppercaseWide)}>License</dt>
             <dd {...stylex.props(s.textFg)}>
               {entry.license.id}
@@ -179,8 +179,8 @@ export function ModelPicker({
       </div>
 
       {entry.license.cardConflictNote ? (
-        <p {...stylex.props(s.rowTight, s.textXs, s.leading5, s.textMuted)}>
-          <Info aria-hidden="true" {...stylex.props(s.mt1, s.iconSm)} />
+        <p {...stylex.props(s.flexNoAlignGap2, s.textXs, s.leading5, s.textMuted)}>
+          <Info aria-hidden="true" {...stylex.props(s.mt05, s.iconSm)} />
           {entry.license.cardConflictNote}
         </p>
       ) : null}
@@ -208,7 +208,7 @@ export function ModelPicker({
               />
               <span {...stylex.props(s.targetBody)}>
                 <span {...stylex.props(s.targetTitle)}>
-                  <Icon aria-hidden="true" {...stylex.props(s.icon)} />
+                  <Icon aria-hidden="true" {...stylex.props(s.iconPlain)} />
                   {meta.label}
                   {offer.qualification === "qualification-pending" ? (
                     <Badge variant="outline">Qualification pending</Badge>

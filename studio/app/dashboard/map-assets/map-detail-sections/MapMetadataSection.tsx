@@ -5,7 +5,6 @@ import { styles } from "../map-assets.stylex";
 import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAsset, MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
 
 /** Props for the MapMetadataSection component. */
@@ -51,7 +50,7 @@ export function MapMetadataSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           {title}
         </button>
@@ -249,7 +248,7 @@ export function MapMetadataSection({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className={stylex.props(styles.s_708).className}
+                xstyle={styles.s_708}
                 disabled={populateBusy}
                 onClick={onPopulateMetadata}
               >

@@ -9,117 +9,66 @@ import {
   TooltipProvider,
 } from "../../../../src/components/ui/tooltip";
 
-describe("TooltipProvider", () => {
-  it("renders children without crashing", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <span>child</span>
-      </TooltipProvider>
-    );
-    expect(html).toContain("child");
-  });
-});
+function render(element: React.ReactElement): DocumentFragment {
+  const template = document.createElement("template");
+  template.innerHTML = renderToString(element);
+  return template.content;
+}
 
-describe("Tooltip", () => {
-  it("renders children inside the tooltip root", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip>
-          <span>tooltip root</span>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("tooltip root");
-  });
-});
+function renderTooltip(contentProps: React.ComponentProps<typeof TooltipContent> = {}): DocumentFragment {
+  return render(
+    <TooltipProvider>
+      <Tooltip defaultOpen>
+        <TooltipTrigger>Trigger</TooltipTrigger>
+        <TooltipContent {...contentProps}>Copy to clipboard</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>,
+  );
+}
 
 describe("TooltipTrigger", () => {
-  it("renders the trigger element with its children", () => {
-    const html = renderToString(
+  it("renders a trigger button with its children and forwarded attributes", () => {
+    const trigger = render(
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger>
-            <button type="button">Hover me</button>
-          </TooltipTrigger>
+          <TooltipTrigger data-testid="tooltip-trigger">Hover me</TooltipTrigger>
         </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("Hover me");
+      </TooltipProvider>,
+    ).querySelector("button")!;
+
+    expect(trigger.textContent).toBe("Hover me");
+    expect(trigger.getAttribute("data-testid")).toBe("tooltip-trigger");
+    expect(trigger.getAttribute("data-state")).toBe("closed");
   });
 
-  it("passes through HTML attributes to the trigger", () => {
-    const html = renderToString(
+  it("is not described by a tooltip while the tooltip is closed", () => {
+    const fragment = render(
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger data-testid="tooltip-trigger">Trigger</TooltipTrigger>
+          <TooltipTrigger>Trigger</TooltipTrigger>
+          <TooltipContent>Help text</TooltipContent>
         </Tooltip>
-      </TooltipProvider>
+      </TooltipProvider>,
     );
-    expect(html).toContain('data-testid="tooltip-trigger"');
+
+    expect(fragment.querySelector("button")?.getAttribute("aria-describedby")).toBeNull();
+    expect(fragment.querySelector('[role="tooltip"]')).toBeNull();
   });
 });
 
 describe("TooltipContent", () => {
-  it("applies z-50 and overflow-hidden classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("z-50");
-    expect(html).toContain("overflow-hidden");
+  it("renders the tooltip text with tooltip semantics when open", () => {
+    const content = renderTooltip().querySelector('[role="tooltip"]')!;
+
+    expect(content.textContent).toBe("Copy to clipboard");
   });
 
-  it("applies rounded-md and border classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("rounded-md");
-    expect(html).toContain("border");
-  });
+  it("describes its trigger while open", () => {
+    const fragment = renderTooltip();
+    const trigger = fragment.querySelector("button")!;
+    const content = fragment.querySelector('[role="tooltip"]')!;
 
-  it("applies bg-popover and text-popover-foreground classes", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Tooltip text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("bg-popover");
-    expect(html).toContain("text-popover-foreground");
-  });
-
-  it("renders tooltip text content", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent>Copy to clipboard</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("Copy to clipboard");
-  });
-
-  it("merges a custom className", () => {
-    const html = renderToString(
-      <TooltipProvider>
-        <Tooltip defaultOpen>
-          <TooltipTrigger>Trigger</TooltipTrigger>
-          <TooltipContent className="custom-tooltip">Help text</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-    expect(html).toContain("custom-tooltip");
+    expect(content.id).not.toBe("");
+    expect(trigger.getAttribute("aria-describedby")).toBe(content.id);
   });
 });

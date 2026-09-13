@@ -41,7 +41,7 @@ function PrimitiveValue({ value, onHighlightId, onSelectId, knownIds }: Primitiv
       </span>
     );
   }
-  return <span {...stylex.props(styles.mono)}>{str}</span>;
+  return <span {...stylex.props(styles.plain)}>{str}</span>;
 }
 
 interface JsonNodeProps {

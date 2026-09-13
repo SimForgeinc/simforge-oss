@@ -12,20 +12,25 @@ export const CARLA_MARK_SRC = "/scenario-editor/carla-mark.png";
 
 export function CarlaReadyMark({
   className,
+  xstyle,
   size = 14,
   testId,
   title,
 }: {
   className?: string;
+  /** Caller StyleX styles, composed after this mark's own so they win. */
+  xstyle?: stylex.StyleXStyles;
   size?: number;
   testId?: string;
   title?: string;
 }) {
   return (
     <Image
+      {...mergeStyleProps(stylex.props(styles.root, xstyle), className)}
       src={CARLA_MARK_SRC}
       alt=""
       aria-hidden="true"
+      data-testid={testId}
       title={title}
       unoptimized
       width={size}

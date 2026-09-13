@@ -13,92 +13,75 @@ import {
   CardTitle,
 } from "../../../../src/components/ui/card";
 
+function render(element: React.ReactElement): HTMLElement {
+  const template = document.createElement("template");
+  template.innerHTML = renderToString(element);
+  const root = template.content.firstElementChild;
+  if (!(root instanceof HTMLElement)) throw new Error("expected a rendered element");
+  return root;
+}
+
+const parts: ReadonlyArray<readonly [string, React.ElementType<React.HTMLAttributes<HTMLDivElement>>]> = [
+  ["Card", Card],
+  ["CardHeader", CardHeader],
+  ["CardTitle", CardTitle],
+  ["CardDescription", CardDescription],
+  ["CardAction", CardAction],
+  ["CardContent", CardContent],
+  ["CardFooter", CardFooter],
+];
+
+describe("Card parts", () => {
+  it("each render a div carrying their children", () => {
+    for (const [name, Part] of parts) {
+      const element = render(<Part>{name} body</Part>);
+
+      expect(element.tagName, name).toBe("DIV");
+      expect(element.textContent, name).toBe(`${name} body`);
+    }
+  });
+
+});
+
 describe("Card", () => {
-  it("renders a div with base classes and merged props", () => {
-    const html = renderToString(
-      <Card className="custom-card" data-testid="card">
+  it("forwards arbitrary DOM attributes", () => {
+    const card = render(
+      <Card data-testid="card" id="summary" aria-label="Summary card">
         Body
       </Card>
     );
 
-    expect(html).toContain("<div");
-    expect(html).toContain("rounded-md");
-    expect(html).toContain("border-border");
-    expect(html).toContain("bg-card");
-    expect(html).toContain("custom-card");
-    expect(html).toContain('data-testid="card"');
-    expect(html).toContain("Body");
+    expect(card.getAttribute("data-testid")).toBe("card");
+    expect(card.getAttribute("id")).toBe("summary");
+    expect(card.getAttribute("aria-label")).toBe("Summary card");
   });
-});
 
-describe("CardHeader", () => {
-  it("renders header layout classes", () => {
-    const html = renderToString(<CardHeader className="header-extra">Header</CardHeader>);
+  it("keeps a caller-supplied inline style", () => {
+    const card = render(<Card style={{ marginTop: 4 }} />);
 
-    expect(html).toContain("grid");
-    expect(html).toContain("grid-cols-[1fr_auto]");
-    expect(html).toContain("gap-y-1.5");
-    expect(html).toContain("p-5");
-    expect(html).toContain("header-extra");
-    expect(html).toContain("Header");
+    expect(card.style.marginTop).toBe("4px");
   });
-});
 
-describe("CardTitle", () => {
-  it("renders title typography classes", () => {
-    const html = renderToString(<CardTitle>Title</CardTitle>);
-
-    expect(html).toContain("col-start-1");
-    expect(html).toContain("text-[15px]");
-    expect(html).toContain("font-semibold");
-    expect(html).toContain("tracking-tight");
-    expect(html).toContain("Title");
-  });
-});
-
-describe("CardDescription", () => {
-  it("renders description classes and custom className", () => {
-    const html = renderToString(
-      <CardDescription className="description-extra">Description</CardDescription>
+  it("composes header, content and footer in document order", () => {
+    const card = render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Title</CardTitle>
+          <CardDescription>Description</CardDescription>
+          <CardAction>
+            <button type="button">Act</button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>Content</CardContent>
+        <CardFooter>Footer</CardFooter>
+      </Card>
     );
 
-    expect(html).toContain("text-sm");
-    expect(html).toContain("text-muted-foreground");
-    expect(html).toContain("description-extra");
-    expect(html).toContain("Description");
-  });
-});
+    const [header, content, footer] = Array.from(card.children);
 
-describe("CardAction", () => {
-  it("renders action positioning classes", () => {
-    const html = renderToString(<CardAction>Action</CardAction>);
-
-    expect(html).toContain("col-start-2");
-    expect(html).toContain("row-span-2");
-    expect(html).toContain("justify-self-end");
-    expect(html).toContain("Action");
-  });
-});
-
-describe("CardContent", () => {
-  it("renders content spacing classes", () => {
-    const html = renderToString(<CardContent>Content</CardContent>);
-
-    expect(html).toContain("px-5");
-    expect(html).toContain("pb-3");
-    expect(html).toContain("Content");
-  });
-});
-
-describe("CardFooter", () => {
-  it("renders footer layout classes", () => {
-    const html = renderToString(<CardFooter>Footer</CardFooter>);
-
-    expect(html).toContain("flex");
-    expect(html).toContain("items-center");
-    expect(html).toContain("border-t");
-    expect(html).toContain("p-4");
-    expect(html).toContain("px-5");
-    expect(html).toContain("Footer");
+    expect(header.textContent).toBe("TitleDescriptionAct");
+    expect(content.textContent).toBe("Content");
+    expect(footer.textContent).toBe("Footer");
+    expect(header.querySelector("button")?.textContent).toBe("Act");
   });
 });

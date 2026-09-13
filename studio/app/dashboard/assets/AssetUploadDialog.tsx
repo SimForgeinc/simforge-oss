@@ -462,7 +462,7 @@ export function AssetUploadDialog({
               >
                 <FileUp {...stylex.props(dialog.iconAccent)} />
                 <span {...stylex.props(dialog.uploadDropLabel)}>Drop a model and its texture files here</span>
-                <span {...stylex.props(dialog.subText)}>GLB, GLTF, FBX, OBJ, STL, DAE, PLY or USDZ</span>
+                <span {...stylex.props(dialog.dropHint)}>GLB, GLTF, FBX, OBJ, STL, DAE, PLY or USDZ</span>
               </button>
 
               {model && thumbnailUrl ? (
@@ -504,7 +504,7 @@ export function AssetUploadDialog({
                         ]}
                         labelClassName="mb-1 text-xs text-white/45"
                       />
-                      <div {...stylex.props(dialog.uploadRow)}>
+                      <div {...stylex.props(dialog.alignEndRow)}>
                         <Button
                           type="button"
                           size="sm"
@@ -540,9 +540,9 @@ export function AssetUploadDialog({
                         {autoSize ? `Auto-size to ${autoSize.metres} m ${autoSize.axisLabel}` : "Auto-size"}
                       </Button>
                       {autoSize ? (
-                        <span {...stylex.props(dialog.warningText)}>{`typical for ${autoSize.example}`}</span>
+                        <span {...stylex.props(dialog.faintText)}>{`typical for ${autoSize.example}`}</span>
                       ) : (
-                        <span {...stylex.props(dialog.warningText)}>pick a motion answer to enable</span>
+                        <span {...stylex.props(dialog.faintText)}>pick a motion answer to enable</span>
                       )}
                     </div>
                     {model.warnings.map((warning) => <p key={warning} {...stylex.props(dialog.warningText)}>{warning}</p>)}
@@ -566,7 +566,7 @@ export function AssetUploadDialog({
                   />
                 ) : null}
                 <div {...stylex.props(dialog.uploadSpan2)}>
-                  <p {...stylex.props(dialog.uploadLabel)}>How does it move?</p>
+                  <p {...stylex.props(dialog.uploadLabelMb)}>How does it move?</p>
                   <div {...stylex.props(dialog.uploadMotionGrid)} role="radiogroup" aria-label="How does it move?">
                     {MOTION_OPTIONS.map((option) => (
                       <button

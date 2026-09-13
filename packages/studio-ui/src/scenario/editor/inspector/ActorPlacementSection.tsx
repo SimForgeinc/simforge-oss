@@ -5,6 +5,8 @@ import { Button } from "../../../components/ui/button";
 import type { ActorRecord, EditorController } from "@simforge-oss/editor";
 import { Heading, NumberField } from "../authoring/fields";
 import { Readout } from "../regions/Readout";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActorPlacementSection.stylex";
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -33,11 +35,11 @@ export function ActorPlacementSection({
   const lane = actor.laneRef;
 
   return (
-    <section aria-labelledby="scenario-placement-heading" className="space-y-3">
+    <section aria-labelledby="scenario-placement-heading" {...stylex.props(styles.stackLg)}>
       <Heading>
         <span id="scenario-placement-heading">Placement</span>
       </Heading>
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2)}>
         <NumberField
           label="X (m)"
           step={0.1}
@@ -62,7 +64,7 @@ export function ActorPlacementSection({
       </div>
 
       {lane ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div {...stylex.props(styles.gridCols2Gap2)}>
           <NumberField
             label="Lane s (m)"
             step={0.5}
@@ -79,14 +81,14 @@ export function ActorPlacementSection({
           <Readout label="Lane" value={`${lane.laneId} · sec ${lane.section}`} />
         </div>
       ) : (
-        <p className="text-muted-foreground">
+        <p {...stylex.props(styles.muted)}>
           Free placement — not anchored to a lane. Drag onto a road to snap.
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div {...stylex.props(styles.flexGap2)}>
         <Button
-          className="flex-1"
+          xstyle={styles.fill}
           size="sm"
           variant="outline"
           onClick={() => controller?.frameActor(actor.id)}
@@ -95,7 +97,7 @@ export function ActorPlacementSection({
           Frame
         </Button>
         <Button
-          className="flex-1"
+          xstyle={styles.fill}
           size="sm"
           variant="outline"
           onClick={() => controller?.duplicateSelection()}

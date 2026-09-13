@@ -5,7 +5,6 @@ import { styles } from "../../map-assets.stylex";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { getMapSearchSuggestions } from "@/app/lib/maps/search/map-search";
 
 interface SearchInputBoxProps {
@@ -95,7 +94,7 @@ export function SearchInputBox({
             onSubmitSearch();
           }
         }}
-        className={stylex.props(styles.s_989).className}
+        xstyle={styles.s_989}
         aria-label="Search this map"
         aria-autocomplete="list"
         aria-expanded={showSuggestions && suggestions.length > 0}
@@ -132,7 +131,7 @@ export function SearchInputBox({
               type="button"
               role="option"
               aria-selected={index === highlightedSuggestionIndex}
-              className={stylex.props(styles.u_908, styles.u_928, styles.u_955, styles.u_936, styles.u_943, styles.u_965, styles.u_964, styles.u_970, styles.u_924).className}
+              className={stylex.props(styles.suggestion, index === highlightedSuggestionIndex && styles.suggestionHighlighted).className}
               onMouseDown={(event) => {
                 event.preventDefault();
               }}

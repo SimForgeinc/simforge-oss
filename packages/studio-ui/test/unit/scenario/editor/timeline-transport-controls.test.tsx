@@ -33,10 +33,10 @@ describe("timeline transport controls", () => {
     expect(screen.queryByRole("button", { name: "Stop scenario" })).toBeNull();
     const playButton = screen.getByRole("button", { name: "Play scenario" });
     const resetButton = screen.getByRole("button", { name: "Reset scenario" });
-    for (const button of [playButton, resetButton]) {
-      expect(button.className).toContain("border-0");
-      expect(button.className).toContain("bg-transparent");
-    }
+    // One row: both controls are siblings directly under the transport strip,
+    // never split across a wrapper or nested in per-button chrome.
+    const row = screen.getByTestId("timeline-transport-controls");
+    expect([...row.children]).toEqual([playButton, resetButton]);
     fireEvent.click(playButton);
     fireEvent.click(resetButton);
     expect(onPlay).toHaveBeenCalledOnce();

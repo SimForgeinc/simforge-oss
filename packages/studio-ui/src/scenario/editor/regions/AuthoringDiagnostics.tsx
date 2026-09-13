@@ -2,6 +2,8 @@
 
 import type { EditorDocument } from "@simforge-oss/editor";
 import { Readout } from "./Readout";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./AuthoringDiagnostics.stylex";
 
 /**
  * OWNS: the document's validation summary.
@@ -22,17 +24,17 @@ export function AuthoringDiagnostics({ document }: { document: EditorDocument })
   const first = issues[0];
 
   return (
-    <section className="mt-5 border-t border-border pt-4 text-xs">
-      <h3 className="font-semibold uppercase tracking-meta text-muted-foreground">
+    <section {...stylex.props(styles.xsRuleT)}>
+      <h3 {...stylex.props(styles.capsMutedSemibold)}>
         Authoring diagnostics
       </h3>
-      <dl className="mt-3 grid grid-cols-2 gap-2">
+      <dl {...stylex.props(styles.gridCols2Gap2)}>
         <Readout label="Errors" value={String(errors)} />
         <Readout label="Warnings" value={String(warnings)} />
         <Readout label="Portable roles" value={String(portable)} />
         <Readout label="Map-bound roles" value={String(mapBound)} />
       </dl>
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+      <div {...stylex.props(styles.flexWrapMuted)}>
         <span>{Object.keys(document.data.params).length} parameters</span>
         <span>{document.data.variants.length} variants</span>
         <span>{document.data.invariants.length} invariants</span>
@@ -40,11 +42,7 @@ export function AuthoringDiagnostics({ document }: { document: EditorDocument })
       {first ? (
         <p
           aria-live="polite"
-          className={`mt-3 border p-2 ${
-            errors
-              ? "border-destructive/50 bg-destructive/15 text-foreground"
-              : "border-amber-400/40 bg-amber-500/15 text-foreground"
-          }`}
+          {...stylex.props(styles.firstIssue, errors ? styles.firstIssueError : styles.firstIssueWarning)}
           role={errors ? "alert" : "status"}
         >
           {first.message}
@@ -52,7 +50,7 @@ export function AuthoringDiagnostics({ document }: { document: EditorDocument })
       ) : (
         <p
           aria-live="polite"
-          className="mt-3 border border-emerald-400/40 bg-emerald-500/15 p-2 text-foreground"
+          {...stylex.props(styles.inkBorderedPad2)}
           role="status"
         >
           Document is structurally valid.

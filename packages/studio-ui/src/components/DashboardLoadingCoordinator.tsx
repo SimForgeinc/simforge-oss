@@ -221,13 +221,13 @@ export function DashboardLoadingProvider({ children }: { children: ReactNode }) 
               : "scene-loader-cloud-exit"
           }
           className={cn(
-            "!z-[250] transition-colors ease-out motion-reduce:transition-none",
             entryKind === "route" && "route-loading",
             enteringScene && "dashboard-scene-loading-enter",
-            visible
-              ? "pointer-events-auto bg-black/70 backdrop-blur-2xl"
-              : "pointer-events-none bg-transparent backdrop-blur-none",
           )}
+          xstyle={[
+            styles.overlay,
+            visible ? styles.overlayVisible : styles.overlayHidden,
+          ]}
           style={{ transitionDuration: "900ms" }}
           contentTestId="dashboard-loading-content"
           contentWrapClassName={

@@ -33,7 +33,7 @@ export const styles = stylex.create({
     borderRadius: radii.sm,
     paddingInline: "0.375rem",
     paddingBlock: "0.125rem",
-    fontSize: "0.6875rem",
+    fontSize: "11px",
   },
   compactIcon: {
     width: "0.75rem",

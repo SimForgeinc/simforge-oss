@@ -4,6 +4,7 @@ import { useId } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { control } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "./CopyableErrorMessage";
 
 /**
@@ -98,7 +99,7 @@ export function MetadataDetailsDialog({
             }
           }}
           placeholder={namePlaceholder}
-          className="mt-1.5"
+          xstyle={control.spaceAbove15}
           disabled={busy}
         />
         <label

@@ -30,7 +30,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { toast } from "sonner";
 import { MapSwitcherDropdown } from "./MapSwitcherDropdown";
 
@@ -100,7 +99,7 @@ export function MapDetailHeader({
         <Button
           variant="secondary"
           size="sm"
-          className={stylex.props(styles.s_724).className}
+          xstyle={styles.s_724}
           onClick={onCreateBlankScenario}
           disabled={createBlankBusy || !canCreateBlankScenario}
           title={
@@ -117,13 +116,13 @@ export function MapDetailHeader({
             <Button
               variant="ghost"
               size="icon"
-              className={stylex.props(styles.s_726).className}
+              xstyle={styles.s_726}
             >
               <MoreHorizontal size={22} strokeWidth={1.75} />
               <span className={stylex.props(styles.s_997).className}>Actions</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={stylex.props(styles.s_728).className}>
+          <DropdownMenuContent align="end" xstyle={styles.s_728}>
             <TooltipProvider delayDuration={200}>
               <DropdownMenuItem onClick={onEdit}>
                 <Pencil className={stylex.props(styles.s_732).className} />
@@ -136,18 +135,18 @@ export function MapDetailHeader({
                     disabled={populateBusy}
                   >
                     <RefreshCw
-                      className={stylex.props(styles.u_932).className}
+                      className={stylex.props(styles.headerActionIcon, populateBusy && styles.spinning).className}
                     />
                     Re-extract Metadata
                   </DropdownMenuItem>
                 </TooltipTrigger>
-                <TooltipContent side="left" className={stylex.props(styles.s_731).className}>
+                <TooltipContent side="left" xstyle={styles.s_731}>
                   Recalculate metadata and refresh the local search index.
                 </TooltipContent>
               </Tooltip>
               <DropdownMenuItem onClick={onEnrich} disabled>
                 <RefreshCw
-                  className={stylex.props(styles.u_932).className}
+                  className={stylex.props(styles.headerActionIcon, enrichBusy && styles.spinning).className}
                 />
                 Enrichment unavailable locally
               </DropdownMenuItem>
@@ -158,12 +157,12 @@ export function MapDetailHeader({
                     disabled={refreshSearchIndexBusy}
                   >
                     <RefreshCw
-                      className={stylex.props(styles.u_932).className}
+                      className={stylex.props(styles.headerActionIcon, refreshSearchIndexBusy && styles.spinning).className}
                     />
                     Refresh Search Index
                   </DropdownMenuItem>
                 </TooltipTrigger>
-                <TooltipContent side="left" className={stylex.props(styles.s_731).className}>
+                <TooltipContent side="left" xstyle={styles.s_731}>
                   Refreshes the search index just from the current metadata — no repopulation or re-enrichment.
                 </TooltipContent>
               </Tooltip>
@@ -172,7 +171,7 @@ export function MapDetailHeader({
                 disabled={thumbnailBusy}
               >
                 <Camera
-                  className={stylex.props(styles.u_932).className}
+                  className={stylex.props(styles.headerActionIcon, thumbnailBusy && styles.pulsing).className}
                 />
                 Generate Thumbnail
               </DropdownMenuItem>

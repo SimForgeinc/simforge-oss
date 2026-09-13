@@ -14,6 +14,8 @@ import {
   useScenarioNotificationStore,
 } from "./notification-store";
 import { ScenarioNotificationCard } from "./ScenarioNotificationCard";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioNotificationDock.stylex";
 
 /** How often expiry is checked. Coarse on purpose — TTLs are seconds, not frames. */
 const SWEEP_INTERVAL_MS = 500;
@@ -74,7 +76,7 @@ export function ScenarioNotificationDock() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-5 right-5 z-[70] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
+      {...stylex.props(styles.fixedFlexColRev)}
       data-testid="scenario-notification-dock"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -89,7 +91,7 @@ export function ScenarioNotificationDock() {
       {hiddenCount > 0 || expanded ? (
         <Button
           aria-expanded={expanded}
-          className="pointer-events-auto h-auto justify-center border-border/70 bg-background/95 py-1.5 text-xs text-muted-foreground shadow-lg backdrop-blur-md hover:text-foreground"
+          xstyle={styles.midXsMuted}
           data-testid="scenario-notification-overflow"
           size="sm"
           variant="outline"

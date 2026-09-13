@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import * as stylex from "@stylexjs/stylex";
 import { AppSwitcherOverlay } from "@/app/components/AppSwitcherOverlay";
 import SimForgeLogo from "@/app/components/landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { activeNavItem } from "@/app/lib/dashboard-nav";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { cloudPlate, styles } from "@/app/components/AppTopBar.stylex";
 
 export function AppTopBar() {
   const pathname = usePathname();
@@ -38,15 +39,15 @@ export function AppTopBar() {
   return (
     <>
       <header
-        className="sticky top-0 z-[260] flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-white/15 bg-black/[0.52] shadow-[0_10px_35px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl backdrop-saturate-0 after:pointer-events-none after:absolute after:inset-0 after:shadow-[inset_0_0_34px_rgba(255,255,255,0.07)]"
+        {...stylex.props(styles.header)}
         data-testid="app-topbar"
       >
         <div
           aria-hidden="true"
-          className="app-topbar-clouds pointer-events-none absolute -inset-x-[8%] -inset-y-full"
+          {...stylex.props(styles.clouds, cloudPlate.plate)}
           data-testid="app-topbar-clouds"
         />
-        <div className="relative z-10 flex h-full w-full items-center gap-3 px-3">
+        <div {...stylex.props(styles.row)}>
           <button
             ref={switcherTriggerRef}
             type="button"
@@ -54,58 +55,51 @@ export function AppTopBar() {
             aria-label="Open app switcher"
             aria-haspopup="dialog"
             aria-expanded={switcherOpen}
-            className="group flex size-10 shrink-0 items-center justify-center bg-transparent text-primary transition-colors hover:bg-transparent hover:text-[#f4ed55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {...stylex.props(styles.trigger)}
           >
             <span
-              className="flex items-center justify-center transition-[transform,filter] duration-200 ease-out [filter:drop-shadow(0_0_0_transparent)] group-hover:scale-[1.18] group-hover:[filter:drop-shadow(0_0_1px_#E8E044)_drop-shadow(0_0_8px_rgba(232,224,68,0.32))] group-focus-visible:scale-[1.18] motion-reduce:transition-none"
+              {...stylex.props(styles.logo)}
               data-testid="app-topbar-logo"
             >
               <SimForgeLogo size={30} />
             </span>
           </button>
 
-          <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div {...stylex.props(styles.content)}>
             {unbrandedPageTitle ? (
               <span
                 suppressHydrationWarning
-                className="flex min-w-0 items-baseline gap-2 truncate text-foreground"
+                {...stylex.props(styles.titleRow)}
                 data-topbar-slot="title"
                 aria-label={`SIMFORGE - ${unbrandedPageTitle}`}
               >
                 <span
-                  className="shrink-0 text-[20px] uppercase"
-                  style={{
-                    fontFamily: "var(--font-heavy)",
-                    fontWeight: 700,
-                    letterSpacing: "-0.055em",
-                    lineHeight: 0.84,
-                  }}
+                  {...stylex.props(styles.brand)}
                   data-topbar-slot="brand"
                 >
                   SIMFORGE
                 </span>
-                <span aria-hidden="true" className="shrink-0 text-foreground/35">
+                <span aria-hidden="true" {...stylex.props(styles.separator)}>
                   -
                 </span>
-                <span
-                  className="min-w-0 truncate text-[22px] font-semibold leading-[1.1] tracking-tight"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
+                <span {...stylex.props(styles.pageTitle)}>
                   {unbrandedPageTitle}
                 </span>
               </span>
             ) : null}
             <div
               ref={(element) => slotCtx?.registerActionsSlot(element)}
-              className={cn(
-                "flex shrink-0 items-center gap-2",
-                slotCtx?.actionsAlignment === "start" ? "mr-auto" : "ml-auto",
+              {...stylex.props(
+                styles.actions,
+                slotCtx?.actionsAlignment === "start"
+                  ? styles.actionsStart
+                  : styles.actionsEnd,
               )}
               data-topbar-slot="actions"
             />
             <div
               ref={(element) => slotCtx?.registerTrailingSlot(element)}
-              className="flex shrink-0 items-center"
+              {...stylex.props(styles.trailing)}
               data-topbar-slot="trailing"
             />
           </div>

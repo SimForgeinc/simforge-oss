@@ -19,7 +19,6 @@ import {
 import type { EditorDocument } from "@simforge-oss/editor";
 import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
-import { cn } from "../../../lib/utils";
 import { SensorCoverageDiagram } from "./SensorCoverageDiagram";
 import { EDITOR_SENSOR_RIGS, PRONTO_SENSOR_RIG } from "./sensor-rig-presets";
 import {
@@ -38,6 +37,9 @@ import {
   sensorName,
   type SensorModality,
 } from "./sensor-presentation";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./SensorSetupModal.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The sensor workbench.
@@ -111,25 +113,25 @@ export function SensorSetupModal({
     <div
       aria-label={`Sensors on ${label}`}
       aria-modal="true"
-      className="fixed inset-0 z-[90] grid place-items-center p-4 sm:p-6"
+      {...stylex.props(styles.fixedGridCentered)}
       data-testid="sensor-setup-modal"
       role="dialog"
     >
       <button
         aria-label="Close sensor setup"
-        className="absolute inset-0 cursor-default bg-background/60 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        {...stylex.props(styles.absInset0)}
         onClick={onClose}
         type="button"
       />
-      <div className="relative flex max-h-[calc(100vh-48px)] w-[min(880px,calc(100vw-32px))] flex-col overflow-hidden border border-border bg-card/90 shadow-2xl backdrop-blur-xl">
-        <header className="relative flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-          <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/15 to-transparent" />
-          <div className="min-w-0">
-            <p className="font-mono text-micro font-bold uppercase tracking-meta text-primary/90">Sensors</p>
-            <h2 className="mt-1 text-lg font-extrabold leading-tight tracking-tight text-foreground">
+      <div {...stylex.props(styles.relFlexCol)}>
+        <header {...stylex.props(styles.relFlexBetween)}>
+          <span aria-hidden {...stylex.props(styles.abs)} />
+          <div {...stylex.props(styles.narrowable)}>
+            <p {...stylex.props(styles.capsMonoMicro)}>Sensors</p>
+            <h2 {...stylex.props(styles.lgInkExtrabold)}>
               {label}
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p {...stylex.props(styles.xsMuted)}>
               {counts.total === 0
                 ? "A vehicle with sensors records the scenario. Fit a rig, or add one sensor."
                 : `${sensorCountSummary(counts)}${rig ? ` · ${rig.name}` : ""} · this vehicle records the scenario`}
@@ -137,18 +139,18 @@ export function SensorSetupModal({
           </div>
           <button
             aria-label="Close sensor setup"
-            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {...stylex.props(styles.gridCenteredTight)}
             onClick={onClose}
             type="button"
           >
-            <X aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[300px_minmax(0,1fr)]">
-          <div className="min-h-0 space-y-4 overflow-y-auto border-b border-border p-4 md:border-b-0 md:border-r [scrollbar-width:thin]">
-            <section aria-labelledby="sensor-rig-heading" className="space-y-1.5">
-              <h3 className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground" id="sensor-rig-heading">
+        <div {...stylex.props(styles.gridFillClip)}>
+          <div {...stylex.props(styles.ruleBScrollYShrinkable)}>
+            <section aria-labelledby="sensor-rig-heading" {...stylex.props(styles.stackSm)}>
+              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-rig-heading">
                 Production rigs
               </h3>
               {EDITOR_SENSOR_RIGS.map((preset) => {
@@ -158,12 +160,7 @@ export function SensorSetupModal({
                   <button
                     aria-label={`Fit ${preset.name}`}
                     aria-pressed={applied}
-                    className={cn(
-                      "editor-motion flex w-full items-center gap-3 border px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      applied
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50 hover:bg-muted/40",
-                    )}
+                    className={stylex.props(applied ? styles.flexCenterBordered : styles.flexCenterBordered2, motionStyles.editorMotion).className}
                     key={preset.id}
                     onClick={() => {
                       setError(null);
@@ -186,14 +183,14 @@ export function SensorSetupModal({
                     title={preset.description}
                     type="button"
                   >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-semibold text-foreground">{preset.name}</span>
-                      <span className="block truncate text-micro text-muted-foreground">
+                    <span {...stylex.props(styles.fillNarrowable)}>
+                      <span {...stylex.props(styles.blockXsInk)}>{preset.name}</span>
+                      <span {...stylex.props(styles.blockMicroMuted)}>
                         {sensorCountSummary(presetCounts)}
                       </span>
                     </span>
                     {applied ? (
-                      <span className="shrink-0 font-mono text-micro font-bold uppercase tracking-meta text-primary">
+                      <span {...stylex.props(styles.tightCapsMono)}>
                         Fitted
                       </span>
                     ) : null}
@@ -202,11 +199,11 @@ export function SensorSetupModal({
               })}
             </section>
 
-            <section aria-labelledby="sensor-add-heading" className="space-y-1.5">
-              <h3 className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground" id="sensor-add-heading">
+            <section aria-labelledby="sensor-add-heading" {...stylex.props(styles.stackSm, styles.stackedXl)}>
+              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-add-heading">
                 Add one sensor
               </h3>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div {...stylex.props(styles.gridCols3Gap15)}>
                 <AddButton
                   icon={Camera}
                   label="Camera"
@@ -217,16 +214,16 @@ export function SensorSetupModal({
                 <AddButton icon={Radar} label="Radar" onClick={() => add("radar")} title="Add a bumper radar" />
               </div>
               {error ? (
-                <p className="text-micro text-destructive" role="alert">{error}</p>
+                <p {...stylex.props(styles.microDanger)} role="alert">{error}</p>
               ) : null}
             </section>
 
-            <section aria-labelledby="sensor-list-heading" className="space-y-1.5">
-              <h3 className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground" id="sensor-list-heading">
+            <section aria-labelledby="sensor-list-heading" {...stylex.props(styles.stackSm, styles.stackedXl)}>
+              <h3 {...stylex.props(styles.capsMonoMicro2)} id="sensor-list-heading">
                 Fitted{counts.total ? ` · ${counts.total}` : ""}
               </h3>
               {sensors.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nothing fitted yet.</p>
+                <p {...stylex.props(styles.xsMuted2)}>Nothing fitted yet.</p>
               ) : (
                 sensors.map((sensor) => (
                   <SensorListRow
@@ -242,10 +239,10 @@ export function SensorSetupModal({
             </section>
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-y-auto p-4 [scrollbar-width:thin]">
-            <div className="grid h-[240px] shrink-0 place-items-center border border-border bg-muted/20 p-2">
+          <div {...stylex.props(styles.flexColScrollY)}>
+            <div {...stylex.props(styles.gridCenteredTight2)}>
               {sensors.length === 0 ? (
-                <p className="max-w-[24ch] text-center text-xs text-muted-foreground">
+                <p {...stylex.props(styles.xsMutedCenterText)}>
                   Coverage appears here once this vehicle carries a sensor.
                 </p>
               ) : (
@@ -267,7 +264,7 @@ export function SensorSetupModal({
                 sensor={selected}
               />
             ) : sensors.length > 0 ? (
-              <p className="mt-4 text-xs text-muted-foreground">
+              <p {...stylex.props(styles.xsMuted3)}>
                 Select a sensor — in the list or on the plan — to place and aim it.
               </p>
             ) : null}
@@ -295,15 +292,15 @@ function AddButton({
   return (
     <button
       aria-label={`Add ${label}`}
-      className="editor-motion flex flex-col items-center gap-1 border border-border px-2 py-2 text-micro font-semibold text-foreground hover:border-primary/50 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-35"
+      className={stylex.props(styles.flexColCenter, motionStyles.editorMotion).className}
       disabled={disabled}
       onClick={onClick}
       title={title}
       type="button"
     >
-      <span className="relative">
-        <Icon aria-hidden="true" className="size-4" />
-        <Plus aria-hidden="true" className="absolute -right-1.5 -top-1 size-2.5 text-primary" />
+      <span {...stylex.props(styles.rel)}>
+        <Icon aria-hidden="true" className={stylex.props(styles.size4).className} />
+        <Plus aria-hidden="true" className={stylex.props(styles.absAccent).className} />
       </span>
       {label}
     </button>
@@ -327,20 +324,17 @@ function SensorListRow({
   const name = sensorName(sensor);
   return (
     <div
-      className={cn(
-        "flex items-center gap-2 border px-2 py-1.5",
-        selected ? "border-primary bg-primary/10" : "border-border",
-      )}
+      {...stylex.props(selected ? styles.flexCenterBordered3 : styles.flexCenterBordered4)}
       data-sensor-id={sensor.id}
     >
       <button
         aria-label={`Configure ${name}`}
-        className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        {...stylex.props(styles.fillNarrowableLeftText)}
         onClick={onSelect}
         type="button"
       >
-        <span className="block truncate text-xs text-foreground">{name}</span>
-        <span className="block truncate font-mono text-micro text-muted-foreground">
+        <span {...stylex.props(styles.blockXsInk2)}>{name}</span>
+        <span {...stylex.props(styles.blockMonoMicro)}>
           {modalityLabel(sensor.type)} · {Math.round(aperture.horizontalFovDeg)}° · {Math.round(aperture.farM)} m
         </span>
       </button>
@@ -351,12 +345,12 @@ function SensorListRow({
       />
       <button
         aria-label={`Remove ${name} (${sensor.id})`}
-        className="editor-motion text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={stylex.props(styles.muted, motionStyles.editorMotion).className}
         onClick={() => editorDocument.removeActorSensor(roleId, sensor.id)}
         title={`Remove ${name}`}
         type="button"
       >
-        <X aria-hidden="true" className="size-3.5" />
+        <X aria-hidden="true" className={stylex.props(styles.size35).className} />
       </button>
     </div>
   );
@@ -380,12 +374,12 @@ function SensorEditor({
   const name = sensorName(sensor);
 
   return (
-    <div className="mt-4 space-y-4">
-      <label className="block">
-        <span className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground">Name</span>
+    <div {...stylex.props(styles.mt4StackXl)}>
+      <label {...stylex.props(styles.block)}>
+        <span {...stylex.props(styles.capsMonoMicro2)}>Name</span>
         <Input
           aria-label={`Name for ${modalityLabel(sensor.type)} ${sensor.id}`}
-          className="mt-1 h-8 text-xs"
+          xstyle={styles.xs}
           onChange={(event) => {
             const label = event.target.value.trim();
             replaceSensor(editorDocument, roleId, sensor, { label: label === "" ? undefined : label.slice(0, 200) });
@@ -445,8 +439,8 @@ function SensorEditor({
       />
 
       <div>
-        <span className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground">Range</span>
-        <div className="mt-1 grid grid-cols-2 gap-2">
+        <span {...stylex.props(styles.capsMonoMicro2)}>Range</span>
+        <div {...stylex.props(styles.gridCols2Gap2)}>
           <NumberBox
             label={`Near range in metres for ${name}`}
             min={0}
@@ -466,21 +460,21 @@ function SensorEditor({
         </div>
       </div>
 
-      <div className="border-t border-border pt-3">
+      <div {...stylex.props(styles.ruleT)}>
         <button
           aria-expanded={showNumbers}
-          className="editor-motion font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={stylex.props(styles.capsMonoMicro3, motionStyles.editorMotion).className}
           onClick={() => setShowNumbers((open) => !open)}
           type="button"
         >
           {showNumbers ? "Hide exact mount" : "Exact mount"}
         </button>
         {showNumbers ? (
-          <div className="mt-2 space-y-2">
-            <p className="text-micro text-muted-foreground">
+          <div {...stylex.props(styles.mt2StackMd)}>
+            <p {...stylex.props(styles.microMuted)}>
               Actor-local metres: +X forward, +Y up, +Z left.
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div {...stylex.props(styles.gridCols3Gap2)}>
               {(["x", "y", "z"] as const).map((axis) => (
                 <NumberBox
                   key={axis}
@@ -499,7 +493,7 @@ function SensorEditor({
                 />
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div {...stylex.props(styles.gridCols3Gap2)}>
               {(["yawRad", "pitchRad", "rollRad"] as const).map((axis) => {
                 const limit = axis === "pitchRad" ? 90 : 180;
                 const short = axis.slice(0, -3);
@@ -547,22 +541,17 @@ function ChipGroup({
 }) {
   return (
     <div>
-      <span className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-micro font-bold uppercase tracking-meta text-muted-foreground">{label}</span>
-        {note ? <span className="font-mono text-micro text-muted-foreground">{note}</span> : null}
+      <span {...stylex.props(styles.flexBetweenBaseline)}>
+        <span {...stylex.props(styles.capsMonoMicro2)}>{label}</span>
+        {note ? <span {...stylex.props(styles.monoMicroMuted)}>{note}</span> : null}
       </span>
-      <div aria-label={label} className="mt-1 flex flex-wrap gap-1" role="group">
+      <div aria-label={label} {...stylex.props(styles.flexWrapGap1)} role="group">
         {options.map((option) => {
           const selected = option.id === active;
           return (
             <button
               aria-pressed={selected}
-              className={cn(
-                "editor-motion border px-2 py-1 text-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                selected
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
-              )}
+              className={stylex.props(selected ? styles.microAccentBordered : styles.microMutedBordered, motionStyles.editorMotion).className}
               key={option.id}
               onClick={() => onSelect(option.id)}
               type="button"
@@ -592,12 +581,12 @@ function NumberBox({
   value: number;
 }) {
   return (
-    <label className="block">
-      <span className="sr-only">{label}</span>
-      <span className="relative block">
+    <label {...stylex.props(styles.block)}>
+      <span {...stylex.props(styles.srOnly)}>{label}</span>
+      <span {...stylex.props(styles.relBlock)}>
         <Input
           aria-label={label}
-          className="h-8 pr-12 text-xs"
+          xstyle={styles.xs2}
           min={min}
           onChange={(event) => {
             const next = Number(event.target.value);
@@ -607,7 +596,7 @@ function NumberBox({
           type="number"
           value={Math.round(value * 1000) / 1000}
         />
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-micro text-muted-foreground">
+        <span {...stylex.props(styles.absMonoMicro)}>
           {suffix}
         </span>
       </span>

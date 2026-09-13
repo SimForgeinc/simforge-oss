@@ -268,24 +268,24 @@ export function AssetGenerateDialog({
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={active.previewUrl} alt={`Generated preview of ${active.title}`} {...stylex.props(dialog.preview)} />
                 ) : (
-                  <div {...stylex.props(dialog.loadingPreview)}><LoaderCircle {...stylex.props(dialog.icon, dialog.progressPulse)} />Building preview…</div>
+                  <div {...stylex.props(dialog.generatePreviewLoading)}><LoaderCircle {...stylex.props(dialog.previewSpinner, dialog.progressPulse)} />Building preview…</div>
                 )}
-                <div {...stylex.props(dialog.card)}><p {...stylex.props(dialog.titleText)}>{active.title}</p><p {...stylex.props(dialog.mutedText)}>{active.imageCount} reference {active.imageCount === 1 ? "photo" : "photos"}</p></div>
+                <div {...stylex.props(dialog.padOnly)}><p {...stylex.props(dialog.titleText)}>{active.title}</p><p {...stylex.props(dialog.mutedTextMt1)}>{active.imageCount} reference {active.imageCount === 1 ? "photo" : "photos"}</p></div>
               </div>
 
               {status ? (
                 <div aria-live="polite">
                   <div {...stylex.props(dialog.progressText)}><span>{status}</span><span>{generationProgress}%</span></div>
                   <div {...stylex.props(dialog.progress)}><div {...stylex.props(dialog.progressBar, active.state === "importing" ? dialog.progressPulse : null)} style={{ width: `${generationProgress}%` }} /></div>
-                  {active.state === "generating" || active.state === "importing" ? <p {...stylex.props(dialog.mutedText)}>You can close this dialog. Work continues in the background.</p> : null}
+                  {active.state === "generating" || active.state === "importing" ? <p {...stylex.props(dialog.hintMt2)}>You can close this dialog. Work continues in the background.</p> : null}
                 </div>
               ) : null}
 
               {publishedAsset ? (
                 <div {...stylex.props(dialog.cardSuccess)}>
                   <p {...stylex.props(dialog.successText)}>Ready to use</p>
-                  <p {...stylex.props(dialog.mutedText)}>{publishedAsset.dims.l.toFixed(2)} × {publishedAsset.dims.w.toFixed(2)} × {publishedAsset.dims.h.toFixed(2)} m</p>
-                  <p {...stylex.props(dialog.mutedText)}>Actors travel nose-first along +X. If this model faces the wrong way, correct its orientation from the asset drawer.</p>
+                  <p {...stylex.props(dialog.noteMt1)}>{publishedAsset.dims.l.toFixed(2)} × {publishedAsset.dims.w.toFixed(2)} × {publishedAsset.dims.h.toFixed(2)} m</p>
+                  <p {...stylex.props(dialog.noteMt2)}>Actors travel nose-first along +X. If this model faces the wrong way, correct its orientation from the asset drawer.</p>
                 </div>
               ) : null}
               {error ? <p role="alert" {...stylex.props(dialog.errorText)}>{error}</p> : null}

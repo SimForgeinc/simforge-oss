@@ -3,6 +3,8 @@
 import { CloudSun } from "lucide-react";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { AuthoredRenderSensor } from "./render-spec-v3";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./recording-panel-fields.stylex";
 
 /**
  * Reusable leaf controls and read-outs for render configuration surfaces.
@@ -27,14 +29,14 @@ export function EnvironmentSummary({ content }: { content: ScenarioTemplateV2 | 
   const environment = content?.environment;
   if (!environment) return null;
   return (
-    <section className="mt-3 border-t render-hairline pt-3" aria-labelledby="recording-environment-heading">
-      <div className="flex items-center gap-2">
-        <CloudSun aria-hidden="true" className="size-3.5 text-muted-foreground" />
-        <h3 className="text-micro font-bold uppercase tracking-meta text-muted-foreground" id="recording-environment-heading">
+    <section {...stylex.props(styles.ruleT)} aria-labelledby="recording-environment-heading">
+      <div {...stylex.props(styles.flexCenterGap2)}>
+        <CloudSun aria-hidden="true" className={stylex.props(styles.muted).className} />
+        <h3 {...stylex.props(styles.capsMicroMuted)} id="recording-environment-heading">
           Environment included
         </h3>
       </div>
-      <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4">
+      <dl {...stylex.props(styles.gridXsCols2)}>
         <SummaryValue label="Weather" value={humanize(environment.weather)} />
         <SummaryValue label="Time of day" value={humanize(environment.timeOfDay)} />
         <SummaryValue
@@ -47,7 +49,7 @@ export function EnvironmentSummary({ content }: { content: ScenarioTemplateV2 | 
         />
         <SummaryValue label="Surface patches" value={String(environment.surfacePatches.length)} />
       </dl>
-      <p className="mt-1.5 text-micro text-muted-foreground">
+      <p {...stylex.props(styles.microMuted)}>
         Weather, lighting, friction and surface configuration are frozen into the recording manifest.
       </p>
     </section>
@@ -55,7 +57,7 @@ export function EnvironmentSummary({ content }: { content: ScenarioTemplateV2 | 
 }
 
 function SummaryValue({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-muted-foreground">{label}</dt><dd className="font-medium">{value}</dd></div>;
+  return <div><dt {...stylex.props(styles.muted2)}>{label}</dt><dd {...stylex.props(styles.medium)}>{value}</dd></div>;
 }
 
 export function NumberInput({ label, value, onChange, ...input }: {
@@ -68,9 +70,9 @@ export function NumberInput({ label, value, onChange, ...input }: {
   step?: number;
 }) {
   return (
-    <label className="space-y-1 text-xs">
-      <span className="font-medium">{label}</span>
-      <input {...input} className="h-9 w-full render-glass border px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onChange={(event) => onChange(event.currentTarget.valueAsNumber)} type="number" value={value} />
+    <label {...stylex.props(styles.xs)}>
+      <span {...stylex.props(styles.medium)}>{label}</span>
+      <input {...input} {...stylex.props(styles.smBorderedWide, styles.stackedXs)} onChange={(event) => onChange(event.currentTarget.valueAsNumber)} type="number" value={value} />
     </label>
   );
 }
@@ -83,9 +85,9 @@ export function SelectInput({ label, value, onChange, options, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <label className="space-y-1 text-xs">
-      <span className="font-medium">{label}</span>
-      <select className="h-9 w-full render-glass border px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" disabled={disabled} onChange={(event) => onChange(event.currentTarget.value)} value={value}>
+    <label {...stylex.props(styles.xs)}>
+      <span {...stylex.props(styles.medium)}>{label}</span>
+      <select {...stylex.props(styles.xsBorderedWide, styles.stackedXs)} disabled={disabled} onChange={(event) => onChange(event.currentTarget.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>

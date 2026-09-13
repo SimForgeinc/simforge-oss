@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/button";
 import { EmptyState } from "../../components/ui/empty-state";
 import { PageHeader } from "../../components/ui/page-header";
 import { cn } from "../../lib/utils";
+import { paneLoading, review } from "../scenario-controls.stylex";
 import {
   SCENARIO_REVIEW_QUEUE_PAGE_SIZE,
   ScenarioReviewQueuePageSchema,
@@ -250,7 +251,7 @@ export function ScenarioReviewQueue() {
       <div className="flex-1 px-5 py-5 sm:px-6">
         {loading ? (
           <WorkspacePaneLoading
-            className="min-h-[420px]"
+            xstyle={paneLoading.h420}
             hint="Collecting unrated scenarios from this workspace."
             message="Loading the review queue…"
           />
@@ -313,17 +314,17 @@ export function ScenarioReviewQueue() {
                       <Badge variant="outline">{item.reviewState}</Badge>
                       {item.archetype && <Badge variant="secondary">{item.archetype}</Badge>}
                       {item.contentTags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-[10px]">
+                        <Badge key={tag} variant="outline" xstyle={review.tagBadge}>
                           {tag}
                         </Badge>
                       ))}
                       {item.renderJobId && (
-                        <Badge variant="outline" className="font-mono text-[10px]">
+                        <Badge variant="outline" xstyle={review.idBadge}>
                           render {item.renderJobId.slice(-6)}
                         </Badge>
                       )}
                       {item.revisionId && (
-                        <Badge variant="outline" className="font-mono text-[10px]">
+                        <Badge variant="outline" xstyle={review.idBadge}>
                           rev {item.revisionId.slice(-6)}
                         </Badge>
                       )}
@@ -349,7 +350,7 @@ export function ScenarioReviewQueue() {
                       ))}
                       {isSaving && (
                         <CloudActivityIndicator
-                          className="ml-1 text-xs text-muted-foreground"
+                          xstyle={review.saving}
                           label="Saving rating"
                         />
                       )}

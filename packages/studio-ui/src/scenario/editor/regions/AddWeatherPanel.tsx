@@ -15,6 +15,7 @@ import {
   Sun,
   Wind,
 } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import type { CSSProperties } from "react";
 import type { EditorDocument } from "@simforge-oss/editor";
 import type { Weather } from "@simforge-oss/scenario";
@@ -45,6 +46,7 @@ import {
   PanelTileGrid,
   type SceneSearchResult,
 } from "./panel-tiles";
+import { styles as catalog } from "./catalog-surfaces.stylex";
 
 interface WeatherChoice {
   value: Weather;
@@ -230,7 +232,7 @@ export function AddWeatherPanel({ document }: { document: EditorDocument | null 
         <div style={styles.timeRow}>
           <span style={styles.timeValue}>{formatSceneTime(sceneMinutes)}</span>
           <button
-            className="actor-chip"
+            {...stylex.props(catalog.chip)}
             onClick={() => document.setEnvironment(withSceneMinutes(document.data.environment, localSceneMinutes()))}
             style={styles.timeNow}
             type="button"

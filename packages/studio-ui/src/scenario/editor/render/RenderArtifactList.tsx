@@ -12,6 +12,8 @@ import {
   isImage,
   shortDigest,
 } from "./render-view-model";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderArtifactList.stylex";
 
 /**
  * Artifact rows with previews and downloads — manifest #148.
@@ -43,24 +45,25 @@ export function RenderArtifactList({
   resolve?: (artifact: DisplayArtifact) => Promise<PresignedArtifact | null>;
 }) {
   if (artifacts.length === 0) {
-    return <p className="px-1 py-6 text-center text-xs text-muted-foreground">{emptyMessage}</p>;
+    return <p {...stylex.props(styles.xsMutedCenterText)}>{emptyMessage}</p>;
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div {...stylex.props(styles.flexColGap4)}>
       {groupArtifacts(artifacts).map((group) => (
-        <section className="flex flex-col gap-1" key={group.title}>
-          <h4 className="text-micro font-semibold uppercase tracking-meta text-muted-foreground">
+        <section {...stylex.props(styles.flexColGap1)} key={group.title}>
+          <h4 {...stylex.props(styles.capsMicroMuted)}>
             {group.title} · {group.items.length}
           </h4>
-          <ul className="render-divide divide-y render-glass border">
-            {group.items.map((artifact) => (
+          <ul {...stylex.props(styles.borderedDivided)}>
+            {group.items.map((artifact, index) => (
               <ArtifactRow
                 artifact={artifact}
                 key={artifact.id}
                 onPreview={onPreview}
                 resolve={resolve}
                 signed={signed}
+                xstyle={index > 0 ? styles.rowDivided : null}
               />
             ))}
           </ul>
@@ -75,11 +78,14 @@ function ArtifactRow({
   signed,
   onPreview,
   resolve,
+  xstyle,
 }: {
   artifact: DisplayArtifact;
   signed: boolean;
   onPreview?: (artifact: PresignedArtifact) => void;
   resolve?: (artifact: DisplayArtifact) => Promise<PresignedArtifact | null>;
+  /** The list's divider, which only StyleX on the row itself can draw. */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const [busy, setBusy] = useState<"preview" | "download" | null>(null);
   const [resolveFailed, setResolveFailed] = useState(false);
@@ -127,18 +133,17 @@ function ArtifactRow({
   }
 
   return (
-    <li className="flex items-center gap-3 px-2.5 py-2">
+    <li {...stylex.props(styles.flexCenterGap3, xstyle)}>
       <Icon
         aria-hidden="true"
-        className={
-          artifact.artifactState === "quarantined"
-            ? "size-4 shrink-0 text-destructive"
-            : "size-4 shrink-0 text-muted-foreground"
-        }
+        className={stylex.props(
+          styles.artifactIcon,
+          artifact.artifactState === "quarantined" ? styles.danger : styles.muted,
+        ).className}
       />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-foreground">{displayName}</p>
-        <p className="truncate text-micro text-muted-foreground">
+      <div {...stylex.props(styles.fillNarrowable)}>
+        <p {...stylex.props(styles.xsInkMedium)}>{displayName}</p>
+        <p {...stylex.props(styles.microMutedTruncate)}>
           {formatBytes(artifact.byteLength)} · {artifact.mediaType}
           {artifact.relationship ? ` · ${artifact.relationship}` : ""}
           {" · "}
@@ -146,11 +151,11 @@ function ArtifactRow({
         </p>
       </div>
       {resolveFailed ? (
-        <span className="shrink-0 text-micro uppercase tracking-meta text-destructive">
+        <span {...stylex.props(styles.tightCapsMicro)}>
           No longer in storage
         </span>
       ) : openable && (availability.kind === "ready" || resolve) ? (
-        <div className="flex shrink-0 items-center gap-1">
+        <div {...stylex.props(styles.flexCenterTight)}>
           {media && onPreview ? (
             <Button
               aria-label={`Preview ${displayName}`}
@@ -160,9 +165,9 @@ function ArtifactRow({
               variant="ghost"
             >
               {busy === "preview" ? (
-                <CloudActivityIndicator iconClassName="size-3.5" />
+                <CloudActivityIndicator iconXstyle={styles.size35} />
               ) : (
-                <Play aria-hidden="true" className="size-3.5" />
+                <Play aria-hidden="true" className={stylex.props(styles.size35).className} />
               )}
             </Button>
           ) : null}
@@ -174,19 +179,18 @@ function ArtifactRow({
             variant="ghost"
           >
             {busy === "download" ? (
-              <CloudActivityIndicator iconClassName="size-3.5" />
+              <CloudActivityIndicator iconXstyle={styles.size35} />
             ) : (
-              <Download aria-hidden="true" className="size-3.5" />
+              <Download aria-hidden="true" className={stylex.props(styles.size35).className} />
             )}
           </Button>
         </div>
       ) : (
         <span
-          className={
-            availability.kind === "quarantined"
-              ? "shrink-0 text-micro uppercase tracking-meta text-destructive"
-              : "shrink-0 text-micro uppercase tracking-meta text-muted-foreground"
-          }
+          {...stylex.props(
+            styles.availabilityNote,
+            availability.kind === "quarantined" ? styles.danger : styles.muted,
+          )}
           data-artifact-state={artifact.artifactState}
         >
           {availability.message}

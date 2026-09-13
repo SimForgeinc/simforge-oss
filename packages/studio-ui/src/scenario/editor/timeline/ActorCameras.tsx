@@ -5,6 +5,9 @@ import { defaultDashCamera, type ActorSensor } from "@simforge-oss/scenario";
 import { Button } from "../../../components/ui/button";
 import { Switch } from "../../../components/ui/switch";
 import type { EditorDocument } from "@simforge-oss/editor";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActorCameras.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 type Role = EditorDocument["data"]["roles"][number];
 
@@ -23,19 +26,19 @@ export function ActorCameras({
   role: Role | null;
 }) {
   return (
-    <div className="w-editor-inspector shrink-0 overflow-y-auto border-l border-border bg-card p-3 text-foreground xl:w-editor-inspector-xl">
-      <h2 className="flex items-center text-micro font-semibold uppercase tracking-meta-wide text-muted-foreground">
-        <Gauge aria-hidden="true" className="mr-2 size-3" />
+    <div {...stylex.props(styles.tightInkRuleL)}>
+      <h2 {...stylex.props(styles.flexCenterCaps)}>
+        <Gauge aria-hidden="true" className={stylex.props(styles.mr2Size3).className} />
         Actor sensors
       </h2>
       {role ? (
         <>
-          <div className="mt-3 flex items-center text-xs">
+          <div {...stylex.props(styles.flexCenterXs)}>
             <span>{sensorSummary(role.actor.sensors)}</span>
             <Button
               size="sm"
               variant="ghost"
-              className="ml-auto h-7 text-primary hover:text-primary"
+              xstyle={styles.accentPushRight}
               onClick={() =>
                 document.addActorSensor(
                   role.id,
@@ -54,11 +57,11 @@ export function ActorCameras({
             return (
               <div
                 key={sensor.id}
-                className="mt-1 flex items-center gap-2 border border-border bg-muted/30 px-2 py-1.5 text-meta"
+                {...stylex.props(styles.flexCenterMeta)}
               >
-                <span className="min-w-0 flex-1 truncate">
+                <span {...stylex.props(styles.fillTruncateNarrowable)}>
                   {name}
-                  <span className="ml-2 text-micro text-muted-foreground">
+                  <span {...stylex.props(styles.microMuted)}>
                     {kind}
                   </span>
                 </span>
@@ -76,17 +79,17 @@ export function ActorCameras({
                 <button
                   type="button"
                   aria-label={`Remove ${controlName} from timeline`}
-                  className="editor-motion text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={stylex.props(styles.muted, motionStyles.editorMotion).className}
                   onClick={() => document.removeActorSensor(role.id, sensor.id)}
                 >
-                  <Trash2 aria-hidden="true" className="size-3" />
+                  <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />
                 </button>
               </div>
             );
           })}
         </>
       ) : (
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p {...stylex.props(styles.xsMuted)}>
           Select an actor to attach sensors.
         </p>
       )}

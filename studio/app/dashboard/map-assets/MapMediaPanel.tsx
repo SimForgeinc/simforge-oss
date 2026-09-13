@@ -115,7 +115,7 @@ export function MapMediaPanel({
         <Button
           variant="ghost"
           size="icon"
-          className={stylex.props(styles.s_132).className}
+          xstyle={styles.s_132}
           onClick={onClose}
           aria-label="Close video panel"
         >

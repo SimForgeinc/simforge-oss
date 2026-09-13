@@ -89,7 +89,7 @@ export const onboarding = stylex.create({
   /* ── Type ──────────────────────────────────────────────────────── */
   eyebrow: {
     fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
+    fontSize: "10px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWidest,
@@ -151,7 +151,7 @@ export const onboarding = stylex.create({
   },
   qualityFootnote: {
     marginTop: space.lg,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     lineHeight: "1rem",
     color: colors.textFaint,
   },
@@ -199,13 +199,13 @@ export const onboarding = stylex.create({
     paddingBlock: space.lg,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: colors.line,
+    borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
   },
   lockedNoticeText: {
     minWidth: 0,
-    flexGrow: 1,
+    flex: 1,
     fontSize: "0.75rem",
     lineHeight: "1.25rem",
     color: "rgba(255, 255, 255, 0.55)",
@@ -285,7 +285,7 @@ export const onboarding = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: space.sm,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -293,7 +293,7 @@ export const onboarding = stylex.create({
   },
   mapCardBody: {
     display: "flex",
-    flexGrow: 1,
+    flex: 1,
     alignItems: "flex-start",
     gap: space.lg,
     paddingInline: space.xl,
@@ -313,7 +313,7 @@ export const onboarding = stylex.create({
   },
   mapCardText: {
     minWidth: 0,
-    flexGrow: 1,
+    flex: 1,
   },
   mapCardLabel: {
     display: "block",
@@ -337,14 +337,14 @@ export const onboarding = stylex.create({
   },
   mapCardSize: {
     fontFamily: text.fontMono,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     color: "rgba(255, 255, 255, 0.45)",
   },
 
   /* ── Graphics level ────────────────────────────────────────────── */
   legend: {
     fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
+    fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
@@ -391,7 +391,7 @@ export const onboarding = stylex.create({
   },
   recommendedTag: {
     fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
+    fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -400,7 +400,7 @@ export const onboarding = stylex.create({
   qualityGuidance: {
     display: "block",
     marginTop: space.xxs,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     lineHeight: "1rem",
     color: "rgba(255, 255, 255, 0.4)",
   },
@@ -444,6 +444,9 @@ export const onboarding = stylex.create({
   icon: {
     width: "1rem",
     height: "1rem",
+  },
+  /** Only the locked-notice `Lock` carried `shrink-0` at baseline. */
+  iconNoShrink: {
     flexShrink: 0,
   },
   iconSmall: {
@@ -489,7 +492,7 @@ export const installRows = stylex.create({
   row: {
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: colors.line,
+    borderColor: "rgba(255,255,255,0.1)",
     borderRadius: radii.none,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
     paddingInline: space.xl,
@@ -510,7 +513,7 @@ export const installRows = stylex.create({
   },
   rowLabel: {
     minWidth: 0,
-    flexGrow: 1,
+    flex: 1,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -520,7 +523,7 @@ export const installRows = stylex.create({
   },
   rowBytes: {
     fontFamily: text.fontMono,
-    fontSize: "0.6875rem",
+    fontSize: "11px",
     color: "rgba(255, 255, 255, 0.4)",
   },
   rowMessage: {

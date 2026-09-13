@@ -150,7 +150,7 @@ export function ThumbnailGenerator({ asset, hasThumbnail, onGenerated, hidden, o
           size="sm"
           disabled={busy}
           onClick={generate}
-          className={stylex.props(styles.s_536).className}
+          xstyle={styles.s_536}
         >
           {busy ? (
             <Loader2 className={stylex.props(styles.s_972).className} />

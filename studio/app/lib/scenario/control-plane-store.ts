@@ -8,6 +8,7 @@ import {
   headS3Object,
   MEDIA_URL_TTL_SECONDS,
 } from "@/app/lib/s3/s3-presign";
+import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import { deleteS3Keys } from "@/app/lib/s3/s3-delete";
 import {
   getS3ObjectUtf8Bounded,
@@ -3374,14 +3375,14 @@ export async function getFinalizedArtifact(
   );
   const row = rows[0];
   if (!row) return null;
-  const downloadUrl = await getPresignedGetUrl(
+  const downloadUrl = sameOriginWhenLocal(await getPresignedGetUrl(
     row.storage_key,
     row.storage_bucket,
     MEDIA_URL_TTL_SECONDS,
     disposition === "attachment"
       ? `attachment; filename="${row.artifact_kind === "compiled-xosc" ? "uniscenario.xosc" : row.id}"`
       : undefined,
-  );
+  ));
   return {
     id: row.id,
     revisionId: row.revision_id,

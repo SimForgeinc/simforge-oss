@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
+import { control, list, menu, paneLoading } from "../scenario-controls.stylex";
 import { datasetTileTransitionName } from "./datasetMorph";
 import { formatDocumentCoverage, formatLastUpdated } from "./document-list-utils";
 
@@ -81,7 +82,7 @@ export function ScenarioDatasetBrowser({
         // A skeleton, not `null`. v2's list rendered an empty grid while loading, which reads as
         // "no datasets" to a screen reader and flashes empty for everyone else.
         <WorkspacePaneLoading
-          className="min-h-40"
+          xstyle={paneLoading.h40}
           hint="Reading your scenario datasets."
           message="Loading datasets"
         />
@@ -267,7 +268,7 @@ function DatasetCreateRowAction({ busy, onClick }: { busy: boolean; onClick: () 
       data-testid="scenario-new-dataset"
       disabled={busy}
       onClick={onClick}
-      className="h-9 px-4 font-meta text-micro font-bold uppercase tracking-meta active:scale-[0.97]"
+      xstyle={list.newDataset}
     >
       {busy ? (
         <CloudActivityIndicator />
@@ -377,24 +378,24 @@ function DatasetRowActions({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7"
+            xstyle={control.iconSm}
             disabled={busy}
             aria-label={`Dataset actions for ${dataset.name}`}
           >
             {busy ? (
-              <CloudActivityIndicator iconClassName="size-3.5" />
+              <CloudActivityIndicator />
             ) : (
               <MoreHorizontal className="size-3.5" aria-hidden="true" />
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[160px]">
+        <DropdownMenuContent align="end" xstyle={menu.width160}>
           <DropdownMenuItem disabled={!canEditDetails} onSelect={onEditDetails}>
             <Pencil className="mr-2 size-3.5" aria-hidden="true" />
             Edit details
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            xstyle={menu.destructiveItem}
             disabled={!canDelete}
             onSelect={onDelete}
           >

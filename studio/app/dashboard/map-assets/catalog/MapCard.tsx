@@ -1,6 +1,6 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles, bridge } from "../map-assets.stylex";
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -77,7 +77,7 @@ function CachedThumbnail({ url, alt }: { url: string; alt: string }) {
       alt={alt}
       fill
       sizes="(max-width: 768px) 100vw, 33vw"
-      className={stylex.props(styles.s_182).className}
+      className={stylex.props(styles.s_182).className + " " + bridge.s_182}
       unoptimized
     />
   );
@@ -137,7 +137,7 @@ function CardPreviewVideo({
       loop
       playsInline
       preload="none"
-      className={stylex.props(styles.s_183).className}
+      className={stylex.props(styles.s_183).className + " " + bridge.s_183}
     />
   );
 }
@@ -186,7 +186,7 @@ export function MapCard({ asset }: MapCardProps) {
   return (
     <Link
       href={`/dashboard/map-assets/${asset.map_asset_id}`}
-      className={stylex.props(styles.s_184).className}
+      className={stylex.props(styles.s_184).className + " " + bridge.s_184}
     >
       {/* Thumbnail / fly-by preview */}
       <div className={stylex.props(styles.s_185).className}>
@@ -217,7 +217,7 @@ export function MapCard({ asset }: MapCardProps) {
       <div className={stylex.props(styles.s_187).className}>
         {/* Name + location */}
         <div>
-          <h3 className={stylex.props(styles.s_188).className}>
+          <h3 className={stylex.props(styles.s_188).className + " " + bridge.s_188}>
             {asset.name}
           </h3>
           {locationStr && (

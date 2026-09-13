@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
+import { control } from "./scenario-controls.stylex";
 import { RouteLoading } from "../components/ui/sim-loader";
 import { CopyableErrorMessage } from "./list/CopyableErrorMessage";
 import { ScenarioWorkspaceErrorState } from "./editor/status";
@@ -66,7 +67,7 @@ export function ScenarioSegmentError({ error, reset }: RouteErrorProps) {
       {error.digest ? (
         <p className="mt-1 font-mono text-micro text-muted-foreground">Reference: {error.digest}</p>
       ) : null}
-      <Button className="mt-5" type="button" onClick={reset}>
+      <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>
         Try again
       </Button>
     </div>
@@ -113,7 +114,7 @@ export function ScenarioReviewError({ error, reset }: RouteErrorProps) {
       <p className="mt-2 text-sm text-muted-foreground">
         {error.message || "The review queue is temporarily unavailable."}
       </p>
-      <Button className="mt-5" type="button" onClick={reset}>
+      <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>
         Try again
       </Button>
     </div>

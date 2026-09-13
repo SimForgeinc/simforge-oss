@@ -70,13 +70,13 @@ export const stylexBabelOptions = {
   enableInlinedConditionalMerge: true,
   unstable_moduleResolution: { type: "commonJS", rootDir: repoRoot },
   /**
-   * `@/*` is the app's own alias. The `studio-ui` token entry is pinned to the
-   * package's source because StyleX resolves token imports itself, with plain
-   * Node conditions — it would land on `dist`, which only exists once the
-   * package has been built, and would then name the same variables differently
-   * in development (where the app imports `src`) than in a production build.
-   * Pinning to `src` makes the generated names identical in both, and makes
-   * the app compile against a package that has never been built.
+   * `@/*` is the app's own alias. The `studio-ui` token entry is a fallback,
+   * not a pin: StyleX resolves theme imports itself and tries the bare
+   * specifier through Node before any alias, with plain Node conditions and
+   * no `development` condition, so while `dist` exists an app-side token
+   * import resolves there and its variables are named from that copy — which
+   * is why `dist` is one of the compile roots. The alias is what resolves the
+   * same import when the package has never been built.
    */
   aliases: {
     "@/*": [join(studioDir, "*")],

@@ -24,7 +24,6 @@ import {
   type RenderModality,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
-import { cn } from "../../../lib/utils";
 import { loadCarlaCompatibility } from "../../../lib/scenario/carla-compatibility";
 import {
   carlaRenderWarnings,
@@ -48,6 +47,9 @@ import {
   supportedModalities,
   type AuthoredRenderSensor,
 } from "./render-spec-v3";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderConfigPanel.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 type RenderBackend = ScenarioRendererEngine | "esmini";
 
 const ESMINI_VALIDATOR_VERSION = "3.6.0";
@@ -199,13 +201,13 @@ function delay(ms: number) {
 
 function StepHeading({ title, hint, aside }: { title: string; hint?: string; aside?: ReactNode }) {
   return (
-    <div className="mb-3 flex shrink-0 items-start justify-between gap-4">
-      <div className="min-w-0">
-        <h3 className="text-sm font-bold tracking-tight text-foreground">{title}</h3>
-        {hint ? <p className="mt-0.5 text-micro text-muted-foreground">{hint}</p> : null}
+    <div {...stylex.props(styles.flexBetweenStart)}>
+      <div {...stylex.props(styles.narrowable)}>
+        <h3 {...stylex.props(styles.smInkBold)}>{title}</h3>
+        {hint ? <p {...stylex.props(styles.microMuted)}>{hint}</p> : null}
       </div>
       {aside ? (
-        <span className="shrink-0 text-micro uppercase tracking-meta text-muted-foreground">{aside}</span>
+        <span {...stylex.props(styles.tightCapsMicro)}>{aside}</span>
       ) : null}
     </div>
   );
@@ -213,9 +215,9 @@ function StepHeading({ title, hint, aside }: { title: string; hint?: string; asi
 
 function ReviewRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b render-hairline py-1.5 last:border-b-0">
-      <dt className="text-micro uppercase tracking-meta text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 truncate text-xs font-semibold text-foreground">{value}</dd>
+    <div {...stylex.props(styles.flexBetweenBaseline)}>
+      <dt {...stylex.props(styles.capsMicroMuted)}>{label}</dt>
+      <dd {...stylex.props(styles.xsInkSemibold)}>{value}</dd>
     </div>
   );
 }
@@ -634,26 +636,26 @@ export function RenderConfigPanel({
   return (
     <section
       aria-label="New render configuration"
-      className="render-view-enter flex min-h-0 flex-1 flex-col overflow-hidden"
+      className={`${stylex.props(styles.flexColFill).className} render-view-enter`}
       data-render-engine={backend}
       data-render-step={step.id}
       data-testid="render-config-panel"
     >
-      <header className="relative flex shrink-0 items-center justify-between gap-4 border-b render-hairline px-6 py-3">
-        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/15 to-transparent" />
-        <div className="flex min-w-0 items-center gap-3">
+      <header {...stylex.props(styles.relFlexCenter)}>
+        <span aria-hidden {...stylex.props(styles.abs)} />
+        <div {...stylex.props(styles.flexCenterNarrowable)}>
           <button
             aria-label="Back to the render gallery"
-            className="editor-motion grid size-8 shrink-0 place-items-center border render-hairline render-glass text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
             data-testid="render-config-back"
             onClick={onClose}
             type="button"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
+            <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
-          <div className="min-w-0">
-            <p className="font-mono text-micro font-bold uppercase tracking-meta text-primary/90">New render</p>
-            <h2 className="text-base font-extrabold leading-tight tracking-tight text-foreground">
+          <div {...stylex.props(styles.narrowable)}>
+            <p {...stylex.props(styles.capsMonoMicro)}>New render</p>
+            <h2 {...stylex.props(styles.inkBaseExtrabold)}>
               {engineOption.label}
             </h2>
           </div>
@@ -674,7 +676,7 @@ export function RenderConfigPanel({
                 : "Checking renderer availability on the connected host."}
               title="How should this scenario be rendered?"
             />
-            <div aria-label="Render engine" className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+            <div aria-label="Render engine" {...stylex.props(styles.gridGap2)} role="radiogroup">
               {ENGINE_OPTIONS.filter((option) =>
                 // Engines this host will reject are not choices. Until the host has answered,
                 // every card stays visible but disabled rather than pretending nothing exists.
@@ -698,11 +700,11 @@ export function RenderConfigPanel({
               })}
             </div>
             {hostBlock !== null ? (
-              <p className="mt-5 border border-destructive/40 px-3 py-2 text-xs text-muted-foreground" data-testid="render-host-block">
+              <p {...stylex.props(styles.xsMutedBordered)} data-testid="render-host-block">
                 {hostBlock}
               </p>
             ) : backend !== "esmini" ? (
-              <p className="mt-5 border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              <p {...stylex.props(styles.xsMutedBordered2)}>
                 SimForge owns execution; the host persists the immutable intent, lease and progress.
               </p>
             ) : null}
@@ -721,23 +723,23 @@ export function RenderConfigPanel({
               hint={`Fixed 0.02 s timestep, pinned seed, esmini ${ESMINI_VALIDATOR_VERSION}.`}
               title="Replay the frozen export and check it"
             />
-            <p className="render-glass border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+            <p {...stylex.props(styles.xsMutedBordered3)}>
               The frozen revision&apos;s OpenSCENARIO 1.4 export and its OpenDRIVE road network are
               replayed headlessly. It is a cross-engine check of the exported scenario — no cameras,
               no imagery.
             </p>
-            <ul className="mt-3 grid gap-1.5 text-xs sm:grid-cols-2">
-              <li className="flex items-baseline justify-between gap-2 render-glass border px-3 py-2">
-                <span className="font-semibold text-foreground">State trace</span>
-                <span className="text-micro text-muted-foreground">CSV · pose and speed per step</span>
+            <ul {...stylex.props(styles.gridXsGap15)}>
+              <li {...stylex.props(styles.flexBetweenBaseline2)}>
+                <span {...stylex.props(styles.inkSemibold)}>State trace</span>
+                <span {...stylex.props(styles.microMuted2)}>CSV · pose and speed per step</span>
               </li>
-              <li className="flex items-baseline justify-between gap-2 render-glass border px-3 py-2">
-                <span className="font-semibold text-foreground">Validation report</span>
-                <span className="text-micro text-muted-foreground">JSON · XSD, entities, collisions</span>
+              <li {...stylex.props(styles.flexBetweenBaseline2)}>
+                <span {...stylex.props(styles.inkSemibold)}>Validation report</span>
+                <span {...stylex.props(styles.microMuted2)}>JSON · XSD, entities, collisions</span>
               </li>
             </ul>
             {submitError ? (
-              <p className="mt-3 break-words text-xs text-destructive" role="alert">
+              <p {...stylex.props(styles.xsDangerBreakWords)} role="alert">
                 {submitError}
               </p>
             ) : null}
@@ -747,12 +749,7 @@ export function RenderConfigPanel({
             onBack={() => setStepIndex(0)}
             primary={
               <button
-                className={cn(
-                  "editor-motion inline-flex h-9 shrink-0 items-center justify-center gap-2 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  stage != null
-                    ? "cursor-not-allowed render-glass border text-muted-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
+                className={stylex.props(stage != null ? styles.inlineFlexCenterMid : styles.inlineFlexCenterMid2, motionStyles.editorMotion).className}
                 data-testid="esmini-run-button"
                 disabled={stage != null}
                 onClick={() => void submitEsminiRun()}
@@ -765,7 +762,7 @@ export function RenderConfigPanel({
                   </>
                 ) : (
                   <>
-                    <FlaskConical aria-hidden="true" className="size-3.5" />
+                    <FlaskConical aria-hidden="true" className={stylex.props(styles.size35).className} />
                     Run esmini
                   </>
                 )}
@@ -788,48 +785,40 @@ export function RenderConfigPanel({
               title={`Which sensors should ${engineOption.label} capture?`}
             />
             {sensorOptions.length > 0 ? (
-              <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+              <div {...stylex.props(styles.gridGap15)}>
                 {sensorOptions.map((option) => {
                   const key = sensorOptionKey(option);
                   return (
                     <div
-                      className={cn(
-                        "editor-motion border px-3 py-2",
-                        selectedSensorKeys.includes(key)
-                          ? "border-primary bg-primary/10"
-                          : "render-glass",
-                      )}
+                      className={stylex.props(selectedSensorKeys.includes(key) ? styles.bordered3 : styles.bordered4, motionStyles.editorMotion).className}
                       key={key}
                     >
-                      <label className="flex cursor-pointer items-start gap-2.5">
+                      <label {...stylex.props(styles.flexStartPointer)}>
                         <input
                           checked={selectedSensorKeys.includes(key)}
-                          className="mt-0.5 size-3.5 accent-primary"
+                          {...stylex.props(styles.mt05Size35AccentPrimary)}
                           data-testid={`render-sensor-${option.sensor.id}`}
                           disabled={stage != null}
                           onChange={(event) => toggleSensor(key, event.target.checked)}
                           type="checkbox"
                         />
-                        <Camera aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-semibold text-foreground">
+                        <Camera aria-hidden="true" className={stylex.props(styles.tightAccent).className} />
+                        <span {...stylex.props(styles.narrowable)}>
+                          <span {...stylex.props(styles.blockXsInk)}>
                             {sensorLabel(option.sensor)}
                           </span>
-                          <span className="block truncate text-micro uppercase tracking-meta text-muted-foreground">
+                          <span {...stylex.props(styles.blockCapsMicro)}>
                             {sensorDetail(option)}
                           </span>
                         </span>
                       </label>
-                      <div className="mt-2 flex flex-wrap gap-1 pl-6">
+                      <div {...stylex.props(styles.flexWrapGap1)}>
                         {(backend === "native" ? ["rgb" as const] : supportedModalities(option.sensor)).map((modality) => {
                           const enabled = modalitiesBySensor[key]?.includes(modality) ?? false;
                           return (
                             <button
                               aria-pressed={enabled}
-                              className={cn(
-                                "border px-1.5 py-0.5 text-micro uppercase tracking-meta",
-                                enabled ? "border-primary bg-primary text-primary-foreground" : "render-glass text-muted-foreground",
-                              )}
+                              {...stylex.props(enabled ? styles.capsMicroBordered : styles.capsMicroMuted3)}
                               disabled={stage != null || !selectedSensorKeys.includes(key)}
                               key={modality}
                               onClick={() => toggleSensorModality(key, modality)}
@@ -845,24 +834,19 @@ export function RenderConfigPanel({
                 })}
               </div>
             ) : (
-              <p className="border border-dashed render-hairline px-3 py-2 text-xs text-muted-foreground">
+              <p {...stylex.props(styles.xsMutedBordered4)}>
                 Add a camera, LiDAR or radar to an actor in the editor before rendering.
               </p>
             )}
-            <div className="mt-4">
+            <div {...stylex.props(styles.mt4)}>
               <StepHeading hint="What each selected sensor produces." title="Kinds" />
-              <div className="flex flex-wrap gap-1.5">
+              <div {...stylex.props(styles.flexWrapGap15)}>
                 {SENSOR_KINDS.filter((kind) => backend !== "native" || kind.id === "rgb").map((kind) => {
                   const enabled = kinds.includes(kind.id);
                   return (
                     <button
                       aria-pressed={enabled}
-                      className={cn(
-                        "editor-motion border px-2.5 py-1 text-micro uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        enabled
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "render-glass text-muted-foreground hover:text-foreground",
-                      )}
+                      className={stylex.props(enabled ? styles.capsMicroBordered2 : styles.capsMicroMuted4, motionStyles.editorMotion).className}
                       key={kind.id}
                       onClick={() => toggleKind(kind.id)}
                       title={kind.hint}
@@ -890,7 +874,7 @@ export function RenderConfigPanel({
               hint="A behavior trace, manifest and parity report are always included as run evidence."
               title="What should the render return?"
             />
-            <div className="grid gap-1.5 sm:grid-cols-3">
+            <div {...stylex.props(styles.gridGap152)}>
               {OUTPUT_OPTIONS.filter((option) => backend !== "native" || option.id === "video").map((option) => (
                 <RenderOptionCard
                   hint={option.hint}
@@ -918,14 +902,14 @@ export function RenderConfigPanel({
               hint="These settings are stored in the immutable render intent without changing the scenario draft."
               title="How should this render look and run?"
             />
-            <div className="grid gap-5 lg:grid-cols-[1fr_1.25fr]">
+            <div {...stylex.props(styles.gridGap5)}>
               <section>
                 <StepHeading hint="Applies to every image sensor in the request." title="Format" />
-                <div className="grid gap-2 text-xs sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-micro uppercase tracking-meta text-muted-foreground">Resolution</span>
+                <div {...stylex.props(styles.gridXsGap2)}>
+                  <label {...stylex.props(styles.flexColGap1)}>
+                    <span {...stylex.props(styles.capsMicroMuted)}>Resolution</span>
                     <select
-                      className="render-glass border px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      {...stylex.props(styles.inkBordered)}
                       disabled={stage != null}
                       onChange={(event) => setResolutionIndex(Number(event.target.value))}
                       value={String(resolutionIndex)}
@@ -937,10 +921,10 @@ export function RenderConfigPanel({
                       ))}
                     </select>
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-micro uppercase tracking-meta text-muted-foreground">FPS</span>
+                  <label {...stylex.props(styles.flexColGap1)}>
+                    <span {...stylex.props(styles.capsMicroMuted)}>FPS</span>
                     <select
-                      className="render-glass border px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      {...stylex.props(styles.inkBordered)}
                       disabled={stage != null}
                       onChange={(event) => setFps(Number(event.target.value))}
                       value={String(fps)}
@@ -952,27 +936,27 @@ export function RenderConfigPanel({
                       ))}
                     </select>
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-micro uppercase tracking-meta text-muted-foreground">Quality</span>
+                  <label {...stylex.props(styles.flexColGap1)}>
+                    <span {...stylex.props(styles.capsMicroMuted)}>Quality</span>
                     <select
-                      className="render-glass border px-2 py-1.5 capitalize text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      {...stylex.props(styles.capsInkBordered)}
                       disabled={stage != null}
                       onChange={(event) => setQuality(event.target.value as (typeof CARLA_QUALITIES)[number])}
                       value={quality}
                     >
                       {CARLA_QUALITIES.map((value) => (
-                        <option className="capitalize" key={value} value={value}>
+                        <option {...stylex.props(styles.caps)} key={value} value={value}>
                           {value}
                         </option>
                       ))}
                     </select>
                   </label>
                 </div>
-                <div className="mt-5 flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-2">
-                  <Clock aria-hidden="true" className="size-3.5 shrink-0 text-primary/80" />
-                  <p className="text-xs text-foreground">
+                <div {...stylex.props(styles.flexCenterBordered)}>
+                  <Clock aria-hidden="true" className={stylex.props(styles.tight).className} />
+                  <p {...stylex.props(styles.xsInk)}>
                     {durationSeconds}s
-                    <span className="ml-2 text-micro font-normal uppercase tracking-meta text-muted-foreground">
+                    <span {...stylex.props(styles.capsMicroMuted2)}>
                       durable submission — closing this tab does not stop the worker
                     </span>
                   </p>
@@ -1001,7 +985,7 @@ export function RenderConfigPanel({
               hint="Submitting freezes the scenario and persists one immutable SimForge render intent."
               title={`Ready to render with ${engineOption.label}`}
             />
-            <dl className="render-glass border px-3 py-1.5">
+            <dl {...stylex.props(styles.bordered)}>
               <ReviewRow label="Engine" value={`${engineOption.label} · ${localExecution ? "this machine" : "connected service"}`} />
               <ReviewRow
                 label="Sensors"
@@ -1022,43 +1006,43 @@ export function RenderConfigPanel({
             {backend === "carla" ? (
               <section
                 aria-labelledby="render-warnings-heading"
-                className="mt-3 border border-amber-500/45 bg-amber-500/10 px-3 py-2.5"
+                {...stylex.props(styles.bordered2)}
                 data-testid="render-warnings"
               >
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                  <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
+                <div {...stylex.props(styles.flexCenterGap2)}>
+                  <TriangleAlert aria-hidden="true" className={stylex.props(styles.tight2).className} />
                   <h3
-                    className="text-micro font-bold uppercase tracking-meta"
+                    {...stylex.props(styles.capsMicroBold)}
                     id="render-warnings-heading"
                   >
                     Warnings
                   </h3>
                 </div>
                 {carlaWarnings.status === "ready" && carlaWarnings.warnings.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {carlaWarnings.warnings.map((warning) => (
+                  <ul {...stylex.props(styles.listMt2)}>
+                    {carlaWarnings.warnings.map((warning, index) => (
                       <li
-                        className="grid grid-cols-[auto_1fr] gap-x-2 text-xs"
+                        {...stylex.props(styles.gridXs, index > 0 && styles.rowStackedMd)}
                         key={`${warning.kind}:${warning.actorId}:${warning.authoredCatalogId}`}
                       >
-                        <span className="font-mono text-micro font-bold uppercase text-amber-700 dark:text-amber-300">
+                        <span {...stylex.props(styles.capsMonoMicro2)}>
                           {warning.kind === "drop" ? "Dropped" : "Substituted"}
                         </span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground">
+                        <div {...stylex.props(styles.narrowable)}>
+                          <p {...stylex.props(styles.inkSemibold)}>
                             {warning.actorLabel}
-                            <span className="ml-1 font-mono text-micro font-normal text-muted-foreground">
+                            <span {...stylex.props(styles.monoMicroMuted)}>
                               {warning.authoredCatalogId}
                               {warning.substituteCatalogId ? ` → ${warning.substituteCatalogId}` : ""}
                             </span>
                           </p>
-                          <p className="text-muted-foreground">{warning.reason}</p>
+                          <p {...stylex.props(styles.muted)}>{warning.reason}</p>
                         </div>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-1.5 text-xs text-muted-foreground">
+                  <p {...stylex.props(styles.xsMuted)}>
                     {carlaWarnings.status === "ready"
                       ? "No known CARLA actor limitations."
                       : carlaWarnings.status === "error"
@@ -1066,14 +1050,14 @@ export function RenderConfigPanel({
                         : "Checking CARLA actor compatibility…"}
                   </p>
                 )}
-                <p className="mt-2 text-micro text-muted-foreground">
+                <p {...stylex.props(styles.microMuted3)}>
                   Informational only — you can still submit this render.
                 </p>
               </section>
             ) : null}
             {issues.length > 0 ? (
               <div
-                className="mt-3 border border-destructive/40 px-3 py-2 text-xs text-muted-foreground"
+                {...stylex.props(styles.xsMutedBordered5)}
                 data-testid="render-config-issues"
               >
                 {issues.map((issue) => (
@@ -1087,19 +1071,19 @@ export function RenderConfigPanel({
               // difference between a slow pipeline and an apparently dead button.
               <section
                 aria-live="polite"
-                className="mt-3 render-glass border p-3"
+                {...stylex.props(styles.borderedPad3)}
                 data-testid="render-submit-progress"
               >
-                <div className="flex items-center gap-2 text-xs font-medium">
+                <div {...stylex.props(styles.flexCenterXs)}>
                   <CloudActivityIndicator />
-                  <span className="min-w-0 flex-1 truncate">
+                  <span {...stylex.props(styles.fillTruncateNarrowable)}>
                     {stage === "package"
                       ? packageWait === null
                         ? "Freezing the scenario into an immutable revision"
                         : `Compiling the execution package · export ${packageWait.status}`
                       : "Submitting to the GPU fleet"}
                   </span>
-                  <span className="shrink-0 font-mono text-micro text-muted-foreground">
+                  <span {...stylex.props(styles.tightMonoMicro)}>
                     {formatElapsed(
                       new Date(packageWait?.startedAtMs ?? nowMs).toISOString(),
                       new Date(nowMs).toISOString(),
@@ -1107,17 +1091,17 @@ export function RenderConfigPanel({
                   </span>
                 </div>
                 {packageWait !== null ? (
-                  <p className="mt-1.5 text-micro text-muted-foreground" data-testid="render-submit-export">
+                  <p {...stylex.props(styles.microMuted4)} data-testid="render-submit-export">
                     {packageWait.claimed
                       ? "A compiler has it and is working."
                       : "Waiting for an OpenSCENARIO compiler to pick it up."}
-                    <span className="ml-1 font-mono opacity-80">{packageWait.exportId}</span>
+                    <span {...stylex.props(styles.mono)}>{packageWait.exportId}</span>
                   </p>
                 ) : null}
               </section>
             ) : null}
             {submitError ? (
-              <p className="mt-3 break-words text-xs text-destructive" role="alert">
+              <p {...stylex.props(styles.xsDangerBreakWords)} role="alert">
                 {submitError}
               </p>
             ) : null}
@@ -1127,12 +1111,7 @@ export function RenderConfigPanel({
             onBack={() => setStepIndex(3)}
             primary={
               <button
-                className={cn(
-                  "editor-motion inline-flex h-9 shrink-0 items-center justify-center gap-2 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  submitDisabled
-                    ? "cursor-not-allowed render-glass border text-muted-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
+                className={stylex.props(submitDisabled ? styles.inlineFlexCenterMid : styles.inlineFlexCenterMid2, motionStyles.editorMotion).className}
                 data-testid="render-run-button"
                 disabled={submitDisabled}
                 onClick={() => void submitGpuRender()}
@@ -1145,7 +1124,7 @@ export function RenderConfigPanel({
                   </>
                 ) : (
                   <>
-                    <Sparkles aria-hidden="true" className="size-3.5" />
+                    <Sparkles aria-hidden="true" className={stylex.props(styles.size35).className} />
                     Create render
                   </>
                 )}

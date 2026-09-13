@@ -55,11 +55,11 @@ const TONE_STYLES: Record<JobStatusTone, XStyle> = {
 export function JobStatusBadge({ job }: { job: ComputeJob }) {
   const presentation = jobStatusPresentation(job.status);
   return (
-    <span {...stylex.props(s.rowTight)}>
+    <span {...stylex.props(s.inlineGap2)}>
       <Badge variant="outline" xstyle={TONE_STYLES[presentation.tone]}>
         {presentation.label}
       </Badge>
-      {presentation.live ? <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} /> : null}
+      {presentation.live ? <Loader2 aria-hidden="true" {...stylex.props(s.icon14, s.spinner, s.textMuted)} /> : null}
     </span>
   );
 }
@@ -134,8 +134,8 @@ export function JobHistory({
 
   if (jobs === null) {
     return (
-      <p className={cn(stylex.props(s.rowTight, s.textSm, s.textMuted).className, className)} style={stylex.props(s.rowTight, s.textSm, s.textMuted).style}>
-        <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />Loading runs…
+      <p className={cn(stylex.props(s.inlineGap2, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineGap2, s.textSm, s.textMuted).style}>
+        <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />Loading runs…
       </p>
     );
   }
@@ -177,7 +177,7 @@ export function JobHistory({
                         {job.id.slice(0, 8)}
                       </span>
                     </button>
-                    <div {...stylex.props(s.mt1, s.flexCenterGap2, s.textXs, s.textMuted)}>
+                    <div {...stylex.props(s.mt05, s.flexWrapCenterGap15, s.textXs, s.textMuted)}>
                       <Badge variant="outline">{job.origin}</Badge>
                       {job.scored === false ? <Badge variant="outline">not scored</Badge> : null}
                       {job.inputs.length > 1 ? <span>{job.inputs.length} inputs</span> : null}
@@ -211,7 +211,7 @@ export function JobHistory({
                       {elapsed !== null ? ` · ${formatSeconds(elapsed)}` : ""}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.justifyEndSm)}>
+                  <TableCell {...stylex.props(s.justifyEndSm, s.tabular)}>
                     <div {...stylex.props(s.textFg)}>
                       {job.settledCents !== null
                         ? formatCents(job.settledCents)
@@ -233,7 +233,7 @@ export function JobHistory({
                           aria-label={`Cancel run ${job.id}`}
                         >
                           {cancelling === job.id ? (
-                            <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />
+                            <Loader2 aria-hidden="true" {...stylex.props(s.spinner)} />
                           ) : (
                             <Ban aria-hidden="true" />
                           )}

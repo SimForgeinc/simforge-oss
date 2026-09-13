@@ -9,7 +9,6 @@ import type {
   MapStats,
 } from "@simforge-oss/studio-shared";
 import { Route, Gauge, PersonStanding, Bike, SquareParking, GitFork, ArrowUpDown, ChevronRight, ChevronsUpDown, Database } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 function fmt(n: number | undefined): string {
   if (n == null) return "—";
@@ -43,10 +42,7 @@ function CollapsibleSection({
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
-            open && "rotate-90",
-          )}
+          className={stylex.props(styles.chevronMutedShrink, open && styles.rotate90).className}
         />
         <Icon className={stylex.props(styles.s_635).className} />
         <span className={stylex.props(styles.s_636).className}>{label}</span>

@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { text } from "../stylex/tokens.stylex";
 
 export const hoverScale = stylex.defineVars({ value: "1" });
 export const hoverBrightness = stylex.defineVars({ value: "1" });
@@ -60,7 +61,7 @@ export const styles = stylex.create({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontSize: "0.75rem",
+    fontSize: "0.75rem", lineHeight: "1rem",
     fontWeight: 600,
     textTransform: "capitalize",
     color: "white",
@@ -124,7 +125,7 @@ export const styles = stylex.create({
     backgroundColor: "rgb(9 9 11)",
     paddingInline: "1.5rem",
     textAlign: "center",
-    fontFamily: "monospace",
+    fontFamily: text.fontMono,
     fontSize: "10px",
     textTransform: "uppercase",
     letterSpacing: "0.12em",

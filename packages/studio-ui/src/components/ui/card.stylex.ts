@@ -29,7 +29,7 @@ export const styles = stylex.create({
     lineHeight: "1.375",
     letterSpacing: "-0.025em",
   },
-  description: { gridColumnStart: 1, fontSize: text.sizeSm, color: colors.mutedForeground },
+  description: { gridColumnStart: 1, fontSize: text.sizeSm, lineHeight: "1.25rem", color: colors.mutedForeground },
   action: { gridColumnStart: 2, gridRow: "span 2 / span 2", gridRowStart: 1, alignSelf: "start", justifySelf: "end" },
   content: { paddingInline: "1.25rem", paddingBottom: "0.75rem" },
   footer: { display: "flex", alignItems: "center", borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: colors.border, padding: "1rem", paddingInline: "1.25rem" },

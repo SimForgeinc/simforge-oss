@@ -52,9 +52,9 @@ export function AssetGalleryToolbar({
   searching: boolean;
 }) {
   return (
-    <Toolbar {...stylex.props(dialog.toolbar)}>
+    <Toolbar xstyle={dialog.toolbar}>
       <div {...stylex.props(dialog.searchWrap)}>
-        {searching ? <Loader2 aria-hidden="true" {...stylex.props(dialog.searchIcon, dialog.progressPulse)} /> : <Search aria-hidden="true" {...stylex.props(dialog.searchIcon)} />}
+        {searching ? <Loader2 aria-hidden="true" {...stylex.props(dialog.searchIcon, dialog.searchSpinner, dialog.progressPulse)} /> : <Search aria-hidden="true" {...stylex.props(dialog.searchIcon)} />}
         <Input
           type="search"
           aria-label="Search assets by title"
@@ -62,7 +62,7 @@ export function AssetGalleryToolbar({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           // Native bridge: hide the browser's duplicate search clear button.
-          className="[&::-webkit-search-cancel-button]:hidden"
+          xstyle={dialog.searchInput}
         />
         {query ? (
           <button type="button" aria-label="Clear search" onClick={() => onQueryChange("")} {...stylex.props(dialog.clearButton)}>
@@ -76,17 +76,17 @@ export function AssetGalleryToolbar({
         onChange={(value) => onActorClassChange(value as GalleryActorClass | "all")}
         options={GALLERY_ACTOR_CLASS_OPTIONS}
         label="Filter by actor class"
-        {...stylex.props(dialog.toolbarSelect, dialog.toolbarActor)}
+        xstyle={[dialog.toolbarSelect, dialog.toolbarActor]}
       />
       <SelectMenu
         value={carla}
         onChange={(value) => onCarlaChange(value as GalleryCarlaFilter)}
         options={GALLERY_CARLA_FILTER_OPTIONS}
         label="Filter by CARLA compatibility"
-        {...stylex.props(dialog.toolbarSelect, dialog.toolbarCarla)}
+        xstyle={[dialog.toolbarSelect, dialog.toolbarCarla]}
       />
 
-      <ToolbarGroup {...stylex.props(dialog.toolbarGroup)}>
+      <ToolbarGroup xstyle={dialog.toolbarGroup}>
         <p {...stylex.props(dialog.toolbarCount)}>
           <span {...stylex.props(dialog.toolbarCountValue)}>{resultCount}</span>{" "}
           {resultCount === 1 ? "asset" : "assets"}
@@ -97,7 +97,7 @@ export function AssetGalleryToolbar({
             <Button
               variant="outline"
               size="sm"
-              {...stylex.props(dialog.toolbarSort)}
+              xstyle={dialog.toolbarSort}
               title={
                 hasMore
                   ? "Sorts the assets loaded so far. Load more to sort across the rest of the library."

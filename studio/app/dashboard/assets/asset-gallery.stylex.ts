@@ -107,7 +107,7 @@ export const carla = stylex.create({
   },
   // text-[10px] font-semibold uppercase tracking-[0.18em] text-[#E8E044]
   eyebrow: {
-    fontSize: text.sizeMicro,
+    fontSize: "10px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
@@ -170,6 +170,18 @@ export const header = stylex.create({
   // mb-4 — the switch's clearance over the grid that follows it.
   sectionSwitch: {
     marginBottom: "1rem",
+  },
+  // border-b-0 bg-transparent px-0 pb-4 sm:px-0
+  //
+  // `PageHeader` draws its own rule, plate and inset; this shelf supplies all
+  // three itself on `bar` above, so the header's frame is stripped back to the
+  // title block. It travels as `xstyle` because the header compiles those
+  // declarations with StyleX — a class name would lose to them.
+  titleBlock: {
+    borderBottomWidth: 0,
+    backgroundColor: "transparent",
+    paddingInline: 0,
+    paddingBottom: "1rem",
   },
 });
 

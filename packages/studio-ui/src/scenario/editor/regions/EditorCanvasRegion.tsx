@@ -15,6 +15,8 @@ import type { ScenarioAuthoringQuality } from "../../../lib/scenario/contracts";
 import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface";
 import { cn } from "../../../lib/utils";
 import { AUTHORING_QUALITY } from "../authoring-quality";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorCanvasRegion.stylex";
 
 /**
  * OWNS: the `CityView` host element and the actor-library overlay.
@@ -63,10 +65,7 @@ export function EditorCanvasRegion({
   return (
     <div
       ref={hostRef}
-      className={cn(
-        "relative min-w-0 flex-1 overflow-hidden",
-        externalWorld ? "pointer-events-none bg-transparent" : "bg-background",
-      )}
+      {...stylex.props(externalWorld ? styles.relFillClip : styles.relFillClip2)}
       data-tutorial="canvas"
       data-testid="scenario-editor-canvas-region"
       data-external-world={String(externalWorld)}
@@ -85,7 +84,7 @@ export function EditorCanvasRegion({
           }}
           onViewerReady={registerViewer}
           onViewerMapLoaded={reportMapLoaded}
-          className="h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className={stylex.props(styles.wideTall).className}
           ariaLabel={`${map.label} 3D scene. Click an actor to select it, drag to orbit.`}
           role="application"
           tabIndex={0}
@@ -94,7 +93,7 @@ export function EditorCanvasRegion({
       {!state ? (
         error ? (
           <div
-            className="pointer-events-none absolute bottom-4 right-4 z-20 max-w-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive shadow-lg"
+            {...stylex.props(styles.absXsDanger)}
             data-testid="scenario-map-status"
             role="alert"
             aria-live="assertive"
@@ -103,14 +102,14 @@ export function EditorCanvasRegion({
           </div>
         ) : (
           <CloudActivityIndicator
-            className="pointer-events-none absolute bottom-4 right-4 z-20 text-xs text-white/65"
+            xstyle={styles.absXsInert}
             label="Loading map and lane topology…"
             testId="scenario-map-status"
           />
         )
       ) : null}
 
-      <div className="pointer-events-auto">
+      <div {...stylex.props(styles.live)}>
         {children}
       </div>
     </div>

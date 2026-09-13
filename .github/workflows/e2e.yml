@@ -1,0 +1,605 @@
+name: E2E
+
+# End-to-end gates for the Studio surfaces, driven by the root E2E package
+# (`pnpm e2e:smoke`, `e2e:maps`, `e2e:models`, `e2e:interop`, `e2e:all`).
+#
+# Three explicit modes, decided once in the `plan` job and consumed by every
+# other job as a boolean output:
+#
+#   pr       — pull request: the Linux browser/local-host smoke gate only.
+#              Nothing that needs a GPU, a real map corpus, a packaged
+#              installer or a cloud credential runs on untrusted input.
+#   main     — push to main: the same smoke gate, as the merge-state signal.
+#   nightly  — scheduled: smoke plus the real-map and staging cloud model
+#              gates; the GPU/native gate joins only when the self-hosted
+#              runner is declared ready (repository variable
+#              E2E_GPU_RUNNER_READY), so a nightly never queues forever on
+#              an unregistered runner.
+#   manual   — workflow_dispatch: one named suite, plus the packaged desktop
+#              matrix when a desktop build run is supplied.
+#
+# Heavyweight prerequisites are never inferred and never skipped into a green
+# check. Each gate owns its prerequisite and fails inside its own job with an
+# actionable ::error:: when the corpus, runner binary, credential or packaged
+# installer it needs is absent — a missing prerequisite is a red gate, not a
+# quiet pass. The suites themselves are the only thing that decides whether
+# the product works; this workflow only decides what is allowed to run.
+#
+# Secrets: credentials reach a suite as `env` on the single step that runs it,
+# never as workflow-level env, command-line arguments or interpolated strings
+# inside a `run` body. Values derived from secrets (the staging endpoint) are
+# re-masked with ::add-mask:: before use, so a suite that echoes its
+# configuration cannot print them. Only the presence of a secret is ever
+# logged, following the pattern in desktop.yml.
+#
+# This workflow builds no installers and publishes nothing: the packaged
+# desktop matrix consumes the artifacts of an existing "SimForge Studio
+# desktop" run instead of repeating its build.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Nightly, after the day's merges have settled.
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Suite to run"
+        type: choice
+        options: ["smoke", "maps", "models", "interop", "all"]
+        default: "smoke"
+      app_mode:
+        description: "Surface under test (SIMFORGE_E2E_MODE)"
+        type: choice
+        options: ["browser", "electron"]
+        default: "browser"
+      desktop_run_id:
+        description: "Run id of a 'SimForge Studio desktop' workflow whose installers the packaged desktop matrix should test; empty skips that matrix"
+        type: string
+        required: false
+      keep_data_root:
+        description: "Retain the isolated temp data roots for debugging (SIMFORGE_E2E_KEEP_DATA_ROOT)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  # Superseded pull-request runs are worth nothing; a main, nightly or manual
+  # run is a record and is allowed to finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Every suite creates its isolated SIMFORGE_CLOUD_ROOT / map cache under
+  # this runner-local parent, so no run can observe another's state and the
+  # whole tree dies with the runner.
+  SIMFORGE_E2E_DATA_ROOT: ${{ github.workspace }}/../simforge-e2e-data
+  SIMFORGE_E2E_MODE: ${{ inputs.app_mode || 'browser' }}
+  SIMFORGE_E2E_KEEP_DATA_ROOT: ${{ inputs.keep_data_root == true && '1' || '' }}
+
+jobs:
+  plan:
+    name: Plan (mode and suite selection)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+      smoke: ${{ steps.select.outputs.smoke }}
+      maps: ${{ steps.select.outputs.maps }}
+      models: ${{ steps.select.outputs.models }}
+      interop: ${{ steps.select.outputs.interop }}
+      full: ${{ steps.select.outputs.full }}
+      desktop: ${{ steps.select.outputs.desktop }}
+    steps:
+      - name: Decide the mode and the suites it admits
+        id: select
+        env:
+          SUITE: ${{ inputs.suite || '' }}
+          DESKTOP_RUN_ID: ${{ inputs.desktop_run_id || '' }}
+          # Set to 'true' once the self-hosted GPU runner (label
+          # gpu-rtx5080, see native-golden.yml) is registered. Until then the
+          # GPU/native gate stays manual so no nightly waits on a runner that
+          # will never pick the job up.
+          GPU_RUNNER_READY: ${{ vars.E2E_GPU_RUNNER_READY }}
+        run: |
+          smoke=false maps=false models=false interop=false full=false desktop=false
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              mode=pr
+              smoke=true
+              ;;
+            push)
+              mode=main
+              smoke=true
+              ;;
+            schedule)
+              mode=nightly
+              smoke=true
+              maps=true
+              models=true
+              [ "$GPU_RUNNER_READY" = "true" ] && interop=true
+              ;;
+            workflow_dispatch)
+              mode=manual
+              case "$SUITE" in
+                smoke)   smoke=true ;;
+                maps)    maps=true ;;
+                models)  models=true ;;
+                interop) interop=true ;;
+                all)     full=true ;;
+                *)
+                  echo "::error title=Unknown suite::'$SUITE' is not one of smoke, maps, models, interop, all."
+                  exit 1
+                  ;;
+              esac
+              [ -n "$DESKTOP_RUN_ID" ] && desktop=true
+              ;;
+            *)
+              echo "::error title=Unsupported trigger::This workflow has no mode for event '$GITHUB_EVENT_NAME'."
+              exit 1
+              ;;
+          esac
+          for name in mode smoke maps models interop full desktop; do
+            echo "$name=${!name}" >> "$GITHUB_OUTPUT"
+          done
+          {
+            echo "### E2E plan"
+            echo
+            echo "| field | value |"
+            echo "| --- | --- |"
+            echo "| mode | \`$mode\` |"
+            echo "| surface | \`${SIMFORGE_E2E_MODE}\` |"
+            echo "| smoke | \`$smoke\` |"
+            echo "| real-map gate | \`$maps\` |"
+            echo "| cloud model gate | \`$models\` |"
+            echo "| GPU/native interop gate | \`$interop\` |"
+            echo "| full suite | \`$full\` |"
+            echo "| packaged desktop matrix | \`$desktop\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    name: Smoke (Linux browser + local host)
+    needs: plan
+    if: needs.plan.outputs.smoke == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install the Chromium build the suites pin
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Smoke the local host and the browser surface
+        run: pnpm e2e:smoke
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 7
+          if-no-files-found: warn
+
+  maps:
+    name: Real maps (nightly gate)
+    needs: plan
+    if: needs.plan.outputs.maps == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Require the real map corpus this gate exists to exercise
+        # The corpus is tens of gigabytes of derived map data and is never
+        # fabricated here: without it there is nothing to gate, so this job
+        # fails instead of reporting a pass it did not earn.
+        env:
+          MAPS_FIXTURE_ROOT: ${{ vars.SIMFORGE_E2E_MAPS_FIXTURE_ROOT }}
+        run: |
+          if [ -z "$MAPS_FIXTURE_ROOT" ]; then
+            echo "::error title=Real-map gate prerequisite missing::Set the repository variable SIMFORGE_E2E_MAPS_FIXTURE_ROOT to an installed map corpus root (the directory holding dev-assets/ and map-bundles/). This gate does not fall back to synthetic maps."
+            exit 1
+          fi
+          if [ ! -d "$MAPS_FIXTURE_ROOT" ]; then
+            echo "::error title=Real-map corpus not present::SIMFORGE_E2E_MAPS_FIXTURE_ROOT is set but '$MAPS_FIXTURE_ROOT' is not a directory on this runner. A hosted runner cannot see a corpus that lives on a self-hosted host."
+            exit 1
+          fi
+          missing=
+          for member in dev-assets map-bundles; do
+            [ -d "$MAPS_FIXTURE_ROOT/$member" ] || missing="$missing $member"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Real-map corpus incomplete::'$MAPS_FIXTURE_ROOT' is missing:$missing"
+            exit 1
+          fi
+          echo "Map corpus root: $MAPS_FIXTURE_ROOT"
+      - run: pnpm install --frozen-lockfile
+      - name: Build the CLI and map packages used by the E2E process
+        run: |
+          pnpm --filter @simforge-oss/map-pipeline build
+          pnpm --filter @simforge-oss/map-registry build
+          pnpm --filter @simforge-oss/cli build
+      - name: Install the Chromium build the suites pin
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Exercise the real-map surfaces
+        env:
+          SIMFORGE_E2E_MAPS_FIXTURE_ROOT: ${{ vars.SIMFORGE_E2E_MAPS_FIXTURE_ROOT }}
+        run: pnpm e2e:maps
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-maps-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 14
+          if-no-files-found: warn
+
+  models:
+    name: Cloud models (staging gate)
+    needs: plan
+    if: needs.plan.outputs.models == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Require staging model credentials, without logging them
+        # Only presence is reported. The endpoint is masked before any suite
+        # can echo it, and the key is never referenced outside the env block
+        # of the step that runs the suite.
+        env:
+          HAS_BASE_URL: ${{ secrets.SIMFORGE_E2E_MODEL_BASE_URL != '' }}
+          HAS_API_KEY: ${{ secrets.SIMFORGE_E2E_MODEL_API_KEY != '' }}
+        run: |
+          if [ "$HAS_BASE_URL" != "true" ] || [ "$HAS_API_KEY" != "true" ]; then
+            echo "::error title=Cloud model gate prerequisite missing::This gate needs the repository secrets SIMFORGE_E2E_MODEL_BASE_URL and SIMFORGE_E2E_MODEL_API_KEY, pointing at the staging model service. Provision both; the gate never silently degrades to a stub service. (base URL present: $HAS_BASE_URL, API key present: $HAS_API_KEY)"
+            exit 1
+          fi
+          echo "Staging model credentials are present."
+      - run: pnpm install --frozen-lockfile
+      - name: Install the Chromium build the suites pin
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Refuse the production service and mask the endpoint
+        env:
+          MODEL_BASE_URL: ${{ secrets.SIMFORGE_E2E_MODEL_BASE_URL }}
+        run: |
+          echo "::add-mask::$MODEL_BASE_URL"
+          case "$MODEL_BASE_URL" in
+            https://simforge.ai|https://simforge.ai/*)
+              echo "::error title=Refusing the production service::This gate runs against staging only; SIMFORGE_E2E_MODEL_BASE_URL points at the production origin."
+              exit 1
+              ;;
+          esac
+      - name: Exercise the model surfaces against staging
+        env:
+          SIMFORGE_E2E_MODEL_BASE_URL: ${{ secrets.SIMFORGE_E2E_MODEL_BASE_URL }}
+          SIMFORGE_E2E_MODEL_API_KEY: ${{ secrets.SIMFORGE_E2E_MODEL_API_KEY }}
+        run: pnpm e2e:models
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-models-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 14
+          if-no-files-found: warn
+
+  interop:
+    name: GPU/native interop (manual gate)
+    needs: plan
+    if: needs.plan.outputs.interop == 'true'
+    # Same host as native-golden.yml: raster on anything else is
+    # unrepresentative, so this gate is pinned to the registered 5080 box.
+    runs-on: [self-hosted, Linux, X64, gpu-rtx5080]
+    timeout-minutes: 60
+    concurrency:
+      # One shared raster GPU — serialize, never cancel a run mid-render.
+      group: e2e-interop-gpu-rtx5080
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Require a working GPU and the native runner binary
+        env:
+          NATIVE_RUNNER_BIN: ${{ vars.SIMFORGE_E2E_NATIVE_RUNNER_BIN }}
+        run: |
+          if ! command -v nvidia-smi >/dev/null 2>&1; then
+            echo "::error title=No GPU on this runner::nvidia-smi is not on PATH. The interop gate needs the real GPU stack; it does not fall back to software raster."
+            exit 1
+          fi
+          nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+          if [ -z "$NATIVE_RUNNER_BIN" ]; then
+            echo "::error title=Native runner not configured::Set the repository variable SIMFORGE_E2E_NATIVE_RUNNER_BIN to the simforge native runner binary installed on this host."
+            exit 1
+          fi
+          if [ ! -x "$NATIVE_RUNNER_BIN" ]; then
+            echo "::error title=Native runner unusable::'$NATIVE_RUNNER_BIN' is not an executable file on this runner."
+            exit 1
+          fi
+          "$NATIVE_RUNNER_BIN" --version || {
+            echo "::error title=Native runner failed to start::'$NATIVE_RUNNER_BIN' could not report its version."
+            exit 1
+          }
+      - run: pnpm install --frozen-lockfile
+      - name: Build the CLI and OpenSCENARIO packages used by the E2E process
+        run: |
+          pnpm --filter @simforge-oss/map-pipeline build
+          pnpm --filter @simforge-oss/map-registry build
+          pnpm --filter @simforge-oss/openscenario build
+          pnpm --filter @simforge-oss/cli build
+      - name: Install the Chromium build the suites pin
+        # No --with-deps: this host's system packages are managed by its
+        # owner, not by a CI job running as the runner user.
+        run: pnpm exec playwright install chromium
+      - name: Exercise the native/GPU interop surfaces
+        env:
+          SIMFORGE_E2E_NATIVE_RUNNER_BIN: ${{ vars.SIMFORGE_E2E_NATIVE_RUNNER_BIN }}
+          # This host has the real GPU stack, verified above.
+          SIMFORGE_E2E_GPU: "1"
+        run: pnpm e2e:interop
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-interop-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 14
+          if-no-files-found: warn
+
+  full:
+    name: Full suite (manual)
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Require every prerequisite the full suite covers
+        # `e2e:all` includes the map, model and interop projects, so it needs
+        # everything the dedicated gates need. Report all missing
+        # prerequisites at once rather than one failure per re-run.
+        env:
+          MAPS_FIXTURE_ROOT: ${{ vars.SIMFORGE_E2E_MAPS_FIXTURE_ROOT }}
+          NATIVE_RUNNER_BIN: ${{ vars.SIMFORGE_E2E_NATIVE_RUNNER_BIN }}
+          HAS_BASE_URL: ${{ secrets.SIMFORGE_E2E_MODEL_BASE_URL != '' }}
+          HAS_API_KEY: ${{ secrets.SIMFORGE_E2E_MODEL_API_KEY != '' }}
+        run: |
+          ok=true
+          if [ ! -d "${MAPS_FIXTURE_ROOT:-}" ]; then
+            echo "::error title=Real-map corpus unavailable::SIMFORGE_E2E_MAPS_FIXTURE_ROOT must name an installed corpus directory on this runner."
+            ok=false
+          fi
+          if [ ! -x "${NATIVE_RUNNER_BIN:-}" ]; then
+            echo "::error title=Native runner unavailable::SIMFORGE_E2E_NATIVE_RUNNER_BIN must name an executable native runner on this runner. A hosted runner has no GPU; run the 'interop' suite on the self-hosted GPU host instead."
+            ok=false
+          fi
+          if [ "$HAS_BASE_URL" != "true" ] || [ "$HAS_API_KEY" != "true" ]; then
+            echo "::error title=Staging model credentials unavailable::SIMFORGE_E2E_MODEL_BASE_URL and SIMFORGE_E2E_MODEL_API_KEY must both be provisioned."
+            ok=false
+          fi
+          if [ "$ok" != "true" ]; then
+            echo "::error title=Full suite cannot run here::e2e:all runs the map, model and interop projects too. Run the dedicated gates for the prerequisites this runner has, or dispatch the full suite where all of them exist."
+            exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - name: Build every CLI/interop package consumed by the full suite
+        run: |
+          pnpm --filter @simforge-oss/map-pipeline build
+          pnpm --filter @simforge-oss/map-registry build
+          pnpm --filter @simforge-oss/openscenario build
+          pnpm --filter @simforge-oss/cli build
+      - name: Install the Chromium build the suites pin
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run every suite
+        env:
+          SIMFORGE_E2E_MAPS_FIXTURE_ROOT: ${{ vars.SIMFORGE_E2E_MAPS_FIXTURE_ROOT }}
+          SIMFORGE_E2E_NATIVE_RUNNER_BIN: ${{ vars.SIMFORGE_E2E_NATIVE_RUNNER_BIN }}
+          SIMFORGE_E2E_MODEL_BASE_URL: ${{ secrets.SIMFORGE_E2E_MODEL_BASE_URL }}
+          SIMFORGE_E2E_MODEL_API_KEY: ${{ secrets.SIMFORGE_E2E_MODEL_API_KEY }}
+        run: pnpm e2e:all
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-full-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 14
+          if-no-files-found: warn
+
+  desktop:
+    name: Packaged desktop smoke (${{ matrix.name }})
+    needs: plan
+    if: needs.plan.outputs.desktop == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Runner images with a usable desktop session for a packaged
+          # Electron app. Linux needs a virtual display; the hosted Windows
+          # and macOS images provide one. macOS x64 is deliberately absent:
+          # desktop.yml packages it, and one macOS architecture is enough to
+          # gate the shell's behaviour.
+          - name: linux-x64
+            os: ubuntu-24.04
+            installer: AppImage
+          - name: windows-x64
+            os: windows-2022
+            installer: exe
+          - name: macos-arm64
+            os: macos-14
+            # The zip target carries the same .app as the dmg and needs no
+            # disk-image mount to reach the executable.
+            installer: zip
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      # Reading another workflow run's artifacts.
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Download the installers this leg tests
+        # Built by "SimForge Studio desktop"; nothing is rebuilt here. A
+        # missing or mismatched artifact fails this leg, which is the whole
+        # point of naming a run id.
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simforge-studio-${{ matrix.name }}-*
+          path: ${{ runner.temp }}/desktop
+          merge-multiple: true
+          run-id: ${{ inputs.desktop_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify the packaged artifact and unpack the shell it carries
+        id: app
+        env:
+          INSTALLER_DIR: ${{ runner.temp }}/desktop
+          EXTENSION: ${{ matrix.installer }}
+          UNPACK_DIR: ${{ runner.temp }}/desktop-app
+        run: |
+          installer=$(find "$INSTALLER_DIR" -maxdepth 2 -type f -name "*.$EXTENSION" | sort | head -n 1)
+          if [ -z "$installer" ]; then
+            echo "::error title=No packaged artifact for ${{ matrix.name }}::Run ${{ inputs.desktop_run_id }} published no *.$EXTENSION file. Dispatch 'SimForge Studio desktop' for this target first, then pass its run id."
+            exit 1
+          fi
+          sums="$INSTALLER_DIR/SHA256SUMS"
+          if [ ! -f "$sums" ]; then
+            echo "::error title=No digest record::The downloaded artifact has no SHA256SUMS, so the package cannot be verified against the bytes the build produced."
+            exit 1
+          fi
+          node -e '
+            const { createHash } = require("node:crypto");
+            const { readFileSync } = require("node:fs");
+            const { basename } = require("node:path");
+            const [installer, sums] = process.argv.slice(1);
+            const name = basename(installer);
+            const line = readFileSync(sums, "utf8").split(/\r?\n/).find((l) => l.endsWith("  " + name));
+            if (!line) { console.error(`${name} is absent from SHA256SUMS`); process.exit(1); }
+            const expected = line.split(/\s+/)[0];
+            const actual = createHash("sha256").update(readFileSync(installer)).digest("hex");
+            if (actual !== expected) { console.error(`${name}: ${actual} != recorded ${expected}`); process.exit(1); }
+            console.log(`${name}: digest matches the build record`);
+          ' "$installer" "$sums"
+          mkdir -p "$UNPACK_DIR"
+          # A failed unpack reports the artifact that could not be opened,
+          # rather than letting the archiver's own noise become the failure.
+          unpacked=true
+          case "$RUNNER_OS" in
+            Linux)
+              cp "$installer" "$UNPACK_DIR/studio.AppImage"
+              chmod +x "$UNPACK_DIR/studio.AppImage"
+              ( cd "$UNPACK_DIR" && ./studio.AppImage --appimage-extract >/dev/null 2>&1 ) || unpacked=false
+              binary="$UNPACK_DIR/squashfs-root/simforge-studio"
+              ;;
+            macOS)
+              unzip -q "$installer" -d "$UNPACK_DIR" >/dev/null 2>&1 || unpacked=false
+              binary="$UNPACK_DIR/SimForge Studio.app/Contents/MacOS/SimForge Studio"
+              ;;
+            Windows)
+              # electron-builder's NSIS installer carries the application in
+              # $PLUGINSDIR/app-64.7z. Unpacking reads the real shipped bytes
+              # without installing anything on the runner.
+              7z x -y -o"$UNPACK_DIR/setup" "$installer" >/dev/null 2>&1 &&
+                7z x -y -o"$UNPACK_DIR/app" "$UNPACK_DIR/setup/\$PLUGINSDIR/app-64.7z" >/dev/null 2>&1 || unpacked=false
+              binary="$UNPACK_DIR/app/SimForge Studio.exe"
+              ;;
+            *)
+              echo "::error title=Unsupported runner::No packaged-shell layout is defined for '$RUNNER_OS'."
+              exit 1
+              ;;
+          esac
+          if [ "$unpacked" != "true" ]; then
+            echo "::error title=Packaged artifact could not be unpacked::$(basename "$installer") is not a readable $EXTENSION package on this runner, even though its digest matches the build record."
+            exit 1
+          fi
+          if [ ! -f "$binary" ]; then
+            echo "::error title=Packaged shell not found::'$binary' is absent after unpacking $(basename "$installer"). The packaged layout changed, or this artifact is for another target."
+            exit 1
+          fi
+          [ "$RUNNER_OS" = "Windows" ] || chmod +x "$binary"
+          echo "path=$binary" >> "$GITHUB_OUTPUT"
+      - run: pnpm install --frozen-lockfile
+      - name: Install a virtual display for the packaged shell
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes xvfb
+      - name: Smoke the packaged shell
+        env:
+          SIMFORGE_E2E_MODE: electron
+          SIMFORGE_E2E_ELECTRON_BINARY: ${{ steps.app.outputs.path }}
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a pnpm e2e:smoke
+          else
+            pnpm e2e:smoke
+          fi
+      - name: Upload the failing run's report, traces and evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-desktop-${{ matrix.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/evidence
+          retention-days: 14
+          if-no-files-found: warn

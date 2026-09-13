@@ -11,14 +11,16 @@ const TooltipProvider = TooltipPrimitive.Provider;
 const Tooltip = TooltipPrimitive.Root;
 const TooltipTrigger = TooltipPrimitive.Trigger;
 
+type TooltipStyle = stylex.StyleXStyles;
+
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & { xstyle?: TooltipStyle }
+>(({ className, sideOffset = 4, xstyle, ...props }, ref) => (
   <TooltipPrimitive.Content
     ref={ref}
     sideOffset={sideOffset}
-    {...mergeStyleProps(stylex.props(styles.content), className)}
+    {...mergeStyleProps(stylex.props(styles.content, xstyle), className)}
     {...props}
   />
 ));

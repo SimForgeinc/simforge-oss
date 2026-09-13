@@ -13,6 +13,9 @@ import { InteractionTargetControls } from "./InteractionTargetControls";
 import { TimelineRuler } from "./TimelineRuler";
 import { TriggerControls } from "./TriggerControls";
 import { triggerLabel } from "./trigger-defaults";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./InteractionList.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The semantic timeline: one row per authored interaction, expandable into its
@@ -71,16 +74,16 @@ export function InteractionList({
   };
 
   return (
-    <div className="min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a] p-3 text-white" data-testid="semantic-timeline">
-      <h2 className="mb-2 flex items-center text-micro font-semibold uppercase tracking-meta-wide text-white/45">
-        <Radio aria-hidden="true" className="mr-2 size-3" />
+    <div {...stylex.props(styles.fillWhiteScrollY)} data-testid="semantic-timeline">
+      <h2 {...stylex.props(styles.flexCenterCaps)}>
+        <Radio aria-hidden="true" className={stylex.props(styles.mr2Size3).className} />
         Semantic timeline
-        <span className="ml-auto normal-case tracking-normal">
+        <span {...stylex.props(styles.pushRightNormalCase)}>
           {choreography.clipSeconds}s
         </span>
       </h2>
       {interactions.length > 0 ? <TimelineRuler choreography={choreography} /> : null}
-      <div className="space-y-1">
+      <div {...stylex.props(styles.stackXs)}>
         {interactions.map((interaction) => {
           const expanded = editingId === interaction.id;
           const panelId = `scenario-interaction-${interaction.id}`;
@@ -89,11 +92,7 @@ export function InteractionList({
           return (
             <div key={interaction.id} data-testid={`interaction-row-${interaction.id}`}>
               <div
-                className={`flex h-8 w-full items-center border text-xs ${
-                  expanded
-                    ? "border-[#E8E044]/60 bg-[#E8E044]/10"
-                    : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
-                }`}
+                {...stylex.props(styles.row, expanded ? styles.rowExpanded : styles.rowCollapsed)}
               >
                 <button
                   type="button"
@@ -101,32 +100,28 @@ export function InteractionList({
                   aria-controls={panelId}
                   aria-expanded={expanded}
                   data-testid={`interaction-expand-${interaction.id}`}
-                  className="editor-motion flex min-w-0 flex-1 items-center self-stretch px-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  className={stylex.props(styles.flexCenterFill, motionStyles.editorMotion).className}
                 >
-                  <span className="w-24 truncate text-white/40">
+                  <span {...stylex.props(styles.truncate)}>
                     {interaction.actor}
                   </span>
-                  <span className="truncate font-medium">{name}</span>
-                  <span className="ml-auto font-mono text-white/45">
+                  <span {...stylex.props(styles.mediumTruncate)}>{name}</span>
+                  <span {...stylex.props(styles.monoPushRight)}>
                     {triggerLabel(interaction.trigger)}
                   </span>
                 </button>
                 <button
                   type="button"
                   aria-label={`Delete action ${name}`}
-                  className="editor-motion mr-2 text-white/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                  className={stylex.props(styles.editorMotionMr2TextWhite30, motionStyles.editorMotion).className}
                   onClick={() => document.removeInteraction(interaction.id)}
                 >
-                  <Trash2 aria-hidden="true" className="size-3" />
+                  <Trash2 aria-hidden="true" className={stylex.props(styles.size3).className} />
                 </button>
               </div>
               {resolved ? <InteractionTrack resolved={resolved} window={window} /> : null}
               <div
-                className={
-                  expanded
-                    ? "grid grid-cols-2 gap-3 border-x border-b border-white/10 bg-[#111111] p-3"
-                    : "hidden"
-                }
+                {...stylex.props(expanded ? styles.inspector : styles.inspectorCollapsed)}
                 id={panelId}
                 data-testid={`interaction-inspector-${interaction.id}`}
               >
@@ -153,7 +148,7 @@ export function InteractionList({
                       optional
                       onChange={(value) => replaceTrigger(interaction, "until", value)}
                     />
-                    <div className="col-span-2 border-t border-white/10 pt-3">
+                    <div {...stylex.props(styles.ruleT)}>
                       <InteractionTargetControls
                         document={document}
                         interaction={interaction}
@@ -166,7 +161,7 @@ export function InteractionList({
           );
         })}
         {interactions.length === 0 ? (
-          <p className="grid h-16 place-items-center border border-dashed border-white/15 text-xs text-white/35">
+          <p {...stylex.props(styles.gridCenteredXs)}>
             Actions appear here as semantic, exportable OpenSCENARIO behavior.
           </p>
         ) : null}

@@ -1,6 +1,8 @@
 "use client";
 
 import { rangePercent, type ResolvedInteraction, type TimelineRange } from "../../../lib/scenario/timeline";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./InteractionTrack.stylex";
 
 /**
  * One interaction drawn as a bar on the shared time axis — manifest 84.
@@ -30,14 +32,16 @@ export function InteractionTrack({
   const endPercent = rangePercent(resolved.range.endMs, window);
 
   return (
-    <div className="relative h-2.5 overflow-hidden bg-black/30" aria-hidden="true" data-testid="interaction-track">
-      <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/10" />
+    <div {...stylex.props(styles.relClip)} aria-hidden="true" data-testid="interaction-track">
+      <div {...stylex.props(styles.abs)} />
       <div
-        className={`absolute inset-y-0.5 min-w-px rounded-[2px] shadow-[0_0_12px_rgba(232,224,68,0.14)] ${
-          resolved.armed
-            ? "border-y border-l border-dashed border-[#E8E044] bg-[#E8E044]/20"
-            : "bg-[#E8E044]/75"
-        } ${resolved.openEnded ? "opacity-70" : ""}`}
+        {...stylex.props(
+          styles.bar,
+          resolved.armed ? styles.barArmed : styles.barExact,
+          resolved.openEnded && styles.barOpenEnded,
+        )}
+        data-armed={String(resolved.armed)}
+        data-open-ended={String(resolved.openEnded)}
         style={{
           left: `${startPercent}%`,
           width: `${Math.max(0, endPercent - startPercent)}%`,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Marker } from "react-map-gl/maplibre";
 import { metersPerPixel } from "@/app/lib/scenario-editor/map-3d/coordinates";
 import {
@@ -15,6 +16,7 @@ import {
   junctionSummary,
   useSignalJunctionStore,
 } from "@/app/lib/scenario-editor/signals/signal-junction-store";
+import { styles } from "../map-canvas.stylex";
 
 /**
  * Armed-mode intersection candidates (plan 2026-07-26, section 5).
@@ -132,20 +134,12 @@ function CandidateMarker({
       pitchAlignment="map"
       rotationAlignment="map"
     >
-      <div style={{ position: "relative" }}>
+      <div {...stylex.props(styles.markerRelative)}>
         <button
           aria-label={label}
-          className="block"
           data-intersection-candidate-id={candidate.junctionId}
           data-testid={`intersection-candidate-${candidate.junctionId}`}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            display: "block",
-            padding: 0,
-            pointerEvents: "auto",
-          }}
+          {...stylex.props(styles.bareButton)}
           title={label}
           type="button"
           onClick={(event) => {
@@ -178,13 +172,10 @@ function CandidateFan({
     <svg
       aria-hidden
       height={glyph.sizePx}
-      style={{
-        display: "block",
-        overflow: "visible",
-        transform: hovered ? "scale(1.08)" : undefined,
-        transformOrigin: "center",
-        transition: "transform 120ms ease-out",
-      }}
+      {...stylex.props(
+        styles.candidateFan,
+        hovered ? styles.candidateFanHovered : null,
+      )}
       viewBox={`0 0 ${glyph.sizePx} ${glyph.sizePx}`}
       width={glyph.sizePx}
     >
@@ -238,21 +229,18 @@ function CandidateHoverCard({ candidate }: { candidate: IntersectionCandidate })
   const heads = candidate.lights.length;
   return (
     <div
-      className="pointer-events-none absolute left-1/2 z-10 w-[220px] -translate-x-1/2 rounded-lg border border-white/15 bg-black/90 px-2.5 py-2 shadow-lg backdrop-blur"
       data-testid={`intersection-candidate-card-${candidate.junctionId}`}
       role="tooltip"
-      style={{ bottom: "calc(100% + 10px)" }}
+      {...stylex.props(styles.candidateCard)}
     >
-      <p className="text-[12px] font-semibold leading-tight text-white">
-        {candidate.identity}
-      </p>
-      <p className="mt-0.5 text-[10px] text-white/55">
+      <p {...stylex.props(styles.candidateName)}>{candidate.identity}</p>
+      <p {...stylex.props(styles.candidateMeta, styles.candidateMetaSpaced)}>
         {candidate.approachCount}{" "}
         {candidate.approachCount === 1 ? "approach" : "approaches"} ·{" "}
         {candidate.movementCount}{" "}
         {candidate.movementCount === 1 ? "movement" : "movements"}
       </p>
-      <p className="text-[10px] text-white/55">
+      <p {...stylex.props(styles.candidateMeta)}>
         {heads} {heads === 1 ? "signal head" : "signal heads"}
       </p>
       {candidate.overlapsJunctionIds.length > 0 ? (
@@ -261,19 +249,17 @@ function CandidateHoverCard({ candidate }: { candidate: IntersectionCandidate })
         // the honest move is to say so rather than let the author wonder why
         // one intersection grew two candidates.
         <p
-          className="mt-1 text-[10px] leading-snug text-[#F0B429]"
           data-testid={`intersection-candidate-split-${candidate.junctionId}`}
+          {...stylex.props(styles.candidateSplit)}
         >
           The map splits this intersection across{" "}
           {candidate.overlapsJunctionIds.length + 1} junction ids — control both
           halves to govern all of it.
         </p>
       ) : null}
-      <div className="mt-1.5 border-t border-white/10 pt-1.5">
-        <p className="text-[10px] font-semibold text-[#E8E044]">
-          Click to add control
-        </p>
-        <p className="text-[9px] text-white/30">id {candidate.junctionId}</p>
+      <div {...stylex.props(styles.candidateFooter)}>
+        <p {...stylex.props(styles.candidateAction)}>Click to add control</p>
+        <p {...stylex.props(styles.candidateId)}>id {candidate.junctionId}</p>
       </div>
     </div>
   );

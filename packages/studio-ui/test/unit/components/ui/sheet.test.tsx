@@ -47,6 +47,31 @@ function mount(element: React.ReactNode): MountedApp {
   };
 }
 
+function query(selector: string): HTMLElement {
+  const element = document.body.querySelector(selector);
+  if (!(element instanceof HTMLElement)) throw new Error(`no element matched ${selector}`);
+  return element;
+}
+
+function classesFor(element: React.ReactNode, selector: string): string[] {
+  const app = mount(element);
+  const classes = Array.from(query(selector).classList);
+  app.unmount();
+  return classes;
+}
+
+function renderPanel(side?: React.ComponentProps<typeof SheetContent>["side"]): React.ReactElement {
+  return (
+    <Sheet open>
+      <SheetContent side={side}>
+        <SheetTitle>Panel</SheetTitle>
+        <SheetDescription>Panel description</SheetDescription>
+        Body
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -63,166 +88,102 @@ describe("Sheet", () => {
         </SheetPortal>
       </Sheet>
     );
-    const html = document.body.innerHTML;
+    const text = document.body.textContent ?? "";
 
-    expect(html).toContain("Open");
-    expect(html).toContain("Portal content");
-
-    app.unmount();
-  });
-});
-
-describe("SheetOverlay", () => {
-  it("renders overlay base classes and custom className", () => {
-    const app = mount(
-      <Sheet open>
-        <SheetOverlay className="overlay-extra" />
-      </Sheet>
-    );
-    const html = document.body.innerHTML;
-
-    expect(html).toContain("fixed inset-0");
-    expect(html).toContain("bg-black/80");
-    expect(html).toContain("overlay-extra");
+    expect(text).toContain("Open");
+    expect(text).toContain("Portal content");
 
     app.unmount();
   });
 });
 
 describe("SheetContent", () => {
-  it("renders default right-side content with close affordance", () => {
-    const app = mount(
-      <Sheet open>
-        <SheetContent className="content-extra">
-          <SheetTitle>Panel</SheetTitle>
-          <SheetDescription>Panel description</SheetDescription>
-          Body
-        </SheetContent>
-      </Sheet>
-    );
-    const html = document.body.innerHTML;
+  it("renders an accessible dialog labelled by its title and description", () => {
+    const app = mount(renderPanel());
 
-    expect(html).toContain("content-extra");
-    expect(html).toContain("fixed z-50");
-    expect(html).toContain("right-0");
-    expect(html).toContain("border-l");
-    expect(html).toContain("absolute right-4 top-4");
-    expect(html).toContain("sr-only");
-    expect(html).toContain("Close");
-    expect(html).toContain("Body");
+    const dialog = query('[role="dialog"]');
+    const title = query("h2");
+    const description = query("p");
+
+    expect(dialog.getAttribute("data-state")).toBe("open");
+    expect(dialog.textContent).toContain("Body");
+    expect(title.textContent).toBe("Panel");
+    expect(description.textContent).toBe("Panel description");
+    expect(dialog.getAttribute("aria-labelledby")).toBe(title.id);
+    expect(dialog.getAttribute("aria-describedby")).toBe(description.id);
 
     app.unmount();
   });
 
-  it("renders variant classes for each side", () => {
-    const topApp = mount(
-      <Sheet open>
-        <SheetContent side="top">
-          <SheetTitle>Top panel</SheetTitle>
-          <SheetDescription>Top description</SheetDescription>
-          Top
-        </SheetContent>
-      </Sheet>
+  it("renders a dimming overlay alongside the panel", () => {
+    const app = mount(renderPanel());
+
+    const dialog = query('[role="dialog"]');
+    const overlay = Array.from(document.body.querySelectorAll('[data-state="open"]')).find(
+      (element) => element !== dialog && !dialog.contains(element)
     );
-    const top = document.body.innerHTML;
-    topApp.unmount();
 
-    const bottomApp = mount(
-      <Sheet open>
-        <SheetContent side="bottom">
-          <SheetTitle>Bottom panel</SheetTitle>
-          <SheetDescription>Bottom description</SheetDescription>
-          Bottom
-        </SheetContent>
-      </Sheet>
-    );
-    const bottom = document.body.innerHTML;
-    bottomApp.unmount();
-
-    const leftApp = mount(
-      <Sheet open>
-        <SheetContent side="left">
-          <SheetTitle>Left panel</SheetTitle>
-          <SheetDescription>Left description</SheetDescription>
-          Left
-        </SheetContent>
-      </Sheet>
-    );
-    const left = document.body.innerHTML;
-
-    expect(top).toContain("top-0");
-    expect(top).toContain("border-b");
-    expect(bottom).toContain("bottom-0");
-    expect(bottom).toContain("border-t");
-    expect(left).toContain("left-0");
-    expect(left).toContain("border-r");
-    expect(left).toContain("sm:max-w-sm");
-
-    leftApp.unmount();
-  });
-});
-
-describe("SheetHeader", () => {
-  it("renders header layout classes", () => {
-    const html = renderToString(<SheetHeader className="header-extra">Header</SheetHeader>);
-
-    expect(html).toContain("flex");
-    expect(html).toContain("flex-col");
-    expect(html).toContain("space-y-2");
-    expect(html).toContain("sm:text-left");
-    expect(html).toContain("header-extra");
-  });
-});
-
-describe("SheetFooter", () => {
-  it("renders footer layout classes", () => {
-    const html = renderToString(<SheetFooter className="footer-extra">Footer</SheetFooter>);
-
-    expect(html).toContain("flex-col-reverse");
-    expect(html).toContain("sm:flex-row");
-    expect(html).toContain("sm:justify-end");
-    expect(html).toContain("footer-extra");
-  });
-});
-
-describe("SheetTitle", () => {
-  it("renders title classes", () => {
-    const app = mount(
-      <Sheet open>
-        <SheetContent>
-          <SheetTitle className="title-extra">Title</SheetTitle>
-          <SheetDescription>Title description</SheetDescription>
-        </SheetContent>
-      </Sheet>
-    );
-    const html = document.body.innerHTML;
-
-    expect(html).toContain("text-lg");
-    expect(html).toContain("font-semibold");
-    expect(html).toContain("text-foreground");
-    expect(html).toContain("title-extra");
+    expect(overlay).toBeDefined();
 
     app.unmount();
   });
-});
 
-describe("SheetDescription", () => {
-  it("renders description classes", () => {
-    const app = mount(
-      <Sheet open>
-        <SheetContent>
-          <SheetTitle>Accessible title</SheetTitle>
-          <SheetDescription className="description-extra">Description</SheetDescription>
-        </SheetContent>
-      </Sheet>
+  it("always offers a labelled close affordance", () => {
+    const app = mount(renderPanel());
+
+    const closeButtons = Array.from(document.body.querySelectorAll("button")).filter((button) =>
+      button.textContent?.includes("Close")
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("text-sm");
-    expect(html).toContain("text-muted-foreground");
-    expect(html).toContain("description-extra");
+    expect(closeButtons).toHaveLength(1);
 
     app.unmount();
+  });
+
+  it("styles each side differently", () => {
+    const sides = ["top", "bottom", "left", "right"] as const;
+    const classesBySide = sides.map((side) => classesFor(renderPanel(side), '[role="dialog"]').join(" "));
+
+    expect(new Set(classesBySide).size).toBe(sides.length);
+  });
+
+});
+
+describe("SheetOverlay", () => {
+  it("is present only while the sheet is open", () => {
+    const open = mount(
+      <Sheet open>
+        <SheetOverlay data-testid="overlay" />
+      </Sheet>
+    );
+
+    expect(query('[data-testid="overlay"]').getAttribute("data-state")).toBe("open");
+
+    open.unmount();
+
+    const closed = mount(
+      <Sheet>
+        <SheetOverlay data-testid="overlay" />
+      </Sheet>
+    );
+
+    expect(document.body.querySelector('[data-testid="overlay"]')).toBeNull();
+
+    closed.unmount();
+  });
+});
+
+describe("SheetHeader and SheetFooter", () => {
+  it("render divs carrying their children", () => {
+    const template = document.createElement("template");
+
+    for (const Section of [SheetHeader, SheetFooter] as const) {
+      template.innerHTML = renderToString(<Section>Section body</Section>);
+      const plain = template.content.firstElementChild!;
+
+      expect(plain.tagName).toBe("DIV");
+      expect(plain.textContent).toBe("Section body");
+    }
   });
 });
 
@@ -239,9 +200,8 @@ describe("SheetClose", () => {
         </SheetContent>
       </Sheet>
     );
-    const html = document.body.innerHTML;
 
-    expect(html).toContain("Dismiss");
+    expect(document.body.textContent).toContain("Dismiss");
 
     app.unmount();
   });

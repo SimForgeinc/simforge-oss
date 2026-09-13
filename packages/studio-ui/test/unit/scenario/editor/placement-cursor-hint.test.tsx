@@ -43,7 +43,8 @@ describe("PlacementCursorHint", () => {
     const hint = screen.getByTestId("placement-cursor-hint");
     expect(hint.getAttribute("data-placement-valid")).toBe("false");
     expect(hint.textContent).toContain("Move onto a valid surface");
-    expect(hint.className).toContain("pointer-events-none");
+    expect(hint.getAttribute("role")).toBe("status");
+    expect(hint.getAttribute("aria-live")).toBe("polite");
   });
 
   it("shows a non-blocking route warning for a risky lane", () => {
@@ -65,9 +66,6 @@ describe("PlacementCursorHint", () => {
     expect(hint.textContent).toContain("click to place anyway");
     expect(hint.textContent).toContain("right turn");
     expect(hint.textContent).toContain("Interactions may not work properly on this road.");
-    expect(hint.className).toContain("border-amber-300/80");
-    expect(hint.className).toContain("bg-amber-400/25");
-    expect(hint.className).toContain("text-amber-50");
   });
 
   it("reuses the placement warning presentation while moving an actor", () => {
@@ -126,6 +124,5 @@ describe("PlacementCursorHint", () => {
     const hint = screen.getByTestId("placement-cursor-hint");
     expect(hint.getAttribute("data-placement-warning")).toBe("true");
     expect(hint.textContent).toContain("off-road — will place unanchored");
-    expect(hint.className).toContain("border-amber-300/80");
   });
 });

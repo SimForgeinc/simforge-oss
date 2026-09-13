@@ -1,5 +1,6 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import type { CSSProperties, DragEvent } from "react";
 import type { CatalogEntry, CatalogId, PropClass } from "@simforge-oss/asset-catalog";
 
@@ -13,6 +14,7 @@ import { DynamicActorCatalogIcon, type DynamicActorCatalogId } from "./DynamicAc
 import { ObjectCatalogIcon } from "./ObjectCatalogIcon";
 import { PedestrianCatalogIcon, type PedestrianCatalogId } from "./PedestrianCatalogIcon";
 import { VehicleCatalogIcon, type VehicleCatalogId } from "./VehicleCatalogIcon";
+import { styles as catalog } from "./catalog-surfaces.stylex";
 
 /**
  * One model, one tile: icon, name, footprint, and the CARLA mark when the model
@@ -47,7 +49,7 @@ export function CatalogTile({
     : null;
   return (
     <div
-      className="actor-catalog-tile actor-catalog-tile-enter"
+      {...stylex.props(catalog.tile, catalog.tileEnter)}
       data-active={String(active)}
       title={compatibilityTitle ? `${entry.description}\n${compatibilityTitle}` : entry.description}
       data-testid={`catalog-${entry.id}`}
@@ -70,7 +72,7 @@ export function CatalogTile({
         }}
         style={styles.tileAction}
       >
-        <span className="actor-catalog-tile-icon" style={{ ...styles.tileIcon, color: classColor(entry.class) }}>{icon}</span>
+        <span {...stylex.props(catalog.tileIcon)} style={{ ...styles.tileIcon, color: classColor(entry.class) }}>{icon}</span>
         <strong style={styles.tileLabel}>{entry.label}</strong>
         <span style={styles.tileMeta}>{entry.dims.l.toFixed(1)} × {entry.dims.w.toFixed(1)} m</span>
       </div>

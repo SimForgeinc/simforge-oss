@@ -17,6 +17,7 @@ import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
 import type { ScenarioDocumentSummaryDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
+import { control, paneLoading, rail } from "../scenario-controls.stylex";
 import { documentMapLabel, documentName } from "../list/document-list-utils";
 
 /**
@@ -126,7 +127,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="icon"
             variant="ghost"
-            className={cn("size-7 bg-transparent hover:bg-transparent", statusOpen && "text-primary")}
+            xstyle={[control.iconSm, control.flatBackground, statusOpen ? rail.toggleOn : null]}
             aria-pressed={statusOpen}
             aria-label="Dataset status"
             title="Dataset status"
@@ -140,7 +141,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7"
+            xstyle={control.iconSm}
             aria-label="Previous scenario"
             title="Previous scenario (Alt+↑)"
             onClick={onSelectPrevious}
@@ -151,7 +152,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7"
+            xstyle={control.iconSm}
             aria-label="Next scenario"
             title="Next scenario (Alt+↓)"
             onClick={onSelectNext}
@@ -162,10 +163,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="sm"
             variant="ghost"
-            className={cn(
-              "h-7 flex-1 gap-1.5 bg-transparent px-2 font-meta text-micro font-bold uppercase tracking-meta hover:bg-transparent hover:text-primary",
-              autoplayPlaying && "text-primary",
-            )}
+            xstyle={[rail.autoplay, autoplayPlaying ? rail.autoplayOn : null]}
             aria-pressed={autoplayPlaying}
             title="Step through every scenario in this dataset"
             onClick={onToggleAutoplay}
@@ -183,7 +181,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="sm"
             variant="ghost"
-            className="h-9 w-full justify-center gap-1.5 rounded-none border-0 border-t border-white/10 bg-[#E8E044] px-0 font-meta text-micro font-bold uppercase tracking-meta text-black hover:bg-[#f1e949] hover:text-black"
+            xstyle={[rail.footerAction, rail.footerActionShort]}
             disabled={creating}
             onClick={onCreateDocument}
           >
@@ -220,7 +218,7 @@ export function ScenarioScenarioRail({
         ) : null}
         {loading && documents.length === 0 ? (
           <WorkspacePaneLoading
-            className="min-h-52"
+            xstyle={paneLoading.h52}
             hint="Reading scenarios in this dataset."
             message="Loading scenarios"
           />

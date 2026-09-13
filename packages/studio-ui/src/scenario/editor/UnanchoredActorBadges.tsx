@@ -18,6 +18,8 @@ import {
   type EditorState,
 } from "@simforge-oss/editor";
 import type { CityViewer } from "@simforge-oss/viewer";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./UnanchoredActorBadges.stylex";
 
 export function UnanchoredActorBadges({
   viewer,
@@ -85,16 +87,16 @@ export function UnanchoredActorBadges({
         if (!position?.visible) return null;
         return (
           <div
-            className="pointer-events-none fixed z-[85] -translate-x-1/2 -translate-y-full"
+            {...stylex.props(styles.fixedInert)}
             data-testid="unanchored-actor-badge"
             data-actor-id={actor.id}
             key={actor.id}
             style={{ left: position.x, top: position.y }}
           >
-            <div className="pointer-events-auto flex items-center gap-2 rounded-md border border-amber-300/80 bg-black/90 px-2 py-1 text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md">
+            <div {...stylex.props(styles.flexCenterMedium)}>
               <span>Unanchored</span>
               <button
-                className="rounded-sm border border-amber-300/60 px-1.5 py-0.5 text-amber-50 transition-colors hover:bg-amber-300/20"
+                {...stylex.props(styles.bordered)}
                 data-testid="unanchored-resnap"
                 onClick={() => controller?.resnapToLane([actor.id])}
                 type="button"

@@ -1,0 +1,65 @@
+{
+  "schema": "simforge.e2e.platform-expectations/v1",
+  "comment": [
+    "Platform-facing expectations for e2e/flows/platform.spec.ts. Kept as data so a",
+    "packaging layout or per-OS location change is a fixture edit with a diff, not a",
+    "constant buried in an assertion.",
+    "Paths are relative to the staged resource root (the directory that holds",
+    "stage-manifest.json), matching scripts/release/qualify-installed-desktop.mjs."
+  ],
+  "stageManifest": {
+    "locations": ["studio/stage-manifest.json", "stage-manifest.json"],
+    "identityFields": ["platform", "arch", "studioVersion", "electron"],
+    "executables": ["nativeRunner", "nativeRenderService"],
+    "libraries": ["nativeAddon", "nativeRenderLibrary"],
+    "tools": ["ffmpeg", "ffprobe"],
+    "entries": [
+      { "field": "hostEntry", "label": "local host" },
+      { "field": "workerEntry", "label": "CPU worker" },
+      { "field": "browserHarness", "label": "render harness" }
+    ]
+  },
+  "platforms": {
+    "linux": {
+      "label": "Linux",
+      "packagedArtifactSuffixes": [".AppImage", ".deb"],
+      "dataRootAnchors": [".local/share", "XDG_DATA_HOME"],
+      "vaultProvider": "Secret Service (libsecret) via the keyring module",
+      "vaultAbsentIsExpected": true,
+      "vaultAbsentNote": "A headless Linux session commonly has no unlocked Secret Service, so \"session\" persistence is a legitimate observation, not a defect."
+    },
+    "darwin": {
+      "label": "macOS",
+      "packagedArtifactSuffixes": [".dmg", ".zip", ".app"],
+      "dataRootAnchors": ["Library/Application Support"],
+      "vaultProvider": "macOS Keychain",
+      "vaultAbsentIsExpected": false,
+      "vaultAbsentNote": "A signed macOS build on a logged-in desktop session is expected to reach the Keychain."
+    },
+    "win32": {
+      "label": "Windows",
+      "packagedArtifactSuffixes": [".exe", ".msi"],
+      "dataRootAnchors": ["AppData\\Local", "LOCALAPPDATA"],
+      "vaultProvider": "Windows Credential Manager",
+      "vaultAbsentIsExpected": false,
+      "vaultAbsentNote": "Windows always offers Credential Manager to an interactive user session."
+    }
+  },
+  "capabilityContract": {
+    "capabilitiesSchema": "simforge.studio-host-capabilities/v1",
+    "nativeRuntimeUnavailableCodes": [
+      "not_installed",
+      "runtime.manifest_missing",
+      "runtime.manifest_invalid",
+      "probe_failed",
+      "not_offered"
+    ],
+    "credentialPersistence": ["os-vault", "session"],
+    "sessionOnlyMessageTerms": ["vault", "session"]
+  },
+  "awkwardPaths": {
+    "comment": "Real user home directories contain spaces and non-ASCII; the data root must survive both.",
+    "spaces": "SimForge E2E Data Root",
+    "unicode": "SimForge é2é — 資料 ✓"
+  }
+}

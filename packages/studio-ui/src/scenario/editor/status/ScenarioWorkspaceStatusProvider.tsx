@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { ScenarioBootGate } from "./ScenarioBootGate";
 import { ScenarioNotificationDock } from "./ScenarioNotificationDock";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioWorkspaceStatusProvider.stylex";
 
 /**
  * Mounts the v2 editor's two status renderers: the bottom-right notification
@@ -23,8 +25,8 @@ export function ScenarioWorkspaceStatusProvider({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1">{children}</div>
+    <div {...stylex.props(styles.flexColTall)}>
+      <div {...stylex.props(styles.fillShrinkable)}>{children}</div>
       <ScenarioNotificationDock />
       <ScenarioBootGate />
     </div>

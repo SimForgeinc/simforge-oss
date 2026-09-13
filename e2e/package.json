@@ -1,0 +1,5 @@
+{
+  "name": "@simforge-oss/e2e",
+  "private": true,
+  "type": "module"
+}

@@ -18,6 +18,10 @@ type ButtonSize = "default" | "sm" | "lg" | "icon";
  * Button accepts arbitrary icon components, so their dimensions cannot be
  * inherited from the parent. All root, state, variant, and size styling is
  * compiled by StyleX.
+ *
+ * This is the "descendant selector into DOM this element does not render"
+ * residual of the migration doc: the declarations belong on SVGs the caller
+ * passes in, and StyleX only styles the element it is applied to.
  */
 const ICON_CLASS = "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0";
 

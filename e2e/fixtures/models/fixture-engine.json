@@ -1,0 +1,82 @@
+{
+  "comment": [
+    "The deterministic fixture engine used by e2e/flows/models.spec.ts.",
+    "It is `studio/worker/testing/echo-endpoint.mjs`: a process endpoint that echoes a",
+    "straight-line trajectory at a fixed speed and reports a fixed checkpoint digest.",
+    "It is NOT Alpamayo and it measures NO accuracy: every assertion made against it is",
+    "about the run ledger, the refusal contract and the result documents, never about",
+    "driving quality. Real-weight coverage lives behind the prerequisite lanes."
+  ],
+  "engine": {
+    "family": "stub",
+    "displayName": "Fixture Engine (deterministic stub)",
+    "quant": "none",
+    "license": "apache-2.0",
+    "source": "local/simforge-e2e-fixture-engine",
+    "checkpointDigest": "c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00",
+    "wrongCheckpointDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "requiredCameras": [0, 1, 2, 6],
+    "cameraProfile": "alpamayo-4cam",
+    "speedMps": 8,
+    "waypoints": 64,
+    "dtS": 0.1
+  },
+  "clips": {
+    "scored": {
+      "clipId": "e2e-fixture-scored",
+      "cameraIds": [0, 1, 2, 6],
+      "withEgo": true,
+      "withReference": true,
+      "expect": { "itemStatus": "ok", "scored": true, "manifestStatus": "succeeded" }
+    },
+    "videoOnly": {
+      "clipId": "e2e-fixture-video-only",
+      "cameraIds": [0, 1, 2, 6],
+      "withEgo": false,
+      "withReference": false,
+      "expect": {
+        "itemStatus": "refused",
+        "refusalCode": "missing_fields",
+        "missingFields": ["ego.poses"],
+        "scored": false,
+        "manifestStatus": "partial"
+      }
+    },
+    "missingCameras": {
+      "clipId": "e2e-fixture-missing-cameras",
+      "cameraIds": [0, 1],
+      "withEgo": true,
+      "withReference": true,
+      "expect": {
+        "itemStatus": "refused",
+        "refusalCode": "missing_fields",
+        "missingFields": ["cameras[cameraId=2]", "cameras[cameraId=6]"],
+        "scored": false,
+        "manifestStatus": "partial"
+      },
+      "note": "Verified against the real protocol code: a clip missing a required camera is refused as missing_fields naming the camera ids. The engine-reported camera_set_violation -> camera_set_invalid mapping needs an engine that advertises variable cameras and still refuses a set; the fixture engine cannot express that, so it belongs to the real-weights lane."
+    },
+    "brokenFrames": {
+      "clipId": "e2e-fixture-broken-frames",
+      "cameraIds": [0, 1, 2, 6],
+      "withEgo": true,
+      "withReference": true,
+      "deleteFrame": { "cameraId": 1, "index": 0 },
+      "expect": {
+        "itemStatus": "refused",
+        "refusalCode": "input_error",
+        "scored": false,
+        "manifestStatus": "partial"
+      }
+    }
+  },
+  "catalog": {
+    "families": ["alpamayo-1", "alpamayo-1.5", "alpamayo-2-super"],
+    "stagingFamilies": ["alpamayo-1.5", "alpamayo-2-super"],
+    "weightsLicenseId": "OpenMDW-1.1",
+    "weightsLicenseBlobSha": "ec297ac5456384786644013ec196da33b916be97",
+    "gatedSidecarRepo": "nvidia/Cosmos-Reason2-8B",
+    "gatedSidecarFamily": "alpamayo-1.5",
+    "viewSchema": "simforge.model-store-view/v1"
+  }
+}

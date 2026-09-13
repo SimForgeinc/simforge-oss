@@ -2,7 +2,7 @@
 
 import type { Choreography } from "@simforge-oss/scenario";
 import { CarFront } from "lucide-react";
-import { cn } from "../../../lib/utils";
+import { mergeStyleProps, type XStyle } from "../../../components/stylex/surface";
 import type { V1TimelineCrashMarker } from "./V1TimelineRail";
 
 import {
@@ -10,6 +10,8 @@ import {
   rangePercent,
   timelineTicks,
 } from "../../../lib/scenario/timeline";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TimelineRuler.stylex";
 
 /**
  * The time axis above the interaction rows — manifest 84.
@@ -20,32 +22,35 @@ export function TimelineRuler({
   choreography,
   crashes = [],
   className,
+  xstyle,
 }: {
   choreography: Choreography;
   crashes?: readonly V1TimelineCrashMarker[];
   className?: string;
+  /** Caller StyleX styles, applied last so they win. */
+  xstyle?: XStyle;
 }) {
   const window = choreographyWindow(choreography);
   const ticks = timelineTicks(window);
 
   return (
     <div
-      className={cn("relative mb-1 h-5 select-none border-b border-white/10 bg-black/20", className)}
+      {...mergeStyleProps(stylex.props(styles.relRuleB, xstyle), className)}
       data-testid="timeline-ruler"
     >
       {ticks.map((tick) => {
         const isOrigin = tick.timeMs === 0;
         const percent = rangePercent(tick.timeMs, window);
         const labelPosition = percent <= 0
-          ? "left-0.5"
+          ? styles.tickLabelStart
           : percent >= 100
-            ? "right-0.5"
-            : "left-1/2 -translate-x-1/2";
+            ? styles.tickLabelEnd
+            : styles.tickLabelCentered;
         return (
           <div
             key={tick.id}
             aria-hidden="true"
-            className={`absolute inset-y-0 w-px ${isOrigin ? "bg-[#E8E044]/60" : "bg-white/10"}`}
+            {...stylex.props(styles.tick, isOrigin ? styles.tickOrigin : styles.tickMinor)}
             style={{ left: `${percent}%` }}
           >
             {/*
@@ -55,9 +60,11 @@ export function TimelineRuler({
             */}
             <span
               data-testid={`timeline-tick-label-${tick.timeMs}`}
-              className={`absolute top-1/2 -translate-y-1/2 font-mono text-[0.5625rem] leading-none ${
-                isOrigin ? "text-white" : "text-white/35"
-              } ${labelPosition}`}
+              {...stylex.props(
+                styles.tickLabel,
+                isOrigin ? styles.tickLabelOrigin : styles.tickLabelMinor,
+                labelPosition,
+              )}
             >
               {tick.title}
             </span>
@@ -72,14 +79,14 @@ export function TimelineRuler({
         return (
           <span
             aria-label={label}
-            className="absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-red-300 bg-red-950 text-red-200 shadow-[0_0_8px_rgba(248,113,113,0.7)]"
+            {...stylex.props(styles.absFlexCenter)}
             data-testid="timeline-crash-marker"
             key={`${crash.timeS}-${actors.join("-")}-${index}`}
             role="img"
             style={{ left: `${percent}%` }}
             title={label}
           >
-            <CarFront aria-hidden="true" className="size-2.5" strokeWidth={2.5} />
+            <CarFront aria-hidden="true" className={stylex.props(styles.size25).className} strokeWidth={2.5} />
           </span>
         );
       })}
@@ -88,7 +95,7 @@ export function TimelineRuler({
         words on its own row by `triggerLabel`, so announcing tick positions would be noise, and a
         screen-reader user gets the times without needing the geometry.
       */}
-      <span className="sr-only">
+      <span {...stylex.props(styles.srOnly)}>
         Timeline over {choreography.clipSeconds} seconds.
       </span>
     </div>

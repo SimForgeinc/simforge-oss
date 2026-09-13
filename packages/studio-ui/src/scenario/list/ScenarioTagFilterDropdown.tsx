@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
+import { chip, menu } from "../scenario-controls.stylex";
 
 export type ScenarioCreatorFilterOption = {
   value: string;
@@ -46,29 +47,21 @@ export function ScenarioTagFilterDropdown({
         <Button
           type="button"
           variant="outline"
-          className={cn(
-            "h-8 gap-2 rounded-none border-border/80 px-3 font-[Share_Tech_Mono,IBM_Plex_Mono,monospace] text-[10px] font-bold uppercase tracking-[0.16em]",
-            hasActiveFilter
-              ? "bg-foreground text-background hover:bg-foreground/90"
-              : "bg-background/70 text-foreground/75 hover:bg-muted hover:text-foreground",
-          )}
+          xstyle={[chip.base, hasActiveFilter ? chip.on : chip.off]}
           aria-label="Filter scenarios"
         >
           <Filter className="size-3.5" aria-hidden="true" />
           Filter
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[220px]">
+      <DropdownMenuContent align="end" xstyle={menu.width220}>
         <DropdownMenuItem
           data-scenario-filter-all
           onSelect={() => {
             onSelectTagFilter(null);
             onSelectCreatorFilter(null);
           }}
-          className={cn(
-            "font-meta text-micro uppercase tracking-meta",
-            showingAll ? "text-primary" : null,
-          )}
+          xstyle={[menu.metaItem, showingAll ? menu.selected : null]}
         >
           <span
             className={cn(
@@ -80,7 +73,7 @@ export function ScenarioTagFilterDropdown({
           All scenarios
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="font-meta text-micro uppercase tracking-meta-wide text-muted-foreground">
+        <DropdownMenuLabel xstyle={menu.metaLabel}>
           Created by
         </DropdownMenuLabel>
         {creatorOptions.length === 0 ? (
@@ -94,10 +87,10 @@ export function ScenarioTagFilterDropdown({
                 onSelectCreatorFilter(creator.value);
                 onSelectTagFilter(null);
               }}
-              className={cn(
-                "font-meta text-micro uppercase tracking-meta-tight",
-                selectedCreatorFilter === creator.value ? "text-primary" : null,
-              )}
+              xstyle={[
+                menu.metaItemTight,
+                selectedCreatorFilter === creator.value ? menu.selected : null,
+              ]}
             >
               <span
                 className={cn(
@@ -112,7 +105,7 @@ export function ScenarioTagFilterDropdown({
           ))
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="font-meta text-micro uppercase tracking-meta-wide text-muted-foreground">
+        <DropdownMenuLabel xstyle={menu.metaLabel}>
           Tags
         </DropdownMenuLabel>
         {tags.length === 0 ? (
@@ -126,10 +119,7 @@ export function ScenarioTagFilterDropdown({
                 onSelectTagFilter(tag.id);
                 onSelectCreatorFilter(null);
               }}
-              className={cn(
-                "font-meta text-micro uppercase tracking-meta",
-                selectedTagFilter === tag.id ? "text-primary" : null,
-              )}
+              xstyle={[menu.metaItem, selectedTagFilter === tag.id ? menu.selected : null]}
             >
               {/*
                 A tag's colour is operator-chosen data, so it arrives as an inline style rather than

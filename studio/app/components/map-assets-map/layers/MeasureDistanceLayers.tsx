@@ -1,6 +1,8 @@
 import { useCallback, useRef } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Layer, Marker, Source } from "react-map-gl/maplibre";
 import { C } from "../map-layer-constants";
+import { styles } from "../map-canvas.stylex";
 import {
   measureOverlayGeoJSON,
   measureReadout,
@@ -90,41 +92,20 @@ export function MeasureDistanceLayers({
           latitude={readout.position.lat}
           anchor="bottom"
           offset={[0, -10] as never}
-          style={{ pointerEvents: readout.pinned ? "auto" : "none", zIndex: 5 }}
+          {...stylex.props(
+            styles.measureMarker,
+            readout.pinned ? styles.pointerEventsAuto : styles.pointerEventsNone,
+          )}
         >
-          <div
-            ref={attachPill}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              padding: "0.25rem 0.6rem",
-              background: `${C.bg}f2`,
-              color: C.fg,
-              border: `1px solid ${C.border}`,
-              borderRadius: "999px",
-              fontSize: "0.75rem",
-              fontFamily: C.font,
-              whiteSpace: "nowrap",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-            }}
-          >
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>{readout.label}</span>
+          <div ref={attachPill} {...stylex.props(styles.measurePill)}>
+            <span {...stylex.props(styles.measureValue)}>{readout.label}</span>
             {readout.pinned && (
               <button
                 type="button"
                 data-measure-clear
                 aria-label="Clear measurement"
                 title="Clear measurement"
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: C.muted,
-                  cursor: "pointer",
-                  padding: 0,
-                  fontSize: "0.8rem",
-                  lineHeight: 1,
-                }}
+                {...stylex.props(styles.measureClear)}
               >
                 ✕
               </button>

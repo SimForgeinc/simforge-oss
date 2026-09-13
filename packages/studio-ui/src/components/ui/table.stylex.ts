@@ -13,7 +13,17 @@ export const styles = stylex.create({
     width: "100%",
     captionSide: "bottom",
     fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
   },
+  /**
+   * `<thead>` and `<tbody>` declare nothing: the baseline's only styling for
+   * them was the `[&_tr]` compat strings, which stay on `table.tsx` because
+   * they reach rows this element does not render. The keys exist so every
+   * part of the table composes through the same
+   * `stylex.props(styles.<part>, xstyle)` shape — dropping them would make
+   * two of nine parts pass `xstyle` alone, and a later declaration would have
+   * nowhere to land.
+   */
   header: {},
   body: {},
   footer: {
@@ -42,6 +52,7 @@ export const styles = stylex.create({
     textAlign: "left",
     verticalAlign: "middle",
     fontSize: text.sizeXs,
+    lineHeight: "1rem",
     fontWeight: text.weightMedium,
     color: colors.mutedForeground,
     textTransform: "uppercase",
@@ -55,6 +66,7 @@ export const styles = stylex.create({
   caption: {
     marginTop: "1rem",
     fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
     color: colors.mutedForeground,
   },
 });

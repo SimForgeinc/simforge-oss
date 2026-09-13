@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, FileUp } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
+import { list } from "../scenario-controls.stylex";
 import type { ScenarioMapOption } from "./document-map-groups";
 
 type Diagnostic = {
@@ -132,7 +133,7 @@ export function useScenarioOpenScenarioImport({
           className="hidden"
           onChange={(event) => { const next = event.target.files?.[0]; if (next) void analyze(next); }}
         />
-        <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={() => inputRef.current?.click()}>
+        <Button type="button" variant="outline" xstyle={list.fileChooser} disabled={busy} onClick={() => inputRef.current?.click()}>
           {busy && !result ? <CloudActivityIndicator /> : <FileUp className="size-4" aria-hidden="true" />}
           {file ? file.name : "Choose .xosc file"}
         </Button>

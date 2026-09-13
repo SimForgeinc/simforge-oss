@@ -253,7 +253,7 @@ export function MapUploadPanel({
       <div {...stylex.props(dialog.panel)}>
         <div {...stylex.props(dialog.cardSuccess)}>
           <p {...stylex.props(dialog.titleText)}><CheckCircle2 {...stylex.props(dialog.iconSm)} />{published.label} is published and available in the scenario editor</p>
-          <p {...stylex.props(dialog.mutedText)}><MapPin {...stylex.props(dialog.iconSm)} />{published.locality} · roadway consistency: {published.generated.roadwayConsistencyVerdict}</p>
+          <p {...stylex.props(dialog.uploadLocality)}><MapPin {...stylex.props(dialog.iconSm)} />{published.locality} · roadway consistency: {published.generated.roadwayConsistencyVerdict}</p>
         </div>
 
         <div {...stylex.props(dialog.grid2)}>
@@ -269,8 +269,8 @@ export function MapUploadPanel({
 
         {published.browserOnly ? (
           <div {...stylex.props(dialog.cardWarning)}>
-            <p {...stylex.props(dialog.titleText)}>Browser-only map version</p>
-            <p {...stylex.props(dialog.mutedText)}>
+            <p {...stylex.props(dialog.uploadWarnTitle)}>Browser-only map version</p>
+            <p {...stylex.props(dialog.uploadWarnNote)}>
               No cooked CARLA map is bound to this version, so CARLA renders will refuse it. Scenarios author
               and render in the browser. To enable local CARLA renders, cook a CARLA map, then publish again
               with its name in the CARLA map name field.
@@ -278,14 +278,14 @@ export function MapUploadPanel({
           </div>
         ) : null}
 
-        <dl {...stylex.props(dialog.stack)}>
+        <dl {...stylex.props(dialog.dlXs)}>
           <div>
-            <dt {...stylex.props(dialog.statLabel)}>Map version</dt>
-            <dd {...stylex.props(dialog.mono)}>{published.mapVersionId}</dd>
+            <dt {...stylex.props(dialog.dlLabel)}>Map version</dt>
+            <dd {...stylex.props(dialog.uploadMono)}>{published.mapVersionId}</dd>
           </div>
           <div>
-            <dt {...stylex.props(dialog.statLabel)}>Closure digest</dt>
-            <dd {...stylex.props(dialog.mono)}>{published.closureSha256}</dd>
+            <dt {...stylex.props(dialog.dlLabel)}>Closure digest</dt>
+            <dd {...stylex.props(dialog.uploadMono)}>{published.closureSha256}</dd>
           </div>
         </dl>
       </div>
@@ -300,27 +300,27 @@ export function MapUploadPanel({
         <input type="file" multiple disabled={busy} {...stylex.props(dialog.srOnly)} accept=".xodr,.glb" onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         <FileUp {...stylex.props(dialog.iconAccent)} aria-hidden="true" />
         <span {...stylex.props(dialog.uploadDropLabel)}>Drop map.xodr and one GLB per layer here</span>
-        <span {...stylex.props(dialog.subText)}>road.glb is required. Add sidewalk, building, vegetation, terrain, furniture, pole, signage or water as separate GLBs — the file name is the layer id.</span>
+        <span {...stylex.props(dialog.dropHint)}>road.glb is required. Add sidewalk, building, vegetation, terrain, furniture, pole, signage or water as separate GLBs — the file name is the layer id.</span>
       </label>
       {map && thumbnailUrl ? (
         <>
-          <div {...stylex.props(dialog.grid)}>
+          <div {...stylex.props(dialog.preflightGrid)}>
             <div>
               <img src={thumbnailUrl} alt="Rendered preview of the uploaded map" {...stylex.props(dialog.preview)} />
-              <p {...stylex.props(dialog.mutedText)}>{map.totalTriangles.toLocaleString()} triangles · {formatBytes(totalLayerBytes)} of geometry</p>
+              <p {...stylex.props(dialog.mutedTextMt2)}>{map.totalTriangles.toLocaleString()} triangles · {formatBytes(totalLayerBytes)} of geometry</p>
             </div>
             <div {...stylex.props(dialog.stack)}>
-              <div><p {...stylex.props(dialog.statLabel)}>OpenDRIVE map name</p><p {...stylex.props(dialog.statValue)}>{map.mapName}</p></div>
+              <div><p {...stylex.props(dialog.statLabel)}>OpenDRIVE map name</p><p {...stylex.props(dialog.statText)}>{map.mapName}</p></div>
               <div {...stylex.props(dialog.grid2)}>
                 <StatTile label="Lanes" value={map.preflight.laneCount.toLocaleString()} />
                 <StatTile label="Drivable lanes" value={map.preflight.drivableLaneCount.toLocaleString()} />
                 <StatTile label="Junctions" value={map.preflight.junctionCount.toLocaleString()} />
                 <StatTile label="Georeferenced" value={map.preflight.georeferenced ? "Yes" : "Local coordinates only"} />
               </div>
-              <div><p {...stylex.props(dialog.statLabel)}>Plan-view geometry</p><p {...stylex.props(dialog.statValue)}>{map.preflight.geometryKinds.join(", ")}</p></div>
+              <div><p {...stylex.props(dialog.statLabel)}>Plan-view geometry</p><p {...stylex.props(dialog.statText)}>{map.preflight.geometryKinds.join(", ")}</p></div>
             </div>
           </div>
-          <div><p {...stylex.props(dialog.statLabel)}>{map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}</p><ul {...stylex.props(dialog.list)}>{map.layers.map((layer) => <li key={layer.layerId} {...stylex.props(dialog.listRow)}><span>{layer.layerId}</span><span {...stylex.props(dialog.mutedText)}>{layer.fileName}</span><span {...stylex.props(dialog.mutedText)}>{layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}</span></li>)}</ul></div>
+          <div><p {...stylex.props(dialog.statLabel)}>{map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}</p><ul {...stylex.props(dialog.layerList)}>{map.layers.map((layer) => <li key={layer.layerId} {...stylex.props(dialog.layerRow)}><span {...stylex.props(dialog.layerId)}>{layer.layerId}</span><span {...stylex.props(dialog.layerFile)}>{layer.fileName}</span><span {...stylex.props(dialog.layerMeta)}>{layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}</span></li>)}</ul></div>
         </>
       ) : null}
 
@@ -330,7 +330,7 @@ export function MapUploadPanel({
         <div {...stylex.props(dialog.span2)}>
           <label htmlFor={carlaFieldId} {...stylex.props(dialog.fieldLabel)}>CARLA map name, optional</label>
           <Input id={carlaFieldId} aria-describedby={carlaHelpId} maxLength={120} value={carlaMapName} onChange={(event) => setCarlaMapName(event.target.value)} placeholder="Town10HD_Opt" {...stylex.props(dialog.fieldControl)} />
-          <p id={carlaHelpId} {...stylex.props(dialog.mutedText)}>Fill this in only when a cooked CARLA map of the same road network already exists. Leave it empty and the map version is browser-only: you can author and render scenarios in the browser, but local CARLA renders are not available for it.</p>
+          <p id={carlaHelpId} {...stylex.props(dialog.helpText)}>Fill this in only when a cooked CARLA map of the same road network already exists. Leave it empty and the map version is browser-only: you can author and render scenarios in the browser, but local CARLA renders are not available for it.</p>
         </div>
       </div>
 

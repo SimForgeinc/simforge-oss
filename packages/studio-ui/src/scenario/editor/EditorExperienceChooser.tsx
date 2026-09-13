@@ -2,23 +2,25 @@
 
 import { Clock3, SlidersHorizontal } from "lucide-react";
 import type { EditorExperience } from "./simple-timed-routes";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorExperienceChooser.stylex";
 
 export function EditorExperienceChooser({ onChoose }: { onChoose: (mode: EditorExperience) => void }) {
   return (
-    <div className="pointer-events-auto absolute inset-0 z-[80] grid place-items-center bg-black/65 p-6 backdrop-blur-sm" data-testid="editor-experience-chooser">
-      <div className="w-full max-w-xl rounded-2xl border border-white/15 bg-[#111317] p-6 shadow-2xl">
-        <h2 className="text-xl font-semibold text-white">How do you want to build this scenario?</h2>
-        <p className="mt-2 text-sm text-white/55">You can switch views later without changing the simulation format.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <button className="rounded-xl border border-[#E8E044]/50 bg-[#E8E044]/8 p-4 text-left hover:bg-[#E8E044]/12" onClick={() => onChoose("simple")} type="button">
-            <Clock3 className="size-6 text-[#E8E044]" />
-            <strong className="mt-3 block text-sm text-white">Simple</strong>
-            <span className="mt-1 block text-xs leading-5 text-white/55">Every movable actor gets one custom timed route. After its final authored point, the actor brakes under physics; the timeline stays visible but locked.</span>
+    <div {...stylex.props(styles.absGridCentered)} data-testid="editor-experience-chooser">
+      <div {...stylex.props(styles.borderedWidePad6)}>
+        <h2 {...stylex.props(styles.xlWhiteSemibold)}>How do you want to build this scenario?</h2>
+        <p {...stylex.props(styles.sm)}>You can switch views later without changing the simulation format.</p>
+        <div {...stylex.props(styles.gridGap3)}>
+          <button {...stylex.props(styles.borderedPad4LeftText)} onClick={() => onChoose("simple")} type="button">
+            <Clock3 className={stylex.props(styles.size6Text).className} />
+            <strong {...stylex.props(styles.blockSmWhite)}>Simple</strong>
+            <span {...stylex.props(styles.blockXs)}>Every movable actor gets one custom timed route. After its final authored point, the actor brakes under physics; the timeline stays visible but locked.</span>
           </button>
-          <button className="rounded-xl border border-white/15 bg-white/[0.03] p-4 text-left hover:bg-white/[0.06]" onClick={() => onChoose("advanced")} type="button">
-            <SlidersHorizontal className="size-6 text-white/70" />
-            <strong className="mt-3 block text-sm text-white">Advanced</strong>
-            <span className="mt-1 block text-xs leading-5 text-white/55">Use the current multi-track timeline, triggers, actions, signals, and detailed controls.</span>
+          <button {...stylex.props(styles.borderedPad4LeftText2)} onClick={() => onChoose("advanced")} type="button">
+            <SlidersHorizontal className={stylex.props(styles.size6TextWhite70).className} />
+            <strong {...stylex.props(styles.blockSmWhite)}>Advanced</strong>
+            <span {...stylex.props(styles.blockXs)}>Use the current multi-track timeline, triggers, actions, signals, and detailed controls.</span>
           </button>
         </div>
       </div>

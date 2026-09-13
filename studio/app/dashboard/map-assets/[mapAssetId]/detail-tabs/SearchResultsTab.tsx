@@ -37,7 +37,6 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapSearchResult, SearchFilterChip, SearchObjectFamily } from "@/app/lib/maps/search/map-search";
 import { SearchExamplesPanel } from "./SearchExamplesPanel";
 import { CopyJsonButton } from "./CopyJsonButton";
@@ -317,7 +316,7 @@ function TopologyPathChain({
               </>
             ) : null}
             <div
-              className={stylex.props(styles.u_908, styles.u_928, styles.u_916, styles.u_951, styles.u_903, styles.u_935, styles.u_941, styles.u_970).className}
+              className={stylex.props(styles.stepChip, stepHighlighted ? styles.stepChipOn : styles.stepChipOff).className}
               title={`${step.title ?? step.objectId} (${step.cumulativeM} m from subject)`}
             >
               <StepIcon className={stylex.props(styles.s_873).className} aria-hidden="true" />
@@ -376,8 +375,8 @@ export function HighlightToggleButton({
   onClick,
   size = "default",
 }: HighlightToggleButtonProps) {
-  const dimensions = size === "xs" ? "size-4" : "size-5";
-  const iconSize = size === "xs" ? "size-2.5" : "size-3";
+  const dimensions = size === "xs" ? styles.highlightToggleXs : styles.highlightToggleDefault;
+  const iconSize = size === "xs" ? styles.highlightIconXs : styles.highlightIconDefault;
   return (
     <button
       type="button"
@@ -388,9 +387,9 @@ export function HighlightToggleButton({
       aria-pressed={active}
       aria-label={label}
       title={label}
-      className={stylex.props(styles.u_908, styles.u_928, styles.u_929, styles.u_951, styles.u_970).className}
+      className={stylex.props(styles.highlightToggle, dimensions, active ? styles.highlightToggleOn : styles.highlightToggleOff).className}
     >
-      <Target className={cn(iconSize, "shrink-0")} aria-hidden="true" />
+      <Target className={stylex.props(iconSize).className} aria-hidden="true" />
     </button>
   );
 }
@@ -489,7 +488,7 @@ export function SearchResultsTab({
                       <Badge
                         key={`debug-${chip.id}`}
                         variant="outline"
-                        className={stylex.props(styles.s_893).className}
+                        xstyle={styles.s_893}
                       >
                         {chip.id}
                       </Badge>
@@ -505,7 +504,7 @@ export function SearchResultsTab({
                       <Badge
                         key={`ft-${token}`}
                         variant="outline"
-                        className={stylex.props(styles.s_893).className}
+                        xstyle={styles.s_893}
                       >
                         {token}
                       </Badge>
@@ -524,12 +523,12 @@ export function SearchResultsTab({
                     onClick={() => setShowDebug((prev) => !prev)}
                     aria-label="Toggle search debug"
                     aria-pressed={showDebug}
-                    className={stylex.props(styles.u_927, styles.u_960, styles.u_928, styles.u_929, styles.u_954, styles.u_970, styles.u_924, styles.u_926).className}
+                    className={stylex.props(styles.debugToggle, showDebug && styles.debugToggleOn).className}
                   >
                     <Bug className={stylex.props(styles.s_927).className} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
+                <TooltipContent side="bottom" xstyle={styles.s_948}>
                   {showDebug ? "Hide debug" : "Show debug"}
                 </TooltipContent>
               </Tooltip>
@@ -551,7 +550,7 @@ export function SearchResultsTab({
                   <Badge
                     key={chip.id}
                     variant="secondary"
-                    className={stylex.props(styles.s_900).className}
+                    xstyle={styles.s_900}
                   >
                     {chip.label}
                   </Badge>
@@ -561,7 +560,7 @@ export function SearchResultsTab({
                 <Badge
                   key={`free-${token}`}
                   variant="outline"
-                  className={stylex.props(styles.s_901).className}
+                  xstyle={styles.s_901}
                   title="Free-text token — not matched to a structured filter"
                 >
                   {token}
@@ -608,12 +607,7 @@ export function SearchResultsTab({
                     onMouseLeave={() => onHoverResult?.(null)}
                     onFocus={() => onHoverResult?.(result.id)}
                     onBlur={() => onHoverResult?.(null)}
-                    className={cn(
-                      "w-full cursor-pointer rounded-lg border px-3 py-2.5 text-left transition-all",
-                      selected
-                        ? "border-primary/50 bg-primary/10"
-                        : "border-border bg-secondary/20 hover:bg-secondary/40",
-                    )}
+                    className={stylex.props(styles.resultCard, selected ? styles.resultCardSelected : styles.resultCardIdle).className}
                   >
                     <div className={stylex.props(styles.s_908).className}>
                       <ResultIcon
@@ -651,7 +645,7 @@ export function SearchResultsTab({
                           <Badge
                             key={fact}
                             variant="secondary"
-                            className={stylex.props(styles.s_923).className}
+                            xstyle={styles.s_923}
                           >
                             {fact}
                           </Badge>
@@ -671,7 +665,7 @@ export function SearchResultsTab({
                               className={stylex.props(styles.s_925).className}
                             >
                               <div
-                                className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_954, styles.u_903, styles.u_936, styles.u_942, styles.u_963, styles.u_970).className}
+                                className={stylex.props(styles.refChip, refHighlighted ? styles.refChipOn : styles.refChipOff).className}
                                 title={`${formatRelation(ref.relation)} ${ref.title ?? ref.objectId}${ref.distance_m != null ? ` (${ref.distance_m} m)` : ""}`}
                               >
                                 <span className={stylex.props(styles.s_926).className}>
@@ -765,7 +759,7 @@ export function SearchResultsTab({
                           <Button
                             variant="outline"
                             size="icon"
-                            className={stylex.props(styles.s_946).className}
+                            xstyle={styles.s_946}
                             onClick={(event) => {
                               event.stopPropagation();
                               onZoomToResult(result.id);
@@ -775,7 +769,7 @@ export function SearchResultsTab({
                             <Map className={stylex.props(styles.s_991).className} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
+                        <TooltipContent side="bottom" xstyle={styles.s_948}>
                           Zoom on Map
                         </TooltipContent>
                       </Tooltip>
@@ -784,7 +778,7 @@ export function SearchResultsTab({
                           <Button
                             variant="outline"
                             size="icon"
-                            className={stylex.props(styles.s_946).className}
+                            xstyle={styles.s_946}
                             onClick={(event) => {
                               event.stopPropagation();
                               onUseInScenario(result.id);
@@ -794,7 +788,7 @@ export function SearchResultsTab({
                             <Play className={stylex.props(styles.s_991).className} />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className={stylex.props(styles.s_948).className}>
+                        <TooltipContent side="bottom" xstyle={styles.s_948}>
                           Use in Scenario
                         </TooltipContent>
                       </Tooltip>

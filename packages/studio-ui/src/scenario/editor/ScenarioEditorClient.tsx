@@ -29,6 +29,8 @@ import type { ScenarioWorldTarget } from "../scene/ScenarioWorldHost";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "../scene/previewPolicy";
 import type { ScenarioSharedPlayback } from "../scene/useScenarioSession";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioEditorClient.stylex";
 
 type SaveState = "saved" | "saving" | "dirty" | "conflict";
 
@@ -488,7 +490,7 @@ function ScenarioEditorWorkspace({
       : null,
   );
   const shell = (children: React.ReactNode) => (
-    <div className="relative h-full min-h-0">{children}</div>
+    <div {...stylex.props(styles.relTallShrinkable)}>{children}</div>
   );
 
   if (!maps) return shell(<EditorPlaceholder transparent={persistentWorkspace} />);
@@ -549,11 +551,7 @@ function EditorPlaceholder({ transparent = false }: { transparent?: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className={
-        transparent
-          ? "h-full min-h-editor-shell bg-transparent"
-          : "h-full min-h-editor-shell bg-background"
-      }
+      {...stylex.props(styles.placeholder, transparent ? styles.placeholderTransparent : styles.placeholderOpaque)}
     />
   );
 }

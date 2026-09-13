@@ -20,6 +20,9 @@ import { formatTimestamp, hasLiveJob, humanizeCode, renderJobEngine, renderJobLa
 import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
 import type { BrowserRecordingSummaryDto } from "../../../lib/scenario/recording-contracts";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderWorkspace.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -352,15 +355,15 @@ export function RenderWorkspace({
 
   return (
     <div
-      className="render-glass-pane render-hairline flex min-h-0 flex-1 flex-col border-l backdrop-blur-2xl backdrop-saturate-150"
+      {...stylex.props(styles.flexColFill)}
       data-render-view={view.kind}
     >
       {/* Always present, whatever the view: the scenario being looked at, and the way out of the
           pane. Each view owns its own back affordance, so this bar never carries one. */}
-      <div className="flex shrink-0 items-center gap-2 border-b render-hairline px-4 py-2.5">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold text-foreground">Renders</h2>
-          <p className="truncate text-micro uppercase tracking-meta text-muted-foreground">
+      <div {...stylex.props(styles.flexCenterTight)}>
+        <div {...stylex.props(styles.fillNarrowable)}>
+          <h2 {...stylex.props(styles.smInkSemibold)}>Renders</h2>
+          <p {...stylex.props(styles.capsMicroMuted)}>
             {documentTitle ?? "This scenario"} · {summary}
           </p>
         </div>
@@ -375,13 +378,13 @@ export function RenderWorkspace({
           size="icon"
           variant={view.kind === "artifacts" ? "secondary" : "ghost"}
         >
-          <FolderOpen aria-hidden="true" className="size-3.5" />
+          <FolderOpen aria-hidden="true" className={stylex.props(styles.size35).className} />
         </Button>
         <Button aria-label="Refresh renders" onClick={() => void load()} size="icon" variant="ghost">
-          <RefreshCw aria-hidden="true" className="size-3.5" />
+          <RefreshCw aria-hidden="true" className={stylex.props(styles.size35).className} />
         </Button>
         <Button aria-label="Close the render workspace" onClick={onClose} size="icon" variant="ghost">
-          <PanelRightClose aria-hidden="true" className="size-4" />
+          <PanelRightClose aria-hidden="true" className={stylex.props(styles.size4).className} />
         </Button>
       </div>
 
@@ -423,7 +426,7 @@ export function RenderWorkspace({
         <ArtifactsWorkspacePanel />
       ) : (
         <>
-          <div className="render-view-enter flex shrink-0 flex-wrap items-center gap-2 border-b render-hairline px-4 py-2.5">
+          <div className={`${stylex.props(styles.flexCenterWrap).className} render-view-enter`}>
             {/* Never gated on `revisionId`: that prop only pins the pane to one snapshot for a history
                 deep link, and is null for a scenario opened from the list — which disabled this
                 button for every scenario that had never been rendered, i.e. the normal case. The
@@ -434,20 +437,19 @@ export function RenderWorkspace({
               onClick={() => setView({ kind: "create" })}
               size="sm"
             >
-              <Sparkles aria-hidden="true" className="size-3.5" />
+              <Sparkles aria-hidden="true" className={stylex.props(styles.size35).className} />
               New render
             </Button>
-            <div aria-label="Filter renders by backend" className="flex items-center gap-1" role="group">
+            <div aria-label="Filter renders by backend" {...stylex.props(styles.flexCenterGap1)} role="group">
               {(Object.keys(FILTER_LABELS) as GalleryFilter[]).map((tag) => {
                 const count = tag === "all" ? visibleEntries.length : tagCounts[tag];
                 return (
                   <button
                     aria-pressed={filter === tag}
-                    className={
-                      filter === tag
-                        ? "editor-motion bg-primary/15 px-2 py-1 text-micro uppercase tracking-meta text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        : "editor-motion px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    }
+                    className={stylex.props(
+                      filter === tag ? styles.filterTabActive : styles.filterTab,
+                      motionStyles.editorMotion,
+                    ).className}
                     key={tag}
                     onClick={() => setFilter(tag)}
                     type="button"
@@ -470,20 +472,20 @@ export function RenderWorkspace({
             ) : null}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div {...stylex.props(styles.fillScrollYShrinkable)}>
           {recentlyHidden.length > 0 ? (
-            <ul className="mb-3 flex flex-col gap-1">
+            <ul {...stylex.props(styles.flexColGap1)}>
               {recentlyHidden.map((item) => (
                 <li
-                  className="flex items-center gap-2 border border-border bg-muted/40 px-2.5 py-1.5 backdrop-blur"
+                  {...stylex.props(styles.flexCenterBordered)}
                   key={item.id}
                 >
-                  <EyeOff aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-micro text-muted-foreground">
+                  <EyeOff aria-hidden="true" className={stylex.props(styles.tightMuted).className} />
+                  <span {...stylex.props(styles.fillMicroMuted)}>
                     Hid {renderJobLabel(item).toLowerCase()} from {formatTimestamp(item.createdAt)}
                   </span>
                   <Button onClick={() => void unhide(item)} size="sm" variant="outline">
-                    <Undo2 aria-hidden="true" className="size-3" />
+                    <Undo2 aria-hidden="true" className={stylex.props(styles.size3).className} />
                     Undo
                   </Button>
                 </li>
@@ -493,16 +495,16 @@ export function RenderWorkspace({
 
           {loading && entries.length === 0 ? (
             <WorkspacePaneLoading
-              className="min-h-72"
+              xstyle={styles.minH72}
               hint="Reading render jobs, recordings, and esmini replays."
               message="Loading renders…"
             />
           ) : visibleEntries.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-              <p className="font-heavy text-2xl tracking-tight text-foreground/20">
+            <div {...stylex.props(styles.flexColCenter)}>
+              <p {...stylex.props(styles.xxlHeavy)}>
                 {entries.length === 0 ? "Create a render." : "No visible renders."}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p {...stylex.props(styles.xsMuted)}>
                 {entries.length === 0
                   ? "Videos and artifacts will appear here."
                   : filter !== "all"
@@ -512,12 +514,12 @@ export function RenderWorkspace({
             </div>
           ) : (
             <div
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+              {...stylex.props(styles.gridCols1Gap3)}
               data-testid="unified-render-gallery"
             >
               {visibleEntries.map((entry, index) => (
                 <div
-                  className="render-tile-enter"
+                  {...stylex.props(styles.tileEnter)}
                   key={
                     entry.kind === "job"
                       ? entry.job.id
@@ -525,8 +527,8 @@ export function RenderWorkspace({
                         ? entry.recording.id
                         : entry.run.id
                   }
-                  // Consumed by the stagger; the cap lives in the CSS so a long gallery does not
-                  // make its last tile arrive late.
+                  // Consumed by the stagger; the cap lives in the module so a long gallery does
+                  // not make its last tile arrive late.
                   style={{ "--render-tile-index": index } as React.CSSProperties}
                 >
                   {entry.kind === "job" ? (
@@ -560,7 +562,7 @@ export function RenderWorkspace({
           )}
 
           {hiddenCount > 0 ? (
-            <p className="mt-3 text-micro text-muted-foreground">
+            <p {...stylex.props(styles.microMuted)}>
               {hiddenCount} hidden {hiddenCount === 1 ? "render" : "renders"} not shown. A hidden
               render keeps all of its files and stays reachable by its job id.
             </p>

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@simforge-oss/studio-ui/components/ui/table";
 import type { CarlaCompatibility } from "@simforge-oss/studio-ui/lib/scenario/carla-compatibility";
-import { dialog } from "../asset-dialogs.stylex";
+import { carla } from "./carla-table.stylex";
 
 export interface CarlaCompatibilityRow {
   catalogId: string;
@@ -51,15 +51,16 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
   }, [query, rows, status]);
 
   return (
-    <section aria-label="CARLA compatibility catalog" {...stylex.props(dialog.panel)}>
-      <div {...stylex.props(dialog.tableTools)}>
-        <div {...stylex.props(dialog.searchWrap)}>
-          <Search {...stylex.props(dialog.searchIcon)} />
+    <section aria-label="CARLA compatibility catalog" {...stylex.props(carla.section)}>
+      <div {...stylex.props(carla.tools)}>
+        <div {...stylex.props(carla.searchWrap)}>
+          <Search {...stylex.props(carla.searchIcon)} />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search objects, classes, or blueprints"
             aria-label="Search CARLA compatibility"
+            xstyle={carla.searchInput}
           />
         </div>
         <SelectMenu
@@ -67,54 +68,54 @@ export function CarlaCompatibilityTable({ rows }: { rows: CarlaCompatibilityRow[
           onChange={(value) => setStatus(value as typeof status)}
           options={STATUS_OPTIONS}
           label="Filter by compatibility status"
-          {...stylex.props(dialog.toolbarSelect, dialog.toolbarCarla)}
+          xstyle={carla.select}
         />
       </div>
 
-      <div {...stylex.props(dialog.tableWrap)}>
-        <Table {...stylex.props(dialog.table)}>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Object</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Class</TableHead>
-              <TableHead>Dimensions</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>CARLA blueprint</TableHead>
-              <TableHead>Agreement</TableHead>
+      <div {...stylex.props(carla.tableWrap)}>
+        <Table xstyle={carla.table}>
+          <TableHeader xstyle={carla.header}>
+            <TableRow xstyle={carla.headerRow}>
+              <TableHead xstyle={carla.head}>Object</TableHead>
+              <TableHead xstyle={carla.head}>Source</TableHead>
+              <TableHead xstyle={carla.head}>Class</TableHead>
+              <TableHead xstyle={carla.head}>Dimensions</TableHead>
+              <TableHead xstyle={carla.head}>Status</TableHead>
+              <TableHead xstyle={carla.head}>CARLA blueprint</TableHead>
+              <TableHead xstyle={carla.head}>Agreement</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRows.map((row) => {
               const native = row.compatibility.status === "native" ? row.compatibility : null;
               return (
-                <TableRow key={row.catalogId}>
-                  <TableCell {...stylex.props(dialog.tableCell)}>
-                    <p {...stylex.props(dialog.cellStrong)}>{row.label}</p>
-                    <p {...stylex.props(dialog.mutedText)}>{row.catalogId}</p>
+                <TableRow key={row.catalogId} xstyle={carla.row}>
+                  <TableCell xstyle={carla.cell}>
+                    <p {...stylex.props(carla.label)}>{row.label}</p>
+                    <p {...stylex.props(carla.catalogId)}>{row.catalogId}</p>
                   </TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.source}</TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.objectClass.replaceAll("_", " ")}</TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{row.dimensions ?? "—"}</TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell)}><CarlaCompatibilityPill compatibility={row.compatibility} size="sm" /></TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell)}>
+                  <TableCell xstyle={[carla.cell, carla.cellMuted]}>{row.source}</TableCell>
+                  <TableCell xstyle={[carla.cell, carla.cellCapitalize, carla.cellMuted]}>{row.objectClass.replaceAll("_", " ")}</TableCell>
+                  <TableCell xstyle={[carla.cell, carla.cellNumeric, carla.cellMuted]}>{row.dimensions ?? "—"}</TableCell>
+                  <TableCell xstyle={carla.cell}><CarlaCompatibilityPill compatibility={row.compatibility} size="sm" /></TableCell>
+                  <TableCell xstyle={[carla.blueprintCell, carla.cell]}>
                     {row.compatibility.status === "native"
-                      ? <span {...stylex.props(dialog.cellStrong)}>{row.compatibility.blueprintId}</span>
-                      : <span {...stylex.props(dialog.cellMuted)}>{row.compatibility.reason}</span>}
+                      ? <span {...stylex.props(carla.blueprintId)}>{row.compatibility.blueprintId}</span>
+                      : <span {...stylex.props(carla.reason)}>{row.compatibility.reason}</span>}
                   </TableCell>
-                  <TableCell {...stylex.props(dialog.tableCell, dialog.cellMuted)}>{native?.dimensionalAgreement ?? "—"}</TableCell>
+                  <TableCell xstyle={[carla.cell, carla.cellCapitalize, carla.cellMuted]}>{native?.dimensionalAgreement ?? "—"}</TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
         {filteredRows.length === 0 ? (
-          <div {...stylex.props(dialog.tableEmpty)}>
+          <div {...stylex.props(carla.empty)}>
             No catalog objects match these filters.
           </div>
         ) : null}
       </div>
-      <p {...stylex.props(dialog.mutedText)}>Showing {filteredRows.length.toLocaleString()} of {rows.length.toLocaleString()} objects</p>
+      <p {...stylex.props(carla.count)}>Showing {filteredRows.length.toLocaleString()} of {rows.length.toLocaleString()} objects</p>
     </section>
   );
 }

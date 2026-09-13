@@ -1,6 +1,9 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import type { CSSProperties, ReactNode } from "react";
+
+import { styles as catalog } from "./catalog-surfaces.stylex";
 
 /**
  * The add-panel's one visual vocabulary: a titled section of tiles.
@@ -8,7 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
  * Weather and traffic are chosen the same way an actor is chosen — pick the
  * thing that looks right — so they use the actor grid rather than a second
  * dialect of dropdowns and sliders. Hover, lift and entrance animation live in
- * `globals.css` under `.actor-catalog-tile`, shared with the model tiles.
+ * `catalog-surfaces.stylex`, shared with the model tiles.
  */
 export const MAX_TILE_STAGGER_MS = 260;
 
@@ -85,7 +88,7 @@ export function PanelTile({
   return (
     <button
       aria-pressed={active}
-      className="actor-catalog-tile actor-catalog-tile-enter"
+      {...stylex.props(catalog.tile, catalog.tileEnter)}
       data-active={String(active)}
       data-testid={testId}
       disabled={disabled}
@@ -98,7 +101,7 @@ export function PanelTile({
       title={title}
       type="button"
     >
-      <span className="actor-catalog-tile-icon" style={styles.icon}>{icon}</span>
+      <span {...stylex.props(catalog.tileIcon)} style={styles.icon}>{icon}</span>
       <strong style={styles.label}>{label}</strong>
       {detail ? <span style={styles.detail}>{detail}</span> : null}
     </button>

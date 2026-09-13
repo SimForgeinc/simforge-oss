@@ -47,7 +47,6 @@ describe("ScenarioEditorShell", () => {
       '[data-editor-shell-region="floating-overlay"]',
     );
     expect(floating).not.toBeNull();
-    expect(floating?.className).toContain("floatingLayer");
     expect(screen.getByLabelText("Three scene")).toBeTruthy();
   });
 
@@ -89,7 +88,8 @@ describe("ScenarioEditorShell", () => {
     const shell = screen.getByTestId("scenario-editor-shell");
     const canvasRegion = screen.getByTestId("scenario-editor-canvas-region");
     expect(shell.getAttribute("data-canvas-mode")).toBe("passthrough");
-    expect(canvasRegion.className).toContain("passthrough");
+    expect(shell.querySelector('[data-editor-shell-region="body"]')).toBeTruthy();
+    expect(canvasRegion.getAttribute("data-editor-shell-region")).toBe("canvas");
   });
 
   it("updates the sidebar without replacing the canvas slot", () => {

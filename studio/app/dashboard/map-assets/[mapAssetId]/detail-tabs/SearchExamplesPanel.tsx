@@ -2,7 +2,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "../../map-assets.stylex";
 
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { SEARCH_EXAMPLE_GROUPS, type SearchExample } from "./search-examples";
 
 interface SearchExamplesPanelProps {
@@ -55,7 +54,7 @@ function Chip({ example, onRun }: ChipProps) {
       type="button"
       disabled={!isAvailable}
       onClick={() => isAvailable && onRun(example.query)}
-      className={stylex.props(styles.u_952, styles.u_903, styles.u_937, styles.u_942, styles.u_970).className}
+      className={stylex.props(styles.examplePill, isAvailable ? styles.examplePillAvailable : styles.examplePillUnavailable).className}
       title={isAvailable ? `Run search: ${example.query}` : "Coming in the next release"}
     >
       {example.label}

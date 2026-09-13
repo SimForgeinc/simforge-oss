@@ -4,7 +4,6 @@ import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Check, Copy } from "lucide-react";
 import { getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the ScenarioTagsSection component. */
 type ScenarioTagsSectionProps = {
@@ -33,7 +32,7 @@ export function ScenarioTagsSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           Scenario tags ({tags.length})
         </button>

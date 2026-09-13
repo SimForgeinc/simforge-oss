@@ -13,6 +13,9 @@ import { AUTHORING_CATALOG as CATALOG, getEntry, type CatalogId } from "@simforg
 import type { ActorRecord, EditorController } from "@simforge-oss/editor";
 import { Heading, NumberField } from "../authoring/fields";
 import { Readout } from "../regions/Readout";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActorAppearanceSection.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * Eight paints that stay legible against asphalt at authoring distance and read
@@ -88,17 +91,17 @@ export function ActorAppearanceSection({
     : null;
 
   return (
-    <section aria-labelledby="scenario-appearance-heading" className="space-y-3">
+    <section aria-labelledby="scenario-appearance-heading" {...stylex.props(styles.stackLg)}>
       <Heading>
         <span id="scenario-appearance-heading">Appearance</span>
       </Heading>
 
       {galleryAsset ? (
-        <div className="space-y-2">
+        <div>
           <Readout label="Gallery asset" value={entry.label} />
-          <Readout label="Version" value={galleryVersion ?? "Unknown"} />
+          <Readout label="Version" value={galleryVersion ?? "Unknown"} xstyle={styles.stackedMd} />
           <Link
-            className="inline-flex text-micro font-medium text-primary underline-offset-4 hover:underline"
+            className={stylex.props(styles.inlineFlexMicroAccent, styles.stackedMd).className}
             href="/dashboard/assets"
           >
             Open asset gallery
@@ -106,7 +109,7 @@ export function ActorAppearanceSection({
         </div>
       ) : siblings.length > 1 ? (
         <SelectMenuField
-          className="h-8 text-xs"
+          xstyle={styles.xs}
           label={`Model (${entry.class})`}
           value={actor.catalogId}
           options={siblings.map((candidate) => ({
@@ -123,23 +126,23 @@ export function ActorAppearanceSection({
         <Readout label="Model" value={entry.label} />
       )}
       {carlaCompatibility === null ? (
-        <p className="text-micro leading-relaxed text-muted-foreground">
+        <p {...stylex.props(styles.microMutedRelaxed)}>
           {carlaLoadFailed
             ? "CARLA compatibility is unavailable."
             : "Checking CARLA compatibility…"}
         </p>
       ) : carlaCompatibility.status === "native" ? null : (
-        <div className="space-y-1.5" data-testid={`actor-carla-compatibility-${actor.id}`}>
+        <div data-testid={`actor-carla-compatibility-${actor.id}`}>
           <CarlaCompatibilityPill compatibility={carlaCompatibility} size="sm" />
-          <p className="text-micro leading-relaxed text-muted-foreground">
+          <p {...stylex.props(styles.microMutedRelaxed, styles.stackedSm)}>
             {carlaCompatibility.reason}
           </p>
         </div>
       )}
 
       <fieldset>
-        <legend className="text-muted-foreground">Paint</legend>
-        <div className="mt-1 flex flex-wrap gap-1">
+        <legend {...stylex.props(styles.muted)}>Paint</legend>
+        <div {...stylex.props(styles.flexWrapGap1)}>
           {PAINTS.map((option) => {
             const active = paint?.toLowerCase() === option.value.toLowerCase();
             return (
@@ -154,9 +157,11 @@ export function ActorAppearanceSection({
                     bodyColor: option.value,
                   })
                 }
-                className={`editor-motion size-6 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card ${
-                  active ? "border-primary ring-1 ring-primary" : "border-border"
-                }`}
+                className={stylex.props(
+                  styles.swatch,
+                  active ? styles.swatchActive : styles.swatchIdle,
+                  motionStyles.editorMotion,
+                ).className}
                 // The swatch *is* the colour, so this is data, not decoration —
                 // the one place a literal belongs. Every other colour in the
                 // editor comes from the token layer.
@@ -170,12 +175,12 @@ export function ActorAppearanceSection({
       {mobile ? (
         <>
           <label
-            className="flex items-center justify-between gap-3 border border-border px-2 py-2 text-foreground"
+            {...stylex.props(styles.flexCenterBetween)}
             data-testid={`actor-static-control-${actor.id}`}
           >
             <span>
-              <span className="block font-medium">Static / parked</span>
-              <span className="block text-micro text-muted-foreground">
+              <span {...stylex.props(styles.blockMedium)}>Static / parked</span>
+              <span {...stylex.props(styles.blockMicroMuted)}>
                 Fixed in playback; still collides and occludes.
               </span>
             </span>
@@ -206,12 +211,12 @@ export function ActorAppearanceSection({
       ) : null}
 
       {fixedByCatalog ? (
-        <p className="text-micro leading-relaxed text-muted-foreground" data-testid={`actor-static-fixed-${actor.id}`}>
+        <p {...stylex.props(styles.microMutedRelaxed)} data-testid={`actor-static-fixed-${actor.id}`}>
           Static catalog objects are always fixed in playback and export.
         </p>
       ) : null}
 
-      <dl className="grid grid-cols-3 gap-2">
+      <dl {...stylex.props(styles.gridCols3Gap2)}>
         <Readout label="Length" value={`${actor.dims.l} m`} />
         <Readout label="Width" value={`${actor.dims.w} m`} />
         <Readout label="Height" value={`${actor.dims.h} m`} />

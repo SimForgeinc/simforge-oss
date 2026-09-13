@@ -67,10 +67,10 @@ function InstallProgress({ state }: { state: ModelInstallState }) {
           : null;
 
   return (
-    <div {...stylex.props(s.section1)}>
-      <div {...stylex.props(s.rowBetween, s.textXs, s.textMuted)}>
-        <span {...stylex.props(s.rowTight)}>
-          {state.state === "downloading" || state.state === "verifying" ? <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} /> : null}
+    <div {...stylex.props(s.stack15)}>
+      <div {...stylex.props(s.flexBetweenPlain, s.textXs, s.textMuted)}>
+        <span {...stylex.props(s.inlineGap2)}>
+          {state.state === "downloading" || state.state === "verifying" ? <Loader2 aria-hidden="true" {...stylex.props(s.icon14, s.spinner)} /> : null}
           {installLabel(state)}
         </span>
         {detail ? <span {...stylex.props(s.tabular)}>{detail}</span> : null}
@@ -117,7 +117,7 @@ function QuantRow({
 
   return (
     <div {...stylex.props(s.quantRow)} data-testid={`quant-row-${entry.family}-${quant}`}>
-      <div {...stylex.props(s.rowBetween)}>
+      <div {...stylex.props(s.flexCenterBetween)}>
         <div {...stylex.props(s.flexCenterGap2)}>
           <span {...stylex.props(s.mono, s.textSm, s.textFg)}>{quant}</span>
           {offer.status === "supported" ? (
@@ -137,10 +137,10 @@ function QuantRow({
           ) : null}
         </div>
 
-        <div {...stylex.props(s.flexCenterGap2)}>
+        <div {...stylex.props(s.flexWrapCenterGap1)}>
           {state === "not_installed" || state === "error" ? (
             <Button type="button" size="sm" variant="outline" disabled={busy || !downloadable} onClick={onInstall}>
-              {busy ? <Loader2 aria-hidden="true" {...stylex.props(s.icon)} /> : <Download aria-hidden="true" />}
+              {busy ? <Loader2 aria-hidden="true" {...stylex.props(s.spinner)} /> : <Download aria-hidden="true" />}
               Download
             </Button>
           ) : null}
@@ -227,7 +227,7 @@ function QuantRow({
               : `not available on this machine (${eligibility.qualification})`}
           </p>
           {!eligibility.executionEligible && eligibility.reasons.length > 0 ? (
-            <ul {...stylex.props(s.bulletList, s.spaceY1)}>
+            <ul {...stylex.props(s.bulletList, s.stack05)}>
               {eligibility.reasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
@@ -240,7 +240,7 @@ function QuantRow({
             </p>
           ) : null}
           {!eligibility.downloadEligible && eligibility.downloadBlockedReasons.length > 0 ? (
-            <ul {...stylex.props(s.bulletList, s.spaceY1)}>
+            <ul {...stylex.props(s.bulletList, s.stack05)}>
               {eligibility.downloadBlockedReasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
@@ -324,8 +324,8 @@ export function ModelStorePanel({ className }: { className?: string }) {
     return (
       <div className={cn(stylex.props(s.section4).className, className)}>
         {error ? <RefusalNotice title="Model store" reasons={[error]} /> : (
-          <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
-            <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
+          <p {...stylex.props(s.inlineGap2, s.textSm, s.textMuted)}>
+            <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
             Reading the model store…
           </p>
         )}
@@ -369,12 +369,12 @@ export function ModelStorePanel({ className }: { className?: string }) {
       ) : null}
 
       <div {...stylex.props(s.flexEndGap3, s.borderP4)}>
-        <div {...stylex.props(s.minW64, s.flex1, s.spaceY1)}>
+        <div {...stylex.props(s.minW64, s.flex1, s.stack15)}>
           <label
             htmlFor="hf-token"
             {...stylex.props(s.labelToken)}
           >
-            <KeyRound aria-hidden="true" {...stylex.props(s.iconSm)} />
+            <KeyRound aria-hidden="true" {...stylex.props(s.icon14)} />
             Hugging Face token
           </label>
           <Input

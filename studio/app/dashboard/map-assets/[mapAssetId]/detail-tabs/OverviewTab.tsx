@@ -5,7 +5,6 @@ import { styles } from "../../map-assets.stylex";
 import { useState, useMemo } from "react";
 import { Route, GitFork, PersonStanding, Footprints, Bike, SquareParking, ChevronRight, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAsset, MapAssetEnrichmentSnapshot, CandidateLocation } from "@simforge-oss/studio-shared";
 import type { ScenarioSummary } from "@/app/lib/scenarios";
 import { CopyButton } from "@/app/components/CopyButton";
@@ -49,7 +48,7 @@ function QuickStatCard({ icon, value, label, tooltip }: QuickStatCardProps) {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="bottom" className={stylex.props(styles.s_829).className}>
+        <TooltipContent side="bottom" xstyle={styles.s_829}>
           {tooltip.map((line, i) => (
             <div key={i}>{line}</div>
           ))}
@@ -247,10 +246,7 @@ export function OverviewTab({
         {asset.description && (
           <div className={stylex.props(styles.s_835).className}>
             <p
-              className={cn(
-                "text-xs leading-relaxed text-muted-foreground",
-                !descExpanded && "line-clamp-2",
-              )}
+              className={stylex.props(styles.overviewDescription, !descExpanded && styles.clamp2).className}
             >
               {asset.description}
             </p>
@@ -423,7 +419,7 @@ export function OverviewTab({
                         </p>
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className={stylex.props(styles.s_863).className}>
+                    <TooltipContent side="top" xstyle={styles.s_863}>
                       <div>
                         <span className={stylex.props(styles.s_865).className}>Scenario Family:</span> {group.family.name}
                       </div>
@@ -451,7 +447,7 @@ export function OverviewTab({
               {showAllFamilies
                 ? "Show fewer"
                 : `+${familyGroups.length - 6} more ${familyGroups.length - 6 !== 1 ? "families" : "family"}`}
-              <ChevronRight className={cn("size-3 transition-transform", showAllFamilies && "rotate-90")} />
+              <ChevronRight className={stylex.props(styles.chevronBare, showAllFamilies && styles.rotate90).className} />
             </button>
           )}
         </section>

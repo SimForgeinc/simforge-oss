@@ -50,7 +50,7 @@ function HorizonTable({ label, metrics }: { label: string; metrics: HorizonMetri
   return (
     <div>
       <p {...stylex.props(s.textXs, s.uppercaseWide, s.textMuted)}>{label}</p>
-      <dl {...stylex.props(s.stack1)} style={{ marginTop: "0.25rem", display: "flex", flexWrap: "wrap", columnGap: "1.5rem", rowGap: "0.25rem" }}>
+      <dl {...stylex.props(s.mt1, s.metaRow)}>
         {horizons.map(([horizon, metric]) => (
           <div key={horizon} {...stylex.props(s.textSm)}>
             <dt {...stylex.props(s.textXs, s.textMuted)}>{horizon}s</dt>
@@ -248,7 +248,7 @@ function UploadedVideoResult({
             download="prediction-overlay.mp4"
             {...stylex.props(s.downloadLink)}
           >
-            <Download aria-hidden="true" {...stylex.props(s.icon)} />
+            <Download aria-hidden="true" {...stylex.props(s.iconPlain)} />
             Download overlay video
           </a>
         ) : null}
@@ -339,8 +339,8 @@ export function JobDetail({
 
   if (loading && !job) {
     return (
-      <p className={cn(stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted).style}>
-        <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
+      <p className={cn(stylex.props(s.inlineGap2, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineGap2, s.textSm, s.textMuted).style}>
+        <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
         Loading run…
       </p>
     );
@@ -480,7 +480,7 @@ export function JobDetail({
               download="prediction-overlay.mp4"
               {...stylex.props(s.downloadLink)}
             >
-              <Download aria-hidden="true" {...stylex.props(s.icon)} />
+              <Download aria-hidden="true" {...stylex.props(s.iconPlain)} />
               Download overlay video
             </a>
           </div>
@@ -519,7 +519,7 @@ export function JobDetail({
                 {aggregate.failedItems > 0 ? ` · ${aggregate.failedItems} failed` : ""}
               </p>
               {Object.keys(aggregate.scoredItems).length > 0 ? (
-                <p {...stylex.props(s.mt1, s.textXs, s.textMuted)}>
+                <p {...stylex.props(s.mt05, s.textXs, s.textMuted)}>
                   scored per horizon:{" "}
                   {Object.entries(aggregate.scoredItems)
                     .map(([horizon, count]) => `${horizon}s: ${count}`)
@@ -530,7 +530,7 @@ export function JobDetail({
           </div>
           {aggregate.refusedItems > 0 ? (
             <p {...stylex.props(s.flexStartGap2, s.textXs, s.leading5, s.textMuted)}>
-              <AlertTriangle aria-hidden="true" {...stylex.props(s.mt1, s.iconSm)} />
+              <AlertTriangle aria-hidden="true" {...stylex.props(s.mt05, s.iconSm)} />
               Refused items are excluded from the aggregate. They are listed below with the fields
               they were missing; nothing was substituted for them.
             </p>
@@ -612,13 +612,13 @@ export function JobDetail({
           </div>
         </section>
       ) : presentation.live ? (
-        <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
-          <Loader2 aria-hidden="true" {...stylex.props(s.icon, s.spinner)} />
+        <p {...stylex.props(s.inlineGap2, s.textSm, s.textMuted)}>
+          <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
           Results appear here when the run finishes. Closing this page does not stop it.
         </p>
       ) : job.status === "cancelled" ? (
-        <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
-          <Ban aria-hidden="true" {...stylex.props(s.icon)} />
+        <p {...stylex.props(s.inlineGap2, s.textSm, s.textMuted)}>
+          <Ban aria-hidden="true" {...stylex.props(s.iconPlain)} />
           This run was cancelled. Cost settles from the provider&apos;s actual accounting, so a
           cancelled run is not automatically free.
         </p>

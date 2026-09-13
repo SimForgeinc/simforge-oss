@@ -45,7 +45,7 @@ export function MapAssetDangerZone({
           Delete map
         </h3>
         <ChevronDown
-          className={`size-3.5 shrink-0 text-destructive/70 transition-transform duration-150 ${dangerOpen ? "rotate-180" : ""}`}
+          className={stylex.props(styles.dangerChevron, dangerOpen ? styles.dangerChevronOpen : null).className}
         />
       </button>
       {dangerOpen && (
@@ -77,7 +77,7 @@ export function MapAssetDangerZone({
                 onChange={(e) => onDeleteConfirmEmailChange(e.target.value)}
                 placeholder="Type your email to confirm"
                 autoComplete="off"
-                className={stylex.props(styles.s_150).className}
+                xstyle={styles.s_150}
                 disabled={deleteBusy}
               />
             </>
@@ -87,7 +87,7 @@ export function MapAssetDangerZone({
             type="button"
             variant="destructive"
             size="sm"
-            className={stylex.props(styles.s_708).className}
+            xstyle={styles.s_708}
             disabled={
               deleteBusy ||
               !sessionEmail ||

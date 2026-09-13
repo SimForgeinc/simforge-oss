@@ -36,9 +36,16 @@
     "integration:audit": "node scripts/integration/audit-simcloud-divergence.mjs",
     "integration:compare-engine": "tsx scripts/integration/compare-engine-behavior.ts",
     "test:integration": "node --test scripts/integration/*.test.mjs",
+    "e2e:smoke": "playwright test -c e2e/playwright.config.ts --project=smoke",
+    "e2e:maps": "playwright test -c e2e/playwright.config.ts --project=maps",
+    "e2e:models": "playwright test -c e2e/playwright.config.ts --project=models",
+    "e2e:interop": "playwright test -c e2e/playwright.config.ts --project=interop",
+    "e2e:all": "playwright test -c e2e/playwright.config.ts",
     "dev:all": "SIMFORGE_LOCAL_WORKER=1 pnpm --filter @simforge-oss/studio dev"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.0",
     "@simforge-oss/map-pipeline": "workspace:*",
     "playwright-core": "^1.62.1",
     "sharp": "0.34.5",

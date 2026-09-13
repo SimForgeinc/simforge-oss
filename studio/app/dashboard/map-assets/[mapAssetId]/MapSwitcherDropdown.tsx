@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 interface MapSwitcherDropdownProps {
   currentAsset: MapAsset;
@@ -63,7 +62,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
           <ChevronDown className={stylex.props(styles.s_751).className} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className={stylex.props(styles.s_752).className} sideOffset={4}>
+      <DropdownMenuContent align="start" xstyle={styles.s_752} sideOffset={4}>
         {/* Search input */}
         <div className={stylex.props(styles.s_753).className}>
           <div className={stylex.props(styles.s_987).className}>
@@ -74,7 +73,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
               placeholder="Search maps..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className={stylex.props(styles.s_756).className}
+              xstyle={styles.s_756}
               onKeyDown={(e) => {
                 // Prevent dropdown from closing on key presses
                 e.stopPropagation();
@@ -115,7 +114,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     if (!isCurrent) switchToMap(asset.map_asset_id);
                     setOpen(false);
                   }}
-                  className={stylex.props(styles.u_908, styles.u_928, styles.u_918, styles.u_938, styles.u_944, styles.u_965, styles.u_970).className}
+                  className={stylex.props(styles.switcherItem, isCurrent ? styles.switcherItemCurrent : styles.switcherItemOther).className}
                 >
                   {isCurrent ? (
                     <Check className={stylex.props(styles.s_759).className} />
@@ -123,7 +122,7 @@ export function MapSwitcherDropdown({ currentAsset, allAssets, onSwitchMap }: Ma
                     <div className={stylex.props(styles.s_760).className} />
                   )}
                   <div className={stylex.props(styles.s_761).className}>
-                    <p className={cn("text-xs truncate", isCurrent && "font-medium")}>
+                    <p className={stylex.props(styles.switcherLabel, isCurrent && styles.switcherLabelCurrent).className}>
                       {asset.name}
                     </p>
                     {place && (

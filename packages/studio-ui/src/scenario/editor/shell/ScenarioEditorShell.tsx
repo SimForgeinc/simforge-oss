@@ -5,8 +5,9 @@ import type {
   HTMLAttributes,
   ReactNode,
 } from "react";
-import { cn } from "../../../lib/utils";
-import styles from "./ScenarioEditorShell.module.css";
+import * as stylex from "@stylexjs/stylex";
+import { mergeStyleProps } from "../../../components/stylex/surface";
+import { styles } from "./ScenarioEditorShell.stylex";
 import {
   SCENARIO_EDITOR_SHELL_STYLE,
   type ScenarioEditorShellStyle,
@@ -42,6 +43,13 @@ export interface ScenarioEditorShellProps
   canvasMode?: ScenarioEditorCanvasMode;
   disabled?: boolean;
   geometryStyle?: ScenarioEditorShellStyle;
+  /**
+   * Caller StyleX styles for the shell root, composed after the shell's own so
+   * they win per property. A caller's StyleX cannot travel as a `className`:
+   * two atomic rules for one property are resolved by stylesheet order, not by
+   * argument order.
+   */
+  xstyle?: stylex.StyleXStyles;
 }
 
 /**
@@ -61,11 +69,14 @@ export function ScenarioEditorShell({
   disabled = false,
   geometryStyle,
   className,
+  xstyle,
   style,
   "data-testid": testId = "scenario-editor-shell",
   ...rootProps
 }: ScenarioEditorShellProps) {
   const chromeDisabled = disabled;
+  const passthrough = canvasMode === "passthrough";
+  const hasHeader = header !== null && header !== undefined;
   const shellStyle = {
     ...SCENARIO_EDITOR_SHELL_STYLE,
     ...geometryStyle,
@@ -76,37 +87,55 @@ export function ScenarioEditorShell({
     <section
       {...rootProps}
       aria-disabled={chromeDisabled || undefined}
-      className={cn(styles.shell, className)}
+      {...mergeStyleProps(
+        stylex.props(
+          styles.shell,
+          hasHeader ? null : styles.shellHeaderless,
+          passthrough && styles.shellPassthrough,
+          xstyle,
+        ),
+        className,
+      )}
       data-canvas-mode={canvasMode}
       data-editor-shell-geometry="v1"
-      data-has-header={String(header !== null && header !== undefined)}
+      data-has-header={String(hasHeader)}
       data-testid={testId}
       style={shellStyle}
     >
-      {header !== null && header !== undefined
+      {hasHeader
         ? renderSlot(header, {
-            className: cn(styles.header, chromeDisabled && styles.disabledChrome),
+            className: stylex.props(styles.header, chromeDisabled && styles.disabledChrome).className,
             "data-editor-shell-region": "header",
             inert: chromeDisabled || undefined,
           })
         : null}
 
-      <div className={styles.body} data-editor-shell-region="body">
+      <div
+        {...stylex.props(styles.body, passthrough && styles.inert)}
+        data-editor-shell-region="body"
+      >
         {leftSidebar !== null && leftSidebar !== undefined
           ? renderSlot(leftSidebar, {
-              className: cn(styles.leftSidebar, chromeDisabled && styles.disabledChrome),
+              className: stylex.props(styles.leftSidebar, chromeDisabled && styles.disabledChrome).className,
               "data-editor-shell-region": "left-sidebar",
               inert: chromeDisabled || undefined,
             })
           : null}
 
-        <div className={styles.viewport} data-editor-shell-region="viewport">
+        <div
+          {...stylex.props(
+            styles.viewport,
+            passthrough && styles.viewportPassthrough,
+            passthrough && styles.inert,
+          )}
+          data-editor-shell-region="viewport"
+        >
           {renderSlot(canvas, {
-            className: cn(
+            className: stylex.props(
               styles.canvas,
-              canvasMode === "passthrough" && styles.passthrough,
+              passthrough && styles.passthrough,
               chromeDisabled && styles.disabledChrome,
-            ),
+            ).className,
             "data-editor-shell-region": "canvas",
             "data-tutorial": "canvas",
             "data-testid": "scenario-editor-canvas-region",
@@ -114,13 +143,13 @@ export function ScenarioEditorShell({
           })}
           {statusOverlay
             ? renderSlot(statusOverlay, {
-                className: styles.statusLayer,
+                className: stylex.props(styles.statusLayer).className,
                 "data-editor-shell-region": "status-overlay",
               })
             : null}
           {floatingOverlay
             ? renderSlot(floatingOverlay, {
-                className: styles.floatingLayer,
+                className: stylex.props(styles.floatingLayer).className,
                 "data-editor-shell-region": "floating-overlay",
               })
             : null}

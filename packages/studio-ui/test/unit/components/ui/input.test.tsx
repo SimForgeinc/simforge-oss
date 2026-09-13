@@ -4,84 +4,50 @@ import { describe, it, expect } from "vitest";
 import { renderToString } from "react-dom/server";
 import { Input } from "../../../../src/components/ui/input";
 
+function render(element: React.ReactElement): HTMLInputElement {
+  const template = document.createElement("template");
+  template.innerHTML = renderToString(element);
+  const root = template.content.firstElementChild;
+  if (!(root instanceof HTMLInputElement)) throw new Error("expected an input element");
+  return root;
+}
+
 describe("Input", () => {
-  it("renders an input element", () => {
-    const html = renderToString(<Input />);
-    expect(html).toContain("<input");
+  it("renders an input that behaves as a text field when no type is given", () => {
+    const input = render(<Input />);
+
+    expect(input.tagName).toBe("INPUT");
+    expect(input.type).toBe("text");
   });
 
-  it("renders with the provided type attribute", () => {
-    const html = renderToString(<Input type="email" />);
-    expect(html).toContain('type="email"');
+  it("renders the requested input type", () => {
+    for (const type of ["email", "password", "number", "search"] as const) {
+      expect(render(<Input type={type} />).type, type).toBe(type);
+    }
   });
 
-  it("renders with type text when no type is provided", () => {
-    const html = renderToString(<Input />);
-    // default HTML input type is text, or no type attr — either is acceptable
-    // The component passes type through, so absence means browser default
-    expect(html).toContain("<input");
+  it("renders the placeholder text", () => {
+    expect(render(<Input placeholder="Enter value" />).placeholder).toBe("Enter value");
   });
 
-  it("renders with type password", () => {
-    const html = renderToString(<Input type="password" />);
-    expect(html).toContain('type="password"');
+  it("renders a disabled control when disabled", () => {
+    expect(render(<Input disabled />).disabled).toBe(true);
+    expect(render(<Input />).disabled).toBe(false);
   });
 
-  it("renders with type number", () => {
-    const html = renderToString(<Input type="number" />);
-    expect(html).toContain('type="number"');
+  it("keeps a caller-supplied inline style", () => {
+    expect(render(<Input style={{ marginTop: 4 }} />).style.marginTop).toBe("4px");
   });
 
-  it("renders with type search", () => {
-    const html = renderToString(<Input type="search" />);
-    expect(html).toContain('type="search"');
+  it("forwards arbitrary DOM attributes", () => {
+    const input = render(<Input data-testid="my-input" name="username" id="email-field" />);
+
+    expect(input.getAttribute("data-testid")).toBe("my-input");
+    expect(input.name).toBe("username");
+    expect(input.id).toBe("email-field");
   });
 
-  it("applies base structural classes", () => {
-    const html = renderToString(<Input />);
-    expect(html).toContain("flex");
-    expect(html).toContain("h-10");
-    expect(html).toContain("w-full");
-    expect(html).toContain("rounded-md");
-    expect(html).toContain("border");
-  });
-
-  it("applies placeholder styling classes", () => {
-    const html = renderToString(<Input placeholder="Enter value" />);
-    expect(html).toContain("placeholder:text-muted-foreground");
-    expect(html).toContain('placeholder="Enter value"');
-  });
-
-  it("applies disabled styling classes", () => {
-    const html = renderToString(<Input disabled />);
-    expect(html).toContain("disabled:cursor-not-allowed");
-    expect(html).toContain("disabled:opacity-50");
-  });
-
-  it("renders disabled attribute when disabled prop is passed", () => {
-    const html = renderToString(<Input disabled />);
-    expect(html).toContain("disabled");
-  });
-
-  it("merges a custom className with base classes", () => {
-    const html = renderToString(<Input className="custom-input" />);
-    expect(html).toContain("custom-input");
-    expect(html).toContain("rounded-md");
-  });
-
-  it("passes through arbitrary HTML attributes", () => {
-    const html = renderToString(<Input data-testid="my-input" name="username" />);
-    expect(html).toContain('data-testid="my-input"');
-    expect(html).toContain('name="username"');
-  });
-
-  it("renders with a defaultValue", () => {
-    const html = renderToString(<Input defaultValue="hello" />);
-    expect(html).toContain("hello");
-  });
-
-  it("renders with an id attribute", () => {
-    const html = renderToString(<Input id="email-field" />);
-    expect(html).toContain('id="email-field"');
+  it("renders its default value", () => {
+    expect(render(<Input defaultValue="hello" />).getAttribute("value")).toBe("hello");
   });
 });

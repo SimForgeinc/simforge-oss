@@ -8,6 +8,9 @@ import {
   type ScenarioAuthoringQuality,
 } from "../../../lib/scenario/contracts";
 import type { ScenarioMapEntry } from "@simforge-oss/editor";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorStatePanels.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 const QUALITY_PREVIEW_IMAGES: Record<ScenarioAuthoringQuality, string> = {
   "roads-only": "/render-selection/roads-only.jpg",
@@ -40,20 +43,20 @@ export function EditorEmptyState({
   return (
     <div
       aria-live="polite"
-      className="grid h-full min-h-editor-shell place-items-center bg-background p-8"
+      {...stylex.props(styles.gridCenteredTall)}
       role="status"
     >
-      <div className="max-w-md border border-border bg-card p-8 text-center">
+      <div {...stylex.props(styles.borderedPad8CenterText)}>
         <div
           aria-hidden="true"
-          className="mx-auto mb-5 grid size-12 place-items-center bg-primary font-bold text-primary-foreground"
+          {...stylex.props(styles.gridCenteredBold)}
         >
           U2
         </div>
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{detail}</p>
+        <h1 {...stylex.props(styles.xlSemibold)}>{title}</h1>
+        <p {...stylex.props(styles.smMuted)}>{detail}</p>
         {href && action ? (
-          <Button asChild className="mt-6">
+          <Button asChild xstyle={styles.mt6}>
             <Link href={href}>{action}</Link>
           </Button>
         ) : null}
@@ -81,70 +84,70 @@ export function QualityChooser({
   footer?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-full place-items-center bg-transparent px-4 py-10 sm:px-6 sm:py-14">
+    <div {...stylex.props(styles.gridCentered)}>
       <div
-        className="w-full max-w-6xl px-1 py-2 text-white sm:px-3"
+        {...stylex.props(styles.whiteWide)}
         data-testid="render-selection-content"
         data-visual-treatment="flat"
       >
-        <div className="text-center">
-          <p className="font-meta text-[10px] font-bold uppercase tracking-[0.22em] text-[#E8E044]">
+        <div {...stylex.props(styles.centerText)}>
+          <p {...stylex.props(styles.capsMetaBold)}>
             Rendering
           </p>
           <h1
             id={titleId}
-            className="mt-2 text-3xl font-semibold tracking-tight text-white"
+            {...stylex.props(styles.xxxlWhiteSemibold)}
           >
             Render Selection
           </h1>
-          <p id={descriptionId} className="mt-2 text-sm text-white/50">
+          <p id={descriptionId} {...stylex.props(styles.sm)}>
             Find the best experience for this device. You can change this any time.
           </p>
         </div>
         {benchmark}
-        <div className="mt-7 flex items-center gap-4">
-          <div className="h-px flex-1 bg-white/10" />
-          <h2 className="font-meta text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">
+        <div {...stylex.props(styles.flexCenterGap4)}>
+          <div {...stylex.props(styles.fill)} />
+          <h2 {...stylex.props(styles.capsMetaBold2)}>
             Manual Selection
           </h2>
-          <div className="h-px flex-1 bg-white/10" />
+          <div {...stylex.props(styles.fill)} />
         </div>
-        <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
+        <div {...stylex.props(styles.gridCols4Gap2)}>
           {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => (
             <button
               key={choice.id}
               type="button"
               onClick={() => onChoose(choice.id)}
               aria-label={`Use ${choice.label}`}
-              className="group editor-motion text-left hover:-translate-y-1 focus-visible:rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+              className={`${stylex.props(styles.leftText, motionStyles.editorMotion).className} group`}
             >
               <span
                 aria-hidden="true"
-                className="relative block aspect-[16/9] overflow-hidden rounded-2xl ring-1 ring-inset ring-white/10"
+                {...stylex.props(styles.relBlockClip)}
               >
                 <span
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-[1.04]"
+                  className={`${stylex.props(styles.absInset0).className} group-hover:scale-[1.04]`}
                   style={{
                     backgroundImage: `url(${QUALITY_PREVIEW_IMAGES[choice.id]})`,
                   }}
                 />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-2 font-meta text-[9px] font-bold uppercase tracking-meta text-white/80">
+                <span {...stylex.props(styles.absInset02)} />
+                <span {...stylex.props(styles.absCapsMeta)}>
                   Belmont · same camera
                 </span>
               </span>
-              <span className="block px-1 py-3">
-                <span className="flex items-center">
-                  <span className="font-semibold text-white">
+              <span {...stylex.props(styles.block)}>
+                <span {...stylex.props(styles.flexCenter)}>
+                  <span {...stylex.props(styles.whiteSemibold)}>
                     {choice.label}
                   </span>
                   {choice.recommended ? (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-meta text-[#E8E044]">
+                    <span {...stylex.props(styles.capsBoldPushRight)}>
                       Recommended
                     </span>
                   ) : null}
                 </span>
-                <span className="mt-1.5 block text-xs text-white/45">
+                <span {...stylex.props(styles.blockXs)}>
                   {choice.id === "roads-only"
                     ? "Core roads and traffic, without 3D scenery"
                     : choice.id === "ultra-low-3d"
@@ -158,7 +161,7 @@ export function QualityChooser({
           ))}
         </div>
         {footer ? (
-          <div className="mt-4 border-t border-white/10 pt-4">{footer}</div>
+          <div {...stylex.props(styles.ruleT)}>{footer}</div>
         ) : null}
       </div>
     </div>
@@ -175,31 +178,31 @@ export function MapChooser({
   onChoose: (mapId: string) => void;
 }) {
   return (
-    <div className="grid min-h-editor-shell place-items-center bg-background p-8">
-      <div className="w-full max-w-3xl">
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-meta-wider text-primary">
+    <div {...stylex.props(styles.gridCenteredPad8)}>
+      <div {...stylex.props(styles.wide)}>
+        <div {...stylex.props(styles.centerText)}>
+          <p {...stylex.props(styles.capsXsAccent)}>
             Map-bound scenario
           </p>
-          <h1 className="mt-2 text-2xl font-semibold">Choose a map</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 {...stylex.props(styles.xxlSemibold)}>Choose a map</h1>
+          <p {...stylex.props(styles.smMuted2)}>
             This scenario will follow compatible new builds of the selected map.
             Choosing a different map creates a separate scenario.
           </p>
         </div>
-        <div className="mt-8 grid gap-3 md:grid-cols-2">
+        <div {...stylex.props(styles.gridGap3)}>
           {maps.map((map) => (
             <button
               key={map.versionId}
               type="button"
               onClick={() => onChoose(map.versionId)}
-              className="editor-motion border border-border bg-card p-5 text-left hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className={stylex.props(styles.borderedPad5LeftText, motionStyles.editorMotion).className}
             >
-              <span className="block font-semibold">{map.label}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
+              <span {...stylex.props(styles.blockSemibold)}>{map.label}</span>
+              <span {...stylex.props(styles.blockXsMuted)}>
                 {map.locality || "Immutable map version"}
               </span>
-              <span className="mt-3 block break-all font-mono text-micro text-muted-foreground">
+              <span {...stylex.props(styles.blockMonoMicro)}>
                 {map.versionId}
               </span>
             </button>

@@ -3,7 +3,6 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "../map-assets.stylex";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { CandidateLocation } from "@simforge-oss/studio-shared";
 import {
   humanizeTag,
@@ -45,25 +44,20 @@ export function CandidateLocationCard({
     <button
       type="button"
       onClick={() => onSelect(selected ? null : candidate.id)}
-      className={cn(
-        "w-full rounded border px-2.5 py-2 text-left transition-colors",
-        selected
-          ? "border-orange-400/70 bg-orange-500/10"
-          : "border-border bg-muted/20 hover:bg-muted/40",
-      )}
+      className={stylex.props(styles.candidateCard, selected ? styles.candidateCardSelected : styles.candidateCardIdle).className}
     >
       {/* Row 1: Label + confidence */}
       <div className={stylex.props(styles.s_831).className}>
         <p className={stylex.props(styles.s_814).className}>{candidate.label}</p>
         <span
-          className={cn(
-            "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
+          className={stylex.props(
+            styles.confidenceBadge,
             candidate.confidence >= 0.9
-              ? "bg-emerald-950/40 text-emerald-400 border border-emerald-700/40"
+              ? styles.confidenceHigh
               : candidate.confidence >= 0.75
-                ? "bg-blue-950/40 text-blue-400 border border-blue-700/40"
-                : "bg-muted text-muted-foreground border border-border",
-          )}
+                ? styles.confidenceMedium
+                : styles.confidenceLow,
+          ).className}
         >
           {Math.round(candidate.confidence * 100)}%
         </span>
@@ -105,7 +99,7 @@ export function CandidateLocationCard({
     </button>
     </TooltipTrigger>
     {tooltipText && (
-      <TooltipContent side="bottom" className={stylex.props(styles.s_984).className}>
+      <TooltipContent side="bottom" xstyle={styles.s_984}>
         {tooltipText}
       </TooltipContent>
     )}

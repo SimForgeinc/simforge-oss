@@ -72,7 +72,7 @@ function formatExpiry(iso: string | null): string | null {
  * Button variants are StyleX-backed; explicit caller classes remain where the
  * control needs a card-specific size or presentation override.
  */
-export function CloudConnectionCard({ className }: { className?: string }) {
+export function CloudConnectionCard({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
   const { status, loading, error, connect, disconnect } = useStudioCloudStatus();
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const state = status?.state ?? null;
@@ -81,7 +81,7 @@ export function CloudConnectionCard({ className }: { className?: string }) {
   return (
     <section
       aria-labelledby="cloud-connection-title"
-      {...mergeStyleProps(stylex.props(card.section), className)}
+      {...stylex.props(card.section, xstyle)}
       data-testid="cloud-connection-card"
       data-cloud-state={state ?? "loading"}
     >

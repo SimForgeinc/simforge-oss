@@ -13,6 +13,7 @@ import { Input } from "../../components/ui/input";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
 import { cn } from "../../lib/utils";
+import { list, paneLoading } from "../scenario-controls.stylex";
 import {
   groupDocumentsByMap,
   groupVariationsBySource,
@@ -286,7 +287,7 @@ export function ScenarioDocumentCreator({
         <div className="min-h-0 flex-1 overflow-y-auto" data-testid="scenario-document-list">
           {documentsLoading && documents.length === 0 ? (
             <WorkspacePaneLoading
-              className="min-h-24"
+              xstyle={paneLoading.h24}
               hint="Reading scenarios and their saved revisions."
               message="Loading scenarios"
             />
@@ -315,7 +316,7 @@ export function ScenarioDocumentCreator({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-9 w-full bg-transparent font-meta text-micro font-bold uppercase tracking-meta-wide hover:bg-transparent hover:text-primary"
+                    xstyle={list.loadMore}
                     disabled={documentsLoadingMore}
                     onClick={onLoadMoreDocuments}
                   >
@@ -470,7 +471,7 @@ function ScenarioTagTools({
                 type="button"
                 size="icon"
                 variant="outline"
-                className="size-6 border-primary/40 text-primary"
+                xstyle={list.tagAdd}
                 aria-label="Add scenario tag"
                 aria-expanded={createOpen}
                 onClick={() => setCreateOpen((open) => !open)}
@@ -497,13 +498,13 @@ function ScenarioTagTools({
                   value={newTagName}
                   onChange={(event) => onNewTagNameChange(event.target.value)}
                   placeholder="Create tag"
-                  className="h-7 min-w-0 flex-1 px-2 text-meta"
+                  xstyle={list.tagNameInput}
                 />
                 <Button
                   type="submit"
                   size="sm"
                   variant="outline"
-                  className="h-7 border-primary/60 px-2 text-micro uppercase tracking-meta text-primary"
+                  xstyle={list.tagSubmit}
                 >
                   Add
                 </Button>
@@ -531,7 +532,7 @@ function ScenarioTagTools({
               type="button"
               variant={selectedTagFilter === null ? "default" : "outline"}
               onClick={() => onSelectTagFilter(null)}
-              className="h-8 w-full justify-start px-3 text-xs"
+              xstyle={list.allScenarios}
             >
               All scenarios
             </Button>

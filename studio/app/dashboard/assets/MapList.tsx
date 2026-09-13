@@ -56,7 +56,7 @@ export function MapList({
     return <p role="alert" {...stylex.props(styles.error)}>{error}</p>;
   }
   if (maps === null) {
-    return <div {...stylex.props(styles.empty)}><p {...stylex.props(styles.emptyText)}>Loading published maps…</p></div>;
+    return <div {...stylex.props(styles.emptyFlush)}><p {...stylex.props(styles.loadingText)}>Loading published maps…</p></div>;
   }
   if (maps.length === 0) {
     return (

@@ -137,6 +137,8 @@ import {
   routePointMayBeTooFast,
   shouldShowRoutePointWarning,
 } from "./route-authoring-warnings";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioEditorSurface.stylex";
 
 export function stopAndResetTimelinePlayback(input: {
   controller: { pause: () => void; seek: (time: number) => void } | null;
@@ -925,17 +927,13 @@ export function ScenarioEditorSurface({
         />
       ) : null}
       <ScenarioEditorShell
-        className={cn(
-          "h-full min-h-editor-shell text-foreground",
-          externalWorld ? "pointer-events-none" : "pointer-events-auto",
-          externalWorld ? "bg-transparent" : "bg-background",
-        )}
+        xstyle={[styles.inkTall, externalWorld ? styles.inert : styles.live, externalWorld ? styles.bgTransparent : styles.bgBackground]}
         canvasMode={externalWorld ? "passthrough" : "interactive"}
         data-external-world={String(externalWorld)}
         data-testid="scenario-editor-surface"
         header={null}
         leftSidebar={sharedPlayback?.inspecting ? null : (slotProps) => (
-          <div {...slotProps} className={cn(slotProps.className, "flex h-full")}>
+          <div {...slotProps} className={cn(stylex.props(styles.flexTall).className, slotProps.className)}>
             <ActorLibraryRail
               controller={controller}
               state={state}
@@ -963,7 +961,7 @@ export function ScenarioEditorSurface({
                   sumoAvailable={Boolean(map.sumoNetworkSha256)}
                 />
               ) : (
-                <div className="grid h-32 place-items-center text-xs text-muted-foreground">
+                <div {...stylex.props(styles.gridCenteredXs)}>
                   <CloudActivityIndicator label="Loading traffic configuration…" />
                 </div>
               )}
@@ -979,7 +977,7 @@ export function ScenarioEditorSurface({
           return (
             <div
               {...canvasSlotProps}
-              className={cn(canvasSlotProps.className, "flex")}
+              className={cn(stylex.props(styles.flex).className, canvasSlotProps.className)}
               data-external-world={String(externalWorld)}
             >
               <EditorCanvasRegion
@@ -1004,14 +1002,14 @@ export function ScenarioEditorSurface({
               canvas={externalWorld ? (viewer?.renderer.domElement ?? null) : null}
             />
           ) : state?.mode && state.mode !== "idle" ? (
-            <div className="pointer-events-auto">
+            <div {...stylex.props(styles.live)}>
               <EditorModeBanner state={state} controller={controller} />
             </div>
           ) : state ? (
-            <div className="pointer-events-none flex flex-col items-center gap-2">
+            <div {...stylex.props(styles.flexColCenter)}>
               {clipboardNotice ? (
                 <p
-                  className="pointer-events-none rounded-md border border-border/70 bg-black/85 px-3 py-1 text-xs text-white shadow-lg backdrop-blur-md"
+                  {...stylex.props(styles.xsWhiteBordered)}
                   data-testid="clipboard-notice"
                   role="status"
                 >
@@ -1024,27 +1022,27 @@ export function ScenarioEditorSurface({
         }
         floatingOverlay={environmentSceneReady && editorDocument ? (
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4"
+            {...stylex.props(styles.absFlexMid)}
             data-left-panel-open={String(expandedTool !== null)}
             data-testid="floating-timeline-layer"
           >
             {/* 920px is the previous 736px widened by a quarter: the clips need the
                 horizontal room more than the viewport needs the margin, and the
                 name column can now be traded against the track by dragging. */}
-            <div className="pointer-events-auto relative h-auto max-h-[min(65vh,520px)] w-full max-w-[920px] min-w-0">
+            <div {...stylex.props(styles.relLiveWide)}>
               {/* Absolutely positioned rather than stacked above the card: the
                   timeline's height is constrained and user-draggable, and a
                   flow sibling would take height from the track. Escape is bound
                   only while playback is inspecting (V1TimelineRail), so the hint
                   appears exactly when the key does something. */}
               {sharedPlayback?.inspecting ? (
-                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-xs text-white">
+                <p {...stylex.props(styles.absXsWhite)}>
                   Press Escape to exit simulation
                 </p>
               ) : null}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl"
+                {...stylex.props(styles.absInertRound)}
               />
               <EditorTimelineOverlayBridge
                 document={editorDocument}
@@ -1179,18 +1177,18 @@ function RoutePointSpeedWarningOverlay({
         return (
           <div
             aria-live="polite"
-            className="pointer-events-none fixed z-[90] max-w-56 -translate-x-1/2 -translate-y-full pb-3"
+            {...stylex.props(styles.fixedInert)}
             data-point-warning-id={warning.id}
             data-testid="route-point-speed-warning"
             key={warning.id}
             role="status"
             style={{ left: position.x, top: position.y }}
           >
-            <div className="relative border border-amber-300/80 bg-black/90 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md">
+            <div {...stylex.props(styles.relMediumBordered)}>
               {warning.message}
               <span
                 aria-hidden="true"
-                className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-amber-300/80 bg-black"
+                {...stylex.props(styles.absRuleBRuleR)}
               />
             </div>
           </div>

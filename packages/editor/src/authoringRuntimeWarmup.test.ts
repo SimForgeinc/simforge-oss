@@ -21,13 +21,14 @@ describe('authoring runtime warmup', () => {
     let resolve!: (index: LaneIndex) => void;
     const index = {} as LaneIndex;
     const pending = new Promise<LaneIndex>((done) => { resolve = done; });
+    const engine = {} as never;
     const load = vi.spyOn(LaneIndex, 'load').mockReturnValue(pending);
 
-    const first = warmAuthoringRuntime(TEST_MAP);
-    const second = warmAuthoringRuntime(TEST_MAP);
+    const first = warmAuthoringRuntime(TEST_MAP, engine);
+    const second = warmAuthoringRuntime(TEST_MAP, engine);
     expect(first).toBe(second);
     expect(load).toHaveBeenCalledOnce();
-    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl);
+    expect(load).toHaveBeenCalledWith(TEST_MAP.topologyUrl, { engine });
     expect(authoringRuntimeReady(TEST_MAP.mapVersionId)).toBe(false);
 
     resolve(index);

@@ -26,7 +26,7 @@ import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
 const AssetModelPreview = dynamic(() => import("./AssetModelPreview"), {
   ssr: false,
   loading: () => (
-    <div {...stylex.props(dialog.loadingPreview)}>
+    <div {...stylex.props(dialog.drawerPreviewLoading)}>
       Loading preview…
     </div>
   ),
@@ -167,7 +167,7 @@ export function AssetDetailDrawer({
             <AssetModelPreview catalogId={asset.catalogId} />
             <div {...stylex.props(drawer.stats)}>
               <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Class</p><p {...stylex.props(drawer.value)}>{asset.actorClass.replaceAll("_", " ")}</p>
+                <p {...stylex.props(drawer.eyebrow)}>Class</p><p {...stylex.props(drawer.valueCapitalize)}>{asset.actorClass.replaceAll("_", " ")}</p>
               </div>
               <div {...stylex.props(drawer.tile)}>
                 <p {...stylex.props(drawer.eyebrow)}>Triangles</p><p {...stylex.props(drawer.value)}>{asset.triangleCount.toLocaleString()}</p>
@@ -176,19 +176,19 @@ export function AssetDetailDrawer({
                 <p {...stylex.props(drawer.eyebrow)}>Dimensions</p><p {...stylex.props(drawer.value)}>{asset.dims.l.toFixed(2)} × {asset.dims.w.toFixed(2)} × {asset.dims.h.toFixed(2)} m</p>
               </div>
               <div {...stylex.props(drawer.tile)}>
-                <p {...stylex.props(drawer.eyebrow)}>Source</p><p {...stylex.props(drawer.value)}>{asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB</p>
+                <p {...stylex.props(drawer.eyebrow)}>Source</p><p {...stylex.props(drawer.valueUppercase)}>{asset.sourceFormat} · {(asset.byteLength / 1_048_576).toFixed(1)} MB</p>
               </div>
               <div {...stylex.props(drawer.tile, dialog.span2)}>
                 <p {...stylex.props(drawer.eyebrow)}>CARLA</p>
                 <div {...stylex.props(drawer.section)}>
                   <CarlaCompatibilityPill compatibility={GALLERY_UPLOAD_CARLA_COMPATIBILITY} size="sm" />
-                  <p {...stylex.props(dialog.mutedText)}>Runs in browser preview and browser-recorded renders, but not CARLA renders because it has no runtime blueprint.</p>
+                  <p {...stylex.props(dialog.drawerNote)}>Runs in browser preview and browser-recorded renders, but not CARLA renders because it has no runtime blueprint.</p>
                 </div>
               </div>
             </div>
 
             {asset.description ? (
-              <p {...stylex.props(dialog.bodyText)}>{asset.description}</p>
+              <p {...stylex.props(dialog.drawerBody)}>{asset.description}</p>
             ) : null}
 
             {asset.tags.length > 0 ? (
@@ -200,19 +200,19 @@ export function AssetDetailDrawer({
             <section aria-labelledby="asset-clips-heading" {...stylex.props(drawer.section)}>
               <h3 id="asset-clips-heading" {...stylex.props(dialog.sectionHeading)}>Animation clips</h3>
               {asset.clips.length > 0 ? (
-                <ul {...stylex.props(dialog.list)}>
+                <ul {...stylex.props(dialog.clipList)}>
                   {asset.clips.map((clip) => (
                     <li key={clip} {...stylex.props(dialog.listRow)}>
-                      <span>{clip}</span>
-                      <span {...stylex.props(dialog.mutedText)}>{clip === asset.idleClip ? "Idle" : clip === asset.locomotionClip ? "Locomotion" : ""}</span>
+                      <span {...stylex.props(dialog.truncate)}>{clip}</span>
+                      <span {...stylex.props(dialog.drawerClipTag)}>{clip === asset.idleClip ? "Idle" : clip === asset.locomotionClip ? "Locomotion" : ""}</span>
                     </li>
                   ))}
                 </ul>
-              ) : <p {...stylex.props(dialog.bodyText)}>No animation clips</p>}
+              ) : <p {...stylex.props(dialog.drawerBodyMuted)}>No animation clips</p>}
             </section>
 
             <div {...stylex.props(dialog.stack)}>
-              <p {...stylex.props(dialog.mono)}>{asset.catalogId}</p>
+              <p {...stylex.props(dialog.drawerMono)}>{asset.catalogId}</p>
               {renameDraft !== null ? (
                 <form
                   {...stylex.props(dialog.renameForm)}

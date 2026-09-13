@@ -4,6 +4,7 @@ import { useId } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { control } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "./CopyableErrorMessage";
 
 export function NewDatasetDialog({
@@ -73,7 +74,7 @@ export function NewDatasetDialog({
             }
           }}
           placeholder={placeholder}
-          className="mt-4"
+          xstyle={control.spaceAbove4}
           disabled={busy}
         />
         {/*

@@ -13,6 +13,8 @@ import {
   type Interaction,
   type SetValue,
 } from "@simforge-oss/scenario";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./InteractionTargetControls.stylex";
 
 type SpeedInteraction = Extract<Interaction, { verb: "speed" }>;
 type ChangeLaneInteraction = Extract<Interaction, { verb: "changeLane" }>;
@@ -74,7 +76,7 @@ export function InteractionTargetControls({
 
   if (interaction.verb === "speed") {
     return (
-      <div className="space-y-2">
+      <div {...stylex.props(styles.stackMd)}>
         <InteractionTargetModeControls
           document={document}
           interaction={interaction}
@@ -108,9 +110,9 @@ export function InteractionTargetControls({
                 )
               : interaction.target.mode === "match"
                 ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div {...stylex.props(styles.gridCols2Gap2)}>
                       <SelectMenuField
-                        className="h-8 text-xs"
+                        xstyle={styles.xs}
                         label="Match actor"
                         options={roleOptions}
                         value={interaction.target.role}
@@ -133,16 +135,16 @@ export function InteractionTargetControls({
 
   if (interaction.verb === "gap") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2)}>
         <SelectMenuField
-          className="h-8 text-xs"
+          xstyle={styles.xs}
           label="Follow actor"
           options={roleOptions}
           value={interaction.target.role}
           onChange={(role) => commit({ ...interaction.target, role })}
         />
         <SelectMenuField
-          className="h-8 text-xs"
+          xstyle={styles.xs}
           label="Gap unit"
           options={[
             { value: "time", label: "Time (seconds)" },
@@ -154,7 +156,7 @@ export function InteractionTargetControls({
             unit: unit as "time" | "distance",
           })}
         />
-        <div className="col-span-2">
+        <div {...stylex.props(styles.colSpan2)}>
           {numberTarget(
             interaction.id,
             interaction.target.unit === "time" ? "Gap (seconds)" : "Gap (metres)",
@@ -170,9 +172,9 @@ export function InteractionTargetControls({
 
   if (interaction.verb === "laneOffset") {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div {...stylex.props(styles.gridCols2Gap2)}>
         <SelectMenuField
-          className="h-8 text-xs"
+          xstyle={styles.xs}
           label="Offset reference"
           options={[
             { value: "lane_center", label: "Lane center" },
@@ -200,7 +202,7 @@ export function InteractionTargetControls({
 
   if (interaction.verb === "changeLane") {
     return (
-      <div className="space-y-2">
+      <div {...stylex.props(styles.stackMd)}>
         <InteractionTargetModeControls
           document={document}
           interaction={interaction}
@@ -229,7 +231,7 @@ export function InteractionTargetControls({
               )
             : (
                 <SelectMenuField
-                  className="h-8 text-xs"
+                  xstyle={styles.xs}
                   label="Align with actor"
                   options={roleOptions}
                   value={interaction.target.role}
@@ -254,7 +256,7 @@ export function InteractionTargetControls({
   if (interaction.verb === "exist") {
     return (
       <SelectMenuField
-        className="h-8 text-xs"
+        xstyle={styles.xs}
         label="Existence state"
         options={[
           { value: "present", label: "Present" },
@@ -305,7 +307,7 @@ export function InteractionTargetModeControls({
   if (interaction.verb === "speed") {
     return (
       <SelectMenuField
-        className="h-8 text-xs"
+        xstyle={styles.xs}
         label="Speed target mode"
         options={SPEED_MODES.map((value) => ({ value, label: humanize(value) }))}
         value={interaction.target.mode}
@@ -315,7 +317,7 @@ export function InteractionTargetModeControls({
   }
   return (
     <SelectMenuField
-      className="h-8 text-xs"
+      xstyle={styles.xs}
       label="Lane target mode"
       options={LANE_CHANGE_MODES.map((value) => ({ value, label: humanize(value) }))}
       value={interaction.target.mode}
@@ -337,26 +339,26 @@ function RouteTargetControls({
 }) {
   const { target } = interaction;
   return (
-    <div className="space-y-2">
+    <div {...stylex.props(styles.stackMd)}>
       <SelectMenuField
-        className="h-8 text-xs"
+        xstyle={styles.xs}
         label="Route target mode"
         options={ROUTE_MODES.map((value) => ({ value, label: humanize(value) }))}
         value={target.mode}
         onChange={(mode) => onChange(defaultRouteTarget(mode as RouteTarget["mode"], peer))}
       />
       {target.mode === "turn" ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div {...stylex.props(styles.gridCols2Gap2)}>
           <IdField label="Junction feature" value={target.feature} onChange={(feature) => onChange({ ...target, feature })} />
-          <SelectMenuField className="h-8 text-xs" label="Turn" options={["left", "right", "straight", "uturn"]} value={target.turn} onChange={(turn) => onChange({ ...target, turn: turn as typeof target.turn })} />
+          <SelectMenuField xstyle={styles.xs} label="Turn" options={["left", "right", "straight", "uturn"]} value={target.turn} onChange={(turn) => onChange({ ...target, turn: turn as typeof target.turn })} />
         </div>
       ) : target.mode === "nextJunction" ? (
-        <SelectMenuField className="h-8 text-xs" label="Turn" options={["straight", "left", "right"]} value={target.turn} onChange={(turn) => onChange({ ...target, turn: turn as typeof target.turn })} />
+        <SelectMenuField xstyle={styles.xs} label="Turn" options={["straight", "left", "right"]} value={target.turn} onChange={(turn) => onChange({ ...target, turn: turn as typeof target.turn })} />
       ) : target.mode === "toFeature" ? (
         <IdField label="Destination feature" value={target.feature} onChange={(feature) => onChange({ ...target, feature })} />
       ) : target.mode === "crossing" ? (
-        <div className="grid grid-cols-2 gap-2">
-          <div className="col-span-2"><IdField label="Crossing feature" value={target.feature} onChange={(feature) => onChange({ ...target, feature })} /></div>
+        <div {...stylex.props(styles.gridCols2Gap2)}>
+          <div {...stylex.props(styles.colSpan2)}><IdField label="Crossing feature" value={target.feature} onChange={(feature) => onChange({ ...target, feature })} /></div>
           {numberTarget(interaction.id, "Start fraction", "crossing-from", target.fromFrac ?? 0, 0, (fromFrac) => onChange({ ...target, fromFrac }), 1)}
           {numberTarget(interaction.id, "End fraction", "crossing-to", target.toFrac ?? 1, 0, (toFrac) => onChange({ ...target, toFrac }), 1)}
         </div>
@@ -371,9 +373,9 @@ function RouteTargetControls({
       ) : target.mode === "acquire" ? (
         <FramePoseControls interactionId={interaction.id} pose={target.pose} onChange={(pose) => onChange({ ...target, pose })} />
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <SelectMenuField className="h-8 text-xs" label="Near-miss actor" options={roleOptions} value={target.target} onChange={(next) => onChange({ ...target, target: next })} />
-          <SelectMenuField className="h-8 text-xs" label="Pass" options={["front", "behind", "auto"]} value={target.pass ?? "auto"} onChange={(pass) => onChange({ ...target, pass: pass as NonNullable<typeof target.pass> })} />
+        <div {...stylex.props(styles.gridCols2Gap2)}>
+          <SelectMenuField xstyle={styles.xs} label="Near-miss actor" options={roleOptions} value={target.target} onChange={(next) => onChange({ ...target, target: next })} />
+          <SelectMenuField xstyle={styles.xs} label="Pass" options={["front", "behind", "auto"]} value={target.pass ?? "auto"} onChange={(pass) => onChange({ ...target, pass: pass as NonNullable<typeof target.pass> })} />
           {numberTarget(interaction.id, "Clearance (m)", "near-miss-clearance", target.clearanceM ?? 1, 0, (clearanceM) => onChange({ ...target, clearanceM }))}
           {numberTarget(interaction.id, "Minimum speed (kph)", "near-miss-min-speed", target.minSpeedKph ?? 0, 0, (minSpeedKph) => onChange({ ...target, minSpeedKph }))}
           {numberTarget(interaction.id, "Maximum speed (kph)", "near-miss-max-speed", target.maxSpeedKph ?? 50, 0, (maxSpeedKph) => onChange({ ...target, maxSpeedKph }))}
@@ -386,22 +388,22 @@ function RouteTargetControls({
 
 function FramePoseList({ interactionId, points, onChange }: { interactionId: string; points: readonly FramePose[]; onChange: (points: FramePose[]) => void }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-micro text-white/45">Polyline points</legend>
+    <fieldset>
+      <legend {...stylex.props(styles.micro)}>Polyline points</legend>
       {points.map((point, index) => (
-        <div className="border border-white/10 p-2" key={index}>
+        <div {...stylex.props(styles.borderedPad2, styles.stackedMd)} key={index}>
           <FramePoseControls interactionId={`${interactionId}-${index}`} pose={point} onChange={(pose) => onChange(points.map((item, at) => at === index ? pose : item))} />
-          {points.length > 2 ? <button className="mt-2 text-micro text-red-300" type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
+          {points.length > 2 ? <button {...stylex.props(styles.micro2)} type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
         </div>
       ))}
-      {points.length < 32 ? <button className="text-micro text-[#E8E044]" type="button" onClick={() => onChange([...points, { s: 0, laneOffset: 0, tFrac: 0, headingOffsetRad: 0 }])}>Add polyline point</button> : null}
+      {points.length < 32 ? <button {...stylex.props(styles.micro3, styles.stackedMd)} type="button" onClick={() => onChange([...points, { s: 0, laneOffset: 0, tFrac: 0, headingOffsetRad: 0 }])}>Add polyline point</button> : null}
     </fieldset>
   );
 }
 
 function FramePoseControls({ interactionId, pose, onChange }: { interactionId: string; pose: FramePose; onChange: (pose: FramePose) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div {...stylex.props(styles.gridCols2Gap2)}>
       {numberTarget(interactionId, "Longitudinal s", "pose-s", pose.s, undefined, (s) => onChange({ ...pose, s }))}
       {numberTarget(interactionId, "Lane index offset", "pose-lane", pose.laneOffset ?? 0, -8, (laneOffset) => onChange({ ...pose, laneOffset: Math.round(laneOffset) }), 8, 1)}
       {numberTarget(interactionId, "Lateral fraction", "pose-frac", pose.tFrac ?? 0, -1, (tFrac) => onChange({ ...pose, tFrac }), 1)}
@@ -412,16 +414,16 @@ function FramePoseControls({ interactionId, pose, onChange }: { interactionId: s
 
 function CustomPointList({ interactionId, points, onChange }: { interactionId: string; points: readonly { x: number; z: number }[]; onChange: (points: { x: number; z: number }[]) => void }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-micro text-white/45">Scene points</legend>
+    <fieldset>
+      <legend {...stylex.props(styles.micro)}>Scene points</legend>
       {points.map((point, index) => (
-        <div className="grid grid-cols-2 gap-2 border border-white/10 p-2" key={index}>
+        <div {...stylex.props(styles.gridBorderedCols2, styles.stackedMd)} key={index}>
           {numberTarget(interactionId, `Point ${index + 1} x`, `custom-x-${index}`, point.x, undefined, (x) => onChange(points.map((item, at) => at === index ? { ...item, x } : item)))}
           {numberTarget(interactionId, `Point ${index + 1} z`, `custom-z-${index}`, point.z, undefined, (z) => onChange(points.map((item, at) => at === index ? { ...item, z } : item)))}
-          {points.length > 2 ? <button className="col-span-2 text-left text-micro text-red-300" type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
+          {points.length > 2 ? <button {...stylex.props(styles.microLeftText)} type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
         </div>
       ))}
-      {points.length < 128 ? <button className="text-micro text-[#E8E044]" type="button" onClick={() => onChange([...points, { x: 0, z: 0 }])}>Add scene point</button> : null}
+      {points.length < 128 ? <button {...stylex.props(styles.micro3, styles.stackedMd)} type="button" onClick={() => onChange([...points, { x: 0, z: 0 }])}>Add scene point</button> : null}
     </fieldset>
   );
 }
@@ -432,10 +434,10 @@ function TimedCustomPointList({ interactionId, points, onChange }: {
   onChange: (points: { timeS: number; x: number; z: number }[]) => void;
 }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-micro text-white/45">Exact timed scene points</legend>
+    <fieldset>
+      <legend {...stylex.props(styles.micro)}>Exact timed scene points</legend>
       {points.map((point, index) => (
-        <div className="grid grid-cols-3 gap-2 border border-white/10 p-2" key={index}>
+        <div {...stylex.props(styles.gridBorderedCols3, styles.stackedMd)} key={index}>
           {numberTarget(interactionId, `Point ${index + 1} time`, `timed-time-${index}`, point.timeS, 0, (timeS) => onChange(points.map((item, at) => at === index ? { ...item, timeS } : item)))}
           {index === 0
             ? pinnedCoordinate(interactionId, "Point 1 x", "timed-x-0", point.x)
@@ -447,14 +449,14 @@ function TimedCustomPointList({ interactionId, points, onChange }: {
             // Not an authored waypoint: it is where the simulation starts the actor, so it
             // is the actor's own position. The map tool refuses to drag it for the same
             // reason, and moving the actor carries the whole route.
-            <p className="col-span-3 text-micro text-white/35">
+            <p {...stylex.props(styles.micro4)}>
               The first point is the actor&apos;s position. Move the actor to move it.
             </p>
           ) : null}
-          {index > 0 && points.length > 2 ? <button className="col-span-3 text-left text-micro text-red-300" type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
+          {index > 0 && points.length > 2 ? <button {...stylex.props(styles.microLeftText2)} type="button" onClick={() => onChange(points.filter((_, at) => at !== index))}>Remove point {index + 1}</button> : null}
         </div>
       ))}
-      {points.length < 1024 ? <button className="text-micro text-[#E8E044]" type="button" onClick={() => {
+      {points.length < 1024 ? <button {...stylex.props(styles.micro3, styles.stackedMd)} type="button" onClick={() => {
         const last = points.at(-1) ?? { timeS: 0, x: 0, z: 0 };
         onChange([...points, { timeS: last.timeS + 1, x: last.x, z: last.z }]);
       }}>Add one-second point</button> : null}
@@ -510,10 +512,10 @@ function numberTarget(
 ) {
   if (typeof value !== "number") return <TargetSummary value="Expression-authored value" />;
   return (
-    <label className="block text-micro text-white/45">
+    <label {...stylex.props(styles.blockMicro)}>
       {label}
       <Input
-        className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white"
+        xstyle={styles.xsWhite}
         data-testid={`interaction-target-${selector}-${interactionId}`}
         max={max}
         min={min}
@@ -537,10 +539,10 @@ function numberTarget(
 function pinnedCoordinate(interactionId: string, label: string, selector: string, value: unknown) {
   if (typeof value !== "number") return <TargetSummary value="Expression-authored value" />;
   return (
-    <label className="block text-micro text-white/35">
+    <label {...stylex.props(styles.blockMicro2)}>
       {label}
       <Input
-        className="mt-1 h-8 border-white/10 bg-white/[0.02] text-xs text-white/50"
+        xstyle={styles.xs2}
         data-testid={`interaction-target-${selector}-${interactionId}`}
         readOnly
         step={0.1}
@@ -553,18 +555,18 @@ function pinnedCoordinate(interactionId: string, label: string, selector: string
 
 function IdField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="block text-micro text-white/45">
+    <label {...stylex.props(styles.blockMicro)}>
       {label}
-      <Input className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white" value={value} onChange={(event) => onChange(event.currentTarget.value)} />
+      <Input xstyle={styles.xsWhite} value={value} onChange={(event) => onChange(event.currentTarget.value)} />
     </label>
   );
 }
 
 function TextListField({ label, value, onChange }: { label: string; value: readonly string[]; onChange: (value: string[]) => void }) {
   return (
-    <label className="block text-micro text-white/45">
+    <label {...stylex.props(styles.blockMicro)}>
       {label}
-      <Input className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white" value={value.join(", ")} onChange={(event) => onChange(event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} />
+      <Input xstyle={styles.xsWhite} value={value.join(", ")} onChange={(event) => onChange(event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} />
     </label>
   );
 }
@@ -573,15 +575,15 @@ function SetValueControl({ interaction, onChange }: { interaction: Extract<Inter
   const declaration = lookupSetKey(interaction.target.key);
   const selector = `interaction-target-value-${interaction.id}`;
   if (declaration?.valueType === "enum" && declaration.values) {
-    return <div data-testid={selector}><SelectMenu className="h-8 text-xs" label="Target value" options={declaration.values.map((value) => ({ value, label: value }))} value={String(interaction.target.value)} onChange={onChange} /></div>;
+    return <div data-testid={selector}><SelectMenu xstyle={styles.xs} label="Target value" options={declaration.values.map((value) => ({ value, label: value }))} value={String(interaction.target.value)} onChange={onChange} /></div>;
   }
   if (declaration?.valueType === "boolean") {
-    return <div data-testid={selector}><SelectMenu className="h-8 text-xs" label="Target value" options={[{ value: "true", label: "True" }, { value: "false", label: "False" }]} value={String(interaction.target.value)} onChange={(value) => onChange(value === "true")} /></div>;
+    return <div data-testid={selector}><SelectMenu xstyle={styles.xs} label="Target value" options={[{ value: "true", label: "True" }, { value: "false", label: "False" }]} value={String(interaction.target.value)} onChange={(value) => onChange(value === "true")} /></div>;
   }
   return (
-    <label className="block text-micro text-white/45">
+    <label {...stylex.props(styles.blockMicro)}>
       Target value
-      <Input className="mt-1 h-8 border-white/15 bg-white/5 text-xs text-white" data-testid={selector} max={declaration?.range?.[1]} min={declaration?.range?.[0]} step={declaration?.valueType === "number" ? 0.1 : undefined} type={declaration?.valueType === "number" ? "number" : "text"} value={String(interaction.target.value)} onChange={(event) => {
+      <Input xstyle={styles.xsWhite} data-testid={selector} max={declaration?.range?.[1]} min={declaration?.range?.[0]} step={declaration?.valueType === "number" ? 0.1 : undefined} type={declaration?.valueType === "number" ? "number" : "text"} value={String(interaction.target.value)} onChange={(event) => {
         if (declaration?.valueType === "number") {
           const next = Number(event.currentTarget.value);
           if (Number.isFinite(next)) onChange(next);
@@ -592,7 +594,7 @@ function SetValueControl({ interaction, onChange }: { interaction: Extract<Inter
 }
 
 function TargetSummary({ value }: { value: string }) {
-  return <p className="text-micro text-white/40">Target <span className="text-white/65">{value}</span></p>;
+  return <p {...stylex.props(styles.micro5)}>Target <span {...stylex.props(styles.textWhite65)}>{value}</span></p>;
 }
 
 function humanize(value: string) {

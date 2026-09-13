@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFinalizedArtifact } from "@/app/lib/scenario/control-plane-store";
+import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
 import { requireScenarioContext } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ artifactId: string }> };
@@ -12,8 +13,11 @@ export async function GET(request: Request, route: Context) {
     ? "attachment"
     : "inline";
   const artifact = await getFinalizedArtifact(auth.context, artifactId, disposition);
-  return artifact
-    ? NextResponse.json(artifact, {
+  const body = artifact
+    ? { ...artifact, downloadUrl: sameOriginWhenLocal(artifact.downloadUrl) }
+    : null;
+  return body
+    ? NextResponse.json(body, {
         headers: { "Cache-Control": "private, no-store" },
       })
     : NextResponse.json({ error: "artifact_not_found" }, { status: 404 });

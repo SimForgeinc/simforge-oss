@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 
 import type { CatalogId } from "@simforge-oss/asset-catalog";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./parts.stylex";
 
 /**
  * Shared drawing vocabulary for the vehicle catalog artwork.
@@ -112,7 +114,7 @@ export function VehicleSvg({
       aria-label={`${id.slice(id.indexOf(".") + 1).replaceAll("_", " ")} model`}
       data-vehicle-icon={id}
       data-catalog-icon={id}
-      style={{ display: "block", overflow: "visible" }}
+      {...stylex.props(styles.block)}
     >
       <ArtDefs />
       {children}

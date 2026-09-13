@@ -2,6 +2,14 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScenarioScenarioRail } from "../../src/scenario/rail/ScenarioScenarioRail";
+import { rail as railStyles } from "../../src/scenario/scenario-controls.stylex";
+
+/** One compiled atom of a StyleX namespace, by the property it declares. */
+const atomFor = (namespace: object, property: string): string => {
+  const key = Object.keys(namespace).find((k) => k.startsWith(`${property}-`));
+  if (!key) throw new Error(`no compiled ${property} atom`);
+  return (namespace as Record<string, string>)[key];
+};
 
 afterEach(cleanup);
 
@@ -43,9 +51,13 @@ describe("ScenarioScenarioRail", () => {
     expect(screen.getByRole("heading", { name: "Scenarios" })).toBeTruthy();
     expect(screen.getByText("Cut-in corpus")).toBeTruthy();
     expect(header.contains(addScenario)).toBe(true);
-    expect(addScenario.className).toContain("justify-center");
-    expect(addScenario.className).toContain("bg-[#E8E044]");
-    expect(addScenario.className).toContain("font-bold");
+    // The accent footer style — centered, on the accent fill, in the heavy meta
+    // weight — as the atoms the compiler emitted, not as literal class text.
+    for (const property of ["justifyContent", "backgroundColor", "fontWeight"]) {
+      expect(addScenario.className).toContain(
+        atomFor(railStyles.footerAction, property),
+      );
+    }
     expect(screen.getByTestId("scenario-scenario-rail").className).toContain(
       "bg-transparent",
     );

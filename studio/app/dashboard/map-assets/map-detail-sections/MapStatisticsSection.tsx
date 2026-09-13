@@ -5,7 +5,6 @@ import { styles } from "../map-assets.stylex";
 import { ChevronRight, Check, Copy } from "lucide-react";
 import type { CandidateLocation, MapStats } from "@simforge-oss/studio-shared";
 import { MapStatsDisplay } from "./MapStatsDisplay";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the MapStatisticsSection component. */
 type MapStatisticsSectionProps = {
@@ -36,7 +35,7 @@ export function MapStatisticsSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           Map Statistics
         </button>

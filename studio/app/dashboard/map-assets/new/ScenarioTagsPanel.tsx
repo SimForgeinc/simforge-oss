@@ -7,7 +7,6 @@ import { ChevronDown, X } from "lucide-react";
 import { MAP_ASSET_DESCRIPTOR_TAG_IDS, getMapAssetDescriptorTag } from "@simforge-oss/studio-shared";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { displayTag } from "@/app/lib/maps/frontend/add-map-utils";
 
 interface ScenarioTagsPanelProps {
@@ -73,7 +72,7 @@ export function ScenarioTagsPanel({
       <div className={stylex.props(styles.s_267).className}>
         <h2 className={stylex.props(styles.s_880).className}>Scenario tags</h2>
         <span
-          className={stylex.props(styles.u_952, styles.u_937, styles.u_941, styles.u_961).className}
+          className={stylex.props(styles.tagCount, tags.length > 0 ? styles.tagCountFilled : styles.tagCountEmpty).className}
         >
           {tags.length} tags
         </span>
@@ -92,7 +91,7 @@ export function ScenarioTagsPanel({
               <span
                 key={tagId}
                 title={descriptor?.shortDefinition}
-                className={stylex.props(styles.u_927, styles.u_928, styles.u_916, styles.u_951, styles.u_903, styles.u_935, styles.u_941).className}
+                className={stylex.props(styles.tagChip, isAuto ? styles.tagChipAuto : styles.tagChipManual).className}
               >
                 {isAuto && (
                   <span className={stylex.props(styles.s_271).className}>
@@ -103,7 +102,7 @@ export function ScenarioTagsPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveTag(tagId)}
-                  className={stylex.props(styles.u_931, styles.u_970).className}
+                  className={stylex.props(styles.tagRemove, isAuto ? styles.tagRemoveAuto : styles.tagRemoveManual).className}
                   aria-label={`Remove ${tagId}`}
                 >
                   <X className={stylex.props(styles.s_967).className} />
@@ -120,7 +119,7 @@ export function ScenarioTagsPanel({
           type="button"
           variant="outline"
           size="sm"
-          className={stylex.props(styles.s_288).className}
+          xstyle={styles.s_288}
           onClick={() => { setTagDropdownOpen((o) => !o); setTagSearch(""); }}
         >
           + Add tag
@@ -132,7 +131,7 @@ export function ScenarioTagsPanel({
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
                 placeholder="Search tags..."
-                className={stylex.props(styles.s_288).className}
+                xstyle={styles.s_288}
                 autoFocus
               />
             </div>
@@ -174,7 +173,7 @@ export function ScenarioTagsPanel({
           className={stylex.props(styles.s_351).className}
         >
           <ChevronDown
-            className={cn("size-3 shrink-0 transition-transform", !csvOpen && "-rotate-90")}
+            className={stylex.props(styles.chevron, !csvOpen && styles.rotateMinus90).className}
           />
           Bulk-add via CSV paste
         </button>
@@ -189,10 +188,10 @@ export function ScenarioTagsPanel({
               placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
               spellCheck={false}
               rows={3}
-              className={stylex.props(styles.s_285).className}
+              className={stylex.props(styles.s_285, styles.stackY1_5).className}
             />
             {csvErrors.length > 0 && (
-              <p className={stylex.props(styles.s_451).className}>
+              <p className={stylex.props(styles.s_451, styles.stackY1_5).className}>
                 Unrecognised (ignored):{" "}
                 <span className={stylex.props(styles.s_940).className}>{csvErrors.join(", ")}</span>
               </p>
@@ -201,7 +200,7 @@ export function ScenarioTagsPanel({
               type="button"
               variant="outline"
               size="sm"
-              className={stylex.props(styles.s_288).className}
+              xstyle={[styles.s_288, styles.stackY1_5]}
               disabled={!csvInput.trim()}
               onClick={applyCSV}
             >

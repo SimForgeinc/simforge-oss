@@ -39,25 +39,28 @@ export function DigitalTwinLayersPanel() {
 
   return (
     <div className={stylex.props(styles.s_426).className}>
-      <div className={stylex.props(styles.s_986).className}>
+      {/* `space-y-1.5` lives on the children here: the label is an inline
+          `<span>`, so a flex column would blockify it and change its line box. */}
+      <div>
         <span className={stylex.props(styles.s_636).className}>Render quality</span>
-        <div className={stylex.props(styles.s_429).className}>
+        <div className={stylex.props(styles.s_429, styles.stackY1_5).className}>
           {QUALITY_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => chooseQuality(value)}
-              className={`flex-1 rounded-md px-2 py-1 text-xs transition-colors ${
-                quality === value
-                  ? "bg-background font-medium text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={
+                stylex.props(
+                  styles.qualitySegment,
+                  quality === value ? styles.qualitySegmentActive : styles.qualitySegmentInactive,
+                ).className
+              }
             >
               {label}
             </button>
           ))}
         </div>
-        <p className={stylex.props(styles.s_430).className}>
+        <p className={stylex.props(styles.s_430, styles.stackY1_5).className}>
           Changes apply to the shared scenario-editor and digital-twin viewer on reload.
         </p>
       </div>

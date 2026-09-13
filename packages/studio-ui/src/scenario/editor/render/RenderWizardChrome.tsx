@@ -4,6 +4,9 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { cn } from "../../../lib/utils";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderWizardChrome.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The chrome every step of the new-render flow shares.
@@ -32,22 +35,23 @@ export function RenderWizardStepRail({
   onSelect: (index: number) => void;
 }) {
   return (
-    <ol className="flex flex-wrap items-center gap-x-1 gap-y-1" data-testid="render-wizard-steps">
+    <ol {...stylex.props(styles.flexCenterWrap)} data-testid="render-wizard-steps">
       {steps.map((step, index) => {
         const state = index === activeIndex ? "active" : index < activeIndex ? "done" : "todo";
         return (
-          <li className="flex items-center gap-1" key={step.id}>
-            {index > 0 ? <span aria-hidden="true" className="w-3 border-t render-hairline" /> : null}
+          <li {...stylex.props(styles.flexCenterGap1)} key={step.id}>
+            {index > 0 ? <span aria-hidden="true" {...stylex.props(styles.ruleT)} /> : null}
             <button
               aria-current={state === "active" ? "step" : undefined}
-              className={cn(
-                "editor-motion inline-flex items-center gap-1.5 px-2 py-1 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              className={stylex.props(
+                styles.inlineFlexCenterCaps2,
+                motionStyles.editorMotion,
                 state === "active"
-                  ? "bg-primary text-primary-foreground"
+                  ? styles.stepActive
                   : state === "done"
-                    ? "text-foreground/80 hover:text-primary"
-                    : "cursor-default text-muted-foreground/50",
-              )}
+                    ? styles.stepDone
+                    : styles.stepTodo,
+              ).className}
               data-state={state}
               data-testid={`render-wizard-step-${step.id}`}
               disabled={state === "todo"}
@@ -55,9 +59,9 @@ export function RenderWizardStepRail({
               type="button"
             >
               {state === "done" ? (
-                <Check aria-hidden="true" className="size-3" />
+                <Check aria-hidden="true" className={stylex.props(styles.size3).className} />
               ) : (
-                <span className="font-mono">{String(index + 1).padStart(2, "0")}</span>
+                <span {...stylex.props(styles.mono)}>{String(index + 1).padStart(2, "0")}</span>
               )}
               {step.label}
             </button>
@@ -94,10 +98,7 @@ export function RenderWizardBody({
 }) {
   return (
     <div
-      className={cn(
-        "render-step-center flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-5",
-        className,
-      )}
+      className={cn(stylex.props(styles.flexColFill).className, "render-step-center", className)}
       data-testid={testId}
     >
       {children}
@@ -129,35 +130,30 @@ export function RenderWizardFooter({
   primary?: ReactNode;
 }) {
   return (
-    <footer className="flex shrink-0 items-center justify-between gap-4 render-glass-raised border-t px-6 py-3.5">
-      <div className="min-w-0 text-micro text-muted-foreground">{note}</div>
-      <div className="flex shrink-0 items-center gap-2">
+    <footer {...stylex.props(styles.flexCenterBetween)}>
+      <div {...stylex.props(styles.microMutedNarrowable)}>{note}</div>
+      <div {...stylex.props(styles.flexCenterTight)}>
         {onBack ? (
           <button
-            className="editor-motion inline-flex h-9 items-center gap-1.5 border render-hairline render-glass px-3 text-micro font-bold uppercase tracking-meta text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
             data-testid="render-wizard-back"
             onClick={onBack}
             type="button"
           >
-            <ArrowLeft aria-hidden="true" className="size-3.5" />
+            <ArrowLeft aria-hidden="true" className={stylex.props(styles.size35).className} />
             {backLabel}
           </button>
         ) : null}
         {primary ?? (onNext ? (
           <button
-            className={cn(
-              "editor-motion inline-flex h-9 items-center gap-1.5 px-5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              nextDisabled
-                ? "cursor-not-allowed border render-hairline render-glass text-muted-foreground"
-                : "bg-primary text-primary-foreground hover:bg-primary/90",
-            )}
+            className={stylex.props(nextDisabled ? styles.inlineFlexCenterCaps3 : styles.inlineFlexCenterCaps4, motionStyles.editorMotion).className}
             data-testid="render-wizard-next"
             disabled={nextDisabled}
             onClick={onNext}
             type="button"
           >
             {nextLabel}
-            <ArrowRight aria-hidden="true" className="size-3.5" />
+            <ArrowRight aria-hidden="true" className={stylex.props(styles.size35).className} />
           </button>
         ) : null)}
       </div>
@@ -196,11 +192,7 @@ export function RenderOptionCard({
     <button
       aria-checked={selection === "single" ? selected : undefined}
       aria-pressed={selection === "multi" ? selected : undefined}
-      className={cn(
-        "editor-motion flex min-w-0 flex-col items-start gap-1 border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "border-primary bg-primary/10" : "render-glass hover:border-primary/40",
-        disabled && "cursor-not-allowed opacity-50",
-      )}
+      className={stylex.props(styles.flexColStart, selected ? styles.borderPrimaryBgPrimary10 : styles.renderGlassHoverBorderPrimary40, disabled && styles.cursorNotAllowedOpacity50, motionStyles.editorMotion).className}
       data-selected={selected}
       data-testid={testId}
       disabled={disabled}
@@ -208,18 +200,18 @@ export function RenderOptionCard({
       role={selection === "single" ? "radio" : undefined}
       type="button"
     >
-      <span className="flex w-full min-w-0 items-center gap-2">
+      <span {...stylex.props(styles.flexCenterWide)}>
         {Icon ? (
           <Icon
             aria-hidden="true"
-            className={cn("size-4 shrink-0", selected ? "text-primary" : "text-muted-foreground")}
+            className={stylex.props(selected ? styles.tightAccent : styles.tightMuted).className}
           />
         ) : null}
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{label}</span>
+        <span {...stylex.props(styles.fillXsInk)}>{label}</span>
         {badge}
       </span>
       {hint ? (
-        <span className="text-micro leading-relaxed text-muted-foreground">{hint}</span>
+        <span {...stylex.props(styles.microMutedRelaxed)}>{hint}</span>
       ) : null}
     </button>
   );

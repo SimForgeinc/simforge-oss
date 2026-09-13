@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
+import { control, menu, renderInk, row } from "../scenario-controls.stylex";
 import { documentCardTransitionName } from "./datasetMorph";
 import {
   documentEditedAtLabel,
@@ -54,12 +55,15 @@ const SHOW_VARIATIONS_TOGGLE = false;
 
 type RenderState = "missing" | "complete" | "running";
 
-function renderIconClassName(state: RenderState) {
+function renderIconStyle(state: RenderState, active: boolean, disabled: boolean) {
   // Traffic-light semantics, and deliberately not tokens: `primary` is the brand yellow, so a
   // running render would be indistinguishable from every other accent in the row.
-  if (state === "running") return "text-yellow-400 hover:text-yellow-300";
-  if (state === "complete") return "text-green-400 hover:text-green-300";
-  return "text-red-400 hover:text-red-300";
+  // A disabled button took Tailwind's `hover:text-current`, which is the resting colour: here
+  // that is the variant of each pair that declares no hover at all.
+  if (active) return disabled ? renderInk.activeFlat : renderInk.active;
+  if (state === "running") return disabled ? renderInk.runningFlat : renderInk.running;
+  if (state === "complete") return disabled ? renderInk.completeFlat : renderInk.complete;
+  return disabled ? renderInk.noneFlat : renderInk.none;
 }
 
 function renderIconTitle(
@@ -217,18 +221,18 @@ function DocumentActionCluster({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7 text-foreground/65 hover:text-foreground"
+            xstyle={[control.iconSm, row.quiet]}
             disabled={anyBusy}
             aria-label={`Scenario actions for ${label}`}
           >
             {anyBusy ? (
-              <CloudActivityIndicator iconClassName="size-3.5" />
+              <CloudActivityIndicator />
             ) : (
               <MoreHorizontal className="size-3.5" aria-hidden="true" />
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[160px]">
+        <DropdownMenuContent align="end" xstyle={menu.width160}>
           <DropdownMenuItem onSelect={() => onDownloadDocument(document)}>
             <Download className="mr-2 size-3.5" aria-hidden="true" />
             Download JSON
@@ -243,7 +247,7 @@ function DocumentActionCluster({
             Duplicate
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            xstyle={menu.destructiveItem}
             disabled={!mutable}
             onSelect={() => onDeleteDocument(document)}
           >
@@ -282,10 +286,11 @@ function DocumentActionCluster({
         type="button"
         size="icon"
         variant="ghost"
-        className={cn(
-          "size-7 bg-transparent hover:bg-transparent hover:text-foreground",
-          editActive ? "text-primary" : "text-foreground/65",
-        )}
+        xstyle={[
+          control.iconSm,
+          control.flatBackground,
+          editActive ? row.activeInk : row.quiet,
+        ]}
         aria-label={editActive ? `Exit editor for ${label}` : `Edit ${label}`}
         aria-pressed={editActive}
         title={editActive ? "Exit editor" : "Edit"}
@@ -311,10 +316,12 @@ function DocumentActionCluster({
           type="button"
           size="icon"
           variant="ghost"
-          className={cn(
-            "relative size-7 bg-transparent hover:bg-transparent",
-            variationsExpanded ? "text-primary" : null,
-          )}
+          xstyle={[
+            control.relative,
+            control.iconSm,
+            control.flatBackground,
+            variationsExpanded ? row.accentInk : null,
+          ]}
           aria-label={`${variationsExpanded ? "Hide" : "Show"} ${variationCount} variation${
             variationCount === 1 ? "" : "s"
           } of ${label}`}
@@ -345,13 +352,12 @@ function DocumentActionCluster({
               type="button"
               size="icon"
               variant="ghost"
-              className={cn(
-                "size-7 bg-transparent hover:bg-transparent hover:text-foreground",
-                renderActive
-                  ? "text-red-300"
-                  : renderIconClassName(renderState),
-                renderDisabled && "cursor-not-allowed opacity-50 hover:text-current",
-              )}
+              xstyle={[
+                control.iconSm,
+                control.flatBackground,
+                renderIconStyle(renderState, renderActive, renderDisabled),
+                renderDisabled ? row.disabled : null,
+              ]}
               aria-label={`Render ${label}`}
               aria-pressed={renderActive}
               aria-disabled={renderDisabled || undefined}

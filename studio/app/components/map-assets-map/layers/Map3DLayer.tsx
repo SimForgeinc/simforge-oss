@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Layer, Marker, Source, useMap } from "react-map-gl/maplibre";
 import type { MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MercatorCoordinate } from "maplibre-gl";
@@ -63,6 +64,7 @@ import {
   type RuntimeActorMarker,
 } from "./RuntimeActorLayers";
 import { actorTagText } from "./actor-tag-text";
+import { styles } from "../map-canvas.stylex";
 
 /**
  * 3D mode's host: reads the same data the 2D renderer reads, converts it into
@@ -836,11 +838,7 @@ export function Map3DLayer({
           <div
             aria-hidden
             data-runtime-actor-id={anchorActor.id}
-            style={{
-              width: `${CHROME_SIZE_PX}px`,
-              height: `${CHROME_SIZE_PX}px`,
-              pointerEvents: "none",
-            }}
+            {...stylex.props(styles.chromeMarker)}
           />
         </Marker>
       ) : null}
@@ -856,12 +854,7 @@ export function Map3DLayer({
         >
           <div
             data-runtime-actor-chrome-id={actor.id}
-            style={{
-              position: "relative",
-              width: `${CHROME_SIZE_PX}px`,
-              height: `${CHROME_SIZE_PX}px`,
-              pointerEvents: "none",
-            }}
+            {...stylex.props(styles.chromeMarkerHost)}
           >
             {actor.id === holdingActorId ? (
               <HoldProgressRing size={CHROME_SIZE_PX} />

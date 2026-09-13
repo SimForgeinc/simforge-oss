@@ -7,6 +7,8 @@ import {
   type TimeOfDay,
   type Weather,
 } from "@simforge-oss/scenario";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderSettingsFields.stylex";
 
 const DURATION_PRESETS_SECONDS = [3, 5, 10, 15, 30, 60] as const;
 
@@ -32,20 +34,20 @@ export function RenderSettingsFields({
   ])].sort((left, right) => left - right);
 
   return (
-    <div className="grid gap-5">
+    <div {...stylex.props(styles.gridGap5)}>
       <section aria-labelledby="render-format-heading">
-        <div className="mb-2">
-          <h4 className="text-micro font-semibold uppercase tracking-meta text-foreground/80" id="render-format-heading">
+        <div {...stylex.props(styles.mb2)}>
+          <h4 {...stylex.props(styles.capsMicroSemibold)} id="render-format-heading">
             Capture
           </h4>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p {...stylex.props(styles.xsMuted)}>
             Choose how much of the frozen scenario the worker renders.
           </p>
         </div>
-        <label className="flex max-w-xs flex-col gap-1 text-xs">
-          <span className="text-micro uppercase tracking-meta text-muted-foreground">Duration</span>
+        <label {...stylex.props(styles.flexColXs)}>
+          <span {...stylex.props(styles.capsMicroMuted)}>Duration</span>
           <select
-            className="render-glass border px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {...stylex.props(styles.inkBordered)}
             data-testid="render-duration"
             disabled={disabled}
             onChange={(event) => onDurationChange(Number(event.target.value))}
@@ -61,19 +63,19 @@ export function RenderSettingsFields({
       </section>
 
       <section aria-labelledby="render-environment-heading">
-        <div className="mb-2">
-          <h4 className="text-micro font-semibold uppercase tracking-meta text-foreground/80" id="render-environment-heading">
+        <div {...stylex.props(styles.mb2)}>
+          <h4 {...stylex.props(styles.capsMicroSemibold)} id="render-environment-heading">
             Environment
           </h4>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p {...stylex.props(styles.xsMuted)}>
             SimForge resolves these canonical authored presets into renderer lighting and atmosphere.
           </p>
         </div>
-        <div className="grid gap-2 text-xs sm:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-micro uppercase tracking-meta text-muted-foreground">Weather</span>
+        <div {...stylex.props(styles.gridXsGap2)}>
+          <label {...stylex.props(styles.flexColGap1)}>
+            <span {...stylex.props(styles.capsMicroMuted)}>Weather</span>
             <select
-              className="render-glass border px-2 py-1.5 capitalize text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...stylex.props(styles.capsInkBordered)}
               data-testid="render-weather"
               disabled={disabled}
               onChange={(event) => onEnvironmentChange({
@@ -83,16 +85,16 @@ export function RenderSettingsFields({
               value={environment.weather}
             >
               {WEATHER_PRESETS.map((weather) => (
-                <option className="capitalize" key={weather} value={weather}>
+                <option {...stylex.props(styles.caps)} key={weather} value={weather}>
                   {weather.replaceAll("_", " ")}
                 </option>
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-micro uppercase tracking-meta text-muted-foreground">Time of day</span>
+          <label {...stylex.props(styles.flexColGap1)}>
+            <span {...stylex.props(styles.capsMicroMuted)}>Time of day</span>
             <select
-              className="render-glass border px-2 py-1.5 capitalize text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...stylex.props(styles.capsInkBordered)}
               data-testid="render-time-of-day"
               disabled={disabled}
               onChange={(event) => {
@@ -107,7 +109,7 @@ export function RenderSettingsFields({
               value={environment.timeOfDay}
             >
               {TIME_OF_DAY_PRESETS.map((timeOfDay) => (
-                <option className="capitalize" key={timeOfDay} value={timeOfDay}>
+                <option {...stylex.props(styles.caps)} key={timeOfDay} value={timeOfDay}>
                   {timeOfDay.replaceAll("_", " ")}
                 </option>
               ))}

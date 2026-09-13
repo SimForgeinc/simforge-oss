@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 import { useAnchoredPopoverPosition } from "../../../lib/scenario/editor/anchored-popover";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./AnchoredEditorPopover.stylex";
 
 const FORM_CARD_WIDTH = 420;
 const FORM_CARD_MAX_HEIGHT = 560;
@@ -87,7 +89,11 @@ export function AnchoredEditorPopover({
     <aside
       ref={panelRef}
       aria-label={`${title} editor`}
-      className={`pointer-events-auto fixed z-[81] flex max-h-[560px] flex-col overflow-visible rounded-xl border border-[#E8E044]/80 bg-[linear-gradient(155deg,#111111_0%,#090909_58%,#0d0d0d_100%)] text-white shadow-[0_28px_90px_rgba(0,0,0,0.72),0_0_0_1px_rgba(232,224,68,0.12)] ${
+      // The three `editor-actor-popover-enter-*` classes are global keyframe
+      // rules in `styles.css`, applied by name and reduced-motion guarded
+      // there — the documented exception for shared entrance motion. Each side
+      // slides in from its own direction, so the class carries the animation.
+      className={`${stylex.props(styles.popover).className} ${
         placement?.side === "right"
           ? "editor-actor-popover-enter-right"
           : placement?.side === "below"
@@ -126,29 +132,29 @@ export function AnchoredEditorPopover({
       <span
         ref={pointerRef}
         aria-hidden="true"
-        className={`pointer-events-none absolute z-20 size-5 rotate-45 bg-[#0d0d0d] ${anchorVisible ? "" : "hidden"}`}
+        {...stylex.props(styles.pointer, !anchorVisible && styles.pointerHidden)}
         data-testid="editor-popover-pointer"
       />
-      <header className="flex min-h-[52px] shrink-0 items-center gap-3 overflow-hidden rounded-t-[10px] border-b border-white/10 bg-[linear-gradient(180deg,#171717_0%,#111111_100%)] px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase leading-none tracking-[0.18em] text-[#E8E044]">
+      <header {...stylex.props(styles.flexCenterTight)}>
+        <div {...stylex.props(styles.fillNarrowable)}>
+          <p {...stylex.props(styles.capsBoldLeadNone)}>
             {kicker}
           </p>
-          <p className="mt-1 truncate text-sm font-semibold leading-none text-white">
+          <p {...stylex.props(styles.smWhiteSemibold)}>
             {title}
           </p>
         </div>
         <button
           aria-label={`Close ${kind} editor`}
-          className="flex size-6 shrink-0 items-center justify-center rounded text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+          {...stylex.props(styles.flexCenterMid)}
           data-testid={`${kind}-popover-close`}
           type="button"
           onClick={onClose}
         >
-          <X aria-hidden="true" className="size-3.5" />
+          <X aria-hidden="true" className={stylex.props(styles.size35).className} />
         </button>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-b-[11px] bg-[#0d0d0d] p-4 [scrollbar-width:thin]">
+      <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {children}
       </div>
     </aside>,

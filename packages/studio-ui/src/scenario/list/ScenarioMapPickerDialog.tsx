@@ -7,6 +7,7 @@ import { Check, MapPin, Search, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
+import { control, list } from "../scenario-controls.stylex";
 import type { ScenarioMapOption } from "./document-map-groups";
 
 function searchableText(map: ScenarioMapOption) {
@@ -111,7 +112,7 @@ export function ScenarioMapPickerDialog({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search maps"
-                className="h-9 pl-9"
+                xstyle={list.mapSearchInput}
               />
             </div>
             <Button
@@ -184,7 +185,7 @@ export function ScenarioMapPickerDialog({
                     <div className="px-4 py-3">
                       <Button
                         type="button"
-                        className="w-full"
+                        xstyle={control.fullWidth}
                         variant={isCurrent ? "outline" : "default"}
                         onClick={() => {
                           onSelectMap(map);
