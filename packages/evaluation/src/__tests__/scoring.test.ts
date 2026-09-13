@@ -365,10 +365,11 @@ describe('parseTraceJsonl', () => {
 describe('off-road v2: footprint containment', () => {
   /** A 40 m x 8 m straight corridor centred on y = 0, plus a 2 m island at x 20. */
   const AREA = {
-    schema: 'simforge.drivable-area/v1' as const,
-    source: 'clipgt',
+    source: 'clipgt-lane-union' as const,
+    geometry: 'polygons' as const,
     frame: 'nurec-source-z-up',
     confidence: 'authoritative' as const,
+    boundaries: [],
     polygons: [
       {
         id: 'lane',
@@ -392,7 +393,7 @@ describe('off-road v2: footprint containment', () => {
       },
     ],
     timeSupportUs: null,
-    coverage: null,
+    coverage: { boundsMinXY: [0, -4] as [number, number], boundsMaxXY: [40, 4] as [number, number] },
   };
   const V2: ScenarioScoringContext = {
     ...CTX,
@@ -423,9 +424,28 @@ describe('off-road v2: footprint containment', () => {
     expect(score.worstOffRoadM).toBeCloseTo(0.5, 6);
   });
 
-  it('flags a footprint over a hole even though it is inside the outer ring', () => {
-    const steps = [mkStep(0, { ex: { x: 20, y: 0, headingRad: 0 } })];
+  it('flags a corner inside an island exclusion', () => {
+    // Corner at (21.5, 0.5) sits in the 19..21 x -1..1 hole once the box is
+    // shifted onto it.
+    const steps = [mkStep(0, { ex: { x: 18.2, y: 0, headingRad: 0 } })];
     expect(scoreEpisode(mkTrace(steps), V2).infractions['off-road']).toBe(1);
+  });
+
+  it('does NOT flag an island narrower than the car that the box straddles', () => {
+    // Documented limit of corner sampling, pinned so it cannot change
+    // silently: corners at x 18 and 22 clear the 19..21 island, so no corner is
+    // inside it. It is a conservative gap - it can only miss an excursion,
+    // never invent one - and the mitigation is denser island rings in the
+    // ingestion rather than edge sampling in the scorer.
+    const steps = [mkStep(0, { ex: { x: 20, y: 0, headingRad: 0 } })];
+    expect(scoreEpisode(mkTrace(steps), V2).infractions['off-road']).toBe(0);
+  });
+
+  it('reports unavailable for a decision outside the geometry time support', () => {
+    const bounded = { ...AREA, timeSupportUs: { startUs: 1_000_000, endUs: 2_000_000 } };
+    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: bounded, originUs: 9_000_000 });
+    expect(score.unavailable).toContain('off-road');
   });
 
   it('reports unavailable rather than clean when the geometry is absent', () => {
@@ -440,11 +460,51 @@ describe('off-road v2: footprint containment', () => {
     expect(score.unavailable).toContain('off-road');
   });
 
-  it('reports unavailable for a decision outside the polygons\' time support', () => {
-    const bounded = { ...AREA, timeSupportUs: { startUs: 1_000_000, endUs: 2_000_000 } };
-    const steps = [mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } })];
-    const score = scoreEpisode(mkTrace(steps), { ...V2, drivableArea: bounded, originUs: 9_000_000 });
-    expect(score.unavailable).toContain('off-road');
+  it('does not count a finding for a metric it declares unavailable', () => {
+    // Laundering guard: a speeding event while speeding is unevaluable would
+    // put an unsupported claim in the record.
+    const steps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) =>
+      mkStep(i, { speed: 30, ex: { x: 10, y: 0, headingRad: 0 } }),
+    );
+    const withAuthority = scoreEpisode(mkTrace(steps), V2);
+    expect(withAuthority.infractions['speeding']).toBe(1);
+    const withoutAuthority = scoreEpisode(mkTrace(steps), {
+      ...V2,
+      unavailableInfractions: ['speeding'],
+    });
+    expect(withoutAuthority.infractions['speeding']).toBe(0);
+    expect(withoutAuthority.events.some((e) => e.type === 'speeding')).toBe(false);
+    expect(withoutAuthority.unavailable).toContain('speeding');
+  });
+
+  it('keeps a partly-assessed episode assessed, and counts the undecidable samples', () => {
+    // One decision with no ego pose among decidable ones: per-sample
+    // unavailability must not discard the episode's off-road answer.
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1),
+      mkStep(2, { ex: { x: 12, y: 0, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), V2);
+    expect(score.unavailable).not.toContain('off-road');
+    expect(score.offRoad).toEqual({ offered: 3, assessed: 2, unavailableSamples: 1 });
+    expect(score.worstOffRoadM).toBe(0);
+  });
+
+  it('reports lane-departure as unavailable when no centreline authority exists', () => {
+    // The claim is about lane POSITION, so a derived lane graph that is 1.1 m
+    // off cannot support it: on a real reconstruction it reported -5.454 m of
+    // departure for a trajectory 0.16 m from the recorded human path.
+    const steps = [mkStep(0, { latOff: 3.5, ex: { x: 10, y: 2.5, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), {
+      ...V2,
+      unavailableInfractions: ['lane-departure'],
+    });
+    expect(score.infractions['lane-departure']).toBe(0);
+    expect(score.unavailable).toContain('lane-departure');
+    // Off-road is unaffected: containment has its own authority.
+    expect(score.infractions['off-road']).toBe(0);
+    expect(score.offRoad).toEqual({ offered: 1, assessed: 1, unavailableSamples: 0 });
   });
 
   it('carries declared unavailability through without counting it', () => {
@@ -455,7 +515,9 @@ describe('off-road v2: footprint containment', () => {
     });
     expect(score.unavailable).toEqual(['speeding', 'wrong-way']);
     expect(score.infractions['speeding']).toBe(0);
-    expect(score.metricVersion).toBe('v2');
+    // The instrument names the ingestion that produced the geometry, so the
+    // lane-union control and the road-boundary outline stay separable.
+    expect(score.metricVersion).toBe('simforge.offroad/v2');
   });
 
   it('leaves v1 scoring unchanged and emits no lane-departure', () => {
@@ -464,5 +526,123 @@ describe('off-road v2: footprint containment', () => {
     expect(score.infractions['off-road']).toBe(1);
     expect(score.infractions['lane-departure']).toBe(0);
     expect(score.unavailable).toEqual([]);
+  });
+});
+
+const AREA_FOR_LANES = {
+  source: 'clipgt-road-boundary' as const,
+  geometry: 'polygons' as const,
+  frame: 'nurec-source-z-up',
+  confidence: 'authoritative' as const,
+  boundaries: [],
+  polygons: [
+    {
+      id: 'road',
+      kind: 'drivable' as const,
+      ring: [
+        [0, -2],
+        [200, -2],
+        [200, 5.4],
+        [0, 5.4],
+      ] as [number, number][],
+    },
+  ],
+  timeSupportUs: null,
+  coverage: { boundsMinXY: [0, -2] as [number, number], boundsMaxXY: [200, 5.4] as [number, number] },
+};
+
+describe('lane-departure: rail binding and the lane-change policy', () => {
+  /** Two 3.4 m lanes side by side, centred at y = 0 and y = 3.4, running along x. */
+  const lane = (id: string, centreY: number) => ({
+    id,
+    widthM: 3.4,
+    centreline: [
+      [0, centreY],
+      [200, centreY],
+    ] as [number, number][],
+    // Rails INSET by 5 cm, as the real ClipGT rails are: the 0.1 m strip
+    // between neighbours is what makes a line-rider `ambiguous` instead of
+    // silently contained by whichever lane won a tie.
+    leftRail: [
+      [0, centreY + 1.65],
+      [200, centreY + 1.65],
+    ] as [number, number][],
+    rightRail: [
+      [0, centreY - 1.65],
+      [200, centreY - 1.65],
+    ] as [number, number][],
+  });
+  const LANES = {
+    schema: 'simforge.lane-context/v1' as const,
+    source: 'clipgt-lane-rails' as const,
+    sourceSha256: 'f'.repeat(64),
+    frame: 'nurec-source-z-up',
+    timeSupportUs: null,
+    lanes: [lane('L1', 0), lane('L2', 3.4)],
+    coverage: { boundsMinXY: [0, -1.7] as [number, number], boundsMaxXY: [200, 5.1] as [number, number] },
+  };
+  const BOUND: ScenarioScoringContext = {
+    ...CTX,
+    metricVersion: 'v2',
+    drivableArea: AREA_FOR_LANES,
+    laneContext: LANES,
+    egoDims: { lengthM: 4, widthM: 2 },
+  };
+
+  it('reports a lane change as a diagnostic transition, never an infraction', () => {
+    // Contained in L1, two undecided samples crossing the line, contained in L2.
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1, { ex: { x: 12, y: 1.7, headingRad: 0 } }),
+      mkStep(2, { ex: { x: 14, y: 1.70, headingRad: 0 } }),
+      mkStep(3, { ex: { x: 16, y: 3.4, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.infractions['lane-departure']).toBe(0);
+    expect(score.laneDeparture?.bound).toBe(2);
+    expect(score.laneDeparture?.transitions).toBe(1);
+    // The detector reports entering the strip and then the lateral move; the
+    // lane-transition is the one that names both lanes.
+    const events = score.events.filter((e) => e.type === 'lane-transition');
+    expect(events.every((e) => e.severity === 'info')).toBe(true);
+    const lateral = events.find(
+      (e) => (e.data as { kind?: string } | undefined)?.kind === 'lane-transition',
+    );
+    expect((lateral?.data as { fromLaneId?: string; toLaneId?: string } | undefined)).toMatchObject({
+      fromLaneId: 'L1',
+      toLaneId: 'L2',
+    });
+    // Which crossings are illegitimate needs route, marking and rule context a
+    // reconstruction does not carry, so the metric stays unavailable.
+    expect(score.unavailable).toContain('lane-departure');
+  });
+
+  it('reports an over-long undecided run diagnostically, not as an infraction', () => {
+    // Riding the line for 5 s at 10 Hz, past the 4 s crossing bound.
+    const steps = Array.from({ length: 50 }, (_, i) =>
+      mkStep(i, { ex: { x: 10 + i, y: 1.7, headingRad: 0 } }),
+    );
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.infractions['lane-departure']).toBe(0);
+    const event = score.events.find((e) => e.type === 'lane-transition');
+    expect(event?.severity).toBe('info');
+    expect((event?.data as { reason?: string } | undefined)?.reason).toBe('undecided_run_exceeded');
+  });
+
+  it('records the worst in-lane offset without penalising it', () => {
+    const steps = [
+      mkStep(0, { ex: { x: 10, y: 0, headingRad: 0 } }),
+      mkStep(1, { ex: { x: 12, y: 1.2, headingRad: 0 } }),
+    ];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.laneDeparture?.worstOffsetM).toBeCloseTo(1.2, 6);
+    expect(score.infractions['lane-departure']).toBe(0);
+  });
+
+  it('binds nothing outside the rails and still reports unavailable', () => {
+    const steps = [mkStep(0, { ex: { x: 10, y: 40, headingRad: 0 } })];
+    const score = scoreEpisode(mkTrace(steps), BOUND);
+    expect(score.laneDeparture?.bound).toBe(0);
+    expect(score.unavailable).toContain('lane-departure');
   });
 });

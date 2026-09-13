@@ -155,7 +155,17 @@ export const CalibratedCameraSchema = z.strictObject({
   height: z.number().int().positive(),
   intrinsics: IntrinsicsSchema,
   extrinsics: ExtrinsicsSchema,
+  /** When the camera captured — the full recorded timeline, independent of what imagery survives. */
   timing: CameraTimingSchema,
+  /**
+   * Recorded imagery actually available for comparison, with the archive member holding it.
+   *
+   * Distinct from `timing`: a NuRec package records a ~30 Hz capture timeline but ships only a
+   * handful of stored frames. Conflating the two makes a 20 s drive look like a four-frame
+   * recording, which is what an earlier version of this importer did. G1 compares renders
+   * against these; everything time-related uses `timing`.
+   */
+  referenceFrames: z.array(z.strictObject({ tUs: TimestampUs, member: z.string().min(1) })).optional(),
 });
 export type CalibratedCamera = z.infer<typeof CalibratedCameraSchema>;
 

@@ -197,6 +197,12 @@ function episodeErrorClass(error: { code: string; message: string }): { code: Er
   return { code, message: error.message };
 }
 
+/** `v1` -> `simforge.eval-metrics/v1`; an already-qualified id is left alone. */
+function qualifiedMetricVersion(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0) return 'simforge.eval-metrics/v1';
+  return raw.includes('/') ? raw : `simforge.eval-metrics/${raw}`;
+}
+
 function stringOrNull(source: Record<string, unknown> | null, key: string): string | null {
   const value = source?.[key];
   return typeof value === 'string' ? value : null;
@@ -263,10 +269,11 @@ async function emitManifest(
       compute: null,
       // The scorer decides its own version per episode: a reconstructed scene
       // is scored under v2 (footprint containment), a synthetic one under v1.
-      metricVersion:
-        typeof parts.metrics['metricVersion'] === 'string'
-          ? `simforge.eval-metrics/${parts.metrics['metricVersion']}`
-          : 'simforge.eval-metrics/v1',
+      // The scorer may already name a fully-qualified instrument
+      // (`simforge.offroad/v3`); only the bare `v1`/`v2` shorthand gets the
+      // eval-metrics prefix, so a version never reads as
+      // `simforge.eval-metrics/simforge.offroad/v3`.
+      metricVersion: qualifiedMetricVersion(parts.metrics['metricVersion']),
       reprocessedFrom: parts.reprocessedFrom ?? null,
     },
     timing: {
@@ -539,7 +546,17 @@ async function main(): Promise<number> {
       replayContext: null,
       error: { code: failure.code, message: failure.message, fields: failure.fields },
     });
-    process.stderr.write(`${JSON.stringify({ error: failure.code, message: failure.message })}\n`);
+    // One refusal shape across this package: the nested object the runner CLIs
+    // and the result manifest already use. The flat `{error: "<code>"}` this
+    // line used to write lost `fields` exactly when a refusal is most
+    // actionable - "clip is missing camera ids [3]" arrived with nothing naming
+    // the offending input - and it forced a consumer to parse two shapes from
+    // one package, which hides whichever one is wrong.
+    process.stderr.write(
+      `${JSON.stringify({
+        error: { code: failure.code, message: failure.message, fields: failure.fields },
+      })}\n`,
+    );
     return controller.signal.aborted ? 130 : 2;
   }
 }

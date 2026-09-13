@@ -175,10 +175,19 @@ All thresholds and factors are per-scenario overridable (`suite[].scoring`).
 The manifest stamps `provenance.metricVersion`. Results keep the version that
 scored them and are never re-scored under another: a v1 number is a v1 claim.
 
-- `simforge.eval-metrics/v1` — off-road is lane-relative lateral offset.
-- `simforge.eval-metrics/v2` — off-road is footprint containment in the
-  authoritative drivable-area polygons; the old rule survives as
-  `lane-departure`.
+- `v1` — off-road is lane-relative lateral offset.
+- `simforge.offroad/v2` — footprint containment against the ClipGT LANE-UNION
+  ingestion. Retained for reproducibility and NOT trustworthy: its
+  ground-truth control fails, because inset lane rails leave a ~20 cm seam at
+  every lane boundary and a car straddling a lane line has corners in it.
+- `simforge.offroad/v3` — footprint containment against the authoritative
+  road-boundary outline with island exclusions. Its ground-truth control passes.
+
+The instrument names itself from the geometry it was handed, so a score record
+says which ingestion produced it and the two can never be conflated. The
+geometry, the point classifier and the containment rule live in
+`packages/evaluation/src/replay-context/drivable.ts` and are owned there: this
+scorer calls them rather than carrying a second implementation.
 
 v1's rule measured distance from a lane CENTRELINE, which is not the same
 question as "did the vehicle leave the road". On a reconstructed clip the
@@ -189,9 +198,71 @@ wrong thing, so v2 asks the containment question directly and keeps the
 centreline question as its own, separately named infraction. Both can fire; they
 are different claims.
 
-v2 evaluates the four corners of the actor's box at its pose (dims from the
-spec, yaw from the trace), not its centre, and reports the worst corner's
-outside-distance so a marginal exit is legible rather than binary.
+Containment evaluates the four corners of the actor's box at its pose (dims from
+the spec, yaw from the trace), not its centre, and reports the worst corner's
+outside-distance so a marginal exit is legible rather than binary. One corner
+out is off-road: two wheels over a kerb has left the road, and requiring all
+four would only report what needs no metric to notice.
+
+**Unavailability wins over off-road.** A corner past the labelled extent makes
+the whole sample unknown, because a kerb strike and the end of annotation are
+indistinguishable there. Per-sample, so a single unlabelled decision does not
+discard an otherwise assessed episode.
+
+Corner sampling has one documented gap: an island NARROWER than the vehicle,
+straddled without a corner inside it, is not detected. It is conservative — it
+can only miss an excursion, never invent one — the mitigation is denser island
+rings in the ingestion rather than edge sampling here, and a regression pins it
+so it cannot change silently.
+
+### Lane-departure: binding, and what a lane change is
+
+`lane-departure` is a claim about lane POSITION, so it requires an authoritative
+binding: the bundle declares `metricAuthority.laneCentrelines`, and without it
+the metric is unavailable rather than a number.
+
+The requirement was earned. A derived lane graph mis-bound by 1.10 m reported
+-5.454 m of departure for a trajectory 0.16 m from the recorded human path — the
+artifact that made off-road v1 flag ground truth, surviving under a new name
+because renaming a metric does not give it a better lane. The binding that
+replaced it is rail containment, per pose: a vehicle is in the lane whose own
+rails contain it, and a sample contained by two lanes (or by none, within half a
+lane of one) is `ambiguous` with its candidates named. No offset is ever
+reported for an unbound sample, because an offset from a lane the vehicle is not
+in is exactly the quantity that must never be reported.
+
+On the reference drive that binding is sound: 200 of 202 samples contained, 2
+ambiguous, 0 outside. Its large offsets are confined to a lane change — worst
+0.600 m before the traverse, 1.732 m during it, 0.555 m after the vehicle
+settles, with 106 of 128 steady-state samples inside a third of a half-width.
+A constant frame misalignment does not switch off when the car stops
+manoeuvring, so the manoeuvre is the explanation and the geometry is not
+suspect. (Two earlier readings of this data — a rigid ~1.8 m ego-to-annotation
+discrepancy, and a per-segment autolabel registration error — were both
+withdrawn against these numbers, as was a supposed 0.36 m disagreement between
+the boundary and lane layers: the road carries three ~3.45 m lanes plus a ~1.0 m
+shoulder, and dividing the shoulder into the lanes is what made the layers look
+inconsistent.)
+
+**A lane-boundary crossing is a lane TRANSITION, and transitions are
+diagnostic.** Rail binding tells you where the vehicle was, not whether it was
+allowed to be there: which crossings are illegitimate depends on the route the
+vehicle was meant to take, the markings it crossed and the rules in force, none
+of which a reconstructed scene establishes. So a rail binding emits
+`lane-transition` INFORMATION — `{fromLaneId, toLaneId, crossingSeconds,
+withinCrossingBound}`, or an `undecided_run_exceeded` note when a vehicle rides
+the strip for longer than `laneChangeMaxS` — and never an infraction, and
+`lane-departure` remains unavailable under a rail binding alone. Penalising a
+crossing would fail a stock replay for driving the way the human drove.
+
+Geometry availability is therefore scoped to validated support and its hash. It
+is not a certification of legality, and nothing in this scorer converts one into
+the other.
+
+The binding surfaces ambiguity rather than absorbing it for the same reason: a
+consumer that later has route and rule authority can decide which lane an
+undecided sample belonged to, with the candidates in front of it, instead of
+inheriting a band that silently picked one.
 
 **Absent geometry is `unavailable`, never a pass.** With no drivable-area block,
 empty polygons, or a decision outside the polygons' time support, v2 reports
