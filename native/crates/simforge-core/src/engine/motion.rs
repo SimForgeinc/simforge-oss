@@ -990,6 +990,18 @@ impl Simulation {
             if !self.actors[index].is_live() {
                 continue;
             }
+            let station_release: Vec<bool> = self.actors[index].route_stations.iter().enumerate().map(|(si, station)| {
+                let state = &self.actors[index].route_station_states[si];
+                if station.coordination_id.is_none() || state.stopped_since_s.is_none() {
+                    return true;
+                }
+                self.actors.iter().all(|other| {
+                    other.route_stations.iter().enumerate().filter(|(_, peer)| peer.coordination_id == station.coordination_id)
+                        .all(|(pi, peer)| other.route_station_states.get(pi).is_some_and(|ps| {
+                            ps.stopped_since_s.is_some() && t - ps.stopped_since_s.unwrap_or(t) >= peer.dwell_s
+                        }))
+                })
+            }).collect();
             {
                 let a = &mut self.actors[index];
                 a.speed_mps = plan.speed;
@@ -1005,7 +1017,7 @@ impl Simulation {
                     if !state.released && (a.route_s - station.s).abs() <= 0.05 {
                         if state.stopped_since_s.is_none() {
                             state.stopped_since_s = Some(t);
-                        } else if t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s {
+                        } else if station_release[station_index] && t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s {
                             state.released = true;
                             state.released_at_s = Some(t);
                         }
