@@ -45,6 +45,7 @@ import { useWorldSource } from "@/app/lib/live-world/use-world-source";
 import { route } from "./drive-route.stylex";
 import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
+import { DrivingControls } from "./DrivingControls";
 
 /** The world advances at this rate; the renderer interpolates between its frames. */
 const WORLD_TICK_HZ = 20;
@@ -149,7 +150,6 @@ export function DriveSession({
           document: scenario.document,
           map,
           tickHz: WORLD_TICK_HZ,
-          endless: true,
         });
         if (disposed) {
           nextSource.close();
@@ -191,13 +191,6 @@ export function DriveSession({
       rigRef.current.reset();
       spawnedAtRef.current = performance.now();
       source.transport.play();
-      if (!source.heldDriverCommand) {
-        toast.warning("Runtime without a held driver command", {
-          description:
-            "This build applies the pedals once per world tick instead of every physics substep, and has no separate handbrake: the handbrake key brakes hard.",
-          duration: 10000,
-        });
-      }
     } catch (error) {
       setSpawnError(errorMessage(error));
     }
@@ -377,7 +370,7 @@ export function DriveSession({
     inputRef.current?.setEnabled(!paused);
     if (!source || !egoActorId || source.status !== "running") return;
     if (paused) {
-      source.setDriverCommand(null);
+      source.control({ actorId: egoActorId, steer: 0, throttle: 0, brake: 1 });
       source.transport.stop();
     } else {
       source.transport.play();
@@ -446,7 +439,8 @@ export function DriveSession({
         // substep, so pushing it once per rendered frame is the whole of
         // driving: the gearbox picks reverse off the brake pedal at a
         // standstill by itself, exactly as an automatic does.
-        source.setDriverCommand(input.sample(dtS));
+        const command = input.sample(dtS);
+        source.control({ actorId: egoActorId, steer: command.steer, throttle: command.throttle, brake: command.brake });
       }
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
@@ -554,6 +548,7 @@ export function DriveSession({
         units={units}
         vehicleLabel={vehicleLabel}
       />
+      <DrivingControls source={source} actorId={egoActorId} />
       {status ? (
         <div
           {...stylex.props(driveChrome.panelStatus, route.status)}

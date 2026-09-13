@@ -70,7 +70,6 @@ import { EditorHeader } from "./regions/EditorHeader";
 import { EditorModeBanner } from "./regions/EditorModeBanner";
 import { PlacementCursorHint } from "./regions/PlacementCursorHint";
 import {
-  AssistantChatSlot,
   NotificationDockSlot,
   TutorialOverlaySlot,
 } from "./regions/slots";
@@ -1110,12 +1109,6 @@ export function ScenarioEditorSurface({
           review={manualDrive.review}
         />
       ) : null}
-      <AssistantChatSlot
-        controller={controller}
-        document={editorDocument}
-        documentId={record?.id ?? null}
-        datasetId={datasetId}
-      />
       <NotificationDockSlot documentId={record?.id ?? null} datasetId={datasetId} />
       <RoutePointSpeedWarningOverlay viewer={viewer} warnings={routeSpeedWarnings} />
       <HifiPreviewSlot

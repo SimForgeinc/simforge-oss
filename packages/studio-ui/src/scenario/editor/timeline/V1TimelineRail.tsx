@@ -16,6 +16,7 @@ import {
   TrafficCone,
   Zap,
 } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import {
   Fragment,
   useCallback,
@@ -103,7 +104,7 @@ import {
   type TimelineClipEditMode,
 } from "./v1-timeline-model";
 import {
-  TIMELINE_GLASS_SURFACE_CLASSNAME,
+  TIMELINE_GLASS_SURFACE_STYLE,
   TimelineGlassBackdrop,
 } from "./TimelineGlassSurface";
 import {
@@ -788,10 +789,8 @@ export function V1TimelineRail({
   return (
     <section
       ref={railRef}
-      className={cn(
-        "z-30 flex min-h-0 w-full shrink-0 flex-col text-white",
-        TIMELINE_GLASS_SURFACE_CLASSNAME,
-      )}
+      className="z-30 flex min-h-0 w-full shrink-0 flex-col text-white"
+      {...stylex.props(TIMELINE_GLASS_SURFACE_STYLE)}
       data-floating="true"
       data-interaction-authoring={readOnly || disableInteractionCreation ? "disabled" : "enabled"}
       data-presentation="floating"
@@ -1474,7 +1473,6 @@ function ReasoningTraceEditor({
           <span className="text-[8px] text-white/40">Observation and action</span>
         </div>
       )}
-      previewClassName="h-24 px-4 py-3"
       testId="scenario-reasoning-trace-panel"
     >
       <div className="grid grid-cols-2 gap-2">

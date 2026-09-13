@@ -34,6 +34,7 @@ export interface TruthViewerBridge {
    * immediately instead of being dropped as stale.
    */
   reset(): void;
+  rendered(actorId: string): ActorRenderState | null;
   setFollow(actorId: string | null, mode?: 'chase' | 'dash'): void;
   dispose(): void;
 }
@@ -158,6 +159,9 @@ export function createTruthViewerBridge(
       latest = frame;
       elapsedSinceLatest = 0;
       render(0);
+    },
+    rendered(actorId) {
+      return lastRendered.get(actorId) ?? null;
     },
     reset() {
       if (disposed) return;
