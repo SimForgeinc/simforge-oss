@@ -232,3 +232,38 @@ card omits that sentence. Which text controls has **not** been decided here.
 Commercial hosting requires a recorded human/legal review. The application
 shows both texts verbatim, `commercialUseReviewRequired` is surfaced per
 family, and no code asserts a resolution.
+
+## Evidence classes, and why they are a field
+
+Every quant row in the family catalog carries `evidence`, one of:
+
+| value | meaning |
+|---|---|
+| `measured-here` | we ran it on hardware we control; the note carries the figures. A receipt. |
+| `vendor-published` | upstream states it and we have not reproduced it. Real evidence, someone else's. A citation. |
+| `unmeasured` | nobody has a number, ours or theirs. |
+
+Three classes rather than two: collapsing a vendor test into "pending"
+discards information to make a table look uniform. A vendor test is real
+evidence and a minimum-VRAM figure is a floor, not a claim about our stack.
+
+**Why this is data and not prose.** The notes already said which rows were
+measured. A consumer could in principle read the class out of them, and that
+approach was tried: the eight values were first derived by matching the notes
+for the word `MEASURED`. It mislabelled **four of eight rows**, and it failed
+in the direction that does real harm — every `nf4` row, the ones with genuine
+figures taken on this machine, came out `unmeasured`, because those notes lead
+with the quantization recipe and only reach the word "measured" mid-sentence.
+
+A heuristic that downgrades the best evidence is worse than no badge at all: a
+reader would conclude nothing had ever been measured. The failure happened on
+the first attempt, in this repository's own code, over notes written by the
+same author. So the class is set explicitly per row, and tests assert it
+agrees with whether the note beside it actually carries a measurement — a note
+edited without touching the field fails the suite rather than silently
+re-opening the drift.
+
+`unmeasured` is also why the field is a class rather than a source name:
+`measuredBy: null` reads as missing metadata, when the truth being recorded is
+that no measurement exists anywhere. Those are different states and only one
+of them is honest to render as "no measurement exists".

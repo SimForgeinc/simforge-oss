@@ -34,6 +34,7 @@ import base64
 import binascii
 import io
 import os
+from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
@@ -288,6 +289,30 @@ def decode_observation(
             "observation.cameras is required and must be non-empty",
             fields=["obs.cameras"],
         )
+
+    # Each entry must be a camera OBJECT. A bare id list - the natural first
+    # guess, and what a real caller sent - previously fell through to
+    # `c["camera_id"]` and surfaced as TypeError: 'int' object is not
+    # subscriptable. A malformed input deserves a typed refusal naming the
+    # field, not an interpreter error the caller has to reverse-engineer.
+    for position, entry in enumerate(cameras):
+        if not isinstance(entry, Mapping):
+            raise ObservationError(
+                "input_error",
+                "observation.cameras must be a list of camera objects "
+                "{camera_id, frames, encoding, width, height}; entry "
+                f"{position} is {type(entry).__name__}. A bare list of "
+                "camera ids is not an observation: the frames are the "
+                "input. simforge_alpamayo.obs.minimal_observation(family) "
+                "builds a well-formed one.",
+                fields=[f"obs.cameras[{position}]"],
+            )
+        if "camera_id" not in entry:
+            raise ObservationError(
+                "missing_fields",
+                f"observation.cameras[{position}] has no camera_id",
+                fields=[f"obs.cameras[{position}].camera_id"],
+            )
 
     cams = sorted(cameras, key=lambda c: int(c["camera_id"]))
     cam_ids = [int(c["camera_id"]) for c in cams]
@@ -593,3 +618,39 @@ def synthetic_observation(
             -(NUM_HISTORY_STEPS - 1 - i) * dt for i in range(NUM_HISTORY_STEPS)
         ]
     return obs
+
+
+def minimal_observation(
+    family: str,
+    *,
+    task: str = "act",
+    seed: int = 0,
+    width: int = SYNTH_W,
+    height: int = SYNTH_H,
+    with_times: bool = False,
+) -> dict[str, Any]:
+    """A well-formed, deliberately UNSCORABLE observation for one family.
+
+    Exists so a caller never hand-builds the wire shape. The camera set comes
+    from the family's own contract, so a family whose required set changes
+    cannot leave a caller constructing a stale one, and a family with variable
+    cameras gets its documented default rather than a guess.
+
+    The result carries ``synthetic: True``, which the engine records in
+    provenance and which makes any metric computed from it unscorable. That is
+    the point: this proves a forward pass and an envelope, never a score.
+    """
+    from simforge_alpamayo.families import get_family
+
+    required, variable = get_family(family).camera_contract(task)
+    if required is None:
+        if not variable:
+            raise ValueError(f"family {family!r} declares no camera contract for {task!r}")
+        required = get_family(family).cameras.default
+    return synthetic_observation(
+        camera_ids=list(required),
+        seed=seed,
+        width=width,
+        height=height,
+        with_times=with_times,
+    )
