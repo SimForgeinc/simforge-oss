@@ -41,7 +41,7 @@ use crate::types::{
     PropAttachment, RouteSpec, SetValue, SimActor, SimScenarioInput, VehiclePhysicsProfile,
 };
 
-use super::actor::{ActorIndex, ActorRuntime, DriverBehaviorProfile, InteractionIndex};
+use super::actor::{ActorIndex, ActorRuntime, DriverBehaviorProfile, InteractionIndex, RouteStationRuntime, RoadControlRuntimeState};
 use super::controllers::cruise_speed;
 use super::doors::{articulated_door_obb_for, DoorName, DoorRuntime};
 use super::gear::{
@@ -887,6 +887,12 @@ impl Simulation {
             }
             _ => None,
         };
+        let route_stations = match &spec.behavior.route {
+            RouteSpec::Polyline { stop_controls, .. } => stop_controls.iter().map(|stop| RouteStationRuntime {
+                id: stop.id.clone(), s: stop.s, dwell_s: stop.dwell_s, coordination_id: stop.coordination_id.clone(),
+            }).collect(),
+            _ => Vec::new(),
+        };
         let remaining_turns = match &spec.behavior.route {
             RouteSpec::Follow { turns, .. } => turns.clone(),
             _ => Vec::new(),
@@ -912,6 +918,8 @@ impl Simulation {
                 .cruise_speed_mps
                 .map(|v| v * traffic_speed_factor),
             route,
+            route_stations: route_stations.clone(),
+            route_station_states: vec![RoadControlRuntimeState::default(); route_stations.len()],
             route_s,
             timed_route,
             best_effort_world_path: false,

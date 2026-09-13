@@ -1082,7 +1082,7 @@ pub fn build_route(graph: &Arc<LaneGraph>, spec: &RouteSpec) -> RouteResult {
                 .ok_or_else(|| RouteBuildError::lane_missing(start_rsl))?;
             build_follow_route(graph, &FollowRouteOptions::new(start, turns, *max_length_m))
         }
-        RouteSpec::Polyline { points } => Ok(Route::from_polyline(
+        RouteSpec::Polyline { points, .. } => Ok(Route::from_polyline(
             points
                 .iter()
                 .map(|p| local_from_scene(SceneXZ { x: p.x, z: p.z })),

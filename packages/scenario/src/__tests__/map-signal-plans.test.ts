@@ -62,4 +62,24 @@ describe('map signal plan schema and document operations', () => {
     expect(doc.undo()).toBe(true);
     expect(doc.mapSignalPlan(plan.id)?.clips[0]?.indication).toBe('red');
   });
+
+  it('preserves exact movement bindings, display heads, and additional controller stages', () => {
+    const enriched = {
+      ...plan,
+      clips: [{
+        ...plan.clips[0]!,
+        reference: {
+          ...plan.clips[0]!.reference,
+          additionalStages: [{ controllerId: 'c2', headId: 'h2' }],
+          displayHeadIds: ['h1', 'h1', 'h3'],
+          movements: [{ approachLaneRsl: 'r:1', connectingLaneRsl: 'r:2' }],
+        },
+      }],
+    };
+    const parsed = ScenarioTemplateV2Schema.parse(input({ mapSignalPlans: [enriched] }));
+    expect(parsed.mapSignalPlans[0]!.clips[0]!.reference.displayHeadIds).toEqual(['h1', 'h3']);
+    expect(parsed.mapSignalPlans[0]!.clips[0]!.reference.movements?.[0]).toEqual({
+      approachLaneRsl: 'r:1', connectingLaneRsl: 'r:2',
+    });
+  });
 });

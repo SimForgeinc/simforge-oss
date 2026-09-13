@@ -701,7 +701,8 @@ fn compile_junction(
     for (clip_index, clip) in plan.clips.iter().enumerate() {
         let clip_path = format!("{prefix}.clips.{clip_index}");
         let reference_program = validate_controller_stage(plan, clip, &owned, options, &clip_path)?;
-        let selection = select_signal_reference(
+        let mut controller_ids = BTreeSet::from([clip.reference.controller_id.clone()]);
+        let mut selection = select_signal_reference(
             &control_index,
             &clip.reference.head_id,
             Some(&reference_program.id),
@@ -718,6 +719,71 @@ fn compile_junction(
                 ),
             )
         })?;
+        for (stage_index, stage) in clip.reference.additional_stages.iter().enumerate() {
+            if !controller_ids.insert(stage.controller_id.clone()) {
+                return Err(plan_error(
+                    "map_signal_plan_reference_unbound",
+                    format!("{clip_path}.reference.additionalStages.{stage_index}.controllerId"),
+                    format!("controller stage \"{}\" is duplicated", stage.controller_id),
+                ));
+            }
+            let stage_program = validate_controller_stage(
+                plan,
+                &MapSignalPlanClip {
+                    id: clip.id.clone(),
+                    start_s: clip.start_s,
+                    end_s: clip.end_s,
+                    reference: stage.clone(),
+                    indication: clip.indication,
+                },
+                &owned,
+                options,
+                &format!("{clip_path}.reference.additionalStages.{stage_index}"),
+            )?;
+            if let Some(extra) = select_signal_reference(
+                &control_index,
+                &stage.head_id,
+                Some(&stage_program.id),
+                Some(&stage.controller_id),
+            ).filter(|s| s.junction_id == plan.binding.junction_id) {
+                selection.movement_head_ids.extend(extra.movement_head_ids);
+                selection.intersection_head_ids.extend(extra.intersection_head_ids);
+            }
+        }
+        selection.movement_head_ids.extend(clip.reference.display_head_ids.iter().cloned());
+        selection.movement_head_ids.sort();
+        selection.movement_head_ids.dedup();
+        selection.intersection_head_ids.extend(clip.reference.display_head_ids.iter().cloned());
+        selection.intersection_head_ids.sort();
+        if !clip.reference.movements.is_empty() {
+            let wanted: BTreeSet<String> = control_index
+                .movements
+                .values()
+                .filter(|movement| {
+                    movement.controller_ids.iter().any(|id| controller_ids.contains(id))
+                        && clip.reference.movements.iter().any(|requested| {
+                            movement.approach_lane_rsls.iter().any(|lane| lane == &requested.approach_lane_rsl)
+                                && movement.connecting_lane_rsls.iter().any(|lane| lane == &requested.connecting_lane_rsl)
+                        })
+                })
+                .map(|movement| movement.id.clone())
+                .collect();
+            if wanted.is_empty() {
+                return Err(plan_error(
+                    "map_signal_plan_reference_unbound",
+                    format!("{clip_path}.reference.movements"),
+                    "exact signal movements do not resolve on the selected controller stage".to_owned(),
+                ));
+            }
+            selection.stage_movement_ids.retain(|id| wanted.contains(id));
+            selection.related_movement_ids.retain(|id| wanted.contains(id));
+            selection.movement_head_ids = wanted
+                .iter()
+                .filter_map(|id| control_index.movements.get(id))
+                .flat_map(|movement| movement.head_ids.iter().cloned())
+                .collect();
+        }
+        selection.intersection_head_ids.dedup();
         let evaluation = evaluate_signal_reference_phase(
             &control_index,
             &selection,

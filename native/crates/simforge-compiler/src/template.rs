@@ -1883,8 +1883,23 @@ impl ManualDriveRecording {
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]
 pub enum SceneAbsoluteInitialRoute {
     LanePath { lanes: Vec<String> },
+    WorldPath {
+        points: Vec<ScenePointXZ>,
+        #[serde(default)]
+        stop_controls: Vec<WorldPathStopControl>,
+    },
     CustomRoute { points: Vec<ScenePointXZ> },
     CustomTimedRoute { points: Vec<SceneTimedPoint> },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WorldPathStopControl {
+    pub id: String,
+    pub s: f64,
+    pub dwell_s: f64,
+    #[serde(default)]
+    pub coordination_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3190,9 +3205,22 @@ pub struct TrafficControl {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MapSignalMovement {
+    pub approach_lane_rsl: String,
+    pub connecting_lane_rsl: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MapSignalHeadRef {
     pub controller_id: String,
     pub head_id: String,
+    #[serde(default)]
+    pub additional_stages: Vec<MapSignalHeadRef>,
+    #[serde(default)]
+    pub display_head_ids: Vec<String>,
+    #[serde(default)]
+    pub movements: Vec<MapSignalMovement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3215,12 +3243,52 @@ pub struct MapSignalPlanBinding {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MapSignalDisplayPhase {
+    pub phase: ControlIndication,
+    pub duration_s: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MapSignalDisplayBaseline {
+    pub head_id: String,
+    pub phases: Vec<MapSignalDisplayPhase>,
+    pub offset_s: f64,
+    pub r#loop: bool,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MapSignalRouteSignal {
+    pub id: String,
+    pub actor_id: String,
+    pub route_points_hash: String,
+    pub selected_by_clip_ids: Vec<String>,
+    #[serde(default)]
+    pub baseline_only: bool,
+    pub phases: Vec<MapSignalDisplayPhase>,
+    #[serde(default)]
+    pub coordination_id: Option<String>,
+    #[serde(default)]
+    pub dark_fallback: Option<String>,
+    #[serde(default)]
+    pub dark_dwell_s: Option<f64>,
+    pub s: f64,
+    pub offset_s: f64,
+    pub r#loop: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MapSignalPlan {
     pub id: String,
     pub version: u32,
     pub binding: MapSignalPlanBinding,
     #[serde(default)]
     pub clips: Vec<MapSignalPlanClip>,
+    #[serde(default)]
+    pub display_baselines: Vec<MapSignalDisplayBaseline>,
+    #[serde(default)]
+    pub route_signals: Vec<MapSignalRouteSignal>,
 }
 
 /* ------------------------------------------------------------ perception */

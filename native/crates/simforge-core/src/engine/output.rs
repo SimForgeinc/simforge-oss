@@ -323,6 +323,7 @@ pub struct ActorState {
     pub cruise_override_mps: Option<f64>,
     pub route: RouteSnapshot,
     pub route_s: f64,
+    pub route_station_states: Vec<RoadControlRuntimeState>,
     pub timed_route: Option<TimedRoute>,
     pub best_effort_world_path: bool,
     pub remaining_turns: Vec<TurnRelation>,
@@ -419,6 +420,7 @@ impl Simulation {
                 cruise_override_mps: a.cruise_override_mps,
                 route: a.route.snapshot(),
                 route_s: a.route_s,
+                route_station_states: a.route_station_states.clone(),
                 timed_route: a.timed_route.clone(),
                 best_effort_world_path: a.best_effort_world_path,
                 remaining_turns: a.remaining_turns.clone(),
@@ -609,6 +611,7 @@ impl Simulation {
                 )
             })?;
             a.route_s = state.route_s;
+            a.route_station_states = state.route_station_states.clone();
             a.timed_route = state.timed_route.clone();
             a.best_effort_world_path = state.best_effort_world_path;
             a.remaining_turns = state.remaining_turns.clone();

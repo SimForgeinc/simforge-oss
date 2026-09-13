@@ -1181,6 +1181,7 @@ impl WorldSession {
                     x: pose.x,
                     z: pose.z,
                 }],
+                stop_controls: Vec::new(),
             });
             return Ok(ResolvedPlacement {
                 pose,

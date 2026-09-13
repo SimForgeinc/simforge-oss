@@ -631,7 +631,7 @@ impl Simulation {
             },
             RouteActionTarget::Spec(spec) => {
                 if joins_live_pose {
-                    let RouteSpec::Polyline { points } = spec else {
+                    let RouteSpec::Polyline { points, .. } = spec else {
                         unreachable!()
                     };
                     let mut local: Vec<Vec2> = Vec::with_capacity(points.len() + 1);

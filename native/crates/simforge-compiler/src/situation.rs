@@ -2748,6 +2748,7 @@ pub fn compile_situation(
                     verb: sim::Verb::Route {
                         target: sim::RouteActionTarget::Spec(RouteSpec::Polyline {
                             points: points.clone(),
+                            stop_controls: Vec::new(),
                         }),
                         join_from_current_pose: None,
                         best_effort_world_path: None,

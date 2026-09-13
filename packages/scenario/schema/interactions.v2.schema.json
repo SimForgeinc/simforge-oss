@@ -536,6 +536,58 @@
                   "properties": {
                     "mode": {
                       "type": "string",
+                      "const": "worldPath"
+                    },
+                    "points": {
+                      "minItems": 2,
+                      "maxItems": 20000,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema20"
+                      }
+                    },
+                    "stopControls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "s": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "dwellS": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "coordinationId": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "s",
+                          "dwellS"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "points"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
                       "const": "customRoute"
                     },
                     "points": {
@@ -543,7 +595,7 @@
                       "maxItems": 128,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema20"
+                        "$ref": "#/$defs/__schema21"
                       }
                     }
                   },
@@ -565,7 +617,7 @@
                       "maxItems": 1024,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema21"
+                        "$ref": "#/$defs/__schema22"
                       }
                     }
                   },
@@ -598,7 +650,7 @@
                           "maxItems": 6001,
                           "type": "array",
                           "items": {
-                            "$ref": "#/$defs/__schema22"
+                            "$ref": "#/$defs/__schema23"
                           }
                         }
                       },
@@ -1678,6 +1730,22 @@
     "__schema21": {
       "type": "object",
       "properties": {
+        "x": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema22": {
+      "type": "object",
+      "properties": {
         "timeS": {
           "type": "number",
           "minimum": 0
@@ -1696,7 +1764,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema22": {
+    "__schema23": {
       "type": "object",
       "properties": {
         "timeS": {

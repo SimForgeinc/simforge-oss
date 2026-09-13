@@ -812,6 +812,29 @@ impl Simulation {
         plan.accel = accel;
         plan.speed = speed;
         plan.route_s = a.route_s + speed * dt;
+        if let Some((station_index, station)) = a.route_stations.iter().enumerate().find(|(idx, station)| {
+            !a.route_station_states[*idx].released
+                && a.route_s <= station.s + 0.05
+                && plan.route_s >= station.s - 0.05
+        }) {
+            let state = &a.route_station_states[station_index];
+            let group_ready = station.coordination_id.as_ref().is_none_or(|coordination_id| {
+                self.actors.iter().all(|other| {
+                    other.route_stations.iter().enumerate()
+                        .filter(|(_, peer)| peer.coordination_id.as_ref() == Some(coordination_id))
+                        .all(|(peer_index, peer)| other.route_station_states[peer_index].stopped_since_s
+                            .is_some_and(|stopped| t - stopped >= peer.dwell_s))
+                })
+            });
+            if state.stopped_since_s.is_none()
+                || t - state.stopped_since_s.unwrap_or(t) < station.dwell_s
+                || !group_ready
+            {
+                plan.speed = 0.0;
+                plan.accel = -a.speed_mps / dt;
+                plan.route_s = station.s;
+            }
+        }
 
         let lat = lateral_step(a, t, dt);
         plan.lateral_reference_offset = lat.offset;
@@ -1031,6 +1054,18 @@ impl Simulation {
             if !self.actors[index].is_live() {
                 continue;
             }
+            let station_release: Vec<bool> = self.actors[index].route_stations.iter().enumerate().map(|(si, station)| {
+                let state = &self.actors[index].route_station_states[si];
+                if station.coordination_id.is_none() || state.stopped_since_s.is_none() {
+                    return true;
+                }
+                self.actors.iter().all(|other| {
+                    other.route_stations.iter().enumerate().filter(|(_, peer)| peer.coordination_id == station.coordination_id)
+                        .all(|(pi, peer)| other.route_station_states.get(pi).is_some_and(|ps| {
+                            ps.stopped_since_s.is_some() && t - ps.stopped_since_s.unwrap_or(t) >= peer.dwell_s
+                        }))
+                })
+            }).collect();
             {
                 let a = &mut self.actors[index];
                 a.speed_mps = plan.speed;
@@ -1044,6 +1079,17 @@ impl Simulation {
                 a.lateral_accel_mps2 = plan.lateral_accel;
                 a.lateral_reference_offset_m = plan.lateral_reference_offset;
                 a.lateral_reference_rate_mps = plan.lateral_reference_rate;
+                for (station_index, station) in a.route_stations.iter().enumerate() {
+                    let state = &mut a.route_station_states[station_index];
+                    if !state.released && (a.route_s - station.s).abs() <= 0.05 {
+                        if state.stopped_since_s.is_none() {
+                            state.stopped_since_s = Some(t);
+                        } else if station_release[station_index] && t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s {
+                            state.released = true;
+                            state.released_at_s = Some(t);
+                        }
+                    }
+                }
                 a.lateral_reference_accel_mps2 = plan.lateral_reference_accel;
                 a.position = plan.position;
                 a.heading_rad = plan.heading;
@@ -1546,4 +1592,32 @@ impl Simulation {
 #[inline]
 pub(super) fn engine_err(e: impl std::fmt::Display) -> crate::error::SimEngineError {
     crate::error::SimEngineError::new(e.to_string(), Vec::new())
+}
+
+#[cfg(test)]
+mod route_station_tests {
+    use super::super::actor::{RoadControlRuntimeState, RouteStationRuntime};
+
+    fn released_at(station: &RouteStationRuntime, state: &RoadControlRuntimeState, t: f64, group_ready: bool) -> bool {
+        state.stopped_since_s.is_some_and(|start| group_ready && t - start >= station.dwell_s)
+    }
+
+    #[test]
+    fn route_station_dwells_exactly_then_resumes() {
+        let station = RouteStationRuntime { id: "stop".into(), s: 4.0, dwell_s: 2.0, coordination_id: None };
+        let state = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
+        assert!(!released_at(&station, &state, 11.999, true));
+        assert!(released_at(&station, &state, 12.0, true));
+    }
+
+    #[test]
+    fn coordinated_stations_wait_for_last_dwell() {
+        let a = RouteStationRuntime { id: "a".into(), s: 2.0, dwell_s: 1.0, coordination_id: Some("g".into()) };
+        let b = RouteStationRuntime { id: "b".into(), s: 3.0, dwell_s: 2.0, coordination_id: Some("g".into()) };
+        let sa = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
+        let sb = RoadControlRuntimeState { stopped_since_s: Some(11.0), ..Default::default() };
+        assert!(!released_at(&a, &sa, 12.0, false));
+        assert!(released_at(&a, &sa, 13.0, true));
+        assert!(released_at(&b, &sb, 13.0, true));
+    }
 }
