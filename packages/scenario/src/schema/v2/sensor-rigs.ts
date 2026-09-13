@@ -807,7 +807,7 @@ export function modelRigRequirement(family: string): ModelRigRequirement | undef
  * Returned as DATA, unhashed: this package sits below the one that owns
  * content hashing (`@simforge-oss/engine` depends on this one), and adding a
  * second SHA-256 here to dodge that layering would duplicate the primitive.
- * Hash it with `captureProfileHash` in `@simforge-oss/engine`.
+ * Hash it with `captureHashFromSensors` in `@simforge-oss/engine`.
  *
  * Sensor fields are read from the preset, so the payload cannot disagree
  * with the geometry it describes.
