@@ -134,7 +134,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               ) : null}
               <span {...stylex.props(styles.monoSmall, styles.muted)} >{run.id}</span>
               {live ? (
-                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerSm)} />
               ) : null}
             </div>
 
@@ -155,7 +155,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               </div>
               <div>
                 <dt {...stylex.props(styles.label)} >Model version</dt>
-                <dd {...stylex.props(styles.monoSmall)} >
+                <dd {...stylex.props(styles.truncateValue, styles.monoSmall)} >
                   {run.modelVersionId}
                 </dd>
               </div>
@@ -177,13 +177,13 @@ export function LocalRunClient({ runId }: { runId: string }) {
                   {Object.entries(manifest.metrics).map(([field, value]) => (
                     <div key={field}>
                       <dt {...stylex.props(styles.label)} >{field}</dt>
-                      <dd {...stylex.props(styles.mono)} >
+                      <dd {...stylex.props(styles.truncateValue, styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>
                   ))}
                 </dl>
-                <p {...stylex.props(styles.tinyMuted)} >
+                <p {...stylex.props(styles.xsMutedRelaxed)} >
                   {manifest.scored
                     ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or AlpaSim benchmark number."
                     : "This run is not scored: no reference future was available, so the numbers above are not a driving score."}
@@ -198,7 +198,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
                   {Object.entries(run.metrics).map(([field, value]) => (
                     <div key={field}>
                       <dt {...stylex.props(styles.label)} >{field}</dt>
-                      <dd {...stylex.props(styles.mono)} >
+                      <dd {...stylex.props(styles.truncateValue, styles.mono)} >
                         {typeof value === "object" ? JSON.stringify(value) : String(value)}
                       </dd>
                     </div>
@@ -217,14 +217,14 @@ export function LocalRunClient({ runId }: { runId: string }) {
                     </li>
                   ))}
                 </ul>
-                <p {...stylex.props(styles.tinyMuted)} >
+                <p {...stylex.props(styles.xsMutedRelaxed)} >
                   The run writes `result.json` (simforge.eval-result-manifest/v1) last, as its
                   completion marker — the same document a cloud run produces.
                 </p>
               </section>
             ) : live ? (
               <p {...stylex.props(styles.controls, styles.muted)} >
-                <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+                <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerPlain)} />
                 Waiting for the local worker to lease and execute this run. Closing this page does
                 not stop it.
               </p>
@@ -232,7 +232,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
           </>
         ) : error === null ? (
           <p {...stylex.props(styles.controls, styles.muted)} >
-            <Loader2 aria-hidden="true" {...stylex.props(styles.spinner)} />
+            <Loader2 aria-hidden="true" {...stylex.props(styles.spinnerPlain)} />
             Loading run…
           </p>
         ) : null}

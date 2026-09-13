@@ -14,6 +14,9 @@ import {
   sensorName,
 } from "./sensor-presentation";
 import { EDITOR_SENSOR_RIGS } from "./sensor-rig-presets";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActorSensorsSection.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * Sensors, as much of them as a 192px rail can honestly show.
@@ -43,42 +46,42 @@ export function ActorSensorsSection({
   const rig = appliedRigPreset(sensors, role.actor, EDITOR_SENSOR_RIGS);
 
   return (
-    <section aria-labelledby="scenario-sensors-heading" className="space-y-1.5">
-      <div className="flex items-baseline justify-between gap-2">
+    <section aria-labelledby="scenario-sensors-heading" {...stylex.props(styles.stackSm)}>
+      <div {...stylex.props(styles.flexBetweenBaseline)}>
         <span
-          className="text-[9px] uppercase tracking-[0.12em] text-white/40"
+          {...stylex.props(styles.caps)}
           id="scenario-sensors-heading"
         >
           Sensors
         </span>
         {counts.total > 0 ? (
-          <span className="font-mono text-[9px] text-white/45">{counts.total}</span>
+          <span {...stylex.props(styles.mono)}>{counts.total}</span>
         ) : null}
       </div>
 
       {counts.total === 0 ? (
-        <p className="text-[9px] leading-3 text-white/35">
+        <p {...stylex.props(styles.textLeading3TextWhite35)}>
           Add a camera or a full perception rig to record the scenario.
         </p>
       ) : (
-        <p className="text-[9px] leading-3 text-white/45">
+        <p {...stylex.props(styles.textLeading3TextWhite45)}>
           {rig ? rig.name : sensorCountSummary(counts)}
-          <span className="mt-0.5 block text-white/30">Records the scenario</span>
+          <span {...stylex.props(styles.block)}>Records the scenario</span>
         </p>
       )}
 
       {sensors.map((sensor) => {
         const name = sensorName(sensor);
         return (
-          <div className="flex items-center gap-1.5" key={sensor.id} data-sensor-id={sensor.id}>
-            <span className="min-w-0 flex-1 truncate text-[10px] text-white/70" title={name}>
+          <div {...stylex.props(styles.flexCenterGap15)} key={sensor.id} data-sensor-id={sensor.id}>
+            <span {...stylex.props(styles.fillTruncateNarrowable)} title={name}>
               {name}
-              <span className="ml-1 text-[8px] text-white/30">{modalityLabel(sensor.type)}</span>
+              <span {...stylex.props(styles.ml1TextTextWhite30)}>{modalityLabel(sensor.type)}</span>
             </span>
             <Switch
               aria-label={`${name} (${sensor.id}) enabled`}
               checked={sensor.enabled}
-              className="scale-75"
+              xstyle={styles.scale75}
               onCheckedChange={(enabled) =>
                 document.updateActorSensor(role.id, sensor.id, { ...sensor, enabled })
               }
@@ -87,24 +90,24 @@ export function ActorSensorsSection({
         );
       })}
 
-      <div className="flex gap-1.5">
+      <div {...stylex.props(styles.flexGap15)}>
         <button
-          className="editor-motion flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/12 bg-white/[0.035] px-2 py-1.5 text-[9px] font-semibold text-white/70 hover:border-[#E8E044]/45 hover:bg-[#E8E044]/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+          className={stylex.props(styles.flexCenterMid, motionStyles.editorMotion).className}
           data-testid="open-sensor-setup"
           onClick={() => setSetupOpen(true)}
           type="button"
         >
-          <SlidersHorizontal aria-hidden="true" className="size-3" />
+          <SlidersHorizontal aria-hidden="true" className={stylex.props(styles.size3).className} />
           {counts.total === 0 ? "Add sensors" : "Configure"}
         </button>
         {counts.total === 0 ? (
           <button
             aria-label="Add dash camera"
-            className="editor-motion flex items-center justify-center gap-1 rounded-lg border border-[#E8E044]/35 bg-[#E8E044]/10 px-2 py-1.5 text-[9px] font-semibold text-[#E8E044] hover:bg-[#E8E044]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+            className={stylex.props(styles.flexCenterMid2, motionStyles.editorMotion).className}
             onClick={() => document.addActorSensor(role.id, defaultDashCamera(role.actor))}
             type="button"
           >
-            <Radio aria-hidden="true" className="size-3" />
+            <Radio aria-hidden="true" className={stylex.props(styles.size3).className} />
             Camera
           </button>
         ) : null}

@@ -135,7 +135,7 @@ function ProfileRow({
  * local Bevy renderer needs. Every state comes from the local service; nothing
  * here claims a map is ready before its closure is complete and registered.
  */
-export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDescriptor; className?: string }) {
+export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescriptor; xstyle?: stylex.StyleXStyles }) {
   const cloud = useStudioCloudStatus();
   const router = useRouter();
   const browser = useMapInstall(map.mapVersionId, "browser");
@@ -150,7 +150,7 @@ export function LocalMapPreparationPanel({ map, className }: { map: LocalMapDesc
 
   return (
     <div
-      {...mergeStyleProps(stylex.props(setup.panel), className)}
+      {...stylex.props(setup.panel, xstyle)}
       data-testid="local-map-preparation"
       data-map-access={map.access}
       data-map-locked={String(locked)}

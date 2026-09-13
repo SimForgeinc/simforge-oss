@@ -10,6 +10,8 @@ import { SelectMenuField } from "../../../components/ui/select-menu";
 import { useScenarioNotification } from "../status";
 import { RenderArtifactList } from "./RenderArtifactList";
 import { VideoPreviewModal } from "./VideoPreviewModal";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ArtifactsWorkspacePanel.stylex";
 
 /**
  * The artifacts workspace — manifest #146. Every artifact in the workspace reachable from a visible
@@ -109,17 +111,17 @@ export function ArtifactsWorkspacePanel() {
   }, [studioHost]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="scenario-artifacts-workspace">
-      <div className="flex shrink-0 items-end gap-2 border-b render-hairline px-4 pb-3 pt-1">
-        <label className="min-w-0 flex-1">
-          <span className="sr-only">Search artifacts</span>
-          <span className="relative block">
+    <div {...stylex.props(styles.flexColFill)} data-testid="scenario-artifacts-workspace">
+      <div {...stylex.props(styles.flexEndTight)}>
+        <label {...stylex.props(styles.fillNarrowable)}>
+          <span {...stylex.props(styles.srOnly)}>Search artifacts</span>
+          <span {...stylex.props(styles.relBlock)}>
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              className={stylex.props(styles.absMutedInert).className}
             />
             <Input
-              className="h-9 pl-8 text-xs"
+              xstyle={styles.xs}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search kind, media type, job…"
               type="search"
@@ -128,19 +130,19 @@ export function ArtifactsWorkspacePanel() {
           </span>
         </label>
         <SelectMenuField
-          fieldClassName="w-40"
+          fieldXstyle={styles.filterField}
           label="Kind"
-          labelClassName="text-micro uppercase tracking-meta"
+          labelXstyle={styles.fieldMetaLabel}
           onChange={setKind}
           options={kindOptions}
           value={kind}
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {loading && artifacts.length === 0 ? (
           <WorkspacePaneLoading
-            className="min-h-64"
+            xstyle={styles.minH64}
             hint="Indexing the outputs available in this workspace."
             message="Loading artifacts…"
           />

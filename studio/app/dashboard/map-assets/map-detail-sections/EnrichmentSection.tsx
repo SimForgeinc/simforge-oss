@@ -10,7 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
 
 type EnrichmentSectionProps = {
@@ -50,7 +49,7 @@ export function EnrichmentSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           Third-Party Enrichment
         </button>
@@ -72,7 +71,7 @@ export function EnrichmentSection({
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" className={stylex.props(styles.s_948).className}>
+              <TooltipContent side="left" xstyle={styles.s_948}>
                 {enrichment ? "Re-run 3rd-party enrichment (replaces existing)" : "Run 3rd-party enrichment (1–2 min)"}
               </TooltipContent>
             </Tooltip>
@@ -85,8 +84,10 @@ export function EnrichmentSection({
             <p className={stylex.props(styles.s_973).className}>Loading saved snapshot…</p>
           )}
           {!enrichmentLoading && !enrichment && (
-            <div className={stylex.props(styles.s_960).className}>
-              <p className={stylex.props(styles.s_881).className}>
+            /* `space-y-2` lives on the children here: `Button` is inline-flex, so
+               a flex column would blockify it and lose its line-box leading. */
+            <div>
+              <p className={stylex.props(styles.s_881, styles.stackY2).className}>
                 No enrichment snapshot yet. Run 3rd-party enrichment to pull bus stops,
                 schools, hospitals, and named road segments for this map.
               </p>
@@ -95,7 +96,7 @@ export function EnrichmentSection({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className={stylex.props(styles.s_708).className}
+                  xstyle={[styles.s_708, styles.stackY2]}
                   disabled={enrichBusy}
                   onClick={onEnrich}
                 >
@@ -112,7 +113,7 @@ export function EnrichmentSection({
                   )}
                 </Button>
               )}
-              {enrichErr && <p className={stylex.props(styles.s_451).className}>{enrichErr}</p>}
+              {enrichErr && <p className={stylex.props(styles.s_451, styles.stackY2).className}>{enrichErr}</p>}
             </div>
           )}
           {enrichment && (

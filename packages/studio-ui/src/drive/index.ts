@@ -17,7 +17,10 @@ export {
 // Drive's chrome travels through this barrel; its *tokens* deliberately do
 // not. StyleX resolves `defineVars` through the importing module's own path,
 // so a var group re-exported from an index fails the compile — import
-// `./drive.stylex` (or `@simforge-oss/studio-ui/drive/drive.stylex`) directly.
+// `./drive.stylex` directly. In this repo that means the source path even
+// from `studio/app`, because StyleX resolves theme specifiers with plain Node
+// conditions and the `@simforge-oss/studio-ui/drive/drive.stylex` subpath
+// would land on `dist`; the subpath export is for consumers outside the repo.
 export { DriveButton, DrivePill, driveChrome } from "./chrome";
 export { CarPickerScreen, DRIVE_PAINT_COLORS, type DriveVehicleOption } from "./CarPickerScreen";
 export { MapPickerScreen, type DriveMapOption } from "./MapPickerScreen";

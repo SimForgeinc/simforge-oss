@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./VideoPreviewModal.stylex";
 
 /**
  * Full-pane playback for one artifact — manifest #148.
@@ -44,38 +46,38 @@ export function VideoPreviewModal({
     <div
       aria-label={title}
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur"
+      {...stylex.props(styles.fixedFlexCenter)}
       role="dialog"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[85vh] w-full max-w-[1200px] flex-col overflow-hidden border border-border bg-card shadow-2xl">
-        <header className="flex items-center gap-3 border-b border-border px-5 py-3">
-          <div className="min-w-0 flex-1">
+      <div {...stylex.props(styles.flexColBordered)}>
+        <header {...stylex.props(styles.flexCenterRuleB)}>
+          <div {...stylex.props(styles.fillNarrowable)}>
             {eyebrow ? (
-              <p className="truncate text-micro uppercase tracking-meta text-muted-foreground">
+              <p {...stylex.props(styles.capsMicroMuted)}>
                 {eyebrow}
               </p>
             ) : null}
-            <h2 className="truncate text-sm font-semibold text-card-foreground">{title}</h2>
+            <h2 {...stylex.props(styles.smSemiboldTruncate)}>{title}</h2>
           </div>
           <Button aria-label="Close preview" onClick={onClose} size="icon" variant="ghost">
-            <X aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" className={stylex.props(styles.size4).className} />
           </Button>
         </header>
-        <div className="relative min-h-0 flex-1 bg-background">
+        <div {...stylex.props(styles.relFillShrinkable)}>
           {!url ? (
-            <p className="grid size-full place-items-center text-meta uppercase tracking-meta text-muted-foreground">
+            <p {...stylex.props(styles.gridCenteredCaps)}>
               This file has no playable URL.
             </p>
           ) : isVideo ? (
-            <video autoPlay className="size-full object-contain" controls loop muted playsInline src={url}>
+            <video autoPlay {...stylex.props(styles.fullContain)} controls loop muted playsInline src={url}>
               <track kind="captions" />
             </video>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- presigned URL; see RenderGalleryTile
-            <img alt={title} className="size-full object-contain" src={url} />
+            <img alt={title} {...stylex.props(styles.fullContain)} src={url} />
           )}
         </div>
       </div>

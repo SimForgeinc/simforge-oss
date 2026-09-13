@@ -20,7 +20,6 @@ import {
 } from "../../../../lib/scenario/contracts";
 import { Button } from "../../../../components/ui/button";
 import { SkyCloudBackdrop } from "../../../../components/SkyCloudBackdrop";
-import { cn } from "../../../../lib/utils";
 import { AUTHORING_QUALITY } from "../../authoring-quality";
 import {
   captureRenderingBenchmarkHardware,
@@ -36,6 +35,8 @@ import {
   type RenderingBenchmarkResult,
   type RenderingBenchmarkSnapshot,
 } from "./rendering-benchmark";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderingBenchmark.stylex";
 
 export type BenchmarkState =
   | { phase: "idle"; snapshot: RenderingBenchmarkSnapshot | null }
@@ -234,7 +235,7 @@ export function RenderingBenchmarkCard({
 }) {
   const benchmark = useRenderingBenchmark(manifestUrl);
   return (
-    <div className="mx-auto mt-6 w-full max-w-4xl text-left">
+    <div {...stylex.props(styles.wideCenteredXLeftText)}>
       <RenderingBenchmarkSection
         state={benchmark.state}
         currentQuality={currentQuality}
@@ -291,37 +292,37 @@ export function RenderingBenchmarkSection({
       <button
         type="button"
         onClick={onStart}
-        className="group relative w-full overflow-hidden px-6 py-8 text-left transition duration-300 hover:-translate-y-0.5 focus-visible:rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] sm:px-10"
+        className={`${stylex.props(styles.relClipWide).className} group`}
         aria-label={
           snapshot ? "Run benchmark again" : `Start benchmark on ${mapLabel}`
         }
       >
-        <span className="relative flex items-center gap-5">
-          <span className="grid size-16 shrink-0 place-items-center text-[#E8E044] transition-transform duration-300 group-hover:scale-105">
-            <Gauge className="size-9" aria-hidden="true" />
+        <span {...stylex.props(styles.relFlexCenter)}>
+          <span className={`${stylex.props(styles.gridCenteredTight).className} group-hover:scale-105`}>
+            <Gauge className={stylex.props(styles.size9).className} aria-hidden="true" />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-meta text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]">
+          <span {...stylex.props(styles.fillNarrowable)}>
+            <span {...stylex.props(styles.blockCapsMeta)}>
               Benchmark
             </span>
-            <span className="mt-1 block text-xl font-semibold text-white sm:text-2xl">
+            <span {...stylex.props(styles.blockXlWhite)}>
               {snapshot ? "Run Benchmark Again" : "Start Benchmark"}
             </span>
-            <span className="mt-1 block truncate text-xs text-white/45">
+            <span {...stylex.props(styles.blockXsTruncate)}>
               {mapLabel}
             </span>
           </span>
           <ArrowRight
-            className="size-5 shrink-0 text-[#E8E044] transition-transform duration-300 group-hover:translate-x-1"
+            className={`${stylex.props(styles.tight).className} group-hover:translate-x-1`}
             aria-hidden="true"
           />
         </span>
       </button>
 
       {snapshot ? (
-        <p className="mt-2 text-center text-micro text-muted-foreground">
+        <p {...stylex.props(styles.microMutedCenterText)}>
           Last result:{" "}
-          <span className="font-semibold text-foreground">
+          <span {...stylex.props(styles.inkSemibold)}>
             {choiceLabel(snapshot.recommended)}
           </span>
         </p>
@@ -329,13 +330,13 @@ export function RenderingBenchmarkSection({
 
       {state.phase === "error" ? (
         <div
-          className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs"
+          {...stylex.props(styles.flexBetweenStart)}
           role="alert"
         >
-          <span className="min-w-0 text-destructive">
-            <span className="block">Benchmark stopped: {state.message}</span>
+          <span {...stylex.props(styles.dangerNarrowable)}>
+            <span {...stylex.props(styles.block)}>Benchmark stopped: {state.message}</span>
             {state.failures.length > 0 ? (
-              <span className="mt-1 block text-[10px] text-destructive/80">
+              <span {...stylex.props(styles.block2)}>
                 {state.failures
                   .map(
                     (failure) =>
@@ -401,56 +402,56 @@ function BenchmarkProgressOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[220] grid place-items-center overflow-hidden text-white"
+      {...stylex.props(styles.fixedGridCentered)}
       role="status"
       aria-live="polite"
     >
-      <SkyCloudBackdrop className="fixed" />
+      <SkyCloudBackdrop xstyle={styles.fixed} />
       <Button
-        className="absolute right-5 top-5 z-10 gap-2 rounded-full bg-transparent text-white/60 hover:bg-transparent hover:text-white"
+        xstyle={styles.absRoundRaised}
         size="sm"
         variant="ghost"
         onClick={onCancel}
       >
-        <X className="size-4" aria-hidden="true" /> Cancel
+        <X className={stylex.props(styles.size4).className} aria-hidden="true" /> Cancel
       </Button>
 
       <div
-        className="relative z-10 w-full max-w-3xl px-6 py-10 text-center sm:px-10"
+        {...stylex.props(styles.relWideRaised)}
         data-testid="benchmark-progress-content"
         data-visual-treatment="flat"
       >
-        <div className="relative mx-auto grid size-44 place-items-center sm:size-52">
-          <div className="absolute inset-0 animate-spin rounded-full border border-primary/25 border-t-primary [animation-duration:3s]" />
-          <div className="absolute inset-5 animate-spin rounded-full border border-dashed border-primary/30 border-b-primary [animation-direction:reverse] [animation-duration:5s]" />
-          <div className="absolute inset-10 animate-pulse rounded-full bg-primary/10" />
-          <div className="relative grid size-20 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_60px_hsl(var(--primary)/.45)]">
+        <div {...stylex.props(styles.relGridCentered)}>
+          <div className={`${stylex.props(styles.absBorderedRound).className} animate-spin rounded-full`} />
+          <div className={`${stylex.props(styles.absBorderedRound2).className} animate-spin rounded-full`} />
+          <div {...stylex.props(styles.absRoundPulsing)} />
+          <div {...stylex.props(styles.relGridCentered2)}>
             {state.phase === "loading" ? (
               <LoaderCircle
-                className="size-9 animate-spin"
+                className={stylex.props(styles.spinner).className}
                 aria-hidden="true"
               />
             ) : (
-              <Activity className="size-9 animate-pulse" aria-hidden="true" />
+              <Activity className={stylex.props(styles.pulsing).className} aria-hidden="true" />
             )}
           </div>
         </div>
 
-        <p className="mt-8 font-meta text-[10px] font-bold uppercase tracking-[0.28em] text-primary">
+        <p {...stylex.props(styles.capsMetaAccent)}>
           {state.phase === "loading"
             ? "Preparing renderer"
             : "Testing orbit smoothness"}
         </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+        <h2 {...stylex.props(styles.xxxlInkSemibold)}>
           {candidate}
         </h2>
-        <p className="mt-2 text-sm tabular-nums text-muted-foreground">
+        <p {...stylex.props(styles.smMutedNums)}>
           {elapsedSeconds}s elapsed · {completedCount} of{" "}
           {SCENARIO_AUTHORING_QUALITY_IDS.length} complete
         </p>
 
         <div
-          className="mx-auto mt-9 grid max-w-2xl grid-cols-4 gap-2"
+          {...stylex.props(styles.gridCenteredXCols4)}
           aria-label="Benchmark progress"
         >
           {SCENARIO_AUTHORING_QUALITY_IDS.map((quality, index) => {
@@ -458,28 +459,21 @@ function BenchmarkProgressOverlay({
             const failed = failures.some((item) => item.quality === quality);
             const current = index === state.candidateIndex;
             return (
-              <div key={quality} className="min-w-0">
+              <div key={quality} {...stylex.props(styles.narrowable)}>
                 <div
-                  className={cn(
-                    "relative h-2 overflow-hidden rounded-full bg-border/70",
-                    result && "bg-primary",
-                    failed && "bg-destructive/70",
-                  )}
+                  className={stylex.props(styles.relClipRound, result && styles.bgPrimary, failed && styles.bgDestructive70).className}
                 >
                   {current ? (
-                    <span className="absolute inset-y-0 left-0 w-1/2 animate-pulse rounded-full bg-primary" />
+                    <span {...stylex.props(styles.absRoundPulsing2)} />
                   ) : null}
                 </div>
                 <p
-                  className={cn(
-                    "mt-2 truncate text-[10px] text-muted-foreground",
-                    current && "font-semibold text-foreground",
-                  )}
+                  {...stylex.props(current ? styles.mutedInkSemibold : styles.mutedTruncate)}
                 >
                   {choiceLabel(quality)}
                 </p>
                 {result ? (
-                  <p className="mt-0.5 text-micro font-semibold tabular-nums text-primary">
+                  <p {...stylex.props(styles.microAccentSemibold)}>
                     {result.metrics.avgFps.toFixed(0)} FPS
                   </p>
                 ) : null}
@@ -512,37 +506,37 @@ function BenchmarkResultOverlay({
   );
   return (
     <div
-      className="fixed inset-0 z-[220] overflow-y-auto text-white"
+      {...stylex.props(styles.fixedWhiteScrollY)}
       role="dialog"
       aria-modal="true"
       aria-labelledby="benchmark-result-title"
     >
-      <SkyCloudBackdrop className="fixed" />
-      <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center px-5 py-12 text-center">
-        <div className="relative grid size-20 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_70px_hsl(var(--primary)/.4)]">
-          <span className="absolute inset-0 animate-ping rounded-full border border-primary opacity-25" />
-          <Sparkles className="size-9" aria-hidden="true" />
+      <SkyCloudBackdrop xstyle={styles.fixed} />
+      <div {...stylex.props(styles.relFlexCol)}>
+        <div {...stylex.props(styles.relGridCentered3)}>
+          <span {...stylex.props(styles.absBorderedRound3)} />
+          <Sparkles className={stylex.props(styles.size9).className} aria-hidden="true" />
         </div>
-        <p className="mt-7 font-meta text-[10px] font-bold uppercase tracking-[0.28em] text-primary">
+        <p {...stylex.props(styles.capsMetaAccent2)}>
           Your best match
         </p>
         <h2
           id="benchmark-result-title"
-          className="mt-2 text-4xl font-semibold tracking-tight text-foreground sm:text-6xl"
+          {...stylex.props(styles.hugeInkSemibold)}
         >
           {choiceLabel(snapshot.recommended)}
         </h2>
         {recommendedResult ? (
-          <div className="mt-5 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div {...stylex.props(styles.flexCenterMid)}>
             <span>
-              <strong className="text-xl font-semibold tabular-nums text-foreground">
+              <strong {...stylex.props(styles.xlInkSemibold)}>
                 {recommendedResult.metrics.avgFps.toFixed(0)}
               </strong>{" "}
               FPS
             </span>
-            <span className="h-8 w-px bg-border" />
+            <span {...stylex.props(styles.h8WPxBgBorder)} />
             <span>
-              <strong className="text-xl font-semibold tabular-nums text-foreground">
+              <strong {...stylex.props(styles.xlInkSemibold)}>
                 {recommendedResult.metrics.p95FrameMs.toFixed(1)}
               </strong>{" "}
               ms p95
@@ -551,31 +545,31 @@ function BenchmarkResultOverlay({
         ) : null}
         <Button
           autoFocus
-          className="mt-8 h-12 min-w-64 gap-2 rounded-full bg-[#E8E044] px-8 text-sm text-black hover:bg-[#f1ea55] focus-visible:ring-[#E8E044]"
+          xstyle={styles.smRoundGap2}
           size="lg"
           onClick={() => onApply(snapshot.recommended)}
         >
           {currentQuality === snapshot.recommended
             ? "Continue with recommendation"
             : `Use recommended ${choiceLabel(snapshot.recommended)}`}
-          <ArrowRight className="size-4" aria-hidden="true" />
+          <ArrowRight className={stylex.props(styles.size4).className} aria-hidden="true" />
         </Button>
 
         <section
-          className="mt-9 w-full max-w-3xl"
+          {...stylex.props(styles.wide)}
           aria-labelledby="benchmark-manual-selection-title"
         >
-          <div className="flex items-center gap-4">
-            <span className="h-px flex-1 bg-border" />
+          <div {...stylex.props(styles.flexCenterGap4)}>
+            <span {...stylex.props(styles.fill)} />
             <h3
               id="benchmark-manual-selection-title"
-              className="font-meta text-[10px] font-bold uppercase tracking-meta-wider text-muted-foreground"
+              {...stylex.props(styles.capsMetaMuted)}
             >
               Manual selection
             </h3>
-            <span className="h-px flex-1 bg-border" />
+            <span {...stylex.props(styles.fill)} />
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div {...stylex.props(styles.gridGap2)}>
             {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => {
               const result = snapshot.results.find(
                 (candidate) => candidate.quality === choice.id,
@@ -589,28 +583,23 @@ function BenchmarkResultOverlay({
                   type="button"
                   aria-label={`Use ${choice.label}`}
                   onClick={() => onApply(choice.id)}
-                  className={cn(
-                    "group min-h-24 p-3 text-left transition hover:-translate-y-0.5 focus-visible:rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]",
-                    currentQuality === choice.id
-                      ? "text-[#E8E044]"
-                      : "text-white/70",
-                  )}
+                  className={stylex.props(currentQuality === choice.id ? styles.pad3LeftText : styles.pad3LeftText2).className}
                 >
-                  <span className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-semibold text-foreground">
+                  <span {...stylex.props(styles.flexBetweenStart2)}>
+                    <span {...stylex.props(styles.smInkSemibold)}>
                       {choice.label}
                     </span>
                     {choice.id === snapshot.recommended ? (
-                      <span className="rounded-full bg-primary/15 px-1.5 py-0.5 font-meta text-[8px] font-bold uppercase tracking-meta text-primary">
+                      <span {...stylex.props(styles.capsMetaAccent3)}>
                         Best
                       </span>
                     ) : currentQuality === choice.id ? (
-                      <span className="rounded-full border border-border px-1.5 py-0.5 font-meta text-[8px] font-bold uppercase tracking-meta text-muted-foreground">
+                      <span {...stylex.props(styles.capsMetaMuted2)}>
                         Current
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-3 block text-micro tabular-nums text-muted-foreground">
+                  <span {...stylex.props(styles.blockMicroMuted)}>
                     {result
                       ? `${result.metrics.avgFps.toFixed(0)} FPS · ${result.metrics.orbit.p95FrameMs.toFixed(1)} ms orbit p95`
                       : failed
@@ -623,13 +612,13 @@ function BenchmarkResultOverlay({
           </div>
         </section>
 
-        <details className="mt-8 w-full max-w-3xl rounded-xl border border-border bg-card/70 text-left">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-muted-foreground hover:text-foreground">
+        <details {...stylex.props(styles.borderedWideLeftText)}>
+          <summary {...stylex.props(styles.xsMutedSemibold)}>
             Benchmark details
           </summary>
-          <div className="space-y-3 border-t border-border p-4">
+          <div {...stylex.props(styles.ruleTPad4)}>
             <HardwareSummary hardware={snapshot.hardware} />
-            <div className="space-y-2" aria-label="Renderer benchmark results">
+            <div {...stylex.props(styles.stackMd)} aria-label="Renderer benchmark results">
               {snapshot.results.map((result) => (
                 <BenchmarkResultCard
                   key={result.quality}
@@ -640,37 +629,37 @@ function BenchmarkResultOverlay({
               {snapshot.failures.map((failure) => (
                 <div
                   key={failure.quality}
-                  className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs"
+                  {...stylex.props(styles.xsBorderedPad3)}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold text-foreground">
+                  <div {...stylex.props(styles.flexCenterBetween)}>
+                    <span {...stylex.props(styles.inkSemibold)}>
                       {choiceLabel(failure.quality)}
                     </span>
-                    <span className="text-destructive">Unavailable</span>
+                    <span {...stylex.props(styles.danger)}>Unavailable</span>
                   </div>
-                  <p className="mt-1 text-micro text-muted-foreground">
+                  <p {...stylex.props(styles.microMuted)}>
                     {failure.message}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div {...stylex.props(styles.flexWrapGap2)}>
               <Button
-                className="gap-2"
+                xstyle={styles.gap2}
                 size="sm"
                 variant="outline"
                 onClick={onCopy}
               >
-                <Clipboard className="size-3.5" aria-hidden="true" />
+                <Clipboard className={stylex.props(styles.size35).className} aria-hidden="true" />
                 {copied ? "Report copied" : "Copy developer report"}
               </Button>
               <Button
-                className="gap-2"
+                xstyle={styles.gap2}
                 size="sm"
                 variant="ghost"
                 onClick={onRestart}
               >
-                <RotateCcw className="size-3.5" aria-hidden="true" /> Run again
+                <RotateCcw className={stylex.props(styles.size35).className} aria-hidden="true" /> Run again
               </Button>
             </div>
           </div>
@@ -704,13 +693,13 @@ function HardwareSummary({
       : "Unavailable";
   return (
     <section
-      className="border border-border bg-surface-raised p-3"
+      {...stylex.props(styles.borderedPad3)}
       aria-label="Benchmark hardware"
     >
-      <h3 className="font-meta text-micro font-bold uppercase tracking-meta text-muted-foreground">
+      <h3 {...stylex.props(styles.capsMetaMicro)}>
         Hardware and runtime
       </h3>
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-micro sm:grid-cols-3">
+      <dl {...stylex.props(styles.gridMicroCols2)}>
         <Diagnostic label="Browser" value={hardware.browser} />
         <Diagnostic label="Operating system" value={hardware.operatingSystem} />
         <Diagnostic
@@ -745,7 +734,7 @@ function HardwareSummary({
           value={`${(RENDERING_BENCHMARK_CONFIGURATION.sampleDurationMs / 1000).toFixed(1)} seconds per bundle`}
         />
       </dl>
-      <dl className="mt-2 border-t border-border/60 pt-2 text-micro">
+      <dl {...stylex.props(styles.microRuleT)}>
         <Diagnostic
           label="GPU / renderer"
           value={
@@ -761,10 +750,10 @@ function HardwareSummary({
 
 function Diagnostic({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div {...stylex.props(styles.narrowable)}>
+      <dt {...stylex.props(styles.muted)}>{label}</dt>
       <dd
-        className="mt-0.5 break-words font-medium text-foreground"
+        {...stylex.props(styles.inkMediumBreakWords)}
         title={value}
       >
         {value}
@@ -783,24 +772,19 @@ function BenchmarkResultCard({
   const { metrics } = result;
   return (
     <article
-      className={cn(
-        "border p-3",
-        recommended
-          ? "border-primary/60 bg-primary/10"
-          : "border-border bg-card",
-      )}
+      {...stylex.props(recommended ? styles.borderedPad32 : styles.borderedPad33)}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="font-semibold text-foreground">
+      <div {...stylex.props(styles.flexCenterBetween2)}>
+        <h4 {...stylex.props(styles.inkSemibold)}>
           {choiceLabel(result.quality)}
         </h4>
         {recommended ? (
-          <span className="bg-primary px-1.5 py-0.5 font-meta text-[9px] font-bold uppercase text-primary-foreground">
+          <span {...stylex.props(styles.capsMetaBold)}>
             Recommended
           </span>
         ) : null}
       </div>
-      <div className="mt-2 grid grid-cols-4 gap-2">
+      <div {...stylex.props(styles.gridCols4Gap2)}>
         <Metric label="Average" value={`${metrics.avgFps.toFixed(1)} FPS`} />
         <Metric label="Minimum" value={`${metrics.minFps.toFixed(1)} FPS`} />
         <Metric
@@ -842,7 +826,7 @@ function BenchmarkResultCard({
           value={result.assetLoading.cachedResponses.toLocaleString()}
         />
       </div>
-      <p className="mt-2 text-micro text-muted-foreground">
+      <p {...stylex.props(styles.microMuted2)}>
         {metrics.frames.toLocaleString()} frames over{" "}
         {(metrics.durationMs / 1000).toFixed(1)}s · three orbit passes reverse
         direction and change viewing angle · worst orbit frame{" "}
@@ -855,10 +839,10 @@ function BenchmarkResultCard({
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[9px] uppercase tracking-meta text-muted-foreground">
+      <p {...stylex.props(styles.capsMuted)}>
         {label}
       </p>
-      <p className="mt-0.5 text-micro font-semibold tabular-nums text-foreground">
+      <p {...stylex.props(styles.microInkSemibold)}>
         {value}
       </p>
     </div>
@@ -949,7 +933,7 @@ function BenchmarkCanvas({
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed left-[-10000px] top-0 h-[720px] w-[1280px] overflow-hidden opacity-0"
+      {...stylex.props(styles.fixedClipInert)}
       data-testid="rendering-benchmark-canvas"
     >
       <CityView

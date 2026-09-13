@@ -16,7 +16,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../../../../components/ui/sheet";
-import { cn } from "../../../../lib/utils";
 import type { EditorExperience } from "../../simple-timed-routes";
 import { CopyDebugInformationButton } from "../CopyDebugInformationButton";
 import {
@@ -29,6 +28,8 @@ import {
   type ViewportLayerKey,
   type ViewportSettings,
 } from "./viewport-settings";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ViewportSettingsPanel.stylex";
 
 /**
  * Editor, viewport, and camera settings for either the editor top bar or the idle canvas.
@@ -93,70 +94,62 @@ export function ViewportSettingsPanel({
       type="button"
       size={placement === "topbar" ? "sm" : "icon"}
       variant="outline"
-      className={cn(
-        "h-8 border-border bg-card/90 shadow-sm backdrop-blur",
-        placement === "topbar" ? "gap-2 rounded-none px-3" : "w-8 shadow-xl",
-      )}
+      xstyle={placement === "topbar" ? styles.glassyGap2 : styles.glassy}
       aria-expanded={open}
       aria-controls={panelId}
       aria-label={placement === "topbar" ? "Settings" : "Viewport and camera settings"}
       title="Viewport and camera settings"
       onClick={placement === "canvas" ? () => setOpen((value) => !value) : undefined}
     >
-      <Settings2 className="size-4" aria-hidden="true" />
+      <Settings2 className={stylex.props(styles.size4).className} aria-hidden="true" />
       {placement === "topbar" ? <span>Settings</span> : null}
     </Button>
   );
 
   if (!open && placement === "canvas") {
-    return <div className="absolute right-4 top-4">{trigger}</div>;
+    return <div {...stylex.props(styles.abs)}>{trigger}</div>;
   }
 
   const panel = (
     <div
       id={panelId}
-      className={cn(
-        "flex flex-col",
-        placement === "topbar"
-          ? "min-h-0 flex-1"
-          : "absolute right-4 top-4 max-h-[calc(100%-2rem)] w-[300px] border border-border bg-card/95 shadow-xl backdrop-blur",
-      )}
+      {...stylex.props(placement === "topbar" ? styles.flexColFill : styles.absFlexCol)}
       role="group"
       aria-label="Viewport and camera settings"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-1.5">
-        <span className="font-meta text-micro uppercase tracking-meta-wider text-muted-foreground">
+      <div {...stylex.props(styles.flexCenterBetween)}>
+        <span {...stylex.props(styles.capsMetaMicro)}>
           Settings
         </span>
-        <div className="flex items-center gap-0.5">
+        <div {...stylex.props(styles.flexCenterGap05)}>
           {modified ? (
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              className="size-6"
+              xstyle={styles.size6}
               aria-label="Reset all viewport settings to defaults"
               title="Reset to defaults"
               onClick={() => update({ ...DEFAULT_VIEWPORT_SETTINGS })}
             >
-              <RotateCcw className="size-3" aria-hidden="true" />
+              <RotateCcw className={stylex.props(styles.size3).className} aria-hidden="true" />
             </Button>
           ) : null}
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            className="size-6"
+            xstyle={styles.size6}
             aria-expanded
             aria-label="Close viewport settings"
             onClick={() => setOpen(false)}
           >
-            <X className="size-3" aria-hidden="true" />
+            <X className={stylex.props(styles.size3).className} aria-hidden="true" />
           </Button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {experience && onExperienceToggle ? (
           <Section label="Editor mode">
             <Toggle
@@ -164,7 +157,7 @@ export function ViewportSettingsPanel({
               label="Simple mode"
               onChange={onExperienceToggle}
             />
-            <p className="mt-1.5 text-micro leading-snug text-muted-foreground">
+            <p {...stylex.props(styles.microMutedSnug)}>
               Simple mode keeps the workspace focused. Weather and scene time stay available; turn
               it off for traffic and reasoning controls.
             </p>
@@ -172,17 +165,11 @@ export function ViewportSettingsPanel({
         ) : null}
         {quality && onQualityChange ? (
           <Section label="Render quality">
-            <div className="grid grid-cols-2 gap-1">
+            <div {...stylex.props(styles.gridCols2Gap1)}>
               {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => (
                 <button
                   aria-pressed={quality === choice.id}
-                  className={cn(
-                    "min-h-7 border px-1.5 font-meta text-[9px] font-bold uppercase tracking-meta transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    quality === choice.id
-                      ? "border-primary bg-primary/15 text-foreground"
-                      : "border-border bg-surface-raised text-muted-foreground hover:text-foreground",
-                  )}
+                  {...stylex.props(quality === choice.id ? styles.capsMetaInk : styles.capsMetaMuted)}
                   key={choice.id}
                   onClick={() => onQualityChange(choice.id)}
                   type="button"
@@ -191,32 +178,26 @@ export function ViewportSettingsPanel({
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-micro leading-snug text-muted-foreground">
+            <p {...stylex.props(styles.microMutedSnug)}>
               Balanced is recommended for most devices. High uses more graphics memory.
             </p>
           </Section>
         ) : null}
         <Section label="Camera mode">
-          <div className="grid grid-cols-2 gap-1">
+          <div {...stylex.props(styles.gridCols2Gap1)}>
             {(["orbit", "fly"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 aria-pressed={settings.cameraMode === mode}
                 onClick={() => update({ ...settings, cameraMode: mode })}
-                className={cn(
-                  "h-7 border font-meta text-micro font-bold uppercase tracking-meta transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  settings.cameraMode === mode
-                    ? "border-primary bg-primary/15 text-foreground"
-                    : "border-border bg-surface-raised text-muted-foreground hover:text-foreground",
-                )}
+                {...stylex.props(settings.cameraMode === mode ? styles.capsMetaMicro3 : styles.capsMetaMicro4)}
               >
                 {mode}
               </button>
             ))}
           </div>
-          <p className="mt-1.5 text-micro leading-snug text-muted-foreground">
+          <p {...stylex.props(styles.microMutedSnug)}>
             {settings.cameraMode === "orbit"
               ? "Drag orbits · middle or right drag pans · wheel zooms · WASD pans · Q/E rotates."
               : "Pointer-lock mouse look · WASD moves · Q/E rolls."}
@@ -309,17 +290,17 @@ export function ViewportSettingsPanel({
             checked={settings.layers.road}
             onChange={(value) => update({ ...settings, layers: { ...settings.layers, road: value } })}
           />
-          <p className="mt-1.5 text-micro leading-snug text-muted-foreground">
+          <p {...stylex.props(styles.microMutedSnug)}>
             The quality preset can hide buildings and vegetation regardless of these.
           </p>
         </Section>
         {getDebugInformation ? (
           <Section label="Support" last>
             <CopyDebugInformationButton
-              className="w-full justify-start"
+              xstyle={styles.startWide}
               getDebugInformation={getDebugInformation}
             />
-            <p className="mt-1.5 text-micro leading-snug text-muted-foreground">
+            <p {...stylex.props(styles.microMutedSnug)}>
               Copies scenario and editor diagnostics for troubleshooting.
             </p>
           </Section>
@@ -332,12 +313,16 @@ export function ViewportSettingsPanel({
     <Sheet onOpenChange={setOpen} open={open}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
-        className="flex w-[min(420px,calc(100vw-1rem))] flex-col gap-0 overflow-hidden border-border bg-background p-0 pr-0 sm:max-w-[420px] [&>button:last-child]:hidden"
+        // `[&>button:last-child]:hidden` hides the close button `SheetContent`
+        // renders for itself (sheet.tsx). It is a residual because it selects a
+        // child this element does not render, so the declaration has nowhere
+        // else to go: StyleX only styles the element it is applied to.
+        xstyle={styles.flexColClip} className="[&>button:last-child]:hidden"
         data-testid="viewport-settings-drawer"
         side="right"
       >
-        <SheetTitle className="sr-only">Editor settings</SheetTitle>
-        <SheetDescription className="sr-only">
+        <SheetTitle xstyle={styles.srOnly}>Editor settings</SheetTitle>
+        <SheetDescription xstyle={styles.srOnly}>
           Configure the editor mode, rendering quality, camera controls, and visible map layers.
         </SheetDescription>
         {panel}
@@ -356,8 +341,8 @@ function Section({
   last?: boolean;
 }) {
   return (
-    <section className={cn("pb-3", !last && "mb-3 border-b border-border/60")}>
-      <h3 className="mb-1.5 font-meta text-micro uppercase tracking-meta-wider text-muted-foreground/70">
+    <section {...stylex.props(!last ? styles.ruleB : styles.pb3)}>
+      <h3 {...stylex.props(styles.capsMetaMicro2)}>
         {label}
       </h3>
       {children}
@@ -381,21 +366,15 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-2 py-1 text-left text-meta text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {...stylex.props(styles.flexCenterBetween2)}
     >
       <span>{label}</span>
       <span
         aria-hidden="true"
-        className={cn(
-          "relative h-3.5 w-7 shrink-0 border transition-colors",
-          checked ? "border-primary bg-primary/30" : "border-border bg-surface-raised",
-        )}
+        {...stylex.props(checked ? styles.relTightBordered : styles.relTightBordered2)}
       >
         <span
-          className={cn(
-            "absolute top-0.5 size-2 transition-all",
-            checked ? "left-[calc(100%-0.625rem)] bg-primary" : "left-0.5 bg-muted-foreground",
-          )}
+          {...stylex.props(checked ? styles.abs2 : styles.abs3)}
         />
       </span>
     </button>
@@ -415,12 +394,12 @@ function Slider({
 }) {
   const id = useId();
   return (
-    <div className="py-1">
-      <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-meta text-muted-foreground">
+    <div {...stylex.props(styles.py1)}>
+      <div {...stylex.props(styles.flexBetweenBaseline)}>
+        <label htmlFor={id} {...stylex.props(styles.metaMuted)}>
           {label}
         </label>
-        <span className="font-meta text-micro tabular-nums text-muted-foreground/70">{value}%</span>
+        <span {...stylex.props(styles.metaMicroNums)}>{value}%</span>
       </div>
       <input
         id={id}
@@ -433,7 +412,7 @@ function Slider({
         // whether that is fast or slow.
         aria-valuetext={`${value} percent`}
         onChange={(event) => onChange(Number(event.currentTarget.value))}
-        className="mt-1 h-1 w-full cursor-pointer appearance-none bg-muted accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        {...stylex.props(styles.widePointer)}
       />
     </div>
   );

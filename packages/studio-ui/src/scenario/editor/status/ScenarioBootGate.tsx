@@ -12,6 +12,8 @@ import {
   undismissedNotifications,
   useScenarioNotificationStore,
 } from "./notification-store";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioBootGate.stylex";
 
 /**
  * Publishes editor-blocking work into the dashboard's single viewport loader.
@@ -43,10 +45,10 @@ export function ScenarioBootGate() {
       progress: isError ? undefined : (blocking.progress ?? null),
       progressLabel: "Editor workspace",
       severity: isError ? "error" : "loading",
-      icon: isError ? <CircleAlert className="size-5" aria-hidden="true" /> : undefined,
+      icon: isError ? <CircleAlert className={stylex.props(styles.size5).className} aria-hidden="true" /> : undefined,
       actions: blocking.action ? (
         <Button
-          className="mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]"
+          xstyle={styles.round}
           onClick={blocking.action.run}
         >
           {blocking.action.label}

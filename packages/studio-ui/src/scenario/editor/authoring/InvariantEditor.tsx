@@ -43,7 +43,9 @@ export function InvariantEditor({ document }: { document: EditorDocument }) {
       {document.data.invariants.map((rule) => (
         <div key={rule.id} {...stylex.props(styles.item)}>
           <div {...stylex.props(styles.row)}>
-            <span>{rule.label ?? rule.id} · {rule.kind}</span>
+            <span {...stylex.props(styles.truncate)}>
+              {rule.label ?? rule.id} · {rule.kind}
+            </span>
             <DeleteButton
               label={`Remove invariant ${rule.label ?? rule.id}`}
               onClick={() => document.removeInvariant(rule.id)}
@@ -67,7 +69,7 @@ export function InvariantEditor({ document }: { document: EditorDocument }) {
                   essentiality: essentiality as typeof rule.essentiality,
                 })
               }
-              className={stylex.props(styles.input).className}
+              xstyle={styles.selectField}
             />
           </div>
         </div>

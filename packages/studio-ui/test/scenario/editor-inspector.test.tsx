@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   defaultDashCamera,
@@ -190,16 +190,22 @@ describe("ActorDetailsPanel", () => {
     const panel = screen.getByTestId("scenario-actor-details-panel");
     expect(panel.getAttribute("data-placement")).toBe("right-centered");
     expect(panel.getAttribute("data-size")).toBe("compact");
-    expect(panel.className).toContain("right-[calc(100%-100vw)]");
-    expect(panel.className).toContain("top-1/2");
-    // Width is the author's now: it opens a quarter under the 192px ceiling and the left edge
-    // drags. A fixed width class here would have to be deleted to make the panel resizable at all.
+    expect(panel.getAttribute("role")).toBe("dialog");
+    // Portalled to the document body: it floats over the scene rather than taking width
+    // out of the editor layout.
+    expect(panel.parentElement).toBe(document.body);
+    // Width is the author's now: it opens a quarter under the 192px ceiling, and the left
+    // edge drags, so the panel carries a live width rather than a fixed one.
     expect(panel.style.width).toBe("144px");
-    expect(screen.getByTestId("editor-details-resize-handle")).not.toBeNull();
-    expect(panel.className).toContain("rounded-l-xl");
-    expect(panel.className).toContain("border-r-0");
-    expect(panel.className).toContain("editor-actor-details-enter");
-    expect(panel.className).not.toContain("editor-actor-popover-enter-right");
+    // The left edge is the only one the author can reach, and it reports the range it may
+    // be dragged through: the pre-resize 192px stays the ceiling.
+    const resizeHandle = screen.getByTestId("editor-details-resize-handle");
+    expect(resizeHandle.getAttribute("role")).toBe("separator");
+    expect(resizeHandle.getAttribute("aria-orientation")).toBe("vertical");
+    expect(resizeHandle.getAttribute("aria-label")).toBe("Resize the details panel");
+    expect(resizeHandle.getAttribute("aria-valuenow")).toBe("144");
+    expect(resizeHandle.getAttribute("aria-valuemin")).toBe("132");
+    expect(resizeHandle.getAttribute("aria-valuemax")).toBe("192");
     expect(panel.style.maxHeight).toBe("min(560px, calc(100vh - 96px))");
     expect(screen.getByTestId("actor-details-model-preview").querySelector('[data-catalog-icon="vehicle.sedan"]')).not.toBeNull();
     expect(screen.getByLabelText("Name")).not.toBeNull();
@@ -209,8 +215,8 @@ describe("ActorDetailsPanel", () => {
     expect(speed.min).toBe("0");
     expect(speed.max).toBe("160");
     expect(screen.getByLabelText("Driver behavior")).not.toBeNull();
-    expect(screen.getAllByRole("radio")).toHaveLength(4);
-    expect(screen.getByRole("radiogroup", { name: "Driver behavior choices" }).className).toContain("grid-cols-1");
+    const behaviorChoices = screen.getByRole("radiogroup", { name: "Driver behavior choices" });
+    expect(within(behaviorChoices).getAllByRole("radio")).toHaveLength(4);
     const lawfulBehavior = screen.getByRole("radio", { name: /lawful.*behavior/i });
     expect(lawfulBehavior.getAttribute("aria-checked")).toBe("true");
     expect(lawfulBehavior.querySelector("img")?.getAttribute("src")).toContain("lawful.png");

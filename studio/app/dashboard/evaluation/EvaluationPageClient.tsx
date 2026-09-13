@@ -189,12 +189,12 @@ export function EvaluationPageClient() {
         description="Upload one driving video or synchronized camera views for an unscored AlpaMayo trajectory and reasoning overlay."
       />
       <Tabs {...stylex.props(styles.tabs)} defaultValue="runs">
-        <TabsList {...stylex.props(styles.tabList)}>
+        <TabsList xstyle={styles.tabList}>
           <TabsTrigger value="runs">Video prediction</TabsTrigger>
           <TabsTrigger value="campaigns">Research campaigns</TabsTrigger>
         </TabsList>
 
-        <TabsContent {...stylex.props(styles.tabContent)} value="runs">
+        <TabsContent xstyle={styles.tabContent} value="runs">
           <CloudRunsClient />
         </TabsContent>
 

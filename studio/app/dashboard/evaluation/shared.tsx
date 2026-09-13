@@ -9,7 +9,7 @@ const STATUS_BADGE_CLASS: Record<string, keyof typeof styles> = { queued: "queue
 
 export function StatusBadge({ status }: { status: string }) {
   const tone = STATUS_BADGE_CLASS[status] ?? "queued";
-  return <Badge variant="outline" {...stylex.props(styles.status, styles[tone])}>{status}</Badge>;
+  return <Badge variant="outline" xstyle={[styles.status, styles[tone]]}>{status}</Badge>;
 }
 
 export function formatScore(score: number | null | undefined): string {

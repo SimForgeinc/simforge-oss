@@ -7,6 +7,8 @@
  * worth testing, and testing them through a DOM would be testing React instead.
  */
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderStatePieces.stylex";
 import type {
   ScenarioGalleryItemDto,
   ScenarioPresignedArtifactDto,
@@ -40,19 +42,19 @@ export function renderStateVisual(state: ScenarioRenderJobState): RenderStateVis
   return STATE_VISUALS[state] ?? { label: state, tone: "queued", live: false };
 }
 
-/** Tokenized chip classes per tone. No hex, no white-alpha — parity plan §5.1. */
-export function renderStateChipClass(tone: RenderStateTone): string {
+/** Tokenized chip styling per tone. No hex, no white-alpha — parity plan §5.1. */
+export function renderStateChipStyle(tone: RenderStateTone): stylex.StyleXStyles {
   switch (tone) {
     case "running":
-      return "bg-primary/20 text-primary";
+      return styles.chipRunning;
     case "succeeded":
-      return "bg-primary/15 text-primary";
+      return styles.chipSucceeded;
     case "failed":
-      return "bg-destructive/20 text-destructive";
+      return styles.chipFailed;
     case "cancelled":
-      return "bg-muted text-muted-foreground";
+      return styles.chipCancelled;
     default:
-      return "bg-secondary text-secondary-foreground";
+      return styles.chipQueued;
   }
 }
 

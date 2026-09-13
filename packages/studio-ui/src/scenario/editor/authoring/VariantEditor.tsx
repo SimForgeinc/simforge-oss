@@ -37,7 +37,7 @@ export function VariantEditor({ document }: { document: EditorDocument }) {
       {document.data.variants.map((variant) => (
         <div key={variant.id} {...stylex.props(styles.item)}>
           <div {...stylex.props(styles.row)}>
-            <span>{variant.label ?? variant.id}</span>
+            <span {...stylex.props(styles.truncate)}>{variant.label ?? variant.id}</span>
             <DeleteButton
               label={`Remove variant ${variant.label ?? variant.id}`}
               onClick={() => document.removeVariant(variant.id)}
@@ -55,7 +55,7 @@ export function VariantEditor({ document }: { document: EditorDocument }) {
             <TextField
               label="Override path"
               value={variant.overrides[0]?.path ?? "environment.weather"}
-              className={stylex.props(styles.monoInput).className}
+              xstyle={styles.monoInput}
               onChange={(path) => {
                 const first =
                   variant.overrides[0] ??

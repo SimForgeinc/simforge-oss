@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio-ui",
-  "version": "0.1.0-rc.61",
+  "version": "0.1.0-rc.65",
   "description": "The SimForge Studio product: scenario datasets, editor, inspector, timeline, render workflows, Three.js viewport hosting and the native playback worker, shared by local Studio and SimCloud behind @simforge-oss/studio-host services.",
   "repository": {
     "type": "git",
@@ -52,6 +52,10 @@
       "./components/SkyCloudBackdrop": {
         "types": "./dist/components/SkyCloudBackdrop.d.ts",
         "default": "./dist/components/SkyCloudBackdrop.js"
+      },
+      "./components/SkyCloudBackdrop.stylex": {
+        "types": "./dist/components/SkyCloudBackdrop.stylex.d.ts",
+        "default": "./dist/components/SkyCloudBackdrop.stylex.js"
       },
       "./components/TopBarSlot": {
         "types": "./dist/components/TopBarSlot.d.ts",
@@ -449,6 +453,11 @@
       "development": "./src/components/SkyCloudBackdrop.tsx",
       "types": "./dist/components/SkyCloudBackdrop.d.ts",
       "default": "./dist/components/SkyCloudBackdrop.js"
+    },
+    "./components/SkyCloudBackdrop.stylex": {
+      "development": "./src/components/SkyCloudBackdrop.stylex.ts",
+      "types": "./dist/components/SkyCloudBackdrop.stylex.d.ts",
+      "default": "./dist/components/SkyCloudBackdrop.stylex.js"
     },
     "./components/TopBarSlot": {
       "development": "./src/components/TopBarSlot.tsx",

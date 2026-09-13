@@ -13,7 +13,6 @@ import {
 import type { MapAsset, MapAssetArtifactType } from "@simforge-oss/studio-shared";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { MapAssetDangerZone } from "./MapAssetDangerZone";
 import {
   artifactTypeFromFilename,
@@ -475,7 +474,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
         <Button
           variant="ghost"
           size="icon"
-          className={stylex.props(styles.s_132).className}
+          xstyle={styles.s_132}
           onClick={onBack}
           aria-label="Back to details"
           title="Back to map details"
@@ -504,7 +503,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                 value={placeCity}
                 onChange={(e) => setPlaceCity(e.target.value)}
                 placeholder={asset.place_context?.city ?? "e.g. San Jose"}
-                className={stylex.props(styles.s_288).className}
+                xstyle={styles.s_288}
               />
             </div>
             <div>
@@ -513,7 +512,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                 value={placeState}
                 onChange={(e) => setPlaceState(e.target.value)}
                 placeholder={asset.place_context?.state ?? "e.g. California"}
-                className={stylex.props(styles.s_288).className}
+                xstyle={styles.s_288}
               />
             </div>
             <div>
@@ -522,7 +521,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                 value={placeCountry}
                 onChange={(e) => setPlaceCountry(e.target.value)}
                 placeholder={asset.place_context?.country ?? "e.g. United States"}
-                className={stylex.props(styles.s_288).className}
+                xstyle={styles.s_288}
               />
             </div>
           </div>
@@ -540,7 +539,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             value={carlaMapName}
             onChange={(e) => setCarlaMapName(e.target.value)}
             placeholder="e.g. Belmont_Office_Park_Belmont_CA"
-            className={stylex.props(styles.s_38).className}
+            xstyle={styles.s_38}
           />
         </section>
 
@@ -552,12 +551,15 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             (with its RGB layer); a map can need several to cover its full extent. They stack
             top-to-bottom in the order listed. Leave empty for no satellite basemap.
           </p>
-          <div className={stylex.props(styles.s_960).className}>
+          {/* `space-y-2` lives on the children here: the trailing "+ Add" control
+              is an inline-level <button>, so a flex column would blockify it and
+              lose both its shrink-to-fit width and its line-box leading. */}
+          <div>
             {imageryTilesets.length === 0 ? (
-              <p className={stylex.props(styles.s_22).className}>No image services configured.</p>
+              <p className={stylex.props(styles.s_22, styles.stackY2).className}>No image services configured.</p>
             ) : (
               imageryTilesets.map((row, index) => (
-                <div key={index} className={stylex.props(styles.s_23).className}>
+                <div key={index} className={stylex.props(styles.s_23, styles.stackY2).className}>
                   <div className={stylex.props(styles.s_24).className}>
                     <span className={stylex.props(styles.s_25).className}>
                       Image service {index + 1}
@@ -584,7 +586,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                         value={row.tileset_id}
                         onChange={(e) => updateImageryRow(index, "tileset_id", e.target.value)}
                         placeholder="e.g. 019f1d21-97c7-7326-b542-e3566870c679"
-                        className={stylex.props(styles.s_38).className}
+                        xstyle={styles.s_38}
                       />
                     </div>
                     <div>
@@ -599,7 +601,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                         value={row.layer_id}
                         onChange={(e) => updateImageryRow(index, "layer_id", e.target.value)}
                         placeholder="e.g. a92b15c6-b541-4074-8455-dcdecc7ec193"
-                        className={stylex.props(styles.s_38).className}
+                        xstyle={styles.s_38}
                       />
                     </div>
                   </div>
@@ -609,7 +611,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             <button
               type="button"
               onClick={addImageryRow}
-              className={stylex.props(styles.s_32).className}
+              className={stylex.props(styles.s_32, styles.stackY2).className}
             >
               + Add image service
             </button>
@@ -630,7 +632,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                 onChange={(e) => setEditorOffsetX(e.target.value)}
                 inputMode="decimal"
                 placeholder="0"
-                className={stylex.props(styles.s_38).className}
+                xstyle={styles.s_38}
               />
             </div>
             <div>
@@ -640,7 +642,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                 onChange={(e) => setEditorOffsetY(e.target.value)}
                 inputMode="decimal"
                 placeholder="0"
-                className={stylex.props(styles.s_38).className}
+                xstyle={styles.s_38}
               />
             </div>
           </div>
@@ -688,7 +690,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               type="button"
               variant="outline"
               size="sm"
-              className={stylex.props(styles.s_288).className}
+              xstyle={styles.s_288}
               onClick={() => { setTagDropdownOpen((o) => !o); setTagSearch(""); }}
             >
               + Add tag
@@ -700,7 +702,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                     value={tagSearch}
                     onChange={(e) => setTagSearch(e.target.value)}
                     placeholder="Search tags..."
-                    className={stylex.props(styles.s_288).className}
+                    xstyle={styles.s_288}
                     autoFocus
                   />
                 </div>
@@ -744,12 +746,12 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               className={stylex.props(styles.s_351).className}
             >
               <ChevronDown
-                className={cn("size-3 shrink-0 transition-transform", !csvOpen && "-rotate-90")}
+                className={stylex.props(styles.chevron, !csvOpen && styles.rotateMinus90).className}
               />
               Bulk-add via CSV
             </button>
             {csvOpen && (
-              <div className={stylex.props(styles.s_819).className}>
+              <div className={stylex.props(styles.inlineStackMt2).className}>
                 <textarea
                   value={csvInput}
                   onChange={(e) => { setCsvInput(e.target.value); setCsvErrors([]); }}
@@ -759,10 +761,10 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                   placeholder={"SCHOOL_ZONE_BOUNDARY,\nINTERSECTION_SIGNALIZED"}
                   spellCheck={false}
                   rows={3}
-                  className={stylex.props(styles.s_285).className}
+                  className={stylex.props(styles.s_285, styles.stackY1_5).className}
                 />
                 {csvErrors.length > 0 && (
-                  <p className={stylex.props(styles.s_451).className}>
+                  <p className={stylex.props(styles.s_451, styles.stackY1_5).className}>
                     Unrecognised (ignored):{" "}
                     <span className={stylex.props(styles.s_940).className}>{csvErrors.join(", ")}</span>
                   </p>
@@ -771,7 +773,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                   type="button"
                   variant="outline"
                   size="sm"
-                  className={stylex.props(styles.s_288).className}
+                  xstyle={[styles.s_288, styles.stackY1_5]}
                   disabled={!csvInput.trim()}
                   onClick={applyCSV}
                 >
@@ -823,7 +825,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             type="button"
             variant="outline"
             size="sm"
-            className={stylex.props(styles.s_288).className}
+            xstyle={styles.s_288}
             onClick={() => videoInputRef.current?.click()}
           >
             <Film className={stylex.props(styles.s_121).className} />
@@ -840,7 +842,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setVideoEntries)}
                     placeholder="Label"
-                    className={stylex.props(styles.s_92).className}
+                    xstyle={styles.s_92}
                   />
                   <button
                     type="button"
@@ -896,7 +898,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             type="button"
             variant="outline"
             size="sm"
-            className={stylex.props(styles.s_288).className}
+            xstyle={styles.s_288}
             onClick={() => imageInputRef.current?.click()}
           >
             <ImageIcon className={stylex.props(styles.s_121).className} aria-hidden />
@@ -913,7 +915,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
                     value={entry.label}
                     onChange={(e) => updateLabel(entry.id, e.target.value, setImageEntries)}
                     placeholder="Label"
-                    className={stylex.props(styles.s_92).className}
+                    xstyle={styles.s_92}
                   />
                   <button
                     type="button"
@@ -1019,7 +1021,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
               type="button"
               variant="outline"
               size="sm"
-              className={stylex.props(styles.s_288).className}
+              xstyle={styles.s_288}
               onClick={() => threeDInputRef.current?.click()}
             >
               <FolderUp className={stylex.props(styles.s_121).className} />
@@ -1054,7 +1056,7 @@ export function MapAssetEditPanel({ asset, onBack, onSaved, onDeleted }: Props) 
             size="sm"
             disabled={submitting}
             onClick={handleSave}
-            className={stylex.props(styles.s_436).className}
+            xstyle={styles.s_436}
           >
             {submitting ? "Saving…" : "Save changes"}
           </Button>

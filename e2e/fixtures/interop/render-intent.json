@@ -1,0 +1,90 @@
+{
+  "schema": "simforge.render-intent/v1",
+  "intentId": "usri_e2e_interop",
+  "executionPackage": {
+    "id": "usepkg_e2e_interop",
+    "sourceInputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "scenarioRevision": {
+    "revisionId": "usrev_e2e_interop",
+    "scenarioSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "openScenario": {
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sizeBytes": 1024
+    },
+    "map": {
+      "mapId": "map",
+      "revisionId": "usmap_e2e_interop",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "sensorHosts": [
+    {
+      "sourceId": "vehicle-host-front-rgb",
+      "actorId": "vehicle-host",
+      "vehicleAsset": {
+        "catalogAssetId": "vehicle.kia.carnival",
+        "carlaBlueprintId": "vehicle.kia.carnival",
+        "carlaClassPath": "/Game/Carla/Blueprints/Vehicles/KiaCarnival2025/BP_KiaCarnival2025.BP_KiaCarnival2025_C",
+        "make": "Kia",
+        "model": "Carnival",
+        "baseType": "van",
+        "sourceImage": {
+          "repository": "ghcr.io/simforgeinc/carla-rfs-munich-belmont",
+          "indexSha256": "f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5",
+          "linuxAmd64ManifestSha256": "baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64"
+        }
+      }
+    }
+  ],
+  "renderSpec": {
+    "schema": "simforge.render-spec/v3",
+    "sources": [
+      {
+        "actorId": "vehicle-host",
+        "sensorId": "front",
+        "outputName": "vehicle-host-front-rgb",
+        "modality": "rgb",
+        "transform": {
+          "position": { "x": 0.7, "y": 1.83, "z": 0 },
+          "rotation": { "yawRad": 0, "pitchRad": 0.17, "rollRad": 0 }
+        },
+        "attributes": {
+          "width": 1280,
+          "height": 720,
+          "fps": 24,
+          "horizontalFovDeg": 120,
+          "nearM": 0.05,
+          "farM": 1000
+        }
+      }
+    ],
+    "clip": { "startSeconds": 0, "endSeconds": 20 },
+    "video": {
+      "width": 1280,
+      "height": 720,
+      "fps": 24,
+      "container": "mp4",
+      "codec": "h264",
+      "quality": "standard"
+    },
+    "artifacts": ["manifest", "video", "frames"],
+    "capabilityIntent": { "required": ["sensor.rgb"], "preferred": [], "fidelity": "review" },
+    "authoredEnvironment": {
+      "weather": "clear",
+      "timeOfDay": "noon",
+      "sunAzimuthDeg": 180,
+      "sunElevationDeg": 60,
+      "surfacePatches": []
+    }
+  },
+  "assets": [
+    {
+      "assetId": "map.xodr",
+      "kind": "map",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sizeBytes": 2048
+    }
+  ],
+  "seed": 7
+}

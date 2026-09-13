@@ -52,7 +52,7 @@ function defaultCameraMappings(count: number): UploadedVideoCamera[] {
 function StepHeading({ index, title, hint }: { index: number; title: string; hint?: string }) {
   return (
     <div {...stylex.props(s.stack1)}>
-      <h2 {...stylex.props(s.titleSm)}><span {...stylex.props(s.textMuted)}>{index}.</span> {title}</h2>
+      <h2 {...stylex.props(s.titleSm)}><span {...stylex.props(s.mr2, s.textMuted)}>{index}.</span> {title}</h2>
       {hint ? <p {...stylex.props(s.textXs, s.leading5, s.textMuted)}>{hint}</p> : null}
     </div>
   );
@@ -290,7 +290,7 @@ export function EvaluationLauncher({
                 <div key={`${file.name}-${inputIndex}`} {...stylex.props(s.cameraGrid)}>
                   <div {...stylex.props(s.min0)}>
                     <p {...stylex.props(s.truncate, s.textSm, s.fontMedium, s.textFg)}>{file.name}</p>
-                    <label {...stylex.props(s.mt2, s.rowTight, s.textXs, s.textMuted)}>
+                    <label {...stylex.props(s.mt2, s.flexGap2, s.textXs, s.textMuted)}>
                       <input
                         type="radio"
                         name="primary-camera"
@@ -351,7 +351,7 @@ export function EvaluationLauncher({
             invented.
           </p>
 
-          <details {...stylex.props(s.border, s.mutedSurface)}>
+          <details {...stylex.props(s.border, s.mutedSurface10)}>
             <summary {...stylex.props(s.cursor, s.px4py3, s.textSm, s.fontMedium, s.textFg)}>
               Advanced assumptions
             </summary>
@@ -393,8 +393,8 @@ export function EvaluationLauncher({
         <section {...stylex.props(s.space3)} data-testid="evaluation-estimate">
           <StepHeading index={4} title="Cost and limits" />
           {estimating ? (
-            <p {...stylex.props(s.inlineFlex, s.rowTight, s.textSm, s.textMuted)}>
-              <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />
+            <p {...stylex.props(s.inlineGap2, s.textSm, s.textMuted)}>
+              <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />
               Estimating…
             </p>
           ) : estimate ? (
@@ -425,9 +425,9 @@ export function EvaluationLauncher({
       {localUnavailable ? <RefusalNotice title="Local execution is not available here" reasons={[localUnavailable]} /> : null}
       {error ? <RefusalNotice title="Submission failed" reasons={[error]} /> : null}
 
-      <div {...stylex.props(s.row, s.borderTop)}>
+      <div {...stylex.props(s.row, s.borderTop, s.pt5)}>
         <Button type="button" disabled={!canSubmit} onClick={() => void submit()} data-testid="evaluation-submit">
-          {submitting ? <Loader2 aria-hidden="true" {...stylex.props(s.icon)} /> : <Play aria-hidden="true" />}
+          {submitting ? <Loader2 aria-hidden="true" {...stylex.props(s.spinner)} /> : <Play aria-hidden="true" />}
           {selection.target === "local" ? "Run prediction on this machine" : "Submit prediction"}
         </Button>
         {prepared ? (

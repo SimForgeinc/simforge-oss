@@ -16,6 +16,7 @@ import { WorkspacePaneLoading } from "../../components/WorkspacePaneLoading";
 import type { ScenarioDatasetDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
+import { control, paneLoading, rail } from "../scenario-controls.stylex";
 
 /**
  * The dataset list inside the datasets workspace's shared floating sidebar.
@@ -110,7 +111,7 @@ export function ScenarioDatasetRail({
             asChild
             size="icon"
             variant="ghost"
-            className="size-7 shrink-0 rounded-none bg-transparent hover:bg-transparent hover:text-primary"
+            xstyle={[control.iconSm, control.noShrink, rail.quietAccent]}
             title="Review queue"
           >
             <Link
@@ -150,7 +151,7 @@ export function ScenarioDatasetRail({
           size="sm"
           variant="ghost"
           disabled={creating}
-          className="h-10 w-full justify-center gap-1.5 rounded-none border-0 border-t border-white/10 bg-[#E8E044] px-0 font-meta text-micro font-bold uppercase tracking-meta text-black hover:bg-[#f1e949] hover:text-black"
+          xstyle={[rail.footerAction, rail.footerActionTall]}
           data-testid="scenario-new-dataset"
           onClick={onOpenNewDatasetDialog}
         >
@@ -175,7 +176,7 @@ export function ScenarioDatasetRail({
 
         {loading && datasets.length === 0 ? (
           <WorkspacePaneLoading
-            className="min-h-52"
+            xstyle={paneLoading.h52}
             hint="Reading this workspace."
             message="Loading datasets"
           />
@@ -287,7 +288,7 @@ function RailGroup({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="size-6 bg-transparent hover:bg-transparent hover:text-primary"
+                    xstyle={[control.iconXs, rail.quietAccent]}
                     disabled={busy}
                     aria-label={`Edit ${dataset.name}`}
                     title="Edit dataset details"
@@ -301,7 +302,7 @@ function RailGroup({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="size-6 bg-transparent text-muted-foreground hover:bg-transparent hover:text-destructive"
+                    xstyle={[control.iconXs, rail.quietDestructive]}
                     disabled={busy}
                     aria-label={`Delete ${dataset.name}`}
                     title="Delete dataset"

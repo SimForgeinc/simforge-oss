@@ -57,10 +57,18 @@ describe("EditorCanvasRegion loading presentation", () => {
 
     const status = screen.getByTestId("scenario-map-status");
     expect(status.textContent).toContain("Loading map and lane topology");
-    expect(status.className).toContain("bottom-4");
-    expect(status.className).toContain("right-4");
-    expect(status.className).not.toContain("inset-0");
-    expect(status.className).not.toContain("backdrop-blur");
+    // A chip, not a cover: an inline status element that announces politely, carrying
+    // nothing but its spinner and its label.
+    expect(status.tagName).toBe("SPAN");
+    expect(status.getAttribute("role")).toBe("status");
+    expect(status.querySelector("svg")).not.toBeNull();
+
+    // The shade this replaced was a cloud surface drawn over the whole region. Neither it
+    // nor its backdrop may come back, and the scene stays mounted and reachable beneath.
+    const region = screen.getByTestId("scenario-editor-canvas-region");
+    expect(region.contains(status)).toBe(true);
+    expect(region.querySelector("[data-cloud-loading-scope]")).toBeNull();
+    expect(screen.getByLabelText("Map canvas")).toBeTruthy();
   });
 
   it("ignores a stale map completion after quality remounts the viewer", () => {

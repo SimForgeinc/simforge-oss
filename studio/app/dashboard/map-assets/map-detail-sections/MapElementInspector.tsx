@@ -7,7 +7,6 @@ import { ChevronRight, Copy, Check, MapPin, X } from "lucide-react";
 import type { SelectedGeoJSONFeaturePayload } from "@/app/lib/maps/frontend/feature-inspection-types";
 import { useStreetFactsByFeatureId } from "@/app/lib/maps/frontend/use-street-facts-index";
 import { JsonTreeView } from "@/app/components/JsonTreeView";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 /** Props for the MapElementInspector component. */
 export type MapElementInspectorProps = {
@@ -83,7 +82,7 @@ export function MapElementInspector({
           return (
             <div
               key={f.id}
-              className={stylex.props(styles.u_954, styles.u_903, styles.u_965, styles.u_970).className}
+              className={stylex.props(styles.elementCard, isSelected ? styles.elementCardSelected : styles.elementCardIdle).className}
             >
               <button
                 type="button"
@@ -98,7 +97,7 @@ export function MapElementInspector({
                 className={stylex.props(styles.s_489).className}
               >
                 <ChevronRight
-                  className={cn("size-3.5 shrink-0 transition-transform duration-150", isExpanded && "rotate-90")}
+                  className={stylex.props(styles.chevronLg, isExpanded && styles.rotate90).className}
                 />
                 <span className={stylex.props(styles.s_490).className} data-testid="selected-feature-summary">
                   {f.summary}

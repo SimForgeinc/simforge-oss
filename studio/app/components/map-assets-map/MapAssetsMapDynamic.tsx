@@ -40,7 +40,7 @@ const MapAssetsMap = dynamic(importMapAssetsMap, {
 const SilentMapAssetsMap = dynamic(importMapAssetsMap, {
   ssr: false,
   loading: () => (
-    <div {...stylex.props(styles.loading)} aria-hidden="true" />
+    <div {...stylex.props(styles.loadingSilent)} aria-hidden="true" />
   ),
 });
 

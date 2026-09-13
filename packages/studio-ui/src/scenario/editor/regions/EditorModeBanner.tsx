@@ -3,6 +3,8 @@
 import { Button } from "../../../components/ui/button";
 import type { EditorController, EditorState } from "@simforge-oss/editor";
 import { Check, Move3d, PenLine, Trash2, X } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorModeBanner.stylex";
 
 /**
  * OWNS: the modal-mode strip.
@@ -32,37 +34,36 @@ export function EditorModeBanner({
 
   return (
     <div
-      className={warning
-        ? "flex min-h-11 shrink-0 items-center bg-amber-400 px-5 py-2 text-sm font-semibold text-black"
-        : "flex min-h-11 shrink-0 items-center bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"}
+      {...stylex.props(styles.banner, warning ? styles.bannerWarning : styles.bannerMode)}
+      data-banner-variant={warning ? "warning" : "mode"}
       role="status"
       aria-live="polite"
     >
       <span
         aria-hidden="true"
-        className={warning ? "editor-pulse mr-2 size-2 bg-black" : "editor-pulse mr-2 size-2 bg-primary-foreground"}
+        className={`editor-pulse ${stylex.props(styles.pulseDot, warning ? styles.pulseDotWarning : styles.pulseDotMode).className}`}
       />
       {message ?? state.hint}
       {state.mode === "drawingRoute" ? (
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="flex items-center rounded-md bg-black/15 p-0.5">
+        <div {...stylex.props(styles.flexCenterPushRight)}>
+          <div {...stylex.props(styles.flexCenterPad05)}>
             <Button
               aria-pressed={state.customRouteTool === "add"}
-              className={state.customRouteTool === "add" ? "bg-black text-white hover:bg-black/85" : "text-primary-foreground hover:bg-primary-foreground/10"}
+              xstyle={state.customRouteTool === "add" ? styles.routeToolActive : styles.routeToolIdle}
               onClick={() => controller?.setCustomRouteTool("add")}
               size="sm"
               variant="ghost"
             >
-              <PenLine className="size-3.5" /> Add points
+              <PenLine className={stylex.props(styles.size35).className} /> Add points
             </Button>
             <Button
               aria-pressed={state.customRouteTool === "move"}
-              className={state.customRouteTool === "move" ? "bg-black text-white hover:bg-black/85" : "text-primary-foreground hover:bg-primary-foreground/10"}
+              xstyle={state.customRouteTool === "move" ? styles.routeToolActive : styles.routeToolIdle}
               onClick={() => controller?.setCustomRouteTool("move")}
               size="sm"
               variant="ghost"
             >
-              <Move3d className="size-3.5" /> Move points
+              <Move3d className={stylex.props(styles.size35).className} /> Move points
             </Button>
           </div>
           {state.customRouteTool === "add" ? (
@@ -71,9 +72,9 @@ export function EditorModeBanner({
               size="sm"
               disabled={state.customRoutePointCount < 2}
               onClick={() => controller?.finishCustomRouteAuthoring()}
-              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
             >
-              <Check className="size-3.5" /> Finish
+              <Check className={stylex.props(styles.size35).className} /> Finish
             </Button>
           ) : (
             <Button
@@ -81,18 +82,18 @@ export function EditorModeBanner({
               size="sm"
               disabled={state.customRouteSelectedPointIndex === null}
               onClick={() => controller?.deleteSelectedCustomRoutePoint()}
-              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
             >
-              <Trash2 className="size-3.5" /> Delete point
+              <Trash2 className={stylex.props(styles.size35).className} /> Delete point
             </Button>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => controller?.cancel()}
-            className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            xstyle={styles.textPrimaryForegroundHoverBgPrimaryForeground10HoverTextPrimaryForeground}
           >
-            <X className="size-3.5" /> Close
+            <X className={stylex.props(styles.size35).className} /> Close
           </Button>
         </div>
       ) : null}
@@ -101,7 +102,7 @@ export function EditorModeBanner({
           variant="ghost"
           size="sm"
           onClick={() => controller?.cancel()}
-          className="ml-auto text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          xstyle={styles.pushRight}
         >
           Esc · Cancel
         </Button>

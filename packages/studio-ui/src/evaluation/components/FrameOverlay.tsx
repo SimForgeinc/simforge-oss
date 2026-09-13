@@ -101,7 +101,7 @@ export function FrameOverlay({
               key={index}
               d={path}
               fill="none"
-              {...stylex.props(s.svgPrimary)}
+              {...stylex.props(s.strokePrimary)}
               strokeWidth={Math.max(2, width / 320)}
               strokeOpacity={paths.samples.length > 1 ? 0.6 : 0.95}
             />
@@ -118,7 +118,7 @@ export function FrameOverlay({
         </svg>
       </div>
 
-      <div {...stylex.props(s.rowBetween)} style={{ marginTop: "0.5rem" }}>
+      <div {...stylex.props(s.mt2, s.flexCenterBetween)}>
         <figcaption {...stylex.props(s.textXs, s.textMuted)}>
           Camera {projection.cameraId} · {width}×{height} · projected from{" "}
           {item.convention ?? "FLU"} metres using the clip&apos;s own calibration

@@ -122,7 +122,7 @@ export function AiProviderSettingsClient() {
 
   return (
     <div {...stylex.props(styles.root)}>
-      <header {...stylex.props(styles.header)}>
+      <header>
         <h1 {...stylex.props(styles.title)}>AI providers</h1>
         <p {...stylex.props(styles.lead)}>3D asset generation calls an external AI service. SimForge ships no keys: bring your own.</p>
         <p {...stylex.props(styles.back)}><Link href="/dashboard/settings">Back to settings</Link></p>

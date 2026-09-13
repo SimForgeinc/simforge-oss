@@ -51,12 +51,12 @@ export function AssetGalleryGridSkeleton({ count = 10 }: { count?: number }) {
             <Skeleton xstyle={grid.skeletonThumb} />
             <div {...stylex.props(grid.skeletonBody)}>
               <div {...stylex.props(grid.skeletonRow)}>
-                <Skeleton {...stylex.props(grid.skeletonTitle)} />
-                <Skeleton {...stylex.props(grid.skeletonChip)} />
+                <Skeleton xstyle={grid.skeletonTitle} />
+                <Skeleton xstyle={grid.skeletonChip} />
               </div>
               <div {...stylex.props(grid.skeletonRow)}>
-                <Skeleton {...stylex.props(grid.skeletonMeta)} />
-                <Skeleton {...stylex.props(grid.skeletonMetaShort)} />
+                <Skeleton xstyle={grid.skeletonMeta} />
+                <Skeleton xstyle={grid.skeletonMetaShort} />
               </div>
             </div>
           </div>

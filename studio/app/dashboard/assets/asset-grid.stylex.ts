@@ -157,7 +157,8 @@ export const card = stylex.create({
     backgroundColor: "hsl(var(--background) / 0.8)",
     paddingInline: "0.375rem",
     paddingBlock: 0,
-    fontSize: text.sizeMicro,
+    fontSize: "10px",
+    lineHeight: "inherit",
     color: colors.primary,
   },
   // size-3 animate-pulse

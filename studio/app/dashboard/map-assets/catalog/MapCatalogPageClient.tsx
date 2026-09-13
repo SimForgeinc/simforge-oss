@@ -61,7 +61,7 @@ export function MapCatalogPageClient({ assets, runs: _runs }: MapCatalogPageClie
           title="No maps yet"
           description="Upload your first map to start exploring assets and building simulation scenarios."
           action={<Button asChild><Link href="/dashboard/map-assets/new"><Plus className={stylex.props(styles.s_219).className} />Add map</Link></Button>}
-          className={stylex.props(styles.s_220).className}
+          xstyle={styles.s_220}
         />
       </>
     );

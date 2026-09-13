@@ -9,13 +9,14 @@ import { editorSourceMapId } from "@simforge-oss/editor";
 import { actorClassForCatalogEntry, getEntry, type CatalogActorClass } from "@simforge-oss/asset-catalog";
 import { SCENE_STATE_VERSION } from "@simforge-oss/engine/scene-state";
 import { Button } from "../../../../components/ui/button";
-import { cn } from "../../../../lib/utils";
 import {
   contractCameraReportAsWire,
   type CreateHifiPreviewInput,
   type HifiPreviewProfile,
   type HifiPreviewRecord,
 } from "../../../../lib/hifi-preview/contracts";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./HifiPreviewSlot.stylex";
 
 /** Catalog physics families mapped to the scene-state actor classes. */
 const SCENE_ACTOR_CLASS: Record<CatalogActorClass, CreateHifiPreviewInput["scene"]["actors"][number]["actorClass"]> = {
@@ -205,19 +206,14 @@ export function HifiPreviewSlot({
   return (
 
     <div
-      className={cn(
-        "pointer-events-none fixed right-5 top-16 z-[60] flex flex-col items-end gap-2",
-        preview.phase === "done"
-          ? "w-[min(720px,calc(50vw-1.5rem))]"
-          : "w-[min(460px,calc(100vw-2rem))]",
-      )}
+      {...stylex.props(preview.phase === "done" ? styles.fixedFlexCol : styles.fixedFlexCol2)}
       data-testid="hifi-preview-slot"
     >
-      <div className="pointer-events-auto flex items-center gap-1.5">
+      <div {...stylex.props(styles.flexCenterLive)}>
         {preview.phase === "idle" || preview.phase === "failed" ? (
           <select
             aria-label="High-fidelity render profile"
-            className="h-8 rounded-none border border-border/70 bg-card/90 px-2 text-xs text-foreground shadow-sm backdrop-blur"
+            {...stylex.props(styles.xsInkBordered)}
             data-testid="hifi-preview-profile"
             onChange={(event) => setProfile(event.target.value as HifiPreviewProfile)}
             value={profile}
@@ -228,7 +224,7 @@ export function HifiPreviewSlot({
         ) : null}
         <Button
           aria-label="High-fidelity preview"
-          className="h-8 gap-2 rounded-none border border-[#7DD3FC]/45 bg-card/90 px-3 text-[#7DD3FC] shadow-sm backdrop-blur hover:border-[#7DD3FC] hover:bg-[#7DD3FC] hover:text-black disabled:border-border disabled:text-muted-foreground"
+          xstyle={styles.borderedGlassyGap2}
           data-testid="hifi-preview-button"
           disabled={!viewer || preview.phase === "pending"}
           onClick={() => void start()}
@@ -238,9 +234,9 @@ export function HifiPreviewSlot({
           variant="outline"
         >
           {preview.phase === "pending" ? (
-            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+            <Loader2 aria-hidden="true" className={stylex.props(styles.spinner).className} />
           ) : (
-            <Sparkles aria-hidden="true" className="size-4" />
+            <Sparkles aria-hidden="true" className={stylex.props(styles.size4).className} />
           )}
           <span>High-fidelity preview</span>
         </Button>
@@ -248,15 +244,15 @@ export function HifiPreviewSlot({
 
       {preview.phase === "pending" ? (
         <div
-          className="pointer-events-auto flex w-full items-center gap-2 border border-border/70 bg-card/95 p-3 text-xs text-muted-foreground shadow-lg backdrop-blur"
+          {...stylex.props(styles.flexCenterXs)}
           data-testid="hifi-preview-progress"
         >
-          <Loader2 aria-hidden="true" className="size-4 animate-spin text-[#7DD3FC]" />
+          <Loader2 aria-hidden="true" className={stylex.props(styles.spinner2).className} />
           <span>
             Rendering one {profile} frame with the native renderer… the map prewarm can take a minute on
             first use. The editor stays fully interactive.
           </span>
-          <Button className="ml-auto h-6 px-2" onClick={dismiss} size="sm" type="button" variant="ghost">
+          <Button xstyle={styles.pushRight} onClick={dismiss} size="sm" type="button" variant="ghost">
             Cancel
           </Button>
         </div>
@@ -264,43 +260,43 @@ export function HifiPreviewSlot({
 
       {preview.phase === "failed" ? (
         <div
-          className="pointer-events-auto flex w-full items-start gap-2 border border-red-500/50 bg-card/95 p-3 text-xs text-red-200 shadow-lg backdrop-blur"
+          {...stylex.props(styles.flexStartXs)}
           data-testid="hifi-preview-error"
           role="alert"
         >
-          <span className="min-w-0">{preview.message}</span>
+          <span {...stylex.props(styles.narrowable)}>{preview.message}</span>
           <Button
             aria-label="Dismiss high-fidelity preview error"
-            className="ml-auto h-6 px-2"
+            xstyle={styles.pushRight}
             onClick={dismiss}
             size="sm"
             type="button"
             variant="ghost"
           >
-            <X aria-hidden="true" className="size-3.5" />
+            <X aria-hidden="true" className={stylex.props(styles.size35).className} />
           </Button>
         </div>
       ) : null}
 
       {preview.phase === "done" ? (
         <figure
-          className="pointer-events-auto w-full border border-border/70 bg-card/95 shadow-xl backdrop-blur"
+          {...stylex.props(styles.borderedLiveWide)}
           data-testid="hifi-preview-frame"
         >
-          <div className="flex items-center justify-between border-b border-border/60 px-2 py-1">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-[#7DD3FC]">
+          <div {...stylex.props(styles.flexCenterBetween)}>
+            <span {...stylex.props(styles.capsMedium)}>
               High-fidelity preview
             </span>
             <Button
               aria-label="Close high-fidelity preview"
-              className="h-6 px-1.5"
+              xstyle={styles.h6Px15}
               data-testid="hifi-preview-close"
               onClick={dismiss}
               size="sm"
               type="button"
               variant="ghost"
             >
-              <X aria-hidden="true" className="size-3.5" />
+              <X aria-hidden="true" className={stylex.props(styles.size35).className} />
             </Button>
           </div>
           {preview.record.artifactUrl ? (
@@ -308,15 +304,12 @@ export function HifiPreviewSlot({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               alt="High-fidelity native render of the current viewport"
-              className="block w-full"
+              {...stylex.props(styles.blockWide)}
               src={preview.record.artifactUrl}
             />
           ) : null}
           <figcaption
-            className={cn(
-              "flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/60 px-2 py-1",
-              "font-mono text-[10px] leading-4 text-muted-foreground",
-            )}
+            {...stylex.props(styles.flexCenterWrap)}
             data-testid="hifi-preview-provenance"
           >
             <span title="Renderer implementation">

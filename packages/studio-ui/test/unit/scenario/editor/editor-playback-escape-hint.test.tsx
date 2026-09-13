@@ -116,16 +116,22 @@ describe("escape hint above the timeline", () => {
     expect(hint.closest('[data-testid="floating-timeline-layer"]')).not.toBeNull();
   });
 
-  it("is plain floating white text, with nothing drawn behind it", () => {
+  it("is bare floating text, with nothing drawn behind it", () => {
     render(<ScenarioEditorSurface {...surfaceProps()} sharedPlayback={playback(true)} />);
 
     const hint = screen.getByText(HINT);
-    expect(hint.className).toContain("text-white");
-    // No plate, chip or panel behind it, and it never eats a click meant for
-    // the scene underneath.
-    expect(hint.className).not.toMatch(/\bbg-/);
-    expect(hint.className).not.toMatch(/\bborder\b/);
-    expect(hint.className).toContain("pointer-events-none");
+    // A sentence and nothing else: no icon, badge or chip wrapper of its own, and no
+    // control semantics that would put it in the author's way.
+    expect(hint.tagName).toBe("P");
+    expect(hint.children).toHaveLength(0);
+    expect(hint.textContent?.trim()).toBe(HINT);
+    expect(hint.getAttribute("role")).toBeNull();
+
+    // The timeline card's plate is a decorative sibling the hint floats above — never a
+    // container drawn behind it.
+    const plate = hint.parentElement?.querySelector(':scope > [aria-hidden="true"]');
+    expect(plate).not.toBeNull();
+    expect(plate?.contains(hint)).toBe(false);
   });
 
   it("stays out of the way while the author is authoring", () => {

@@ -4,7 +4,6 @@ import { styles } from "../../map-assets.stylex";
 
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef } from "react";
 import { ChevronRight, Loader2, X } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type {
   MapAsset,
   MapAssetEnrichmentSnapshot,
@@ -137,7 +136,7 @@ export function InsightsTab({
               aria-expanded={explorerOpen}
             >
               <ChevronRight
-                className={cn("size-3 shrink-0 transition-transform duration-150", explorerOpen && "rotate-90")}
+                className={stylex.props(styles.chevron, explorerOpen && styles.rotate90).className}
               />
               Candidate Locations
               {candidateLocationsLoading ? (
@@ -177,7 +176,7 @@ export function InsightsTab({
                       onClick={() =>
                         setActiveFilter(isActive ? null : { type: "family", id: group.family.id })
                       }
-                      className={stylex.props(styles.u_952, styles.u_936, styles.u_941, styles.u_962, styles.u_903, styles.u_970).className}
+                      className={stylex.props(styles.insightChip, isActive ? styles.insightChipActive : styles.insightChipIdle).className}
                     >
                       {group.family.name}
                       {!candidateLocationsLoading && (
@@ -253,10 +252,7 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
           className={stylex.props(styles.s_976).className}
         >
           <ChevronRight
-            className={cn(
-              "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
-              expanded && "rotate-90",
-            )}
+            className={stylex.props(styles.chevronMutedShrink, expanded && styles.rotate90).className}
           />
           <Icon className={stylex.props(styles.s_977).className} />
           <span className={stylex.props(styles.s_978).className}>{group.family.name}</span>
@@ -278,21 +274,21 @@ const ScenarioFamilyCard = forwardRef<HTMLDivElement, ScenarioFamilyCardProps>(
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className={stylex.props(styles.s_983).className}>
+                    <button type="button" className={stylex.props(styles.s_983, styles.stackY2_5).className}>
                       {group.family.description}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className={stylex.props(styles.s_984).className}>
+                  <TooltipContent side="bottom" xstyle={styles.s_984}>
                     {tagTooltip}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <p className={stylex.props(styles.s_985).className}>{group.family.description}</p>
+              <p className={stylex.props(styles.s_985, styles.stackY2_5).className}>{group.family.description}</p>
             )}
 
             {group.candidates.length > 0 && (
-              <ul className={stylex.props(styles.s_986).className}>
+              <ul className={stylex.props(styles.s_986, styles.stackY2_5).className}>
                 {group.candidates.map((candidate: CandidateLocation) => (
                   <li key={candidate.id}>
                     <CandidateLocationCard

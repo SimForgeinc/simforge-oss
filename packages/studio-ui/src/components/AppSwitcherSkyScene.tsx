@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import * as stylex from "@stylexjs/stylex";
 import * as THREE from "three";
+import { styles } from "./AppSwitcherSkyScene.stylex";
 
 const CLOUD_VERTEX_SHADER = /* glsl */ `
   varying vec2 vUv;
@@ -180,7 +182,7 @@ export function AppSwitcherSkyScene() {
       ref={canvasRef}
       aria-hidden="true"
       data-testid="app-switcher-three-sky"
-      className="pointer-events-none absolute inset-0 size-full"
+      {...stylex.props(styles.canvas)}
     />
   );
 }

@@ -34,7 +34,6 @@ import type {
 import { TopBarActionsPortal } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { ScenarioMapPickerDialog } from "@simforge-oss/studio-ui/scenario/list/ScenarioMapPickerDialog";
 import {
@@ -274,7 +273,7 @@ export function MapGalleryPageClient({
               </Link>
             </Button>
           }
-          className={stylex.props(styles.s_220).className}
+          xstyle={styles.s_220}
         />
       </>
     );
@@ -340,7 +339,11 @@ export function MapGalleryPageClient({
             type="button"
             aria-label={sumoAvailable ? `SUMO traffic ${sumoEnabled ? "on" : "off"}` : "SUMO traffic unavailable"}
             aria-pressed={sumoAvailable ? sumoEnabled : undefined}
-            className={stylex.props(styles.u_927, styles.u_922, styles.u_928, styles.u_918, styles.u_903, styles.u_939, styles.u_900, styles.u_970, styles.u_910, styles.u_911, styles.u_912).className}
+            className={stylex.props(
+              styles.sumoToggle,
+              sumoEnabled && sumoAvailable ? styles.sumoToggleOn : styles.sumoToggleOff,
+              !sumoAvailable && styles.sumoToggleUnavailable,
+            ).className}
             disabled={!sumoAvailable}
             onClick={() => setSumoEnabled((enabled) => !enabled)}
             title={
@@ -382,12 +385,8 @@ export function MapGalleryPageClient({
         </div>
         <div
           aria-hidden="true"
-          className={stylex.props(styles.s_233).className}
+          className={stylex.props(styles.s_233, styles.diagonalVeilMask).className}
           data-testid="map-gallery-diagonal-veil"
-          style={{
-            maskImage: "radial-gradient(ellipse 92% 105% at 0% 100%, black 0%, black 38%, rgba(0,0,0,0.76) 52%, transparent 78%)",
-            WebkitMaskImage: "radial-gradient(ellipse 92% 105% at 0% 100%, black 0%, black 38%, rgba(0,0,0,0.76) 52%, transparent 78%)",
-          }}
         />
 
         <section
@@ -401,8 +400,7 @@ export function MapGalleryPageClient({
                 Simulation-ready digital twin
               </p>
               <h1
-                className={stylex.props(styles.s_239).className}
-                style={{ textShadow: "0 4px 28px rgba(0,0,0,0.5)" }}
+                className={stylex.props(styles.s_239, styles.heroTitleShadow).className}
               >
                 {entry.map.label}
               </h1>
@@ -429,7 +427,7 @@ export function MapGalleryPageClient({
                   </Link>
                 ) : null}
               </div>
-              <LocalMapPreparationPanel className={stylex.props(styles.s_247).className} map={entry.map} />
+              <LocalMapPreparationPanel xstyle={styles.s_247} map={entry.map} />
             </div>
 
             <div className={stylex.props(styles.s_248).className}>
@@ -466,7 +464,7 @@ export function MapGalleryPageClient({
                 onClick={createScenario}
                 disabled={creating || locked || !entry.map.installed.browser}
                 title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
-                className={stylex.props(styles.s_253).className}
+                xstyle={styles.s_253}
               >
                 {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}
                 <span>{creating ? "Creating scenario…" : "Create scenario"}</span>

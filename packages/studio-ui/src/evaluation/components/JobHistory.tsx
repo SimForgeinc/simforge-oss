@@ -55,11 +55,11 @@ const TONE_STYLES: Record<JobStatusTone, XStyle> = {
 export function JobStatusBadge({ job }: { job: ComputeJob }) {
   const presentation = jobStatusPresentation(job.status);
   return (
-    <span {...stylex.props(s.rowTight)}>
+    <span {...stylex.props(s.inlineGap2)}>
       <Badge variant="outline" xstyle={TONE_STYLES[presentation.tone]}>
         {presentation.label}
       </Badge>
-      {presentation.live ? <Loader2 aria-hidden="true" {...stylex.props(s.iconSm)} /> : null}
+      {presentation.live ? <Loader2 aria-hidden="true" {...stylex.props(s.icon14, s.spinner, s.textMuted)} /> : null}
     </span>
   );
 }
@@ -134,8 +134,8 @@ export function JobHistory({
 
   if (jobs === null) {
     return (
-      <p className={cn(stylex.props(s.rowTight, s.textSm, s.textMuted).className, className)} style={stylex.props(s.rowTight, s.textSm, s.textMuted).style}>
-        <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />Loading runs…
+      <p className={cn(stylex.props(s.inlineGap2, s.textSm, s.textMuted).className, className)} style={stylex.props(s.inlineGap2, s.textSm, s.textMuted).style}>
+        <Loader2 aria-hidden="true" {...stylex.props(s.iconPlain, s.spinner)} />Loading runs…
       </p>
     );
   }
@@ -156,8 +156,8 @@ export function JobHistory({
               <TableHead>Model</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
-              <TableHead {...stylex.props(s.tableRight)}>Cost</TableHead>
-              <TableHead {...stylex.props(s.shrink0)} />
+              <TableHead xstyle={s.tableRight}>Cost</TableHead>
+              <TableHead xstyle={s.shrink0} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -166,7 +166,7 @@ export function JobHistory({
               const elapsed = elapsedSeconds(job.startedAt, job.finishedAt);
               return (
                 <TableRow key={job.id} data-testid={`job-row-${job.id}`}>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <button
                       type="button"
                       onClick={() => onOpenJob(job.id)}
@@ -177,19 +177,19 @@ export function JobHistory({
                         {job.id.slice(0, 8)}
                       </span>
                     </button>
-                    <div {...stylex.props(s.mt1, s.flexCenterGap2, s.textXs, s.textMuted)}>
+                    <div {...stylex.props(s.mt05, s.flexWrapCenterGap15, s.textXs, s.textMuted)}>
                       <Badge variant="outline">{job.origin}</Badge>
                       {job.scored === false ? <Badge variant="outline">not scored</Badge> : null}
                       {job.inputs.length > 1 ? <span>{job.inputs.length} inputs</span> : null}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                  <TableCell xstyle={s.alignTopTextSm}>
                     <div {...stylex.props(s.textFg)}>{job.model.family}</div>
                     <div {...stylex.props(s.textXs, s.textMuted)}>
                       {job.model.quant} · {job.model.revision.slice(0, 12)}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <JobStatusBadge job={job} />
                     {presentation.detail ? (
                       <p {...stylex.props(s.mt1, s.maxXs, s.textXs, s.leading5, s.textMuted)}>
@@ -202,7 +202,7 @@ export function JobHistory({
                       </p>
                     ) : null}
                   </TableCell>
-                  <TableCell {...stylex.props(s.alignTopTextSm)}>
+                  <TableCell xstyle={s.alignTopTextSm}>
                     <div {...stylex.props(s.textFg)}>
                       {new Date(job.createdAt).toLocaleString()}
                     </div>
@@ -211,7 +211,7 @@ export function JobHistory({
                       {elapsed !== null ? ` · ${formatSeconds(elapsed)}` : ""}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.justifyEndSm)}>
+                  <TableCell xstyle={[s.justifyEndSm, s.tabular]}>
                     <div {...stylex.props(s.textFg)}>
                       {job.settledCents !== null
                         ? formatCents(job.settledCents)
@@ -221,7 +221,7 @@ export function JobHistory({
                       {job.settledCents !== null ? "settled" : "reserved"}
                     </div>
                   </TableCell>
-                  <TableCell {...stylex.props(s.tableTop)}>
+                  <TableCell xstyle={s.tableTop}>
                     <div {...stylex.props(s.flexGap1)}>
                       {job.cancellable ? (
                         <Button
@@ -233,7 +233,7 @@ export function JobHistory({
                           aria-label={`Cancel run ${job.id}`}
                         >
                           {cancelling === job.id ? (
-                            <Loader2 aria-hidden="true" {...stylex.props(s.icon)} />
+                            <Loader2 aria-hidden="true" {...stylex.props(s.spinner)} />
                           ) : (
                             <Ban aria-hidden="true" />
                           )}

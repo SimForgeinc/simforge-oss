@@ -64,7 +64,6 @@ import {
 } from "@/app/lib/maps/frontend/candidate-location-utils";
 import { computeTooltipPosition } from "@/app/lib/maps/frontend/tooltip-positioning";
 import type { MapMarkerSizingMode } from "@/app/lib/maps/frontend/map-marker-sizing";
-import { C } from "./map-layer-constants";
 import { MapAssetsMapView } from "./MapAssetsMapView";
 import {
   AssetPolygonLayers,
@@ -1277,6 +1276,12 @@ export default function MapAssetsMap({
     return { width: el?.offsetWidth ?? 400, height: el?.offsetHeight ?? 400 };
   }
 
+  /**
+   * Where each overlay sits, and nothing else: the plates themselves are
+   * StyleX classes the overlay components carry (`map-canvas.stylex`). Only
+   * the placement is dynamic — it is solved against the pointer and the live
+   * container rect so the card stays inside the canvas.
+   */
   const hoverTooltipStyle = useMemo(() => {
     if (!tooltipPosition) return undefined;
     const { left, top } = computeTooltipPosition({
@@ -1284,13 +1289,7 @@ export default function MapAssetsMap({
       container: getContainerDims(),
       tooltip: { width: 140, height: 40 },
     });
-    return {
-      position: "absolute" as const, left, top, zIndex: 999,
-      pointerEvents: "none" as const, fontFamily: C.font,
-      padding: "0.35rem 0.6rem", background: `${C.bg}f2`, color: C.fg,
-      borderRadius: "6px", fontSize: "0.8125rem",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.5)", border: `1px solid ${C.border}`,
-    };
+    return { left, top };
   }, [tooltipPosition]);
 
   const geojsonTooltipStyle = useMemo(() => {
@@ -1300,14 +1299,7 @@ export default function MapAssetsMap({
       container: getContainerDims(),
       tooltip: { width: 200, height: 120 },
     });
-    return {
-      position: "absolute" as const, left, top, zIndex: 999,
-      pointerEvents: "none" as const, fontFamily: C.font,
-      padding: "0.4rem 0.65rem", background: `${C.bg}f2`, color: C.fg,
-      borderRadius: "6px", fontSize: "0.75rem",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.5)", border: `1px solid ${C.border}`,
-      maxWidth: 280, maxHeight: 160, overflow: "auto",
-    };
+    return { left, top };
   }, [geojsonHoverInfo]);
 
   // Only treat lanes as polygons when the sidecar actually has geometry. An
@@ -1330,14 +1322,7 @@ export default function MapAssetsMap({
       container: getContainerDims(),
       tooltip: { width: 300, height: 240 },
     });
-    return {
-      position: "absolute" as const, left, top, zIndex: 1000,
-      pointerEvents: "auto" as const, fontFamily: C.font,
-      minWidth: 220, maxWidth: 300, padding: "0.75rem 1rem",
-      background: `${C.bg}fa`, color: C.fg, borderRadius: "8px",
-      fontSize: "0.8125rem", boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
-      border: `1px solid ${C.border}`,
-    };
+    return { left, top };
   }, [clusterPosition]);
 
   // In `twin` mode the editor's digital-twin canvas covers this map entirely.

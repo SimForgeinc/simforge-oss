@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@simforge-oss/studio-ui/components/ui/dropdown-menu";
 import type { CatalogView, CatalogSort } from "./catalog-filters";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 const SORT_LABELS: Record<CatalogSort, string> = {
   date: "Date Added",
@@ -50,7 +49,7 @@ export function MapCatalogToolbar({
           placeholder="Search maps by name, city, tag..."
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          className={stylex.props(styles.s_155).className}
+          xstyle={styles.s_155}
         />
         {query && (
           <button
@@ -68,11 +67,11 @@ export function MapCatalogToolbar({
         {resultCount} {resultCount === 1 ? "map" : "maps"}
       </span>
 
-      <ToolbarGroup className={stylex.props(styles.s_159).className}>
+      <ToolbarGroup xstyle={styles.s_159}>
         {/* Sort */}
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className={stylex.props(styles.s_160).className}>
+          <Button variant="outline" size="sm" xstyle={styles.s_160}>
             <ArrowUpDown className={stylex.props(styles.s_991).className} />
             {SORT_LABELS[sort]}
           </Button>
@@ -89,7 +88,7 @@ export function MapCatalogToolbar({
         <button
           type="button"
           onClick={() => onViewChange("grid")}
-          className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_951, styles.u_937, styles.u_943, styles.u_970).className}
+          className={stylex.props(styles.viewToggle, view === "grid" ? styles.viewToggleActive : styles.viewToggleIdle).className}
           title="Grid view"
         >
           <LayoutGrid className={stylex.props(styles.s_991).className} />
@@ -98,7 +97,7 @@ export function MapCatalogToolbar({
         <button
           type="button"
           onClick={() => onViewChange("map")}
-          className={stylex.props(styles.u_908, styles.u_928, styles.u_917, styles.u_951, styles.u_937, styles.u_943, styles.u_970).className}
+          className={stylex.props(styles.viewToggle, view === "map" ? styles.viewToggleActive : styles.viewToggleIdle).className}
           title="Map view"
         >
           <Map className={stylex.props(styles.s_991).className} />

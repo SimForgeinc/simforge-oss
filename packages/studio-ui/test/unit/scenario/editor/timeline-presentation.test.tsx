@@ -241,8 +241,6 @@ describe("floating timeline presentation", () => {
 
     const routeClip = screen.getByTestId("timeline-interaction-clip-simple-route-unconfigured");
     expect(routeClip.getAttribute("data-route-status")).toBe("needs-setup");
-    expect(routeClip.className).toContain("animate-pulse");
-    expect(routeClip.className).toContain("bg-red-500/45");
     expect(routeClip.textContent).toContain("Click to configure route");
     expect(routeClip.querySelector(".lucide-lock")).toBeNull();
     expect(screen.getByRole("button", { name: "Configure route; setup required" })).not.toBeNull();
@@ -384,36 +382,25 @@ describe("floating timeline presentation", () => {
     expect(dock.getAttribute("data-presentation")).toBe("floating");
     expect(dock.getAttribute("data-floating")).toBe("true");
     expect(dock.style.width).toBe("100%");
-    expect(dock.className).toContain("border-white/25");
-    expect(dock.className).toContain("bg-black/15");
-    expect(dock.className).toContain("rounded-t-[24px]");
-    expect(dock.className).toContain("rounded-b-none");
     expect(dock.style.borderRadius).toBe("24px 24px 0 0");
     expect(dock.style.clipPath).toBe("inset(0 round 24px 24px 0 0)");
     expect(dock.style.backdropFilter).toBe("blur(72px) saturate(1.85) contrast(1.05)");
-    expect(dock.className).not.toContain("max-h-[clamp(220px,30vh,300px)]");
     expect(dock.style.maxHeight).toBe("min(65vh, 520px)");
     expect(Number.parseInt(dock.style.height, 10)).toBeGreaterThanOrEqual(168);
-    expect(dock.className).toContain("backdrop-blur-[72px]");
-    expect(dock.className).toContain("backdrop-saturate-[1.85]");
-    expect(dock.className).toContain("backdrop-contrast-[1.05]");
     expect(screen.getByTestId("timeline-glass-backdrop")).not.toBeNull();
     expect(screen.queryByTestId("timeline-width-divider")).toBeNull();
     expect(screen.queryByTestId("timeline-collapse-rail")).toBeNull();
     const topbar = screen.getByTestId("timeline-topbar");
     // The split is one authored value published on the rail, so the header, the
     // lanes, and the playhead offset all read the same custom property.
-    expect(topbar.className).toContain("grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)]");
     const rail = screen.getByTestId("scenario-timeline-dock");
     expect(rail.style.getPropertyValue("--timeline-identity-width")).toBe("114px");
     expect(screen.getByTestId("timeline-split-resize-handle").getAttribute("aria-orientation")).toBe("vertical");
-    expect(topbar.className).toContain("rounded-t-[24px]");
     expect(within(topbar).queryByTestId("timeline-transport-play")).toBeNull();
     expect(within(topbar).getByTestId("timeline-transport-controls")).not.toBeNull();
     expect(within(topbar).getByText("Timeline")).not.toBeNull();
-    expect(within(topbar).getByText("Timeline").parentElement?.className).toContain("flex-col");
-    expect(within(topbar).getByText("Timeline").parentElement?.className).toContain("items-center");
-    expect(within(topbar).getByText("Timeline").className).toContain("text-center");
+    expect(within(topbar).getByText("Timeline").parentElement)
+      .toBe(within(topbar).getByTestId("timeline-transport-controls").parentElement);
     expect(within(topbar).queryByTestId("timeline-authoring-scrubber")).toBeNull();
     expect(within(topbar).queryByTestId("timeline-time-readout")).toBeNull();
     expect(within(topbar).getByTestId("timeline-ruler")).not.toBeNull();
@@ -423,9 +410,10 @@ describe("floating timeline presentation", () => {
     expect(within(topbar).queryByText("20s clip")).toBeNull();
     expect(screen.getByTestId("semantic-timeline")).not.toBeNull();
     expect(screen.getByTestId("timeline-ruler")).not.toBeNull();
-    expect(screen.getByTestId("timeline-tick-label-2000").className).toContain("-translate-x-1/2");
+    expect(screen.getByTestId("timeline-tick-label-2000")).toBeTruthy();
     expect(screen.getByTestId("timeline-playhead").parentElement).toBe(dock);
-    expect(screen.getByTestId("timeline-playhead").className).toContain("inset-y-0");
+    expect(screen.getByTestId("timeline-playhead").style.left)
+      .toBe("calc(var(--timeline-identity-width) + (100% - var(--timeline-identity-width)) * 0)");
     expect(screen.getByTestId("interaction-row-exact-speed")).not.toBeNull();
     expect(screen.getByTestId("interaction-expand-exact-speed").getAttribute("aria-controls")).toBe(
       "scenario-interaction-exact-speed",
@@ -1109,7 +1097,7 @@ describe("floating timeline presentation", () => {
     expect(screen.queryByTestId("timeline-context-menu")).toBeNull();
   });
 
-  it("deletes an actor immediately from the backgroundless timeline action", () => {
+  it("deletes an actor immediately from the inline timeline action", () => {
     const document = fixture([]);
     render(<ScenarioTimelineDock document={document as never} state={{ selection: [] } as never} />);
 
@@ -1117,8 +1105,10 @@ describe("floating timeline presentation", () => {
     fireEvent.contextMenu(screen.getByTestId("timeline-actor-identity-camera-car"));
     expect(screen.queryByTestId("timeline-context-menu")).toBeNull();
     const deleteButton = screen.getByTestId("timeline-delete-camera-car");
-    expect(deleteButton.className).toContain("bg-transparent");
-    expect(deleteButton.className).not.toContain("rounded");
+    // The action is always on the identity row, so deleting never needs the
+    // context menu that the same right click used to open.
+    expect(screen.getByTestId("timeline-actor-identity-camera-car").contains(deleteButton)).toBe(true);
+    expect(deleteButton.getAttribute("aria-label")).toBe("Delete actor Sedan 1");
     fireEvent.click(deleteButton);
     expect(document.remove).toHaveBeenCalledWith(["camera-car"]);
   });
@@ -1203,7 +1193,7 @@ describe("existing semantic geometry", () => {
         window={{ startMs: 0, endMs: 10000 }}
       />,
     );
-    expect(screen.getByTestId("interaction-track").lastElementChild?.className).toContain("bg-[#E8E044]/75");
+    expect(screen.getByTestId("interaction-track").lastElementChild?.getAttribute("data-armed")).toBe("false");
 
     rerender(
       <InteractionTrack
@@ -1211,8 +1201,8 @@ describe("existing semantic geometry", () => {
         window={{ startMs: 0, endMs: 10000 }}
       />,
     );
-    expect(screen.getByTestId("interaction-track").lastElementChild?.className).toContain("border-dashed");
-    expect(screen.getByTestId("interaction-track").lastElementChild?.className).toContain("opacity-70");
+    expect(screen.getByTestId("interaction-track").lastElementChild?.getAttribute("data-armed")).toBe("true");
+    expect(screen.getByTestId("interaction-track").lastElementChild?.getAttribute("data-open-ended")).toBe("true");
 
     render(<TimelineRuler choreography={{ warmupSeconds: 2, clipSeconds: 10, interactions: [] } as never} />);
     expect(screen.getByTestId("timeline-ruler")).not.toBeNull();

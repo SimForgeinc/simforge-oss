@@ -11,7 +11,6 @@ import {
 } from "@/app/lib/maps/frontend/road-network-feature-types";
 import { SIGNAL_CATEGORY_CONFIG } from "@/app/lib/maps/frontend/signal-overlay";
 import { enrichmentGlyphPath } from "@/app/components/map-assets-map/map-icons";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { LaneRenderMode } from "@/app/lib/maps/frontend/lane-render-mode";
 import type { MapOverlayLayer, MapOverlayLayerId } from "@simforge-oss/studio-shared";
 import type { ScenarioCandidateFamilyLayer } from "@/app/lib/maps/frontend/scenario-candidate-layers";
@@ -22,9 +21,6 @@ import {
   type TwinFidelityScorecard,
   type TwinFidelitySubLayerId,
 } from "@/app/lib/maps/frontend/twin-fidelity-layers";
-
-/** Insights-orange dot used for every scenario-candidate family row. */
-const SCENARIO_CANDIDATE_DOT = "#f97316";
 
 const ENRICHMENT_DOTS: Record<string, string> = {
   bus_stops: "#60a5fa",
@@ -222,10 +218,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn(
-            "size-3 shrink-0 transition-transform duration-150",
-            open && "rotate-90",
-          )}
+          className={stylex.props(styles.chevron, open && styles.rotate90).className}
         />
         Map Layers
       </button>
@@ -243,10 +236,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Road Network"
                 >
                   <ChevronRight
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150",
-                      roadNetworkExpanded && "rotate-90",
-                    )}
+                    className={stylex.props(styles.chevronMuted, roadNetworkExpanded && styles.rotate90).className}
                   />
                 </button>
                 <span className={stylex.props(styles.s_623).className}>
@@ -257,11 +247,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 )}
                 <Switch
                   checked={allFeatureTypesEnabled}
-                  className={cn(
-                    !allFeatureTypesEnabled &&
-                      someFeatureTypesEnabled &&
-                      "opacity-60",
-                  )}
+                  xstyle={!allFeatureTypesEnabled && someFeatureTypesEnabled && styles.partiallyEnabled}
                   onCheckedChange={onToggleAllFeatureTypes}
                   aria-label="Toggle all road network layers"
                 />
@@ -289,7 +275,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                             type="button"
                             onClick={() => onSetLaneRenderMode?.(mode)}
                             aria-pressed={laneRenderMode === mode}
-                            className={stylex.props(styles.u_936, styles.u_941, styles.u_963, styles.u_970).className}
+                            className={stylex.props(styles.laneModeButton, laneRenderMode === mode ? styles.laneModeButtonActive : styles.laneModeButtonIdle).className}
                           >
                             {label}
                           </button>
@@ -303,7 +289,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                     return (
                       <li
                         key={ft.id}
-                        className={stylex.props(styles.u_908, styles.u_928, styles.u_919, styles.u_951, styles.u_903, styles.u_905, styles.u_901, styles.u_937, styles.u_942).className}
+                        className={stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty).className}
                       >
                         <span
                           className={stylex.props(styles.s_629).className}
@@ -331,8 +317,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   {onToggleInHouseSpeedLimits && (
                     <li className={stylex.props(styles.s_628).className}>
                       <span
-                        className={stylex.props(styles.s_629).className}
-                        style={{ backgroundColor: "#111111" }}
+                        className={stylex.props(styles.s_629, styles.dotInHouseSpeedLimits).className}
                         aria-hidden="true"
                       />
                       <span
@@ -370,10 +355,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Signals and Signs"
                 >
                   <ChevronRight
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150",
-                      signalsLayerExpanded && "rotate-90",
-                    )}
+                    className={stylex.props(styles.chevronMuted, signalsLayerExpanded && styles.rotate90).className}
                   />
                 </button>
                 <span className={stylex.props(styles.s_623).className}>
@@ -387,11 +369,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 )}
                 <Switch
                   checked={allSignalsEnabled}
-                  className={cn(
-                    !allSignalsEnabled &&
-                      someSignalsEnabled &&
-                      "opacity-60",
-                  )}
+                  xstyle={!allSignalsEnabled && someSignalsEnabled && styles.partiallyEnabled}
                   onCheckedChange={onToggleAllSignalCategories}
                   aria-label="Toggle all signals"
                 />
@@ -404,7 +382,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                     return (
                       <li
                         key={cat.id}
-                        className={stylex.props(styles.u_908, styles.u_928, styles.u_919, styles.u_951, styles.u_903, styles.u_905, styles.u_901, styles.u_937, styles.u_942).className}
+                        className={stylex.props(styles.layerRow, count === 0 && styles.layerRowEmpty).className}
                       >
                         <span
                           className={stylex.props(styles.s_629).className}
@@ -441,7 +419,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 type="button"
                 variant="secondary"
                 size="sm"
-                className={stylex.props(styles.s_708).className}
+                xstyle={styles.s_708}
                 disabled={enrichBusy}
                 onClick={onEnrich}
               >
@@ -470,10 +448,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Enrichment Layers"
                 >
                   <ChevronRight
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150",
-                      enrichmentLayersExpanded && "rotate-90",
-                    )}
+                    className={stylex.props(styles.chevronMuted, enrichmentLayersExpanded && styles.rotate90).className}
                   />
                 </button>
                 <span className={stylex.props(styles.s_623).className}>
@@ -481,11 +456,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 </span>
                 <Switch
                   checked={allEnrichmentEnabled}
-                  className={cn(
-                    !allEnrichmentEnabled &&
-                      someEnrichmentEnabled &&
-                      "opacity-60",
-                  )}
+                  xstyle={!allEnrichmentEnabled && someEnrichmentEnabled && styles.partiallyEnabled}
                   onCheckedChange={() => {
                     for (const id of actionableEnrichmentLayerIds) {
                       const isOn = enabledOverlayLayerIds.includes(
@@ -516,7 +487,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                     return (
                       <li
                         key={layer.layer_id}
-                        className={stylex.props(styles.u_908, styles.u_928, styles.u_919, styles.u_951, styles.u_903, styles.u_905, styles.u_901, styles.u_937, styles.u_942).className}
+                        className={stylex.props(styles.layerRow, isEmpty && styles.layerRowEmpty).className}
                       >
                         {glyphPath ? (
                           <span
@@ -566,8 +537,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   {onToggleSpeedLimits && (
                     <li className={stylex.props(styles.s_628).className}>
                       <span
-                        className={stylex.props(styles.s_629).className}
-                        style={{ backgroundColor: "#2563eb" }}
+                        className={stylex.props(styles.s_629, styles.dotOvertureSpeedLimits).className}
                         aria-hidden="true"
                       />
                       <span
@@ -608,10 +578,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Scenario Candidates"
                 >
                   <ChevronRight
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150",
-                      candidatesLayerExpanded && "rotate-90",
-                    )}
+                    className={stylex.props(styles.chevronMuted, candidatesLayerExpanded && styles.rotate90).className}
                   />
                 </button>
                 <span className={stylex.props(styles.s_623).className}>
@@ -622,11 +589,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 )}
                 <Switch
                   checked={allCandidateFamiliesEnabled}
-                  className={cn(
-                    !allCandidateFamiliesEnabled &&
-                      someCandidateFamiliesEnabled &&
-                      "opacity-60",
-                  )}
+                  xstyle={!allCandidateFamiliesEnabled && someCandidateFamiliesEnabled && styles.partiallyEnabled}
                   onCheckedChange={() => {
                     for (const id of actionableCandidateFamilyIds) {
                       const isOn = enabledCandidateFamilyIds.includes(id);
@@ -646,8 +609,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                       className={stylex.props(styles.s_628).className}
                     >
                       <span
-                        className={stylex.props(styles.s_629).className}
-                        style={{ backgroundColor: SCENARIO_CANDIDATE_DOT }}
+                        className={stylex.props(styles.s_629, styles.dotScenarioCandidate).className}
                         aria-hidden="true"
                       />
                       <span className={stylex.props(styles.s_630).className}>
@@ -680,10 +642,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                   aria-label="Toggle Twin Fidelity"
                 >
                   <ChevronRight
-                    className={cn(
-                      "size-3 text-muted-foreground transition-transform duration-150",
-                      twinFidelityExpanded && "rotate-90",
-                    )}
+                    className={stylex.props(styles.chevronMuted, twinFidelityExpanded && styles.rotate90).className}
                   />
                 </button>
                 <span className={stylex.props(styles.s_623).className}>
@@ -697,9 +656,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                 </span>
                 <Switch
                   checked={allTwinLayersEnabled}
-                  className={cn(
-                    !allTwinLayersEnabled && someTwinLayersEnabled && "opacity-60",
-                  )}
+                  xstyle={!allTwinLayersEnabled && someTwinLayersEnabled && styles.partiallyEnabled}
                   onCheckedChange={() => {
                     for (const sub of TWIN_FIDELITY_SUBLAYERS) {
                       const isOn = enabledTwinFidelityLayerIds.includes(sub.id);
@@ -751,7 +708,7 @@ export function MapLayersSection(props: MapLayersSectionProps) {
                         key={r.res}
                         type="button"
                         onClick={() => onSetTwinFidelityRes?.(r.res)}
-                        className={stylex.props(styles.u_951, styles.u_903, styles.u_935, styles.u_941, styles.u_962).className}
+                        className={stylex.props(styles.resolutionButton, twinFidelityRes === r.res ? styles.resolutionButtonActive : styles.resolutionButtonIdle).className}
                         aria-pressed={twinFidelityRes === r.res}
                         aria-label={`Set twin fidelity cell size to ${r.label}`}
                       >

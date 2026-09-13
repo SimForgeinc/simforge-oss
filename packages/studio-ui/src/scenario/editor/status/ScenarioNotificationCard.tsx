@@ -16,6 +16,9 @@ import type {
   NotificationSeverity,
 } from "./notification-model";
 import { useCopyToClipboard } from "../../list/CopyableErrorMessage";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioNotificationCard.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 const SEVERITY_ICON = {
   error: CircleAlert,
@@ -25,16 +28,13 @@ const SEVERITY_ICON = {
   progress: LoaderCircle,
 } as const;
 
-const SEVERITY_CHROME: Record<NotificationSeverity, string> = {
-  error: "border-destructive/50 bg-destructive/20 text-foreground",
-  warning: "border-amber-400/40 bg-amber-500/15 text-foreground",
-  success: "border-emerald-400/40 bg-emerald-500/15 text-foreground",
-  info: "border-border/70 bg-background/95 text-foreground",
-  progress: "border-border/70 bg-background/95 text-foreground",
+const SEVERITY_CHROME: Record<NotificationSeverity, stylex.StyleXStyles> = {
+  error: styles.cardError,
+  warning: styles.cardWarning,
+  success: styles.cardSuccess,
+  info: styles.cardNeutral,
+  progress: styles.cardNeutral,
 };
-
-const ICON_BUTTON =
-  "editor-motion -mt-1 inline-flex size-7 shrink-0 items-center justify-center border border-border/70 bg-muted/40 text-current hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background";
 
 export function ScenarioNotificationCard({
   group,
@@ -52,32 +52,25 @@ export function ScenarioNotificationCard({
   return (
     <div
       aria-live={isError ? "assertive" : "polite"}
-      className={[
-        "pointer-events-auto border px-3 py-2 shadow-lg backdrop-blur-md",
-        SEVERITY_CHROME[severity],
-        progress != null ? "relative overflow-hidden pb-2.5" : "",
-      ].join(" ")}
+      {...stylex.props(styles.card, SEVERITY_CHROME[severity], progress != null && styles.cardWithProgress)}
       data-severity={severity}
       data-source={source}
       data-testid="scenario-notification-card"
       role={isError ? "alert" : "status"}
     >
-      <div className="flex items-start gap-2">
+      <div {...stylex.props(styles.flexStartGap2)}>
         <Icon
           aria-hidden="true"
-          className={[
-            "mt-0.5 size-4 shrink-0",
-            severity === "progress" ? "animate-spin text-primary" : "",
-          ].join(" ")}
+          className={stylex.props(styles.icon, severity === "progress" && styles.iconSpinning).className}
         />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-micro font-bold uppercase tracking-meta opacity-70">
+        <div {...stylex.props(styles.fillNarrowable)}>
+          <div {...stylex.props(styles.flexCenterGap15)}>
+            <span {...stylex.props(styles.capsMicroBold)}>
               {source}
             </span>
             {count > 1 ? (
               <span
-                className="border border-border/70 bg-muted/40 px-1 text-micro font-bold tabular-nums"
+                {...stylex.props(styles.microBoldBordered)}
                 data-testid="scenario-notification-count"
                 title={`${count} notifications say this`}
               >
@@ -85,22 +78,22 @@ export function ScenarioNotificationCard({
               </span>
             ) : null}
             {progress != null ? (
-              <span className="ml-auto text-meta font-medium tabular-nums opacity-80">
+              <span {...stylex.props(styles.metaMediumPushRight)}>
                 {progress}%
               </span>
             ) : null}
           </div>
-          <div className="mt-0.5 text-sm font-medium leading-snug">
+          <div {...stylex.props(styles.smMediumSnug)}>
             {message}
           </div>
           {detail ? (
-            <div className="mt-0.5 text-xs leading-snug opacity-70">
+            <div {...stylex.props(styles.xsSnug)}>
               {detail}
             </div>
           ) : null}
           {action ? (
             <Button
-              className="mt-2 h-7 px-2.5 text-xs"
+              xstyle={styles.xs}
               size="sm"
               variant="outline"
               onClick={action.run}
@@ -116,7 +109,7 @@ export function ScenarioNotificationCard({
               ? `${message} copied to clipboard`
               : `Copy ${message} to clipboard`
           }
-          className={ICON_BUTTON}
+          className={stylex.props(styles.iconButton, motionStyles.editorMotion).className}
           title={copied ? "Copied" : "Copy to clipboard"}
           onClick={() =>
             copy(
@@ -127,18 +120,18 @@ export function ScenarioNotificationCard({
           }
         >
           {copied ? (
-            <Check className="size-3.5" aria-hidden="true" />
+            <Check className={stylex.props(styles.size35).className} aria-hidden="true" />
           ) : (
-            <Copy className="size-3.5" aria-hidden="true" />
+            <Copy className={stylex.props(styles.size35).className} aria-hidden="true" />
           )}
         </button>
         <button
           type="button"
           aria-label={`Dismiss ${message}`}
-          className={`${ICON_BUTTON} -mr-1`}
+          className={stylex.props(styles.iconButton, styles.iconButtonEdge, motionStyles.editorMotion).className}
           onClick={() => onDismiss(keys)}
         >
-          <X className="size-3.5" aria-hidden="true" />
+          <X className={stylex.props(styles.size35).className} aria-hidden="true" />
         </button>
       </div>
       {progress != null ? (
@@ -147,11 +140,11 @@ export function ScenarioNotificationCard({
           aria-valuemin={0}
           aria-valuenow={progress}
           aria-label={`${message} progress`}
-          className="absolute inset-x-0 bottom-0 h-0.5 bg-muted"
+          {...stylex.props(styles.abs)}
           role="progressbar"
         >
           <span
-            className="block h-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
+            {...stylex.props(styles.blockTall)}
             style={{ width: `${progress}%` }}
           />
         </div>

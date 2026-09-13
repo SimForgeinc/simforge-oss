@@ -7,6 +7,7 @@ import {
   type DashboardLoadingSource,
 } from "../../components/DashboardLoadingCoordinator";
 import { Button } from "../../components/ui/button";
+import { scene } from "../scenario-controls.stylex";
 import type { SceneLoadProgress } from "./map-load-progress";
 import { CacheAllMapAssetsButton } from "./CacheAllMapAssetsButton";
 
@@ -37,7 +38,7 @@ export function SceneLoadingTransition({
         <>
           {failed && onRetry ? (
             <Button
-              className="mt-6 h-10 rounded-full bg-[#E8E044] px-5 text-black hover:bg-[#f1ea55]"
+              xstyle={scene.retry}
               onClick={onRetry}
             >
               <RotateCcw className="size-4" aria-hidden="true" />

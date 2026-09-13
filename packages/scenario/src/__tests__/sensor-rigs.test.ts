@@ -29,6 +29,8 @@ describe('sensor rigs', () => {
       'alpamayo-pai',
       'alpamayo-2cam',
       'alpamayo-4cam',
+      'alpamayo-6cam',
+      'alpamayo-6cam-vqa',
     ]);
 
     for (const preset of BUILT_IN_SENSOR_RIGS) {
@@ -162,7 +164,7 @@ describe('alpamayo model-input rigs', () => {
   });
 
   it('rejects camera names without an authored template', () => {
-    expect(() => buildAlpamayoRigPreset('alpamayo-bad', 'Bad', ['camera_rear_left_70fov']))
+    expect(() => buildAlpamayoRigPreset('alpamayo-bad', 'Bad', ['camera_unknown' as never]))
       .toThrow(/no authored Alpamayo camera template/);
   });
 });

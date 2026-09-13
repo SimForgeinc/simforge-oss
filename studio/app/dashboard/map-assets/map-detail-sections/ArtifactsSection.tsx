@@ -4,7 +4,6 @@ import { styles } from "../map-assets.stylex";
 
 import { ChevronRight, Download, Play } from "lucide-react";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -47,7 +46,7 @@ export function ArtifactsSection({
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+          className={stylex.props(styles.chevron, open && styles.rotate90).className}
         />
         Artifacts ({visibleArtifacts.length})
       </button>

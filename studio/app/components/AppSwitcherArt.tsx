@@ -1,8 +1,16 @@
 import Image from "next/image";
+import * as stylex from "@stylexjs/stylex";
+import {
+  mergeStyleProps,
+  type XStyle,
+} from "@simforge-oss/studio-ui/components/stylex";
 
 type AppSwitcherArtProps = {
   href: string;
+  /** Caller-supplied Tailwind classes, kept for callers still on utilities. */
   className?: string;
+  /** Caller-supplied StyleX styles; applied before `className` so it wins. */
+  xstyle?: XStyle;
 };
 
 const APP_ART = {
@@ -24,7 +32,7 @@ const APP_ART = {
   },
 } as const;
 
-export function AppSwitcherArt({ href, className }: AppSwitcherArtProps) {
+export function AppSwitcherArt({ href, className, xstyle }: AppSwitcherArtProps) {
   const art =
     APP_ART[href as keyof typeof APP_ART] ??
     APP_ART["/dashboard/dataset-export"];
@@ -33,7 +41,7 @@ export function AppSwitcherArt({ href, className }: AppSwitcherArtProps) {
     <Image
       alt=""
       aria-hidden="true"
-      className={className}
+      {...mergeStyleProps(stylex.props(xstyle), className)}
       data-app-switcher-art={art.name}
       draggable={false}
       height={640}

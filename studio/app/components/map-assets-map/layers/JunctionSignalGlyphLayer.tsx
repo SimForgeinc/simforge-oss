@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Marker, useMap } from "react-map-gl/maplibre";
 import type { JunctionSignalPlan } from "@simforge-oss/studio-shared";
 import {
@@ -13,7 +14,6 @@ import {
   dominantPlanState,
   signalStateColor,
   SIGNAL_PLAN_MODE_LABELS,
-  SIGNAL_UNKNOWN_COLOR,
 } from "@/app/lib/scenario-editor/signals/signal-plan-model";
 import {
   useSignalJunctionStore,
@@ -21,6 +21,7 @@ import {
 } from "@/app/lib/scenario-editor/signals/signal-junction-store";
 import { useJunctionIdentityLabels } from "@/app/lib/scenario-editor/signals/use-intersection-candidates";
 import { projectSignalHead } from "@/app/lib/scenario-editor/map-3d/signal-picking";
+import { styles } from "../map-canvas.stylex";
 
 /**
  * Junction markers on the map (plan 2026-07-24 §4.3, extended by the
@@ -156,12 +157,10 @@ export function JunctionSignalGlyphLayer({
           ref={lightAnchorRef}
           aria-hidden
           data-signal-head-anchor={referenceSignalId}
-          style={{
-            display: "block",
-            width: 1,
-            height: SIGNAL_ANCHOR_BASE_HEIGHT_PX,
-            pointerEvents: "none",
-          }}
+          // `styles.signalAnchor` carries the SIGNAL_ANCHOR_BASE_HEIGHT_PX
+          // resting height; `useSignalHeadAnchorSpan` writes the measured span
+          // straight onto the element once the head projects.
+          {...stylex.props(styles.signalAnchor)}
         />
       </Marker>
     ) : null;
@@ -381,7 +380,9 @@ function JunctionMarker({
 }) {
   const controlled = isJunctionControlled(plan);
   const state = plan ? dominantPlanState(plan, previewCurrentTimestamp) : null;
-  const color = controlled ? signalStateColor(state) : SIGNAL_UNKNOWN_COLOR;
+  // Only a controlled junction has a lamp to show. An uncontrolled one is a
+  // hollow hint, outlined in SIGNAL_UNKNOWN_COLOR by `styles`.
+  const lampColor = controlled ? signalStateColor(state) : undefined;
   const size = (controlled ? CONTROLLED_SIZE_PX : BASE_SIZE_PX) * markerScale;
   const name = identity ?? `Junction ${glyph.junction_id}`;
   const label = controlled
@@ -396,11 +397,10 @@ function JunctionMarker({
       pitchAlignment="map"
       rotationAlignment="map"
     >
-      <div style={{ position: "relative" }}>
+      <div {...stylex.props(styles.markerRelative)}>
         <button
           aria-label={label}
           aria-pressed={selected}
-          className="block rounded-full"
           data-junction-id={glyph.junction_id}
           // The anchor the editing card positions against. The camera flow's
           // equivalent (`data-camera-row-id`) is queried and never emitted, so
@@ -410,24 +410,22 @@ function JunctionMarker({
           data-junction-controlled={controlled ? "true" : "false"}
           data-signal-state={state ?? (controlled ? "unset" : "map_default")}
           data-testid={`junction-signal-glyph-${glyph.junction_id}`}
+          {...stylex.props(
+            styles.junctionGlyph,
+            controlled ? styles.junctionControlled : styles.junctionUncontrolled,
+            !controlled && hovered ? styles.junctionUncontrolledHovered : null,
+            hovered ? styles.junctionGlyphHovered : null,
+            selected
+              ? styles.junctionSelected
+              : hovered
+                ? styles.junctionHoveredRing
+                : null,
+          )}
+          // Zoom-resolved footprint, and the lamp colour this plan is showing.
           style={{
             width: `${size}px`,
             height: `${size}px`,
-            backgroundColor: controlled ? color : "transparent",
-            opacity: controlled ? 0.95 : hovered ? 0.7 : 0.4,
-            border: controlled
-              ? "2px solid rgba(255,255,255,0.92)"
-              : `1.5px solid ${SIGNAL_UNKNOWN_COLOR}`,
-            boxShadow: selected
-              ? "0 0 0 3px rgba(232,224,68,0.35)"
-              : hovered
-                ? "0 0 0 2px rgba(232,224,68,0.22)"
-                : undefined,
-            outline: selected ? "2px solid #E8E044" : undefined,
-            cursor: "pointer",
-            pointerEvents: "auto",
-            transform: hovered ? "scale(1.12)" : undefined,
-            transition: "transform 120ms ease-out",
+            backgroundColor: lampColor,
           }}
           title={label}
           type="button"
@@ -445,9 +443,8 @@ function JunctionMarker({
         {controlled && showChip && plan ? (
           <span
             aria-hidden
-            className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-1 py-px text-[8px] font-bold uppercase tracking-[0.06em] text-white/80"
             data-testid={`junction-mode-chip-${glyph.junction_id}`}
-            style={{ top: "calc(100% + 3px)" }}
+            {...stylex.props(styles.junctionChip)}
           >
             {SIGNAL_PLAN_MODE_LABELS[plan.mode]}
           </span>

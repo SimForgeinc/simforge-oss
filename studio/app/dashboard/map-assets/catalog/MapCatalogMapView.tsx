@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { MapAsset } from "@simforge-oss/studio-shared";
 import MapAssetsMapDynamic from "@/app/components/map-assets-map/MapAssetsMapDynamic";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { getCardStats, getMapCapabilities, humanizeTag, rankDominantTags } from "./map-card-data";
 import { CapabilityHints, CardStatsRow } from "./map-card-display";
 
@@ -48,7 +47,7 @@ export function MapCatalogMapView({ assets }: MapCatalogMapViewProps) {
               <Link
                 key={asset.map_asset_id}
                 href={`/dashboard/map-assets/${asset.map_asset_id}`}
-                className={stylex.props(styles.u_902, styles.u_904, styles.u_905, styles.u_940, styles.u_946, styles.u_970, styles.u_923).className}
+                className={stylex.props(styles.catalogRow, hoveredId === asset.map_asset_id && styles.catalogRowHovered).className}
                 onMouseEnter={() => setHoveredId(asset.map_asset_id)}
                 onMouseLeave={() => setHoveredId(null)}
               >

@@ -52,8 +52,8 @@ const styles = stylex.create({
   title: {
     marginTop: "0.5rem",
     fontFamily: driveText.fontDisplay,
-    fontSize: { default: "2.25rem", "@media (min-width: 640px)": "3rem" },
-    lineHeight: 1.05,
+    fontSize: "2.25rem",
+    lineHeight: "2.5rem",
     fontWeight: 600,
     letterSpacing: "-0.025em",
   },
@@ -68,10 +68,14 @@ const styles = stylex.create({
   /** Every non-card state — failed, loading, empty — occupies the same slot. */
   state: {
     marginTop: "2rem",
+    fontSize: "0.875rem",
+    lineHeight: "1.25rem",
+  },
+  /** The two states that lead with an icon; the empty state stays a block. */
+  stateRow: {
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
-    fontSize: "0.875rem",
   },
   stateError: { color: driveColors.danger },
   stateLoading: { color: driveColors.textDim },
@@ -241,12 +245,12 @@ export function MapPickerScreen({ maps, loading, error, onPick }: {
         </p>
 
         {error ? (
-          <p {...stylex.props(styles.state, styles.stateError)} role="alert">
+          <p {...stylex.props(styles.state, styles.stateRow, styles.stateError)} role="alert">
             <CircleAlert {...stylex.props(styles.icon)} aria-hidden="true" />
             {error}
           </p>
         ) : loading ? (
-          <p {...stylex.props(styles.state, styles.stateLoading)} role="status">
+          <p {...stylex.props(styles.state, styles.stateRow, styles.stateLoading)} role="status">
             <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} aria-hidden="true" />
             Loading installed maps…
           </p>

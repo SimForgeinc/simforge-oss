@@ -146,17 +146,27 @@ export const text = stylex.defineVars({
  * Spacing, plus the shell geometry. The rail/inspector widths are fixed by
  * design — the canvas takes the remainder — and naming them keeps the rails
  * and the timeline dock on one measure instead of repeated `w-[220px]`.
+ *
+ * The scale steps are `rem`, not `px`, because that is what they came from:
+ * every one is a Tailwind spacing step (`gap-1.5`, `p-3`, `mt-4`) and
+ * Tailwind's scale is `0.25rem`-based. `styles.css` sets `html { font-size:
+ * 100% }`, so a `rem` tracks the reader's browser default and a `px` does
+ * not — writing these in `px` would freeze the padding of a surface whose
+ * type still scales, which is a density change at any base size other than
+ * 16px. A value that came from an arbitrary pixel utility (`text-[11px]`,
+ * `w-[42px]`) is not a step on this scale and is written as a `px` literal
+ * at its callsite instead.
  */
 export const space = stylex.defineVars({
   none: "0",
-  xxs: "2px",
-  xs: "4px",
-  sm: "6px",
-  md: "8px",
-  lg: "12px",
-  xl: "16px",
-  xxl: "24px",
-  xxxl: "32px",
+  xxs: "0.125rem",
+  xs: "0.25rem",
+  sm: "0.375rem",
+  md: "0.5rem",
+  lg: "0.75rem",
+  xl: "1rem",
+  xxl: "1.5rem",
+  xxxl: "2rem",
 
   railWidth: "13.75rem",
   railWidthXl: "18.25rem",
@@ -188,26 +198,33 @@ export const radii = stylex.defineVars({
  * These are the values the tree already uses, named — not a new scale. They
  * are kept as the existing numbers rather than renumbered to 1..n so a StyleX
  * surface and the Tailwind `z-[200]` sibling it sits beside during the
- * migration continue to stack exactly as they do today.
+ * migration continue to stack exactly as they do today. They are numbers, as
+ * `z-index` is: a string token widens to `string`, which the value-checked
+ * `StyleXStyles` prop type on the primitives then rejects.
  */
 export const layers = stylex.defineVars({
-  base: "0",
-  raised: "10",
-  sticky: "30",
-  editorChrome: "60",
-  editorOverlay: "80",
-  editorTop: "90",
-  dropdown: "100",
-  tutorial: "140",
-  tutorialTop: "150",
-  dialog: "200",
-  dialogTop: "220",
-  loading: "240",
-  loadingTop: "250",
-  topbar: "260",
-  appSwitcher: "300",
-  appSwitcherTop: "310",
-  mapTooltip: "1000",
+  base: 0,
+  raised: 10,
+  sticky: 30,
+  // Tailwind's `z-50`, which the shadcn portals (dropdown menus, tooltips,
+  // sheets and their scrims) are written against. It sits below the editor
+  // chrome on purpose: that is where those portals stacked before the
+  // migration, and the editor's own overlays are meant to cover them.
+  popover: 50,
+  editorChrome: 60,
+  editorOverlay: 80,
+  editorTop: 90,
+  dropdown: 100,
+  tutorial: 140,
+  tutorialTop: 150,
+  dialog: 200,
+  dialogTop: 220,
+  loading: 240,
+  loadingTop: 250,
+  topbar: 260,
+  appSwitcher: 300,
+  appSwitcherTop: 310,
+  mapTooltip: 1000,
 });
 
 /**

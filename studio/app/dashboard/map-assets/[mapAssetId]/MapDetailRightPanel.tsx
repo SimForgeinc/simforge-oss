@@ -121,7 +121,7 @@ export function MapDetailRightPanel({
             onValueChange={handleTabChange}
             className={stylex.props(styles.s_740).className}
           >
-            <TabsList className={stylex.props(styles.s_741).className}>
+            <TabsList xstyle={styles.s_741}>
               {([
                 { value: "overview", label: "Overview", Icon: LayoutDashboard, disabled: false },
                 { value: "layers", label: "Layers", Icon: Layers, disabled: false },
@@ -132,7 +132,7 @@ export function MapDetailRightPanel({
                   key={value}
                   value={value}
                   disabled={disabled}
-                  className={stylex.props(styles.s_742).className}
+                  xstyle={styles.s_742}
                 >
                   <Icon className={stylex.props(styles.s_760).className} />
                   <span className={stylex.props(styles.s_941).className}>{label}</span>
@@ -142,7 +142,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="overview"
-              className={stylex.props(styles.s_748).className}
+              xstyle={styles.s_748}
             >
               <OverviewTab
                 asset={currentAsset}
@@ -168,7 +168,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="layers"
-              className={stylex.props(styles.s_748).className}
+              xstyle={styles.s_748}
             >
               <LayersTab
                 asset={currentAsset}
@@ -231,7 +231,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="analytics"
-              className={stylex.props(styles.s_748).className}
+              xstyle={styles.s_748}
             >
               <AnalyticsTab
                 asset={currentAsset}
@@ -243,7 +243,7 @@ export function MapDetailRightPanel({
 
             <TabsContent
               value="insights"
-              className={stylex.props(styles.s_748).className}
+              xstyle={styles.s_748}
             >
               <InsightsTab
                 asset={currentAsset}

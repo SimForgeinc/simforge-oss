@@ -3,7 +3,7 @@
 import { FolderOpen, HardDrive, Trash2 } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { useCallback, useEffect, useState } from "react";
-import { mergeStyleProps } from "./stylex/surface";
+import { mergeStyleProps, type XStyle } from "./stylex/surface";
 import { styles } from "./MapAssetCacheStorage.stylex";
 import {
   chooseMapAssetCacheDirectory,
@@ -35,6 +35,7 @@ export function MapAssetCacheStorage({
   onCleared,
   onError,
   className,
+  xstyle,
 }: {
   /** Bump to re-read usage after downloads or clears elsewhere. */
   refreshKey?: unknown;
@@ -44,6 +45,13 @@ export function MapAssetCacheStorage({
   /** Surfaces backend faults to a page-level alert in addition to the inline one. */
   onError?: (message: string) => void;
   className?: string;
+  /**
+   * Caller StyleX styles, composed after this component's own so they win.
+   * A page that cancels the `border-y` rule here needs StyleX's merge, not a
+   * concatenated class name: two atomic rules for one property are ordered by
+   * the stylesheet, and this component's rule is collected second.
+   */
+  xstyle?: XStyle;
 }) {
   const [status, setStatus] = useState<MapAssetCacheStatus | null>(null);
   const [error, setError] = useState("");
@@ -108,7 +116,7 @@ export function MapAssetCacheStorage({
   return (
     <section
       aria-label="Map cache storage"
-      {...mergeStyleProps(stylex.props(styles.root), className)}
+      {...mergeStyleProps(stylex.props(styles.root, xstyle), className)}
       data-testid="map-asset-cache-storage"
       data-cache-backend={status?.backend ?? "unknown"}
     >
@@ -155,7 +163,7 @@ export function MapAssetCacheStorage({
         <div className="mt-3 flex flex-wrap gap-2 pl-7">
           {filesystem ? (
             <Button
-              className="h-8 rounded-full border-white/15 bg-transparent px-3 text-[11px] text-white/75 hover:bg-white/5 hover:text-white"
+              xstyle={styles.control}
               disabled={busy !== null}
               onClick={() => void chooseDirectory()}
               type="button"
@@ -167,7 +175,7 @@ export function MapAssetCacheStorage({
           ) : null}
           {allowClear ? (
             <Button
-              className="h-8 rounded-full border-white/15 bg-transparent px-3 text-[11px] text-white/75 hover:bg-white/5 hover:text-white"
+              xstyle={styles.control}
               disabled={busy !== null || !status || unavailable !== null}
               onClick={() => setConfirmClear(true)}
               type="button"
@@ -193,14 +201,14 @@ export function MapAssetCacheStorage({
           </p>
           <div className="mt-2 flex gap-2">
             <Button
-              className="h-8 rounded-full bg-[#E8E044] px-3 text-[11px] text-black hover:bg-[#f1ea55]"
+              xstyle={styles.controlConfirm}
               onClick={() => void clear()}
               type="button"
             >
               Delete cached maps
             </Button>
             <Button
-              className="h-8 rounded-full px-3 text-[11px] text-white/60 hover:bg-transparent hover:text-white"
+              xstyle={styles.controlDismiss}
               onClick={() => setConfirmClear(false)}
               type="button"
               variant="ghost"

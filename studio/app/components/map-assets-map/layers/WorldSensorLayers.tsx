@@ -154,13 +154,15 @@ export function WorldSensorLayers({
           >
             <div
               aria-label={label}
-              {...stylex.props(styles.sensorMarker)}
-              style={{ cursor: onClickSensor ? "pointer" : "default", transform: `rotate(${-(yaw ?? 0)}deg) scale(${effectiveMarkerScale})` }}
-              onClick={
-                onClickSensor
-                  ? () => onClickSensor(id)
-                  : undefined
-              }
+              {...stylex.props(
+                styles.sensorMarker,
+                onClickSensor ? styles.cursorPointer : styles.cursorDefault,
+              )}
+              // Yaw and the zoom-resolved marker scale: the camera decides both.
+              style={{
+                transform: `rotate(${-(yaw ?? 0)}deg) scale(${effectiveMarkerScale})`,
+              }}
+              onClick={onClickSensor ? () => onClickSensor(id) : undefined}
             >
               <CameraMarkerSvg
                 color={color}
@@ -171,7 +173,10 @@ export function WorldSensorLayers({
             {showLabels ? (
               <div
                 {...stylex.props(styles.sensorLabel)}
-                style={{ transform: `translateX(-50%)${labelScale !== 1 ? ` scale(${labelScale})` : ""}` }}
+                // Centring plus the caller's label scale, when it is not 1.
+                style={{
+                  transform: `translateX(-50%)${labelScale !== 1 ? ` scale(${labelScale})` : ""}`,
+                }}
               >
                 {label}
               </div>

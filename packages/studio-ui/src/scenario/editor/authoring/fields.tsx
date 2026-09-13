@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Input } from "../../../components/ui/input";
 import { newTemplateId } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 import { styles } from "./authoring.stylex";
 
 /**
@@ -44,7 +45,7 @@ export function MiniAdd({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      {...stylex.props(styles.iconButton)}
+      {...stylex.props(styles.iconButton, motionStyles.editorMotion)}
     >
       <Plus aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
@@ -65,7 +66,7 @@ export function DeleteButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      {...stylex.props(styles.iconButtonMuted)}
+      {...stylex.props(styles.iconButtonMuted, motionStyles.editorMotion)}
     >
       <Trash2 aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
@@ -78,13 +79,14 @@ export function TextField({
   value,
   onChange,
   placeholder,
-  className,
+  xstyle,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  className?: string;
+  /** Caller StyleX for the input, composed after this field's own so it wins. */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const id = useId();
   return (
@@ -97,7 +99,7 @@ export function TextField({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className={[stylex.props(styles.input).className, className].filter(Boolean).join(" ")}
+        xstyle={[styles.input, xstyle]}
       />
     </div>
   );
@@ -110,16 +112,23 @@ export function NumberField({
   onChange,
   step = 0.1,
   min,
+  xstyle,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
   step?: number;
   min?: number;
+  /**
+   * Caller styles for the field's own box. A field is often a row in a stack,
+   * and StyleX has no sibling selector, so the spacing the stack used to hand
+   * down has to arrive on the field itself.
+   */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const id = useId();
   return (
-    <div {...stylex.props(styles.fieldWrap)}>
+    <div {...stylex.props(styles.fieldWrap, xstyle)}>
       <label {...stylex.props(styles.label)} htmlFor={id}>
         {label}
       </label>
@@ -130,7 +139,7 @@ export function NumberField({
         min={min}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        {...stylex.props(styles.input)}
+        xstyle={styles.input}
       />
     </div>
   );

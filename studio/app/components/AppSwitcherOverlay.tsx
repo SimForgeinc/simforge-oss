@@ -3,12 +3,13 @@
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Laptop, X } from "lucide-react";
+import * as stylex from "@stylexjs/stylex";
 import type { RefObject } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
 import { CloudConnectionChip } from "@/app/components/cloud/CloudConnectionCard";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { DASHBOARD_APPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
+import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 export function AppSwitcherOverlay({
   open,
@@ -27,13 +28,13 @@ export function AppSwitcherOverlay({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-[300] overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:animate-none"
+          {...stylex.props(styles.backdrop)}
           data-testid="app-switcher-backdrop"
         >
           <SkyCloudBackdrop />
         </DialogPrimitive.Overlay>
         <DialogPrimitive.Content
-          className="app-switcher-center-fade fixed inset-0 z-[310] overflow-y-auto text-white outline-none"
+          {...stylex.props(styles.dialog)}
           data-testid="app-switcher-dialog"
           data-visual-surface="flat"
           onCloseAutoFocus={(event) => {
@@ -41,45 +42,42 @@ export function AppSwitcherOverlay({
             triggerRef.current?.focus();
           }}
         >
-          <DialogPrimitive.Title className="sr-only">
+          <DialogPrimitive.Title {...stylex.props(styles.srOnly)}>
             Switch app
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="sr-only">
+          <DialogPrimitive.Description {...stylex.props(styles.srOnly)}>
             Choose a SimForge app or configure local features.
           </DialogPrimitive.Description>
           <DialogPrimitive.Close
-            className="fixed right-5 top-5 z-20 grid size-10 place-items-center rounded-full text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] sm:right-8 sm:top-8"
+            {...stylex.props(styles.close)}
             aria-label="Close app switcher"
           >
-            <X className="size-5" aria-hidden="true" />
+            <X {...stylex.props(styles.closeIcon)} aria-hidden="true" />
           </DialogPrimitive.Close>
 
-          <div className="relative mx-auto flex min-h-full w-full max-w-[1120px] flex-col justify-center gap-8 px-5 py-20 sm:px-8 sm:py-24">
+          <div {...stylex.props(styles.container)}>
             <div
               aria-hidden="true"
               data-testid="app-switcher-sky-ambience"
-              className="pointer-events-none absolute -left-24 top-0 h-56 w-96 rounded-full bg-[#E8E044]/[0.055] blur-[90px]"
+              {...stylex.props(styles.ambience)}
             />
-            <div
-              className="relative grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-              aria-label="SimForge apps"
-            >
+            <div {...stylex.props(styles.grid)} aria-label="SimForge apps">
               {DASHBOARD_APPS.map((app, index) => {
                 const active = !app.disabled && app.match(pathname);
                 const content = (
                   <>
-                    <span className="relative z-10 flex items-center justify-between">
-                      <span className="font-meta text-[9px] font-semibold tracking-[0.18em] text-white/30">
+                    <span {...stylex.props(styles.cardHead)}>
+                      <span {...stylex.props(styles.cardIndex)}>
                         0{index + 1}
                       </span>
                       <span
-                        className={cn(
-                          "rounded-full border px-2.5 py-1 font-meta text-[8px] font-bold uppercase tracking-[0.13em]",
+                        {...stylex.props(
+                          styles.badge,
                           app.disabled
-                            ? "border-white/[0.07] text-white/25"
+                            ? styles.badgeDisabled
                             : active
-                              ? "border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]"
-                              : "border-white/10 text-white/40",
+                              ? styles.badgeActive
+                              : styles.badgeIdle,
                         )}
                       >
                         {app.disabled
@@ -90,37 +88,33 @@ export function AppSwitcherOverlay({
                       </span>
                     </span>
                     <span
-                      className={cn(
-                        "pointer-events-none absolute -right-4 top-7 grid size-40 place-items-center transition-[transform,opacity,filter] duration-500 group-hover:-translate-x-1 group-hover:scale-[1.04]",
-                        active
-                          ? "opacity-100 drop-shadow-[0_16px_34px_rgba(232,224,68,0.14)]"
-                          : "opacity-45 grayscale group-hover:opacity-80 group-hover:grayscale-0",
+                      {...stylex.props(
+                        styles.art,
+                        active ? styles.artActive : styles.artIdle,
                       )}
                     >
                       <AppSwitcherArt
                         href={app.href}
-                        className="size-40 object-contain"
+                        xstyle={styles.artImage}
                       />
                     </span>
-                    <span className="relative z-10 mt-20 block max-w-[75%] text-left">
+                    <span {...stylex.props(styles.copy)}>
                       <span
-                        className={cn(
-                          "block font-display text-2xl font-semibold tracking-[-0.035em]",
-                          active ? "text-[#E8E044]" : "text-white",
+                        {...stylex.props(
+                          styles.title,
+                          active ? styles.titleActive : styles.titleIdle,
                         )}
                       >
                         {app.label}
                       </span>
-                      <span className="mt-2 block text-xs leading-5 text-white/45">
+                      <span {...stylex.props(styles.description)}>
                         {app.description}
                       </span>
                     </span>
                     <span
-                      className={cn(
-                        "relative z-10 mt-6 flex items-center justify-between border-t pt-4 text-left font-meta text-[9px] font-bold uppercase tracking-[0.14em]",
-                        active
-                          ? "border-[#E8E044]/20 text-[#E8E044]"
-                          : "border-white/[0.07] text-white/35 group-hover:text-white/70",
+                      {...stylex.props(
+                        styles.meta,
+                        active ? styles.metaActive : styles.metaIdle,
                       )}
                     >
                       <span>
@@ -133,7 +127,7 @@ export function AppSwitcherOverlay({
                       {!app.disabled ? (
                         <span
                           aria-hidden="true"
-                          className="text-base leading-none"
+                          {...stylex.props(styles.metaArrow)}
                         >
                           ↗
                         </span>
@@ -141,19 +135,19 @@ export function AppSwitcherOverlay({
                     </span>
                   </>
                 );
-                const cardClassName = cn(
-                  "group relative flex min-h-60 flex-col overflow-hidden rounded-[20px] border p-5 transition-[border-color,background-color,box-shadow,transform] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] motion-reduce:transition-none sm:min-h-64 sm:p-6",
+                const cardProps = stylex.props(
+                  styles.card,
                   app.disabled
-                    ? "cursor-not-allowed border-white/[0.05] bg-black/20 opacity-60"
+                    ? styles.cardDisabled
                     : active
-                      ? "border-[#E8E044]/25 bg-[linear-gradient(145deg,rgba(232,224,68,0.09),rgba(255,255,255,0.025))] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(0,0,0,0.18)]"
-                      : "border-white/[0.08] bg-white/[0.025] hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_20px_55px_rgba(0,0,0,0.25)]",
+                      ? styles.cardActive
+                      : styles.cardIdle,
                 );
 
                 return app.disabled ? (
                   <button
                     aria-label={`${app.label} — Coming soon`}
-                    className={cardClassName}
+                    {...cardProps}
                     data-visual-treatment="disabled"
                     disabled
                     key={app.href}
@@ -164,7 +158,7 @@ export function AppSwitcherOverlay({
                 ) : (
                   <Link
                     aria-current={active ? "page" : undefined}
-                    className={cardClassName}
+                    {...cardProps}
                     data-visual-treatment="open"
                     href={app.href}
                     key={app.href}
@@ -177,15 +171,18 @@ export function AppSwitcherOverlay({
             </div>
 
             <div data-testid="app-switcher-footer">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,1.2fr)]">
-                <div className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5">
-                  <Laptop className="size-4 shrink-0 text-[#E8E044]" aria-hidden="true" />
-                  <div className="min-w-0 flex-1">
-                    <p className="mb-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.16em] text-white/30">
-                      Workspace
+              <div {...stylex.props(styles.footerGrid)}>
+                <div {...stylex.props(styles.workspace)}>
+                  <Laptop
+                    {...stylex.props(styles.workspaceIcon)}
+                    aria-hidden="true"
+                  />
+                  <div {...stylex.props(styles.workspaceBody)}>
+                    <p {...stylex.props(styles.workspaceLabel)}>Workspace</p>
+                    <p {...stylex.props(styles.workspaceName)}>This computer</p>
+                    <p {...stylex.props(styles.workspaceHint)}>
+                      Projects, jobs and renders stay local
                     </p>
-                    <p className="truncate text-xs font-semibold text-white/80">This computer</p>
-                    <p className="truncate text-[10px] text-white/35">Projects, jobs and renders stay local</p>
                   </div>
                 </div>
 
@@ -193,8 +190,10 @@ export function AppSwitcherOverlay({
 
                 <nav
                   aria-label="App utilities"
-                  className="grid gap-1 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1"
-                  style={{ gridTemplateColumns: `repeat(${DASHBOARD_UTILITIES.length}, minmax(0, 1fr))` }}
+                  {...stylex.props(
+                    styles.utilities,
+                    styles.utilityColumns(DASHBOARD_UTILITIES.length),
+                  )}
                 >
                   {DASHBOARD_UTILITIES.map((item) => {
                     const active = item.match(pathname);
@@ -202,17 +201,18 @@ export function AppSwitcherOverlay({
                     return (
                       <Link
                         aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-12 items-center justify-center gap-2 rounded-lg px-2 text-center text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E8E044]",
-                          active
-                            ? "bg-[#E8E044]/10 text-[#E8E044]"
-                            : "text-white/45 hover:bg-white/[0.05] hover:text-white",
+                        {...stylex.props(
+                          styles.utility,
+                          active ? styles.utilityActive : styles.utilityIdle,
                         )}
                         href={item.href}
                         key={item.href}
                         onClick={close}
                       >
-                        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                        <Icon
+                          {...stylex.props(styles.utilityIcon)}
+                          aria-hidden="true"
+                        />
                         <span>{item.label}</span>
                       </Link>
                     );

@@ -4,8 +4,8 @@
  * `@stylexjs/postcss-plugin` replaces the directive below with every atomic
  * rule and custom property the compiled sources use. It must appear exactly
  * once in the app, and this file must be imported before `globals.css`: the
- * rules it emits are deliberately weaker in the cascade than Tailwind's, so a
- * caller that still passes Tailwind classes into a migrated component keeps
- * winning and the surface looks the same as before it moved.
+ * generated atoms outrank plain Tailwind utilities by specificity. Caller
+ * overrides must compose through the component's `xstyle` prop; stylesheet
+ * order alone cannot make a Tailwind class replace a StyleX declaration.
  */
 @stylex;

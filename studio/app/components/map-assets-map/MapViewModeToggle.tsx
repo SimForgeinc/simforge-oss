@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Video } from "lucide-react";
-import { C } from "./map-layer-constants";
 import { styles } from "./map-canvas.stylex";
 import {
   useMapViewModeStore,
@@ -85,8 +84,11 @@ export function MapViewModeToggle({
     <div
       data-testid="map-view-mode-toggle"
       data-map-view-mode={mode}
-      {...stylex.props(styles.control, styles.modeControl)}
-      style={{ border: `1px solid ${C.border}`, opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : "auto" }}
+      {...stylex.props(
+        styles.control,
+        styles.viewModeControl,
+        disabled ? styles.controlDisabled : styles.controlEnabled,
+      )}
     >
       {/*
         The twin is opt-in from Settings, and until then it is not drawn at all
@@ -111,13 +113,10 @@ export function MapViewModeToggle({
                 ? `${option.hint} (Shift+D)`
                 : `${option.hint} (Shift+D)`
             }
-            {...stylex.props(styles.modeButton)}
-            style={{
-              fontWeight: isActive ? 600 : 400,
-              cursor: isActive ? "default" : "pointer",
-              background: isActive ? C.fg : `${C.bg}f2`,
-              color: isActive ? C.bg : C.fg,
-            }}
+            {...stylex.props(
+              styles.viewModeButton,
+              isActive ? styles.segmentActive : styles.segmentInactive,
+            )}
           >
             {option.label}
             {isPending ? (
@@ -125,7 +124,6 @@ export function MapViewModeToggle({
                 aria-hidden
                 data-testid="map-view-mode-loading"
                 {...stylex.props(styles.spinner)}
-                style={{ border: `1.5px solid ${C.bg}`, borderTopColor: "transparent" }}
               />
             ) : null}
           </button>
@@ -158,21 +156,15 @@ export function MapViewModeToggle({
           }
           type="button"
           onClick={() => setFollowSelectedActor(!followSelectedActor)}
-          {...stylex.props(styles.modeFollow)}
-          style={{
-            borderLeft: `1px solid ${C.border}`,
-            background: followSelectedActor ? C.fg : `${C.bg}f2`,
-            color: followSelectedActor ? C.bg : C.fg,
-            opacity: selectedActorId ? 1 : 0.4,
-            cursor: selectedActorId ? "pointer" : "not-allowed",
-          }}
+          {...stylex.props(
+            styles.followButton,
+            followSelectedActor ? styles.segmentActive : styles.segmentInactive,
+            selectedActorId ? styles.followEnabled : styles.followDisabled,
+          )}
         >
           <Video aria-hidden {...stylex.props(styles.icon13)} />
         </button>
       ) : null}
-      <style>{`
-        @keyframes mapViewModeSpin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import type { PresignedArtifact } from "@simforge-oss/studio-host";
 import { useEffect, useState } from "react";
 import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderParityEvidence.stylex";
 
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 
@@ -170,11 +172,11 @@ export function RenderParityEvidencePanel({
   }, [executionPackageControlSha256, executionPackageId, jobId, manifest]);
 
   if (error) {
-    return <p className="border border-destructive/40 p-3 text-xs text-destructive" role="alert">{error}</p>;
+    return <p {...stylex.props(styles.xsDangerBordered)} role="alert">{error}</p>;
   }
   if (!manifest) {
     return (
-      <div className="border border-dashed render-hairline p-4 text-xs text-muted-foreground">
+      <div {...stylex.props(styles.xsMutedBordered)}>
         CARLA parity evidence appears after the checksum-verified render manifest is uploaded.
       </div>
     );
@@ -182,7 +184,7 @@ export function RenderParityEvidencePanel({
   if (!evidence) {
     return (
       <WorkspacePaneLoading
-        className="min-h-56"
+        xstyle={styles.minH56}
         hint="Comparing the rendered behavior with the saved scenario."
         message="Reading CARLA behavior evidence…"
       />
@@ -191,22 +193,20 @@ export function RenderParityEvidencePanel({
 
   const nativePhysics = evidence.executionMode === "native-physics";
   return (
-    <div className="space-y-4">
+    <div {...stylex.props(styles.stackXl)}>
       <section
-        className={evidence.accepted && nativePhysics
-          ? "border border-primary/40 bg-primary/5 p-3"
-          : "border border-destructive/40 bg-destructive/5 p-3"}
+        {...stylex.props(styles.verdict, evidence.accepted && nativePhysics ? styles.verdictAccepted : styles.verdictRejected)}
         aria-labelledby="carla-parity-verdict-heading"
       >
-        <p className="text-micro uppercase tracking-meta text-muted-foreground">CARLA behavior verdict</p>
-        <h4 className="mt-1 text-sm font-semibold" id="carla-parity-verdict-heading">
+        <p {...stylex.props(styles.capsMicroMuted)}>CARLA behavior verdict</p>
+        <h4 {...stylex.props(styles.smSemibold)} id="carla-parity-verdict-heading">
           {!nativePhysics
             ? "Diagnostic pose replay — not physical acceptance"
             : evidence.accepted
               ? "Within the native-physics behavior envelope"
               : "Outside the native-physics behavior envelope"}
         </h4>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p {...stylex.props(styles.xsMuted)}>
           {nativePhysics
             ? "CARLA applied vehicle and walker controls and remained the physics authority. Small trajectory differences are expected; per-frame pose forcing was not used."
             : "This attempt replayed poses for diagnosis. Submit a native-physics attempt before treating behavior as equivalent."}
@@ -214,21 +214,21 @@ export function RenderParityEvidencePanel({
       </section>
 
       <section aria-labelledby="carla-parity-measurements-heading">
-        <h4 className="text-xs font-semibold uppercase tracking-meta" id="carla-parity-measurements-heading">
+        <h4 {...stylex.props(styles.capsXsSemibold)} id="carla-parity-measurements-heading">
           Measured physics deviations · {evidence.samples} samples
         </h4>
-        <dl className="mt-2 render-divide divide-y render-glass border">
-          {evidence.metrics.map((metric) => (
-            <div className="grid grid-cols-[1fr_auto] gap-3 px-3 py-2 text-xs" key={metric.key}>
+        <dl {...stylex.props(styles.borderedDivided)}>
+          {evidence.metrics.map((metric, index) => (
+            <div {...stylex.props(styles.gridXsGap3, index > 0 && styles.rowDivided)} key={metric.key}>
               <dt>
-                <span className="font-medium">{metric.label}</span>
-                <span className="ml-2 text-micro text-muted-foreground">
+                <span {...stylex.props(styles.medium)}>{metric.label}</span>
+                <span {...stylex.props(styles.microMuted)}>
                   {metric.violations === 0
                     ? "Expected physics difference"
                     : `${metric.violations} out-of-envelope samples`}
                 </span>
               </dt>
-              <dd className={metric.violations === 0 ? "font-mono" : "font-mono text-destructive"}>
+              <dd {...stylex.props(metric.violations === 0 ? styles.metricValue : styles.metricValueViolating)}>
                 {formatMetric(metric.maximum)} {metric.unit}
               </dd>
             </div>
@@ -238,17 +238,17 @@ export function RenderParityEvidencePanel({
 
       {evidence.divergences.length > 0 ? (
         <section aria-labelledby="carla-parity-divergences-heading">
-          <h4 className="text-xs font-semibold uppercase tracking-meta" id="carla-parity-divergences-heading">Classified differences</h4>
-          <ul className="mt-2 space-y-1">
-            {evidence.divergences.map((divergence) => (
-              <li className="render-glass border p-2 text-xs" key={divergence.id}>
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 font-medium">{divergence.label}</span>
-                  <span className={divergence.accepted ? "text-primary" : "text-destructive"}>
+          <h4 {...stylex.props(styles.capsXsSemibold)} id="carla-parity-divergences-heading">Classified differences</h4>
+          <ul {...stylex.props(styles.listMt2)}>
+            {evidence.divergences.map((divergence, index) => (
+              <li {...stylex.props(styles.xsBorderedPad2, index > 0 && styles.rowStackedXs)} key={divergence.id}>
+                <div {...stylex.props(styles.flexCenterGap2)}>
+                  <span {...stylex.props(styles.fillMediumNarrowable)}>{divergence.label}</span>
+                  <span {...stylex.props(divergence.accepted ? styles.divergenceAccepted : styles.divergenceRejected)}>
                     {divergence.expectedPhysics ? "Expected physics" : "Semantic mismatch"}
                   </span>
                 </div>
-                {divergence.detail ? <p className="mt-1 text-micro text-muted-foreground">{divergence.detail}</p> : null}
+                {divergence.detail ? <p {...stylex.props(styles.microMuted2)}>{divergence.detail}</p> : null}
               </li>
             ))}
           </ul>
@@ -256,14 +256,14 @@ export function RenderParityEvidencePanel({
       ) : null}
 
       {evidence.unrenderedCues.length > 0 ? (
-        <section className="border border-destructive/40 p-3" aria-labelledby="carla-unrendered-cues-heading">
-          <h4 className="text-xs font-semibold" id="carla-unrendered-cues-heading">Unrendered appearance cues</h4>
-          <p className="mt-1 text-micro text-muted-foreground">These cues remained in the execution plan but CARLA could not show them:</p>
-          <p className="mt-2 break-all font-mono text-micro">{evidence.unrenderedCues.join(", ")}</p>
+        <section {...stylex.props(styles.borderedPad3)} aria-labelledby="carla-unrendered-cues-heading">
+          <h4 {...stylex.props(styles.xsSemibold)} id="carla-unrendered-cues-heading">Unrendered appearance cues</h4>
+          <p {...stylex.props(styles.microMuted2)}>These cues remained in the execution plan but CARLA could not show them:</p>
+          <p {...stylex.props(styles.monoMicroBreakAll)}>{evidence.unrenderedCues.join(", ")}</p>
         </section>
       ) : null}
 
-      <dl className="grid grid-cols-2 gap-3 border-y render-hairline py-3 text-xs">
+      <dl {...stylex.props(styles.gridXsCols2)}>
         <EvidenceValue label="CARLA" value={evidence.carlaVersion ?? "—"} />
         <EvidenceValue label="Engine" value={evidence.engineVersion ?? "—"} />
         <EvidenceValue label="Plan digest" value={shortDigest(evidence.planSha256)} mono />
@@ -276,7 +276,7 @@ export function RenderParityEvidencePanel({
 }
 
 function EvidenceValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div className="min-w-0"><dt className="text-muted-foreground">{label}</dt><dd className={mono ? "truncate font-mono text-micro" : "truncate font-medium"} title={value}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.evidenceValueMono : styles.evidenceValue)} title={value}>{value}</dd></div>;
 }
 
 function parseDivergences(value: unknown): RenderParityDivergence[] {

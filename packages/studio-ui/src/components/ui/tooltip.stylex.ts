@@ -12,8 +12,8 @@ const slideRight = stylex.keyframes({ from: { transform: "translateX(-0.5rem)" }
 
 export const styles = stylex.create({
   content: {
-    zIndex: layers.dropdown, overflow: "hidden", borderRadius: radii.md, borderWidth: 1, borderStyle: "solid", borderColor: colors.border,
-    backgroundColor: colors.popover, paddingInline: "0.75rem", paddingBlock: "0.375rem", fontSize: text.sizeSm, color: colors.text,
+    zIndex: layers.popover, overflow: "hidden", borderRadius: radii.md, borderWidth: 1, borderStyle: "solid", borderColor: colors.border,
+    backgroundColor: colors.popover, paddingInline: "0.75rem", paddingBlock: "0.375rem", fontSize: text.sizeSm, lineHeight: "1.25rem", color: colors.text,
     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
     transformOrigin: "var(--radix-tooltip-content-transform-origin)",
     animationDuration: motion.durBase, animationTimingFunction: motion.easeOut,

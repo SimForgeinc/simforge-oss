@@ -18,6 +18,14 @@ import {
   useTopBarSlotContext,
 } from "../../../src/components/TopBarSlot";
 import { resetScenarioListCache } from "../../../src/scenario/list/scenarioListCache";
+import { rail as railStyles } from "../../../src/scenario/scenario-controls.stylex";
+
+/** One compiled atom of a StyleX namespace, by the property it declares. */
+const atomFor = (namespace: object, property: string): string => {
+  const key = Object.keys(namespace).find((k) => k.startsWith(`${property}-`));
+  if (!key) throw new Error(`no compiled ${property} atom`);
+  return (namespace as Record<string, string>)[key];
+};
 
 const push = vi.fn();
 /**
@@ -389,9 +397,9 @@ describe("ScenarioDatasetsClient", () => {
     expect(topBar.contains(filter)).toBe(false);
     expect(topBar.contains(reviewQueue)).toBe(false);
     expect(topBar.contains(newDataset)).toBe(false);
-    expect(newDataset.className).toContain("justify-center");
-    expect(newDataset.className).toContain("bg-[#E8E044]");
-    expect(newDataset.className).toContain("font-bold");
+    expect(newDataset.className).toContain(atomFor(railStyles.footerAction, "justifyContent"));
+    expect(newDataset.className).toContain(atomFor(railStyles.footerAction, "backgroundColor"));
+    expect(newDataset.className).toContain(atomFor(railStyles.footerAction, "fontWeight"));
 
     fireEvent.change(filter, { target: { value: "zzz" } });
     expect(screen.queryByText("Cut-in corpus")).toBeNull();

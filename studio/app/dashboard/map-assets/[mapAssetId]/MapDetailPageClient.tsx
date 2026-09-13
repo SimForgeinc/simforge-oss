@@ -649,11 +649,12 @@ export function MapDetailPageClient({
                   key={mode}
                   type="button"
                   onClick={() => setViewMode(mode)}
-                  className={`rounded px-2 py-1 text-[11px] font-medium uppercase transition-colors ${
-                    viewMode === mode
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={
+                    stylex.props(
+                      styles.viewModeSegment,
+                      viewMode === mode ? styles.viewModeSegmentActive : styles.viewModeSegmentInactive,
+                    ).className
+                  }
                   aria-pressed={viewMode === mode}
                 >
                   {mode}

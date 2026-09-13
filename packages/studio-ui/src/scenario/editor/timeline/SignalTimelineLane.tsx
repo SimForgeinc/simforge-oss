@@ -19,6 +19,9 @@ import {
   indicationLabel,
   indicationSwatch,
 } from "../signals/indication-style";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./SignalTimelineLane.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * One junction's row on the timeline. Manifest #114.
@@ -82,8 +85,8 @@ export function SignalTimelineLane({
   const boundaries = useMemo(() => clipBoundaries(clips), [clips]);
 
   return (
-    <div className="min-w-0" data-testid={`signal-lane-${row.junctionId}`}>
-      <div className="flex min-w-0 items-center gap-1.5">
+    <div {...stylex.props(styles.narrowable)} data-testid={`signal-lane-${row.junctionId}`}>
+      <div {...stylex.props(styles.flexCenterNarrowable)}>
         {stageRows && stageRows.length > 0 && onToggleExpanded ? (
           <button
             aria-expanded={expanded}
@@ -92,22 +95,22 @@ export function SignalTimelineLane({
                 ? `Collapse junction ${row.junctionId} stages`
                 : `Show junction ${row.junctionId} per stage`
             }
-            className="editor-motion shrink-0 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+            className={stylex.props(styles.tightMuted, motionStyles.editorMotion).className}
             data-testid={`signal-lane-expand-${row.junctionId}`}
             type="button"
             onClick={onToggleExpanded}
           >
             {expanded ? (
-              <ChevronDown aria-hidden="true" className="size-3" />
+              <ChevronDown aria-hidden="true" className={stylex.props(styles.size3).className} />
             ) : (
-              <ChevronRight aria-hidden="true" className="size-3" />
+              <ChevronRight aria-hidden="true" className={stylex.props(styles.size3).className} />
             )}
           </button>
         ) : null}
-        <span className="min-w-0 flex-1 truncate text-micro text-foreground">
+        <span {...stylex.props(styles.fillMicroInk)}>
           Junction {row.junctionId}
           {!row.planned ? (
-            <span className="ml-1 text-muted-foreground">· map timing</span>
+            <span {...stylex.props(styles.muted)}>· map timing</span>
           ) : null}
         </span>
       </div>
@@ -125,10 +128,10 @@ export function SignalTimelineLane({
         ? stageRows.map((stageRow) => (
             <div
               key={stageRow.controllerId}
-              className="min-w-0 pl-4"
+              {...stylex.props(styles.narrowable2)}
               data-testid={`signal-lane-stage-${stageRow.controllerId}`}
             >
-              <span className="block truncate text-micro text-muted-foreground">
+              <span {...stylex.props(styles.blockMicroMuted)}>
                 Stage {stageRow.controllerId} · {stageRow.headIds.length} head
                 {stageRow.headIds.length === 1 ? "" : "s"}
               </span>
@@ -164,7 +167,7 @@ function BandTrack({
   onSelectBand?: (band: SignalTimelineBand) => void;
 }) {
   return (
-    <div className="relative h-4 min-w-0 bg-muted" role="group" aria-label={`${label} timing`}>
+    <div {...stylex.props(styles.relNarrowable)} role="group" aria-label={`${label} timing`}>
       {bands.map((band) => {
         const swatch = indicationSwatch(band.indication);
         const authored = band.source === "authored";
@@ -177,10 +180,14 @@ function BandTrack({
             key={`${band.startS}-${band.indication}-${band.source}`}
             aria-label={description}
             className={cn(
-              "absolute top-0 flex h-4 items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-              authored ? swatch.fill : swatch.ghost,
-              selectable ? "cursor-pointer" : "cursor-default",
-              !authored && "border-y border-dashed border-border",
+              stylex.props(
+                styles.absFlexCenter,
+                selectable ? styles.pointer : styles.cursorDefault,
+                authored ? null : styles.dashed,
+                authored ? swatch.fill : swatch.ghost,
+              ).className,
+              // `editor-pulse` stays a global class: it is one of the keyframe
+              // utilities styles.css keeps behind a reduced-motion guard.
               indicationFlashes(band.indication) && "editor-pulse",
             )}
             data-source={band.source}
@@ -236,7 +243,7 @@ function BoundaryHandle({
   return (
     <button
       aria-label={`${label} — move the ${formatSeconds(boundaryS)} second boundary`}
-      className="editor-motion absolute top-0 h-4 w-1.5 -translate-x-1/2 cursor-col-resize bg-foreground/40 hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      className={stylex.props(styles.abs, motionStyles.editorMotion).className}
       data-testid={`signal-boundary-${boundaryS}`}
       style={{ left: `${boundaryS * pxPerSecond}px` }}
       type="button"

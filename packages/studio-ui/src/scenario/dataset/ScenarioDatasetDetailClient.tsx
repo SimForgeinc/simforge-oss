@@ -23,6 +23,7 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
 import { cn } from "../../lib/utils";
+import { chip, control, dataset as datasetStyles, menu } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
@@ -354,12 +355,7 @@ export function ScenarioDatasetDetailClient({
             <Button
               type="button"
               variant="outline"
-              className={cn(
-                "h-8 gap-2 rounded-none border-border/80 px-3 font-[Share_Tech_Mono,IBM_Plex_Mono,monospace] text-[10px] font-bold uppercase tracking-[0.16em]",
-                tagEditorOpen
-                  ? "bg-foreground text-background hover:bg-foreground/90"
-                  : "bg-background/70 text-foreground/75 hover:bg-muted hover:text-foreground",
-              )}
+              xstyle={[chip.base, tagEditorOpen ? chip.on : chip.off]}
               aria-pressed={tagEditorOpen}
               aria-label={tagEditorOpen ? "Close tag editor" : "Add tags"}
               onClick={toggleTagEditor}
@@ -397,7 +393,7 @@ export function ScenarioDatasetDetailClient({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="size-7 shrink-0 rounded-none bg-transparent hover:bg-transparent hover:text-primary"
+                  xstyle={[control.iconSm, control.noShrink, datasetStyles.backArrow]}
                   aria-label="Back to datasets"
                   onClick={onBack}
                 >
@@ -408,7 +404,7 @@ export function ScenarioDatasetDetailClient({
                   asChild
                   size="icon"
                   variant="ghost"
-                  className="size-7 shrink-0 rounded-none bg-transparent hover:bg-transparent hover:text-primary"
+                  xstyle={[control.iconSm, control.noShrink, datasetStyles.backArrow]}
                 >
                   <Link
                     href="/dashboard/scenario"
@@ -439,7 +435,7 @@ export function ScenarioDatasetDetailClient({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-9 w-full justify-start gap-2 rounded-none border-0 border-t border-white/10 bg-transparent px-0 font-[Share_Tech_Mono,IBM_Plex_Mono,monospace] text-[10px] font-bold uppercase tracking-[0.16em] text-primary hover:bg-transparent hover:text-primary/80"
+                    xstyle={datasetStyles.addScenario}
                     aria-label="Add scenario"
                   >
                     {actions.creatingDocument ||
@@ -452,7 +448,7 @@ export function ScenarioDatasetDetailClient({
                     Add Scenario
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[210px]">
+                <DropdownMenuContent align="start" xstyle={menu.width210}>
                   <DropdownMenuItem
                     disabled={actions.creatingDocument || maps.length === 0}
                     onSelect={() => actions.setMapPickerOpen(true)}

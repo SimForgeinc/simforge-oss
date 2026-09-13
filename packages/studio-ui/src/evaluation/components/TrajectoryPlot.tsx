@@ -59,10 +59,11 @@ export function TrajectoryPlot({
   const polylines = reference ? [...samples, reference] : samples;
 
   if (polylines.length === 0) {
+    const empty = stylex.props(s.plotEmpty, s.border, s.mutedSurface, s.textSm, s.textMuted);
     return (
       <div
-        className={cn(stylex.props(s.border, s.mutedSurface, s.textSm, s.textMuted).className, className)}
-        style={stylex.props(s.border, s.mutedSurface, s.textSm, s.textMuted).style}
+        className={cn(empty.className, className)}
+        style={empty.style}
       >
         This item produced no trajectory to plot.
       </div>
@@ -119,10 +120,10 @@ export function TrajectoryPlot({
                 x2={WIDTH - PADDING / 2}
                 y1={y}
                 y2={y}
-                {...stylex.props(s.svgBorder)}
+                {...stylex.props(s.strokeBorder)}
                 strokeWidth={0.5}
               />
-              <text x={4} y={y - 3} {...stylex.props(s.svgMuted)} fontSize={9}>
+              <text x={4} y={y - 3} {...stylex.props(s.fillMuted)} fontSize={9}>
                 {metres} m
               </text>
             </g>
@@ -133,7 +134,7 @@ export function TrajectoryPlot({
           x2={WIDTH / 2}
           y1={PADDING / 2}
           y2={HEIGHT - PADDING / 2}
-          {...stylex.props(s.svgBorder)}
+          {...stylex.props(s.strokeBorder)}
           strokeWidth={0.5}
           strokeDasharray="3 4"
         />
@@ -143,7 +144,7 @@ export function TrajectoryPlot({
             key={`sample-${index}`}
             d={pathOf(line)}
             fill="none"
-            {...stylex.props(s.svgPrimary)}
+            {...stylex.props(s.strokePrimary)}
             strokeWidth={samples.length > 1 ? 1.25 : 2}
             strokeOpacity={samples.length > 1 ? 0.55 : 0.9}
           />
@@ -152,21 +153,21 @@ export function TrajectoryPlot({
           <path
             d={pathOf(reference)}
             fill="none"
-            {...stylex.props(s.textFg)}
+            {...stylex.props(s.strokeFg)}
             strokeWidth={2}
             strokeDasharray="6 4"
           />
         ) : null}
 
-        <circle cx={WIDTH / 2} cy={HEIGHT - PADDING - (0 - extent.minX) * scale} r={4} {...stylex.props(s.textFg)} />
+        <circle cx={WIDTH / 2} cy={HEIGHT - PADDING - (0 - extent.minX) * scale} r={4} {...stylex.props(s.fillFg)} />
       </svg>
       <figcaption {...stylex.props(s.caption)}>
-        <span {...stylex.props(s.rowTight)}>
+        <span {...stylex.props(s.inlineGap15)}>
           <span aria-hidden="true" {...stylex.props(s.swatch)} />
           {samples.length > 1 ? `${samples.length} predicted samples` : "prediction"}
         </span>
         {reference ? (
-          <span {...stylex.props(s.rowTight)}>
+          <span {...stylex.props(s.inlineGap15)}>
             <span
               aria-hidden="true"
               {...stylex.props(s.dashedSwatch)}

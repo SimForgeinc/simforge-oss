@@ -23,7 +23,6 @@ import { deriveIngestTagsFromMapStats } from "@/app/lib/maps/metadata/ingest-tag
 import { ChevronDown, Paperclip, MapPin, Camera } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import {
   generateMapAssetId,
   parseGeoJson,
@@ -100,9 +99,6 @@ const initialParsedMeta: ParsedMetaState = { xodr: null, geojson: null, rrdata_x
 // Pure utilities (slugify, formatTimestamp, generateMapAssetId, collectCoordinates,
 // parseGeoJson, artifactTypeFromExtension, sha256Hex, displayTag, buildDefaultMapName,
 // mapLaneCountsLocal) extracted to @/app/lib/maps/frontend/add-map-utils.ts
-
-const selectCls =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 // FieldLabel + UploadStatusBadge extracted to ./FieldLabel.tsx and ./UploadStatusBadge.tsx
 
@@ -881,7 +877,7 @@ export default function AddMapForm() {
               value={form.carlaMapName}
               onChange={(e) => setForm((f) => ({ ...f, carlaMapName: e.target.value }))}
               placeholder="e.g. Belmont_Office_Park_Belmont_CA"
-              className={stylex.props(styles.s_940).className}
+              xstyle={styles.s_940}
             />
             <p className={stylex.props(styles.s_953).className}>
               Identifier used by the CARLA simulator for this map. Optional.
@@ -903,7 +899,7 @@ export default function AddMapForm() {
             <FieldLabel htmlFor="map-crs">Coordinate reference system (CRS)</FieldLabel>
             <select
               id="map-crs"
-              className={selectCls}
+              className={stylex.props(styles.s_340).className}
               value={form.crs}
               onChange={(e) => setForm((f) => ({ ...f, crs: e.target.value }))}
             >
@@ -976,7 +972,7 @@ export default function AddMapForm() {
           className={stylex.props(styles.s_351).className}
         >
           <ChevronDown
-            className={cn("size-3.5 shrink-0 transition-transform", !debugOpen && "-rotate-90")}
+            className={stylex.props(styles.chevronLg, !debugOpen && styles.rotateMinus90).className}
           />
           Debug: full map payload (asset + metadata + stats)
         </button>

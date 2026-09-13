@@ -100,7 +100,7 @@ export function RenderSettingsPageClient() {
 
   return (
     <div {...stylex.props(styles.root)}>
-      <SkyCloudBackdrop className="absolute" />
+      <SkyCloudBackdrop />
       <div {...stylex.props(styles.scroll)}>
         {preparation ? (
           <ProfileMapPreparation

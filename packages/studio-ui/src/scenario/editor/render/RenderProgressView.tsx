@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Check, CircleDashed, Play, TriangleAlert } from "lucide-react";
 import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface";
 import { useVisiblePolling } from "../../../lib/use-visible-polling";
-import { cn } from "../../../lib/utils";
 import { RenderProgressBar, RenderStateChip } from "./RenderStatePieces";
 import {
   activeRetry,
@@ -21,6 +20,9 @@ import {
   shortDigest,
 } from "./render-view-model";
 import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderProgressView.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /** Faster than the gallery's 5s: this view exists to be watched, so it should keep up. */
 const DETAIL_POLL_MS = 2000;
@@ -128,58 +130,58 @@ export function RenderProgressView({
   return (
     <section
       aria-label="Render progress"
-      className="render-view-enter flex min-h-0 flex-1 flex-col overflow-hidden"
+      className={`${stylex.props(styles.flexColFill).className} render-view-enter`}
       data-render-job-id={jobId}
       data-render-state={detail?.jobState ?? "loading"}
       data-testid="render-progress-view"
     >
-      <header className="flex shrink-0 items-center gap-3 border-b render-hairline px-6 py-3">
+      <header {...stylex.props(styles.flexCenterTight)}>
         <button
           aria-label="Back to the render gallery"
-          className="editor-motion grid size-8 shrink-0 place-items-center border render-hairline render-glass text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
           data-testid="render-progress-back"
           onClick={onBack}
           type="button"
         >
-          <ArrowLeft aria-hidden="true" className="size-4" />
+          <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
         </button>
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-micro font-bold uppercase tracking-meta text-primary/90">
+        <div {...stylex.props(styles.fillNarrowable)}>
+          <p {...stylex.props(styles.capsMonoMicro)}>
             {detail ? renderJobLabel(detail) : "Render"}
           </p>
-          <h2 className="truncate text-base font-extrabold leading-tight tracking-tight text-foreground">
+          <h2 {...stylex.props(styles.inkTruncateBase)}>
             {retryLabel ?? (detail ? renderStateVisual(detail.jobState).label : "Reading status…")}
-            <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">{sinceStart}</span>
+            <span {...stylex.props(styles.monoXsMuted)}>{sinceStart}</span>
           </h2>
         </div>
         {detail ? <RenderStateChip state={detail.jobState} /> : <CloudActivityIndicator />}
         {playable ? (
           <button
-            className="editor-motion inline-flex h-8 shrink-0 items-center gap-1.5 bg-primary px-3 text-micro font-bold uppercase tracking-meta text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={stylex.props(styles.inlineFlexCenterTight, motionStyles.editorMotion).className}
             data-testid="render-progress-watch"
             onClick={() => onWatch(jobId)}
             type="button"
           >
-            <Play aria-hidden="true" className="size-3.5" />
+            <Play aria-hidden="true" className={stylex.props(styles.size35).className} />
             Watch
           </button>
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+      <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {error !== null && detail === null ? (
-          <p className="border border-dashed render-hairline px-3 py-2 text-xs text-destructive">{error}</p>
+          <p {...stylex.props(styles.xsDangerBordered)}>{error}</p>
         ) : null}
 
         {detail ? (
           <>
             <RenderProgressBar
-              className="mb-1"
+              xstyle={styles.mb1}
               label="Render progress"
               progressPercent={detail.progressPercent}
               state={detail.jobState}
             />
-            <p className="mb-4 flex flex-wrap items-baseline gap-x-3 text-micro text-muted-foreground">
+            <p {...stylex.props(styles.flexBaselineWrap)}>
               <span data-testid="render-progress-percent">
                 {detail.progressPercent == null
                   ? "No percentage reported yet"
@@ -196,38 +198,38 @@ export function RenderProgressView({
               {progressAmount ? <span>{progressAmount}</span> : null}
               {etaSeconds !== null ? <span>ETA {Math.ceil(etaSeconds)}s</span> : null}
               {latestSensor ? <span>Sensor {latestSensor}</span> : null}
-              {error !== null ? <span className="text-destructive">Status read failed · retrying</span> : null}
+              {error !== null ? <span {...stylex.props(styles.danger)}>Status read failed · retrying</span> : null}
             </p>
 
-            <ol className="mb-4 grid gap-0" data-testid="render-progress-stages">
+            <ol {...stylex.props(styles.gridGap0)} data-testid="render-progress-stages">
               {stages.map((stage) => (
                 <li
-                  className={cn(
-                    "flex items-baseline gap-2 border-l-2 py-1 pl-3 text-xs",
+                  {...stylex.props(
+                    styles.flexBaselineXs,
                     stage.state === "done"
-                      ? "border-primary text-foreground"
+                      ? styles.stageDone
                       : stage.state === "active"
-                        ? "border-primary/60 text-foreground"
-                        : "border-border text-muted-foreground",
+                        ? styles.stageActive
+                        : styles.stageTodo,
                   )}
                   data-stage={stage.kind}
                   data-stage-state={stage.state}
                   key={stage.kind}
                 >
-                  <span aria-hidden="true" className="shrink-0">
+                  <span aria-hidden="true" {...stylex.props(styles.tight)}>
                     {stage.state === "done" ? (
-                      <Check className="size-3 text-primary" />
+                      <Check className={stylex.props(styles.accent).className} />
                     ) : stage.state === "active" ? (
-                      <CloudActivityIndicator iconClassName="size-3" />
+                      <CloudActivityIndicator iconXstyle={styles.size3Icon} />
                     ) : (
-                      <CircleDashed className="size-3 text-muted-foreground/60" />
+                      <CircleDashed className={stylex.props(styles.size3TextMutedForeground60).className} />
                     )}
                   </span>
-                  <span className="min-w-0 flex-1 font-medium">
+                  <span {...stylex.props(styles.fillMediumNarrowable)}>
                     {stage.label}
-                    <span className="ml-2 font-normal text-micro text-muted-foreground">{stage.hint}</span>
+                    <span {...stylex.props(styles.microMuted)}>{stage.hint}</span>
                   </span>
-                  <span className="shrink-0 font-mono text-micro text-muted-foreground">
+                  <span {...stylex.props(styles.tightMonoMicro)}>
                     {stage.at ? formatTimestamp(stage.at) : stage.state === "active" ? "waiting" : ""}
                   </span>
                 </li>
@@ -236,28 +238,28 @@ export function RenderProgressView({
 
             {retryLabel ? (
               <p
-                className="mb-4 flex items-center gap-2 border border-primary/40 bg-primary/5 px-3 py-2 text-xs font-semibold text-foreground"
+                {...stylex.props(styles.flexCenterXs)}
                 data-testid="render-progress-retry"
               >
-                <CloudActivityIndicator iconClassName="size-3.5" />
+                <CloudActivityIndicator iconXstyle={styles.size35} />
                 <span>{retryLabel}</span>
               </p>
             ) : null}
 
             {failure !== null ? (
               <p
-                className="mb-4 flex items-start gap-2 border border-destructive/40 px-3 py-2 text-xs text-destructive"
+                {...stylex.props(styles.flexStartXs)}
                 data-testid="render-progress-failure"
               >
-                <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                <TriangleAlert aria-hidden="true" className={stylex.props(styles.tight2).className} />
                 <span>
                   {failure}
-                  <span className="ml-1 font-mono text-micro opacity-80">({detail.failureCode})</span>
+                  <span {...stylex.props(styles.monoMicro)}>({detail.failureCode})</span>
                 </span>
               </p>
             ) : null}
 
-            <dl className="mb-4 grid gap-x-4 gap-y-1 text-micro sm:grid-cols-2" data-testid="render-progress-facts">
+            <dl {...stylex.props(styles.gridMicro)} data-testid="render-progress-facts">
               <Fact label="Attempt" value={`${detail.attemptCount} of ${detail.maxAttempts}`} />
               <Fact
                 label="Worker"
@@ -282,33 +284,33 @@ export function RenderProgressView({
             </dl>
 
             <div>
-              <h3 className="mb-1 text-micro font-bold uppercase tracking-meta text-muted-foreground">
+              <h3 {...stylex.props(styles.capsMicroMuted)}>
                 Artifacts
-                <span className="ml-2 font-normal normal-case tracking-normal">
+                <span {...stylex.props(styles.normalCase)}>
                   {detail.artifacts.length === 0
                     ? live ? "none yet" : "none"
                     : `${detail.artifacts.length} so far`}
                 </span>
               </h3>
               {detail.artifacts.length === 0 ? (
-                <p className="text-micro text-muted-foreground">
+                <p {...stylex.props(styles.microMuted2)}>
                   {live
                     ? "Output appears here as the worker uploads it."
                     : "This render produced no artifacts."}
                 </p>
               ) : (
-                <ul className="grid gap-0.5" data-testid="render-progress-artifacts">
+                <ul {...stylex.props(styles.gridGap05)} data-testid="render-progress-artifacts">
                   {detail.artifacts.map((artifact) => (
                     <li
-                      className="flex items-baseline justify-between gap-2 border-b render-hairline py-1 text-xs last:border-b-0"
+                      {...stylex.props(styles.flexBetweenBaseline)}
                       key={artifact.id}
                     >
-                      <span className="min-w-0 truncate font-medium text-foreground">
+                      <span {...stylex.props(styles.inkMediumTruncate)}>
                         {artifact.identity?.actorId
                           ? `${artifact.identity.actorId}/${artifact.identity.sensorId} · ${artifact.identity.modality} · ${artifact.identity.role}`
                           : humanizeCode(artifact.identity?.role ?? artifact.artifactKind)}
                       </span>
-                      <span className="shrink-0 font-mono text-micro text-muted-foreground">
+                      <span {...stylex.props(styles.tightMonoMicro)}>
                         {formatBytes(artifact.byteLength)} · {artifact.artifactState}
                       </span>
                     </li>
@@ -318,7 +320,7 @@ export function RenderProgressView({
             </div>
           </>
         ) : loading ? (
-          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <p {...stylex.props(styles.flexCenterXs2)}>
             <CloudActivityIndicator />
             Reading this render&apos;s status…
           </p>
@@ -330,9 +332,9 @@ export function RenderProgressView({
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 border-b render-hairline py-1">
-      <dt className="shrink-0 uppercase tracking-meta text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 truncate text-right font-mono text-foreground">{value}</dd>
+    <div {...stylex.props(styles.flexBetweenBaseline2)}>
+      <dt {...stylex.props(styles.tightCapsMuted)}>{label}</dt>
+      <dd {...stylex.props(styles.monoInkTruncate)}>{value}</dd>
     </div>
   );
 }

@@ -15,11 +15,11 @@ export function SettingsPageClient() {
   useSetPageTitle("Settings");
   return (
     <div {...stylex.props(styles.root)}>
-      <SkyCloudBackdrop className="absolute" />
+      <SkyCloudBackdrop />
       <div {...stylex.props(styles.scroll)}>
         <div {...stylex.props(styles.inner)}>
           <LocalExecutionCard />
-          <CloudConnectionCard className={stylex.props(styles.cloudCard).className} />
+          <CloudConnectionCard xstyle={styles.cloudCard} />
           <section aria-labelledby="settings-storage-title" {...stylex.props(styles.section)}>
             <p {...stylex.props(styles.eyebrow)}>Storage</p>
             <h2 id="settings-storage-title" {...stylex.props(styles.heading)}>Map cache on this computer</h2>
@@ -27,7 +27,7 @@ export function SettingsPageClient() {
               Downloaded map files are kept here so maps open instantly and renders never re-download. Clearing the
               cache never deletes your projects, jobs or finished renders.
             </p>
-            <MapAssetCacheStorage className={stylex.props(styles.cache).className} />
+            <MapAssetCacheStorage xstyle={styles.cache} />
           </section>
           <section aria-labelledby="settings-ai-title" {...stylex.props(styles.section)}>
             <p {...stylex.props(styles.eyebrow)}>Authoring</p>

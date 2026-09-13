@@ -11,6 +11,9 @@ import {
 } from "../../../lib/scenario/recording-client";
 import type { BrowserRecordingRevisionInput } from "../../../lib/scenario/recording-client";
 import type { BrowserRecordingDetailDto } from "../../../lib/scenario/recording-contracts";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./BrowserRecordingDetails.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 const POLL_INTERVAL_MS = 3_000;
 
@@ -86,21 +89,21 @@ export function BrowserRecordingDetails({
 
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-4">
-      <div className="flex items-center gap-2">
+    <div {...stylex.props(styles.fillScrollYShrinkable)}>
+      <div {...stylex.props(styles.flexCenterGap2)}>
         <Button aria-label="Back to render runs" onClick={onBack} size="icon" type="button" variant="ghost">
-          <ArrowLeft aria-hidden="true" className="size-4" />
+          <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
         </Button>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold">Three.js recording</h3>
-          <p className="truncate font-mono text-micro text-muted-foreground">{recordingId}</p>
+        <div {...stylex.props(styles.fillNarrowable)}>
+          <h3 {...stylex.props(styles.smSemibold)}>Three.js recording</h3>
+          <p {...stylex.props(styles.monoMicroMuted)}>{recordingId}</p>
         </div>
         {detail ? <RecordingStatus status={detail.status} /> : null}
       </div>
-      {error ? <p className="mt-3 text-xs text-destructive" role="alert">{error}</p> : null}
+      {error ? <p {...stylex.props(styles.xsDanger)} role="alert">{error}</p> : null}
       {!detail ? (
         <WorkspacePaneLoading
-          className="min-h-72"
+          xstyle={styles.minH72}
           hint="Reading the recording timeline and generated artifacts."
           message="Loading recording details…"
         />
@@ -112,7 +115,7 @@ export function BrowserRecordingDetails({
                 aria-label={selectedCamera
                   ? `Browser recording camera ${selectedCamera.label}`
                   : "Browser recording primary camera"}
-                className="mt-4 aspect-video w-full render-glass border bg-black"
+                {...stylex.props(styles.borderedWideVideo)}
                 controls
                 key={previewVideo.artifactId}
                 playsInline
@@ -120,20 +123,24 @@ export function BrowserRecordingDetails({
                 src={previewVideo.downloadUrl ?? undefined}
               />
               {cameraVideos.length > 0 ? (
-                <section className="mt-3" aria-labelledby="camera-views-heading">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-meta" id="camera-views-heading">
+                <section {...stylex.props(styles.mt3)} aria-labelledby="camera-views-heading">
+                  <div {...stylex.props(styles.flexBetweenBaseline)}>
+                    <h4 {...stylex.props(styles.capsXsSemibold)} id="camera-views-heading">
                       Camera views
                     </h4>
-                    <span className="font-mono text-micro text-muted-foreground">
+                    <span {...stylex.props(styles.monoMicroMuted2)}>
                       {cameraVideos.length} cameras
                     </span>
                   </div>
-                  <div aria-label="Rendered camera views" className="mt-2 flex gap-2 overflow-x-auto pb-1" role="group">
+                  <div aria-label="Rendered camera views" {...stylex.props(styles.flexGap2ScrollX)} role="group">
                     {cameraVideos.map((camera) => (
                       <button
                         aria-pressed={camera.key === selectedCamera?.key}
-                        className="editor-motion shrink-0 border render-hairline px-2.5 py-1.5 text-xs render-glass render-glass-hover aria-pressed:border-foreground/40 aria-pressed:bg-foreground/10 aria-pressed:text-foreground"
+                        className={stylex.props(
+                          styles.tightXsBordered,
+                          motionStyles.editorMotion,
+                          camera.key === selectedCamera?.key && styles.cameraChipSelected,
+                        ).className}
                         key={camera.key}
                         onClick={() => setSelectedCameraKey(camera.key)}
                         type="button"
@@ -147,27 +154,27 @@ export function BrowserRecordingDetails({
             </>
           ) : null}
           {activeSensorVideos.length > 0 ? (
-            <section className="mt-4" aria-labelledby="active-sensor-videos-heading">
-              <div className="flex items-baseline justify-between gap-3">
-                <h4 className="text-xs font-semibold uppercase tracking-meta" id="active-sensor-videos-heading">
+            <section {...stylex.props(styles.mt4)} aria-labelledby="active-sensor-videos-heading">
+              <div {...stylex.props(styles.flexBetweenBaseline)}>
+                <h4 {...stylex.props(styles.capsXsSemibold)} id="active-sensor-videos-heading">
                   LiDAR and radar views
                 </h4>
-                <span className="font-mono text-micro text-muted-foreground">
+                <span {...stylex.props(styles.monoMicroMuted2)}>
                   {activeSensorVideos.length} videos
                 </span>
               </div>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div {...stylex.props(styles.gridGap3)}>
                 {activeSensorVideos.map((artifact) => (
-                  <figure className="render-glass border p-2" key={artifact.artifactId}>
+                  <figure {...stylex.props(styles.borderedPad2)} key={artifact.artifactId}>
                     <video
                       aria-label={`${artifact.sensor?.modality ?? "Sensor"} visualization for ${artifact.sensor?.sensorId ?? "sensor"}`}
-                      className="aspect-video w-full bg-black"
+                      {...stylex.props(styles.wideVideo)}
                       controls
                       playsInline
                       preload="metadata"
                       src={artifact.downloadUrl ?? undefined}
                     />
-                    <figcaption className="mt-1.5 truncate font-mono text-micro text-muted-foreground">
+                    <figcaption {...stylex.props(styles.monoMicroMuted3)}>
                       {artifact.sensor?.sensorId} · {artifact.sensor?.modality}
                     </figcaption>
                   </figure>
@@ -175,7 +182,7 @@ export function BrowserRecordingDetails({
               </div>
             </section>
           ) : null}
-          <dl className="mt-4 grid grid-cols-2 gap-3 border-y render-hairline py-3 text-xs">
+          <dl {...stylex.props(styles.gridXsCols2)}>
             <DetailValue label="Phase" value={formatPhase(detail.phase)} />
             <DetailValue label="Progress" value={`${Math.round(detail.progress * 100)}%`} />
             <DetailValue label="Created" value={formatTimestamp(detail.createdAt)} />
@@ -184,20 +191,20 @@ export function BrowserRecordingDetails({
             <DetailValue label="Request digest" value={detail.requestPayloadSha256} mono />
           </dl>
           {detail.failureCode ? (
-            <div className="mt-3 border border-destructive/40 p-3 text-xs text-destructive" role="alert">
-              <p className="font-medium">{formatPhase(detail.failureCode)}</p>
-              {detail.failureDetail ? <pre className="mt-1 whitespace-pre-wrap text-micro">{JSON.stringify(detail.failureDetail, null, 2)}</pre> : null}
+            <div {...stylex.props(styles.xsDangerBordered)} role="alert">
+              <p {...stylex.props(styles.medium)}>{formatPhase(detail.failureCode)}</p>
+              {detail.failureDetail ? <pre {...stylex.props(styles.micro)}>{JSON.stringify(detail.failureDetail, null, 2)}</pre> : null}
             </div>
           ) : null}
-          <section className="mt-4" aria-labelledby="browser-recording-files-heading">
-            <h4 className="text-xs font-semibold uppercase tracking-meta" id="browser-recording-files-heading">Files</h4>
+          <section {...stylex.props(styles.mt4)} aria-labelledby="browser-recording-files-heading">
+            <h4 {...stylex.props(styles.capsXsSemibold)} id="browser-recording-files-heading">Files</h4>
             {detail.artifacts.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">Files appear after encoding and checksum verification.</p>
+              <p {...stylex.props(styles.xsMuted)}>Files appear after encoding and checksum verification.</p>
             ) : (
-              <ul className="mt-2 space-y-1">
-                {detail.artifacts.map((artifact) => (
-                  <li className="flex items-center gap-2 render-glass border p-2 text-xs" key={artifact.artifactId}>
-                    <span className="min-w-0 flex-1 truncate">
+              <ul {...stylex.props(styles.listMt2)}>
+                {detail.artifacts.map((artifact, index) => (
+                  <li {...stylex.props(styles.flexCenterXs, index > 0 && styles.rowStackedXs)} key={artifact.artifactId}>
+                    <span {...stylex.props(styles.fillTruncateNarrowable)}>
                       {formatPhase(artifact.role)}
                       {artifact.sensor
                         ? ` · ${artifact.sensor.actorId}/${artifact.sensor.sensorId}/${artifact.sensor.modality}`
@@ -205,10 +212,10 @@ export function BrowserRecordingDetails({
                       {" · "}{formatBytes(artifact.sizeBytes)}
                     </span>
                     {artifact.downloadUrl ? (
-                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className="editor-motion grid size-8 place-items-center render-glass border render-glass-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" download href={artifact.downloadUrl}>
-                        <Download aria-hidden="true" className="size-3.5" />
+                      <a aria-label={`Download ${artifact.role}${artifact.sensor ? ` ${artifact.sensor.sensorId} ${artifact.sensor.modality}` : ""}`} className={stylex.props(styles.gridCenteredBordered, motionStyles.editorMotion).className} download href={artifact.downloadUrl}>
+                        <Download aria-hidden="true" className={stylex.props(styles.size35).className} />
                       </a>
-                    ) : <span className="text-micro text-muted-foreground">{artifact.state}</span>}
+                    ) : <span {...stylex.props(styles.microMuted)}>{artifact.state}</span>}
                   </li>
                 ))}
               </ul>
@@ -221,11 +228,11 @@ export function BrowserRecordingDetails({
 }
 
 function RecordingStatus({ status }: { status: BrowserRecordingDetailDto["status"] }) {
-  return <span className="border render-hairline px-1.5 py-0.5 text-micro uppercase tracking-meta text-muted-foreground">{status}</span>;
+  return <span {...stylex.props(styles.capsMicroMuted)}>{status}</span>;
 }
 
 function DetailValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div className="min-w-0"><dt className="text-muted-foreground">{label}</dt><dd className={mono ? "truncate font-mono text-micro" : "truncate font-medium"}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.detailValueMono : styles.detailValue)}>{value}</dd></div>;
 }
 
 function formatPhase(value: string) {

@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { swatches } from "./indication-style.stylex";
 import type { ControlIndication, MapSignalIndication } from "../../../lib/scenario/signals";
 
 /**
@@ -11,8 +13,9 @@ import type { ControlIndication, MapSignalIndication } from "../../../lib/scenar
  * are why its own surfaces disagreed on grey.
  *
  * Colours come from the `--signal-*` tokens (plan §5.1), not from hex literals.
- * The classes are written out rather than interpolated because Tailwind's
- * scanner reads source text: `bg-signal-${indication}` compiles to nothing.
+ * They are delivered as StyleX styles from `indication-style.stylex`, so the
+ * table below is ordinary data — the old "write every class out because
+ * Tailwind's scanner reads source text" constraint is gone with the classes.
  */
 
 /** Eleven, not six: the lane draws whatever the compiled result carries. */
@@ -56,106 +59,69 @@ export const AUTHORABLE_INDICATIONS: readonly MapSignalIndication[] = [
 
 type IndicationSwatch = {
   /** Solid fill, for a swatch or an authored band. */
-  readonly fill: string;
+  readonly fill: stylex.StyleXStyles;
   /** Faint fill, for a baseline band the author cannot retime. */
-  readonly ghost: string;
+  readonly ghost: stylex.StyleXStyles;
   /** Border, so a dark `off` lamp is still visible against the card. */
-  readonly border: string;
-  readonly text: string;
+  readonly border: stylex.StyleXStyles;
+  readonly text: stylex.StyleXStyles;
 };
 
 const NEUTRAL: IndicationSwatch = {
-  fill: "bg-signal-unknown",
-  ghost: "bg-signal-unknown/25",
-  border: "border-signal-unknown",
-  text: "text-signal-unknown",
+  fill: swatches.unknownFill,
+  ghost: swatches.unknownGhost,
+  border: swatches.unknownBorder,
+  text: swatches.unknownText,
+};
+
+const GREEN: IndicationSwatch = {
+  fill: swatches.greenFill,
+  ghost: swatches.greenGhost,
+  border: swatches.greenBorder,
+  text: swatches.greenText,
+};
+
+const YELLOW: IndicationSwatch = {
+  fill: swatches.yellowFill,
+  ghost: swatches.yellowGhost,
+  border: swatches.yellowBorder,
+  text: swatches.yellowText,
+};
+
+const RED: IndicationSwatch = {
+  fill: swatches.redFill,
+  ghost: swatches.redGhost,
+  border: swatches.redBorder,
+  text: swatches.redText,
 };
 
 const SWATCHES: Readonly<Record<ControlIndication, IndicationSwatch>> = {
-  green: {
-    fill: "bg-signal-green",
-    ghost: "bg-signal-green/25",
-    border: "border-signal-green",
-    text: "text-signal-green",
-  },
+  green: GREEN,
   // The two arrows share their ball colour: the glyph carries the difference,
   // and tinting an arrow differently from a ball would imply the lamp is a
   // different colour than it is.
-  green_arrow: {
-    fill: "bg-signal-green",
-    ghost: "bg-signal-green/25",
-    border: "border-signal-green",
-    text: "text-signal-green",
-  },
-  proceed: {
-    fill: "bg-signal-green",
-    ghost: "bg-signal-green/25",
-    border: "border-signal-green",
-    text: "text-signal-green",
-  },
-  yellow: {
-    fill: "bg-signal-yellow",
-    ghost: "bg-signal-yellow/25",
-    border: "border-signal-yellow",
-    text: "text-signal-yellow",
-  },
-  yellow_arrow: {
-    fill: "bg-signal-yellow",
-    ghost: "bg-signal-yellow/25",
-    border: "border-signal-yellow",
-    text: "text-signal-yellow",
-  },
-  flashing_yellow: {
-    fill: "bg-signal-yellow",
-    ghost: "bg-signal-yellow/25",
-    border: "border-signal-yellow",
-    text: "text-signal-yellow",
-  },
-  flashing_yellow_arrow: {
-    fill: "bg-signal-yellow",
-    ghost: "bg-signal-yellow/25",
-    border: "border-signal-yellow",
-    text: "text-signal-yellow",
-  },
-  red: {
-    fill: "bg-signal-red",
-    ghost: "bg-signal-red/25",
-    border: "border-signal-red",
-    text: "text-signal-red",
-  },
-  red_x: {
-    fill: "bg-signal-red",
-    ghost: "bg-signal-red/25",
-    border: "border-signal-red",
-    text: "text-signal-red",
-  },
-  stop: {
-    fill: "bg-signal-red",
-    ghost: "bg-signal-red/25",
-    border: "border-signal-red",
-    text: "text-signal-red",
-  },
-  flashing_red: {
-    fill: "bg-signal-red",
-    ghost: "bg-signal-red/25",
-    border: "border-signal-red",
-    text: "text-signal-red",
-  },
-  flashing_red_arrow: {
-    fill: "bg-signal-red",
-    ghost: "bg-signal-red/25",
-    border: "border-signal-red",
-    text: "text-signal-red",
-  },
+  green_arrow: GREEN,
+  proceed: GREEN,
+  yellow: YELLOW,
+  yellow_arrow: YELLOW,
+  flashing_yellow: YELLOW,
+  flashing_yellow_arrow: YELLOW,
+  red: RED,
+  red_x: RED,
+  stop: RED,
+  flashing_red: RED,
+  flashing_red_arrow: RED,
+  // An unlit lamp keeps the neutral outline and label: the housing is still
+  // there, and `border-signal-off` on `bg-signal-off` would be invisible.
   off: {
-    fill: "bg-signal-off",
-    ghost: "bg-signal-off/50",
-    border: "border-signal-unknown",
-    text: "text-signal-unknown",
+    fill: swatches.offFill,
+    ghost: swatches.offGhost,
+    border: swatches.unknownBorder,
+    text: swatches.unknownText,
   },
 };
 
-/** Swatch classes for an indication; the neutral set when nothing is stated. */
+/** Swatch styles for an indication; the neutral set when nothing is stated. */
 export function indicationSwatch(indication: ControlIndication | null): IndicationSwatch {
   return indication ? SWATCHES[indication] : NEUTRAL;
 }

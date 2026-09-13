@@ -1,4 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
+// `driveColors` is a `defineVars` group, and StyleX resolves those imports
+// itself with plain Node conditions — the public `./drive/drive.stylex`
+// subpath would land it on `dist`, which names the same variables differently
+// than the `src` copy the dev host loads and does not exist at all until the
+// package has been built. The source path is what keeps the two agreeing, the
+// same reason `stylex.config.mjs` pins the token alias to `src`. The package
+// export stays for consumers outside this repo, which have no relative path.
 import { driveColors } from "../../../packages/studio-ui/src/drive/drive.stylex";
 
 /**

@@ -19,6 +19,8 @@ import { ScenarioReadinessButton } from "../readiness";
 import { EditorTutorialGuide } from "../tutorial/EditorTutorialGuide";
 import { ViewportSettingsPanel } from "./slots/ViewportSettingsPanel";
 import type { EditorExperience } from "../simple-timed-routes";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorHeader.stylex";
 
 const EXPECTED_MAP_BOUND_ISSUES = new Set([
   "non_portable_role",
@@ -87,27 +89,27 @@ export function EditorHeader({
     <>
       <TopBarActionsPortal>
         <div
-          className="flex min-w-0 items-center gap-2"
+          {...stylex.props(styles.flexCenterNarrowable)}
           data-testid="scenario-editor-toolbar"
           data-tour="toolbar"
         >
           {onExit ? (
             <Button
               aria-label="Exit editor"
-              className="h-8 gap-1.5 rounded-none border border-border/70 bg-background/70 shadow-sm"
+              xstyle={styles.borderedGap15}
               onClick={onExit}
               size="sm"
               type="button"
               variant="ghost"
             >
-              <ArrowLeft aria-hidden="true" className="size-3.5" />
+              <ArrowLeft aria-hidden="true" className={stylex.props(styles.size35).className} />
               <span>Exit editor</span>
             </Button>
           ) : null}
         </div>
       </TopBarActionsPortal>
       <TopBarTrailingPortal>
-        <div className="flex items-center gap-2" data-testid="scenario-editor-toolbar-trailing">
+        <div {...stylex.props(styles.flexCenterGap2)} data-testid="scenario-editor-toolbar-trailing">
           <EditorTutorialGuide experience={experience ?? "advanced"} />
           <ScenarioReadinessButton issues={readinessIssues} />
           {/* Weather and traffic moved to the left rail: they are things you add
@@ -117,7 +119,7 @@ export function EditorHeader({
             <>
               <Button
                 aria-label="Add reasoning trace"
-                className="h-8 gap-2 rounded-none border border-[#E8E044]/45 bg-card/90 px-3 text-[#E8E044] shadow-sm backdrop-blur hover:border-[#E8E044] hover:bg-[#E8E044] hover:text-black disabled:border-border disabled:text-muted-foreground"
+                xstyle={styles.borderedGlassyGap2}
                 data-testid="editor-add-reasoning-trace"
                 disabled={!sensorSubjectId || reasoningTraceEnabled}
                 onClick={() => document?.setPresentationExtension("studio.presentation.reasoningTraceLane", true)}
@@ -126,7 +128,7 @@ export function EditorHeader({
                 type="button"
                 variant="outline"
               >
-                <BrainCircuit aria-hidden="true" className="size-4" />
+                <BrainCircuit aria-hidden="true" className={stylex.props(styles.size4).className} />
                 <span>Add reasoning trace</span>
               </Button>
             </>

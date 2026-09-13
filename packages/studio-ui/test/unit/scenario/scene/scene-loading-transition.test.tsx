@@ -5,6 +5,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DashboardLoadingProvider } from "../../../../src/components/DashboardLoadingCoordinator";
 import { SceneLoadingTransition } from "../../../../src/scenario/scene/SceneLoadingTransition";
 import { StudioHostTestProvider } from "../../../helpers/studio-host";
+import { styles as coordinatorStyles } from "../../../../src/components/DashboardLoadingCoordinator.stylex";
+
+/** One compiled atom of a StyleX namespace, by the property it declares. */
+const atomFor = (namespace: object, property: string): string => {
+  const key = Object.keys(namespace).find((k) => k.startsWith(`${property}-`));
+  if (!key) throw new Error(`no compiled ${property} atom`);
+  return (namespace as Record<string, string>)[key];
+};
 
 vi.mock("../../../../src/components/SkyCloudBackdrop", () => ({
   SkyCloudBackdrop: ({ className }: { className?: string }) => (
@@ -42,8 +50,10 @@ describe("SceneLoadingTransition", () => {
     expect(surface.parentElement).not.toBe(document.body);
     expect(surface.getAttribute("data-load-kind")).toBe("scene");
     expect(surface.getAttribute("data-load-phase")).toBe("assets");
-    expect(surface.className).toContain("z-[250]");
-    expect(surface.className).toContain("bg-black/70");
+    expect(surface.className).toContain(atomFor(coordinatorStyles.overlay, "zIndex"));
+    expect(surface.className).toContain(
+      atomFor(coordinatorStyles.overlayVisible, "backgroundColor"),
+    );
     expect(screen.queryByTestId("scene-loading-prerender-cover")).toBeNull();
     expect(screen.queryByTestId("scene-loading-transition")).toBeNull();
     expect(screen.getByRole("button", { name: "Tip: Click here to cache all assets." }))

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { Marker } from "react-map-gl/maplibre";
 import { ActorIcon } from "@/app/lib/scenario-editor/actor-svgs";
 import {
   resolveMapMarkerScale,
   type MapMarkerSizingMode,
 } from "@/app/lib/maps/frontend/map-marker-sizing";
+import { styles } from "../map-canvas.stylex";
 
-const HOLD_TO_MOVE_MS = 500;
 const HOLD_RING_INSET = 6;
 const HOLD_RING_STROKE = 2.5;
 
@@ -108,83 +109,27 @@ export function HoverInfoCard({
   return (
     <div
       role="tooltip"
-      style={{
-        position: "absolute",
-        left: "50%",
-        bottom: `${size + 8}px`,
-        transform: "translateX(-50%)",
-        width: "max-content",
-        minWidth: 132,
-        maxWidth: 200,
-        pointerEvents: "none",
-        zIndex: 20,
-        animation: "hoverInfoFadeIn 120ms ease-out forwards",
-        opacity: 0,
-      }}
+      {...stylex.props(styles.actorCard)}
+      // Clears the marker, whose size is the actor's own.
+      style={{ bottom: `${size + 8}px` }}
     >
-        <div
-          style={{
-            overflow: "hidden",
-            padding: "8px 10px 7px",
-            background: "rgba(10, 10, 10, 0.94)",
-            border: "1px solid rgba(232, 224, 68, 0.62)",
-            boxShadow: "0 10px 28px rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            fontFamily:
-              "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              overflow: "hidden",
-              color: "#ffffff",
-              fontSize: 12,
-              fontWeight: 700,
-              lineHeight: 1.2,
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {actor.label}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              marginTop: 4,
-              color: "rgba(248, 250, 252, 0.55)",
-              fontSize: 8,
-              fontWeight: 650,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span><strong style={{ color: "#ffffff" }}>Right-click</strong> details</span>
-            <span aria-hidden style={{ color: "rgba(255,255,255,0.22)" }}>·</span>
-            <span><strong style={{ color: "#E8E044" }}>Hold</strong> move</span>
-          </div>
+      <div {...stylex.props(styles.actorCardPlate)}>
+        <div {...stylex.props(styles.actorCardTitle)}>{actor.label}</div>
+        <div {...stylex.props(styles.actorCardHints)}>
+          <span>
+            <strong {...stylex.props(styles.actorCardKey)}>Right-click</strong>{" "}
+            details
+          </span>
+          <span aria-hidden {...stylex.props(styles.actorCardSeparator)}>
+            ·
+          </span>
+          <span>
+            <strong {...stylex.props(styles.actorCardKeyAccent)}>Hold</strong>{" "}
+            move
+          </span>
         </div>
-      <span
-        aria-hidden
-        style={{
-          position: "absolute",
-          left: "50%",
-          bottom: -5,
-          transform: "translateX(-50%) rotate(45deg)",
-          width: 8,
-          height: 8,
-          background: "rgba(10, 10, 10, 0.96)",
-          borderRight: "1px solid rgba(232, 224, 68, 0.78)",
-          borderBottom: "1px solid rgba(232, 224, 68, 0.78)",
-        }}
-      />
-      <style>{`
-        @keyframes hoverInfoFadeIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(2px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-      `}</style>
+      </div>
+      <span aria-hidden {...stylex.props(styles.actorCardTail)} />
     </div>
   );
 }
@@ -194,18 +139,7 @@ export function HoldProgressRing({ size }: { size: number }) {
   const radius = size / 2 - HOLD_RING_INSET;
   const circumference = 2 * Math.PI * radius;
   return (
-    <svg
-      className="hold-progress-ring"
-      width={size}
-      height={size}
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        transform: "rotate(-90deg)",
-        transformOrigin: "center",
-      }}
-    >
+    <svg width={size} height={size} {...stylex.props(styles.holdRing)}>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -215,16 +149,11 @@ export function HoldProgressRing({ size }: { size: number }) {
         strokeWidth={HOLD_RING_STROKE}
         strokeLinecap="round"
         strokeDasharray={circumference}
-        style={{
-          strokeDashoffset: circumference,
-          animation: `holdProgressFill ${HOLD_TO_MOVE_MS}ms linear forwards`,
-        }}
+        {...stylex.props(styles.holdRingTrack)}
+        // The ring starts open at its own circumference; the animation closes
+        // it over HOLD_TO_MOVE_MS and, being an animation, outranks this.
+        style={{ strokeDashoffset: circumference }}
       />
-      <style>{`
-        @keyframes holdProgressFill {
-          to { stroke-dashoffset: 0; }
-        }
-      `}</style>
     </svg>
   );
 }
@@ -316,17 +245,9 @@ export function ActorMarkerView({
           clientY: event.clientY,
         });
       }}
-      style={{
-        position: "relative",
-        width: `${size}px`,
-        height: `${size}px`,
-        overflow: "visible",
-        pointerEvents: actor.preview ? "none" : "auto",
-        transform:
-          effectiveMarkerScale !== 1
-            ? `scale(${effectiveMarkerScale})`
-            : undefined,
-        transformOrigin: "center center",
+      {...stylex.props(
+        styles.actorMarker,
+        actor.preview ? styles.actorPreview : styles.actorInteractive,
         // A parity pair is the one place transparency MEANS something: the
         // candidate is drawn over the reference so the offset between them is
         // readable, and that only works if the top one is see-through.
@@ -338,15 +259,22 @@ export function ActorMarkerView({
         // cannot judge what you cannot see. Subordination is the colour's job
         // now — subject yellow is reserved, traffic is hashed — and colour costs no
         // legibility to read.
-        opacity:
-          actor.comparisonRole === "candidate"
-            ? 0.5
-            : actor.comparisonRole === "reference"
-              ? 1
-              : actor.dimmed
-                ? 0.5
-                : undefined,
-        transition: "opacity 0.2s ease",
+        actor.comparisonRole === "candidate"
+          ? styles.actorTranslucent
+          : actor.comparisonRole === "reference"
+            ? styles.actorOpaque
+            : actor.dimmed
+              ? styles.actorTranslucent
+              : null,
+      )}
+      // The marker's footprint, and the zoom-resolved scale it is drawn at.
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        transform:
+          effectiveMarkerScale !== 1
+            ? `scale(${effectiveMarkerScale})`
+            : undefined,
       }}
     >
       <button
@@ -370,18 +298,12 @@ export function ActorMarkerView({
             clientY: event.clientY,
           });
         }}
+        {...stylex.props(styles.actorButton, styles.actorDefaultColor)}
+        // Size follows the marker; the icon is inked and turned by the actor.
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "none",
-          padding: 0,
-          margin: 0,
-          background: "transparent",
-          color: actor.color ?? "#f8fafc",
-          cursor: "pointer",
+          color: actor.color ?? undefined,
           transform: `rotate(${actor.rotationDeg}deg)`,
         }}
       >

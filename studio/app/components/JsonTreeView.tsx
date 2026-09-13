@@ -41,7 +41,7 @@ function PrimitiveValue({ value, onHighlightId, onSelectId, knownIds }: Primitiv
       </span>
     );
   }
-  return <span {...stylex.props(styles.mono)}>{str}</span>;
+  return <span {...stylex.props(styles.plain)}>{str}</span>;
 }
 
 interface JsonNodeProps {
@@ -98,7 +98,7 @@ function JsonNode({ label, value, depth, defaultExpanded = false, collapseArrays
   if (simple) {
     return (
       <div {...stylex.props(styles.row)} style={{ paddingLeft: depth * 12 }}>
-        {label && <span {...stylex.props(styles.label)}>{label}</span>}
+        {label && <span {...stylex.props(styles.labelXs)}>{label}</span>}
         <PrimitiveValue value={parsed} onHighlightId={onHighlightId} onSelectId={onSelectId} knownIds={knownIds} />
       </div>
     );

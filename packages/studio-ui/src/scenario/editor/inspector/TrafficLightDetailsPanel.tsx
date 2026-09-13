@@ -10,6 +10,9 @@ import type {
   ReferenceCyclePhase,
   ReferenceCycleTiming,
 } from "../../../lib/scenario/signals";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TrafficLightDetailsPanel.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 export type TrafficLightCycleSnapshot = {
   readonly timing: ReferenceCycleTiming;
@@ -50,24 +53,24 @@ export function TrafficLightDetailsPanel({
       onClose={onClose}
       onDelete={authoring.onRemoveControl}
       preview={(
-        <div className="flex flex-col items-center gap-1 text-center">
-          <Signal aria-hidden="true" className="size-9 text-[#E8E044]" />
-          <span className="text-[9px] uppercase tracking-[0.16em] text-white/40">
+        <div {...stylex.props(styles.flexColCenter)}>
+          <Signal aria-hidden="true" className={stylex.props(styles.size9Text).className} />
+          <span {...stylex.props(styles.caps)}>
             Junction {authoring.junctionId}
           </span>
-          <strong className="max-w-52 truncate text-xs font-medium text-white">
+          <strong {...stylex.props(styles.xsWhiteMedium)}>
             Traffic light {authoring.headId}
           </strong>
         </div>
       )}
       testId="scenario-traffic-light-details-panel"
     >
-      <p className="text-[10px] leading-relaxed text-white/45">
+      <p {...stylex.props(styles.relaxed)}>
         Set this light&rsquo;s cycle. Every other light in junction {authoring.junctionId}
         is aligned automatically from the map&rsquo;s controller stages.
       </p>
       {authoring.warning ? (
-        <p className="rounded-lg border border-amber-300/35 bg-amber-300/10 px-2.5 py-2 text-[10px] leading-relaxed text-amber-100" role="alert">
+        <p {...stylex.props(styles.borderedRelaxed)} role="alert">
           {authoring.warning} Saving a timing replaces it with a binding to the current map.
         </p>
       ) : null}
@@ -80,13 +83,13 @@ export function TrafficLightDetailsPanel({
         headerAction={authoring.onRemoveControl ? (
           <button
             aria-label={`Remove control from traffic light ${authoring.headId}`}
-            className="editor-motion grid size-6 shrink-0 place-items-center rounded-md text-white/40 hover:bg-red-500/15 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
             data-testid="traffic-light-remove-control"
             onClick={authoring.onRemoveControl}
             title="Remove control"
             type="button"
           >
-            <Trash2 aria-hidden="true" className="size-3.5" />
+            <Trash2 aria-hidden="true" className={stylex.props(styles.size35).className} />
           </button>
         ) : null}
         onTimingChange={authoring.onTimingChange}
@@ -94,12 +97,12 @@ export function TrafficLightDetailsPanel({
       />
       {authoring.hasPlan ? (
         <button
-          className="editor-motion flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs text-white/60 hover:border-white/30 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+          className={stylex.props(styles.flexCenterMid, motionStyles.editorMotion).className}
           data-testid="traffic-light-details-reset"
           onClick={() => authoring.onReset(openingSnapshot.current)}
           type="button"
         >
-          <RotateCcw aria-hidden="true" className="size-3.5" />
+          <RotateCcw aria-hidden="true" className={stylex.props(styles.size35).className} />
           Reset changes
         </button>
       ) : null}

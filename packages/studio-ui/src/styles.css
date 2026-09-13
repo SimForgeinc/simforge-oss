@@ -168,28 +168,6 @@ html {
   }
 }
 
-@keyframes editor-mode-sidebar-in {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes editor-detail-sidebar-in {
-  from {
-    opacity: 0;
-    transform: translateX(-28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 @keyframes editor-actor-popover-in-above {
   from {
     opacity: 0;
@@ -251,236 +229,7 @@ html {
   }
 }
 
-@keyframes editor-mode-topbar-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scenario-sidebar-stage-list-exit {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(calc(-100% + 132px));
-  }
-}
-
-@keyframes scenario-sidebar-stage-editor-enter {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes editor-scenario-context-in {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────
- * Add-actor panel motion
- *
- * The panel is the icon rail growing sideways, so it enters from
- * under the rail (which sits one z-index above it) rather than
- * fading in on top of the map. Its contents arrive just behind
- * it, staggered, so a wall of forty models reads as a list being
- * dealt out instead of a block appearing.
- *
- * Hover states live here, not in the component's inline styles,
- * because inline styles cannot express `:hover` and every one of
- * these is a hover or a keyframe.
- * ───────────────────────────────────────────────────────────── */
-@keyframes actor-add-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes actor-catalog-tile-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes actor-catalog-chip-in {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes actor-rail-tooltip-in {
-  from {
-    opacity: 0;
-    transform: translateX(-9px) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
 @layer utilities {
-  /* `backwards`, never `both`: a forwards fill keeps the animation's final
-     transform winning over the `:hover` rules below, so a filled entrance
-     silently disables every hover lift — and leaves a permanent composited
-     layer over the WebGL scene these glass surfaces sample. */
-  .actor-add-panel-enter {
-    animation: actor-add-panel-in 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-    will-change: transform, opacity;
-  }
-
-  .actor-catalog-chip-enter {
-    animation: actor-catalog-chip-in 200ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-
-  .actor-catalog-tile-enter {
-    animation: actor-catalog-tile-in 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-
-  .actor-rail-tooltip {
-    animation: actor-rail-tooltip-in 130ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-
-  /* Chips and the close button answer the pointer; the icon rail's own hover
-     wash stays in the component, which already tracks the hovered tool. */
-  .actor-chip {
-    transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      background-color 140ms ease, border-color 140ms ease, color 140ms ease;
-  }
-
-  .actor-chip:hover {
-    transform: translateY(-1px);
-  }
-
-  .actor-chip:active {
-    transform: translateY(0) scale(0.97);
-  }
-
-  .actor-tool-button svg {
-    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .actor-tool-button:hover svg {
-    transform: scale(1.16);
-  }
-
-  .actor-tool-button[aria-pressed="true"] svg {
-    transform: scale(1.08);
-  }
-
-  .actor-panel-close {
-    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-      background-color 140ms ease, color 140ms ease;
-  }
-
-  .actor-panel-close:hover {
-    transform: rotate(90deg);
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-  }
-
-  /*
-   * The catalog's drag edge. Invisible until wanted: a permanent bar down the
-   * panel's side would read as a border on a surface whose whole right edge is
-   * already a rounded glass rim. The grip only appears under the pointer or on
-   * focus, which is also the only time it means anything.
-   */
-  .actor-add-panel-resize::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 2px;
-    width: 3px;
-    height: 34px;
-    transform: translateY(-50%);
-    border-radius: 2px;
-    background: rgba(232, 224, 68, 0);
-    transition: background-color 140ms ease;
-  }
-
-  .actor-add-panel-resize:hover::after,
-  .actor-add-panel-resize:focus-visible::after {
-    background: rgba(232, 224, 68, 0.72);
-  }
-
-  .actor-add-panel-resize:focus-visible {
-    outline: none;
-  }
-
-  /* The tile owns its resting look here so hover can lift it without an
-     inline style winning the specificity fight. */
-  .actor-catalog-tile {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 13px;
-    background: rgba(255, 255, 255, 0.045);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      border-color 160ms ease, background-color 160ms ease,
-      box-shadow 160ms ease;
-  }
-
-  .actor-catalog-tile:hover {
-    transform: translateY(-3px);
-    border-color: rgba(232, 224, 68, 0.4);
-    background: rgba(232, 224, 68, 0.07);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.42);
-  }
-
-  .actor-catalog-tile:active {
-    transform: translateY(-1px) scale(0.985);
-  }
-
-  .actor-catalog-tile[data-active="true"] {
-    border-color: rgba(232, 224, 68, 0.62);
-    background: rgba(232, 224, 68, 0.12);
-  }
-
-  .actor-catalog-tile-icon {
-    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .actor-catalog-tile:hover .actor-catalog-tile-icon {
-    transform: scale(1.1) translateY(-1px);
-  }
-
-  .editor-mode-sidebar-enter {
-    animation: editor-mode-sidebar-in 180ms ease-out both;
-  }
-
-  .editor-detail-sidebar-enter {
-    animation: editor-detail-sidebar-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    will-change: transform, opacity;
-  }
-
   .editor-actor-popover-enter-above {
     animation: editor-actor-popover-in-above 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
     will-change: transform, opacity;
@@ -507,22 +256,6 @@ html {
        backdrop root, preventing its glass timeline and actor rail from
        sampling the persistent WebGL scene behind it. */
     animation: editor-mode-main-in 180ms ease-out;
-  }
-
-  .editor-mode-topbar-enter {
-    animation: editor-mode-topbar-in 160ms ease-out both;
-  }
-
-  .scenario-sidebar-stage-list-exit {
-    animation: scenario-sidebar-stage-list-exit 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .scenario-sidebar-stage-editor-enter {
-    animation: scenario-sidebar-stage-editor-enter 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .editor-scenario-context-enter {
-    animation: editor-scenario-context-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* ── List hero banner ────────────────────────────────────────────────────
@@ -594,39 +327,22 @@ html {
   .editor-actor-popover-enter-above,
   .editor-actor-popover-enter-below,
   .editor-actor-popover-enter-right,
-  .editor-actor-details-enter,
-  .actor-add-panel-enter,
-  .actor-catalog-chip-enter,
-  .actor-catalog-tile-enter,
-  .actor-rail-tooltip {
+  .editor-actor-details-enter {
     animation: none !important;
-  }
-
-  .actor-chip,
-  .actor-chip:hover,
-  .actor-chip:active,
-  .actor-tool-button svg,
-  .actor-tool-button:hover svg,
-  .actor-panel-close,
-  .actor-panel-close:hover,
-  .actor-catalog-tile,
-  .actor-catalog-tile:hover,
-  .actor-catalog-tile:active,
-  .actor-catalog-tile-icon,
-  .actor-catalog-tile:hover .actor-catalog-tile-icon {
-    transform: none !important;
-    transition: none !important;
   }
 }
 
 /* ─────────────────────────────────────────────────────────────
  * Motion-safe editor affordances
  *
- * Tailwind's `animate-pulse` and `transition` utilities have no
- * reduced-motion behaviour of their own, so the editor's mode
- * banner dot pulsed and every palette row cross-faded regardless
- * of the OS setting. These two utilities carry the same visuals
- * plus the guard, and are the only motion the editor shell uses.
+ * Tailwind's `animate-pulse` utility has no reduced-motion
+ * behaviour of its own, so the editor's mode banner dot pulsed
+ * regardless of the OS setting. This utility carries the same
+ * visual plus the guard.
+ *
+ * Its transition counterpart is now `motionStyles.editorMotion` in
+ * `stylex/motion.stylex.ts`, carrying the same property list, the
+ * same curve and duration, and the same reduced-motion guard.
  * ───────────────────────────────────────────────────────────── */
 @keyframes editor-pulse {
   0%,
@@ -642,22 +358,11 @@ html {
   .editor-pulse {
     animation: editor-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-
-  .editor-motion {
-    transition-property: color, background-color, border-color,
-      text-decoration-color, fill, stroke, opacity;
-    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
-    transition-duration: 150ms;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .editor-pulse {
     animation: none !important;
-  }
-
-  .editor-motion {
-    transition: none !important;
   }
 }
 
@@ -746,59 +451,12 @@ html {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
- * Placement toolbar "needs action" cue
- *
- * When a path/timed-path actor was just dropped and still has no
- * route waypoints, the placement toolbar swaps to a red surface
- * and pulses an outer glow so the user can see — without looking
- * away from the canvas — that an action is required before the
- * editor will continue normally.
- * ───────────────────────────────────────────────────────────── */
-.editor-intent-toolbar-urgent {
-  animation: editor-intent-toolbar-urgent-pulse 1.4s ease-in-out infinite;
-}
-
-.editor-guided-frame-urgent {
-  animation: editor-guided-frame-urgent-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes editor-intent-toolbar-urgent-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(255, 77, 77, 0);
-  }
-}
-
-@keyframes editor-guided-frame-urgent-pulse {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 60px rgba(255, 77, 77, 0.18),
-      inset 0 0 0 0 rgba(255, 77, 77, 0.45);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 80px rgba(255, 77, 77, 0.32),
-      inset 0 0 0 4px rgba(255, 77, 77, 0.18);
-  }
-}
-
 /*
   Tutorial spotlight. The ring breathes so the eye finds it without the copy
-  having to say "top right"; the dot is the click affordance, and it sits
-  BESIDE the target rather than on it so it never covers the thing it is
-  pointing at.
+  having to say "top right".
 */
 .tutorial-spotlight-ring {
   animation: tutorial-spotlight-breathe 2s ease-in-out infinite;
-}
-
-.tutorial-click-dot {
-  animation: tutorial-click-dot-pulse 1.3s ease-out infinite;
 }
 
 @keyframes tutorial-spotlight-breathe {
@@ -811,24 +469,8 @@ html {
   }
 }
 
-@keyframes tutorial-click-dot-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(232, 224, 68, 0.6);
-    transform: scale(0.85);
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(232, 224, 68, 0);
-    transform: scale(1);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(232, 224, 68, 0);
-    transform: scale(0.85);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .tutorial-spotlight-ring,
-  .tutorial-click-dot {
+  .tutorial-spotlight-ring {
     animation: none;
   }
 }
@@ -847,17 +489,6 @@ html {
  * scene handoffs keep the dashboard surface mounted and never replay this. */
 .dashboard-scene-loading-enter {
   animation: scene-loading-enter 500ms ease-out both;
-}
-
-/* Opacity-only so the fixed -50% centering transform never gets replaced. */
-@keyframes app-switcher-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes app-switcher-fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 
 /* Scene-loading choreography: cloud cover arrives first, the message resolves
@@ -957,77 +588,14 @@ html {
   }
 }
 
-@keyframes app-topbar-cloud-drift {
-  from {
-    transform: translate3d(-1.5%, 0, 0) scale(1.04);
-  }
-
-  to {
-    transform: translate3d(1.5%, -2%, 0) scale(1.08);
-  }
-}
-
-.app-topbar-clouds {
-  background:
-    radial-gradient(
-      ellipse 16% 34% at 7% 50%,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.12) 44%,
-      transparent 76%
-    ),
-    radial-gradient(
-      ellipse 22% 40% at 27% 58%,
-      rgba(255, 255, 255, 0.17) 0%,
-      rgba(255, 255, 255, 0.08) 48%,
-      transparent 78%
-    ),
-    radial-gradient(
-      ellipse 19% 38% at 51% 43%,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0.09) 45%,
-      transparent 76%
-    ),
-    radial-gradient(
-      ellipse 24% 42% at 74% 59%,
-      rgba(255, 255, 255, 0.16) 0%,
-      rgba(255, 255, 255, 0.07) 50%,
-      transparent 80%
-    ),
-    radial-gradient(
-      ellipse 17% 35% at 95% 46%,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.1) 45%,
-      transparent 76%
-    );
-  filter: blur(11px);
-  opacity: 0.95;
-  animation: app-topbar-cloud-drift 16s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.app-switcher-center-fade[data-state="open"] {
-  animation: app-switcher-fade-in 180ms ease-out both;
-}
-
-.app-switcher-center-fade[data-state="closed"] {
-  animation: app-switcher-fade-out 120ms ease-in both;
-}
-
 /* Avoid flashing a full loading state during fast, cached navigations. */
 .route-loading {
   animation: route-loading-enter 120ms ease-out 180ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .editor-intent-toolbar-urgent,
-  .editor-guided-frame-urgent,
   .route-loading,
   .dashboard-scene-loading-enter {
-    animation: none !important;
-  }
-
-  .app-switcher-center-fade,
-  .app-topbar-clouds {
     animation: none !important;
   }
 }
@@ -1055,36 +623,16 @@ html {
   }
 }
 
-@keyframes render-tile-enter {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0) scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .render-view-enter {
   animation: render-view-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /*
- * Staggered by index via `--render-tile-index`, capped so a long
- * gallery does not make the last tile arrive noticeably late.
- */
-.render-tile-enter {
-  animation: render-tile-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(min(var(--render-tile-index, 0), 11) * 28ms);
-}
-
-/*
  * Transform, width and both filters are deliberately included here:
- * `editor-motion` covers only colour and opacity, and the list slide,
- * the pane reflow and the world's blur behind the render tab are all
- * geometry or compositing rather than colour.
+ * the editor's shared transition (`motionStyles.editorMotion`) covers
+ * only colour and opacity, and the list slide, the pane reflow and the
+ * world's blur behind the render tab are all geometry or compositing
+ * rather than colour.
  */
 .render-surface-motion {
   transition-property: opacity, transform, margin, width, filter, backdrop-filter;
@@ -1110,98 +658,9 @@ html {
   justify-content: safe center;
 }
 
-/*
- * The render surface's only two backgrounds.
- *
- * Both are white at low alpha rather than a dark fill, so they lighten
- * whatever is behind them instead of punching a hole in it. Named
- * utilities rather than per-element arbitrary values because the whole
- * point is that every card, header and footer in the pane agrees; when
- * these were `bg-card`, `bg-muted/20` and `bg-background/60` in
- * different files the pane read as several stacked panels.
- */
-.render-glass {
-  background-color: rgb(255 255 255 / 4%);
-  border-color: rgb(255 255 255 / 10%);
-}
-
-.render-glass-raised {
-  background-color: rgb(255 255 255 / 7%);
-  border-color: rgb(255 255 255 / 14%);
-}
-
-/*
- * The pane's own backdrop tint: barely there, so the world stays
- * readable behind the renders that were made from it.
- *
- * The blur is a Tailwind `backdrop-blur-*` utility on the element,
- * not a declaration here. The production CSS minifier keeps only the
- * `-webkit-` prefixed form of a hand-written `backdrop-filter` and
- * drops the standard property, which Chrome then reports as `none` —
- * the pane shipped with no blur at all. Tailwind's utility emits both.
- */
-.render-glass-pane {
-  background: linear-gradient(
-    180deg,
-    rgb(9 11 16 / 46%) 0%,
-    rgb(9 11 16 / 62%) 100%
-  );
-}
-
-/*
- * Structural hairline. Pair with Tailwind's side utilities
- * (`border-b`, `border-t`, `xl:border-l`) which set width only.
- */
-.render-hairline {
-  border-color: rgb(255 255 255 / 10%);
-}
-
-.render-divide > * + * {
-  border-color: rgb(255 255 255 / 10%);
-}
-
 /* A chip: a state, a mode, a count. Reads on video or on the pane. */
 .render-chip {
   background-color: rgb(255 255 255 / 10%);
-}
-
-.render-chip-strong {
-  background-color: rgb(255 255 255 / 15%);
-}
-
-.render-glass-hover:hover {
-  background-color: rgb(255 255 255 / 15%);
-}
-
-/*
- * A control that floats on top of a still or a video, where the
- * artwork behind it is arbitrary. Dark and blurred rather than
- * light, because it has to hold contrast over a bright frame.
- */
-.render-overlay-control {
-  background-color: rgb(0 0 0 / 45%);
-  color: rgb(255 255 255 / 80%);
-}
-
-/*
- * The mat behind a letterboxed video. Darker than the pane so the
- * frame's own edges are where the eye lands.
- */
-.render-video-mat {
-  background-color: rgb(0 0 0 / 25%);
-}
-
-/*
- * Scrim under a tile's caption. Renders are often bright daylight
- * frames and the timestamp sits directly on them.
- */
-.render-scrim {
-  background-image: linear-gradient(
-    to top,
-    rgb(0 0 0 / 75%) 0%,
-    rgb(0 0 0 / 35%) 50%,
-    transparent 100%
-  );
 }
 
 /* Hover lift for a gallery tile. */
@@ -1211,8 +670,7 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .render-view-enter,
-  .render-tile-enter {
+  .render-view-enter {
     animation: none !important;
   }
 

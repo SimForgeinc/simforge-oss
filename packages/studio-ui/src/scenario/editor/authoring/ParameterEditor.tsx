@@ -48,13 +48,13 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
       {declarations.map((param) => (
         <div key={param.id} {...stylex.props(styles.itemBorder)}>
           <div {...stylex.props(styles.row)}>
-            <span>{param.id}</span>
+            <span {...stylex.props(styles.mono)}>{param.id}</span>
             <DeleteButton
               label={`Remove parameter ${param.id}`}
               onClick={() => document.removeParameter(param.id)}
             />
           </div>
-          <div {...stylex.props(styles.input)}>
+          <div {...stylex.props(styles.description)}>
             <TextField
               label="Description"
               value={param.description ?? ""}
@@ -75,7 +75,7 @@ export function ParameterEditor({ document }: { document: EditorDocument }) {
                   parameterAs(type as ParamDecl["type"], param.id),
                 )
               }
-              className={stylex.props(styles.input).className}
+              xstyle={styles.selectField}
             />
             {param.type === "continuous" ? (
               <>

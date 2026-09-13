@@ -53,7 +53,7 @@ const styles = stylex.create({
   },
   headerCompact: { paddingBlock: space.sm, paddingInline: space.lg },
   headerRegular: { paddingBlock: space.md, paddingInline: space.xl },
-  body: { minWidth: 0, flexGrow: 1 },
+  body: { minWidth: 0, flex: 1 },
   padNone: { padding: space.none },
   padXs: { padding: space.xs },
   padSm: { padding: space.sm },

@@ -118,7 +118,7 @@ export function DatasetExportWorkspace() {
               icon={<Database {...stylex.props(styles.iconEmpty)} />}
               title="Select a dataset"
               description="Choose a dataset from the list to review its export options."
-              className={stylex.props(styles.emptyState).className}
+              xstyle={styles.emptyState}
             />
           )}
         </main>

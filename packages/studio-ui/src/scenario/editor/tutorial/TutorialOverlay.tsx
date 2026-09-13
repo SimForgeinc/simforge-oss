@@ -11,6 +11,9 @@ import {
   type TutorialStep,
 } from "./tutorial-steps";
 import type { EditorExperience } from "../simple-timed-routes";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./TutorialOverlay.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -103,11 +106,11 @@ export function TutorialOverlay({
   const last = index === steps.length - 1;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[80]">
+    <div {...stylex.props(styles.fixedInertInset0)}>
       {rect ? (
         <div
           aria-hidden="true"
-          className="tutorial-spotlight-ring absolute border-2 border-primary"
+          className={`${stylex.props(styles.abs).className} tutorial-spotlight-ring`}
           style={{
             top: rect.top - 2,
             left: rect.left - 2,
@@ -120,17 +123,17 @@ export function TutorialOverlay({
       <div
         aria-labelledby="scenario-tutorial-title"
         aria-modal="false"
-        className="pointer-events-auto absolute w-[min(22rem,calc(100vw-2rem))] border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
+        {...stylex.props(styles.absBorderedLive)}
         role="dialog"
         style={cardPosition(step, rect)}
       >
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-micro font-bold uppercase tracking-meta-wider text-primary">
+        <div {...stylex.props(styles.flexStartGap2)}>
+          <div {...stylex.props(styles.fillNarrowable)}>
+            <p {...stylex.props(styles.capsMicroAccent)}>
               {mode} mode · Step {index + 1} of {steps.length}
             </p>
             <h2
-              className="mt-1 text-sm font-semibold"
+              {...stylex.props(styles.smSemibold)}
               id="scenario-tutorial-title"
             >
               {step.title}
@@ -139,16 +142,16 @@ export function TutorialOverlay({
           <button
             type="button"
             aria-label="Skip the walkthrough"
-            className="editor-motion -mr-1 -mt-1 inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-popover"
+            className={stylex.props(styles.inlineFlexCenterMid, motionStyles.editorMotion).className}
             onClick={finish}
           >
-            <X aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
         </div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">{step.body}</p>
-        <div className="mt-4 flex items-center gap-2">
+        <p {...stylex.props(styles.xsMuted)}>{step.body}</p>
+        <div {...stylex.props(styles.flexCenterGap2)}>
           <Button
-            className="h-8"
+            xstyle={styles.h8}
             disabled={index === 0}
             size="sm"
             variant="outline"
@@ -158,7 +161,7 @@ export function TutorialOverlay({
           </Button>
           <Button
             autoFocus
-            className="ml-auto h-8"
+            xstyle={styles.pushRight}
             size="sm"
             onClick={() =>
               last ? finish() : setIndex((current) => current + 1)
@@ -167,7 +170,7 @@ export function TutorialOverlay({
             {last ? "Start authoring" : "Next"}
           </Button>
         </div>
-        <p className="mt-2 text-micro text-muted-foreground">
+        <p {...stylex.props(styles.microMuted)}>
           ← → to step · Esc to skip
         </p>
       </div>

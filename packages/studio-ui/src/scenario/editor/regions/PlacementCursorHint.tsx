@@ -3,6 +3,8 @@
 import { useEffect, useState, type RefObject } from "react";
 import { MousePointer2, TriangleAlert } from "lucide-react";
 import type { EditorState } from "@simforge-oss/editor";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./PlacementCursorHint.stylex";
 
 interface CursorPoint {
   x: number;
@@ -52,11 +54,7 @@ export function PlacementCursorHint({
 
   return (
     <div
-      className={`pointer-events-none fixed z-[70] flex min-w-[188px] max-w-[320px] items-center gap-2 border px-3 py-2 backdrop-blur-xl ${
-        warning
-          ? "border-amber-300/80 bg-amber-400/25 text-amber-50 shadow-[0_10px_36px_rgba(251,191,36,.22)]"
-          : "border-white/10 bg-black/70 text-white shadow-[0_10px_32px_rgba(0,0,0,.22)]"
-      }`}
+      {...stylex.props(styles.hint, warning ? styles.hintWarning : styles.hintNeutral)}
       data-placement-mode={state.mode}
       data-placement-valid={String(ready)}
       data-placement-warning={String(Boolean(warning))}
@@ -67,13 +65,13 @@ export function PlacementCursorHint({
     >
       <Icon
         aria-hidden="true"
-        className={warning || !ready ? "size-4 shrink-0 text-amber-300" : "size-4 shrink-0 text-sky-300"}
+        className={stylex.props(styles.icon, warning || !ready ? styles.iconWarning : styles.iconReady).className}
       />
-      <span className="min-w-0">
-        <strong className={`block text-[11px] font-medium leading-tight ${warning ? "text-amber-50" : ""}`}>
+      <span {...stylex.props(styles.narrowable)}>
+        <strong {...stylex.props(styles.headline, warning ? styles.headlineWarning : null)}>
           {warning ? `Route warning · click to ${action} anyway` : ready ? `Click to ${action}` : moving ? "Move blocked" : "Placement armed"}
         </strong>
-        <span className={`block max-w-[280px] text-[9px] leading-snug ${warning ? "text-amber-100/85" : "text-white/65"}`}>
+        <span {...stylex.props(styles.detail, warning ? styles.detailWarning : styles.detailNeutral)}>
           {detail}{warning ? " Interactions may not work properly on this road." : ""} · Esc cancel
         </span>
       </span>

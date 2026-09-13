@@ -48,7 +48,7 @@ export function AdditionalArtifactsPanel({
           {files.map((f, i) => (
             <li key={f.name} className={stylex.props(styles.s_264).className}>
               <span className={stylex.props(styles.s_941).className}>{f.name}</span>
-              <Badge variant="outline" className={stylex.props(styles.s_266).className}>
+              <Badge variant="outline" xstyle={styles.s_266}>
                 {artifactTypeFromExtension(f.name) ?? "?"}
               </Badge>
               <UploadStatusBadge upload={uploads[`artifact-${i}`]} />

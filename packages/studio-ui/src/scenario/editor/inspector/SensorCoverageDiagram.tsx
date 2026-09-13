@@ -2,6 +2,8 @@
 
 import { sensorAperture, type ActorSensor } from "@simforge-oss/scenario";
 import { modalityLabel, sensorName } from "./sensor-presentation";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./SensorCoverageDiagram.stylex";
 
 /**
  * Top-down plan of the actor and what its sensors can see.
@@ -41,7 +43,7 @@ export function SensorCoverageDiagram({
   return (
     <svg
       aria-label="Sensor coverage plan"
-      className="h-full w-full"
+      {...stylex.props(styles.wideTall)}
       role="img"
       viewBox={`${-extentX} ${-extentY} ${extentX * 2} ${extentY * 2}`}
     >
@@ -62,7 +64,7 @@ export function SensorCoverageDiagram({
       ))}
 
       <rect
-        className="fill-muted/40 stroke-foreground/25"
+        {...stylex.props(styles.fillMuted40StrokeForeground25)}
         height={dims.length}
         rx={Math.min(0.35, dims.width / 6)}
         strokeWidth={0.04}
@@ -72,7 +74,7 @@ export function SensorCoverageDiagram({
       />
       {/* Nose marker: without it a symmetric box gives no clue which way is forward. */}
       <path
-        className="fill-none stroke-foreground/40"
+        {...stylex.props(styles.fillNoneStrokeForeground40)}
         d={`M ${-halfWidth * 0.55} ${-halfLength * 0.72} L 0 ${-halfLength * 0.93} L ${halfWidth * 0.55} ${-halfLength * 0.72}`}
         strokeWidth={0.05}
       />
@@ -82,13 +84,14 @@ export function SensorCoverageDiagram({
         return (
           <g key={sensor.id}>
             <circle
-              className={
+              {...stylex.props(
+                styles.markerStroke,
                 selected
-                  ? "fill-primary stroke-background"
+                  ? styles.markerSelected
                   : sensor.enabled
-                    ? "fill-foreground/70 stroke-background"
-                    : "fill-muted-foreground/40 stroke-background"
-              }
+                    ? styles.markerEnabled
+                    : styles.markerDisabled,
+              )}
               cx={-sensor.mount.position.z}
               cy={-sensor.mount.position.x}
               r={selected ? 0.19 : 0.14}
@@ -97,7 +100,7 @@ export function SensorCoverageDiagram({
             {/* The whole marker is the hit target: at this scale a 0.19m circle is a few pixels. */}
             <circle
               aria-label={`Select ${sensorName(sensor)}`}
-              className="cursor-pointer fill-transparent"
+              {...stylex.props(styles.pointer)}
               cx={-sensor.mount.position.z}
               cy={-sensor.mount.position.x}
               onClick={() => onSelect(sensor.id)}
@@ -126,17 +129,17 @@ function Wedge({
   const originX = -sensor.mount.position.z;
   const originY = -sensor.mount.position.x;
   const colour = selected
-    ? "text-primary"
+    ? styles.wedgeSelected
     : sensor.type === "dash_camera"
-      ? "text-sky-300"
+      ? styles.wedgeCamera
       : sensor.type === "lidar"
-        ? "text-emerald-300"
-        : "text-orange-300";
+        ? styles.wedgeLidar
+        : styles.wedgeOther;
 
   if (aperture.horizontalFovDeg >= 359.5) {
     return (
       <circle
-        className={`${colour} fill-[url(#sensor-wedge-fade)] stroke-current`}
+        {...stylex.props(styles.wedge, colour)}
         cx={originX}
         cy={originY}
         opacity={selected ? 0.9 : 0.45}
@@ -158,7 +161,7 @@ function Wedge({
 
   return (
     <path
-      className={`${colour} fill-[url(#sensor-wedge-fade)] stroke-current`}
+      {...stylex.props(styles.wedge, colour)}
       d={`M ${originX} ${originY} L ${from.x} ${from.y} A ${radius} ${radius} 0 ${largeArc} 1 ${to.x} ${to.y} Z`}
       opacity={selected ? 0.95 : 0.4}
       strokeOpacity={0.3}

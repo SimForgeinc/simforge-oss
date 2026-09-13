@@ -5,6 +5,8 @@ import { useCallback } from "react";
 import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/recording-client";
 import { RenderWorkspace } from "./RenderWorkspace";
 import { useOptionalScenarioSession } from "../../scene/ScenarioSessionContext";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./DocumentRenderWorkspace.stylex";
 
 /**
  * The one entry point into the render workspace, for every route that opens it.
@@ -113,7 +115,7 @@ export function DocumentRenderWorkspace({
 
   if (!documentId) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      <div {...stylex.props(styles.flexCenterMid)}>
         Select a saved scenario to open its render workspace.
       </div>
     );

@@ -55,6 +55,12 @@ describe("EditorModeBanner", () => {
   it("keeps the warning treatment for a warning flash", () => {
     banner({ mode: "idle", hint: "", message: "Warning: no driving lane nearby" });
 
-    expect(screen.getByRole("status").className).toContain("bg-amber-400");
+    expect(screen.getByRole("status").dataset.bannerVariant).toBe("warning");
+  });
+
+  it("uses the ordinary mode treatment for a non-warning flash", () => {
+    banner({ mode: "grab", hint: "", message: "lane anchor cleared" });
+
+    expect(screen.getByRole("status").dataset.bannerVariant).toBe("mode");
   });
 });

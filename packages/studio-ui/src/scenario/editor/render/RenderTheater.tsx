@@ -5,7 +5,6 @@ import type { PresignedArtifact } from "@simforge-oss/studio-host";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Camera, CircleStop, EyeOff } from "lucide-react";
 import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface";
-import { cn } from "../../../lib/utils";
 import { useVisiblePolling } from "../../../lib/use-visible-polling";
 import { WorkspacePaneLoading } from "../../../components/WorkspacePaneLoading";
 import { RenderArtifactList } from "./RenderArtifactList";
@@ -26,6 +25,9 @@ import {
   shortDigest,
 } from "./render-view-model";
 import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderTheater.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The detail sections beside the player.
@@ -163,31 +165,31 @@ export function RenderTheater({
   return (
     <section
       aria-label="Render run details"
-      className="render-view-enter flex min-h-0 flex-1 flex-col"
+      className={`${stylex.props(styles.flexColFill).className} render-view-enter`}
       data-testid="scenario-render-theater"
       data-render-job-id={jobId}
     >
-      <header className="flex shrink-0 flex-col gap-2 border-b render-hairline px-5 py-3.5">
-        <div className="flex items-center gap-3">
+      <header {...stylex.props(styles.flexColTight)}>
+        <div {...stylex.props(styles.flexCenterGap3)}>
           <button
             aria-label="Back to the render gallery"
-            className="editor-motion render-glass grid size-8 shrink-0 place-items-center border text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
             data-testid="scenario-render-theater-back"
             onClick={onBack}
             type="button"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
+            <ArrowLeft aria-hidden="true" className={stylex.props(styles.size4).className} />
           </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold text-foreground">
+          <div {...stylex.props(styles.fillNarrowable)}>
+            <h2 {...stylex.props(styles.smInkSemibold)}>
               {detail ? renderJobLabel(detail) : "Render"} ·{" "}
               {formatTimestamp(detail?.createdAt ?? null)}
             </h2>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-muted-foreground">
+            <div {...stylex.props(styles.flexCenterWrap)}>
               <span>{formatElapsed(detail?.startedAt ?? null, detail?.completedAt ?? null)}</span>
               <span>{detail ? formatCostCents(detail.estimatedCostCents) : "—"}</span>
-              <span className="inline-flex items-center gap-1">
-                <Camera aria-hidden="true" className="size-3" />
+              <span {...stylex.props(styles.inlineFlexCenterGap1)}>
+                <Camera aria-hidden="true" className={stylex.props(styles.size3).className} />
                 {videos.length} {videos.length === 1 ? "video" : "videos"}
               </span>
               {detail && detail.attemptCount > 1 ? <span>attempt {detail.attemptCount}</span> : null}
@@ -197,7 +199,7 @@ export function RenderTheater({
           {cancellable ? (
             <button
               aria-label="Cancel this render"
-              className="editor-motion inline-flex shrink-0 items-center gap-1.5 border border-destructive/40 bg-destructive/10 px-3 py-1 text-micro font-medium text-destructive hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className={stylex.props(styles.inlineFlexCenterTight, motionStyles.editorMotion).className}
               disabled={actionBusy}
               onClick={() => void cancel()}
               type="button"
@@ -205,14 +207,14 @@ export function RenderTheater({
               {actionBusy ? (
                 <CloudActivityIndicator />
               ) : (
-                <CircleStop aria-hidden="true" className="size-3" />
+                <CircleStop aria-hidden="true" className={stylex.props(styles.size3).className} />
               )}
               Cancel
             </button>
           ) : (
             <button
               aria-label="Hide this render from the gallery"
-              className="editor-motion render-glass inline-flex shrink-0 items-center gap-1.5 border px-3 py-1 text-micro font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className={stylex.props(styles.inlineFlexCenterTight2, motionStyles.editorMotion).className}
               disabled={actionBusy}
               onClick={() => void hide()}
               type="button"
@@ -220,20 +222,20 @@ export function RenderTheater({
               {actionBusy ? (
                 <CloudActivityIndicator />
               ) : (
-                <EyeOff aria-hidden="true" className="size-3" />
+                <EyeOff aria-hidden="true" className={stylex.props(styles.size3).className} />
               )}
               Hide
             </button>
           )}
         </div>
         {failure ? (
-          <p className="text-xs text-destructive" role="alert">
+          <p {...stylex.props(styles.xsDanger)} role="alert">
             {failure}
             {detail?.failureDetail ? ` — ${detail.failureDetail}` : ""}
           </p>
         ) : null}
         {error ? (
-          <p className="text-xs text-destructive" role="alert">
+          <p {...stylex.props(styles.xsDanger)} role="alert">
             {error}
           </p>
         ) : null}
@@ -241,19 +243,19 @@ export function RenderTheater({
 
       {!detail ? (
         <WorkspacePaneLoading
-          className="min-h-0 flex-1"
+          xstyle={styles.fillShrinkable}
           hint="Reading the render job, its attempts and its files."
           message="Loading render…"
         />
       ) : (
-        <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-0 overflow-hidden xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-1">
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-4">
+        <div {...stylex.props(styles.gridFillClip)}>
+          <div {...stylex.props(styles.flexColScrollY)}>
             {hero ? (
-              <figure className="render-glass flex min-h-0 flex-col border" key={hero.id}>
+              <figure {...stylex.props(styles.flexColBordered)} key={hero.id}>
                 {/* Render artifacts are served through the local object-store URL. */}
                 <video
                   autoPlay
-                  className="aspect-video w-full render-video-mat object-contain"
+                  {...stylex.props(styles.wideVideoContain)}
                   controls
                   loop
                   muted
@@ -263,18 +265,18 @@ export function RenderTheater({
                 >
                   <track kind="captions" />
                 </video>
-                <figcaption className="flex items-baseline justify-between gap-2 px-3 py-2">
-                  <span className="truncate text-xs font-medium text-foreground">
+                <figcaption {...stylex.props(styles.flexBetweenBaseline)}>
+                  <span {...stylex.props(styles.xsInkMedium)}>
                     {hero.artifactKind}
                   </span>
-                  <span className="shrink-0 text-micro uppercase tracking-meta text-muted-foreground">
+                  <span {...stylex.props(styles.tightCapsMicro)}>
                     {hero.mediaType}
                   </span>
                 </figcaption>
               </figure>
             ) : (
-              <div className="render-glass flex min-h-72 flex-1 flex-col items-center justify-center gap-3 border p-8 text-center text-sm text-muted-foreground">
-                <Camera aria-hidden="true" className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <div {...stylex.props(styles.flexColCenter)}>
+                <Camera aria-hidden="true" className={stylex.props(styles.size6TextMutedForeground50).className} strokeWidth={1.5} />
                 <span>
                   {live ? "Videos will appear here when the render finishes." : "This render has no videos."}
                 </span>
@@ -285,7 +287,7 @@ export function RenderTheater({
             {videos.length > 1 ? (
               <div
                 aria-label="Videos in this render"
-                className="flex shrink-0 flex-wrap gap-2"
+                {...stylex.props(styles.flexWrapTight)}
                 role="tablist"
               >
                 {videos.map((artifact) => {
@@ -293,10 +295,7 @@ export function RenderTheater({
                   return (
                     <button
                       aria-selected={active}
-                      className={cn(
-                        "editor-motion relative w-40 shrink-0 overflow-hidden border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        active ? "border-primary" : "render-glass hover:border-primary/50",
-                      )}
+                      className={stylex.props(active ? styles.relTightBordered : styles.relTightBordered2, motionStyles.editorMotion).className}
                       key={artifact.id}
                       onClick={() => setHeroArtifactId(artifact.id)}
                       role="tab"
@@ -304,7 +303,7 @@ export function RenderTheater({
                     >
                       <video
                         aria-hidden="true"
-                        className="aspect-video w-full render-video-mat object-cover"
+                        {...stylex.props(styles.wideVideoCover)}
                         muted
                         playsInline
                         preload="metadata"
@@ -312,7 +311,7 @@ export function RenderTheater({
                       >
                         <track kind="captions" />
                       </video>
-                      <span className="block truncate px-2 py-1 text-micro uppercase tracking-meta text-muted-foreground">
+                      <span {...stylex.props(styles.blockCapsMicro)}>
                         {artifact.artifactKind}
                       </span>
                     </button>
@@ -322,10 +321,10 @@ export function RenderTheater({
             ) : null}
           </div>
 
-          <div className="flex min-h-0 flex-col render-hairline xl:border-l">
+          <div {...stylex.props(styles.flexColShrinkable)}>
             <div
               aria-label="Render details sections"
-              className="flex shrink-0 items-center gap-1 border-b render-hairline px-2 py-1.5"
+              {...stylex.props(styles.flexCenterTight)}
               role="tablist"
             >
               {RAIL_TABS.map((id) => {
@@ -335,12 +334,7 @@ export function RenderTheater({
                     aria-controls="scenario-render-rail-panel"
                     aria-selected={active}
                     id={`scenario-render-rail-tab-${id}`}
-                    className={cn(
-                      "editor-motion px-2.5 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      active
-                        ? "render-glass-raised border text-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
+                    className={stylex.props(active ? styles.xsInkMedium2 : styles.xsMutedMedium, motionStyles.editorMotion).className}
                     key={id}
                     onClick={() => setTab(id)}
                     role="tab"
@@ -353,12 +347,12 @@ export function RenderTheater({
             </div>
             <div
               aria-labelledby={`scenario-render-rail-tab-${tab}`}
-              className="min-h-0 flex-1 overflow-y-auto"
+              {...stylex.props(styles.fillScrollYShrinkable)}
               id="scenario-render-rail-panel"
               role="tabpanel"
             >
               {tab === "files" ? (
-                <div className="flex flex-col gap-5 p-3">
+                <div {...stylex.props(styles.flexColGap5)}>
                   <RenderArtifactList
                     artifacts={downloads.length > 0 ? downloads : detail.artifacts}
                     emptyMessage="This render has produced no files yet."
@@ -376,7 +370,7 @@ export function RenderTheater({
                   )}
                 </div>
               ) : tab === "behavior" ? (
-                <div className="p-3">
+                <div {...stylex.props(styles.pad3)}>
                   <RenderParityEvidencePanel
                     artifacts={downloads}
                     executionPackageControlSha256={detail.executionPackageControlSha256}
@@ -385,25 +379,25 @@ export function RenderTheater({
                   />
                 </div>
               ) : tab === "log" ? (
-                <div className="p-3 font-mono text-micro leading-relaxed text-foreground/75">
+                <div {...stylex.props(styles.monoMicroPad3)}>
                   {detail.events.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                    <div {...stylex.props(styles.flexCenterMid)}>
                       No events recorded yet.
                     </div>
                   ) : (
                     detail.events.map((event) => (
-                      <div className="flex gap-3" key={event.eventOrdinal}>
-                        <span className="shrink-0 text-muted-foreground">
+                      <div {...stylex.props(styles.flexGap3)} key={event.eventOrdinal}>
+                        <span {...stylex.props(styles.tightMuted)}>
                           {formatTimestamp(event.createdAt)}
                         </span>
-                        <span className="break-all">{humanizeCode(event.eventKind)}</span>
+                        <span {...stylex.props(styles.breakAll)}>{humanizeCode(event.eventKind)}</span>
                       </div>
                     ))
                   )}
                 </div>
               ) : (
-                <div className="p-3">
-                  <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-[7.5rem_minmax(0,1fr)]">
+                <div {...stylex.props(styles.pad3)}>
+                  <dl {...stylex.props(styles.gridXs)}>
                     <ConfigRow label="Mode" value={renderJobLabel(detail)} />
                     <ConfigRow label="Status" value={renderStateVisual(detail.jobState).label} />
                     <ConfigRow label="Created" value={formatTimestamp(detail.createdAt)} />
@@ -454,8 +448,8 @@ export function RenderTheater({
 function ConfigRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <>
-      <dt className="text-micro uppercase tracking-meta text-muted-foreground">{label}</dt>
-      <dd className={cn("min-w-0 break-all text-foreground", mono ? "font-mono text-micro" : "")}>
+      <dt {...stylex.props(styles.capsMicroMuted)}>{label}</dt>
+      <dd {...stylex.props(mono ? styles.monoMicroInk : styles.inkNarrowableBreakAll)}>
         {value}
       </dd>
     </>

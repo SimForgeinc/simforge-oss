@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { ActorRecord, EditorDocument } from "@simforge-oss/editor";
 import { ActionPalette } from "../timeline/ActionPalette";
 import { InteractionList } from "../timeline/InteractionList";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ActorReactionEditor.stylex";
 
 /** Selected-actor behavior only; document-global authoring never enters this tab. */
 export function ActorReactionEditor({
@@ -23,8 +25,8 @@ export function ActorReactionEditor({
   );
 
   return (
-    <div className="mt-4 space-y-3" data-actor-id={actor.id} data-testid="actor-reaction-editor">
-      <div className="flex min-h-0 overflow-hidden border border-white/10">
+    <div {...stylex.props(styles.mt4)} data-actor-id={actor.id} data-testid="actor-reaction-editor">
+      <div {...stylex.props(styles.flexBorderedClip)}>
         <ActionPalette
           document={document}
           role={role}

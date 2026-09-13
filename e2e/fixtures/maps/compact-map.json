@@ -1,0 +1,68 @@
+{
+  "schema": "simforge.e2e.map-fixture.v1",
+  "note": "Deterministic compact map closure used by e2e/flows/maps.spec.ts. Byte-identical on every run so release/closure digests are stable.",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "summary": {
+    "label": "SimForge E2E Compact",
+    "description": "Synthetic compact map closure for deterministic registry flows."
+  },
+  "canonical": {
+    "files": [
+      {
+        "path": "master.gltf",
+        "encoding": "base64",
+        "content": "eyJhc3NldCI6eyJnZW5lcmF0b3IiOiJzaW1mb3JnZS1lMmUtZml4dHVyZSIsInZlcnNpb24iOiIyLjAifSwiYnVmZmVycyI6W3siYnl0ZUxlbmd0aCI6NjQsInVyaSI6Imdlb21ldHJ5LmJpbiJ9XSwiaW1hZ2VzIjpbeyJ1cmkiOiJpbWFnZXMvc3VyZmFjZS5wbmcifSx7InVyaSI6ImltYWdlcy9zdXJmYWNlLmt0eDIifV0sIm5vZGVzIjpbeyJuYW1lIjoiY29tcGFjdC1ibG9jayJ9XSwic2NlbmUiOjAsInNjZW5lcyI6W3sibm9kZXMiOlswXX1dfQ=="
+      },
+      {
+        "path": "geometry.bin",
+        "encoding": "base64",
+        "content": "AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK+2vcTL0tng5+71AQgPFh0kKzI5QEdOVVxjanF4f4aNlJuiqbC3vg=="
+      },
+      {
+        "path": "images/surface.png",
+        "encoding": "base64",
+        "content": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mMwTpsJAAICATNoejH4AAAAAElFTkSuQmCC"
+      },
+      {
+        "path": "images/surface.ktx2",
+        "encoding": "base64",
+        "content": "q0tUWCAyMLsNChoKAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v"
+      },
+      {
+        "path": "map.xodr",
+        "encoding": "utf8",
+        "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenDRIVE>\n  <header revMajor=\"1\" revMinor=\"7\" name=\"simforge-e2e-compact\" version=\"1.00\" date=\"2026-01-01T00:00:00\"\n          north=\"10\" south=\"-10\" east=\"10\" west=\"-10\"/>\n  <road name=\"main\" length=\"120.0\" id=\"1\" junction=\"-1\">\n    <planView><geometry s=\"0\" x=\"0\" y=\"0\" hdg=\"0\" length=\"120.0\"><line/></geometry></planView>\n  </road>\n</OpenDRIVE>\n"
+      },
+      {
+        "path": "signals.geojson.gz",
+        "encoding": "base64",
+        "content": "H4sIAAAAAAAC/6tWKqksSFWyUnJLTSwpLUp1zs/JSU0uyczPU9JRSoOIFStZRcfWAgD36bSQKgAAAA=="
+      },
+      {
+        "path": "topology-index.json.gz",
+        "encoding": "base64",
+        "content": "H4sIAAAAAAAC/6tWKk7OSM1NVLJSKs7MTcsvSk/VK8kvyM/JT6/UzcxLSa3QKzNU0lHKTSzwTAEqSjVK1U3Ozy1ITC4BiuYk5qUWK1lV19YCACSvGiZIAAAA"
+      },
+      {
+        "path": "reports/master.json",
+        "encoding": "utf8",
+        "content": "{\"schema\":\"simforge.map-master-report.v1\",\"cells\":1,\"triangles\":12}"
+      }
+    ]
+  },
+  "web": {
+    "toolFingerprint": "simforge-e2e-web-tier@1",
+    "files": [
+      {
+        "path": "3d/manifest.json",
+        "encoding": "base64",
+        "content": "eyJzdGF0aWNMYXllcnMiOltdLCJ0aWxlcyI6W10sInZlZ2V0YXRpb25UaWxlcyI6W10sInZlcnNpb24iOiIxLjIuMCJ9"
+      },
+      {
+        "path": "images/surface.ktx2",
+        "encoding": "base64",
+        "content": "q0tUWCAyMLsNChoKAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v"
+      }
+    ]
+  }
+}

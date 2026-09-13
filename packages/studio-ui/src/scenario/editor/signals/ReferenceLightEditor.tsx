@@ -17,6 +17,8 @@ import {
 } from "../../../lib/scenario/signals";
 
 import { formatSeconds, indicationSwatch } from "./indication-style";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ReferenceLightEditor.stylex";
 
 /**
  * The whole authoring surface for one traffic light: three sortable phase rows.
@@ -72,23 +74,23 @@ export function ReferenceLightEditor({
   };
 
   return (
-    <section aria-label="Traffic light timing" className="min-w-0 space-y-2">
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-meta font-semibold text-foreground">{label}</p>
+    <section aria-label="Traffic light timing" {...stylex.props(styles.narrowable)}>
+      <div {...stylex.props(styles.flexCenterBetween)}>
+        <p {...stylex.props(styles.metaInkSemibold)}>{label}</p>
         {headerAction}
       </div>
 
       {/* The cycle at a glance follows the same user-selected order as the table. */}
       <div
         aria-hidden="true"
-        className="flex h-2 w-full overflow-hidden border border-border bg-muted"
+        {...stylex.props(styles.flexBorderedClip)}
       >
         {phaseOrder.map((indication) => {
           const seconds = durationByPhase[indication];
           return seconds > 0 ? (
             <span
               key={indication}
-              className={indicationSwatch(indication).fill}
+              {...stylex.props(indicationSwatch(indication).fill)}
               style={{ width: `${(seconds / Math.max(cycleS, 0.1)) * 100}%` }}
             />
           ) : null;
@@ -97,17 +99,17 @@ export function ReferenceLightEditor({
 
       <div
         aria-label="Traffic light phase order and duration"
-        className="overflow-hidden rounded-md border border-border"
+        {...stylex.props(styles.borderedClip)}
         role="table"
       >
         <div
-          className="grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border bg-muted/60 px-1.5 py-1 text-micro uppercase tracking-wide text-muted-foreground"
+          {...stylex.props(styles.gridCenterCaps)}
           role="row"
         >
           <span aria-label="Order" role="columnheader" />
           <span role="columnheader">Phase</span>
-          <span className="text-right" role="columnheader">Seconds</span>
-          <span className="sr-only" role="columnheader">Reorder</span>
+          <span {...stylex.props(styles.rightText)} role="columnheader">Seconds</span>
+          <span {...stylex.props(styles.srOnly)} role="columnheader">Reorder</span>
         </div>
         {phaseOrder.map((phase, at) => (
           <TimingRow
@@ -123,7 +125,7 @@ export function ReferenceLightEditor({
         ))}
       </div>
 
-      <p className="text-micro leading-relaxed text-muted-foreground">
+      <p {...stylex.props(styles.microMutedRelaxed)}>
         {formatSeconds(cycleS)}s cycle
         {crossingStageCount > 0
           ? ` · ${crossingStageCount} crossing ${
@@ -140,7 +142,7 @@ export function ReferenceLightEditor({
       */}
       {!generated ? (
         <p
-          className="border border-signal-yellow/50 bg-signal-yellow/10 px-2 py-1.5 text-micro leading-relaxed text-signal-yellow"
+          {...stylex.props(styles.microBorderedRelaxed)}
           data-testid="signal-reference-hand-edited"
           role="status"
         >
@@ -194,23 +196,23 @@ function TimingRow({
       : { min: MIN_RED_S, max: MAX_RED_S };
   return (
     <div
-      className="grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border px-1.5 py-1 last:border-b-0"
+      {...stylex.props(styles.gridCenterRuleB)}
       data-testid={`traffic-light-phase-row-${phase}`}
       role="row"
     >
-      <span className="grid place-items-center" role="cell">
-        <ArrowUpDown aria-hidden="true" className="size-3 text-muted-foreground/60" />
+      <span {...stylex.props(styles.gridCentered)} role="cell">
+        <ArrowUpDown aria-hidden="true" className={stylex.props(styles.size3TextMutedForeground60).className} />
       </span>
-      <div className="flex min-w-0 items-center gap-1.5" role="cell">
+      <div {...stylex.props(styles.flexCenterNarrowable)} role="cell">
         <span
           aria-hidden="true"
-          className={`size-2.5 shrink-0 rounded-full ${indicationSwatch(phase).fill}`}
+          {...stylex.props(styles.phaseDot, indicationSwatch(phase).fill)}
         />
-        <label className="truncate text-meta text-foreground" htmlFor={id}>
+        <label {...stylex.props(styles.metaInkTruncate)} htmlFor={id}>
           {label}
         </label>
       </div>
-      <div className="relative" role="cell">
+      <div {...stylex.props(styles.rel)} role="cell">
         <Input
           id={id}
           key={`${id}-${value}`}
@@ -220,7 +222,7 @@ function TimingRow({
           max={bounds.max}
           step={1}
           defaultValue={value}
-          className="h-6 w-full pr-3 pl-1 text-right text-meta tabular-nums"
+          xstyle={styles.metaWideRightText}
           onBlur={(event) => {
             const next = Number(event.currentTarget.value);
             if (Number.isFinite(next) && next !== value) onCommit(next);
@@ -231,29 +233,29 @@ function TimingRow({
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-muted-foreground"
+          {...stylex.props(styles.absMutedInert)}
         >
           s
         </span>
       </div>
-      <div className="flex justify-end" role="cell">
+      <div {...stylex.props(styles.flexEnd)} role="cell">
         <button
           aria-label={`Move ${label} up`}
-          className="grid size-5 place-items-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-20"
+          {...stylex.props(styles.gridCenteredMuted)}
           disabled={first}
           onClick={onMoveUp}
           type="button"
         >
-          <ChevronUp aria-hidden="true" className="size-3" />
+          <ChevronUp aria-hidden="true" className={stylex.props(styles.size3).className} />
         </button>
         <button
           aria-label={`Move ${label} down`}
-          className="grid size-5 place-items-center text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-20"
+          {...stylex.props(styles.gridCenteredMuted)}
           disabled={last}
           onClick={onMoveDown}
           type="button"
         >
-          <ChevronDown aria-hidden="true" className="size-3" />
+          <ChevronDown aria-hidden="true" className={stylex.props(styles.size3).className} />
         </button>
       </div>
     </div>

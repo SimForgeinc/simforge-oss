@@ -59,6 +59,9 @@ import type { ParkedCarPlan } from "../../../lib/scenario/parking/fill";
 import type { ParkedCarsSettings } from "../../../lib/scenario/parking/extension";
 import type { ParkingStallsStatus } from "../../../lib/scenario/parking/useParkedCars";
 import { usePanelEdgeResize } from "../usePanelEdgeResize";
+import * as stylex from "@stylexjs/stylex";
+import { styles as sx } from "./ActorLibraryRail.stylex";
+import { styles as catalogStyles } from "./catalog-surfaces.stylex";
 
 /** Everything the parked-cars tool needs, supplied by the editor surface. */
 export interface ParkedCarsRailState {
@@ -499,7 +502,7 @@ export function ActorLibraryRail({
 
   return (
     <div
-      className="pointer-events-auto flex h-full min-h-0 items-center"
+      {...stylex.props(sx.flexCenterLive)}
       data-testid="editor-tool-sidebar"
       data-tutorial="actor-library"
     >
@@ -553,7 +556,7 @@ export function ActorLibraryRail({
               return (
                 <button
                   key={tool.id}
-                  className="actor-tool-button"
+                  {...stylex.props(sx.toolButton)}
                   type="button"
                   aria-label={tool.label}
                   aria-pressed={active}
@@ -577,7 +580,7 @@ export function ActorLibraryRail({
                   onMouseLeave={() => setHoveredTool(null)}
                   onClick={() => run(tool)}
                 >
-                  <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
+                  <Icon {...stylex.props(sx.toolIcon)} aria-hidden="true" size={18} strokeWidth={1.8} />
                 </button>
               );
             })}
@@ -589,7 +592,7 @@ export function ActorLibraryRail({
           has to clear the rail's own clipped frame, hence `fixed`. */}
       {hoveredTool ? (
         <span
-          className="actor-rail-tooltip"
+          {...stylex.props(sx.railTooltip)}
           data-testid="tool-tooltip"
           role="tooltip"
           style={{ ...styles.railTooltip, top: hoveredTool.top }}
@@ -602,7 +605,7 @@ export function ActorLibraryRail({
         <section
           ref={catalogPanelRef as React.RefObject<HTMLElement>}
           aria-label={addActorTitle(activeTool)}
-          className="actor-add-panel-enter"
+          {...stylex.props(sx.panelEnter)}
           data-placement="left-expanded"
           data-testid="catalog-drawer"
           data-visual-surface="glass"
@@ -620,7 +623,7 @@ export function ActorLibraryRail({
           {/* The rail is welded to the panel's left edge, so the right edge is the free one. */}
           <div
             {...catalogSeparatorProps}
-            className="actor-add-panel-resize"
+            {...stylex.props(sx.panelResize)}
             data-testid="catalog-resize-handle"
             style={styles.panelResizeHandle}
           />
@@ -634,7 +637,7 @@ export function ActorLibraryRail({
             </span>
             <button
               aria-label="Close catalog"
-              className="actor-panel-close"
+              {...stylex.props(sx.panelClose)}
               data-testid="catalog-close"
               onClick={() => { controller?.cancel(); setActiveTool(null); }}
               style={styles.panelClose}
@@ -668,7 +671,7 @@ export function ActorLibraryRail({
               </div>
               {activeTool === "vehicles" ? (
                 <button
-                  className="actor-chip"
+                  {...stylex.props(catalogStyles.chip)}
                   type="button"
                   aria-label="Add random car"
                   style={styles.randomAction}
@@ -688,7 +691,7 @@ export function ActorLibraryRail({
               <div style={styles.filters} aria-label="Catalog filters">
                 {FILTERS.map((item) => (
                   <button
-                    className="actor-chip"
+                    {...stylex.props(catalogStyles.chip)}
                     key={item.id}
                     type="button"
                     aria-pressed={filter === item.id}
@@ -723,7 +726,7 @@ export function ActorLibraryRail({
               <div aria-label="Categories" role="group" style={styles.categories}>
                 <button
                   aria-pressed={category === ALL_CATEGORIES}
-                  className="actor-chip actor-catalog-chip-enter"
+                  {...stylex.props(catalogStyles.chip, sx.chipEnter)}
                   onClick={() => { setCategory(ALL_CATEGORIES); setSelectedIndex(0); }}
                   style={{
                     ...styles.category,
@@ -738,7 +741,7 @@ export function ActorLibraryRail({
                   return (
                     <button
                       aria-pressed={selected}
-                      className="actor-chip actor-catalog-chip-enter"
+                      {...stylex.props(catalogStyles.chip, sx.chipEnter)}
                       key={section.id}
                       onClick={() => { setCategory(section.id); setSelectedIndex(0); }}
                       style={{
@@ -952,7 +955,7 @@ const styles: Record<string, CSSProperties> = {
 
   panelBody: { flex: "1 1 auto", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "12px 18px 14px", scrollbarWidth: "thin" },
   // Border, radius, background and every hover/active state of a tile live in
-  // `.actor-catalog-tile`: hover cannot be expressed inline.
+  // `catalog-surfaces.stylex`: hover cannot be expressed inline.
   empty: { height: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, color: "#727b88", fontSize: 10, textAlign: "center" },
   emptyGlyph: { fontSize: 30, color: "#555d68" },
   panelFooter: { flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 18px 11px", borderTop: "1px solid rgba(255,255,255,.08)", color: "#77808d", fontSize: 8.5 },

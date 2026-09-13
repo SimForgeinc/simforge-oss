@@ -21,7 +21,6 @@ import {
   logMapLoadTimeout,
   logMapMountDiagnostics,
 } from "@/app/lib/maps/frontend/map-diagnostics";
-import { C } from "./map-layer-constants";
 import { AssetHoverTooltip, ClusterSelectionPopover, FeatureHoverTooltip } from "./overlays";
 import SatelliteBasemapToggle from "./SatelliteBasemapToggle";
 import MeasureToolButton from "./MeasureToolButton";
@@ -403,6 +402,9 @@ export function MapAssetsMapView({
   return (
     <div
       ref={containerRef}
+      // Global class, not StyleX: the rule it carries dims MapLibre's own
+      // `.maplibregl-canvas` and marker descendants, which this component does
+      // not render and cannot attach a class to.
       className={dimNonCandidateLayers ? "editor-map-dim-non-candidates" : undefined}
       data-map-interaction-locked={interactionLocked ? "true" : "false"}
       data-map-dim-non-candidates={dimNonCandidateLayers ? "true" : "false"}
@@ -415,47 +417,14 @@ export function MapAssetsMapView({
         <button
           type="button"
           onClick={onResetView}
-          style={{
-            position: "absolute",
-            top: "0.75rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10,
-            padding: "0.3rem 0.85rem",
-            background: `${C.bg}f2`,
-            color: C.fg,
-            border: `1px solid ${C.border}`,
-            borderRadius: "999px",
-            fontSize: "0.75rem",
-            fontFamily: C.font,
-            cursor: "pointer",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-            whiteSpace: "nowrap",
-          }}
+          {...stylex.props(styles.resetButton)}
         >
           ← Show all maps
         </button>
       )}
 
       {geojsonLoading && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "0.75rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10,
-            padding: "0.3rem 0.75rem",
-            background: `${C.bg}e0`,
-            color: C.muted,
-            borderRadius: "999px",
-            fontSize: "0.75rem",
-            fontFamily: C.font,
-            pointerEvents: "none",
-            border: `1px solid ${C.border}`,
-            whiteSpace: "nowrap",
-          }}
-        >
+        <div {...stylex.props(styles.loadingPill)}>
           Loading geometry…
         </div>
       )}

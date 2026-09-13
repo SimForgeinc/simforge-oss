@@ -111,7 +111,7 @@ export function MapSelectionScreen({
 
           {signedIn ? null : (
             <div {...stylex.props(onboarding.lockedNotice)} data-testid="onboarding-locked-notice">
-              <Lock {...stylex.props(onboarding.icon, onboarding.iconWarning)} aria-hidden="true" />
+              <Lock {...stylex.props(onboarding.icon, onboarding.iconNoShrink, onboarding.iconWarning)} aria-hidden="true" />
               <p {...stylex.props(onboarding.lockedNoticeText)}>
                 {lockedCount > 0
                   ? `Sign in to unlock ${lockedCount} more ${lockedCount === 1 ? "map" : "maps"} from your SimCloud account.`

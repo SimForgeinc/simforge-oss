@@ -47,7 +47,7 @@ export function MultiSelectionPanel({
       </span>
       {unanchored.length > 0 ? (
         <Button
-          className={stylex.props(styles.button).className}
+          xstyle={styles.resnapButton}
           data-testid="multi-selection-resnap"
           onClick={() => controller?.resnapToLane(unanchored.map((actor) => actor.id))}
           size="sm"
@@ -57,7 +57,7 @@ export function MultiSelectionPanel({
         </Button>
       ) : null}
       <Button
-        className={stylex.props(styles.button).className}
+        xstyle={styles.button}
         data-testid="multi-selection-duplicate"
         onClick={() => controller?.duplicateSelection()}
         size="sm"
@@ -67,7 +67,7 @@ export function MultiSelectionPanel({
         Duplicate
       </Button>
       <Button
-        className={stylex.props(styles.button).className}
+        xstyle={styles.button}
         data-testid="multi-selection-delete"
         onClick={() => controller?.deleteSelection()}
         size="sm"
@@ -78,7 +78,7 @@ export function MultiSelectionPanel({
       </Button>
       <Button
         aria-label="Clear selection"
-        className={stylex.props(styles.clear).className}
+        xstyle={styles.clear}
         data-testid="multi-selection-clear"
         onClick={() => controller?.setSelection([])}
         size="sm"

@@ -13,7 +13,6 @@ import {
   ChevronRight,
   ChevronsUpDown,
 } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import type { ThreeDStats as ThreeDStatsResponse } from "@/app/lib/3d-manifest-stats";
 
 // ---------------------------------------------------------------------------
@@ -62,10 +61,7 @@ function CollapsibleSection({
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
-            open && "rotate-90",
-          )}
+          className={stylex.props(styles.chevronMutedShrink, open && styles.rotate90).className}
         />
         <Icon className={stylex.props(styles.s_635).className} />
         <span className={stylex.props(styles.s_636).className}>{label}</span>
@@ -310,16 +306,16 @@ function ReadinessSignal({
   strength: "strong" | "moderate" | "limited";
 }) {
   const colorMap = {
-    strong: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-    moderate: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    limited: "bg-muted text-muted-foreground border-border",
+    strong: styles.strengthStrong,
+    moderate: styles.strengthModerate,
+    limited: styles.strengthLimited,
   };
 
   return (
     <div>
       <div className={stylex.props(styles.s_655).className}>
         <span
-          className={stylex.props(styles.u_927, styles.u_928, styles.u_955, styles.u_935, styles.u_947, styles.u_962, styles.u_903).className}
+          className={stylex.props(styles.strengthBadge, colorMap[strength]).className}
         >
           {strength}
         </span>

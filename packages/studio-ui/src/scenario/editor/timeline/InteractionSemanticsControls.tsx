@@ -5,6 +5,8 @@ import type { Interaction } from "@simforge-oss/scenario";
 import { Input } from "../../../components/ui/input";
 import type { EditorDocument } from "@simforge-oss/editor";
 import { InteractionTargetModeControls } from "./InteractionTargetControls";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./InteractionSemanticsControls.stylex";
 
 export const MAX_AUTHORED_TARGET_SPEED_KPH = 130;
 type NumericSemantic = "targetSpeedKph" | "laneDelta" | "durationS";
@@ -152,8 +154,8 @@ export function InteractionSemanticsControls({
   };
 
   return (
-    <fieldset className="grid min-w-0 grid-cols-1 gap-3 border-t border-white/10 pt-3">
-      <legend className="text-meta font-semibold uppercase tracking-wider text-muted-foreground">
+    <fieldset {...stylex.props(styles.gridRuleTNarrowable)}>
+      <legend {...stylex.props(styles.capsMetaMuted)}>
         Driving behavior
       </legend>
       <InteractionTargetModeControls
@@ -181,14 +183,14 @@ export function InteractionSemanticsControls({
         />
       ) : null}
       <div>
-        <p className="text-muted-foreground">Driving style</p>
-        <p className="mt-0.5 text-meta leading-4 text-white/35" id={`${interaction.id}-driving-style-help`}>
+        <p {...stylex.props(styles.muted)}>Driving style</p>
+        <p {...stylex.props(styles.meta)} id={`${interaction.id}-driving-style-help`}>
           Choose how smoothly and quickly this action happens.
         </p>
         <div
           aria-describedby={`${interaction.id}-driving-style-help`}
           aria-label="Driving style choices"
-          className="mt-2 grid grid-cols-1 gap-1.5"
+          {...stylex.props(styles.gridCols1Gap15)}
           role="radiogroup"
         >
           {DRIVING_STYLE_PRESETS.map((preset) => {
@@ -196,25 +198,25 @@ export function InteractionSemanticsControls({
             return (
               <button
                 aria-checked={active}
-                className={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044] ${active ? "border-[#E8E044]/70 bg-[#E8E044]/10 text-[#E8E044]" : "border-white/10 bg-white/[0.025] text-white/60 hover:border-white/25 hover:bg-white/[0.06] hover:text-white/90"}`}
+                {...stylex.props(styles.styleOption, active ? styles.styleOptionActive : styles.styleOptionIdle)}
                 key={preset.id}
                 onClick={() => applyStyle(preset.id)}
                 role="radio"
                 type="button"
               >
-                <span className="block text-[10px] font-medium">{preset.label}</span>
-                <span className="mt-0.5 block text-[9px] leading-3.5 opacity-70">{preset.description}</span>
+                <span {...stylex.props(styles.blockMedium)}>{preset.label}</span>
+                <span {...stylex.props(styles.block)}>{preset.description}</span>
               </button>
             );
           })}
         </div>
         {activeStyle === null ? (
-          <p className="mt-1.5 text-meta leading-4 text-white/35">
+          <p {...stylex.props(styles.meta2)}>
             Choose a style to replace the action&apos;s custom timing.
           </p>
         ) : null}
       </div>
-      {error ? <p className="text-meta text-red-300" role="alert">{error}</p> : null}
+      {error ? <p {...stylex.props(styles.meta3)} role="alert">{error}</p> : null}
     </fieldset>
   );
 }
@@ -236,11 +238,11 @@ function SemanticNumberField({
 }) {
   const id = useId();
   return (
-    <div className="min-w-0">
-      <label className="block text-muted-foreground" htmlFor={id}>{label}</label>
+    <div {...stylex.props(styles.narrowable)}>
+      <label {...stylex.props(styles.blockMuted)} htmlFor={id}>{label}</label>
       <Input
         id={id}
-        className="mt-1 h-8"
+        xstyle={styles.mt1H8}
         max={max}
         min={min}
         step={step}

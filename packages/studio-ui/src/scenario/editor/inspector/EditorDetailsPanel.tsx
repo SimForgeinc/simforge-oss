@@ -11,6 +11,8 @@ import { createPortal } from "react-dom";
 import { Square, X } from "lucide-react";
 
 import { usePanelEdgeResize } from "../usePanelEdgeResize";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorDetailsPanel.stylex";
 
 /** The width this panel had before it could be resized, and so the widest it may be. */
 export const DETAILS_MAX_WIDTH = 192;
@@ -46,7 +48,7 @@ export function EditorDetailsPanel({
   onClose,
   onDelete,
   preview,
-  previewClassName = "h-24 px-10 py-3",
+  previewXstyle,
   testId,
 }: {
   ariaLabel: string;
@@ -62,7 +64,8 @@ export function EditorDetailsPanel({
   /** Delete the entity represented by this panel when Delete or Backspace is pressed. */
   onDelete?: () => void;
   preview: ReactNode;
-  previewClassName?: string;
+  /** Geometry for the preview frame. Defaults to the compact `h-24 px-10 py-3` plate. */
+  previewXstyle?: stylex.StyleXStyles;
   testId: string;
 }) {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -110,7 +113,7 @@ export function EditorDetailsPanel({
     <aside
       ref={panelRef as React.RefObject<HTMLElement>}
       aria-label={ariaLabel}
-      className="editor-actor-details-enter fixed right-[calc(100%-100vw)] top-1/2 z-[82] flex min-w-0 -translate-y-1/2 flex-col overflow-hidden rounded-l-xl border border-r-0 border-white/15 bg-[linear-gradient(155deg,rgba(24,24,22,0.98),rgba(9,9,9,0.98))] text-white shadow-[-12px_20px_60px_rgba(0,0,0,0.62),0_0_0_1px_rgba(232,224,68,0.1)] backdrop-blur-2xl"
+      className={`${stylex.props(styles.fixedFlexCol).className} editor-actor-details-enter`}
       data-placement="right-centered"
       data-size="compact"
       data-testid={testId}
@@ -126,40 +129,40 @@ export function EditorDetailsPanel({
       */}
       <div
         {...separatorProps}
-        className="absolute bottom-0 left-0 top-0 z-[60] w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-[#E8E044]/40 focus-visible:bg-[#E8E044]/60 focus-visible:outline-none"
+        {...stylex.props(styles.abs)}
         data-testid="editor-details-resize-handle"
       />
-      <header className="relative shrink-0 overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_75%_15%,rgba(232,224,68,0.14),transparent_42%),linear-gradient(145deg,#191a18,#0d0e0d)]">
-        <div className={`grid place-items-center bg-black/15 ${previewClassName}`}>
+      <header {...stylex.props(styles.relTightRuleB)}>
+        <div {...stylex.props(styles.preview, previewXstyle ?? styles.previewDefault)}>
           {preview}
         </div>
         {headerFooter}
         <button
           aria-label={closeLabel}
-          className="absolute right-2.5 top-2.5 grid size-6 place-items-center rounded-md text-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+          {...stylex.props(styles.absGridCentered)}
           data-testid={closeTestId}
           onClick={onClose}
           type="button"
         >
-          <X aria-hidden="true" className="size-3.5" />
+          <X aria-hidden="true" className={stylex.props(styles.size35).className} />
         </button>
       </header>
 
-      <div className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto p-3 text-[11px] [scrollbar-width:thin]">
+      <div {...stylex.props(styles.fillScrollYShrinkable)}>
         {children}
       </div>
       {configurationBlocked ? (
         <div
-          className="absolute inset-0 z-50 grid place-items-center bg-black/70 px-5 text-center backdrop-blur-md"
+          {...stylex.props(styles.absGridCentered2)}
           data-testid="editor-details-simulation-blocker"
           role="status"
         >
-          <div className="flex flex-col items-center gap-2">
-            <Square aria-hidden="true" className="size-5 fill-[#E8E044] text-[#E8E044]" />
-            <strong className="text-xs leading-snug text-white">
+          <div {...stylex.props(styles.flexColCenter)}>
+            <Square aria-hidden="true" className={stylex.props(styles.size5FillText).className} />
+            <strong {...stylex.props(styles.xsWhiteSnug)}>
               Cancel simulation first to configure
             </strong>
-            <span className="text-[10px] text-white/55">Press Esc to cancel simulation.</span>
+            <span {...stylex.props(styles.textTextWhite55)}>Press Esc to cancel simulation.</span>
           </div>
         </div>
       ) : null}

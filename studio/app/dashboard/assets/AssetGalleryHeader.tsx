@@ -35,13 +35,8 @@ export function AssetGalleryHeader({
   return (
     <div {...stylex.props(header.bar)}>
       <div {...stylex.props(header.measure)}>
-        {/* `PageHeader` is still a Tailwind component and its own base classes
-            win over StyleX by design — the generated sheet is ordered weaker
-            so unmigrated callers keep rendering unchanged. Its frame is
-            stripped here, so these overrides have to stay Tailwind to beat
-            it. They move when `PageHeader` itself does. */}
         <PageHeader
-          className="border-b-0 bg-transparent px-0 pb-4 sm:px-0"
+          xstyle={header.titleBlock}
           eyebrow="Local library"
           title="Assets"
           description={SECTION_DESCRIPTION[section]}

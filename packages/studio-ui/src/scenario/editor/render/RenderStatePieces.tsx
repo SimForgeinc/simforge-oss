@@ -4,10 +4,12 @@ import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface"
 import { cn } from "../../../lib/utils";
 import {
   renderProgressBar,
-  renderStateChipClass,
+  renderStateChipStyle,
   renderStateVisual,
 } from "./render-view-model";
 import type { ScenarioRenderJobState } from "@simforge-oss/studio-host";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderStatePieces.stylex";
 
 /**
  * The two visual atoms every render surface repeats: a state chip and a progress bar.
@@ -26,15 +28,11 @@ export function RenderStateChip({
   const visual = renderStateVisual(state);
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 text-micro font-medium uppercase tracking-meta",
-        renderStateChipClass(visual.tone),
-        className,
-      )}
+      className={cn(stylex.props(styles.inlineFlexCenterCaps, renderStateChipStyle(visual.tone)).className, className)}
       data-render-state={state}
     >
       {visual.live ? (
-        <CloudActivityIndicator iconClassName="size-2.5" />
+        <CloudActivityIndicator iconXstyle={styles.chipSpinner} />
       ) : null}
       {visual.label}
     </span>
@@ -53,12 +51,13 @@ export function RenderProgressBar({
   state,
   progressPercent,
   label,
-  className,
+  xstyle,
 }: {
   state: ScenarioRenderJobState;
   progressPercent: number | null;
   label: string;
-  className?: string;
+  /** Caller StyleX styles, composed after this bar's own so they win. */
+  xstyle?: stylex.StyleXStyles;
 }) {
   const bar = renderProgressBar({ jobState: state, progressPercent });
   if (!renderStateVisual(state).live && state !== "succeeded") return null;
@@ -70,13 +69,13 @@ export function RenderProgressBar({
       aria-valuemin={0}
       aria-valuenow={bar.percent ?? undefined}
       aria-valuetext={bar.indeterminate ? "In progress, no percentage reported" : undefined}
-      className={cn("render-chip h-1 overflow-hidden", className)}
+      {...stylex.props(styles.clip, xstyle)}
       role="progressbar"
     >
       {bar.indeterminate ? (
-        <div className="editor-pulse h-full w-1/3 bg-primary" />
+        <div className={`${stylex.props(styles.tall).className} editor-pulse`} />
       ) : (
-        <div className="h-full bg-primary" style={{ width: `${bar.widthPercent}%` }} />
+        <div {...stylex.props(styles.tall2)} style={{ width: `${bar.widthPercent}%` }} />
       )}
     </div>
   );

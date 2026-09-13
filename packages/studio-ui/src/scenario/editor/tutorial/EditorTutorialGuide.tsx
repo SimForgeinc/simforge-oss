@@ -20,6 +20,8 @@ import { createPortal } from "react-dom";
 import { Button } from "../../../components/ui/button";
 import { startInteractiveTutorial } from "./interactive-tutorial-events";
 import type { EditorExperience } from "../simple-timed-routes";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./EditorTutorialGuide.stylex";
 
 const GUIDE_SECTIONS = [
   { href: "#tutorial-controls", label: "Controls" },
@@ -99,19 +101,19 @@ export function EditorTutorialGuide({
     <>
       <Button
         aria-label="Tutorial"
-        className="h-8 gap-2 rounded-none border border-border bg-card/90 px-3 shadow-sm backdrop-blur"
+        xstyle={styles.borderedGlassyGap2}
         onClick={() => setChoiceOpen(true)}
         size="sm"
         type="button"
         variant="outline"
       >
-        <BookOpen aria-hidden="true" className="size-4" />
+        <BookOpen aria-hidden="true" className={stylex.props(styles.size4).className} />
         <span>Tutorial</span>
       </Button>
       {choiceOpen
         ? createPortal(
             <div
-              className="fixed inset-0 z-[145] grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+              {...stylex.props(styles.fixedGridCentered)}
               data-testid="tutorial-format-backdrop"
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) setChoiceOpen(false);
@@ -121,35 +123,35 @@ export function EditorTutorialGuide({
                 aria-describedby="tutorial-format-description"
                 aria-labelledby="tutorial-format-title"
                 aria-modal="true"
-                className="w-full max-w-xl border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72)]"
+                {...stylex.props(styles.whiteBorderedWide)}
                 role="dialog"
               >
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#E8E044]">
+                <div {...stylex.props(styles.flexStartGap3)}>
+                  <div {...stylex.props(styles.fillNarrowable)}>
+                    <p {...stylex.props(styles.capsMonoBold)}>
                       {experience} mode
                     </p>
-                    <h2 className="mt-1 text-lg font-semibold" id="tutorial-format-title">
+                    <h2 {...stylex.props(styles.lgSemibold)} id="tutorial-format-title">
                       How would you like to learn?
                     </h2>
-                    <p className="mt-1 text-xs leading-5 text-white/55" id="tutorial-format-description">
+                    <p {...stylex.props(styles.xs)} id="tutorial-format-description">
                       Follow the live editor step by step, or browse the complete written reference.
                     </p>
                   </div>
                   <button
                     aria-label="Close tutorial options"
-                    className="grid size-8 shrink-0 place-items-center text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                    {...stylex.props(styles.gridCenteredTight)}
                     onClick={() => setChoiceOpen(false)}
                     type="button"
                   >
-                    <X aria-hidden="true" className="size-4" />
+                    <X aria-hidden="true" className={stylex.props(styles.size4).className} />
                   </button>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div {...stylex.props(styles.gridGap3)}>
                   <button
                     aria-label="Start guided tutorial"
-                    className="group border border-[#E8E044]/55 bg-[#E8E044]/[0.07] p-4 text-left transition-colors hover:bg-[#E8E044]/[0.13] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                    {...stylex.props(styles.borderedPad4LeftText)}
                     onClick={() => {
                       setChoiceOpen(false);
                       startInteractiveTutorial(experience);
@@ -157,15 +159,15 @@ export function EditorTutorialGuide({
                     ref={guidedButtonRef}
                     type="button"
                   >
-                    <Sparkles aria-hidden="true" className="size-5 text-[#E8E044]" />
-                    <strong className="mt-3 block text-sm text-white">Guided tutorial</strong>
-                    <span className="mt-1.5 block text-xs leading-5 text-white/55">
+                    <Sparkles aria-hidden="true" className={stylex.props(styles.size5Text).className} />
+                    <strong {...stylex.props(styles.blockSmWhite)}>Guided tutorial</strong>
+                    <span {...stylex.props(styles.blockXs)}>
                       Complete actions in the live editor. This walkthrough authors content in the current scenario.
                     </span>
                   </button>
                   <button
                     aria-label="Open written guide"
-                    className="group border border-white/15 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+                    {...stylex.props(styles.borderedPad4LeftText2)}
                     onClick={() => {
                       setChoiceOpen(false);
                       setGuideMode(experience);
@@ -173,9 +175,9 @@ export function EditorTutorialGuide({
                     }}
                     type="button"
                   >
-                    <BookOpen aria-hidden="true" className="size-5 text-white/70" />
-                    <strong className="mt-3 block text-sm text-white">Written guide</strong>
-                    <span className="mt-1.5 block text-xs leading-5 text-white/55">
+                    <BookOpen aria-hidden="true" className={stylex.props(styles.size5TextWhite70).className} />
+                    <strong {...stylex.props(styles.blockSmWhite)}>Written guide</strong>
+                    <span {...stylex.props(styles.blockXs)}>
                       Review controls and authoring concepts without changing the current scenario.
                     </span>
                   </button>
@@ -188,7 +190,7 @@ export function EditorTutorialGuide({
       {open
         ? createPortal(
             <div
-              className="fixed inset-0 z-[140] bg-black/45 p-3 md:p-7"
+              {...stylex.props(styles.fixedInset0Pad3)}
               data-testid="editor-tutorial-backdrop"
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) setOpen(false);
@@ -198,26 +200,26 @@ export function EditorTutorialGuide({
                 aria-describedby="editor-tutorial-description"
                 aria-labelledby="editor-tutorial-title"
                 aria-modal="true"
-                className="mx-auto flex h-full w-full max-w-[1180px] flex-col overflow-hidden rounded-[28px] border border-border/80 bg-background/95 text-foreground shadow-2xl backdrop-blur-xl"
+                {...stylex.props(styles.flexColInk)}
                 data-testid="editor-tutorial-guide"
                 role="dialog"
               >
-              <header className="flex shrink-0 items-center gap-4 border-b border-border bg-card/90 px-5 py-3 backdrop-blur md:px-8">
-                <BookOpen aria-hidden="true" className="size-5 text-primary" />
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold" id="editor-tutorial-title">
+              <header {...stylex.props(styles.flexCenterTight)}>
+                <BookOpen aria-hidden="true" className={stylex.props(styles.accent).className} />
+                <div {...stylex.props(styles.narrowable)}>
+                  <h2 {...stylex.props(styles.semiboldBase)} id="editor-tutorial-title">
                     Editor tutorial · {guideMode === "simple" ? "Simple" : "Advanced"}
                   </h2>
-                  <p className="truncate text-xs text-muted-foreground" id="editor-tutorial-description">
+                  <p {...stylex.props(styles.xsMutedTruncate)} id="editor-tutorial-description">
                     {guideMode === "simple"
                       ? "Place actors, draw timed routes, and preview the result."
                       : "Configure actors, interactions, triggers, and simulation behavior."}
                   </p>
                 </div>
-                <nav aria-label="Tutorial sections" className="ml-auto hidden items-center gap-1 lg:flex">
+                <nav aria-label="Tutorial sections" {...stylex.props(styles.hiddenCenterPushRight)}>
                   {GUIDE_SECTIONS.map((section) => (
                     <a
-                      className="px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      {...stylex.props(styles.xsMuted)}
                       href={section.href}
                       key={section.href}
                     >
@@ -225,13 +227,11 @@ export function EditorTutorialGuide({
                     </a>
                   ))}
                 </nav>
-                <div className="hidden shrink-0 border border-border bg-background/60 p-0.5 sm:flex" role="group" aria-label="Tutorial mode">
+                <div {...stylex.props(styles.hiddenTightBordered)} role="group" aria-label="Tutorial mode">
                   {(["simple", "advanced"] as const).map((mode) => (
                     <button
                       aria-pressed={guideMode === mode}
-                      className={guideMode === mode
-                        ? "bg-[#E8E044] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-black"
-                        : "px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground"}
+                      {...stylex.props(styles.modeToggle, guideMode === mode ? styles.modeToggleActive : styles.modeToggleIdle)}
                       key={mode}
                       onClick={() => setGuideMode(mode)}
                       type="button"
@@ -242,7 +242,7 @@ export function EditorTutorialGuide({
                 </div>
                 <Button
                   aria-label={`Start ${guideMode} interactive tutorial`}
-                  className="ml-auto size-8 shrink-0 gap-2 px-0 sm:h-8 sm:w-auto sm:px-3 lg:ml-2"
+                  xstyle={styles.tightPushRightGap2}
                   disabled={guideMode !== experience}
                   onClick={() => {
                     setOpen(false);
@@ -254,24 +254,24 @@ export function EditorTutorialGuide({
                     : `Switch the editor to ${guideMode} mode in Settings before starting`}
                   type="button"
                 >
-                  <Sparkles aria-hidden="true" className="size-3.5" />
-                  <span className="hidden sm:inline">Start {guideMode} tutorial</span>
+                  <Sparkles aria-hidden="true" className={stylex.props(styles.size35).className} />
+                  <span {...stylex.props(styles.hidden)}>Start {guideMode} tutorial</span>
                 </Button>
                 <Button
                   aria-label="Close tutorial"
-                  className="ml-auto size-8 shrink-0 md:ml-2"
+                  xstyle={styles.tightPushRight}
                   onClick={() => setOpen(false)}
                   ref={closeButtonRef}
                   size="icon"
                   type="button"
                   variant="ghost"
                 >
-                  <X aria-hidden="true" className="size-4" />
+                  <X aria-hidden="true" className={stylex.props(styles.size4).className} />
                 </Button>
               </header>
 
-              <div className="min-h-0 flex-1 overflow-y-auto scroll-smooth">
-                <main className="mx-auto w-full max-w-6xl space-y-10 px-5 py-8 md:px-8 md:py-12">
+              <div {...stylex.props(styles.fillScrollYShrinkable)}>
+                <main {...stylex.props(styles.wideCenteredX)}>
                   <section aria-labelledby="tutorial-controls-title" id="tutorial-controls">
                     <SectionHeading
                       eyebrow="Start here"
@@ -281,24 +281,24 @@ export function EditorTutorialGuide({
                       These are the only shortcuts you need to begin. Timeline playback takes priority
                       over camera controls while a simulation is ready.
                     </SectionHeading>
-                    <div className="mt-6 grid gap-3 lg:grid-cols-3">
+                    <div {...stylex.props(styles.gridGap32)}>
                       {CONTROL_ITEMS.map((item) => (
-                        <article className="border border-primary/30 bg-primary/[0.06] p-4" key={item.title}>
-                          <div className="flex min-h-9 flex-wrap items-center gap-1.5">
+                        <article {...stylex.props(styles.borderedPad4)} key={item.title}>
+                          <div {...stylex.props(styles.flexCenterWrap)}>
                             {item.keys.map((key) => <Keycap key={key}>{key}</Keycap>)}
                           </div>
-                          <h3 className="mt-4 text-sm font-semibold">{item.title}</h3>
-                          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{item.body}</p>
+                          <h3 {...stylex.props(styles.smSemibold)}>{item.title}</h3>
+                          <p {...stylex.props(styles.xsMuted2)}>{item.body}</p>
                         </article>
                       ))}
                     </div>
-                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <div {...stylex.props(styles.gridGap33)}>
                       {POINTER_ITEMS.map((item) => (
-                        <article className="flex gap-3 border border-border bg-card/60 p-4" key={item.title}>
-                          <MousePointer2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <article {...stylex.props(styles.flexBorderedGap3)} key={item.title}>
+                          <MousePointer2 aria-hidden="true" className={stylex.props(styles.tightAccent).className} />
                           <div>
-                            <h3 className="text-sm font-semibold">{item.title}</h3>
-                            <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
+                            <h3 {...stylex.props(styles.smSemibold2)}>{item.title}</h3>
+                            <p {...stylex.props(styles.xsMuted3)}>{item.body}</p>
                           </div>
                         </article>
                       ))}
@@ -311,25 +311,25 @@ export function EditorTutorialGuide({
                       your mouse, display, and device before detailed authoring; changes apply to the
                       live viewport immediately.
                     </SectionHeading>
-                    <div className="mt-6 grid gap-3 lg:grid-cols-3">
-                      <SettingCard icon={<Gauge aria-hidden="true" className="size-5" />} title="Render quality">
+                    <div {...stylex.props(styles.gridGap32)}>
+                      <SettingCard icon={<Gauge aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Render quality">
                         Choose Roads Only, Low, Balanced, or High. Start with Balanced, then raise
                         quality for sharper scene context or lower it if navigation feels sluggish.
                       </SettingCard>
-                      <SettingCard icon={<Camera aria-hidden="true" className="size-5" />} title="Camera mode">
+                      <SettingCard icon={<Camera aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Camera mode">
                         Orbit is best for authoring around a road target. Fly enables free inspection
                         with pointer-lock mouse look and WASD movement.
                       </SettingCard>
-                      <SettingCard icon={<SlidersHorizontal aria-hidden="true" className="size-5" />} title="Camera and layers">
+                      <SettingCard icon={<SlidersHorizontal aria-hidden="true" className={stylex.props(styles.size5).className} />} title="Camera and layers">
                         Adjust Look X/Y, pan, wheel zoom, keyboard speed, and invert options. Toggle
                         buildings, vegetation, or roads to keep the viewport readable.
                       </SettingCard>
                     </div>
                   </section>
 
-                  <div className="grid gap-4 lg:grid-cols-3">
+                  <div {...stylex.props(styles.gridGap4)}>
                     <GuideCard
-                      icon={<CarFront aria-hidden="true" className="size-5" />}
+                      icon={<CarFront aria-hidden="true" className={stylex.props(styles.size5).className} />}
                       id="tutorial-actors"
                       step="01"
                       title="Place actors"
@@ -350,7 +350,7 @@ export function EditorTutorialGuide({
                     </GuideCard>
 
                     <GuideCard
-                      icon={<Timer aria-hidden="true" className="size-5" />}
+                      icon={<Timer aria-hidden="true" className={stylex.props(styles.size5).className} />}
                       id="tutorial-timeline"
                       step="02"
                       title="Configure the timeline"
@@ -373,7 +373,7 @@ export function EditorTutorialGuide({
                     </GuideCard>
 
                     <GuideCard
-                      icon={<Play aria-hidden="true" className="size-5" />}
+                      icon={<Play aria-hidden="true" className={stylex.props(styles.size5).className} />}
                       id="tutorial-simulation"
                       step="03"
                       title="Run the simulation"
@@ -392,10 +392,10 @@ export function EditorTutorialGuide({
                     </GuideCard>
                   </div>
 
-                  <section aria-labelledby="tutorial-imports-title" className="border border-border bg-card/50 p-5 md:p-6" id="tutorial-imports">
-                    <div className="flex items-start gap-4">
-                      <FileInput aria-hidden="true" className="mt-1 size-5 shrink-0 text-primary" />
-                      <div className="min-w-0">
+                  <section aria-labelledby="tutorial-imports-title" {...stylex.props(styles.borderedPad5)} id="tutorial-imports">
+                    <div {...stylex.props(styles.flexStartGap4)}>
+                      <FileInput aria-hidden="true" className={stylex.props(styles.tightAccent2).className} />
+                      <div {...stylex.props(styles.narrowable)}>
                         <SectionHeading
                           eyebrow="Bring work in"
                           id="tutorial-imports-title"
@@ -404,15 +404,15 @@ export function EditorTutorialGuide({
                           Importing happens from the scenario list so the editor can resolve the map
                           before opening the document.
                         </SectionHeading>
-                        <div className="mt-5 grid gap-3 md:grid-cols-2">
+                        <div {...stylex.props(styles.gridGap34)}>
                           <ImportCard
-                            icon={<Box aria-hidden="true" className="size-4" />}
+                            icon={<Box aria-hidden="true" className={stylex.props(styles.size4).className} />}
                             title="Scenario JSON"
                           >
                             Restores a SimForge scenario document, then asks you to confirm the target map when needed.
                           </ImportCard>
                           <ImportCard
-                            icon={<Route aria-hidden="true" className="size-4" />}
+                            icon={<Route aria-hidden="true" className={stylex.props(styles.size4).className} />}
                             title="OpenSCENARIO file"
                           >
                             Opens ASAM OpenSCENARIO, analyzes its map references, and reports anything that needs resolution before import.
@@ -445,16 +445,16 @@ function SectionHeading({
 }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
-      <h2 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl" id={id}>{title}</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{children}</p>
+      <p {...stylex.props(styles.capsAccentBold)}>{eyebrow}</p>
+      <h2 {...stylex.props(styles.xlSemibold)} id={id}>{title}</h2>
+      <p {...stylex.props(styles.smMuted)}>{children}</p>
     </div>
   );
 }
 
 function Keycap({ children }: { children: ReactNode }) {
   return (
-    <kbd className="grid min-w-9 place-items-center border border-primary/50 bg-background px-2 py-1.5 font-mono text-xs font-semibold text-primary shadow-[0_2px_0_hsl(var(--border))]">
+    <kbd {...stylex.props(styles.gridCenteredMono)}>
       {children}
     </kbd>
   );
@@ -474,21 +474,21 @@ function GuideCard({
   children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={`${id}-title`} className="border border-border bg-card/60 p-5" id={id}>
-      <div className="flex items-center gap-3 text-primary">
+    <section aria-labelledby={`${id}-title`} {...stylex.props(styles.borderedPad52)} id={id}>
+      <div {...stylex.props(styles.flexCenterAccent)}>
         {icon}
-        <span className="font-mono text-[10px] font-semibold tracking-[0.16em]">{step}</span>
+        <span {...stylex.props(styles.monoSemibold)}>{step}</span>
       </div>
-      <h2 className="mt-4 text-lg font-semibold" id={`${id}-title`}>{title}</h2>
-      <ol className="mt-4 space-y-3">{children}</ol>
+      <h2 {...stylex.props(styles.lgSemibold2)} id={`${id}-title`}>{title}</h2>
+      <ol {...stylex.props(styles.mt4StackLg)}>{children}</ol>
     </section>
   );
 }
 
 function GuideStep({ children }: { children: ReactNode }) {
   return (
-    <li className="flex gap-2.5 text-xs leading-5 text-muted-foreground">
-      <span aria-hidden="true" className="mt-2 size-1 shrink-0 bg-primary" />
+    <li {...stylex.props(styles.flexXsMuted)}>
+      <span aria-hidden="true" {...stylex.props(styles.tight)} />
       <span>{children}</span>
     </li>
   );
@@ -504,24 +504,24 @@ function ImportCard({
   children: ReactNode;
 }) {
   return (
-    <article className="border border-border bg-background/60 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <span className="text-primary">{icon}</span>
+    <article {...stylex.props(styles.borderedPad42)}>
+      <div {...stylex.props(styles.flexCenterSm)}>
+        <span {...stylex.props(styles.accent2)}>{icon}</span>
         {title}
       </div>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">{children}</p>
+      <p {...stylex.props(styles.xsMuted4)}>{children}</p>
     </article>
   );
 }
 
 function SettingCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <article className="rounded-xl border border-primary/25 bg-card/70 p-5">
-      <div className="flex items-center gap-3 text-primary">
+    <article {...stylex.props(styles.borderedPad53)}>
+      <div {...stylex.props(styles.flexCenterAccent)}>
         {icon}
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <h3 {...stylex.props(styles.smInkSemibold)}>{title}</h3>
       </div>
-      <p className="mt-3 text-xs leading-5 text-muted-foreground">{children}</p>
+      <p {...stylex.props(styles.xsMuted5)}>{children}</p>
     </article>
   );
 }

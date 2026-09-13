@@ -80,7 +80,7 @@ export function MapPreparationProgress({
                 {map.state === "error" ? (
                   <span {...stylex.props(preparation.rowActions)}>
                     <Button variant="outline" onClick={() => onRetry(map.mapVersionId)}>
-                      <RotateCcw {...stylex.props(setup.iconSmall)} aria-hidden="true" />
+                      <RotateCcw {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />
                       Retry
                     </Button>
                     <Button variant="outline" onClick={() => onSkip(map.mapVersionId)}>

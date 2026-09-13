@@ -14,6 +14,9 @@ import {
 } from "./render-view-model";
 import { useArtifactPreviewUrl, useNearViewport } from "./useArtifactPreviewUrl";
 import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderGalleryTile.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * One render in the gallery — manifest #137, reshaped onto v2's control plane.
@@ -81,12 +84,12 @@ export function RenderGalleryTile({
     <div
       ref={cardRef}
       className={cn(
-        "render-glass render-surface-motion group relative flex aspect-video w-full flex-col overflow-hidden border text-left",
-        "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background",
+        stylex.props(styles.relFlexCol, item.jobState === "failed" && styles.borderDestructive60).className,
         // Lift on hover. The gallery is a wall of near-identical stills, so the tile under the
         // pointer has to separate itself from its neighbours by more than a border colour.
-        "render-lift hover:border-primary/60",
-        item.jobState === "failed" ? "border-destructive/60" : "",
+        // Both classes are global motion rules in `styles.css`, applied by name and guarded
+        // there by `prefers-reduced-motion` — the documented exception for shared motion.
+        "render-surface-motion render-lift",
       )}
       data-testid="scenario-render-tile"
       data-render-job-id={item.id}
@@ -98,23 +101,23 @@ export function RenderGalleryTile({
       <button
         type="button"
         aria-label={galleryItemAccessibleName(item)}
-        className="absolute inset-0 z-10 focus-visible:outline-none"
+        {...stylex.props(styles.absInset0Raised)}
         onClick={onOpen}
         onFocus={play}
         onBlur={reset}
       />
 
-      <div className="absolute inset-0 render-glass">
+      <div {...stylex.props(styles.absInset0)}>
         {previewUrl && isImagePreview ? (
           // A presigned S3 URL on a per-request signature: `next/image` would try to proxy and cache
           // it through the optimizer, which is the one thing a 1h signature must not go through.
           // eslint-disable-next-line @next/next/no-img-element
-          <img alt="" aria-hidden="true" className="size-full object-cover" src={previewUrl} />
+          <img alt="" aria-hidden="true" {...stylex.props(styles.fullCover)} src={previewUrl} />
         ) : previewUrl && isVideoPreview ? (
           <video
             ref={videoRef}
             aria-hidden="true"
-            className="size-full object-cover"
+            {...stylex.props(styles.fullCover)}
             loop
             muted
             playsInline
@@ -126,33 +129,33 @@ export function RenderGalleryTile({
             <track kind="captions" />
           </video>
         ) : (
-          <div className="grid size-full place-items-center">
+          <div {...stylex.props(styles.gridCenteredFull)}>
             {postprocess ? (
-              <Sparkles aria-hidden="true" className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <Sparkles aria-hidden="true" className={stylex.props(styles.size6TextMutedForeground50).className} strokeWidth={1.5} />
             ) : item.previewArtifactId ? (
-              <Film aria-hidden="true" className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <Film aria-hidden="true" className={stylex.props(styles.size6TextMutedForeground50).className} strokeWidth={1.5} />
             ) : (
-              <Camera aria-hidden="true" className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <Camera aria-hidden="true" className={stylex.props(styles.size6TextMutedForeground50).className} strokeWidth={1.5} />
             )}
           </div>
         )}
       </div>
 
-      <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-wrap items-center gap-1">
-        <span className="render-chip-strong px-1.5 py-0.5 text-micro uppercase tracking-meta text-secondary-foreground">
+      <div {...stylex.props(styles.absFlexCenter)}>
+        <span {...stylex.props(styles.capsMicro)}>
           {label}
         </span>
         <RenderStateChip state={item.jobState} />
         {item.attemptCount > 1 ? (
           <span
-            className="render-chip px-1.5 py-0.5 text-micro uppercase tracking-meta text-muted-foreground"
+            {...stylex.props(styles.capsMicroMuted)}
             title={`Attempt ${item.attemptCount}`}
           >
             ×{item.attemptCount}
           </span>
         ) : null}
         {postprocess && item.modelFamily ? (
-          <span className="bg-primary/15 px-1.5 py-0.5 text-micro uppercase tracking-meta text-primary">
+          <span {...stylex.props(styles.capsMicroAccent)}>
             {item.modelFamily}
           </span>
         ) : null}
@@ -161,7 +164,7 @@ export function RenderGalleryTile({
           // banner because it is a property of one render, and two renders of the same scenario can
           // disagree about it.
           <span
-            className="bg-amber-500/20 px-1.5 py-0.5 text-micro uppercase tracking-meta text-amber-300"
+            {...stylex.props(styles.capsMicro2)}
             data-testid="scenario-render-outdated-pill"
             title="The scenario changed after this render. Its saved configuration can be restored."
           >
@@ -173,47 +176,47 @@ export function RenderGalleryTile({
       <button
         type="button"
         aria-label={`Hide this ${label.toLowerCase()} from the gallery`}
-        className="editor-motion absolute right-2 top-2 z-20 inline-flex size-7 items-center justify-center render-overlay-control opacity-0 backdrop-blur hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 disabled:opacity-40"
+        className={stylex.props(styles.absInlineFlexCenter, motionStyles.editorMotion).className}
         disabled={hideBusy}
         onClick={onHide}
       >
-        <EyeOff aria-hidden="true" className="size-3.5" />
+        <EyeOff aria-hidden="true" className={stylex.props(styles.size35).className} />
       </button>
 
       {onRestore ? (
         <button
           type="button"
           aria-label={`Restore the scenario this ${label.toLowerCase()} was rendered from`}
-          className="editor-motion absolute right-11 top-2 z-20 inline-flex size-7 items-center justify-center render-overlay-control opacity-0 backdrop-blur hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 disabled:opacity-40"
+          className={stylex.props(styles.absInlineFlexCenter2, motionStyles.editorMotion).className}
           data-testid="scenario-render-restore"
           disabled={restoreBusy}
           onClick={onRestore}
           title="Restore this render's saved scenario"
         >
-          <Undo2 aria-hidden="true" className="size-3.5" />
+          <Undo2 aria-hidden="true" className={stylex.props(styles.size35).className} />
         </button>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1 render-scrim px-2.5 pb-2 pt-6">
+      <div {...stylex.props(styles.absFlexCol)}>
         <RenderProgressBar
           label={`${label} progress`}
           progressPercent={item.progressPercent}
           state={item.jobState}
         />
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-meta text-foreground">
+        <div {...stylex.props(styles.flexBetweenBaseline)}>
+          <span {...stylex.props(styles.metaInkTruncate)}>
             {formatTimestamp(item.createdAt)}
           </span>
-          <span className="shrink-0 text-micro uppercase tracking-meta text-muted-foreground">
+          <span {...stylex.props(styles.tightCapsMicro)}>
             {item.artifactCount} {item.artifactCount === 1 ? "file" : "files"}
           </span>
         </div>
         {retry ? (
-          <p className="text-micro font-semibold text-foreground" data-testid="scenario-render-retry">
+          <p {...stylex.props(styles.microInkSemibold)} data-testid="scenario-render-retry">
             Retrying · attempt {retry.attempt} {retry.phase}
           </p>
         ) : failure ? (
-          <p className="line-clamp-2 text-micro text-destructive">{failure}</p>
+          <p {...stylex.props(styles.microDanger)}>{failure}</p>
         ) : null}
       </div>
     </div>

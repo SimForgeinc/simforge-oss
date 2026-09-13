@@ -16,7 +16,7 @@ import { colors, space } from "../../stylex/tokens.stylex";
 import { mergeStyleProps, type SurfaceVariant, type XStyle } from "./surface";
 
 const styles = stylex.create({
-  base: { flexShrink: 0, border: 0, margin: 0 },
+  base: { flexShrink: 0, borderWidth: 0, borderStyle: "none", margin: 0 },
   horizontal: { width: "100%", height: 1, backgroundColor: colors.line },
   vertical: {
     alignSelf: "stretch",

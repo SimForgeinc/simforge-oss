@@ -6,7 +6,6 @@ import { ChevronRight, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { ScenarioStatusBadge } from "@/app/components/ScenarioStatusBadge";
 import { formatRelativeTime } from "@/app/lib/media-utils";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { buildDashboardScenarioEditorHref } from "@/app/lib/scenario/routes";
 import {
   Tooltip,
@@ -48,7 +47,7 @@ export function ScenariosSection({
           aria-expanded={open}
         >
           <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+            className={stylex.props(styles.chevron, open && styles.rotate90).className}
           />
           Scenarios ({scenarios.length})
         </button>
@@ -64,7 +63,7 @@ export function ScenariosSection({
                   <SquarePen className={stylex.props(styles.s_927).className} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="left" className={stylex.props(styles.s_948).className}>
+              <TooltipContent side="left" xstyle={styles.s_948}>
                 Open latest scenario in editor
               </TooltipContent>
             </Tooltip>

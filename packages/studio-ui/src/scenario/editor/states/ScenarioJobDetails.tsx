@@ -9,6 +9,9 @@ import type {
   ScenarioJobProvenanceDto,
   ScenarioRenderJobDto,
 } from "../../../lib/scenario/contracts";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioJobDetails.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The provenance panel for a submitted render or 2D-interaction job.
@@ -46,23 +49,23 @@ export function ScenarioJobDetails({
 
   return (
     <aside
-      className="h-full overflow-y-auto border border-border bg-card p-5 shadow-2xl"
+      {...stylex.props(styles.borderedScrollYTall)}
       data-testid="scenario-job-details"
     >
-      <div className="flex items-start">
+      <div {...stylex.props(styles.flexStart)}>
         <div>
-          <p className="text-xs uppercase tracking-meta text-muted-foreground">
+          <p {...stylex.props(styles.capsXsMuted)}>
             {job.mode === "interaction_2d" ? "2D interaction" : "Full render"}
           </p>
-          <h2 className="mt-1 font-semibold">{job.status}</h2>
+          <h2 {...stylex.props(styles.semibold)}>{job.status}</h2>
         </div>
         <button
           type="button"
           aria-label="Close job details"
-          className="editor-motion -mr-1 -mt-1 ml-auto inline-flex size-7 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+          className={stylex.props(styles.inlineFlexCenterMid, motionStyles.editorMotion).className}
           onClick={onClose}
         >
-          <X aria-hidden="true" className="size-4" />
+          <X aria-hidden="true" className={stylex.props(styles.size4).className} />
         </button>
       </div>
       <div
@@ -70,14 +73,14 @@ export function ScenarioJobDetails({
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={percent}
-        className="mt-4 h-1.5 overflow-hidden bg-muted"
+        {...stylex.props(styles.clip)}
         role="progressbar"
       >
         {/* A floor of 4% so a just-queued job still shows a sliver: a 0-width
             bar is indistinguishable from a missing bar. The announced value
             stays honest. */}
         <div
-          className="h-full bg-primary"
+          {...stylex.props(styles.tall)}
           style={{ width: `${Math.max(4, percent)}%` }}
         />
       </div>
@@ -151,21 +154,21 @@ export function ScenarioJobDetails({
           provenance.artifacts.map((artifact) => (
             <div
               key={artifact.id}
-              className="mb-2 flex border border-border p-2 text-xs"
+              {...stylex.props(styles.flexXsBordered, styles.stackedMd)}
             >
               <button
                 type="button"
                 onClick={() => void studioHost.artifacts.openArtifact(artifact.id)}
-                className="editor-motion min-w-0 flex-1 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+                className={stylex.props(styles.fillNarrowableLeftText, motionStyles.editorMotion).className}
               >
-                <span className="text-primary">{artifact.kind}</span>
-                <span className="ml-2 text-muted-foreground">
+                <span {...stylex.props(styles.accent)}>{artifact.kind}</span>
+                <span {...stylex.props(styles.muted)}>
                   {artifact.sizeBytes.toLocaleString()} bytes
                 </span>
               </button>
               <Button
                 aria-label={`Download ${artifact.kind} artifact`}
-                className="ml-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                xstyle={styles.xsMutedPad0}
                 size="sm"
                 variant="link"
                 onClick={() => void studioHost.artifacts.downloadArtifact(artifact.id)}
@@ -216,20 +219,20 @@ function Details({
 }) {
   const Body = list ? "dl" : "div";
   return (
-    <section className="mt-5 border-t border-border pt-4">
-      <h3 className="text-xs font-semibold uppercase tracking-meta text-muted-foreground">
+    <section {...stylex.props(styles.ruleT)}>
+      <h3 {...stylex.props(styles.capsXsMuted2)}>
         {title}
       </h3>
-      <Body className="mt-3 space-y-2">{children}</Body>
+      <Body {...stylex.props(styles.mt3)}>{children}</Body>
     </section>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-4 text-xs">
-      <dt className="w-32 shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-all text-foreground/90">{value}</dd>
+    <div {...stylex.props(styles.flexXsGap4, styles.stackedMd)}>
+      <dt {...stylex.props(styles.tightMuted)}>{label}</dt>
+      <dd {...stylex.props(styles.narrowableBreakAll)}>{value}</dd>
     </div>
   );
 }

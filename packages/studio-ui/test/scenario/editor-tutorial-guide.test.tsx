@@ -12,14 +12,18 @@ function openWrittenGuide() {
 }
 
 describe("EditorTutorialGuide", () => {
-  it("opens a rounded viewport guide with controls first and the complete authoring flow", () => {
+  it("opens a modal viewport guide with controls first and the complete authoring flow", () => {
     render(<EditorTutorialGuide experience="advanced" />);
 
     openWrittenGuide();
     const dialog = screen.getByRole("dialog", { name: "Editor tutorial · Advanced" });
-    expect(screen.getByTestId("editor-tutorial-backdrop").className).toContain("fixed inset-0");
-    expect(dialog.className).toContain("rounded-[28px]");
-    expect(dialog.className).toContain("max-w-[1180px]");
+    // The backdrop owns the overlay: the guide is rendered inside it, at the top of the
+    // document rather than inline in the editor, and it takes the page over as a modal.
+    const backdrop = screen.getByTestId("editor-tutorial-backdrop");
+    expect(backdrop.contains(dialog)).toBe(true);
+    expect(backdrop.parentElement).toBe(document.body);
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(document.body.style.overflow).toBe("hidden");
     expect(within(dialog).getByRole("button", { name: "Start advanced interactive tutorial" })).toBeTruthy();
 
     const controls = within(dialog).getByRole("heading", { name: "Controls" });
@@ -61,7 +65,7 @@ describe("EditorTutorialGuide", () => {
     expect(within(dialog).getByRole("button", { name: "Start simple interactive tutorial" })).toBeTruthy();
   });
 
-  it("closes from the button or Escape and restores page scrolling", () => {
+  it("closes from the button, the backdrop or Escape and restores page scrolling", () => {
     render(<EditorTutorialGuide />);
     fireEvent.click(screen.getByRole("button", { name: "Tutorial" }));
     expect(document.body.style.overflow).toBe("hidden");
@@ -72,6 +76,16 @@ describe("EditorTutorialGuide", () => {
     openWrittenGuide();
     fireEvent.click(screen.getByRole("button", { name: "Close tutorial" }));
     expect(screen.queryByRole("dialog", { name: /Editor tutorial/ })).toBeNull();
+
+    // The backdrop covers everything outside the guide, so a press that lands on it is a
+    // press on the page behind the guide: it dismisses.
+    openWrittenGuide();
+    const backdrop = screen.getByTestId("editor-tutorial-backdrop");
+    fireEvent.mouseDown(within(backdrop).getByRole("dialog"));
+    expect(screen.queryByRole("dialog", { name: /Editor tutorial/ })).not.toBeNull();
+    fireEvent.mouseDown(backdrop);
+    expect(screen.queryByRole("dialog", { name: /Editor tutorial/ })).toBeNull();
+    expect(document.body.style.overflow).toBe("");
   });
 
   it("asks for a format before launching the guided tutorial", () => {

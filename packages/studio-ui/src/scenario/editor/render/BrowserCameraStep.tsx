@@ -2,7 +2,6 @@
 
 import { Camera, Radar } from "lucide-react";
 import type { RenderModality } from "@simforge-oss/scenario";
-import { cn } from "../../../lib/utils";
 import { humanize } from "./recording-panel-fields";
 import { RenderWizardBody, RenderWizardFooter } from "./RenderWizardChrome";
 import {
@@ -13,6 +12,9 @@ import {
   supportedModalities,
   type AuthoredRenderSensor,
 } from "./render-spec-v3";
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./BrowserCameraStep.stylex";
+import { motionStyles } from "../../../stylex/motion.stylex";
 
 /**
  * The browser lane's sensor step: one row per sensor, one column per pass.
@@ -88,52 +90,49 @@ export function BrowserCameraStep({
   return (
     <>
       <RenderWizardBody testId="recording-step-cameras">
-        <div className="mb-3 flex shrink-0 items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold tracking-tight text-foreground" id="recording-camera-heading">
+        <div {...stylex.props(styles.flexBetweenStart)}>
+          <div {...stylex.props(styles.narrowable)}>
+            <h3 {...stylex.props(styles.smInkBold)} id="recording-camera-heading">
               Which camera is the video?
             </h3>
-            <p className="mt-0.5 text-micro text-muted-foreground">
+            <p {...stylex.props(styles.microMuted)}>
               Every enabled sensor is captured. The one you pick here is also the video&apos;s point of view.
             </p>
           </div>
-          <span className="shrink-0 text-micro uppercase tracking-meta text-muted-foreground">
+          <span {...stylex.props(styles.tightCapsMicro)}>
             {sensors.length} {sensors.length === 1 ? "sensor" : "sensors"} · {selectedCount}{" "}
             {selectedCount === 1 ? "pass" : "passes"}
           </span>
         </div>
         {hasCamera ? null : (
-          <p className="border border-dashed render-hairline px-3 py-2 text-xs text-muted-foreground">
+          <p {...stylex.props(styles.xsMutedBordered)}>
             No enabled dash cameras. Select a vehicle in the editor and add one in Sensors.
           </p>
         )}
         {sensors.length > 0 ? (
           <div
             aria-labelledby="recording-camera-heading"
-            className="min-w-0 overflow-x-auto border render-hairline"
+            {...stylex.props(styles.borderedNarrowableScrollX)}
             data-testid="recording-sensor-matrix"
           >
-            <table className="w-full border-collapse text-left">
+            <table {...stylex.props(styles.wideLeftText)}>
               <thead>
-                <tr className="border-b render-hairline">
-                  <th className="px-3 py-1.5 text-micro font-bold uppercase tracking-meta text-muted-foreground" scope="col">
+                <tr {...stylex.props(styles.ruleB)}>
+                  <th {...stylex.props(styles.capsMicroMuted)} scope="col">
                     Sensor
                   </th>
                   {columns.map((modality) => {
                     const { all, some } = columnState(modality);
                     return (
-                      <th className="w-16 px-1 py-1 text-center" key={modality} scope="col">
+                      <th {...stylex.props(styles.centerText)} key={modality} scope="col">
                         <button
                           aria-label={`${all ? "Clear" : "Capture"} ${renderModalityLabel(modality)} on every sensor`}
                           aria-pressed={all}
-                          className={cn(
-                            "editor-motion w-full px-1 py-0.5 text-micro font-bold uppercase tracking-meta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            all
-                              ? "text-primary"
-                              : some
-                                ? "text-foreground"
-                                : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className={stylex.props(
+                            styles.capsMicroBold,
+                            motionStyles.editorMotion,
+                            all ? styles.columnAll : some ? styles.columnSome : styles.columnNone,
+                          ).className}
                           data-testid={`sensor-modality-column-${modality}`}
                           disabled={busy || unavailable(modality)}
                           onClick={() => toggleColumn(modality)}
@@ -150,11 +149,11 @@ export function BrowserCameraStep({
                 </tr>
               </thead>
               {groups.map((group) => (
-                <tbody className="border-b render-hairline last:border-b-0" key={group.actorId}>
+                <tbody {...stylex.props(styles.ruleB2)} key={group.actorId}>
                   {groups.length > 1 ? (
                     <tr>
                       <th
-                        className="px-3 pt-2 text-micro font-bold uppercase tracking-meta text-muted-foreground"
+                        {...stylex.props(styles.capsMicroMuted2)}
                         colSpan={columns.length + 1}
                         scope="colgroup"
                       >
@@ -170,15 +169,15 @@ export function BrowserCameraStep({
                     const supported = supportedModalities(option.sensor);
                     return (
                       <tr
-                        className={cn("border-t render-hairline first:border-t-0", isPov ? "bg-primary/10" : null)}
+                        {...stylex.props(styles.ruleT, isPov && styles.povRow)}
                         data-pov={isPov}
                         data-testid={`recording-sensor-card-${key}`}
                         key={key}
                       >
-                        <th className="min-w-0 px-3 py-1" scope="row">
+                        <th {...stylex.props(styles.narrowable2)} scope="row">
                           <button
                             aria-checked={isPov}
-                            className="editor-motion flex w-full min-w-0 items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className={stylex.props(styles.flexCenterWide, motionStyles.editorMotion).className}
                             disabled={busy || !isCamera}
                             onClick={() => onSelectPov(key)}
                             role="radio"
@@ -190,19 +189,19 @@ export function BrowserCameraStep({
                             {isCamera ? (
                               <Camera
                                 aria-hidden="true"
-                                className={cn("size-3.5 shrink-0", isPov ? "text-primary" : "text-muted-foreground")}
+                                className={stylex.props(isPov ? styles.tightAccent : styles.tightMuted).className}
                               />
                             ) : (
-                              <Radar aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+                              <Radar aria-hidden="true" className={stylex.props(styles.tightMuted).className} />
                             )}
-                            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
+                            <span {...stylex.props(styles.fillXsInk)}>
                               {option.sensor.label ?? option.sensor.id}
                             </span>
-                            <span className="shrink-0 text-micro uppercase tracking-meta text-muted-foreground">
+                            <span {...stylex.props(styles.tightCapsMicro)}>
                               {humanize(option.sensor.type)}
                             </span>
                             {isPov ? (
-                              <span className="shrink-0 bg-primary px-1.5 py-0.5 text-micro font-bold uppercase tracking-meta text-primary-foreground">
+                              <span {...stylex.props(styles.tightCapsMicro2)}>
                                 Video
                               </span>
                             ) : null}
@@ -211,20 +210,20 @@ export function BrowserCameraStep({
                         {columns.map((modality) => {
                           if (!supported.includes(modality)) {
                             return (
-                              <td className="px-1 py-1 text-center text-micro text-muted-foreground/40" key={modality}>
+                              <td {...stylex.props(styles.microCenterText)} key={modality}>
                                 <span aria-hidden="true">·</span>
-                                <span className="sr-only">
+                                <span {...stylex.props(styles.srOnly)}>
                                   {humanize(option.sensor.type)} cannot write {renderModalityLabel(modality)}
                                 </span>
                               </td>
                             );
                           }
                           return (
-                            <td className="px-1 py-1 text-center" key={modality}>
+                            <td {...stylex.props(styles.centerText2)} key={modality}>
                               <input
                                 aria-label={`Capture ${renderModalityLabel(modality)} from ${option.sensor.label ?? option.sensor.id}`}
                                 checked={selectedModalities.includes(modality)}
-                                className="size-3 accent-primary"
+                                {...stylex.props(styles.size3AccentPrimary)}
                                 data-testid={`sensor-modality-${key}-${modality}`}
                                 disabled={busy || unavailable(modality)}
                                 onChange={() => onToggleModality(option, modality)}
@@ -247,10 +246,10 @@ export function BrowserCameraStep({
         {columns.some(unavailable) ? (
           // Once, under the grid. The old cards repeated this beside every camera, which is both
           // louder and less useful: the reason is a property of the map, not of any one sensor.
-          <p className="mt-1.5 text-micro text-muted-foreground">
+          <p {...stylex.props(styles.microMuted2)}>
             Semantic passes are unavailable: this map version does not advertise
             {" "}
-            <span className="font-mono">map.static_semantics</span>.
+            <span {...stylex.props(styles.mono)}>map.static_semantics</span>.
           </p>
         ) : null}
       </RenderWizardBody>

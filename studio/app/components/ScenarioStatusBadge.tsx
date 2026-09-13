@@ -17,5 +17,5 @@ const CONFIG: Record<ScenarioStatus, StatusConfig> = {
 interface ScenarioStatusBadgeProps { status: string }
 export function ScenarioStatusBadge({ status }: ScenarioStatusBadgeProps) {
   const config = (CONFIG as Record<string, StatusConfig>)[status] ?? CONFIG.DRAFT;
-  return <Badge title={config.label} aria-label={config.label} {...stylex.props(styles.base, styles[config.tone])}>{config.icon}</Badge>;
+  return <Badge title={config.label} aria-label={config.label} xstyle={[styles.base, styles[config.tone]]}>{config.icon}</Badge>;
 }

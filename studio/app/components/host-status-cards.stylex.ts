@@ -87,7 +87,7 @@ export const card = stylex.create({
   // font-meta text-[9px] font-bold uppercase tracking-[0.16em] text-white/40
   eyebrow: {
     fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
+    fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
@@ -139,7 +139,7 @@ export const card = stylex.create({
   factLabel: {
     flexShrink: 0,
     fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
+    fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
@@ -257,7 +257,7 @@ export const cloud = stylex.create({
     gridTemplateColumns: { default: "none", [SM]: "repeat(2, minmax(0, 1fr))" },
     columnGap: space.xxl,
     rowGap: space.xs,
-    fontSize: text.sizeMeta,
+    fontSize: "11px",
     color: "rgba(255, 255, 255, 0.4)",
   },
   // flex gap-2
@@ -343,7 +343,7 @@ export const chip = stylex.create({
   eyebrow: {
     marginBottom: "0.125rem",
     fontFamily: text.fontMeta,
-    fontSize: "0.5rem",
+    fontSize: "8px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
@@ -365,11 +365,16 @@ export const chip = stylex.create({
     borderRadius: radii.lg,
     paddingInline: "0.625rem",
     paddingBlock: "0.375rem",
-    fontSize: text.sizeMicro,
+    fontSize: "10px",
     transitionProperty: COLOR_TRANSITION,
     transitionDuration: "150ms",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-    outline: { default: null, ":focus-visible": "none" },
+    // `focus-visible:outline-none` is Tailwind's transparent 2px outline, not
+    // `outline: none`, so forced-colours mode still has an outline to repaint.
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineColor: { default: null, ":focus-visible": "transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
     boxShadow: { default: null, ":focus-visible": ACCENT_RING },
   },
   // border border-white/[0.06] font-medium text-white/50 hover:border-white/15 hover:text-white
@@ -451,6 +456,9 @@ export const local = stylex.create({
   // list-disc pl-5 text-xs text-amber-300/90
   reasons: {
     listStyleType: "disc",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.25rem",
     paddingLeft: "1.25rem",
     fontSize: text.sizeXs,
     lineHeight: "1rem",
@@ -507,7 +515,7 @@ export const readyPill = stylex.create({
     paddingInline: space.md,
     paddingBlock: "0.125rem",
     fontFamily: text.fontMeta,
-    fontSize: "0.5rem",
+    fontSize: "8px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.13em",

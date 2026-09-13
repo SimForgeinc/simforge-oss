@@ -56,7 +56,7 @@ export function MapList({
     return <p role="alert" {...stylex.props(styles.error)}>{error}</p>;
   }
   if (maps === null) {
-    return <div {...stylex.props(styles.empty)}><p {...stylex.props(styles.emptyText)}>Loading published maps…</p></div>;
+    return <div {...stylex.props(styles.emptyFlush)}><p {...stylex.props(styles.loadingText)}>Loading published maps…</p></div>;
   }
   if (maps.length === 0) {
     return (
@@ -67,7 +67,7 @@ export function MapList({
           <p {...stylex.props(styles.emptyHint)}>
             Upload an OpenDRIVE file and one GLB per layer — a file named <code>road.glb</code> is required — and the server builds the rest.
           </p>
-          <Button type="button" onClick={onUpload} {...stylex.props(styles.upload)}>Upload a map</Button>
+          <Button type="button" onClick={onUpload} xstyle={styles.upload}>Upload a map</Button>
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export function MapList({
               <span {...stylex.props(styles.localityText)}>{map.locality ?? "Locality not recorded"}</span>
             </div>
             <p {...stylex.props(styles.id)} title={map.mapVersionId}>{map.mapVersionId}</p>
-            <Button asChild size="sm" variant="outline" {...stylex.props(styles.author)}>
+            <Button asChild size="sm" variant="outline" xstyle={styles.author}>
               <Link href="/dashboard/scenario" aria-label={`Author a scenario on ${map.label}`}>
                 <SquarePen aria-hidden="true" /> Author a scenario
               </Link>

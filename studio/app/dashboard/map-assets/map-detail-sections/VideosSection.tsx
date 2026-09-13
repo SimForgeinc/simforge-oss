@@ -1,9 +1,8 @@
 "use client";
 import * as stylex from "@stylexjs/stylex";
-import { styles } from "../map-assets.stylex";
+import { styles, bridge } from "../map-assets.stylex";
 
 import { ChevronRight, Play } from "lucide-react";
-import { cn } from "@simforge-oss/studio-ui/lib/utils";
 import { s3UriToMapAssetProxyUrl } from "@/app/lib/media-utils";
 
 /** A fly-by `mp4` artifact, optionally paired with its low-res preview clip. */
@@ -46,7 +45,7 @@ export function VideosSection({
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn("size-3 shrink-0 transition-transform duration-150", open && "rotate-90")}
+          className={stylex.props(styles.chevron, open && styles.rotate90).className}
         />
         Videos
       </button>
@@ -69,7 +68,7 @@ export function VideosSection({
                   <button
                     type="button"
                     onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                    className={stylex.props(styles.s_545).className}
+                    className={stylex.props(styles.s_545).className + " " + bridge.s_545}
                   >
                     <div className={stylex.props(styles.s_546).className}>
                       <video
@@ -84,7 +83,7 @@ export function VideosSection({
                         className={stylex.props(styles.s_547).className}
                       />
                       <div className={stylex.props(styles.s_548).className}>
-                        <span className={stylex.props(styles.s_549).className}>
+                        <span className={stylex.props(styles.s_549).className + " " + bridge.s_549}>
                           <Play className={stylex.props(styles.s_550).className} />
                         </span>
                       </div>
@@ -103,10 +102,10 @@ export function VideosSection({
                 <button
                   type="button"
                   onClick={() => onViewArtifact({ proxyUrl, label: artifact.label })}
-                  className={stylex.props(styles.s_552).className}
+                  className={stylex.props(styles.s_552).className + " " + bridge.s_552}
                 >
                   <div className={stylex.props(styles.s_553).className}>
-                    <span className={stylex.props(styles.s_554).className}>
+                    <span className={stylex.props(styles.s_554).className + " " + bridge.s_554}>
                       <Play className={stylex.props(styles.s_555).className} />
                     </span>
                   </div>
