@@ -210,12 +210,23 @@ export function DriveSession({
     // from zero and whose car is a different actor: without this the bridge
     // would keep drawing the session that just closed.
     bridge?.reset();
+    // The worker announces every rebuild (transport reset, seek backwards,
+    // take start) before the new generation's frames; the bridge only accepts
+    // a tick that walks backwards after that authoritative reset.
+    const unsubscribeResets = source.subscribeResets?.(() => {
+      latestFrameRef.current = null;
+      bridge?.reset();
+    });
     // The loop reads frames from a ref: publishing them as React state at 20 Hz
     // would rebuild the loop's closure twenty times a second.
-    return source.subscribeFrames((frame) => {
+    const unsubscribeFrames = source.subscribeFrames((frame) => {
       latestFrameRef.current = frame;
       bridge?.apply(frame);
     });
+    return () => {
+      unsubscribeResets?.();
+      unsubscribeFrames();
+    };
   }, [bridge, source]);
 
   useEffect(() => () => bridge?.dispose(), [bridge]);

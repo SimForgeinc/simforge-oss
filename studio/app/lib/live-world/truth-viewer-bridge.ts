@@ -170,6 +170,8 @@ export function createTruthViewerBridge(
       failed = null;
       appearance.clear();
       elapsedSinceLatest = 0;
+      lastRendered.clear();
+      adapter.actors.clearLayer(layer);
     },
     setFollow(actorId, mode = 'chase') {
       if (disposed) return;
