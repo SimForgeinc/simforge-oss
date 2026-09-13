@@ -847,7 +847,7 @@ export function expectedCapturePayload(rigId: string): Record<string, unknown> {
       id: sensor.id,
       type: sensor.type,
       mount: sensor.mount,
-      ...(sensor.type === 'dash_camera' ? { fov: sensor.fov, dims: sensor.dims } : {}),
+      ...(sensor.type === 'dash_camera' ? { camera: sensor.camera } : {}),
     })),
   };
 }
@@ -1090,10 +1090,8 @@ export interface ActualCaptureSensor {
   readonly cameraId: number;
   /** Resolved actor-local mount - numeric, post-anchor-resolution. */
   readonly mount: unknown;
-  /** Field of view actually rendered, when the sensor is a camera. */
-  readonly fov?: number;
-  /** Rendered pixel dimensions actually used. */
-  readonly dims?: unknown;
+  /** Camera geometry actually rendered, when the sensor is a camera. */
+  readonly camera?: unknown;
 }
 
 /**
@@ -1137,8 +1135,6 @@ export function capturePayloadFromSensors(input: {
   const sensors = [...input.sensors].sort((a, b) => a.cameraId - b.cameraId);
   return {
     schema: 'simforge.capture-profile/v2',
-    // Label, not identity.
-    rigLabel: input.rigLabel ?? null,
     cameraIds: sensors.map((sensor) => sensor.cameraId),
     renderWidth: input.renderWidth,
     renderHeight: input.renderHeight,
@@ -1150,8 +1146,7 @@ export function capturePayloadFromSensors(input: {
       type: sensor.type,
       cameraId: sensor.cameraId,
       mount: sensor.mount,
-      ...(sensor.fov === undefined ? {} : { fov: sensor.fov }),
-      ...(sensor.dims === undefined ? {} : { dims: sensor.dims }),
+      ...(sensor.camera === undefined ? {} : { camera: sensor.camera }),
     })),
   };
 }

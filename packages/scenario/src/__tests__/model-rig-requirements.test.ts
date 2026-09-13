@@ -100,13 +100,18 @@ describe('model rig requirements', () => {
 
 
 describe('actual capture identity', () => {
-  const sensor = (id: string, cameraId: number, fov: number) => ({
+  const sensor = (id: string, cameraId: number, horizontalFovDeg: number) => ({
     id,
     type: 'dash_camera',
     cameraId,
     mount: { position: { x: 1, y: 0, z: 1.5 }, rotation: { yaw: 0, pitch: 0, roll: 0 } },
-    fov,
-    dims: { width: 512, height: 384 },
+    camera: {
+      horizontalFovDeg,
+      verticalFovDeg: 60,
+      nearM: 0.05,
+      farM: 1_000,
+      aspectRatio: 512 / 384,
+    },
   });
   const base = {
     renderWidth: 512,
@@ -177,12 +182,8 @@ describe('actual capture identity', () => {
     const sensors = [sensor('camera_front_wide_120fov', 1, 120)];
     const a = capturePayloadFromSensors({ ...base, sensors, rigLabel: 'alpamayo-4cam' });
     const b = capturePayloadFromSensors({ ...base, sensors, rigLabel: 'my-custom-rig' });
-    // The label is recorded, so the payloads differ...
-    expect(JSON.stringify(a)).not.toBe(JSON.stringify(b));
-    // ...but the sensors, which are the capture, are identical.
-    expect(JSON.stringify((a as { sensors: unknown }).sensors)).toBe(
-      JSON.stringify((b as { sensors: unknown }).sensors),
-    );
+    // The label is deliberately excluded from the identity payload.
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 
   it('refuses a capture with no sensors or duplicate camera ids', () => {

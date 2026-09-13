@@ -1,5 +1,4 @@
 "use client";
-import * as stylex from "@stylexjs/stylex";
 
 import { ComparisonLauncher } from "./ComparisonLauncher";
 import { ArrowLeft, ChevronDown } from "lucide-react";
@@ -313,7 +312,7 @@ export function CompareClient({
   });
 
   return (
-    <div {...stylex.props(styles.shell)} >
+    <div className="flex h-full flex-col overflow-y-auto">
       <PageHeader
         eyebrow={campaignId}
         title="Model comparison"
@@ -321,18 +320,12 @@ export function CompareClient({
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/evaluation">
-              <ArrowLeft {...stylex.props(styles.icon)} />
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
               All campaigns
             </Link>
           </Button>
         }
       />
-<<<<<<< HEAD
-      <div {...stylex.props(styles.content)} >
-        <div {...stylex.props(styles.grid2)} >
-          <PolicySummaryCard label="A" campaignId={campaignId} policy={comparison.a} />
-          <PolicySummaryCard label="B" campaignId={campaignId} policy={comparison.b} />
-=======
       <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {comparison.columns.map((policy, index) => (
@@ -344,16 +337,11 @@ export function CompareClient({
               sample={firstCellByColumn[index] ?? null}
             />
           ))}
->>>>>>> feat/model-comparison-20260908
         </div>
 
         <Card>
           <CardHeader>
-<<<<<<< HEAD
-            <CardTitle xstyle={styles.cardTitle} >Per-scenario deltas</CardTitle>
-=======
             <CardTitle className="text-base">Metrics</CardTitle>
->>>>>>> feat/model-comparison-20260908
             <CardDescription>
               A metric is ranked only over rows where every column matched the baseline and defined
               it. Where a run saw different cameras or ran on a different runtime, its numbers are
@@ -385,12 +373,6 @@ export function CompareClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Scenario</TableHead>
-<<<<<<< HEAD
-                    <TableHead xstyle={styles.numeric} >Seed</TableHead>
-                    <TableHead xstyle={styles.numeric} >A score</TableHead>
-                    <TableHead xstyle={styles.numeric} >B score</TableHead>
-                    <TableHead xstyle={styles.numeric} >Δ</TableHead>
-=======
                     <TableHead className="text-right">Seed</TableHead>
                     {comparison.columns.map((policy, index) => (
                       <TableHead key={`head-${String(index)}`} className="text-right">
@@ -398,55 +380,11 @@ export function CompareClient({
                       </TableHead>
                     ))}
                     <TableHead>Comparability</TableHead>
->>>>>>> feat/model-comparison-20260908
                     <TableHead>Divergence</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {comparison.episodes.map((episode) => (
-<<<<<<< HEAD
-                    <TableRow key={`${episode.scenarioId}-${episode.seed}`}>
-                      <TableCell xstyle={styles.linkMedium} >{episode.scenarioId}</TableCell>
-                      <TableCell xstyle={styles.numeric} >{episode.seed}</TableCell>
-                      <TableCell xstyle={styles.numeric} >
-                        {episode.aEpisodeId ? (
-                          <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.aEpisodeId}`}>
-                            {formatScore(episode.aScore)}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell xstyle={styles.numeric} >
-                        {episode.bEpisodeId ? (
-                          <Link {...stylex.props(styles.link)} href={`/dashboard/evaluation/${campaignId}/episodes/${episode.bEpisodeId}`}>
-                            {formatScore(episode.bScore)}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell
-                        xstyle={[
-                          styles.delta,
-                          episode.scoreDelta !== null && episode.scoreDelta > 0
-                            ? styles.deltaPositive
-                            : episode.scoreDelta !== null && episode.scoreDelta < 0
-                              ? styles.deltaNegative
-                              : null,
-                        ]}
-                      >
-                        {formatDelta(episode.scoreDelta)}
-                      </TableCell>
-                      <TableCell>
-                        {episode.divergenceStep !== null ? (
-                          <Badge variant="secondary" xstyle={styles.monoTiny} >
-                            step {episode.divergenceStep} · {episode.divergenceTS?.toFixed(1)}s
-                          </Badge>
-                        ) : (
-                          <span {...stylex.props(styles.xsMuted)} >
-                            {episode.aEpisodeId && episode.bEpisodeId ? "none" : "incomplete pair"}
-=======
                     <TableRow key={`${episode.scenarioId}-${String(episode.seed)}`}>
                       <TableCell className="font-medium">{episode.scenarioId}</TableCell>
                       <TableCell className="text-right font-mono">{episode.seed}</TableCell>
@@ -485,7 +423,6 @@ export function CompareClient({
                                   : `step ${String(step)} (${(episode.divergenceTS[index + 1] ?? 0).toFixed(1)}s)`,
                               )
                               .join(" · ")}
->>>>>>> feat/model-comparison-20260908
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">none</span>
