@@ -55,8 +55,23 @@ type RenderBackend = ScenarioRendererEngine | "esmini";
 const ESMINI_VALIDATOR_VERSION = "3.6.0";
 
 type VideoResolution = { width: number; height: number; label: string };
-const RENDERER_RESOLUTIONS: readonly VideoResolution[] = [{ width: 1280, height: 720, label: "720p" }];
-const RENDERER_FPS_OPTIONS: readonly number[] = [24];
+const RENDERER_RESOLUTIONS: readonly VideoResolution[] = [
+  { width: 1280, height: 720, label: "720p" },
+  // The Alpamayo models preprocess to 512x384, so a render at that size is the
+  // one a model reads unresized. Rendering 720p for a model run costs render
+  // time and then throws the extra pixels away.
+  { width: 512, height: 384, label: "512x384 (model native)" },
+];
+/**
+ * Frame rates offered for a render.
+ *
+ * 20 and 30 exist because a model consumes frames at exactly 10 Hz: those
+ * divide it, so the clip is every 2nd or every 3rd frame with no resampling.
+ * 24 does not divide 10 - nearest-frame selection injects up to 20.8 ms of
+ * jitter, which lands in the metric with nothing to attribute it to. 24 stays
+ * for renders meant to be watched rather than scored.
+ */
+const RENDERER_FPS_OPTIONS: readonly number[] = [20, 24, 30];
 const CARLA_QUALITIES = ["preview", "standard", "high", "cinematic"] as const;
 const EXPORT_POLL_MS = 1_000;
 /**

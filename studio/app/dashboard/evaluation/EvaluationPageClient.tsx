@@ -53,11 +53,13 @@ function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
             <Link
               href={{
                 pathname: `/dashboard/evaluation/${campaign.campaignId}/compare`,
-                query: { a: policyA.policyId, b: policyB.policyId },
+                // Repeated `policy` rather than the retired a/b pair: the page
+                // takes any number of columns and the first is the baseline.
+                query: { policy: [policyA.policyId, policyB.policyId] },
               }}
             >
               <GitCompareArrows {...stylex.props(styles.icon)} />
-              Compare A/B
+              Compare models
             </Link>
           </Button>
         ) : null}

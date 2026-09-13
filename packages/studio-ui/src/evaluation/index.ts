@@ -19,6 +19,7 @@ export * from "./model-catalog";
 export * from "./params";
 export * from "./presentation";
 export * from "./projection";
+export * from "./render-handoff";
 export * from "./sha256";
 export * from "./upload";
 export * from "./useJobResult";
@@ -28,6 +29,10 @@ export { EvaluationLauncher, type LocalRunLauncher } from "./components/Evaluati
 export { EvaluationWorkspace } from "./components/EvaluationWorkspace";
 export { FrameOverlay, type FrameSource } from "./components/FrameOverlay";
 export { InputPicker, type PreparedInput } from "./components/InputPicker";
+export {
+  RenderEvaluationHandoff,
+  type RenderEvaluationHandoffProps,
+} from "./components/RenderEvaluationHandoff";
 export { JobDetail } from "./components/JobDetail";
 export { JobHistory, JobStatusBadge } from "./components/JobHistory";
 export { ModelPicker, type ModelSelection } from "./components/ModelPicker";
