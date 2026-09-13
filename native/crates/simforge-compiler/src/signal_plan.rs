@@ -755,6 +755,34 @@ fn compile_junction(
         selection.movement_head_ids.dedup();
         selection.intersection_head_ids.extend(clip.reference.display_head_ids.iter().cloned());
         selection.intersection_head_ids.sort();
+        if !clip.reference.movements.is_empty() {
+            let wanted: BTreeSet<String> = control_index
+                .movements
+                .values()
+                .filter(|movement| {
+                    movement.controller_ids.iter().any(|id| controller_ids.contains(id))
+                        && clip.reference.movements.iter().any(|requested| {
+                            movement.approach_lane_rsls.iter().any(|lane| lane == &requested.approach_lane_rsl)
+                                && movement.connecting_lane_rsls.iter().any(|lane| lane == &requested.connecting_lane_rsl)
+                        })
+                })
+                .map(|movement| movement.id.clone())
+                .collect();
+            if wanted.is_empty() {
+                return Err(plan_error(
+                    "map_signal_plan_reference_unbound",
+                    format!("{clip_path}.reference.movements"),
+                    "exact signal movements do not resolve on the selected controller stage".to_owned(),
+                ));
+            }
+            selection.stage_movement_ids.retain(|id| wanted.contains(id));
+            selection.related_movement_ids.retain(|id| wanted.contains(id));
+            selection.movement_head_ids = wanted
+                .iter()
+                .filter_map(|id| control_index.movements.get(id))
+                .flat_map(|movement| movement.head_ids.iter().cloned())
+                .collect();
+        }
         selection.intersection_head_ids.dedup();
         let evaluation = evaluate_signal_reference_phase(
             &control_index,
