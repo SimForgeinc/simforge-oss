@@ -136,29 +136,15 @@ export const FramePoseSchema = z.strictObject({
 });
 
 /**
- * The exact map-bound route a participant owns from the start of the clip.
- *
- * This is spawn state, not choreography: changing it in the timeline would
- * imply an event at t=0 and force every consumer to rediscover the actor's
- * initial route by scanning interactions.
+ * Map-bound route payloads shared verbatim by initial state and the timeline.
  */
-export const SceneAbsoluteLaneRouteSchema = z.strictObject({
-  mode: z.literal('lanePath'),
-  lanes: z.array(z.string().min(1)).min(1).max(128),
-});
-
-export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
-  SceneAbsoluteLaneRouteSchema,
+export const SceneAbsoluteMapBoundRouteSchemas = [
+  /** The concrete lane chain a map-bound actor follows from its authored pose. */
   z.strictObject({
-    mode: z.literal('worldPath'),
-    points: z.array(z.strictObject({ x: z.number().finite(), z: z.number().finite() })).min(2).max(20000),
-    stopControls: z.array(z.strictObject({
-      id: z.string().min(1),
-      s: z.number().finite().nonnegative(),
-      dwellS: z.number().finite().positive(),
-      coordinationId: z.string().min(1).optional(),
-    })).optional(),
+    mode: z.literal('lanePath'),
+    lanes: z.array(z.string().min(1)).min(1).max(128),
   }),
+  /** One scene-space point holds position; otherwise cruise speed owns motion. */
   z.strictObject({
     mode: z.literal('customRoute'),
     points: z.array(z.strictObject({
@@ -166,6 +152,7 @@ export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
       z: z.number().finite(),
     })).min(1).max(128),
   }),
+  /** Clip-clock keyframes: repeated positions encode dwells, without retiming. */
   z.strictObject({
     mode: z.literal('customTimedRoute'),
     points: z.array(z.strictObject({
@@ -173,6 +160,29 @@ export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
       x: z.number().finite(),
       z: z.number().finite(),
     })).min(1).max(1024),
+  }),
+] as const;
+
+/**
+ * The exact route a participant owns from the start of the clip.
+ *
+ * This is spawn state, not choreography: changing it in the timeline would
+ * imply an event at t=0 and force every consumer to rediscover the actor's
+ * initial route by scanning interactions. `worldPath` is initial-state only:
+ * it carries source-proven stop controls that the timeline never re-authors.
+ */
+export const SceneAbsoluteInitialRouteSchema = z.discriminatedUnion('mode', [
+  ...SceneAbsoluteMapBoundRouteSchemas,
+  z.strictObject({
+    mode: z.literal('worldPath'),
+    points: z.array(z.strictObject({ x: z.number().finite(), z: z.number().finite() })).min(2).max(20000),
+    /** Source-proven static stops retained on this exact world-space route. */
+    stopControls: z.array(z.strictObject({
+      id: z.string().min(1),
+      s: z.number().finite().nonnegative(),
+      dwellS: z.number().finite().positive(),
+      coordinationId: z.string().min(1).optional(),
+    })).optional(),
   }),
 ]);
 

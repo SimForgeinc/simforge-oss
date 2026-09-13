@@ -45,7 +45,7 @@ import {
   RoleRefSchema,
 } from './common.js';
 import { ManualDriveRecordingSchema } from './manual-drive.js';
-import { FramePoseSchema, SceneAbsoluteInitialRouteSchema } from './roles.js';
+import { FramePoseSchema, SceneAbsoluteMapBoundRouteSchemas } from './roles.js';
 import { SetValueSchema } from './set-keys.js';
 
 /** Comparison operators available to threshold conditions. */
@@ -381,7 +381,7 @@ export const RouteTargetSchema = z.discriminatedUnion('mode', [
   /** Frame-relative polyline: jaywalking, work-zone weaves, parking manoeuvres. */
   z.strictObject({ mode: z.literal('polyline'), points: z.array(FramePoseSchema).min(2).max(32) }),
   // Initial state and timeline routes share the exact same map-bound payloads.
-  ...SceneAbsoluteInitialRouteSchema.options,
+  ...SceneAbsoluteMapBoundRouteSchemas,
   /**
    * Manual drive: a recorded take owns the actor's pose for the whole clip.
    * Timeline-only — it is the clip, so it has no initial-state twin.
