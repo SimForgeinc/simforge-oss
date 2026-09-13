@@ -136,7 +136,7 @@
           {
             "source": "asset-catalog-procedural",
             "models": 34,
-            "attribution": "SimForge procedural catalog model (@simforge-oss/asset-catalog 0.1.0-rc.63), built by buildProp() with catalog default params",
+            "attribution": "SimForge procedural catalog model (@simforge-oss/asset-catalog 0.1.0-rc.64), built by buildProp() with catalog default params",
             "terms": "SimForge's own output, Apache-2.0 with the rest of the product"
           },
           {

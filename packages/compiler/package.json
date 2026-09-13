@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/compiler",
-  "version": "0.1.0-rc.63",
+  "version": "0.1.0-rc.64",
   "description": "SimForge scenario compiler contracts and the Node façade over the native compiler: map bundles, site matching, template and situation compilation, rehearsal and comparison.",
   "repository": {
     "type": "git",

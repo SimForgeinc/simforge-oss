@@ -1,6 +1,6 @@
 [project]
 name = "simforge-oss-physics"
-version = "0.1.0rc63"
+version = "0.1.0rc64"
 description = "Articulated physics profile (articulated-mujoco-v1): MuJoCo CPU and MuJoCo Warp execution of the delivery-robot curb/ramp workload with typed actions, observations, snapshots and scene-state export."
 readme = "README.md"
 requires-python = ">=3.10"

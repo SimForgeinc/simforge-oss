@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/model-store",
-  "version": "0.1.0-rc.63",
+  "version": "0.1.0-rc.64",
   "description": "Alpamayo model catalog, digest-pinned resumable installer, integrity verification and hardware preflight, shared by the SimForge CLI, the desktop host and the product UI.",
   "repository": {
     "type": "git",
