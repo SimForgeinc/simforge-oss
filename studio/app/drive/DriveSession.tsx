@@ -50,6 +50,7 @@ import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
 import { DrivingControls } from "./DrivingControls";
 import { ManualDriveTakeReview } from "./ManualDriveTake";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 const WORLD_TICK_HZ = 20;
 /** Orbit drag sensitivity, radians per pixel. */
 const ORBIT_DRAG_RAD_PER_PX = 0.006;
@@ -242,6 +243,20 @@ export function DriveSession({
     if (!bridge) return;
     bridge.setFollow(egoActorId, take ? "dash" : "chase");
   }, [bridge, egoActorId, take]);
+  // A take's outcome arrives once through the source: a sealed recording goes
+  // to review; a failure leaves the take retryable with its reason on screen.
+  useEffect(() => {
+    if (!source || !take) return;
+    return source.subscribeTakes((event) => {
+      if (event.kind === "complete") {
+        setTakeError(null);
+        setTakePhase({ kind: "review", recording: event.recording });
+      } else {
+        setTakeError(event.message);
+        setTakePhase({ kind: "idle" });
+      }
+    });
+  }, [source, take]);
   useEffect(() => () => bridge?.dispose(), [bridge]);
 
   const onViewerReady = useCallback((ready: CityViewer) => {
@@ -570,6 +585,7 @@ export function DriveSession({
 
   const status = spawnError
     ?? (world.status === "error" ? world.error : null)
+    ?? (takePhase.kind === "idle" && takeError ? `Take failed: ${takeError}` : null)
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
@@ -623,9 +639,12 @@ export function DriveSession({
         <div
           {...stylex.props(driveChrome.panelStatus, route.status)}
           data-testid="drive-status"
-          role={spawnError ? "alert" : "status"}
+          role={spawnError || takeError ? "alert" : "status"}
         >
           {status}
+          {takePhase.kind === "idle" && takeError ? (
+            <Button type="button" variant="outline" onClick={retryTake} data-testid="drive-take-retry">Retry</Button>
+          ) : null}
         </div>
       ) : null}
       {paused ? (
