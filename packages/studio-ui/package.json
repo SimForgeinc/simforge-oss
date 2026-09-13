@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/studio-ui",
-  "version": "0.1.0-rc.61",
+  "version": "0.1.0-rc.62",
   "description": "The SimForge Studio product: scenario datasets, editor, inspector, timeline, render workflows, Three.js viewport hosting and the native playback worker, shared by local Studio and SimCloud behind @simforge-oss/studio-host services.",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 {
   "name": "@simforge-oss/engine",
-  "version": "0.1.0-rc.61",
+  "version": "0.1.0-rc.62",
   "description": "SimForge engine contracts (scenario input, trace, evaluation, scene-state) and the Node/WASM façades over the native runtime.",
   "repository": {
     "type": "git",
