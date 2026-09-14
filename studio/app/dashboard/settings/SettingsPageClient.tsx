@@ -1,10 +1,9 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { Sparkles } from "lucide-react";
+import { MonitorCog, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
-import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { CloudConnectionCard } from "@/app/components/cloud/CloudConnectionCard";
@@ -24,10 +23,15 @@ export function SettingsPageClient() {
             <p {...stylex.props(styles.eyebrow)}>Storage</p>
             <h2 id="settings-storage-title" {...stylex.props(styles.heading)}>Map cache on this computer</h2>
             <p {...stylex.props(styles.copy)}>
-              Downloaded map files are kept here so maps open instantly and renders never re-download. Clearing the
-              cache never deletes your projects, jobs or finished renders.
+              Downloaded map files live with the rendering profile: pick the folder, move the cache,
+              or clear it from Render Settings. Clearing never deletes your projects, jobs or finished renders.
             </p>
-            <MapAssetCacheStorage xstyle={styles.cache} />
+            <Button asChild xstyle={styles.action} variant="outline">
+              <Link href="/dashboard/render-settings">
+                <MonitorCog {...stylex.props(styles.icon)} aria-hidden="true" />
+                Rendering profile &amp; map cache
+              </Link>
+            </Button>
           </section>
           <section aria-labelledby="settings-ai-title" {...stylex.props(styles.section)}>
             <p {...stylex.props(styles.eyebrow)}>Authoring</p>

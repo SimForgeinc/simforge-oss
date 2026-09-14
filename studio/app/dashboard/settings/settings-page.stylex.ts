@@ -14,13 +14,4 @@ export const styles = stylex.create({
   icon: { width: "1rem", height: "1rem" },
   // border-t border-white/10 pt-8
   cloudCard: { borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,.1)", paddingTop: "2rem" },
-  /**
-   * mt-4 border-t-0
-   *
-   * Cancels the top rule `MapAssetCacheStorage`'s own `border-y` draws: on
-   * this page the section heading above already rules that boundary. Passed
-   * as `xstyle`, not `className` — two atomic rules for one property are
-   * ordered by the sheet, and only StyleX's own merge makes this one win.
-   */
-  cache: { marginTop: "1rem", borderTopWidth: 0 },
 });

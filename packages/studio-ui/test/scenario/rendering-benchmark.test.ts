@@ -45,7 +45,11 @@ const hardware = {
     webgl2: true,
     software: false,
   },
+  hardwareAccelerated: true,
+  gpuClass: "apple" as const,
 };
+
+const fullCoverage = { wantedTiles: 120, missingTiles: 0, budgetBlockedTiles: 0, failedTiles: 0 };
 
 function metrics(avgFps: number, p95FrameMs: number): BenchResult {
   return {
@@ -92,11 +96,17 @@ function result(
   quality: RenderingBenchmarkResult["quality"],
   avgFps: number,
   p95FrameMs: number,
+  missingTiles = 0,
 ): RenderingBenchmarkResult {
+  const city = quality === "roads-only" ? null : { ...fullCoverage, missingTiles, budgetBlockedTiles: missingTiles };
   return {
     quality,
     metrics: metrics(avgFps, p95FrameMs),
     assetLoading: { settleMs: 1000, streamingSettled: true, requestCount: 2, transferBytes: 100, encodedBodyBytes: 90, decodedBodyBytes: 120, cachedResponses: 0 },
+    coverage: {
+      settled: { roads: fullCoverage, city, vegetation: null },
+      orbit: { roads: fullCoverage, city, vegetation: null },
+    },
   };
 }
 
@@ -146,6 +156,26 @@ describe("rendering benchmark recommendation", () => {
         high,
       ]),
     ).toBe("minimal");
+  });
+
+  it("refuses a fast renderer that leaves building tiles missing", () => {
+    expect(
+      recommendRenderingPreference([
+        result("roads-only", 60, 17),
+        result("ultra-low-3d", 58, 19),
+        result("minimal", 52, 25),
+        result("high", 58, 22, 7),
+      ]),
+    ).toBe("minimal");
+  });
+
+  it("prefers complete coverage over a marginally smoother incomplete renderer when none clear the floor", () => {
+    expect(
+      recommendRenderingPreference([
+        result("ultra-low-3d", 30, 40),
+        result("minimal", 31, 38, 3),
+      ]),
+    ).toBe("ultra-low-3d");
   });
 });
 

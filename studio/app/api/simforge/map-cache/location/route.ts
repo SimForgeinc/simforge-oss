@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await readMapCacheBody(request);
-    return mapCacheJson(await (await getMapCacheService()).setLocation(body.directory));
+    return mapCacheJson(await (await getMapCacheService()).setLocation(body.directory, { move: body.move === true }));
   } catch (error) {
     return mapCacheErrorResponse("location", error);
   }

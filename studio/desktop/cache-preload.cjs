@@ -51,6 +51,6 @@ contextBridge.exposeInMainWorld("simforgeDesktop", {
     receipt: (key) => call("receipt", key),
     writeReceipt: (key, receipt) => call("writeReceipt", key, receipt),
     clear: () => call("clear"),
-    chooseDirectory: () => call("chooseDirectory"),
+    chooseDirectory: (options) => call("chooseDirectory", options),
   },
 });

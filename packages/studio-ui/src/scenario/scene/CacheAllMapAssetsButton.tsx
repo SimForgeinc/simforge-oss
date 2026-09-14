@@ -4,10 +4,10 @@ import { useStudioHost } from "../../host";
 import { Check, Database } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
-import { MapAssetCacheStorage, formatCacheBytes } from "../../components/MapAssetCacheStorage";
+import { formatCacheBytes } from "../../components/MapAssetCacheStorage";
 import { readRenderingPreference } from "../../components/rendering-preference"
 import { Button } from "../../components/ui/button";
-import { control, scene } from "../scenario-controls.stylex";
+import { scene } from "../scenario-controls.stylex";
 import {
   cacheProfileMapPlan,
   createProfileMapPlan,
@@ -91,14 +91,6 @@ export function CacheAllMapAssetsButton() {
         </span>
       </Button>
       {error ? <p className="mt-2 px-3 text-xs leading-5 text-red-300" role="alert">{error}</p> : null}
-      <MapAssetCacheStorage
-        xstyle={control.spaceAbove4}
-        refreshKey={state}
-        onCleared={() => {
-          setState("idle");
-          setProgress(null);
-        }}
-      />
     </div>
   );
 }

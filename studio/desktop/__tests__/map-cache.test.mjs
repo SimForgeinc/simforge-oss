@@ -159,6 +159,11 @@ describe("desktop map cache bridge", () => {
     const location = service.requests.slice(before).find((request) => request.path === "/api/simforge/map-cache/location");
     assert.deepEqual(location.body, { directory: "/mnt/maps" });
     assert.equal(location.headers.authorization, "Bearer host-token");
+    chosen = "/mnt/moved";
+    before = service.requests.length;
+    assert.equal((await electron.invoke("chooseDirectory", { move: true })).directory, "/mnt/maps");
+    const moved = service.requests.slice(before).find((request) => request.path === "/api/simforge/map-cache/location");
+    assert.deepEqual(moved.body, { directory: "/mnt/moved", move: true });
   });
 
   it("refuses untrusted senders before touching the service", async () => {

@@ -285,6 +285,10 @@
         "types": "./dist/onboarding/index.d.ts",
         "default": "./dist/onboarding/index.js"
       },
+      "./render-selection/RenderSelectionPanel": {
+        "types": "./dist/render-selection/RenderSelectionPanel.d.ts",
+        "default": "./dist/render-selection/RenderSelectionPanel.js"
+      },
       "./scenario/ScenarioDatasetsClient": {
         "types": "./dist/scenario/ScenarioDatasetsClient.d.ts",
         "default": "./dist/scenario/ScenarioDatasetsClient.js"
@@ -747,6 +751,11 @@
       "development": "./src/onboarding/index.ts",
       "types": "./dist/onboarding/index.d.ts",
       "default": "./dist/onboarding/index.js"
+    },
+    "./render-selection/RenderSelectionPanel": {
+      "development": "./src/render-selection/RenderSelectionPanel.tsx",
+      "types": "./dist/render-selection/RenderSelectionPanel.d.ts",
+      "default": "./dist/render-selection/RenderSelectionPanel.js"
     },
     "./scenario/ScenarioDatasetsClient": {
       "development": "./src/scenario/ScenarioDatasetsClient.tsx",

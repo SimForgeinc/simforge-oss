@@ -73,7 +73,7 @@ export interface DesktopMapCacheBridge {
   /** Explicit user-requested clearing only. */
   clear(): Promise<void>;
   /** Native directory picker; resolves with the (possibly unchanged) status. */
-  chooseDirectory(): Promise<DesktopMapCacheStatus>;
+  chooseDirectory(options?: { move?: boolean }): Promise<DesktopMapCacheStatus>;
 }
 
 export type SimforgeDesktopBridge = {

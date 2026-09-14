@@ -75,6 +75,7 @@ import {
   TileStreamLayer,
   boxOf,
   type EvictionCandidate,
+  type LayerStats,
   type PreparedAsset,
   RequiredAssetBudgetError,
   type StreamTileDef,
@@ -90,6 +91,7 @@ import type {
   CityViewerStats,
   FramePhaseStats,
   FrameTimeCounts,
+  LayerCoverage,
   RendererCapability,
   VegetationInstanceFile,
 } from './types';
@@ -97,6 +99,16 @@ import type {
 export interface CityViewerLayers {
   city: boolean;
   vegetation: boolean;
+}
+
+function layerCoverage(stats: LayerStats | undefined): LayerCoverage | null {
+  if (!stats) return null;
+  return {
+    wantedTiles: stats.wantedTiles,
+    missingTiles: stats.missingTiles,
+    budgetBlockedTiles: stats.budgetBlockedTiles,
+    failedTiles: stats.failedTiles,
+  };
 }
 
 const DEFAULTS = {
@@ -1489,6 +1501,7 @@ export class CityViewer {
       surfaceMaterials: this.surfaceMaterials.report(),
       snowCover: snow,
       assetVariants: { manifest: Boolean(this.variantManifest), loaded: { ...this.variantLoads }, fallbacks: this.variantFallbacks },
+      coverage: { roads: layerCoverage(road), city: layerCoverage(city), vegetation: layerCoverage(veg) },
     };
   }
 

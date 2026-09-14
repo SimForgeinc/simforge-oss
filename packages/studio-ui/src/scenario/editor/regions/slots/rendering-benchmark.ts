@@ -2,6 +2,7 @@ import type {
   BenchResult,
   CityViewer,
   RendererCapability,
+  StreamingCoverage,
 } from "@simforge-oss/viewer";
 import {
   SCENARIO_AUTHORING_QUALITY_IDS,
@@ -9,7 +10,7 @@ import {
 } from "../../../../lib/scenario/contracts";
 
 export const RENDERING_BENCHMARK_STORAGE_KEY =
-  "simforge.rendering-benchmark.v6";
+  "simforge.rendering-benchmark.v7";
 
 export const RENDERING_BENCHMARK_CONFIGURATION = {
   viewportWidth: 1280,
@@ -36,7 +37,15 @@ export type RenderingBenchmarkHardware = {
     colorDepth: number | null;
   };
   renderer: RendererCapability | null;
+  /**
+   * Whether the browser reports WebGL as hardware accelerated. `null` when
+   * the probe is unavailable (server render, no canvas).
+   */
+  hardwareAccelerated: boolean | null;
+  gpuClass: GpuClass;
 };
+
+export type GpuClass = "apple" | "discrete" | "integrated" | "software" | "unknown";
 
 export type RenderingBenchmarkResult = {
   quality: ScenarioAuthoringQuality;
@@ -50,7 +59,20 @@ export type RenderingBenchmarkResult = {
     decodedBodyBytes: number;
     cachedResponses: number;
   };
+  /** Layer residency when streaming settled, then again after the orbit. */
+  coverage: {
+    settled: StreamingCoverage;
+    orbit: StreamingCoverage;
+  };
 };
+
+/** Wanted city tiles with no LOD resident in either sample. */
+export function missingCityTiles(result: RenderingBenchmarkResult): number {
+  return Math.max(
+    result.coverage.settled.city?.missingTiles ?? 0,
+    result.coverage.orbit.city?.missingTiles ?? 0,
+  );
+}
 
 export type RenderingBenchmarkFailure = {
   quality: ScenarioAuthoringQuality;
@@ -76,9 +98,11 @@ const FIDELITY_ORDER: readonly ScenarioAuthoringQuality[] = [
 ];
 
 /**
- * Pick the highest-fidelity renderer that stays comfortably interactive.
- * If none clear the floor, prefer the candidate with the lowest orbit p95 frame
- * time instead of blindly choosing Roads Only from average FPS alone.
+ * Pick the highest-fidelity renderer that stays comfortably interactive and
+ * actually shows every building the camera asked for. A fast profile whose
+ * city layer has holes is not a profile that "works". If none clear the
+ * floor, prefer complete coverage first, then the lowest orbit p95 frame
+ * time, instead of blindly choosing Roads Only from average FPS alone.
  */
 export function recommendRenderingPreference(
   results: readonly RenderingBenchmarkResult[],
@@ -91,6 +115,7 @@ export function recommendRenderingPreference(
       const result = byQuality.get(quality);
       return Boolean(
         result &&
+          missingCityTiles(result) === 0 &&
           result.metrics.avgFps >= 40 &&
           result.metrics.orbit.p95FrameMs <= 33.3 &&
           result.metrics.orbit.p99FrameMs <= 50,
@@ -99,6 +124,8 @@ export function recommendRenderingPreference(
   if (interactive) return interactive;
 
   return [...results].sort((left, right) => {
+    const coverageDelta = Number(missingCityTiles(right) === 0) - Number(missingCityTiles(left) === 0);
+    if (coverageDelta !== 0) return coverageDelta;
     const frameDelta = left.metrics.orbit.p95FrameMs - right.metrics.orbit.p95FrameMs;
     if (Math.abs(frameDelta) > 0.25) return frameDelta;
     return (
@@ -160,7 +187,50 @@ export function captureRenderingBenchmarkHardware(
       colorDepth: typeof screen === "undefined" ? null : screen.colorDepth,
     },
     renderer,
+    hardwareAccelerated: probeHardwareAcceleration(),
+    gpuClass: classifyGpu(renderer),
   };
+}
+
+/**
+ * Ask the browser whether WebGL would be a "major performance caveat" here:
+ * that is the flag Chromium raises when it falls back to SwiftShader or when
+ * GPU acceleration is disabled in settings or by the block list.
+ */
+export function probeHardwareAcceleration(): boolean | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const canvas = document.createElement("canvas");
+    const context =
+      canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true }) ??
+      canvas.getContext("webgl", { failIfMajorPerformanceCaveat: true });
+    if (!context) return false;
+    context.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Coarse adapter family from the unmasked renderer string. Integrated parts
+ * (Intel Iris/UHD/HD, AMD "Radeon Graphics"/Vega APUs, mobile GPUs) are
+ * separated from discrete cards because a laptop with both often hands the
+ * browser the integrated one until "high performance" is forced.
+ */
+export function classifyGpu(capability: RendererCapability | null): GpuClass {
+  if (!capability) return "unknown";
+  if (capability.software) return "software";
+  const label = `${capability.vendor} ${capability.renderer}`;
+  if (/swiftshader|llvmpipe|softpipe|software/i.test(label)) return "software";
+  if (/apple/i.test(label)) return "apple";
+  if (
+    /iris|uhd|hd graphics|intel|radeon\(tm\) graphics|radeon graphics|vega \d|mali|adreno|powervr/i.test(label)
+  ) {
+    return "integrated";
+  }
+  if (/nvidia|geforce|quadro|rtx|amd|radeon/i.test(label)) return "discrete";
+  return "unknown";
 }
 
 function browserName(userAgent: string): string {

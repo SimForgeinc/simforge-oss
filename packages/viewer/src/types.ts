@@ -277,6 +277,27 @@ export interface CityViewerStats {
     loaded: Record<'original' | 'geometry-only' | 'roads-only' | 'ktx2', number>;
     fallbacks: number;
   };
+  /** Per-layer residency against what the camera currently wants. */
+  coverage: StreamingCoverage;
+}
+
+/** Whether a streamed layer has everything the camera wants resident. */
+export interface LayerCoverage {
+  /** Tiles the camera wants resident at any LOD. */
+  wantedTiles: number;
+  /** Wanted tiles with no LOD resident at all: visible holes. */
+  missingTiles: number;
+  /** Wanted tiles whose desired LOD is refused by the byte budget. */
+  budgetBlockedTiles: number;
+  /** Wanted tiles that failed terminally and will not retry. */
+  failedTiles: number;
+}
+
+/** Per-layer coverage; `null` when the active fidelity does not stream that layer. */
+export interface StreamingCoverage {
+  roads: LayerCoverage | null;
+  city: LayerCoverage | null;
+  vegetation: LayerCoverage | null;
 }
 
 export interface BenchResult {

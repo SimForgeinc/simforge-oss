@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  RenderingBenchmarkSection,
-  type BenchmarkState,
-} from "../../src/scenario/editor/regions/slots/RenderingBenchmark";
 import type { BenchResult } from "@simforge-oss/viewer";
-import { RENDERING_BENCHMARK_CONFIGURATION } from "../../src/scenario/editor/regions/slots/rendering-benchmark";
+import type { BenchmarkState } from "../../src/scenario/editor/regions/slots/RenderingBenchmark";
+import {
+  RENDERING_BENCHMARK_CONFIGURATION,
+  classifyGpu,
+  type RenderingBenchmarkHardware,
+  type RenderingBenchmarkResult,
+} from "../../src/scenario/editor/regions/slots/rendering-benchmark";
+import { RenderDiagnostics, diagnosticChecks } from "../../src/render-selection/RenderSelectionPanel";
 
 vi.mock("@simforge-oss/viewer/react", () => ({
   CityView: () => null,
@@ -53,7 +56,7 @@ const metrics: BenchResult = {
   roadsOnlyFidelity: false,
 };
 
-const hardware = {
+const hardware: RenderingBenchmarkHardware = {
   browser: "Chrome 140.0",
   operatingSystem: "macOS",
   userAgent: "test-agent",
@@ -61,61 +64,69 @@ const hardware = {
   logicalProcessors: 12,
   deviceMemoryGB: 8,
   display: { width: 2560, height: 1440, pixelRatio: 2, colorDepth: 24 },
-  renderer: {
-    renderer: "Apple M3",
-    vendor: "Apple",
-    webgl2: true,
-    software: false,
-  },
+  renderer: { renderer: "Apple M3", vendor: "Apple", webgl2: true, software: false },
+  hardwareAccelerated: true,
+  gpuClass: "apple",
 };
 
-describe("RenderingBenchmarkSection", () => {
-  it("leads with one prominent benchmark action", () => {
+const coverage = { wantedTiles: 96, missingTiles: 0, budgetBlockedTiles: 0, failedTiles: 0 };
+
+function result(quality: RenderingBenchmarkResult["quality"], missingTiles = 0): RenderingBenchmarkResult {
+  const city = quality === "roads-only" ? null : { ...coverage, missingTiles, budgetBlockedTiles: missingTiles };
+  return {
+    quality,
+    metrics,
+    assetLoading: { settleMs: 2300, streamingSettled: true, requestCount: 14, transferBytes: 25 * 1024 * 1024, encodedBodyBytes: 24 * 1024 * 1024, decodedBodyBytes: 30 * 1024 * 1024, cachedResponses: 5 },
+    coverage: {
+      settled: { roads: coverage, city, vegetation: null },
+      orbit: { roads: coverage, city, vegetation: null },
+    },
+  };
+}
+
+const noop = { onStart: vi.fn(), onCancel: vi.fn(), onApply: vi.fn() };
+
+describe("RenderDiagnostics", () => {
+  it("is one button until started, with the body collapsed", () => {
     render(
-      <RenderingBenchmarkSection
+      <RenderDiagnostics
         state={{ phase: "idle", snapshot: null }}
         currentQuality="minimal"
         mapLabel="Yale Street"
-        onStart={vi.fn()}
-        onCancel={vi.fn()}
-        onApply={vi.fn()}
+        {...noop}
       />,
     );
-    expect(screen.getByRole("button", { name: "Start benchmark on Yale Street" }).textContent).toContain("Start Benchmark");
+    const start = screen.getByRole("button", { name: "Start benchmark on Yale Street" });
+    expect(start.textContent).toContain("Start Benchmark");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("rendering-benchmark").getAttribute("data-phase")).toBe("idle");
   });
 
-  it("shows background progress for the current bundle", () => {
+  it("shows live per-profile progress in place, never in an overlay", () => {
     const state: BenchmarkState = {
       phase: "measuring",
       candidateIndex: 2,
-      results: [],
+      results: [result("roads-only"), result("ultra-low-3d")],
       failures: [],
       hardware,
       startedAt: Date.now() - 2_000,
     };
     render(
-      <RenderingBenchmarkSection
-        state={state}
-        currentQuality="high"
-        onStart={vi.fn()}
-        onCancel={vi.fn()}
-        onApply={vi.fn()}
-      />,
+      <RenderDiagnostics state={state} currentQuality="high" mapLabel="Yale Street" {...noop} />,
     );
-    expect(screen.getByRole("status").textContent).toContain("Testing orbit smoothness");
-    expect(screen.getByRole("status").textContent).toContain("Balanced");
-    expect(screen.getByRole("status").textContent).toContain("0 of 4 complete");
-    const content = screen.getByTestId("benchmark-progress-content");
-    expect(content.getAttribute("data-visual-treatment")).toBe("flat");
-    expect(content.className).not.toContain("bg-[");
-    expect(content.className).not.toContain("shadow-");
-    expect(content.className).not.toContain("ring-");
-    expect(content.className).not.toContain("backdrop-");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const status = screen.getByRole("status");
+    expect(status.textContent).toContain("Testing Balanced");
+    expect(status.textContent).toContain("2 of 4 complete");
+    expect(screen.getByTestId("benchmark-lane-roads-only").textContent).toContain("55");
+    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("Orbiting camera");
+    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Queued");
+    expect(screen.getByRole("button", { name: /Cancel/ })).toBeTruthy();
   });
 
-  it("shows the renderer failure details when every candidate fails", () => {
+  it("surfaces every failure when nothing could be measured", () => {
     render(
-      <RenderingBenchmarkSection
+      <RenderDiagnostics
         state={{
           phase: "error",
           message: "None of the renderers could be measured.",
@@ -128,36 +139,25 @@ describe("RenderingBenchmarkSection", () => {
           startedAt: Date.now() - 30_000,
         }}
         currentQuality="minimal"
-        onStart={vi.fn()}
-        onCancel={vi.fn()}
-        onApply={vi.fn()}
+        mapLabel="Yale Street"
+        {...noop}
       />,
     );
-    expect(screen.getByRole("alert").textContent).toContain(
-      "Roads Only: Map streaming did not settle",
-    );
-    expect(screen.getByRole("alert").textContent).toContain(
-      "High: WebGL context unavailable",
-    );
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain("Roads Only: Map streaming did not settle");
+    expect(alert.textContent).toContain("High: WebGL context unavailable");
   });
 
-  it("reports results and allows either the recommendation or a manual renderer", async () => {
+  it("reports the verdict inline and applies either the recommendation or a manual choice", async () => {
     const onApply = vi.fn();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     const state: BenchmarkState = {
       phase: "complete",
       snapshot: {
         manifestUrl: "https://assets.example/manifest.json",
         recommended: "minimal",
-        results: [{
-          quality: "minimal",
-          metrics,
-          assetLoading: { settleMs: 2300, streamingSettled: true, requestCount: 14, transferBytes: 25 * 1024 * 1024, encodedBodyBytes: 24 * 1024 * 1024, decodedBodyBytes: 30 * 1024 * 1024, cachedResponses: 5 },
-        }],
+        results: [result("minimal")],
         failures: [{ quality: "high", message: "WebGL context unavailable" }],
         hardware,
         configuration: RENDERING_BENCHMARK_CONFIGURATION,
@@ -165,32 +165,88 @@ describe("RenderingBenchmarkSection", () => {
       },
     };
     render(
-      <RenderingBenchmarkSection
-        state={state}
-        currentQuality="high"
-        onStart={vi.fn()}
-        onCancel={vi.fn()}
-        onApply={onApply}
-      />,
+      <RenderDiagnostics state={state} currentQuality="high" mapLabel="Yale Street" {...noop} onApply={onApply} />,
     );
-    expect(screen.getByText("55.0 FPS")).toBeTruthy();
-    expect(screen.getByText("Orbit p95")).toBeTruthy();
-    expect(screen.getByText("Orbit stalls")).toBeTruthy();
-    expect(screen.getByText("31.5 ms")).toBeTruthy();
-    expect(screen.getByText("320")).toBeTruthy();
-    expect(screen.getByText("1.50 GB")).toBeTruthy();
-    expect(screen.getByText("68%")).toBeTruthy();
-    expect(screen.getByText("Unavailable")).toBeTruthy();
-    expect(screen.getByRole("dialog").textContent).toContain("Your best match");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("Best match: Balanced")).toBeTruthy();
+    expect(screen.getByTestId("benchmark-lane-minimal").textContent).toContain("96 tiles complete");
+    expect(screen.getByTestId("benchmark-lane-high").textContent).toContain("Unavailable");
     fireEvent.click(screen.getByRole("button", { name: "Copy developer report" }));
     await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     const report = JSON.parse(writeText.mock.calls[0]![0] as string);
     expect(report.hardware.renderer.renderer).toBe("Apple M3");
-    expect(report.configuration.viewportWidth).toBe(1280);
+    expect(report.results[0].coverage.settled.city.wantedTiles).toBe(96);
     fireEvent.click(screen.getByRole("button", { name: "Use recommended Balanced" }));
     expect(onApply).toHaveBeenCalledWith("minimal");
-    fireEvent.click(screen.getByRole("button", { name: "Use Roads Only" }));
-    expect(onApply).toHaveBeenLastCalledWith("roads-only");
-    expect(screen.getByText("Manual selection")).toBeTruthy();
+  });
+});
+
+describe("diagnosticChecks", () => {
+  it("passes a hardware GPU with every building tile resident and an interactive profile", () => {
+    const checks = diagnosticChecks({
+      hardware,
+      results: [result("ultra-low-3d"), result("minimal")],
+      failures: [],
+      recommended: "minimal",
+      running: false,
+    });
+    expect(checks.map((check) => [check.id, check.status])).toEqual([
+      ["gpu", "pass"],
+      ["buildings", "pass"],
+      ["smoothness", "pass"],
+    ]);
+    expect(checks[0]!.title).toContain("Apple M3");
+    expect(checks[1]!.detail).toContain("96 city tiles");
+  });
+
+  it("fails the GPU check when the browser rasterizes on the CPU", () => {
+    const software = {
+      ...hardware,
+      renderer: { renderer: "Google SwiftShader", vendor: "Google Inc.", webgl2: true, software: true },
+      hardwareAccelerated: false,
+      gpuClass: "software" as const,
+    };
+    const [gpu] = diagnosticChecks({ hardware: software, results: [], failures: [], recommended: null, running: true });
+    expect(gpu!.status).toBe("fail");
+    expect(gpu!.title).toContain("CPU");
+  });
+
+  it("warns about an integrated adapter that may be shadowing a discrete one", () => {
+    const integrated = {
+      ...hardware,
+      renderer: { renderer: "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)", vendor: "Google Inc. (Intel)", webgl2: true, software: false },
+      gpuClass: classifyGpu({ renderer: "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)", vendor: "Google Inc. (Intel)", webgl2: true, software: false }),
+    };
+    const [gpu] = diagnosticChecks({ hardware: integrated, results: [], failures: [], recommended: null, running: true });
+    expect(integrated.gpuClass).toBe("integrated");
+    expect(gpu!.status).toBe("warn");
+    expect(gpu!.detail).toContain("high performance");
+  });
+
+  it("flags missing buildings with the reason and keeps that profile off the recommendation", () => {
+    const checks = diagnosticChecks({
+      hardware,
+      results: [result("ultra-low-3d"), result("minimal", 5)],
+      failures: [],
+      recommended: "ultra-low-3d",
+      running: false,
+    });
+    const buildings = checks.find((check) => check.id === "buildings")!;
+    expect(buildings.status).toBe("warn");
+    expect(buildings.title).toContain("Balanced");
+    expect(buildings.detail).toContain("5 of 96 missing (5 over the memory budget)");
+  });
+});
+
+describe("classifyGpu", () => {
+  it("separates discrete, integrated, Apple and software adapters", () => {
+    const capability = (renderer: string, software = false) => ({ renderer, vendor: "", webgl2: true, software });
+    expect(classifyGpu(capability("NVIDIA GeForce RTX 4070/PCIe/SSE2"))).toBe("discrete");
+    expect(classifyGpu(capability("AMD Radeon RX 7800 XT"))).toBe("discrete");
+    expect(classifyGpu(capability("AMD Radeon(TM) Graphics"))).toBe("integrated");
+    expect(classifyGpu(capability("Intel(R) UHD Graphics 630"))).toBe("integrated");
+    expect(classifyGpu(capability("Apple M3 Pro"))).toBe("apple");
+    expect(classifyGpu(capability("Google SwiftShader", true))).toBe("software");
+    expect(classifyGpu(null)).toBe("unknown");
   });
 });

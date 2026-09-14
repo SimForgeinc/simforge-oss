@@ -41,6 +41,8 @@ interface Entry {
   def: StreamTileDef;
   resident: Map<number, PreparedAsset>;
   displayed: number;
+  /** The layer's `want` predicate accepted this tile on the last update. */
+  wanted: boolean;
   /** Wanted LOD index, or -1 when the tile should not be resident at all. */
   desired: number;
   loading: { index: number; controller: AbortController } | null;
@@ -76,6 +78,14 @@ export interface LayerStats {
   compiledAssets: number;
   compiling: number;
   requiredPendingAssets: number;
+  /** Tiles the camera wants resident at any LOD. */
+  wantedTiles: number;
+  /** Wanted tiles with no LOD resident at all: a visible hole in the layer. */
+  missingTiles: number;
+  /** Wanted tiles whose desired LOD cannot be admitted under the byte budget. */
+  budgetBlockedTiles: number;
+  /** Wanted tiles that hit their terminal failure count and will not retry. */
+  failedTiles: number;
 }
 
 export interface MemoryGovernor {
@@ -167,6 +177,7 @@ export class TileStreamLayer {
         def,
         resident: new Map(),
         displayed: -1,
+        wanted: false,
         desired: 0,
         loading: null,
         preparing: null,
@@ -207,6 +218,10 @@ export class TileStreamLayer {
     let queued = 0;
     let loading = 0;
     let requiredPendingAssets = 0;
+    let wantedTiles = 0;
+    let missingTiles = 0;
+    let budgetBlockedTiles = 0;
+    let failedTiles = 0;
     for (const entry of this.entries.values()) {
       if (entry.resident.size > 0) residentTiles++;
       residentAssets += entry.resident.size;
@@ -218,6 +233,12 @@ export class TileStreamLayer {
           ? (this.opts.maxDesiredIndex?.(entry.def) ?? entry.def.lods.length - 1)
           : 0;
         if (!entry.resident.has(requiredIndex)) requiredPendingAssets++;
+      }
+      if (entry.wanted) {
+        wantedTiles++;
+        if (entry.resident.size === 0) missingTiles++;
+        if (entry.budgetBlocked) budgetBlockedTiles++;
+        if (entry.failures >= MAX_FAILURES) failedTiles++;
       }
     }
     let pendingTextureUploads = 0;
@@ -236,6 +257,10 @@ export class TileStreamLayer {
       compiledAssets: this.compiledAssets,
       compiling: this.compiling.size,
       requiredPendingAssets,
+      wantedTiles,
+      missingTiles,
+      budgetBlockedTiles,
+      failedTiles,
     };
   }
 
@@ -289,6 +314,7 @@ export class TileStreamLayer {
       }
       if (entry.budgetBlocked && this.opts.pinCoarsest && !entry.resident.has(0)
         && this.opts.memory.pendingBytes?.() === 0) entry.budgetBlocked = false;
+      entry.wanted = wanted;
       entry.desired = desired;
 
       if (this.opts.pinCoarsest && wanted && !entry.resident.has(0)) {

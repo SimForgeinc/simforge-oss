@@ -598,6 +598,80 @@ describe("local map cache service", () => {
     await service.dispose();
   });
 
+  it("moves the cache root with its objects and receipts, and the new root serves them without the network", async () => {
+    const bytes = Buffer.from("moved-content");
+    const digest = sha256(bytes);
+    origin.assets.set(`${MAP}/moved.bin`, { bytes });
+    const control = await newRoot("move-control");
+    const target = join(await newRoot("move-target"), "cache");
+    const policy = fakeAccess(origin.origin);
+    let service = await open(control, policy.access);
+
+    await service.ensure({ requestId: "mv1", url: `${MAP}/moved.bin`, sha256: digest });
+    await service.writeReceipt("map::v1::closure", { completedAt: 1700000000000, assets: 1, bytes: bytes.length });
+    const before = origin.requests.length;
+
+    const moved = await service.setLocation(target, { move: true });
+    assert.equal(moved.directory, target);
+    assert.equal(moved.assetCount, 1, "the object count came along");
+    assert.equal((await stat(join(target, "objects", digest.slice(0, 2), digest))).size, bytes.length, "object relocated");
+    await assert.rejects(stat(join(control, "objects", digest.slice(0, 2), digest)), "old root no longer holds the object");
+    assert.deepEqual(await service.receipt("map::v1::closure"), { completedAt: 1700000000000, assets: 1, bytes: bytes.length }, "receipts moved too");
+    assert.equal(await service.has({ url: `${MAP}/moved.bin`, sha256: digest }), true);
+    const hit = await service.ensure({ requestId: "mv2", url: `${MAP}/moved.bin`, sha256: digest });
+    assert.equal(hit.cacheHit, true);
+    assert.equal((await serve(service, hit.url)).status, 200);
+    assert.deepEqual(origin.gets(before), [], "nothing was fetched again");
+    await service.dispose();
+
+    // The selection survives a restart; control files stay in the control root.
+    assert.deepEqual(JSON.parse(await readFile(join(control, "location.json"), "utf8")), { version: 1, directory: target });
+    service = await open(control, policy.access);
+    const status = await service.status();
+    assert.equal(status.directory, target);
+    assert.equal(status.assetCount, 1);
+    assert.equal(await service.has({ url: `${MAP}/moved.bin`, sha256: digest }), true);
+    await service.dispose();
+  });
+
+  it("refuses to move into a non-empty folder and leaves the current root untouched", async () => {
+    const bytes = Buffer.from("stay-put");
+    const digest = sha256(bytes);
+    origin.assets.set(`${MAP}/stay.bin`, { bytes });
+    const control = await newRoot("move-refuse");
+    const occupied = await newRoot("move-occupied");
+    await writeFile(join(occupied, "unrelated.txt"), "keep");
+    const policy = fakeAccess(origin.origin);
+    const service = await open(control, policy.access);
+    await service.ensure({ requestId: "st1", url: `${MAP}/stay.bin`, sha256: digest });
+
+    await assert.rejects(service.setLocation(occupied, { move: true }), /empty folder/);
+    assert.equal((await service.status()).directory, control);
+    assert.equal((await stat(join(control, "objects", digest.slice(0, 2), digest))).size, bytes.length);
+    assert.deepEqual(await readdir(occupied), ["unrelated.txt"], "the occupied folder was not touched");
+    assert.equal(await service.has({ url: `${MAP}/stay.bin`, sha256: digest }), true);
+    await service.dispose();
+  });
+
+  it("refuses to move while a download is in flight", async () => {
+    const bytes = Buffer.alloc(2048, 3);
+    const digest = sha256(bytes);
+    origin.assets.set(`${MAP}/inflight.bin`, { bytes });
+    const control = await newRoot("move-inflight");
+    const target = await newRoot("move-inflight-target");
+    const policy = fakeAccess(origin.origin);
+    const service = await open(control, policy.access);
+
+    const gate = origin.hold(`${MAP}/inflight.bin`);
+    const pending = service.ensure({ requestId: "if1", url: `${MAP}/inflight.bin`, sha256: digest });
+    await gate.arrived;
+    await assert.rejects(service.setLocation(target, { move: true }), /download is in progress/);
+    gate.release();
+    assert.equal((await pending).sha256, digest, "the held download still completes into the original root");
+    assert.equal((await service.status()).directory, control);
+    await service.dispose();
+  });
+
   it("replays the journal after an unclean stop instead of rehashing or forgetting receipts", async () => {
     const bytes = Buffer.from("journaled-content");
     const digest = sha256(bytes);

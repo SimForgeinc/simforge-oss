@@ -503,11 +503,17 @@ export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
   };
 }
 
-/** Desktop only: native directory picker; resolves with the resulting status. */
-export async function chooseMapAssetCacheDirectory(): Promise<DesktopMapCacheStatus> {
+/**
+ * Desktop only: native directory picker; resolves with the resulting status.
+ * With `move`, the existing objects and receipts are carried into the chosen
+ * folder so nothing is downloaded again.
+ */
+export async function chooseMapAssetCacheDirectory(
+  options?: { move?: boolean },
+): Promise<DesktopMapCacheStatus> {
   const bridge = desktopMapCacheBridge();
   if (!bridge) throw new Error("Choosing a cache location requires the SimForge desktop app.");
-  return bridge.chooseDirectory();
+  return bridge.chooseDirectory(options);
 }
 
 /**

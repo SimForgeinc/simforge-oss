@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderOpen, HardDrive, Trash2 } from "lucide-react";
+import { FolderInput, FolderOpen, HardDrive, Trash2 } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { useCallback, useEffect, useState } from "react";
 import { mergeStyleProps, type XStyle } from "./stylex/surface";
@@ -13,7 +13,7 @@ import {
 } from "../lib/maps/frontend/map-asset-cache";
 import { Button } from "./ui/button";
 
-type Busy = "choosing" | "clearing" | null;
+type Busy = "choosing" | "moving" | "clearing" | null;
 
 export function formatCacheBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -23,7 +23,7 @@ export function formatCacheBytes(bytes: number): string {
 
 /**
  * Where map bytes live on this device, how much they take, and the explicit
- * controls to move or clear them.
+ * controls to point the cache elsewhere, move it there, or clear it.
  *
  * Reads the active backend once per mount and again whenever `refreshKey`
  * changes (a preparation phase transition, for instance); there is no polling.
@@ -45,12 +45,7 @@ export function MapAssetCacheStorage({
   /** Surfaces backend faults to a page-level alert in addition to the inline one. */
   onError?: (message: string) => void;
   className?: string;
-  /**
-   * Caller StyleX styles, composed after this component's own so they win.
-   * A page that cancels the `border-y` rule here needs StyleX's merge, not a
-   * concatenated class name: two atomic rules for one property are ordered by
-   * the stylesheet, and this component's rule is collected second.
-   */
+  /** Caller StyleX styles, composed after this component's own so they win. */
   xstyle?: XStyle;
 }) {
   const [status, setStatus] = useState<MapAssetCacheStatus | null>(null);
@@ -77,13 +72,13 @@ export function MapAssetCacheStorage({
     void refresh();
   }, [refreshKey, refresh]);
 
-  const chooseDirectory = async () => {
-    setBusy("choosing");
+  const chooseDirectory = async (move: boolean) => {
+    setBusy(move ? "moving" : "choosing");
     try {
-      setStatus(await chooseMapAssetCacheDirectory());
+      setStatus(await chooseMapAssetCacheDirectory({ move }));
       setError("");
     } catch (reason) {
-      fail(reason, "The cache location could not be changed.");
+      fail(reason, move ? "The map cache could not be moved." : "The cache location could not be changed.");
     } finally {
       setBusy(null);
     }
@@ -105,6 +100,7 @@ export function MapAssetCacheStorage({
 
   const filesystem = status?.backend === "filesystem";
   const unavailable = status?.backend === "filesystem" ? status.unavailable : null;
+  const downloading = status?.backend === "filesystem" && status.activeDownloads > 0;
   const location = !status
     ? "Reading…"
     : status.backend === "filesystem"
@@ -120,38 +116,38 @@ export function MapAssetCacheStorage({
       data-testid="map-asset-cache-storage"
       data-cache-backend={status?.backend ?? "unknown"}
     >
-      <div className="flex items-start gap-3">
-        <HardDrive className="mt-0.5 size-4 shrink-0 text-[#E8E044]" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="font-meta text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">
+      <div {...stylex.props(styles.head)}>
+        <HardDrive {...stylex.props(styles.headIcon)} aria-hidden="true" />
+        <div {...stylex.props(styles.headText)}>
+          <p {...stylex.props(styles.eyebrow)}>
             {filesystem ? "Map cache on disk" : "Map cache in browser storage"}
           </p>
           <p
-            className="mt-1 truncate font-mono text-xs text-white/75"
+            {...stylex.props(styles.location)}
             title={location}
             data-testid="map-asset-cache-location"
           >
             {location}
           </p>
-          <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-micro uppercase tracking-meta text-white/45">
+          <dl {...stylex.props(styles.stats)}>
             <div>
-              <dt className="inline">{filesystem ? "Used " : "Site storage used "}</dt>
-              <dd className="inline text-white/70" data-testid="map-asset-cache-used">
+              <dt {...stylex.props(styles.statLabel)}>{filesystem ? "Used " : "Site storage used "}</dt>
+              <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-used">
                 {status?.usedBytes == null ? "—" : formatCacheBytes(status.usedBytes)}
               </dd>
             </div>
             <div>
-              <dt className="inline">Free </dt>
-              <dd className="inline text-white/70" data-testid="map-asset-cache-free">
+              <dt {...stylex.props(styles.statLabel)}>Free </dt>
+              <dd {...stylex.props(styles.statValue)} data-testid="map-asset-cache-free">
                 {status?.availableBytes == null ? "—" : formatCacheBytes(status.availableBytes)}
               </dd>
             </div>
             {status?.backend === "filesystem" ? (
               <div>
-                <dt className="inline">Files </dt>
-                <dd className="inline text-white/70">{status.assetCount}</dd>
+                <dt {...stylex.props(styles.statLabel)}>Files </dt>
+                <dd {...stylex.props(styles.statValue)}>{status.assetCount}</dd>
                 {status.activeDownloads > 0 ? (
-                  <dd className="ml-3 inline text-[#E8E044]">{status.activeDownloads} downloading</dd>
+                  <dd {...stylex.props(styles.statAccent)}>{status.activeDownloads} downloading</dd>
                 ) : null}
               </div>
             ) : null}
@@ -160,18 +156,32 @@ export function MapAssetCacheStorage({
       </div>
 
       {(filesystem || allowClear) && !confirmClear ? (
-        <div className="mt-3 flex flex-wrap gap-2 pl-7">
+        <div {...stylex.props(styles.actions)}>
           {filesystem ? (
-            <Button
-              xstyle={styles.control}
-              disabled={busy !== null}
-              onClick={() => void chooseDirectory()}
-              type="button"
-              variant="outline"
-            >
-              <FolderOpen className="size-3.5" aria-hidden="true" />
-              {busy === "choosing" ? "Choosing…" : "Change location…"}
-            </Button>
+            <>
+              <Button
+                xstyle={styles.control}
+                disabled={busy !== null || downloading}
+                onClick={() => void chooseDirectory(true)}
+                type="button"
+                variant="outline"
+                title="Pick an empty folder; every cached map is carried over so nothing downloads again."
+              >
+                <FolderInput aria-hidden="true" />
+                {busy === "moving" ? "Moving…" : "Move cache…"}
+              </Button>
+              <Button
+                xstyle={styles.control}
+                disabled={busy !== null}
+                onClick={() => void chooseDirectory(false)}
+                type="button"
+                variant="outline"
+                title="Point the cache at another folder and leave the current files where they are."
+              >
+                <FolderOpen aria-hidden="true" />
+                {busy === "choosing" ? "Choosing…" : "Use another folder…"}
+              </Button>
+            </>
           ) : null}
           {allowClear ? (
             <Button
@@ -181,16 +191,20 @@ export function MapAssetCacheStorage({
               type="button"
               variant="outline"
             >
-              <Trash2 className="size-3.5" aria-hidden="true" />
+              <Trash2 aria-hidden="true" />
               {busy === "clearing" ? "Clearing…" : "Clear cache"}
             </Button>
           ) : null}
         </div>
       ) : null}
 
+      {filesystem && downloading && !confirmClear ? (
+        <p {...stylex.props(styles.hint)}>Moving waits until the current downloads finish.</p>
+      ) : null}
+
       {confirmClear ? (
         <div
-          className="mt-3 ml-7 border border-white/10 bg-white/5 p-3 text-xs text-white/70"
+          {...stylex.props(styles.confirm)}
           role="alertdialog"
           aria-label="Confirm clearing the map cache"
         >
@@ -199,12 +213,8 @@ export function MapAssetCacheStorage({
             {status?.usedBytes ? ` (${formatCacheBytes(status.usedBytes)})` : ""}
             {filesystem ? " from disk" : " from this browser"}? Maps will be downloaded again when needed.
           </p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              xstyle={styles.controlConfirm}
-              onClick={() => void clear()}
-              type="button"
-            >
+          <div {...stylex.props(styles.confirmActions)}>
+            <Button xstyle={styles.controlConfirm} onClick={() => void clear()} type="button">
               Delete cached maps
             </Button>
             <Button
@@ -220,18 +230,14 @@ export function MapAssetCacheStorage({
       ) : null}
 
       {unavailable ? (
-        <p
-          className="mt-3 ml-7 border border-[#E8E044]/40 bg-[#E8E044]/10 p-2 text-xs text-[#E8E044]"
-          role="status"
-          data-testid="map-asset-cache-unavailable"
-        >
+        <p {...stylex.props(styles.unavailable)} role="status" data-testid="map-asset-cache-unavailable">
           The map cache location is unavailable ({unavailable}). Maps are not downloaded to another disk;
           reconnect the drive or choose another location.
         </p>
       ) : null}
 
       {error ? (
-        <p className="mt-3 ml-7 border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive" role="alert">
+        <p {...stylex.props(styles.error)} role="alert">
           {error}
         </p>
       ) : null}

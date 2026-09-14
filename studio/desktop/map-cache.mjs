@@ -22,8 +22,7 @@ const API_PREFIX = "/api/simforge/map-cache";
  * @property {string} trustedOrigin  exact origin the local UI is loaded from
  * @property {string} hostBaseUrl  loopback base URL of the local host, e.g. http://127.0.0.1:5199
  * @property {() => Promise<Record<string, string>>} hostAuthorization  headers that authenticate
- *   the shell to the local service (must carry the per-start host control token)
- * @property {() => Promise<string | null>} chooseDirectory  native picker; null = keep current
+ * @property {(options?: { move?: boolean }) => Promise<string | null>} chooseDirectory  native picker; null = keep current
  */
 
 /**
@@ -94,10 +93,10 @@ export async function installDesktopMapCache({ ipcMain, window, trustedOrigin, h
     clear: async () => {
       await call("POST", "/clear");
     },
-    chooseDirectory: async () => {
-      const selected = await chooseDirectory();
+    chooseDirectory: async (options) => {
+      const selected = await chooseDirectory(options);
       if (selected === null || selected === undefined) return call("GET", "/status");
-      return call("POST", "/location", { directory: selected });
+      return call("POST", "/location", options?.move === true ? { directory: selected, move: true } : { directory: selected });
     },
   };
 

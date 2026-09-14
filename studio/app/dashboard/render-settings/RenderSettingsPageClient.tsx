@@ -11,7 +11,7 @@ import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBac
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { readRenderingPreference, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
-import { QualityChooser } from "@simforge-oss/studio-ui/scenario/editor/states/EditorStatePanels";
+import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import { styles } from "./render-settings-page.stylex";
@@ -27,10 +27,10 @@ const PROFILE_LABELS: Record<RenderingPreference, string> = {
   high: "High",
 };
 
-const RenderingBenchmarkCard = dynamic(
+const RenderSelectionPanel = dynamic(
   () =>
-    import("@simforge-oss/studio-ui/scenario/editor/regions/slots/RenderingBenchmark").then(
-      (module) => module.RenderingBenchmarkCard,
+    import("@simforge-oss/studio-ui/render-selection/RenderSelectionPanel").then(
+      (module) => module.RenderSelectionPanel,
     ),
   { ssr: false },
 );
@@ -110,58 +110,34 @@ export function RenderSettingsPageClient() {
             onSkip={finish}
           />
         ) : (
-          <QualityChooser
+          <RenderSelectionPanel
+            manifestUrl={benchmarkTarget?.browserManifestUrl ?? null}
+            mapLabel={benchmarkTarget?.label ?? "Current map"}
+            catalogReady={benchmarkCatalogReady}
+            currentQuality={currentProfile ?? "minimal"}
             onChoose={choose}
             titleId="render-settings-title"
             descriptionId="render-settings-description"
-            benchmark={
-              benchmarkTarget?.browserManifestUrl ? (
-                <RenderingBenchmarkCard
-                  manifestUrl={benchmarkTarget.browserManifestUrl}
-                  mapLabel={benchmarkTarget.label}
-                  currentQuality={currentProfile ?? "minimal"}
-                  onApply={choose}
-                />
-              ) : (
-                <div
-                  {...stylex.props(styles.benchmark)}
-                  data-testid="rendering-benchmark-placeholder"
-                  data-visual-treatment="flat"
-                >
-                  <p {...stylex.props(styles.eyebrow)}>
-                    Benchmark
-                  </p>
-                  <p {...stylex.props(styles.benchmarkTitle)}>
-                    {benchmarkCatalogReady
-                      ? "Benchmark unavailable"
-                      : "Preparing benchmark…"}
-                  </p>
-                  <p {...stylex.props(styles.benchmarkCopy)}>
-                    {benchmarkCatalogReady
-                      ? "Choose a rendering mode below."
-                      : "Selecting a test map automatically."}
-                  </p>
-                </div>
-              )
-            }
             footer={
-              currentProfile ? (
-                <div {...stylex.props(styles.footer)}>
-                  <Button
-                    xstyle={styles.cacheButton}
-                    onClick={() => setConfirmRedownload(true)}
-                    type="button"
-                    variant="outline"
-                  >
-                    <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
-                    Delete cache and re-download{" "}
-                    {PROFILE_LABELS[currentProfile]}
-                  </Button>
-                  <p {...stylex.props(styles.current)}>
-                    Current setting: {PROFILE_LABELS[currentProfile]}
-                  </p>
-                </div>
-              ) : null
+              <div {...stylex.props(styles.footer)}>
+                <MapAssetCacheStorage refreshKey={currentProfile} />
+                {currentProfile ? (
+                  <div {...stylex.props(styles.footerRow)}>
+                    <Button
+                      xstyle={styles.cacheButton}
+                      onClick={() => setConfirmRedownload(true)}
+                      type="button"
+                      variant="outline"
+                    >
+                      <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
+                      Delete cache and re-download {PROFILE_LABELS[currentProfile]}
+                    </Button>
+                    <p {...stylex.props(styles.current)}>
+                      Current setting: {PROFILE_LABELS[currentProfile]}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             }
           />
         )}

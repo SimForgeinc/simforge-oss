@@ -11,7 +11,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { link, mkdir, rename, stat } from "node:fs/promises";
+import { cp, link, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -539,11 +539,51 @@ export class MapCacheService {
   }
 
   /**
-   * Switch the data root to `directory` (chosen by the desktop shell's native
-   * picker). In-flight downloads finish into the root they started in; nothing
-   * is moved or deleted; the previous root stays readable for issued capabilities.
+   * Carry every data-root entry of `from` into `target`: `rename` when both
+   * sit on one device, copy-then-remove across devices. Any failure puts the
+   * completed entries back and leaves `target` as it was found (empty).
    */
-  async setLocation(directory: unknown): Promise<DesktopMapCacheStatus> {
+  private async moveCacheContents(from: CacheStore, target: string) {
+    const moved: string[] = [];
+    let current: string | null = null;
+    try {
+      for (const entry of await readdir(from.root)) {
+        if (entry === "location.json") continue;
+        current = entry;
+        const source = join(from.root, entry);
+        const destination = join(target, entry);
+        try {
+          await rename(source, destination);
+        } catch (error) {
+          if (errorCode(error) !== "EXDEV") throw error;
+          await cp(source, destination, { recursive: true, errorOnExist: true, force: false });
+          await rm(source, { recursive: true, force: true });
+        }
+        moved.push(entry);
+      }
+    } catch (error) {
+      if (current !== null && !moved.includes(current)) {
+        // The entry in flight: its source still exists (copy failed before the
+        // remove), so only the partial destination has to go.
+        await rm(join(target, current), { recursive: true, force: true }).catch(() => undefined);
+      }
+      for (const entry of moved.reverse()) {
+        await rename(join(target, entry), join(from.root, entry)).catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Switch the data root to `directory` (chosen by the desktop shell's native
+   * picker). Without `move`, in-flight downloads finish into the root they
+   * started in; nothing is moved or deleted; the previous root stays readable
+   * for issued capabilities. With `move`, the target must be empty, no
+   * download may be in flight, and every object, receipt and partial transfer
+   * is carried over so nothing is fetched again.
+   */
+  async setLocation(directory: unknown, options: { move?: boolean } = {}): Promise<DesktopMapCacheStatus> {
+    const move = options.move === true;
     if (this.switching) throw new MapCacheError("A cache location change is already in progress");
     if (typeof directory !== "string" || !isAbsolute(directory)) throw new MapCacheError("The selected cache location must be an absolute directory path");
     const target = resolve(directory);
@@ -551,10 +591,22 @@ export class MapCacheService {
     if (this.store && (inside(target, this.store.objectsDir) || inside(target, this.store.incompleteDir))) {
       throw new MapCacheError("The cache location cannot be inside the current cache's object directories");
     }
+    if (move && this.transfers.size > 0) throw new MapCacheError("The map cache cannot be moved while a download is in progress; wait for downloads to finish");
     this.switching = (async () => {
       await mkdir(target, { recursive: true });
       await assertWritable(target);
-      await Promise.allSettled([...this.transfers.values()].map((transfer) => transfer.promise));
+      if (move) {
+        if ((await readdir(target)).length > 0) throw new MapCacheError("Choose an empty folder to move the map cache into");
+        // Not `activeStore()`: that awaits `this.switching`, which is this very promise.
+        const from = this.store;
+        if (!from) throw new MapCacheError(`The map cache location ${this.unavailable?.root} is unavailable; reconnect the drive or choose another cache location`);
+        await from.flush();
+        await this.moveCacheContents(from, target);
+        this.capabilities.clear();
+        this.capabilityIds.clear();
+      } else {
+        await Promise.allSettled([...this.transfers.values()].map((transfer) => transfer.promise));
+      }
       const next = await CacheStore.open(target);
       if (this.store) {
         await this.store.flush();
