@@ -6,7 +6,7 @@ import { Laptop, X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { RefObject } from "react";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
-import { CloudConnectionChip } from "@/app/components/cloud/CloudConnectionCard";
+import { CloudAccountChip } from "@/app/components/cloud/CloudAccountCard";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { DASHBOARD_APP_GROUPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
@@ -214,7 +214,7 @@ export function AppSwitcherOverlay({
                   </div>
                 </div>
 
-                <CloudConnectionChip onNavigate={close} />
+                <CloudAccountChip onNavigate={close} />
 
                 <nav
                   aria-label="App utilities"

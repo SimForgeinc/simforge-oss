@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Cpu, Download, ExternalLink, Globe, LoaderCircle, Lock } from "lucide-react";
+import { Check, Cpu, Download, Globe, LoaderCircle, Lock, LogIn } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
@@ -160,12 +160,12 @@ export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescrip
         <div {...stylex.props(setup.locked)}>
           <Lock {...stylex.props(setup.lockedIcon)} aria-hidden="true" />
           <p {...stylex.props(setup.lockedText)}>
-            {cloud.status?.state === "expired" ? "Your SimCloud session expired. Connect again to use this map on this computer." : cloud.status?.state === "connecting" ? "Waiting for SimCloud approval in your browser…" : "This map needs a SimCloud account. Connect to download and render it on this computer."}
+            {cloud.status?.state === "expired" ? "Your SimCloud session ended. Sign in again to use this map on this computer." : cloud.status?.state === "connecting" ? "Finishing the SimCloud sign-in in your browser…" : "This map needs a SimCloud account. Sign in to download and render it on this computer."}
           </p>
           {cloud.status?.state === "connecting" ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : (
-            <Button xstyle={setup.compactButton} disabled={cloud.loading || cloud.status === null} onClick={() => void cloud.connect()} type="button" variant="outline">
-              <ExternalLink {...stylex.props(setup.iconSmall)} aria-hidden="true" />
-              {cloud.status?.state === "expired" || cloud.status?.state === "error" ? "Connect again" : "Connect to SimCloud"}
+            <Button xstyle={setup.compactButton} disabled={cloud.status === null} onClick={cloud.openAccountPanel} type="button" variant="outline">
+              <LogIn {...stylex.props(setup.iconSmall)} aria-hidden="true" />
+              {cloud.status?.state === "expired" ? "Sign in again" : "Sign in to SimCloud"}
             </Button>
           )}
           {cloud.error ? <p {...stylex.props(setup.alert)} role="alert">{cloud.error}</p> : null}

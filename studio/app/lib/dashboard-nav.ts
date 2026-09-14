@@ -9,6 +9,7 @@ import {
   MonitorCog,
   PackageCheck,
   Settings,
+  UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -121,6 +122,13 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     description: "Rendering profile and map preparation",
     icon: MonitorCog,
     match: (p) => p.startsWith("/dashboard/render-settings"),
+  },
+  {
+    href: "/dashboard/account",
+    label: "Account",
+    description: "SimCloud profile, password, devices, workspaces and invitations",
+    icon: UserCircle,
+    match: (p) => p.startsWith("/dashboard/account"),
   },
   {
     href: "/dashboard/settings",

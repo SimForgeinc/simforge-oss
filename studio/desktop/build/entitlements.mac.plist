@@ -6,7 +6,8 @@
      addon, sharp and the renderer FFI dylib loaded from Resources. No camera,
      microphone, location or network-server entitlements: the app listens on
      loopback only and opens outbound HTTPS solely to the SimCloud origin the
-     user connects to. -->
+     user signs in to (account flows are in-app forms; only Google/GitHub
+     sign-in goes through the system browser). -->
 <plist version="1.0">
   <dict>
     <key>com.apple.security.cs.allow-jit</key>

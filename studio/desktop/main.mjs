@@ -5,7 +5,8 @@
 // to) the bundled local Studio host and loads it from loopback; the host owns
 // the database, artifacts, the on-disk map cache and native job state under
 // one per-user data root. SimCloud is a connection the local product makes
-// (Settings › SimCloud, sign-in in the system browser), never a remote site
+// (Settings › SimCloud account: sign-in, sign-up, verification and password
+// flows are all in-app forms the local host forwards), never a remote site
 // this window navigates to.
 //
 // Security posture: renderers are sandboxed with context isolation and no
@@ -15,7 +16,8 @@
 // the trusted-local session cookie this shell sets on its own session
 // (HttpOnly, SameSite=Strict, an HMAC of the token, never the token). Every
 // navigation or window.open outside the loopback origin goes to the system
-// browser — that is how the SimCloud authorization page opens.
+// browser — docs, mailto links, and the one account flow that must leave the
+// app: Google/GitHub sign-in, which returns to the loopback callback.
 
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";

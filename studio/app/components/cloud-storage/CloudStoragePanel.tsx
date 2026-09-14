@@ -130,11 +130,16 @@ export function CloudStoragePanel() {
     setArtifactLinks(artifactLinkRows);
   }, []);
 
+  const activeWorkspaceId = cloud.status?.activeWorkspaceId ?? null;
   const loadWorkspaces = useCallback(async () => {
     const rows = await studioCloud.listWorkspaces();
     setWorkspaces(rows);
-    setWorkspaceId((current) => (current && rows.some((row) => row.id === current) ? current : rows[0]?.id ?? null));
-  }, []);
+    // The account's active workspace first; a choice made here is kept while it still exists.
+    setWorkspaceId((current) => {
+      if (current && rows.some((row) => row.id === current)) return current;
+      return (activeWorkspaceId && rows.some((row) => row.id === activeWorkspaceId) ? activeWorkspaceId : rows[0]?.id) ?? null;
+    });
+  }, [activeWorkspaceId]);
 
   const loadWorkspaceContent = useCallback(async (id: string) => {
     const [datasets, artifacts] = await Promise.all([
@@ -284,17 +289,17 @@ export function CloudStoragePanel() {
 
       {!connected ? (
         <EmptyState
-          title="Connect to SimCloud to use cloud storage"
+          title="Sign in to SimCloud to use cloud storage"
           icon={<Cloud {...stylex.props(styles.icon8)} />}
           description={
             cloud.status?.state === "expired"
-              ? "Your SimCloud session has expired. Connect again to browse your workspaces. Nothing on this computer is affected."
-              : "Everything on this computer keeps working without an account. Connecting lets you browse your workspaces and move projects and artifacts explicitly — nothing is uploaded on sign-in."
+              ? "Your SimCloud session has ended. Sign in again to browse your workspaces. Nothing on this computer is affected."
+              : "Everything on this computer keeps working without an account. Signing in lets you browse your workspaces and move projects and artifacts explicitly — nothing is uploaded on sign-in."
           }
           action={
-            <Button onClick={() => void cloud.connect()} disabled={cloud.loading}>
-              {cloud.loading ? <LoaderCircle {...stylex.props(styles.icon4, styles.spinner)} /> : <Cloud {...stylex.props(styles.icon4)} />}
-              {cloud.status?.state === "connecting" ? "Waiting for your browser…" : "Connect to SimCloud"}
+            <Button onClick={cloud.openAccountPanel} disabled={cloud.status === null || cloud.status.state === "connecting"}>
+              {cloud.status?.state === "connecting" ? <LoaderCircle {...stylex.props(styles.icon4, styles.spinner)} /> : <Cloud {...stylex.props(styles.icon4)} />}
+              {cloud.status?.state === "connecting" ? "Finishing in your browser…" : cloud.status?.state === "expired" ? "Sign in again" : "Sign in to SimCloud"}
             </Button>
           }
         />

@@ -60,8 +60,13 @@ per installation rather than once per browser profile, and downloads continue
 as host jobs if the window closes mid-way. **Settings → Render Settings**
 changes the level and prepares more maps later.
 
-Use **Connect** in the app switcher for optional SimCloud access. Connecting does
-not move local projects, simulation jobs, or render outputs off this computer.
+Use **Sign in** in the app switcher, or **Settings → SimCloud account**, for
+optional SimCloud access: email and password, account creation, email
+verification and password reset are all forms inside Studio; only Google and
+GitHub sign-in go through the system browser and return to the app. Signing in
+does not move local projects, simulation jobs, or render outputs off this
+computer. **Account** (in the app switcher) manages your name, password, signed-in
+devices, the active workspace and workspace invitations.
 Cloud Storage transfers and managed inference submissions are explicit. Cloud
 inference runs and results belong to the selected workspace and continue after
 the app closes. Credentials use the operating-system vault when available;

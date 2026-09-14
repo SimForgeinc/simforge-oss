@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Cloud, Database, Download, ExternalLink, LoaderCircle } from "lucide-react";
+import { Check, Cloud, Database, Download, LoaderCircle, LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { z } from "zod";
@@ -113,8 +113,8 @@ export function ProfileMapPreparation({ profile, redownload = false, onContinue,
         {!busy && cloudState !== null && cloudState !== "connected" ? (
           <div {...stylex.props(setup.notice)} data-testid="profile-map-preparation-account-notice" data-cloud-state={cloudState}>
             <Cloud {...stylex.props(setup.noticeIcon)} aria-hidden="true" />
-            <p {...stylex.props(setup.noticeText)}>Richmond Field Station is available without an account. Connect to SimCloud for other published maps.</p>
-            <Button xstyle={setup.compactButton} variant="outline" disabled={cloud.loading || cloudState === "connecting"} onClick={() => void cloud.connect()}><ExternalLink {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />{cloudState === "connecting" ? "Waiting for approval…" : "Connect to SimCloud"}</Button>
+            <p {...stylex.props(setup.noticeText)}>Richmond Field Station is available without an account. Sign in to SimCloud for other published maps.</p>
+            <Button xstyle={setup.compactButton} variant="outline" disabled={cloudState === "connecting"} onClick={cloud.openAccountPanel}><LogIn {...stylex.props(setup.iconSmallMr1)} aria-hidden="true" />{cloudState === "connecting" ? "Finishing in your browser…" : "Sign in to SimCloud"}</Button>
           </div>
         ) : null}
         {cloud.error ? <p {...stylex.props(setup.error)} role="alert">{cloud.error}</p> : null}

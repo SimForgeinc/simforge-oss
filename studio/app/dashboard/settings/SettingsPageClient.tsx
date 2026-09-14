@@ -6,7 +6,7 @@ import Link from "next/link";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import { CloudConnectionCard } from "@/app/components/cloud/CloudConnectionCard";
+import { CloudAccountCard } from "@/app/components/cloud/CloudAccountCard";
 import { LocalExecutionCard } from "@/app/components/LocalExecutionCard";
 import { styles } from "./settings-page.stylex";
 
@@ -18,7 +18,7 @@ export function SettingsPageClient() {
       <div {...stylex.props(styles.scroll)}>
         <div {...stylex.props(styles.inner)}>
           <LocalExecutionCard />
-          <CloudConnectionCard xstyle={styles.cloudCard} />
+          <CloudAccountCard xstyle={styles.cloudCard} />
           <section aria-labelledby="settings-storage-title" {...stylex.props(styles.section)}>
             <p {...stylex.props(styles.eyebrow)}>Storage</p>
             <h2 id="settings-storage-title" {...stylex.props(styles.heading)}>Map cache on this computer</h2>

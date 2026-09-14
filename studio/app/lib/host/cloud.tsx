@@ -13,56 +13,93 @@ import {
 import {
   createHttpStudioCloudService,
   StudioHostRequestError,
+  type StudioCloudAccount,
+  type StudioCloudInvitation,
+  type StudioCloudProvider,
   type StudioCloudService,
   type StudioCloudStatus,
+  type StudioCloudWorkspace,
 } from "@simforge-oss/studio-host";
 import { studioHost } from "@/app/lib/host";
 
 /**
  * The local SimCloud connector: same-origin `/api/simforge/cloud/*` routes on
  * the local service, which holds the credentials. Separate from `studioHost`
- * on purpose — connecting adds cloud maps and storage, it never swaps the host
+ * on purpose — signing in adds cloud maps and storage, it never swaps the host
  * that owns local projects, jobs and renders.
  */
 export const studioCloud: StudioCloudService = createHttpStudioCloudService();
 
-/** How long the app keeps asking the local service whether the browser consent finished. */
+/** How long the app keeps asking the local service whether the Google/GitHub browser hop finished. */
 const CONNECT_POLL_INTERVAL_MS = 2_000;
 const CONNECT_POLL_LIMIT_MS = 5 * 60_000;
 
+/** Stable loader identities: a section that keys an effect on one never reloads because `loading` flipped. */
+const loadAccount = (signal?: AbortSignal) => studioCloud.account(signal);
+const loadInvitations = (signal?: AbortSignal) => studioCloud.listInvitations(signal);
+const loadWorkspaces = (signal?: AbortSignal) => studioCloud.listWorkspaces(signal);
+
+/**
+ * Account actions answer `true` on success. On failure they set `error` with
+ * the product message and answer `false`, so a form can stay on its step
+ * without a second copy of the message.
+ */
 export type StudioCloudConnection = {
   /** `null` until the first status read resolves. */
   status: StudioCloudStatus | null;
-  /** True while a connect/disconnect/refresh request or the consent poll is in flight. */
+  /** True while an account request or the social-hop poll is in flight. */
   loading: boolean;
   /** Product message for the last failed operation; cleared by the next successful one. */
   error: string | null;
+  /** Whether the shared account sheet is open; any surface can open it in place of navigating away. */
+  accountPanelOpen: boolean;
+  openAccountPanel(): void;
+  closeAccountPanel(): void;
   refresh(): Promise<void>;
-  /** Starts the system-browser consent flow and polls status until it settles or times out. */
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
+  /** The one browser hop: opens the provider sign-in and polls status until it settles or times out. */
+  connect(provider: StudioCloudProvider): Promise<boolean>;
+  signIn(input: { email: string; password: string }): Promise<boolean>;
+  signUp(input: { email: string; password: string; name: string }): Promise<boolean>;
+  verifyEmail(code: string): Promise<boolean>;
+  resendVerification(): Promise<boolean>;
+  forgotPassword(email: string): Promise<boolean>;
+  resetPassword(input: { email: string; code: string; newPassword: string }): Promise<boolean>;
+  changePassword(input: { currentPassword: string; newPassword: string }): Promise<boolean>;
+  updateAccount(input: { name: string }): Promise<StudioCloudAccount | null>;
+  revokeSession(id: string): Promise<boolean>;
+  acceptInvitation(id: string): Promise<boolean>;
+  declineInvitation(id: string): Promise<boolean>;
+  acceptInvitationLink(token: string): Promise<boolean>;
+  setActiveWorkspace(organizationId: string): Promise<boolean>;
+  disconnect(): Promise<boolean>;
+  /** Loaders for the account page; they throw so the page owns its own empty and error states. */
+  account(signal?: AbortSignal): Promise<StudioCloudAccount>;
+  listInvitations(signal?: AbortSignal): Promise<StudioCloudInvitation[]>;
+  listWorkspaces(signal?: AbortSignal): Promise<StudioCloudWorkspace[]>;
 };
 
 const StudioCloudContext = createContext<StudioCloudConnection | null>(null);
 
-function cloudErrorMessage(reason: unknown, fallback: string): string {
+export function cloudErrorMessage(reason: unknown, fallback: string): string {
   if (reason instanceof StudioHostRequestError) return reason.message;
   if (reason instanceof Error && reason.name !== "AbortError" && reason.message) return reason.message;
   return fallback;
 }
 
 /**
- * One status reader and one consent poller for the whole dashboard. Polling
+ * One status reader and one social-hop poller for the whole dashboard.
+ * Native account actions read status once from their own answer; polling
  * runs only while the service reports `connecting`, and stops on settle,
- * unmount or the bounded limit — a stuck consent tab never keeps the app
+ * unmount or the bounded limit — a stuck browser tab never keeps the app
  * hitting the local service forever.
  */
 export function StudioCloudProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<StudioCloudStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const poll = useRef<AbortController | null>(null);
-  const mapScope = status?.state === "connected" ? status.user?.id : status?.state;
+  const mapScope = status?.state === "connected" ? `${status.user?.id}:${status.activeWorkspaceId}` : status?.state;
   useEffect(() => {
     if (!mapScope || mapScope === "connecting") return;
     const controller = new AbortController();
@@ -87,7 +124,7 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
         });
     };
     readStatus();
-    // Browser consent can finish after the bounded poll has stopped.
+    // The browser hop can finish after the bounded poll has stopped.
     const onFocus = () => {
       if (!poll.current) readStatus();
     };
@@ -108,7 +145,7 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const pollUntilSettled = useCallback(async () => {
+  const pollUntilSettled = useCallback(async (): Promise<boolean> => {
     poll.current?.abort();
     const controller = new AbortController();
     poll.current = controller;
@@ -123,16 +160,16 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
             resolve();
           }, { once: true });
         });
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return false;
         const next = await studioCloud.status(controller.signal);
         setStatus(next);
         if (next.state !== "connecting") {
           setError(next.state === "error" ? next.message : null);
-          return;
+          return next.state === "connected";
         }
       }
       if (!controller.signal.aborted) {
-        setError("SimCloud did not confirm the connection in time. Try connecting again.");
+        setError("SimCloud did not confirm the sign-in in time. Try again.");
       }
     } catch (reason) {
       if (!controller.signal.aborted) setError(cloudErrorMessage(reason, "SimCloud connection status is unavailable."));
@@ -142,45 +179,92 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
+    return false;
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (provider: StudioCloudProvider) => {
     setLoading(true);
     setError(null);
     try {
-      const { authorizationUrl } = await studioCloud.connect();
-      // The consent page belongs to SimCloud and opens in the system browser;
-      // the app itself never navigates away from the local origin.
+      const { authorizationUrl } = await studioCloud.connect({ provider });
+      // The provider's page belongs to the provider and opens in the system
+      // browser; the app itself never navigates away from the local origin.
       const opened = window.open(authorizationUrl, "_blank", "noopener,noreferrer");
       if (opened === null && !window.simforgeDesktop) {
-        setError("Your browser blocked the SimCloud sign-in window. Allow pop-ups for this app and try again.");
+        setError("Your browser blocked the sign-in window. Allow pop-ups for this app and try again.");
       }
       setStatus((current) =>
         current ? { ...current, state: "connecting", message: null } : current,
       );
-      await pollUntilSettled();
+      return await pollUntilSettled();
     } catch (reason) {
       setError(cloudErrorMessage(reason, "SimCloud sign-in could not be started."));
       setLoading(false);
+      return false;
     }
   }, [pollUntilSettled]);
 
-  const disconnect = useCallback(async () => {
+  /** Run one account request; a status answer replaces the current one. */
+  const perform = useCallback(async <T,>(
+    fallback: string,
+    request: () => Promise<T>,
+    apply?: (result: T) => void,
+  ): Promise<T | null> => {
     poll.current?.abort();
     setLoading(true);
     setError(null);
     try {
-      setStatus(await studioCloud.disconnect());
+      const result = await request();
+      apply?.(result);
+      return result;
     } catch (reason) {
-      setError(cloudErrorMessage(reason, "SimCloud could not be disconnected."));
+      setError(cloudErrorMessage(reason, fallback));
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const withStatus = useCallback(
+    async (fallback: string, request: () => Promise<StudioCloudStatus>) =>
+      (await perform(fallback, request, setStatus)) !== null,
+    [perform],
+  );
+
   const value = useMemo<StudioCloudConnection>(
-    () => ({ status, loading, error, refresh, connect, disconnect }),
-    [status, loading, error, refresh, connect, disconnect],
+    () => ({
+      status,
+      loading,
+      error,
+      accountPanelOpen,
+      openAccountPanel: () => {
+        setError(null);
+        setAccountPanelOpen(true);
+      },
+      closeAccountPanel: () => setAccountPanelOpen(false),
+      refresh,
+      connect,
+      signIn: (input) => withStatus("Sign-in failed.", () => studioCloud.signIn(input)),
+      signUp: (input) => withStatus("The account could not be created.", () => studioCloud.signUp(input)),
+      verifyEmail: (code) => withStatus("The code could not be checked.", () => studioCloud.verifyEmail({ code })),
+      resendVerification: () => withStatus("A new code could not be sent.", () => studioCloud.resendVerification()),
+      forgotPassword: async (email) => (await perform("The reset code could not be sent.", () => studioCloud.forgotPassword({ email }))) !== null,
+      resetPassword: (input) => withStatus("The password could not be reset.", () => studioCloud.resetPassword(input)),
+      changePassword: async (input) => (await perform("The password could not be changed.", () => studioCloud.changePassword(input))) !== null,
+      updateAccount: (input) => perform("The profile could not be saved.", () => studioCloud.updateAccount(input), (account) => {
+        setStatus((current) => current?.user ? { ...current, user: { ...current.user, name: account.user.name } } : current);
+      }),
+      revokeSession: async (id) => (await perform("The device could not be signed out.", () => studioCloud.revokeSession(id))) !== null,
+      acceptInvitation: async (id) => (await perform("The invitation could not be accepted.", () => studioCloud.acceptInvitation(id))) !== null,
+      declineInvitation: async (id) => (await perform("The invitation could not be declined.", () => studioCloud.declineInvitation(id))) !== null,
+      acceptInvitationLink: async (token) => (await perform("The invite link could not be used.", () => studioCloud.acceptInvitationLink(token))) !== null,
+      setActiveWorkspace: (organizationId) => withStatus("The workspace could not be selected.", () => studioCloud.setActiveWorkspace(organizationId)),
+      disconnect: () => withStatus("SimCloud could not be signed out.", () => studioCloud.disconnect()),
+      account: loadAccount,
+      listInvitations: loadInvitations,
+      listWorkspaces: loadWorkspaces,
+    }),
+    [status, loading, error, accountPanelOpen, refresh, connect, perform, withStatus],
   );
 
   return <StudioCloudContext.Provider value={value}>{children}</StudioCloudContext.Provider>;

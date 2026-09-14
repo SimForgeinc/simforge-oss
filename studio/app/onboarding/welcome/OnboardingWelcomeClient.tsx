@@ -10,11 +10,11 @@ const MAPS_PATH = "/onboarding/maps";
 /**
  * Step 1: sign in to SimCloud, or continue locally.
  *
- * Sign-in is the existing PKCE flow — the consent page opens in the system
- * browser and `useStudioCloudStatus().connect()` polls the local service until
- * it settles. Only a sign-in the user actually started advances the flow: a
- * data root that is already connected still shows this screen, because the
- * user may well want to review it before downloading anything.
+ * Sign-in opens the in-app account sheet (email + password, sign-up, or the
+ * Google/GitHub browser hop). Only a sign-in the user actually started
+ * advances the flow: a data root that is already connected still shows this
+ * screen, because the user may well want to review it before downloading
+ * anything.
  */
 export function OnboardingWelcomeClient() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export function OnboardingWelcomeClient() {
       onContinueLocally={() => router.push(MAPS_PATH)}
       onSignIn={() => {
         requested.current = true;
-        void cloud.connect();
+        cloud.openAccountPanel();
       }}
       userEmail={cloud.status?.state === "connected" ? (cloud.status.user?.email ?? null) : null}
     />
