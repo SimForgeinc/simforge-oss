@@ -1,4 +1,6 @@
 import type {
+  StudioCloudAccount,
+  StudioCloudInvitation,
   StudioCloudPublishResult,
   StudioCloudService,
   StudioCloudStatus,
@@ -21,14 +23,28 @@ type ErrorBody = {
 
 const CLOUD = "/api/simforge/cloud";
 
-/** Product messages for the connection route error codes. */
+/**
+ * Product messages for the connection and account error codes. A known code
+ * gets this copy; anything else keeps the local service's message.
+ */
 export const STUDIO_CLOUD_ERROR_MESSAGES: Readonly<Record<string, string>> = {
-  cloud_disconnected: "Connect to SimCloud to use cloud maps and storage.",
-  cloud_session_expired: "Your SimCloud session has expired. Connect again to continue.",
-  cloud_connect_pending: "A SimCloud connection is already waiting for approval in your browser.",
+  cloud_disconnected: "Sign in to SimCloud to use cloud maps and storage.",
+  cloud_session_expired: "Your SimCloud session has ended. Sign in again to continue.",
+  cloud_connect_pending: "A Google or GitHub sign-in is already waiting in your browser.",
   cloud_origin_rejected: "That SimCloud origin is not allowed.",
   cloud_unreachable: "SimCloud could not be reached. Check your connection and try again.",
   cloud_workspace_forbidden: "You are not a member of that SimCloud workspace.",
+  invalid_request: "Check the form and try again.",
+  invalid_credentials: "That email or password is incorrect.",
+  email_taken: "An account with that email already exists.",
+  email_unverified: "Verify your email address to continue.",
+  invalid_code: "That code is not right. Check the email and try again.",
+  code_expired: "That code has expired. Request a new one.",
+  weak_password: "Choose a stronger password: at least 8 characters.",
+  throttled: "Too many attempts. Wait a moment and try again.",
+  account_banned: "This account is not available.",
+  invalid_token: "Your session is no longer valid. Sign in again.",
+  not_member: "You are not a member of that workspace.",
 };
 
 /**
@@ -61,23 +77,68 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
     throw new StudioHostRequestError(
       code,
       response.status,
-      body?.message ?? STUDIO_CLOUD_ERROR_MESSAGES[code] ?? (body?.error ? undefined : `Request failed (${response.status}).`),
+      STUDIO_CLOUD_ERROR_MESSAGES[code] ?? body?.message ?? (body?.error ? undefined : `Request failed (${response.status}).`),
     );
   }
+
+  const post = <T>(path: string, body?: unknown, signal?: AbortSignal) =>
+    request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body), signal });
 
   return {
     status(signal) {
       return request<StudioCloudStatus>("/status", { signal });
     },
-    connect(input = {}, signal) {
-      return request<{ authorizationUrl: string }>("/connect", {
-        method: "POST",
-        body: JSON.stringify(input.origin ? { origin: input.origin } : {}),
-        signal,
-      });
+    connect(input, signal) {
+      return post<{ authorizationUrl: string }>("/connect", input, signal);
+    },
+    signIn(input, signal) {
+      return post<StudioCloudStatus>("/auth/sign-in", input, signal);
+    },
+    signUp(input, signal) {
+      return post<StudioCloudStatus>("/auth/sign-up", input, signal);
+    },
+    verifyEmail(input, signal) {
+      return post<StudioCloudStatus>("/auth/verify-email", input, signal);
+    },
+    resendVerification(signal) {
+      return post<StudioCloudStatus>("/auth/verify-email/resend", undefined, signal);
+    },
+    forgotPassword(input, signal) {
+      return post<{ ok: true }>("/auth/password/forgot", input, signal);
+    },
+    resetPassword(input, signal) {
+      return post<StudioCloudStatus>("/auth/password/reset", input, signal);
+    },
+    changePassword(input, signal) {
+      return post<{ ok: true }>("/auth/password/change", input, signal);
+    },
+    account(signal) {
+      return request<StudioCloudAccount>("/account", { signal });
+    },
+    updateAccount(input, signal) {
+      return request<StudioCloudAccount>("/account", { method: "PATCH", body: JSON.stringify(input), signal });
+    },
+    revokeSession(id, signal) {
+      return request<{ ok: true }>(`/account/sessions/${encodeURIComponent(id)}`, { method: "DELETE", signal });
+    },
+    async listInvitations(signal) {
+      const body = await request<{ invitations: StudioCloudInvitation[] }>("/invitations", { signal });
+      return body.invitations;
+    },
+    acceptInvitation(id, signal) {
+      return post<{ organizationId: string }>(`/invitations/${encodeURIComponent(id)}/accept`, undefined, signal);
+    },
+    declineInvitation(id, signal) {
+      return post<{ ok: true }>(`/invitations/${encodeURIComponent(id)}/decline`, undefined, signal);
+    },
+    acceptInvitationLink(token, signal) {
+      return post<{ organizationId: string }>("/invitations/accept-link", { token }, signal);
+    },
+    setActiveWorkspace(organizationId, signal) {
+      return post<StudioCloudStatus>("/workspaces/active", { organizationId }, signal);
     },
     disconnect(signal) {
-      return request<StudioCloudStatus>("/disconnect", { method: "POST", signal });
+      return post<StudioCloudStatus>("/disconnect", undefined, signal);
     },
     async listWorkspaces(signal) {
       const body = await request<{ workspaces: StudioCloudWorkspace[] }>("/workspaces", { signal });
@@ -91,18 +152,10 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
       return body.datasets;
     },
     importDataset(source, signal) {
-      return request<ScenarioDatasetDto>("/datasets/import", {
-        method: "POST",
-        body: JSON.stringify(source),
-        signal,
-      });
+      return post<ScenarioDatasetDto>("/datasets/import", source, signal);
     },
     publishDataset(input, signal) {
-      return request<StudioCloudPublishResult>("/datasets/publish", {
-        method: "POST",
-        body: JSON.stringify(input),
-        signal,
-      });
+      return post<StudioCloudPublishResult>("/datasets/publish", input, signal);
     },
     async listArtifacts(workspaceId, signal) {
       const body = await request<{ artifacts: WorkspaceArtifact[] }>(
@@ -112,18 +165,10 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
       return body.artifacts;
     },
     importArtifact(source, signal) {
-      return request<ScenarioArtifactDto>("/artifacts/import", {
-        method: "POST",
-        body: JSON.stringify(source),
-        signal,
-      });
+      return post<ScenarioArtifactDto>("/artifacts/import", source, signal);
     },
     uploadArtifact(input, signal) {
-      return request<{ workspaceId: string; artifactId: string }>("/artifacts/upload", {
-        method: "POST",
-        body: JSON.stringify(input),
-        signal,
-      });
+      return post<{ workspaceId: string; artifactId: string }>("/artifacts/upload", input, signal);
     },
   };
 }

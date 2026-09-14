@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { LoaderCircle, LogIn } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "../components/ui/button";
@@ -9,8 +9,8 @@ import { onboarding } from "./onboarding.stylex";
 
 /**
  * The first screen of a fresh installation: sign in to SimCloud, or continue
- * locally with the one public map. Props only — the host app owns the PKCE
- * flow, the connection polling and where each action leads.
+ * locally with the one public map. Props only — the host app owns the account
+ * sheet, the connection state and where each action leads.
  */
 export function WelcomeScreen({
   cloudState,
@@ -24,7 +24,7 @@ export function WelcomeScreen({
   cloudState: StudioCloudStatus["state"] | null;
   userEmail: string | null;
   error: string | null;
-  /** A connect request or its consent poll is in flight. */
+  /** An account request, or the Google/GitHub browser hop, is in flight. */
   busy: boolean;
   onSignIn: () => void;
   onContinueLocally: () => void;
@@ -71,13 +71,13 @@ export function WelcomeScreen({
             {connecting ? (
               <>
                 <LoaderCircle {...stylex.props(onboarding.icon, onboarding.iconWithLabel, onboarding.spinner)} aria-hidden="true" />
-                Waiting for approval…
+                Finishing in your browser…
               </>
             ) : connected ? (
               "Continue with SimCloud"
             ) : (
               <>
-                <ExternalLink {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
+                <LogIn {...stylex.props(onboarding.icon, onboarding.iconWithLabel)} aria-hidden="true" />
                 Sign in to SimCloud
               </>
             )}

@@ -147,7 +147,7 @@ export function OnboardingMapsClient() {
       }}
       onQualityChange={setQuality}
       onRetry={preparation.retry}
-      onSignIn={() => void cloud.connect()}
+      onSignIn={cloud.openAccountPanel}
       onSkip={preparation.skip}
       onToggle={(mapVersionId) =>
         setSelection((current) =>

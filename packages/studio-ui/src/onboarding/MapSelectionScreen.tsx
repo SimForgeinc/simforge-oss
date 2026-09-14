@@ -77,7 +77,7 @@ export function MapSelectionScreen({
   onSkip: (mapVersionId: string) => void;
   /** A SimCloud session is active: every published map is selectable. */
   signedIn: boolean;
-  /** Offered while signed out; runs the same PKCE flow as Welcome. */
+  /** Offered while signed out; opens the same in-app account sheet as Welcome. */
   onSignIn: () => void;
 }) {
   const selected = new Set(selection);
