@@ -7113,6 +7113,20 @@ export const styles = stylex.create({
   /** The gallery hero title's drop shadow, which holds it over any frame. */
   heroTitleShadow: { textShadow: "0 4px 28px rgba(0,0,0,0.5)" },
 
+  /** The gallery hero's primary actions: Drive, then Create scenario. */
+  heroActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  /** The Drive action, matched in height to the primary button beside it. */
+  driveAction: {
+    height: "2.75rem",
+    paddingInline: { default: "1rem", "@media (min-width: 640px)": "1.25rem" },
+    fontSize: "0.875rem",
+    lineHeight: "1.25rem",
+  },
+
   /**
    * Legend dots whose colour is fixed by the layer they mark, rather than
    * carried on the datum like the other swatches in this list.

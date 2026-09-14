@@ -28,6 +28,14 @@ import {
 /** The breakpoints this overlay responds to. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
+/** Wide and tall enough that every card fits on one screen without scrolling. */
+const ONE_PAGE = "@media (min-width: 1024px) and (min-height: 720px)";
+/**
+ * The scrolling fallback's card grid: wide but too short for one page. Kept
+ * disjoint from `ONE_PAGE` because StyleX gives two matching media rules on
+ * one property equal weight, and then order, not intent, would decide.
+ */
+const SHORT_WIDE = "@media (min-width: 640px) and (max-height: 719.98px)";
 const REDUCED = "@media (prefers-reduced-motion: reduce)";
 
 /** Tailwind's default transition curve and its `transition-colors` set. */
@@ -217,21 +225,27 @@ export const styles = stylex.create({
   closeIcon: { width: "1.25rem", height: "1.25rem" },
 
   /**
-   * relative mx-auto flex min-h-full w-full max-w-[1120px] flex-col
-   * justify-center gap-8 px-5 py-20 sm:px-8 sm:py-24
+   * The page frame. On a one-page viewport it is exactly the dialog's height,
+   * split into the stage (which takes what is left) and the footer; smaller
+   * viewports fall back to a centred column that scrolls.
    */
   container: {
     position: "relative",
     marginInline: "auto",
-    display: "flex",
+    display: "grid",
+    gridTemplateRows: {
+      default: "auto auto",
+      [ONE_PAGE]: "minmax(0, 1fr) auto",
+    },
+    alignContent: "center",
     minHeight: "100%",
+    height: { default: null, [ONE_PAGE]: "100%" },
     width: "100%",
-    maxWidth: "1120px",
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: "2rem",
+    maxWidth: "1280px",
+    gap: { default: "2rem", [ONE_PAGE]: "1.25rem" },
     paddingInline: { default: "1.25rem", [SM]: "2rem" },
-    paddingBlock: { default: "5rem", [SM]: "6rem" },
+    paddingTop: { default: "5rem", [ONE_PAGE]: "4.25rem" },
+    paddingBottom: { default: "5rem", [ONE_PAGE]: "1.5rem" },
   },
 
   /**
@@ -251,30 +265,41 @@ export const styles = stylex.create({
     filter: "blur(90px)",
   },
 
-  /** The three areas of work, stacked. */
-  groups: {
+  /**
+   * The card groups. One-page: side by side, the exploration column narrower
+   * than the scenarios column; otherwise stacked.
+   */
+  stage: {
     position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2.25rem",
+    display: "grid",
+    minHeight: 0,
+    gap: { default: "2rem", [ONE_PAGE]: "0.75rem" },
+    gridTemplateColumns: {
+      default: null,
+      [ONE_PAGE]: "minmax(0, 1fr) minmax(0, 1.45fr)",
+    },
   },
-  group: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.875rem",
-  },
-  // flex items-baseline gap-3 border-b border-white/[0.08] pb-2.5
-  groupHead: {
-    display: "flex",
-    alignItems: "baseline",
+  /** A group: its label rail, then its cards. */
+  band: {
+    display: "grid",
+    minHeight: 0,
     gap: "0.75rem",
-    paddingBottom: "0.625rem",
-    borderBottomWidth: 1,
-    borderBottomStyle: "solid",
-    borderBottomColor: "rgb(255 255 255 / 0.08)",
+    gridTemplateColumns: { default: null, [LG]: "2rem minmax(0, 1fr)" },
+  },
+  /**
+   * The group label. Horizontal above the cards on narrow viewports; from LG
+   * it turns into a spine down the cards' left edge, reading upward with the
+   * name at the foot and the description at the head.
+   */
+  bandRail: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    writingMode: { default: null, [LG]: "vertical-rl" },
+    transform: { default: null, [LG]: "rotate(180deg)" },
   },
   // font-meta text-[10px] font-bold uppercase tracking-[0.18em] text-white/70
-  groupLabel: {
+  bandLabel: {
     margin: 0,
     fontFamily: text.fontMeta,
     fontSize: "10px",
@@ -282,24 +307,38 @@ export const styles = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
     color: "rgb(255 255 255 / 0.7)",
+    whiteSpace: "nowrap",
+  },
+  bandRule: {
+    flexGrow: 1,
+    minWidth: "1px",
+    minHeight: "1px",
+    height: { default: "1px", [LG]: "auto" },
+    width: { default: "auto", [LG]: "1px" },
+    backgroundColor: "rgb(255 255 255 / 0.1)",
   },
   // text-[11px] text-white/35
-  groupDescription: {
+  bandDescription: {
     margin: 0,
     fontSize: "11px",
     color: "rgb(255 255 255 / 0.35)",
+    whiteSpace: "nowrap",
   },
 
-  // grid gap-3 sm:grid-cols-2 lg:grid-cols-3 — no area holds more than three apps
-  grid: {
+  /** The cards of a group; one-page: a column of equal rows. */
+  bandGrid: {
     display: "grid",
+    minHeight: 0,
     gap: "0.75rem",
+    gridAutoRows: { default: null, [ONE_PAGE]: "minmax(0, 1fr)" },
+  },
+  bandColumns: (count: number) => ({
     gridTemplateColumns: {
       default: null,
-      [SM]: "repeat(2, minmax(0, 1fr))",
-      [LG]: "repeat(3, minmax(0, 1fr))",
+      [SHORT_WIDE]: `repeat(${Math.min(count, 2)}, minmax(0, 1fr))`,
+      [ONE_PAGE]: "minmax(0, 1fr)",
     },
-  },
+  }),
 
   /**
    * group relative flex min-h-60 flex-col overflow-hidden rounded-[20px]
@@ -330,7 +369,7 @@ export const styles = stylex.create({
     },
     position: "relative",
     display: "flex",
-    minHeight: { default: "15rem", [SM]: "16rem" },
+    minHeight: { default: "15rem", [SHORT_WIDE]: "16rem", [ONE_PAGE]: 0 },
     flexDirection: "column",
     overflow: "hidden",
     borderWidth: 1,
@@ -477,12 +516,28 @@ export const styles = stylex.create({
   },
   // size-40 object-contain
   artImage: { width: "10rem", height: "10rem", objectFit: "contain" },
+  /** The single card of a one-card group: a larger tile, lower in the card. */
+  artHero: {
+    right: { default: "-1rem", [ONE_PAGE]: "0.5rem" },
+    top: { default: "1.75rem", [ONE_PAGE]: "22%" },
+    width: { default: "10rem", [ONE_PAGE]: "18rem" },
+    height: { default: "10rem", [ONE_PAGE]: "18rem" },
+  },
+  artImageHero: {
+    width: { default: "10rem", [ONE_PAGE]: "18rem" },
+    height: { default: "10rem", [ONE_PAGE]: "18rem" },
+    objectFit: "contain",
+  },
 
-  // relative z-10 mt-20 block max-w-[75%] text-left
+  /**
+   * relative z-10 mt-20 block max-w-[75%] text-left
+   *
+   * One-page cards are as tall as their row, so the copy sits at the foot.
+   */
   copy: {
     position: "relative",
     zIndex: 10,
-    marginTop: "5rem",
+    marginTop: { default: "5rem", [ONE_PAGE]: "auto" },
     display: "block",
     maxWidth: "75%",
     textAlign: "left",
@@ -541,13 +596,16 @@ export const styles = stylex.create({
   // text-base leading-none
   metaArrow: { fontSize: "1rem", lineHeight: 1 },
 
-  // grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,1.2fr)]
+  /**
+   * grid gap-3 lg:grid-cols-[…]: workspace, the compact library group, the
+   * cloud account, then the utilities.
+   */
   footerGrid: {
     display: "grid",
     gap: "0.75rem",
     gridTemplateColumns: {
       default: null,
-      [LG]: "minmax(0,1fr) minmax(0,1fr) minmax(320px,1.2fr)",
+      [LG]: "minmax(0,1.1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(300px,1.25fr)",
     },
   },
 
@@ -662,4 +720,18 @@ export const styles = stylex.create({
   },
   // size-3.5 shrink-0
   utilityIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },
+
+  /** Graphics level row under the footer grid: a caption, then four utility-styled buttons. */
+  graphics: {
+    marginTop: "0.75rem",
+    display: "grid",
+    gap: "0.375rem",
+  },
+  graphicsHead: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    paddingInline: "0.25rem",
+  },
+  graphicsLabel: { marginBottom: 0 },
 });

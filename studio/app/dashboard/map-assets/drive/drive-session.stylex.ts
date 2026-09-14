@@ -6,39 +6,29 @@ import * as stylex from "@stylexjs/stylex";
 // package has been built. The source path is what keeps the two agreeing, the
 // same reason `stylex.config.mjs` pins the token alias to `src`. The package
 // export stays for consumers outside this repo, which have no relative path.
-import { driveColors } from "../../../packages/studio-ui/src/drive/drive.stylex";
+import { driveColors } from "../../../../../packages/studio-ui/src/drive/drive.stylex";
 
 /**
- * The `/drive` route's own two frames, drawn from Drive's instrument tokens
- * rather than the Studio theme: the layout shell, and the session that fills
- * it. Everything inside a session — HUD, pause menu, pickers — styles itself
- * from `@simforge-oss/studio-ui/drive`; these are the surfaces only the route
- * can own, because only the route knows it is a full-viewport game.
+ * The session's frame, drawn from Drive's instrument tokens rather than the
+ * Studio theme. Everything inside — HUD, pause menu, pickers — styles itself
+ * from `@simforge-oss/studio-ui/drive`; this is the surface only the host can
+ * own, because only the host knows what box the game fills.
  */
-export const route = stylex.create({
-  /**
-   * The route shell. A session is exactly one viewport tall and never
-   * scrolls: the canvas resizes to its box, so a shell that could scroll
-   * would let a stray gesture drag the world out of frame.
-   */
-  shell: {
-    height: "100svh",
-    overflow: "hidden",
-    backgroundColor: driveColors.void,
-    color: driveColors.textPrimary,
-  },
-
+export const driveFrame = stylex.create({
   /**
    * The session's stacking frame. `relative` is load-bearing: the HUD, the
    * status line and the pause menu are all absolutely positioned against it,
-   * and the canvas is the only thing in normal flow.
+   * and the canvas is the only thing in normal flow. It fills whatever the
+   * host gives it and never scrolls: the canvas resizes to its box, so a frame
+   * that could scroll would let a stray gesture drag the world out of frame.
    */
   session: {
     position: "relative",
-    height: "100svh",
+    height: "100%",
     width: "100%",
     overflow: "hidden",
     backgroundColor: driveColors.void,
+    color: driveColors.textPrimary,
   },
 
   /**

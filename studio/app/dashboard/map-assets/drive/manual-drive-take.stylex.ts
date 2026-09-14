@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { driveColors, driveRadius } from "../../../packages/studio-ui/src/drive/drive.stylex";
+import { driveColors, driveRadius } from "../../../../../packages/studio-ui/src/drive/drive.stylex";
 
 export const manualTake = stylex.create({
   boundary: { display: "grid", height: "100%", minHeight: 0, placeItems: "center", backgroundColor: driveColors.void, color: driveColors.textBody },

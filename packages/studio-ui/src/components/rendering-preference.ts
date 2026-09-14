@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   SCENARIO_AUTHORING_QUALITY_IDS,
   type ScenarioAuthoringQuality,
@@ -68,4 +69,18 @@ export function saveRenderingPreference(
 export function requestRenderingPreferenceSelection(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(OPEN_RENDERING_PREFERENCE_EVENT));
+}
+
+/**
+ * The saved preference, kept current as any surface changes it. `null` until
+ * the user has chosen one; callers that render fall back to `"high"`.
+ */
+export function useRenderingPreference(): RenderingPreference | null {
+  const [preference, setPreference] = useState<RenderingPreference | null>(readRenderingPreference);
+  useEffect(() => {
+    const onChange = (event: Event) => setPreference((event as CustomEvent<RenderingPreference>).detail);
+    window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onChange);
+  }, []);
+  return preference;
 }

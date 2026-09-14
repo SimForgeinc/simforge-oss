@@ -1,7 +1,6 @@
 import {
   Boxes,
   Brain,
-  CarFront,
   CloudUpload,
   Database,
   FlaskConical,
@@ -27,6 +26,8 @@ export type NavGroup = {
   label: string;
   description: string;
   apps: NavItem[];
+  /** Shown as small buttons in the switcher footer rather than as cards. */
+  compact?: boolean;
 };
 
 /** Product apps, as the app switcher presents them: three areas of work. */
@@ -39,16 +40,9 @@ export const DASHBOARD_APP_GROUPS: NavGroup[] = [
       {
         href: "/dashboard/map-assets",
         label: "Maps",
-        description: "CARLA map library and bridges",
+        description: "CARLA map library, bridges and driving",
         icon: Map,
         match: (p) => p.startsWith("/dashboard/map-assets"),
-      },
-      {
-        href: "/drive",
-        label: "Drive",
-        description: "Drive a car on an installed map",
-        icon: CarFront,
-        match: (p) => p.startsWith("/drive"),
       },
     ],
   },
@@ -84,6 +78,7 @@ export const DASHBOARD_APP_GROUPS: NavGroup[] = [
     id: "assets",
     label: "Assets",
     description: "3D assets and model weights",
+    compact: true,
     apps: [
       {
         href: "/dashboard/assets",

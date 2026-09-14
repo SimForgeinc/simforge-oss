@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./DrivingControls.stylex";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Gamepad2, Keyboard, Play } from "lucide-react";
 
@@ -486,10 +488,10 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
         : null;
 
   return (
-    <Card className="pointer-events-auto w-full shadow-xl" data-testid="driving-controls">
-      <CardContent className="space-y-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="Driving input mode">
+    <Card xstyle={styles.drivingControlsCard} data-testid="driving-controls">
+      <CardContent xstyle={styles.cardcontent}>
+        <div {...stylex.props(styles.divFlex)}>
+          <div {...stylex.props(styles.drivingInputMode)} role="group" aria-label="Driving input mode">
             <Button type="button" size="sm" variant={mode === "keyboard" ? "secondary" : "ghost"} onClick={(event) => { event.currentTarget.blur(); selectMode("keyboard"); }}>
               <Keyboard aria-hidden="true" /> Keyboard
             </Button>
@@ -501,7 +503,7 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
             {engaged ? "Engaged" : noVehicle ? "Idle" : "Paused"}
           </Badge>
           {live.reverse ? <Badge variant="destructive">Reverse</Badge> : null}
-          <div className="flex-1" />
+          <div {...stylex.props(styles.div)} />
           <Button
             type="button"
             size="sm"
@@ -519,21 +521,21 @@ export function DrivingControls({ source, actorId }: { source: WorldSource | nul
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wide text-muted-foreground" aria-label="Live driving input">
+        <div {...stylex.props(styles.liveDrivingInput)} aria-label="Live driving input">
           <Meter label="Steer" value={live.steer} centered />
           <Meter label="Throttle" value={live.throttle} />
           <Meter label="Brake" value={live.brake} />
         </div>
 
         {!engaged && !noVehicle ? (
-          <p className="text-xs text-muted-foreground" data-testid="driving-pause-reason">
+          <p {...stylex.props(styles.drivingPauseReason)} data-testid="driving-pause-reason">
             {engageRefusal ?? pauseReason ?? (mode === "keyboard" ? "Press a driving key or Engage to take control." : "Engage to hand control to the wheel.")}
           </p>
         ) : null}
-        {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
+        {error ? <p role="alert" {...stylex.props(styles.alert)}>{error}</p> : null}
 
         {mode === "keyboard" ? (
-          <p className="text-xs text-muted-foreground">
+          <p {...stylex.props(styles.pXs)}>
             <kbd>W</kbd>/<kbd>↑</kbd> throttle · <kbd>S</kbd>/<kbd>↓</kbd>/<kbd>Space</kbd> brake · <kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd>/<kbd>→</kbd> steer · <kbd>R</kbd> toggles reverse. Keys are ignored while a text field or button has focus.
           </p>
         ) : (
@@ -573,14 +575,14 @@ function Meter({ label, value, centered = false }: { label: string; value: numbe
   const percent = centered ? 50 + value * 50 : value * 100;
   return (
     <div>
-      <div className="flex justify-between">
+      <div {...stylex.props(styles.divFlex2)}>
         <span>{label}</span>
-        <span className="font-mono normal-case text-foreground">{value.toFixed(2)}</span>
+        <span {...stylex.props(styles.spanMono)}>{value.toFixed(2)}</span>
       </div>
-      <div className="relative mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        {centered ? <div className="absolute inset-y-0 left-1/2 w-px bg-border" /> : null}
+      <div {...stylex.props(styles.divRelative)}>
+        {centered ? <div {...stylex.props(styles.divAbsolute)} /> : null}
         <div
-          className="absolute inset-y-0 bg-primary"
+          {...stylex.props(styles.divAbsolute2)}
           style={centered
             ? { left: `${Math.min(50, percent)}%`, width: `${Math.abs(percent - 50)}%` }
             : { left: 0, width: `${percent}%` }}
@@ -611,24 +613,24 @@ function WheelPanel({
   rawValue: (binding: PedalBinding | null) => number | null;
 }) {
   if (!support.supported) {
-    return <p role="alert" className="text-xs text-destructive">{support.reason ?? "Gamepad input is unavailable."}</p>;
+    return <p role="alert" {...stylex.props(styles.alert2)}>{support.reason ?? "Gamepad input is unavailable."}</p>;
   }
   const selected = devices.find((device) => device.key === deviceKey) ?? null;
   const options = devices.map((device) => ({ value: device.key, label: `${device.key} (${device.axes} axes, ${device.buttons} buttons)` }));
   if (deviceKey && !selected) options.push({ value: deviceKey, label: `${deviceKey} (not connected)` });
 
   return (
-    <div className="space-y-3 text-xs">
-      <div className="space-y-1">
+    <div {...stylex.props(styles.divXs)}>
+      <div {...stylex.props(styles.div2)}>
         <SelectMenu
           label="Wheel device"
           value={deviceKey ?? ""}
           options={options}
           onChange={(value) => onSelectDevice(value || null)}
           placeholder={devices.length === 0 ? "No gamepads exposed" : "Select a wheel"}
-          className="h-8 text-xs"
+          xstyle={styles.selectmenuXs}
         />
-        <p className="text-muted-foreground">
+        <p {...stylex.props(styles.p)}>
           {devices.length === 0
             ? "No gamepad is exposed yet. Press a button or turn the wheel so the browser lists it."
             : selected
@@ -641,7 +643,7 @@ function WheelPanel({
 
       {profile ? (
         <>
-          <div className="space-y-2" data-testid="wheel-bindings">
+          <div {...stylex.props(styles.wheelBindings)} data-testid="wheel-bindings">
             <BindingRow
               label="Steering"
               binding={profile.steer.binding}
@@ -654,7 +656,7 @@ function WheelPanel({
               onCalibrate={profile.steer.binding ? () => onStartCalibration("steer") : null}
               disabled={!live.padConnected}
             >
-              <label className="flex items-center gap-1">
+              <label {...stylex.props(styles.labelFlex)}>
                 <Switch checked={profile.steer.calibration.invert} onCheckedChange={(checked) => onUpdateProfile((draft) => { draft.steer.calibration.invert = checked; })} aria-label="Invert steering" />
                 Invert
               </label>
@@ -694,8 +696,8 @@ function WheelPanel({
           </div>
 
           {calibration ? (
-            <div className="space-y-1 rounded-md border border-border p-2" data-testid="wheel-calibration">
-              <p className="font-medium text-foreground">
+            <div {...stylex.props(styles.wheelCalibration)} data-testid="wheel-calibration">
+              <p {...stylex.props(styles.pMedium)}>
                 {calibration.target === "steer"
                   ? calibration.step === "center"
                     ? "Centre the wheel, then set centre."
@@ -706,13 +708,13 @@ function WheelPanel({
                     ? `Release the ${calibration.target} pedal, then set released.`
                     : `Press the ${calibration.target} pedal fully, then set pressed.`}
               </p>
-              <p className="font-mono text-muted-foreground">
+              <p {...stylex.props(styles.raw)}>
                 raw {rawValue(calibration.target === "steer" ? profile.steer.binding : profile[calibration.target].binding)?.toFixed(3) ?? "—"}
                 {calibration.target === "steer" && calibration.step !== "center" ? ` · centre ${calibration.center.toFixed(3)}` : ""}
                 {calibration.target === "steer" && calibration.step === "right" ? ` · left ${calibration.left.toFixed(3)}` : ""}
                 {calibration.target !== "steer" && calibration.step === "pressed" ? ` · released ${calibration.released.toFixed(3)}` : ""}
               </p>
-              <div className="flex gap-2">
+              <div {...stylex.props(styles.divFlex3)}>
                 <Button type="button" size="sm" variant="default" disabled={!live.padConnected} onClick={onAdvanceCalibration}>
                   {calibration.target === "steer" ? `Set ${calibration.step}` : `Set ${calibration.step}`}
                 </Button>
@@ -722,7 +724,7 @@ function WheelPanel({
           ) : null}
 
           {live.padConnected ? (
-            <p className="font-mono text-[10px] text-muted-foreground" data-testid="wheel-raw">
+            <p {...stylex.props(styles.wheelRaw)} data-testid="wheel-raw">
               axes [{live.axes.map((value) => value.toFixed(2)).join(" ")}] · buttons [{live.buttons.map((value, index) => value >= 0.5 ? index : null).filter((index) => index !== null).join(" ")}]
             </p>
           ) : null}
@@ -746,10 +748,10 @@ function BindingRow({ label, binding, raw, listening, hint, calibrated, onListen
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="w-16 font-medium text-foreground">{label}</span>
+    <div {...stylex.props(styles.divFlex4)}>
+      <span {...stylex.props(styles.spanMedium)}>{label}</span>
       <span className={cn("font-mono", binding ? "text-foreground" : "text-muted-foreground")}>{bindingLabel(binding)}</span>
-      <span className="w-14 font-mono text-muted-foreground">{raw === null ? "—" : raw.toFixed(2)}</span>
+      <span {...stylex.props(styles.spanMono2)}>{raw === null ? "—" : raw.toFixed(2)}</span>
       {binding && !calibrated ? <Badge variant="outline">Uncalibrated</Badge> : null}
       <Button type="button" size="sm" variant={listening ? "secondary" : "outline"} disabled={disabled} onClick={onListen}>
         {listening ? `Move the ${hint}…` : "Listen"}
@@ -763,7 +765,7 @@ function BindingRow({ label, binding, raw, listening, hint, calibrated, onListen
 
 function DeadzoneInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return (
-    <label className="flex items-center gap-1 text-muted-foreground">
+    <label {...stylex.props(styles.deadzone)}>
       Deadzone
       <input
         type="range"
@@ -772,10 +774,10 @@ function DeadzoneInput({ label, value, onChange }: { label: string; value: numbe
         step={0.01}
         value={value}
         onChange={(event) => onChange(Number(event.currentTarget.value))}
-        className="h-1.5 w-16 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+        {...stylex.props(styles.input)}
         aria-label={label}
       />
-      <span className="font-mono">{value.toFixed(2)}</span>
+      <span {...stylex.props(styles.spanMono3)}>{value.toFixed(2)}</span>
     </label>
   );
 }

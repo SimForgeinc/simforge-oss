@@ -14,6 +14,7 @@ import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/e
 import type { ManualDriveTakeSession } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
 import { AUTHORING_QUALITY } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { applyDefaultSceneEnvironment } from "@simforge-oss/studio-ui/scenario/editor/scene-environment";
 import {
   DriveCameraRig,
   DriveHud,
@@ -44,7 +45,7 @@ import {
 } from "@/app/lib/live-world/authored-world-source";
 import { createTruthViewerBridge, type TruthViewerBridge } from "@/app/lib/live-world/truth-viewer-bridge";
 import { useWorldSource } from "@/app/lib/live-world/use-world-source";
-import { route } from "./drive-route.stylex";
+import { driveFrame } from "./drive-session.stylex";
 import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
@@ -263,6 +264,11 @@ export function DriveSession({
     setViewer(ready);
     setBridge(createTruthViewerBridge(ready, { layer: "drive-live", groundLift: true }));
   }, []);
+
+  useEffect(() => {
+    if (!viewer) return;
+    return applyDefaultSceneEnvironment(viewer, quality);
+  }, [quality, viewer]);
 
   useEffect(() => {
     if (!viewer) return;
@@ -589,10 +595,10 @@ export function DriveSession({
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
-    <div {...stylex.props(route.session)}>
+    <div {...stylex.props(driveFrame.session)}>
       <CityView
         ariaLabel={`Driving ${vehicleLabel} on ${map.label}`}
-        {...stylex.props(route.canvas)}
+        {...stylex.props(driveFrame.canvas)}
         key={quality}
         manifestUrl={map.browserManifestUrl}
         onError={(reason) => {
@@ -637,7 +643,7 @@ export function DriveSession({
       ) : null}
       {status ? (
         <div
-          {...stylex.props(driveChrome.panelStatus, route.status)}
+          {...stylex.props(driveChrome.panelStatus, driveFrame.status)}
           data-testid="drive-status"
           role={spawnError || takeError ? "alert" : "status"}
         >

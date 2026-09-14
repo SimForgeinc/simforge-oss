@@ -28,8 +28,8 @@ import type {
 /** Query parameter the Drive page reads to enter take mode. */
 export const MANUAL_DRIVE_TAKE_QUERY = "manualDriveTake";
 
-/** The Drive page route. Studio hosts mount it here; the editor deep-links to it. */
-export const MANUAL_DRIVE_PAGE_PATH = "/dashboard/drive";
+/** Where driving lives: the map gallery, which enters drive mode for a take. */
+export const MANUAL_DRIVE_PAGE_PATH = "/dashboard/map-assets";
 
 const STORAGE_PREFIX = "simforge.manualDrive.take.";
 /** Requests older than this are abandoned tabs, never live recorders. */
