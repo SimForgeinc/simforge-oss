@@ -37,11 +37,9 @@ export function ScenarioBootGate() {
   return (
     <CloudLoadingSurface
       detail={blocking.detail}
-      eyebrow={isError ? "Editor interrupted" : "Preparing editor"}
       icon={isError ? <CircleAlert className={stylex.props(styles.size5).className} aria-hidden="true" /> : undefined}
       kind="boot"
       progress={isError ? undefined : (blocking.progress ?? null)}
-      progressLabel="Editor workspace"
       role={isError ? "alert" : "status"}
       scope="screen"
       title={blocking.message}

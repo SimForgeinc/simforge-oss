@@ -26,9 +26,7 @@ export function useSceneLoadingSurfaceProps(
       kind: "scene",
       title: progress.message,
       detail: progress.detail,
-      eyebrow: failed ? "Scene interrupted" : "Preparing scene",
       progress: failed ? undefined : (progress.percent ?? null),
-      progressLabel: phaseLabel(progress.phase),
       telemetry: progress.download,
       phase: progress.phase,
       role: failed ? "alert" : "status",
@@ -50,15 +48,4 @@ export function useSceneLoadingSurfaceProps(
     }),
     [failed, onRetry, progress],
   );
-}
-
-function phaseLabel(phase: SceneLoadProgress["phase"]): string {
-  switch (phase) {
-    case "covering": return "Switching map";
-    case "resolving": return "Map definition";
-    case "assets": return "Scene assets";
-    case "stabilizing": return "Final checks";
-    case "ready": return "Ready";
-    case "error": return "Stopped";
-  }
 }

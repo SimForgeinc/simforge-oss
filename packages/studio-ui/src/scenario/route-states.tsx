@@ -46,7 +46,6 @@ function ScenarioRouteLoading({ detail, label, priority }: { detail: string; lab
       detail={`Opening ${label} in your workspace.`}
       priority={priority}
       progress={null}
-      progressLabel="Cloud workspace"
       scope="screen"
       title={detail}
     />

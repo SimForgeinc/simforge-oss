@@ -28,9 +28,7 @@ export type CloudLoadingSource = {
   kind: CloudLoadingKind;
   title: string;
   detail?: string | null;
-  eyebrow?: string;
   progress?: number | null;
-  progressLabel?: string;
   progressValueLabel?: string;
   /** Cooperative liveness signal for long stages whose visible progress is coarse. */
   activityToken?: string | number;

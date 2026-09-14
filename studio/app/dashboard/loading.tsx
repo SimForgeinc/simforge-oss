@@ -6,7 +6,6 @@ export default function DashboardLoading() {
       detail="Opening dashboard in your workspace."
       priority={10}
       progress={null}
-      progressLabel="Cloud workspace"
       scope="screen"
       title="Loading your workspace…"
     />

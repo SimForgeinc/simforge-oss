@@ -6,7 +6,6 @@ export default function MapAssetsLoading() {
       detail="Opening maps in your workspace."
       priority={11}
       progress={null}
-      progressLabel="Cloud workspace"
       scope="screen"
       title="Loading map library…"
     />

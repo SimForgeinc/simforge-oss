@@ -53,9 +53,7 @@ const INITIAL_ROUTE_SOURCE: CloudLoadingSource = {
   kind: "route",
   title: "Loading your workspace…",
   detail: "Opening the dashboard in your workspace.",
-  eyebrow: "SimForge",
   progress: null,
-  progressLabel: "Cloud workspace",
   priority: ROUTE_PRIORITY,
 };
 
@@ -228,12 +226,10 @@ export function CloudLoadingHost({ children }: { children: ReactNode }) {
             }
             dataTransitionState={visible ? "covering" : "revealing"}
             detail={renderedSource.detail}
-            eyebrow={renderedSource.eyebrow ?? "SimForge"}
             icon={renderedSource.icon}
             kind={renderedSource.kind}
             phase={renderedSource.phase}
             progress={failed ? undefined : renderedSource.progress}
-            progressLabel={renderedSource.progressLabel}
             progressValueLabel={renderedSource.progressValueLabel}
             role={failed ? "alert" : "status"}
             scope="screen"
@@ -253,7 +249,6 @@ function stalledLoadingSource(source: CloudLoadingSource): CloudLoadingSource {
     kind: source.kind,
     title: "Loading is taking longer than expected",
     detail: `“${source.title}” has made no progress for ${Math.round(CLOUD_LOADING_STALL_MS / 1000)} seconds. Reload to try again; if this keeps happening, report it with the current address.`,
-    eyebrow: "SimForge interrupted",
     severity: "error",
     priority: 100,
     icon: <CircleAlert aria-hidden="true" {...stylex.props(styles.alertIcon)} />,
@@ -302,9 +297,7 @@ function loadingSourcesEqual(
     left.kind === right.kind
     && left.title === right.title
     && left.detail === right.detail
-    && left.eyebrow === right.eyebrow
     && left.progress === right.progress
-    && left.progressLabel === right.progressLabel
     && left.progressValueLabel === right.progressValueLabel
     && left.activityToken === right.activityToken
     && left.telemetry === right.telemetry

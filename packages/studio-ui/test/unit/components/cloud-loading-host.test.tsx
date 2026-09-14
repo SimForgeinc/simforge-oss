@@ -20,9 +20,7 @@ function routeSource(label: string, detail: string, priority = 11): CloudLoading
     kind: "route",
     title: detail,
     detail: `Opening ${label.toLowerCase()} in your workspace.`,
-    eyebrow: "SimForge",
     progress: null,
-    progressLabel: "Cloud workspace",
     priority,
   };
 }
@@ -52,7 +50,6 @@ describe("CloudLoadingHost", () => {
       title: "Preparing Belmont Research Center",
       detail: "Starting the renderer and loading map metadata…",
       progress: 20,
-      progressLabel: "Map definition",
       phase: "resolving",
     };
     const view = render(

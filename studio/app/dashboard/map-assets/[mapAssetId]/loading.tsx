@@ -6,7 +6,6 @@ export default function MapDetailLoading() {
       detail="Opening map in your workspace."
       priority={12}
       progress={null}
-      progressLabel="Cloud workspace"
       scope="screen"
       title="Loading map details…"
     />
