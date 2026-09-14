@@ -1,5 +1,12 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import type { StudioCloudStatus, StudioCloudUser } from "@simforge-oss/studio-host";
+import { hostname } from "node:os";
+import type {
+  StudioCloudAccount,
+  StudioCloudInvitation,
+  StudioCloudProvider,
+  StudioCloudStatus,
+  StudioCloudUser,
+} from "@simforge-oss/studio-host";
 import { z } from "zod";
 import { openSecretVault, type SecretVault } from "./vault";
 import { discardResponseBody } from "@/app/lib/cloud/drain";
@@ -7,36 +14,60 @@ import { discardResponseBody } from "@/app/lib/cloud/drain";
 /**
  * The installed Studio's connection to SimCloud.
  *
- * Privileged, server-only state of the local service: OAuth pending state and
- * PKCE verifier, the server-issued native session (short-lived access token,
- * rotated refresh token) and the account it belongs to. Tokens live in the OS
- * vault (or the reported session-only vault) and never reach the renderer,
- * receipts, artifacts or logs; the renderer sees {@link StudioCloudStatus}
- * only. Connecting changes nothing about local projects or compute — it makes
- * {@link cloudRequest} usable for the modules that need the account.
+ * Privileged, server-only state of the local service: the server-issued
+ * native session (short-lived access token, rotated refresh token), the
+ * account it belongs to, and — for the Google/GitHub hop only — the pending
+ * PKCE state. Every other account flow (password sign-in, sign-up, email
+ * verification, password reset, devices, invitations, workspace choice) is a
+ * direct call from this module to the Cloud's native desktop API. Tokens live
+ * in the OS vault (or the reported session-only vault) and never reach the
+ * renderer, receipts, artifacts or logs; the renderer sees
+ * {@link StudioCloudStatus} and the account payloads only. Signing in changes
+ * nothing about local projects or compute — it makes {@link cloudRequest}
+ * usable for the modules that need the account.
  */
 
 export const CLOUD_CLIENT_ID = "simforge-desktop";
 /** The repository's production application origin; overridable for isolated qualification. */
 export const DEFAULT_CLOUD_ORIGIN = "https://simforge.ai";
 const VAULT_SERVICE = "simforge-studio";
-const CREDENTIAL_SCHEMA = "simforge.cloud-credential/v1";
+/** v1 entries (consent-flow sessions without `emailVerified`) fail the parse and are dropped: one fresh sign-in. */
+const CREDENTIAL_SCHEMA = "simforge.cloud-credential/v2";
 const PENDING_TTL_MS = 10 * 60_000;
 /** Refresh ahead of expiry so an in-flight request never carries a token about to lapse. */
 const ACCESS_REFRESH_SKEW_MS = 60_000;
 const MAX_REDIRECTS = 5;
 const TOKEN_TIMEOUT_MS = 30_000;
+/** The provider list is cosmetic (which social buttons to show); never let it slow status down for long. */
+const PROVIDERS_TIMEOUT_MS = 5_000;
+const PROVIDERS_RETRY_MS = 60_000;
+const DEVICE_LABEL_MAX = 80;
 
+/** Local connector failures, plus the Cloud's native auth error codes passed through as-is. */
 export type CloudConnectionErrorCode =
   | "cloud_disconnected"
   | "cloud_session_expired"
   | "cloud_unreachable"
   | "cloud_invalid_path"
   | "cloud_invalid_origin"
-  | "cloud_callback_rejected";
+  | "cloud_invalid_response"
+  | "cloud_callback_rejected"
+  | "invalid_request"
+  | "invalid_credentials"
+  | "email_taken"
+  | "email_unverified"
+  | "invalid_code"
+  | "code_expired"
+  | "weak_password"
+  | "throttled"
+  | "account_banned"
+  | "invalid_token"
+  | "not_member"
+  | (string & {});
 
 export class CloudConnectionError extends Error {
-  constructor(readonly code: CloudConnectionErrorCode, message: string = code) {
+  /** The Cloud's HTTP status when the error mirrors one of its answers; 0 for local failures. */
+  constructor(readonly code: CloudConnectionErrorCode, message: string = code, readonly status = 0) {
     super(message);
     this.name = "CloudConnectionError";
   }
@@ -55,7 +86,9 @@ const CredentialSchema = z.object({
     id: z.string().min(1),
     email: z.string().nullable(),
     name: z.string().nullable(),
+    emailVerified: z.boolean(),
   }),
+  activeWorkspaceId: z.string().min(1).nullable().default(null),
 });
 type Credential = z.infer<typeof CredentialSchema>;
 
@@ -69,8 +102,46 @@ const TokenResponseSchema = z.object({
     id: z.string().min(1),
     email: z.string().nullable().optional(),
     name: z.string().nullable().optional(),
+    email_verified: z.boolean().default(false),
   }),
 });
+type TokenResponse = z.infer<typeof TokenResponseSchema>;
+
+const ProviderSchema = z.enum(["google", "github"]);
+const ProvidersResponseSchema = z.object({ providers: z.array(z.string()) });
+
+const AccountResponseSchema = z.object({
+  user: z.object({
+    id: z.string().min(1),
+    email: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    email_verified: z.boolean().default(false),
+  }),
+  active_organization_id: z.string().min(1).nullable().default(null),
+  sessions: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().nullable().default(null),
+    user_agent: z.string().nullable().default(null),
+    created_at: z.string(),
+    last_used_at: z.string().nullable().default(null),
+    active: z.boolean().default(true),
+    current: z.boolean().default(false),
+  })),
+});
+
+const InvitationsResponseSchema = z.object({
+  invitations: z.array(z.object({
+    id: z.string().min(1),
+    organization_id: z.string().min(1),
+    organization_name: z.string(),
+    role: z.string(),
+    inviter_email: z.string().nullable().default(null),
+    expires_at: z.string(),
+  })),
+});
+
+const OrganizationResponseSchema = z.object({ organization_id: z.string().min(1) });
+const ActiveWorkspaceResponseSchema = z.object({ active_organization_id: z.string().min(1).nullable() });
 
 type Pending = {
   state: string;
@@ -82,6 +153,7 @@ type Pending = {
 
 type ConnectionState = {
   loaded: Promise<void> | null;
+  /** Pre-seeded by tests; otherwise opened on first load. */
   vault: SecretVault | null;
   credential: Credential | null;
   pending: Pending | null;
@@ -89,6 +161,11 @@ type ConnectionState = {
   expiredMessage: string | null;
   message: string | null;
   refreshing: Promise<Credential> | null;
+  /** Configured social providers; `null` until fetched once, `[]` while the Cloud cannot say. */
+  providers: StudioCloudProvider[] | null;
+  providersFetch: Promise<StudioCloudProvider[]> | null;
+  /** Earliest time a failed provider fetch is retried. */
+  providersRetryAt: number;
 };
 
 // One state per process regardless of how many module instances a dev server
@@ -102,6 +179,9 @@ const state: ConnectionState = ((globalThis as Record<symbol, unknown>)[STATE_KE
   expiredMessage: null,
   message: null,
   refreshing: null,
+  providers: null,
+  providersFetch: null,
+  providersRetryAt: 0,
 } satisfies ConnectionState) as ConnectionState;
 
 function isLoopbackHost(hostname: string) {
@@ -125,7 +205,7 @@ export function normalizeCloudOrigin(candidate: string | undefined): string {
   return url.origin;
 }
 
-/** The local service's own loopback origin, where the system browser is sent back to. */
+/** The local service's own loopback origin, where the system browser is sent back to after a social sign-in. */
 export function localServiceOrigin(): string {
   const port = Number(process.env.PORT?.trim() || "5199");
   if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error("invalid_local_port");
@@ -138,7 +218,7 @@ function vaultAccount(origin: string) {
 
 async function ensureLoaded(): Promise<void> {
   state.loaded ??= (async () => {
-    state.vault = await openSecretVault(VAULT_SERVICE);
+    state.vault ??= await openSecretVault(VAULT_SERVICE);
     const origin = normalizeCloudOrigin(undefined);
     const raw = await state.vault.get(vaultAccount(origin));
     if (!raw) return;
@@ -146,7 +226,7 @@ async function ensureLoaded(): Promise<void> {
     if (parsed.success && parsed.data.origin === origin) {
       state.credential = parsed.data;
     } else {
-      // Unreadable or foreign-origin entry: not ours to keep.
+      // Unreadable, outdated or foreign-origin entry: not ours to keep.
       await state.vault.delete(vaultAccount(origin));
     }
   })().catch((error) => {
@@ -168,20 +248,68 @@ function sessionActive(credential: Credential | null, now = Date.now()): credent
 }
 
 function toUser(credential: Credential): StudioCloudUser {
-  return { id: credential.user.id, email: credential.user.email, name: credential.user.name };
+  return {
+    id: credential.user.id,
+    email: credential.user.email,
+    name: credential.user.name,
+    emailVerified: credential.user.emailVerified,
+  };
+}
+
+/**
+ * The social providers the Cloud has configured. Fetched once per process and
+ * kept; a failed fetch answers `[]` and is retried after a cool-down, in the
+ * background, so status never waits on the Cloud more than once.
+ */
+export async function listCloudProviders(signal?: AbortSignal): Promise<StudioCloudProvider[]> {
+  const cached = state.providers ?? null;
+  if (cached !== null && (cached.length > 0 || Date.now() < state.providersRetryAt)) return cached;
+  state.providersFetch ??= (async () => {
+    try {
+      const body = await cloudAuthRequest("/api/desktop/auth/providers", {
+        method: "GET",
+        timeoutMs: PROVIDERS_TIMEOUT_MS,
+        signal,
+      });
+      const providers = ProvidersResponseSchema.parse(body).providers
+        .filter((provider): provider is StudioCloudProvider => ProviderSchema.safeParse(provider).success);
+      state.providers = providers;
+      state.providersRetryAt = providers.length > 0 ? Number.POSITIVE_INFINITY : Date.now() + PROVIDERS_RETRY_MS;
+      return providers;
+    } catch {
+      state.providers = [];
+      state.providersRetryAt = Date.now() + PROVIDERS_RETRY_MS;
+      return [];
+    } finally {
+      state.providersFetch = null;
+    }
+  })();
+  // First answer is awaited (bounded by the short timeout); retries refresh silently.
+  if (cached === null) return state.providersFetch;
+  return cached;
 }
 
 export async function getCloudStatus(): Promise<StudioCloudStatus> {
   await ensureLoaded();
   const origin = normalizeCloudOrigin(undefined);
   const persistence = state.vault?.persistence ?? "session";
+  const providers = await listCloudProviders();
   const now = Date.now();
   if (state.pending && now - state.pending.createdAt > PENDING_TTL_MS) {
     state.pending = null;
-    state.message = "Sign-in timed out. Start again from Studio.";
+    state.message = "The browser sign-in timed out. Start again from Studio.";
   }
   if (state.pending) {
-    return { state: "connecting", origin, user: null, credentialPersistence: persistence, sessionExpiresAt: null, message: null };
+    return {
+      state: "connecting",
+      origin,
+      user: null,
+      activeWorkspaceId: null,
+      providers,
+      credentialPersistence: persistence,
+      sessionExpiresAt: null,
+      message: null,
+    };
   }
   const credential = state.credential;
   if (credential && (state.expiredMessage !== null || credential.sessionExpiresAt <= now)) {
@@ -189,9 +317,11 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       state: "expired",
       origin,
       user: toUser(credential),
+      activeWorkspaceId: credential.activeWorkspaceId,
+      providers,
       credentialPersistence: persistence,
       sessionExpiresAt: new Date(credential.sessionExpiresAt).toISOString(),
-      message: state.expiredMessage ?? "Your SimCloud session has expired. Sign in again.",
+      message: state.expiredMessage ?? "Your SimCloud session has ended. Sign in again.",
     };
   }
   if (credential) {
@@ -199,6 +329,8 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       state: "connected",
       origin,
       user: toUser(credential),
+      activeWorkspaceId: credential.activeWorkspaceId,
+      providers,
       credentialPersistence: persistence,
       sessionExpiresAt: new Date(credential.sessionExpiresAt).toISOString(),
       message: persistence === "session"
@@ -210,6 +342,8 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
     state: state.message ? "error" : "disconnected",
     origin,
     user: null,
+    activeWorkspaceId: null,
+    providers,
     credentialPersistence: persistence,
     sessionExpiresAt: null,
     message: state.message,
@@ -233,7 +367,294 @@ export async function primeCloudSession(): Promise<void> {
   await ensureLoaded();
 }
 
-export async function beginCloudConnect(options: { origin?: string } = {}): Promise<{ authorizationUrl: string }> {
+// ── Native auth API ───────────────────────────────────────────────────────────
+
+type AuthRequestOptions = {
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: Record<string, string>;
+  /** Send the session's access token; refresh once and retry on a rejected token. */
+  bearer?: boolean;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+};
+
+async function sendAuthRequest(url: URL, init: AuthRequestOptions, token: string | null): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? TOKEN_TIMEOUT_MS);
+  const onAbort = () => controller.abort();
+  init.signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (init.body !== undefined) headers["content-type"] = "application/json";
+    if (token) headers.authorization = `Bearer ${token}`;
+    return await fetch(url, {
+      method: init.method ?? "POST",
+      headers,
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      cache: "no-store",
+      redirect: "error",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    throw new CloudConnectionError(
+      "cloud_unreachable",
+      `SimCloud at ${url.origin} is unreachable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+/** A non-2xx native API answer, in the contract's `{error, error_description}` shape. */
+async function authResponseError(response: Response): Promise<CloudConnectionError> {
+  const payload = (await response.json().catch(() => null)) as { error?: unknown; error_description?: unknown } | null;
+  const code = typeof payload?.error === "string" && payload.error
+    ? payload.error
+    : response.status === 429 ? "throttled" : `cloud_request_failed_${response.status}`;
+  const description = typeof payload?.error_description === "string" && payload.error_description
+    ? payload.error_description
+    : `SimCloud answered ${response.status} (${code}).`;
+  return new CloudConnectionError(code, description, response.status);
+}
+
+/**
+ * One call to the Cloud's native desktop API (`/api/desktop/**`). Unauthenticated
+ * unless `bearer`, in which case the current access token is sent and a
+ * rejected token (`401 invalid_token`) is refreshed once before one retry; a
+ * second rejection marks the session expired. Errors keep the Cloud's code
+ * and status so routes can mirror them. Never logs the body.
+ */
+export async function cloudAuthRequest(path: string, options: AuthRequestOptions = {}): Promise<unknown> {
+  await ensureLoaded();
+  const origin = normalizeCloudOrigin(undefined);
+  const url = resolveCloudPath(path, origin);
+  let response: Response;
+  if (options.bearer) {
+    let credential = await validAccessToken(options.signal);
+    response = await sendAuthRequest(url, options, credential.accessToken);
+    if (response.status === 401) {
+      await discardResponseBody(response);
+      credential = await validAccessToken(options.signal, true);
+      response = await sendAuthRequest(url, options, credential.accessToken);
+      if (response.status === 401) {
+        state.expiredMessage = "SimCloud rejected the current session. Sign in again.";
+        await discardResponseBody(response);
+        throw new CloudConnectionError("cloud_session_expired", state.expiredMessage, 401);
+      }
+    }
+  } else {
+    response = await sendAuthRequest(url, options, null);
+  }
+  if (!response.ok) throw await authResponseError(response);
+  if (response.status === 204) return null;
+  return response.json().catch(() => {
+    throw new CloudConnectionError("cloud_invalid_response", "SimCloud answered with a body that is not JSON.", 502);
+  });
+}
+
+function parseOrInvalid<S extends z.ZodTypeAny>(schema: S, payload: unknown, what: string): z.output<S> {
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new CloudConnectionError("cloud_invalid_response", `SimCloud answered with an unexpected ${what} payload.`, 502);
+  }
+  return parsed.data as z.output<S>;
+}
+
+/** A user-facing name for this computer, as the Cloud lists it under Devices. */
+function deviceLabel(): string {
+  const name = hostname().trim();
+  return (name || "SimForge Studio").slice(0, DEVICE_LABEL_MAX);
+}
+
+async function adoptToken(token: TokenResponse, origin: string): Promise<Credential> {
+  const credential = credentialFromToken(token, origin, randomBytes(16).toString("base64url"));
+  state.pending = null;
+  state.expiredMessage = null;
+  state.message = null;
+  await storeCredential(credential, origin);
+  return credential;
+}
+
+async function patchCredential(patch: (current: Credential) => Credential): Promise<void> {
+  const current = state.credential;
+  if (!current) return;
+  await storeCredential(patch(current), current.origin);
+}
+
+export async function signInCloud(input: { email: string; password: string }, signal?: AbortSignal): Promise<StudioCloudStatus> {
+  const payload = await cloudAuthRequest("/api/desktop/auth/sign-in", {
+    body: { email: input.email, password: input.password, device_label: deviceLabel() },
+    signal,
+  });
+  await adoptToken(parseOrInvalid(TokenResponseSchema, payload, "token"), normalizeCloudOrigin(undefined));
+  return getCloudStatus();
+}
+
+export async function signUpCloud(
+  input: { email: string; password: string; name: string },
+  signal?: AbortSignal,
+): Promise<StudioCloudStatus> {
+  const payload = await cloudAuthRequest("/api/desktop/auth/sign-up", {
+    body: { email: input.email, password: input.password, name: input.name, device_label: deviceLabel() },
+    signal,
+  });
+  await adoptToken(parseOrInvalid(TokenResponseSchema, payload, "token"), normalizeCloudOrigin(undefined));
+  return getCloudStatus();
+}
+
+export async function verifyCloudEmail(code: string, signal?: AbortSignal): Promise<StudioCloudStatus> {
+  await cloudAuthRequest("/api/desktop/auth/verify-email", { bearer: true, body: { code }, signal });
+  await patchCredential((current) => ({ ...current, user: { ...current.user, emailVerified: true } }));
+  return getCloudStatus();
+}
+
+export async function resendCloudVerification(signal?: AbortSignal): Promise<StudioCloudStatus> {
+  await cloudAuthRequest("/api/desktop/auth/verify-email/resend", { bearer: true, signal });
+  return getCloudStatus();
+}
+
+export async function forgotCloudPassword(email: string, signal?: AbortSignal): Promise<void> {
+  await cloudAuthRequest("/api/desktop/auth/password/forgot", { body: { email }, signal });
+}
+
+/**
+ * Reset with the emailed code. The Cloud revokes every desktop session of
+ * that account, so a matching local sign-in is dropped rather than left to
+ * fail on its next refresh.
+ */
+export async function resetCloudPassword(
+  input: { email: string; code: string; newPassword: string },
+  signal?: AbortSignal,
+): Promise<StudioCloudStatus> {
+  await cloudAuthRequest("/api/desktop/auth/password/reset", {
+    body: { email: input.email, code: input.code, new_password: input.newPassword },
+    signal,
+  });
+  const credential = state.credential;
+  if (credential && (credential.user.email === null || credential.user.email.toLowerCase() === input.email.trim().toLowerCase())) {
+    state.expiredMessage = null;
+    await storeCredential(null, credential.origin);
+  }
+  return getCloudStatus();
+}
+
+/** The Cloud revokes the account's other desktop sessions; this one continues. */
+export async function changeCloudPassword(
+  input: { currentPassword: string; newPassword: string },
+  signal?: AbortSignal,
+): Promise<void> {
+  await cloudAuthRequest("/api/desktop/auth/password/change", {
+    bearer: true,
+    body: { current_password: input.currentPassword, new_password: input.newPassword },
+    signal,
+  });
+}
+
+async function adoptAccount(payload: unknown): Promise<StudioCloudAccount> {
+  const account = parseOrInvalid(AccountResponseSchema, payload, "account");
+  // The Cloud is the authority on the profile; keep the local copy in step.
+  await patchCredential((current) => ({
+    ...current,
+    user: {
+      ...current.user,
+      email: account.user.email ?? current.user.email,
+      name: account.user.name ?? null,
+      emailVerified: account.user.email_verified,
+    },
+    activeWorkspaceId: account.active_organization_id,
+  }));
+  return {
+    user: {
+      id: account.user.id,
+      email: account.user.email ?? null,
+      name: account.user.name ?? null,
+      emailVerified: account.user.email_verified,
+    },
+    activeWorkspaceId: account.active_organization_id,
+    sessions: account.sessions.map((session) => ({
+      id: session.id,
+      label: session.label,
+      userAgent: session.user_agent,
+      createdAt: session.created_at,
+      lastUsedAt: session.last_used_at,
+      active: session.active,
+      current: session.current,
+    })),
+  };
+}
+
+export async function getCloudAccount(signal?: AbortSignal): Promise<StudioCloudAccount> {
+  return adoptAccount(await cloudAuthRequest("/api/desktop/account", { method: "GET", bearer: true, signal }));
+}
+
+export async function updateCloudAccount(input: { name: string }, signal?: AbortSignal): Promise<StudioCloudAccount> {
+  return adoptAccount(await cloudAuthRequest("/api/desktop/account", {
+    method: "PATCH",
+    bearer: true,
+    body: { name: input.name },
+    signal,
+  }));
+}
+
+export async function revokeCloudSession(sessionId: string, signal?: AbortSignal): Promise<void> {
+  await cloudAuthRequest(`/api/desktop/account/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+    bearer: true,
+    signal,
+  });
+}
+
+export async function listCloudInvitations(signal?: AbortSignal): Promise<StudioCloudInvitation[]> {
+  const payload = await cloudAuthRequest("/api/desktop/invitations", { method: "GET", bearer: true, signal });
+  return parseOrInvalid(InvitationsResponseSchema, payload, "invitations").invitations.map((invitation) => ({
+    id: invitation.id,
+    organizationId: invitation.organization_id,
+    organizationName: invitation.organization_name,
+    role: invitation.role,
+    inviterEmail: invitation.inviter_email,
+    expiresAt: invitation.expires_at,
+  }));
+}
+
+export async function acceptCloudInvitation(invitationId: string, signal?: AbortSignal): Promise<{ organizationId: string }> {
+  const payload = await cloudAuthRequest(`/api/desktop/invitations/${encodeURIComponent(invitationId)}/accept`, {
+    bearer: true,
+    signal,
+  });
+  return { organizationId: parseOrInvalid(OrganizationResponseSchema, payload, "invitation").organization_id };
+}
+
+export async function declineCloudInvitation(invitationId: string, signal?: AbortSignal): Promise<void> {
+  await cloudAuthRequest(`/api/desktop/invitations/${encodeURIComponent(invitationId)}/decline`, { bearer: true, signal });
+}
+
+/** `token` is the invite token or the whole invite URL; the Cloud extracts `token=` itself. */
+export async function acceptCloudInvitationLink(token: string, signal?: AbortSignal): Promise<{ organizationId: string }> {
+  const payload = await cloudAuthRequest("/api/desktop/invitations/accept-link", { bearer: true, body: { token }, signal });
+  return { organizationId: parseOrInvalid(OrganizationResponseSchema, payload, "invitation").organization_id };
+}
+
+export async function setCloudActiveWorkspace(organizationId: string, signal?: AbortSignal): Promise<StudioCloudStatus> {
+  const payload = await cloudAuthRequest("/api/desktop/workspaces/active", {
+    bearer: true,
+    body: { organization_id: organizationId },
+    signal,
+  });
+  const active = parseOrInvalid(ActiveWorkspaceResponseSchema, payload, "workspace").active_organization_id;
+  await patchCredential((current) => ({ ...current, activeWorkspaceId: active }));
+  return getCloudStatus();
+}
+
+// ── Social hop (Google / GitHub) ──────────────────────────────────────────────
+
+/**
+ * Start the one flow that leaves the app: the Cloud bounces the system
+ * browser to the provider and returns it to the loopback callback with a
+ * PKCE-bound code. No consent page and no password ever cross this path.
+ */
+export async function beginCloudConnect(options: { origin?: string; provider: StudioCloudProvider }): Promise<{ authorizationUrl: string }> {
   await ensureLoaded();
   const origin = normalizeCloudOrigin(options.origin);
   if (origin !== normalizeCloudOrigin(undefined)) {
@@ -252,6 +673,7 @@ export async function beginCloudConnect(options: { origin?: string } = {}): Prom
   state.pending = pending;
   state.message = null;
   const url = new URL("/desktop/connect", origin);
+  url.searchParams.set("provider", options.provider);
   url.searchParams.set("client_id", CLOUD_CLIENT_ID);
   url.searchParams.set("redirect_uri", pending.redirectUri);
   url.searchParams.set("code_challenge", challenge);
@@ -297,7 +719,7 @@ async function postToken(origin: string, body: Record<string, string>, signal?: 
 }
 
 function credentialFromToken(
-  token: z.infer<typeof TokenResponseSchema>,
+  token: TokenResponse,
   origin: string,
   connectionId: string,
   now = Date.now(),
@@ -310,7 +732,13 @@ function credentialFromToken(
     accessExpiresAt: now + token.expires_in * 1000,
     refreshToken: token.refresh_token,
     sessionExpiresAt: now + token.refresh_expires_in * 1000,
-    user: { id: token.user.id, email: token.user.email ?? null, name: token.user.name ?? null },
+    user: {
+      id: token.user.id,
+      email: token.user.email ?? null,
+      name: token.user.name ?? null,
+      emailVerified: token.user.email_verified,
+    },
+    activeWorkspaceId: state.credential?.user.id === token.user.id ? state.credential.activeWorkspaceId : null,
   };
 }
 
@@ -361,12 +789,11 @@ export async function completeCloudCallback(params: URLSearchParams): Promise<Cl
     state.message = `Sign-in failed: ${result.error}`;
     return { ok: false, error: result.error };
   }
-  const credential = credentialFromToken(result.token, pending.origin, randomBytes(16).toString("base64url"));
-  state.expiredMessage = null;
-  state.message = null;
-  await storeCredential(credential, pending.origin);
+  const credential = await adoptToken(result.token, pending.origin);
   return { ok: true, user: toUser(credential) };
 }
+
+// ── Session upkeep ────────────────────────────────────────────────────────────
 
 /** Refresh the access token; coalesced so concurrent callers share one rotation. */
 async function refreshCredential(current: Credential, signal?: AbortSignal): Promise<Credential> {
@@ -385,7 +812,7 @@ async function refreshCredential(current: Credential, signal?: AbortSignal): Pro
         throw new CloudConnectionError("cloud_unreachable", `token refresh failed (${result.status})`);
       }
       // Same sign-in: the connection scope is unchanged by rotation.
-      const next = credentialFromToken(result.token, current.origin, current.connectionId);
+      const next = { ...credentialFromToken(result.token, current.origin, current.connectionId), activeWorkspaceId: current.activeWorkspaceId };
       await storeCredential(next, current.origin);
       return next;
     } finally {
@@ -398,7 +825,7 @@ async function refreshCredential(current: Credential, signal?: AbortSignal): Pro
 async function validAccessToken(signal?: AbortSignal, forceRefresh = false): Promise<Credential> {
   await ensureLoaded();
   const credential = state.credential;
-  if (!credential) throw new CloudConnectionError("cloud_disconnected", "Not connected to SimCloud");
+  if (!credential) throw new CloudConnectionError("cloud_disconnected", "Not signed in to SimCloud");
   if (!sessionActive(credential)) {
     throw new CloudConnectionError("cloud_session_expired", state.expiredMessage ?? "SimCloud session expired");
   }

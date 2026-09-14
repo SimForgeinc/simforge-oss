@@ -63,13 +63,17 @@ const CONNECTION_ERROR_STATUS: Record<string, number> = {
   cloud_session_expired: 401,
   cloud_unreachable: 503,
   cloud_invalid_path: 400,
+  cloud_invalid_origin: 400,
+  cloud_invalid_response: 502,
 };
 
 /**
- * The local transfer routes' one error answer: a transfer failure keeps its
+ * The local Cloud routes' one error answer: a transfer failure keeps its
  * code, status and details (conflicts, map ids) so the storage page can act
  * on them; a connection failure maps to the connector's codes the shared
- * client already knows. Anything else is a real server error.
+ * client already knows, and a native auth answer (`invalid_credentials`,
+ * `throttled`, …) keeps the Cloud's own status. Anything else is a real
+ * server error.
  */
 export function transferErrorResponse(error: unknown): NextResponse {
   if (error instanceof CloudTransferError) {
@@ -81,7 +85,7 @@ export function transferErrorResponse(error: unknown): NextResponse {
   if (error instanceof CloudConnectionError) {
     return NextResponse.json(
       { error: error.code, message: error.message },
-      { status: CONNECTION_ERROR_STATUS[error.code] ?? 503, headers: { "Cache-Control": "no-store" } },
+      { status: error.status || CONNECTION_ERROR_STATUS[error.code] || 503, headers: { "Cache-Control": "no-store" } },
     );
   }
   throw error;
