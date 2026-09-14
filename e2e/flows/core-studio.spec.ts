@@ -288,16 +288,17 @@ async function createDataset(page: Page, name: string): Promise<void> {
   await dialog.getByPlaceholder("Dataset name").fill(name);
   await dialog.getByRole("button", { name: "Create dataset" }).click();
   await expect(dialog).toBeHidden({ timeout: 60_000 });
-  await expect(page.getByTestId("scenario-dataset-rail").getByText(name, { exact: false }))
+  // The strip shows monograms; the dataset's name is the icon's accessible name.
+  await expect(page.getByTestId("scenario-dataset-rail").getByRole("button", { name }))
     .toBeVisible({ timeout: 60_000 });
 }
 
 /** Open the dataset, add one scenario on the first offered map, land in the editor. */
 async function createScenario(page: Page, datasetName: string): Promise<void> {
-  await page.getByTestId("scenario-dataset-rail").getByText(datasetName, { exact: false }).click();
+  await page.getByTestId("scenario-dataset-rail").getByRole("button", { name: datasetName }).click();
   await expect(page.getByTestId("scenario-document-index")).toBeVisible({ timeout: 120_000 });
 
-  await page.getByRole("button", { name: "Add scenario" }).click();
+  await page.getByTestId("scenario-add-scenario").click();
   await page.getByRole("menuitem", { name: "New Scenario" }).click();
 
   const picker = page.getByRole("dialog", { name: "Select map" });

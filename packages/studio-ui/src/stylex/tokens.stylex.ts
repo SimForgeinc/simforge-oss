@@ -168,6 +168,7 @@ export const space = stylex.defineVars({
   xxl: "1.5rem",
   xxxl: "2rem",
 
+  datasetStripWidth: "3.5rem",
   railWidth: "13.75rem",
   railWidthXl: "18.25rem",
   inspectorWidth: "16.25rem",

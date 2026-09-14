@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioDatasetsClient.stylex";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type {
@@ -10,6 +12,8 @@ import type { CityViewer } from "@simforge-oss/viewer";
 import type { ActorRenderer } from "@simforge-oss/viewer";
 import { useSetPageTitle } from "../components/TopBarSlot";
 import { Button } from "../components/ui/button";
+import { EmptyState } from "../components/ui/empty-state";
+import { CloudLoadingSurface } from "../components/CloudLoadingSurface";
 import { CopyableErrorMessage } from "./list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "./list/MetadataDetailsDialog";
 import { NewDatasetDialog } from "./list/NewDatasetDialog";
@@ -17,7 +21,7 @@ import { ResizablePanel } from "./ResizablePanel";
 import { ScenarioDatasetDetailClient } from "./dataset/ScenarioDatasetDetailClient";
 import { ScenarioEditorClient } from "./editor/ScenarioEditorClient";
 import { DatasetRenderPane } from "./render/DatasetRenderPane";
-import { ScenarioDatasetRail } from "./rail/ScenarioDatasetRail";
+import { DatasetStrip } from "./rail/DatasetStrip";
 import { ScenarioIdleScene } from "./scene/ScenarioIdleScene";
 import { useScenarioSession } from "./scene/useScenarioSession";
 import { ScenarioSessionProvider } from "./scene/ScenarioSessionContext";
@@ -33,6 +37,7 @@ import {
   hydrateScenarioViewStateFromStorage,
   persistScenarioViewState,
 } from "./list/scenarioViewState";
+import { paneLoading } from "./scenario-controls.stylex";
 import { runDatasetMorph } from "./list/datasetMorph";
 
 /** Shared width key for the floating dataset/scenario sidebar. */
@@ -104,11 +109,12 @@ export function ScenarioDatasetsClient({
   }
 
   /**
-   * Which dataset the sidebar is showing, if any. `null` is the dataset list.
+   * Which dataset the scenario column is showing.
    *
-   * Opening a dataset swaps the rail's contents rather than navigating. The world scene beside it is
-   * mounted outside this switch, so it survives: a route change would dispose the WebGL context and
-   * re-stream the whole city just to change what the 264px column lists.
+   * Selecting a dataset swaps the column's contents rather than navigating. The world scene beside it
+   * is mounted outside this switch, so it survives: a route change would dispose the WebGL context and
+   * re-stream the whole city just to change what the column lists. `null` only while the list is
+   * loading or empty; once datasets exist, the effect below always resolves one.
    */
   const [openDatasetId, setOpenDatasetId] = useState<string | null>(null);
 
@@ -161,8 +167,10 @@ export function ScenarioDatasetsClient({
       )
     );
   const setPlaybackInspecting = scenarioSession.playback.setInspecting;
-  const openDatasetName = datasets?.find((dataset) => dataset.id === openDatasetId)?.name;
-  useSetPageTitle(openDocumentId ? "Editor" : openDatasetId ? openDatasetName ?? "Dataset" : "Dataset");
+  const openDataset = openDatasetId
+    ? (datasets?.find((dataset) => dataset.id === openDatasetId) ?? null)
+    : null;
+  useSetPageTitle(openDocumentId ? "Editor" : openDataset?.name ?? "Dataset");
 
   // Idle preview and editor chrome are two controllers for one permanently mounted world. They publish
   // only resolved map targets; mode changes themselves never clear or swap the target. Returning the
@@ -278,10 +286,9 @@ export function ScenarioDatasetsClient({
     replaceWorkspaceUrl(url);
   }, [replaceWorkspaceUrl]);
 
-  const openDataset = useCallback((datasetId: string | null) => {
-    const rememberedDocumentId = datasetId
-      ? (scenarioListCache.selectedDocumentIdByDataset[datasetId] ?? null)
-      : null;
+  const selectDataset = useCallback((datasetId: string) => {
+    const rememberedDocumentId =
+      scenarioListCache.selectedDocumentIdByDataset[datasetId] ?? null;
     setOpenDatasetId(datasetId);
     setEditorReady(false);
     setPreviewDocumentId(rememberedDocumentId);
@@ -290,12 +297,14 @@ export function ScenarioDatasetsClient({
     setRenderImmersive(false);
     renderActivityRef.current = null;
     setRenderWorkLive(false);
+    // The last dataset opened is the one the next visit lands on.
+    scenarioListCache.selectedDatasetId = datasetId;
+    persistScenarioViewState();
     // Keep the URL honest without handing the navigation to the router: `router.push` would re-run the
     // server component and remount the scene, which is the thing this whole arrangement avoids. A
     // `replaceState` leaves a reloadable, copyable URL and no history entry per dataset browsed.
     const url = new URL(window.location.href);
-    if (datasetId) url.searchParams.set("dataset", datasetId);
-    else url.searchParams.delete("dataset");
+    url.searchParams.set("dataset", datasetId);
     if (rememberedDocumentId) url.searchParams.set("preview", rememberedDocumentId);
     else url.searchParams.delete("preview");
     url.searchParams.delete("pane");
@@ -395,6 +404,17 @@ export function ScenarioDatasetsClient({
     return [...(datasets ?? [])].sort((a, b) => rank(a) - rank(b));
   }, [datasets]);
 
+  // The column always shows a dataset. With nothing selected — first visit, the app switcher's clean
+  // URL, a deleted or stale `?dataset=` — land on the one the user last opened, else the first of
+  // their own. Writing it back through `selectDataset` keeps the URL reloadable.
+  useEffect(() => {
+    if (orderedDatasets.length === 0) return;
+    if (openDatasetId && orderedDatasets.some((dataset) => dataset.id === openDatasetId)) return;
+    const remembered = scenarioListCache.selectedDatasetId;
+    const fallback = orderedDatasets.find((dataset) => dataset.id === remembered) ?? orderedDatasets[0]!;
+    selectDataset(fallback.id);
+  }, [openDatasetId, orderedDatasets, selectDataset]);
+
   const createDataset = useCallback(async () => {
     const name = newDatasetName.trim();
     if (!name) return;
@@ -407,6 +427,8 @@ export function ScenarioDatasetsClient({
       publish([created, ...(datasets ?? [])]);
       setNewDatasetName("");
       setNewDatasetOpen(false);
+      // Like a new Slack channel: you land in it.
+      selectDataset(created.id);
     } catch (createError) {
       // A name collision belongs in the dialog, beside the field the user has to change; the
       // constraint is not partial, so a soft-deleted dataset still holds its name. Anything else is a
@@ -420,7 +442,7 @@ export function ScenarioDatasetsClient({
     } finally {
       setCreatingDataset(false);
     }
-  }, [datasets, newDatasetName, publish, studioHost]);
+  }, [datasets, newDatasetName, publish, selectDataset, studioHost]);
 
   const saveDatasetDetails = useCallback(async () => {
     if (!editDraft) return;
@@ -517,10 +539,26 @@ export function ScenarioDatasetsClient({
     openDatasetId && datasetRightPaneMode === "render" && renderTarget,
   );
 
+  const openNewDatasetDialog = useCallback(() => {
+    setError(null);
+    setNewDatasetError(null);
+    setNewDatasetOpen(true);
+  }, []);
+
+  const editDatasetDetails = useCallback((dataset: ScenarioDatasetDto) => {
+    setError(null);
+    setEditError(null);
+    setEditDraft({
+      id: dataset.id,
+      name: dataset.name,
+      description: dataset.description ?? "",
+    });
+  }, []);
+
   return (
     <ScenarioSessionProvider session={scenarioSession}>
     <section
-      className="relative h-full min-h-0 overflow-hidden bg-background text-foreground"
+      {...stylex.props(styles.scenarioDatasetIndex)}
       data-testid="scenario-dataset-index"
       data-workspace-mode={openDocumentId ? "editor" : datasetRightPaneMode}
     >
@@ -553,64 +591,78 @@ export function ScenarioDatasetsClient({
       >
         <ResizablePanel
           storageKey={SCENARIO_LIST_WIDTH_KEY}
-          label={`Resize the ${openDatasetId ? "scenario" : "dataset"} list`}
+          label="Resize the scenario list"
           variant="blur-gradient"
           collapsed={renderImmersive}
-          className="pointer-events-auto h-full"
+          {...stylex.props(styles.resizablepanel)}
         >
-          {openDatasetId ? (
-            // The same left-side gradient owns both list states, so opening a dataset does not move the
-            // panel or remount the world beneath it.
-            <ScenarioDatasetDetailClient
-              datasetId={openDatasetId}
-              onBack={() => openDataset(null)}
-              onEditDocument={(document) => openDocument(document.id)}
-              onPreviewDocument={(document) => previewDocument(document.id)}
-              onExitEdit={() => openDocument(null)}
-              onRenderDocument={(document) => toggleRenderPane(document)}
-              editActiveDocumentId={openDocumentId}
-              renderActiveDocumentId={
-                datasetRightPaneMode === "render"
-                  ? (renderTarget?.id ?? null)
-                  : null
-              }
-              renderWorkLive={renderWorkLive}
-              renderCompletionGeneration={renderCompletionGeneration}
-            />
-          ) : (
-            <ScenarioDatasetRail
+          {/* Strip and column share one gradient panel, so switching datasets moves nothing but the
+              column's contents and never remounts the world beneath. */}
+          <div {...stylex.props(styles.panelGrid)}>
+            <DatasetStrip
               datasets={orderedDatasets}
               loading={datasets === null}
-              error={null}
               creating={creatingDataset}
               busyDatasetId={busyDatasetId}
               activeDatasetId={openDatasetId}
-              onSelectDataset={openDataset}
+              onSelectDataset={selectDataset}
               onPrefetchDataset={(datasetId) =>
                 router.prefetch(datasetHref(datasetId))
               }
-              onOpenNewDatasetDialog={() => {
-                setError(null);
-                setNewDatasetError(null);
-                setNewDatasetOpen(true);
-              }}
-              onEditDatasetDetails={(dataset) => {
-                setError(null);
-                setEditError(null);
-                setEditDraft({
-                  id: dataset.id,
-                  name: dataset.name,
-                  description: dataset.description ?? "",
-                });
-              }}
+              onOpenNewDatasetDialog={openNewDatasetDialog}
+              onEditDatasetDetails={editDatasetDetails}
               onDeleteDataset={(dataset) => void deleteDataset(dataset)}
             />
-          )}
+            {openDataset ? (
+              <ScenarioDatasetDetailClient
+                key={openDataset.id}
+                dataset={openDataset}
+                onEditDataset={editDatasetDetails}
+                onDeleteDataset={(dataset) => void deleteDataset(dataset)}
+                onEditDocument={(document) => openDocument(document.id)}
+                onPreviewDocument={(document) => previewDocument(document.id)}
+                onExitEdit={() => openDocument(null)}
+                onRenderDocument={(document) => toggleRenderPane(document)}
+                editActiveDocumentId={openDocumentId}
+                renderActiveDocumentId={
+                  datasetRightPaneMode === "render"
+                    ? (renderTarget?.id ?? null)
+                    : null
+                }
+                renderWorkLive={renderWorkLive}
+                renderCompletionGeneration={renderCompletionGeneration}
+              />
+            ) : datasets === null ? (
+              <CloudLoadingSurface
+                scope="pane"
+                xstyle={paneLoading.h52}
+                detail="Reading this workspace."
+                title="Loading datasets"
+              />
+            ) : (
+              <EmptyState
+                xstyle={styles.emptyColumn}
+                title="No datasets yet"
+                description="A dataset holds your scenarios. Create one to start."
+                action={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={creatingDataset}
+                    onClick={openNewDatasetDialog}
+                  >
+                    Create dataset
+                  </Button>
+                }
+              />
+            )}
+          </div>
         </ResizablePanel>
 
-        <div className="pointer-events-none relative min-w-0 flex-1">
+        <div {...stylex.props(styles.divRelative)}>
           <ScenarioIdleScene
-            className="absolute inset-0"
+            {...stylex.props(styles.scenarioidlesceneAbsolute)}
             documentId={previewDocumentId ?? undefined}
             active={!openDocumentId}
             lockedTour={!openDatasetId}
@@ -621,7 +673,7 @@ export function ScenarioDatasetsClient({
             session={scenarioSession}
           />
           {renderPaneOpen && renderTarget ? (
-            <div className="pointer-events-auto">
+            <div {...stylex.props(styles.div)}>
               <DatasetRenderPane
                 documentId={renderTarget.id}
                 initialDocumentTitle={renderTarget.title || null}
@@ -636,10 +688,10 @@ export function ScenarioDatasetsClient({
           {/* Errors float over the scene rather than sitting in the rail: a failed delete belongs next to
             nothing in particular, and the rail is 220px wide — too narrow for a message plus a retry. */}
           {error ? (
-            <div className="pointer-events-auto absolute inset-x-4 top-4 flex items-center gap-2 border border-border bg-card/95 p-2 shadow-xl backdrop-blur">
+            <div {...stylex.props(styles.divAbsoluteFlex)}>
               <CopyableErrorMessage
                 message={error}
-                className="min-w-0 flex-1"
+                {...stylex.props(styles.copyableerrormessage)}
               />
               {failedOperation ? (
                 <Button

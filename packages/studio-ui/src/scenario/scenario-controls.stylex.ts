@@ -1,7 +1,7 @@
 /**
  * Caller-side StyleX for the shared primitives the scenario surfaces drive.
  *
- * The list, rail, scene, dataset and review surfaces are still authored in
+ * The list, rail, scene and review surfaces are still authored in
  * Tailwind, but the controls they hand their overrides to — `Button`,
  * `Badge`, `Input`, `CloudLoadingSurface`, `CloudActivityIndicator` — are
  * compiled by StyleX. A StyleX atom is guarded by `:not(#\#)` three times over
@@ -12,8 +12,8 @@
  *
  * One module for five directories because the overrides are one vocabulary:
  * the same 28px icon button, the same top-bar toggle chip and the same
- * full-width accent footer button recur across the rails, the list and the
- * dataset detail view, and a copy per directory would let them drift.
+ * full-width accent footer button recur across the rail, the list and the
+ * dataset column, and a copy per directory would let them drift.
  *
  * `rounded-full` / `rounded-none` are not translated. `styles.css` pins every
  * element to `border-radius: 0 !important` and the app's Tailwind config
@@ -30,12 +30,8 @@ const CHIP_FONT = "Share Tech Mono, IBM Plex Mono, monospace";
 
 /** Shared geometry and flat-background pieces the control keys compose with. */
 export const control = stylex.create({
-  /** `size-6` */
-  iconXs: { width: "1.5rem", height: "1.5rem" },
   /** `size-7` */
   iconSm: { width: "1.75rem", height: "1.75rem" },
-  /** `shrink-0` */
-  noShrink: { flexShrink: 0 },
   /** `relative` */
   relative: { position: "relative" },
   /** `bg-transparent hover:bg-transparent` */
@@ -101,8 +97,6 @@ export const menu = stylex.create({
 export const paneLoading = stylex.create({
   /** `min-h-24` */
   h24: { minHeight: "6rem" },
-  /** `min-h-40` */
-  h40: { minHeight: "10rem" },
   /** `min-h-52` */
   h52: { minHeight: "13rem" },
   /** `min-h-[420px]` */
@@ -186,21 +180,6 @@ export const list = stylex.create({
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaNarrow,
     color: "rgb(252 165 165)",
-  },
-  /**
-   * `h-9 px-4 font-meta text-micro font-bold uppercase tracking-meta
-   * active:scale-[0.97]`
-   */
-  newDataset: {
-    height: "2.25rem",
-    paddingInline: "1rem",
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-    transform: { default: null, ":active": "scale(0.97)" },
   },
   /** `w-full gap-2` on the `.xosc` file chooser. */
   fileChooser: { width: "100%", gap: "0.5rem" },
@@ -336,53 +315,8 @@ export const scene = stylex.create({
   cacheAllSpinner: { width: "1rem", height: "1rem", color: "rgb(10 10 10)" },
 });
 
-/** `scenario/dataset` — the detail view's own chrome. */
-export const dataset = stylex.create({
-  /** `bg-transparent hover:bg-transparent hover:text-primary` on the back arrow. */
-  backArrow: {
-    backgroundColor: { default: "transparent", ":hover": "transparent" },
-    color: { default: null, ":hover": colors.primary },
-  },
-  /**
-   * `h-9 w-full justify-start gap-2 rounded-none border-0 border-t
-   * border-white/10 bg-transparent px-0
-   * font-[Share_Tech_Mono,IBM_Plex_Mono,monospace] text-[10px] font-bold
-   * uppercase tracking-[0.16em] text-primary hover:bg-transparent
-   * hover:text-primary/80`
-   */
-  addScenario: {
-    height: "2.25rem",
-    width: "100%",
-    justifyContent: "flex-start",
-    gap: "0.5rem",
-    borderWidth: 0,
-    borderTopWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    backgroundColor: { default: "transparent", ":hover": "transparent" },
-    paddingInline: 0,
-    fontFamily: CHIP_FONT,
-    fontSize: "10px",
-    lineHeight: "inherit",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.16em",
-    color: { default: colors.primary, ":hover": "hsl(var(--primary) / 0.8)" },
-  },
-});
-
-/** `scenario/rail` — the dataset and scenario rails. */
+/** `scenario/rail` — the in-editor scenario rail. */
 export const rail = stylex.create({
-  /** `bg-transparent hover:bg-transparent hover:text-primary` */
-  quietAccent: {
-    backgroundColor: { default: "transparent", ":hover": "transparent" },
-    color: { default: null, ":hover": colors.primary },
-  },
-  /** `bg-transparent text-muted-foreground hover:bg-transparent hover:text-destructive` */
-  quietDestructive: {
-    backgroundColor: { default: "transparent", ":hover": "transparent" },
-    color: { default: colors.mutedForeground, ":hover": colors.danger },
-  },
   /** `text-primary` on a rail toggle that is on. */
   toggleOn: { color: { default: colors.primary, ":hover": ACCENT_FOREGROUND } },
   /**
@@ -411,9 +345,10 @@ export const rail = stylex.create({
    * `w-full justify-center gap-1.5 rounded-none border-0 border-t
    * border-white/10 bg-[#E8E044] px-0 font-meta text-micro font-bold uppercase
    * tracking-meta text-black hover:bg-[#f1e949] hover:text-black` — the accent
-   * footer action. Height is the one thing the two rails disagree on.
+   * footer action.
    */
   footerAction: {
+    height: "2.25rem",
     width: "100%",
     justifyContent: "center",
     gap: "0.375rem",
@@ -431,10 +366,6 @@ export const rail = stylex.create({
     letterSpacing: text.trackingMeta,
     color: { default: "black", ":hover": "black" },
   },
-  /** `h-10` on the dataset rail's footer action. */
-  footerActionTall: { height: "2.5rem" },
-  /** `h-9` on the scenario rail's footer action. */
-  footerActionShort: { height: "2.25rem" },
 });
 
 /** `scenario/review` — the review queue's badges and saving indicator. */

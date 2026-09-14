@@ -1,29 +1,26 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioDatasetDetailClient.stylex";
 import { useStudioHost } from "../../host";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Tags } from "lucide-react";
+import { ChevronDown, Plus, Search, Tags } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import type {
   ScenarioDatasetDto,
   ScenarioDocumentSummaryDto,
 } from "../../lib/scenario/contracts";
-import {
-  TopBarActionsPortal,
-  useSetPageTitle,
-} from "../../components/TopBarSlot";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
+import { EmptyState } from "../../components/ui/empty-state";
 import { useVisiblePolling } from "../../lib/use-visible-polling";
-import { cn } from "../../lib/utils";
-import { chip, control, dataset as datasetStyles, menu } from "../scenario-controls.stylex";
+import { chip, control, menu } from "../scenario-controls.stylex";
 import { CopyableErrorMessage } from "../list/CopyableErrorMessage";
 import { MetadataDetailsDialog } from "../list/MetadataDetailsDialog";
 import { ScenarioDocumentCreator } from "../list/ScenarioDocumentCreator";
@@ -45,35 +42,23 @@ import { useScenarioDocumentActions } from "../list/useScenarioDocumentActions";
 import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
 import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
+import { isDatasetEditable } from "../rail/DatasetStrip";
 
 /** Readiness refresh cadence while a render is in flight, matching v1. */
 const READINESS_POLL_MS = 5_000;
 
-function editorHref(datasetId: string, documentId?: string) {
-  const query = new URLSearchParams({ dataset: datasetId });
-  if (documentId) query.set("document", documentId);
-  return `/dashboard/scenario?${query}`;
-}
-
-function StandaloneDatasetTitle({ title }: { title: string }) {
-  useSetPageTitle(title);
-  return null;
-}
-
 /**
- * One dataset's document list.
+ * One dataset's scenario column: the right-hand half of the workspace's left panel, beside the
+ * dataset strip. Slack's channel pane is the model — the dataset's name and description head the
+ * column, a toolbar filters it, the rows follow, and "Add scenario" closes the list.
  *
- * This surface did not exist in v2 at all: the editor called `studioHost.projects.listDocuments(datasetId)` and
- * took `documents[0]`, so every sibling document in a dataset was unreachable from the UI.
- *
- * `initialDataset` and `initialDocuments` are the house pattern; both are optional because the route
- * that supplies them is new and its server component may not be wired yet.
+ * It never navigates. Every action switches mode in place through the callbacks, because a route
+ * change here would dispose the world scene beside the list.
  */
 export function ScenarioDatasetDetailClient({
-  datasetId,
-  initialDataset,
-  initialDocuments,
-  onBack,
+  dataset,
+  onEditDataset,
+  onDeleteDataset,
   onEditDocument,
   onPreviewDocument,
   onExitEdit,
@@ -83,32 +68,25 @@ export function ScenarioDatasetDetailClient({
   renderWorkLive,
   renderCompletionGeneration = 0,
 }: {
-  datasetId: string;
-  initialDataset?: ScenarioDatasetDto | null;
-  initialDocuments?: ScenarioDocumentSummaryDto[];
-  /**
-   * Overrides for mounting this list inside the datasets surface rather than on its own route.
-   *
-   * All optional, and every default is the standalone-route behaviour, so the `[datasetId]` page keeps
-   * working untouched. When the surface supplies them, the pencil and render button switch mode in place
-   * instead of navigating — a route change here would dispose the world scene beside the list.
-   */
-  onBack?: () => void;
-  onEditDocument?: (document: ScenarioDocumentSummaryDto) => void;
+  dataset: ScenarioDatasetDto;
+  /** Open the dataset details dialog; the header menu and the description both lead here. */
+  onEditDataset: (dataset: ScenarioDatasetDto) => void;
+  onDeleteDataset: (dataset: ScenarioDatasetDto) => void;
+  onEditDocument: (document: ScenarioDocumentSummaryDto) => void;
   /** Select a row for world-pane preview without entering the editor. */
-  onPreviewDocument?: (document: ScenarioDocumentSummaryDto) => void;
-  onExitEdit?: () => void;
-  onRenderDocument?: (document: ScenarioDocumentSummaryDto) => void;
-  editActiveDocumentId?: string | null;
-  renderActiveDocumentId?: string | null;
+  onPreviewDocument: (document: ScenarioDocumentSummaryDto) => void;
+  onExitEdit: () => void;
+  onRenderDocument: (document: ScenarioDocumentSummaryDto) => void;
+  editActiveDocumentId: string | null;
+  renderActiveDocumentId: string | null;
   /** Render job liveness from the pane that owns the job state. Omit when unavailable. */
   renderWorkLive?: boolean;
   /** Increments when the render owner settles a scope on no live work, so badges reconcile exactly once. */
   renderCompletionGeneration?: number;
 }) {
   const studioHost = useStudioHost();
-  const router = useRouter();
   const hydratedRef = useRef(false);
+  const datasetId = dataset.id;
 
   // Hydrate before initializing local state. The cache is module state, so a second hydrate would
   // clobber a selection the user has already made in this session.
@@ -117,16 +95,11 @@ export function ScenarioDatasetDetailClient({
     hydrateScenarioViewStateFromStorage();
   }
 
-  const [dataset, setDataset] = useState<ScenarioDatasetDto | null>(
-    () =>
-      initialDataset ??
-      scenarioListCache.datasets.find((entry) => entry.id === datasetId) ??
-      null,
-  );
   const [maps, setMaps] = useState<ScenarioMapOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const reportError = useCallback((errorValue: unknown, fallback: string) => {
     setError(errorValue instanceof Error ? errorValue.message : fallback);
@@ -139,12 +112,6 @@ export function ScenarioDatasetDetailClient({
     datasetId,
     generation: renderCompletionGeneration,
   }));
-
-  useEffect(() => {
-    if (!initialDocuments) return;
-    scenarioListCache.loadedDatasetIds.add(datasetId);
-    list.setDocuments(initialDocuments);
-  }, [datasetId, initialDocuments, list]);
 
   useEffect(() => {
     // Refetch whenever this list is the visible surface, not just on mount: the editor is where
@@ -165,27 +132,6 @@ export function ScenarioDatasetDetailClient({
     // dataset and once per editor close.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasetId, editActiveDocumentId]);
-
-  useEffect(() => {
-    if (initialDataset) {
-      setDataset(initialDataset);
-      return;
-    }
-    const abort = new AbortController();
-    void (async () => {
-      try {
-        const datasets = await studioHost.projects.listDatasets(abort.signal);
-        if (abort.signal.aborted) return;
-        scenarioListCache.datasets = datasets;
-        scenarioListCache.datasetsLoaded = true;
-        setDataset(datasets.find((entry) => entry.id === datasetId) ?? null);
-      } catch (loadError) {
-        if (abort.signal.aborted) return;
-        reportError(loadError, "Failed to load this dataset.");
-      }
-    })();
-    return () => abort.abort();
-  }, [datasetId, initialDataset, reportError, studioHost]);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -211,17 +157,14 @@ export function ScenarioDatasetDetailClient({
     reportError,
     spliceDocument: list.spliceDocument,
     removeDocument: list.removeDocument,
-    onOpenDocument: (nextDatasetId, documentId, document) => {
-      if (onEditDocument && document) onEditDocument(document);
-      else router.push(editorHref(nextDatasetId, documentId));
+    onOpenDocument: (_datasetId, _documentId, document) => {
+      if (document) onEditDocument(document);
     },
   });
 
   // `resolveScenarioDatasetAccess` is the enforcement; this is the display hint that keeps the
   // affordances honest, derived from the same two fields (§6.5).
-  const datasetEditable = Boolean(
-    dataset && dataset.visibility === "workspace" && !dataset.isSystemManaged,
-  );
+  const datasetEditable = isDatasetEditable(dataset);
 
   const creatorOptions = useMemo(() => {
     const counts = new Map<
@@ -243,9 +186,10 @@ export function ScenarioDatasetDetailClient({
 
   const activeTagFilter = tagManager.selectedTagFilter;
   const activeCreatorFilter = tagManager.selectedCreatorFilter;
+  const needle = query.trim().toLowerCase();
 
   const visibleDocuments = useMemo(() => {
-    if (!activeTagFilter && !activeCreatorFilter) return list.documents;
+    if (!activeTagFilter && !activeCreatorFilter && !needle) return list.documents;
     return list.documents
       .filter((document) => {
         if (
@@ -260,10 +204,10 @@ export function ScenarioDatasetDetailClient({
         ) {
           return false;
         }
-        return true;
+        return !needle || documentName(document).toLowerCase().includes(needle);
       })
       .sort((a, b) => documentName(a).localeCompare(documentName(b)));
-  }, [activeCreatorFilter, activeTagFilter, list.documents]);
+  }, [activeCreatorFilter, activeTagFilter, list.documents, needle]);
 
   const renderInProgress = renderWorkLive === true;
   const completionPending =
@@ -312,14 +256,6 @@ export function ScenarioDatasetDetailClient({
     setTagEditorOpen((open) => !open);
   }, []);
 
-  const openDocument = useCallback(
-    (document: ScenarioDocumentSummaryDto) => {
-      rememberScenarioSelection(datasetId, document.id);
-      router.push(editorHref(datasetId, document.id));
-    },
-    [datasetId, router],
-  );
-
   const openScenarioImport = useScenarioOpenScenarioImport({
     datasetId,
     maps,
@@ -327,186 +263,219 @@ export function ScenarioDatasetDetailClient({
       const summary = documentSummaryFromDocument(document);
       list.spliceDocument(summary);
       rememberScenarioSelection(datasetId, document.id);
-      if (onEditDocument) onEditDocument(summary);
-      else router.push(editorHref(datasetId, document.id));
+      onEditDocument(summary);
     },
   });
 
   const selectDocument = useCallback(
     (document: ScenarioDocumentSummaryDto) => {
       rememberScenarioSelection(datasetId, document.id);
-      if (onPreviewDocument) onPreviewDocument(document);
-      else router.push(editorHref(datasetId, document.id));
+      onPreviewDocument(document);
     },
-    [datasetId, onPreviewDocument, router],
+    [datasetId, onPreviewDocument],
   );
 
   const combinedError = error ?? list.error ?? tagManager.tagError;
-  const showTopBarControls = !editActiveDocumentId;
+  const addBusy =
+    actions.creatingDocument || actions.importingDocument || openScenarioImport.busy;
+  const addScenarioMenu = (
+    <DropdownMenuContent align="start" xstyle={menu.width210}>
+      <DropdownMenuItem
+        disabled={actions.creatingDocument || maps.length === 0}
+        onSelect={() => actions.setMapPickerOpen(true)}
+      >
+        New Scenario
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={actions.importingDocument}
+        onSelect={() => actions.importInputRef.current?.click()}
+      >
+        Import Scenario JSON
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={openScenarioImport.busy}
+        onSelect={openScenarioImport.openDialog}
+      >
+        Open OpenSCENARIO as reference
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
+  const listEmpty = list.loaded && !list.loading && list.documents.length === 0;
 
   return (
-    <>
-      {!onBack ? (
-        <StandaloneDatasetTitle title={dataset?.name ?? "Dataset"} />
-      ) : null}
-      {showTopBarControls ? (
-        <TopBarActionsPortal>
-          <div className="flex min-w-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              xstyle={[chip.base, tagEditorOpen ? chip.on : chip.off]}
-              aria-pressed={tagEditorOpen}
-              aria-label={tagEditorOpen ? "Close tag editor" : "Add tags"}
-              onClick={toggleTagEditor}
-            >
-              <Tags className="size-3.5" aria-hidden="true" />
-              {tagEditorOpen ? "Done Tags" : "Add Tags"}
-            </Button>
-            <ScenarioTagFilterDropdown
-              tags={tagManager.tags}
-              creatorOptions={creatorOptions}
-              selectedTagFilter={tagManager.selectedTagFilter}
-              selectedCreatorFilter={tagManager.selectedCreatorFilter}
-              onSelectTagFilter={tagManager.selectTagFilter}
-              onSelectCreatorFilter={tagManager.selectCreatorFilter}
+    <section
+      {...stylex.props(styles.column)}
+      data-testid="scenario-document-index"
+      data-dataset-id={datasetId}
+    >
+      <header
+        {...stylex.props(styles.header)}
+        data-testid="scenario-scenario-list-header"
+      >
+        <div {...stylex.props(styles.titleRow)}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                {...stylex.props(styles.titleButton)}
+                aria-label={`${dataset.name} dataset menu`}
+              >
+                <h2 {...stylex.props(styles.title)}>{dataset.name}</h2>
+                <ChevronDown {...stylex.props(styles.titleChevron)} aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" xstyle={menu.width210}>
+              <DropdownMenuItem
+                disabled={!datasetEditable}
+                onSelect={() => onEditDataset(dataset)}
+              >
+                Edit details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void navigator.clipboard?.writeText(dataset.id)}
+              >
+                Copy dataset id
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={!datasetEditable}
+                xstyle={menu.destructiveItem}
+                onSelect={() => onDeleteDataset(dataset)}
+              >
+                Delete dataset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {datasetEditable ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  xstyle={styles.headerAdd}
+                  aria-label="Add scenario"
+                  data-testid="scenario-add-scenario"
+                >
+                  {addBusy ? (
+                    <CloudActivityIndicator />
+                  ) : (
+                    <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              {addScenarioMenu}
+            </DropdownMenu>
+          ) : null}
+        </div>
+        <p
+          {...stylex.props(
+            styles.description,
+            dataset.description ? null : styles.descriptionEmpty,
+          )}
+          data-testid="scenario-dataset-description"
+        >
+          {dataset.description || "No description"}
+        </p>
+        <p {...stylex.props(styles.meta)}>
+          {list.documents.length}{" "}
+          {list.documents.length === 1 ? "scenario" : "scenarios"}
+          {list.readiness ? ` · ${list.readiness.rendered} rendered` : null}
+          {!datasetEditable ? " · Read-only" : null}
+        </p>
+        <div {...stylex.props(styles.toolbar)}>
+          <div {...stylex.props(styles.searchField)}>
+            <Search {...stylex.props(styles.searchIcon)} aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              placeholder="Filter scenarios"
+              aria-label="Filter scenarios by name"
+              {...stylex.props(styles.searchInput)}
             />
           </div>
-        </TopBarActionsPortal>
-      ) : null}
-      <section
-        className={cn(
-          "flex h-full min-h-0 flex-col text-foreground",
-          onBack ? "bg-transparent" : "bg-background",
-        )}
-        data-testid="scenario-document-index"
-        data-dataset-id={datasetId}
-      >
-        {showTopBarControls ? (
-          <header
-            className="space-y-2.5 border-b border-white/15 px-3 py-3"
-            data-testid="scenario-scenario-list-header"
+          <ScenarioTagFilterDropdown
+            tags={tagManager.tags}
+            creatorOptions={creatorOptions}
+            selectedTagFilter={tagManager.selectedTagFilter}
+            selectedCreatorFilter={tagManager.selectedCreatorFilter}
+            onSelectTagFilter={tagManager.selectTagFilter}
+            onSelectCreatorFilter={tagManager.selectCreatorFilter}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            xstyle={[chip.base, control.iconSm, tagEditorOpen ? chip.on : chip.off]}
+            aria-pressed={tagEditorOpen}
+            aria-label={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+            title={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+            onClick={toggleTagEditor}
           >
-            <div className="flex min-w-0 items-start gap-2">
-              {onBack ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  xstyle={[control.iconSm, control.noShrink, datasetStyles.backArrow]}
-                  aria-label="Back to datasets"
-                  onClick={onBack}
-                >
-                  <ArrowLeft className="size-4" aria-hidden="true" />
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  size="icon"
-                  variant="ghost"
-                  xstyle={[control.iconSm, control.noShrink, datasetStyles.backArrow]}
-                >
-                  <Link
-                    href="/dashboard/scenario"
-                    aria-label="Back to datasets"
-                  >
-                    <ArrowLeft className="size-4" aria-hidden="true" />
-                  </Link>
-                </Button>
-              )}
-              <div className="min-w-0 flex-1">
-                <h2 className="font-meta text-micro font-bold uppercase tracking-meta-wider text-foreground">
-                  Scenarios
-                </h2>
-                <p className="truncate text-meta text-white/75">
-                  {dataset?.name ?? "Dataset"}
-                </p>
-              </div>
-            </div>
-            <p className="font-meta text-micro uppercase tracking-meta-wider text-white/70">
-              {list.documents.length}{" "}
-              {list.documents.length === 1 ? "scenario" : "scenarios"}
-              {list.readiness ? ` · ${list.readiness.rendered} rendered` : null}
-              {!datasetEditable ? " · Read-only" : null}
-            </p>
-            {datasetEditable ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    xstyle={datasetStyles.addScenario}
-                    aria-label="Add scenario"
-                  >
-                    {actions.creatingDocument ||
-                    actions.importingDocument ||
-                    openScenarioImport.busy ? (
-                      <CloudActivityIndicator />
-                    ) : (
-                      <Plus className="size-3.5" aria-hidden="true" />
-                    )}
-                    Add Scenario
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" xstyle={menu.width210}>
-                  <DropdownMenuItem
-                    disabled={actions.creatingDocument || maps.length === 0}
-                    onSelect={() => actions.setMapPickerOpen(true)}
-                  >
-                    New Scenario
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={actions.importingDocument}
-                    onSelect={() => actions.importInputRef.current?.click()}
-                  >
-                    Import Scenario JSON
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={openScenarioImport.busy}
-                    onSelect={openScenarioImport.openDialog}
-                  >
-                    Open OpenSCENARIO as reference
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </header>
-        ) : null}
-        {combinedError || notice ? (
-          <div className="space-y-2 border-b border-border px-4 py-2">
-            {combinedError ? (
-              <div className="flex items-center gap-2">
-                <CopyableErrorMessage
-                  message={combinedError}
-                  className="min-w-0 flex-1"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setError(null);
-                    list.clearError();
-                    tagManager.clearTagError();
-                    void list.loadFirstPage();
-                  }}
-                >
-                  Refresh
-                </Button>
-              </div>
-            ) : null}
-            {notice ? (
-              <p
-                className="font-meta text-micro uppercase tracking-meta-wider text-muted-foreground"
-                role="status"
+            <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
+          </Button>
+        </div>
+      </header>
+      {combinedError || notice ? (
+        <div {...stylex.props(styles.messages)}>
+          {combinedError ? (
+            <div {...stylex.props(styles.messageRow)}>
+              <CopyableErrorMessage
+                message={combinedError}
+                {...stylex.props(styles.messageText)}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setError(null);
+                  list.clearError();
+                  tagManager.clearTagError();
+                  void list.loadFirstPage();
+                }}
               >
-                {notice}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+                Refresh
+              </Button>
+            </div>
+          ) : null}
+          {notice ? (
+            <p
+              {...stylex.props(styles.status)}
+              role="status"
+            >
+              {notice}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
-        <div className={cn("min-h-0 flex-1 overflow-hidden")}>
+      <div {...stylex.props(styles.body)}>
+        {listEmpty && !tagEditorOpen ? (
+          <EmptyState
+            xstyle={styles.emptyState}
+            title="No scenarios yet"
+            description={
+              datasetEditable
+                ? "Add a scenario to start building this dataset."
+                : "This shared dataset has no scenarios."
+            }
+            action={
+              datasetEditable ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" disabled={addBusy}>
+                      <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
+                      Add scenario
+                    </Button>
+                  </DropdownMenuTrigger>
+                  {addScenarioMenu}
+                </DropdownMenu>
+              ) : undefined
+            }
+          />
+        ) : (
           <ScenarioDocumentCreator
             datasetId={datasetId}
             datasetEditable={datasetEditable}
@@ -560,10 +529,10 @@ export function ScenarioDatasetDetailClient({
             onCommitRename={(document, draft) =>
               void actions.commitRename(document, draft)
             }
-            onOpenDocument={onPreviewDocument ? selectDocument : openDocument}
-            onEditDocument={onEditDocument ?? openDocument}
+            onOpenDocument={selectDocument}
+            onEditDocument={onEditDocument}
             onExitEdit={onExitEdit}
-            onRenderDocument={onRenderDocument ?? openDocument}
+            onRenderDocument={onRenderDocument}
             editActiveDocumentId={editActiveDocumentId}
             onDownloadDocument={(document) =>
               void actions.downloadDocument(document)
@@ -578,52 +547,76 @@ export function ScenarioDatasetDetailClient({
             onError={reportError}
             onNotice={setNotice}
           />
-        </div>
+        )}
+      </div>
 
-        <input
-          ref={actions.importInputRef}
-          aria-label="Import scenario JSON file"
-          className="hidden"
-          type="file"
-          accept=".json,application/json"
-          onChange={actions.handleImportFile}
-        />
-        <ScenarioMapPickerDialog
-          maps={maps}
-          currentMapVersionId={null}
-          open={actions.mapPickerOpen}
-          onOpenChange={actions.setMapPickerOpen}
-          onSelectMap={(map) => void actions.createDocumentOnMap(map)}
-        />
-        {openScenarioImport.dialog}
-        <MetadataDetailsDialog
-          open={Boolean(actions.detailsDraft)}
-          title="Edit scenario details"
-          intro="Update the name and description shown in the dataset scenario list."
-          name={actions.detailsDraft?.name ?? ""}
-          description={actions.detailsDraft?.description ?? ""}
-          busy={Boolean(
-            actions.detailsDraft &&
-            actions.busyDocumentId === actions.detailsDraft.id,
-          )}
-          error={actions.detailsError}
-          namePlaceholder="Scenario name"
-          descriptionPlaceholder="Scenario description"
-          submitLabel="Save scenario"
-          onNameChange={(name) =>
-            actions.setDetailsDraft((current) =>
-              current ? { ...current, name } : current,
-            )
-          }
-          onDescriptionChange={(description) =>
-            actions.setDetailsDraft((current) =>
-              current ? { ...current, description } : current,
-            )
-          }
-          onClose={actions.closeDetailsDialog}
-          onSubmit={() => void actions.saveDetails()}
-        />
-      </section>
-    </>
+      {datasetEditable ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              xstyle={styles.footerAdd}
+              disabled={addBusy}
+              data-testid="scenario-add-scenario-row"
+            >
+              <span {...stylex.props(styles.footerAddIcon)} aria-hidden="true">
+                {addBusy ? (
+                  <CloudActivityIndicator />
+                ) : (
+                  <Plus {...stylex.props(styles.plusIcon)} />
+                )}
+              </span>
+              Add scenario
+            </Button>
+          </DropdownMenuTrigger>
+          {addScenarioMenu}
+        </DropdownMenu>
+      ) : null}
+
+      <input
+        ref={actions.importInputRef}
+        aria-label="Import scenario JSON file"
+        {...stylex.props(styles.importScenarioJSONFileInput)}
+        type="file"
+        accept=".json,application/json"
+        onChange={actions.handleImportFile}
+      />
+      <ScenarioMapPickerDialog
+        maps={maps}
+        currentMapVersionId={null}
+        open={actions.mapPickerOpen}
+        onOpenChange={actions.setMapPickerOpen}
+        onSelectMap={(map) => void actions.createDocumentOnMap(map)}
+      />
+      {openScenarioImport.dialog}
+      <MetadataDetailsDialog
+        open={Boolean(actions.detailsDraft)}
+        title="Edit scenario details"
+        intro="Update the name and description shown in the dataset scenario list."
+        name={actions.detailsDraft?.name ?? ""}
+        description={actions.detailsDraft?.description ?? ""}
+        busy={Boolean(
+          actions.detailsDraft &&
+          actions.busyDocumentId === actions.detailsDraft.id,
+        )}
+        error={actions.detailsError}
+        namePlaceholder="Scenario name"
+        descriptionPlaceholder="Scenario description"
+        submitLabel="Save scenario"
+        onNameChange={(name) =>
+          actions.setDetailsDraft((current) =>
+            current ? { ...current, name } : current,
+          )
+        }
+        onDescriptionChange={(description) =>
+          actions.setDetailsDraft((current) =>
+            current ? { ...current, description } : current,
+          )
+        }
+        onClose={actions.closeDetailsDialog}
+        onSubmit={() => void actions.saveDetails()}
+      />
+    </section>
   );
 }

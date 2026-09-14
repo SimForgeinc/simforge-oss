@@ -8,7 +8,6 @@
  */
 export { StudioHostProvider, useStudioHost } from "./host";
 export { ScenarioDatasetsClient } from "./scenario/ScenarioDatasetsClient";
-export { ScenarioDatasetDetailClient } from "./scenario/dataset/ScenarioDatasetDetailClient";
 export { ScenarioEditorClient } from "./scenario/editor/ScenarioEditorClient";
 export { ScenarioReviewQueue } from "./scenario/review/ScenarioReviewQueue";
 export { ScenarioWorkspaceStatusProvider, ScenarioWorkspaceErrorState } from "./scenario/editor/status";

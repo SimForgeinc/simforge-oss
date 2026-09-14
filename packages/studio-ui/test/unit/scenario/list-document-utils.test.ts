@@ -8,7 +8,6 @@ import {
   documentMapLabel,
   documentName,
   documentSummaryFromDocument,
-  formatDocumentCoverage,
   formatLastUpdated,
   formatRelativeEditedAge,
   updateDocumentList,
@@ -93,8 +92,7 @@ describe("document naming and labels", () => {
     expect(documentEditedAtLabel(summary({ updatedAt: "x", createdAt: "x" }), now)).toBeNull();
   });
 
-  it("formats coverage and last-updated for the dataset columns", () => {
-    expect(formatDocumentCoverage(3, 12)).toBe("3 / 12");
+  it("formats last-updated for the dataset columns", () => {
     expect(formatLastUpdated(null)).toBe("Never");
     expect(formatLastUpdated("not-a-date")).toBe("Unknown");
     expect(formatLastUpdated("2026-08-02T00:00:00.000Z")).toContain("2026");

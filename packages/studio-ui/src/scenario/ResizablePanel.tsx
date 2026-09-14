@@ -1,22 +1,25 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ResizablePanel.stylex";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 
 /**
  * A resizable left panel with a persisted width.
  *
- * The compact 375px default leaves more of the world visible than the original 500px panel. The 300-480
- * bounds still accommodate scenario metadata while keeping the list subordinate to the scene.
+ * The 400px default is the 56px dataset strip plus a ~340px scenario column — wide enough for a row's
+ * name and actions, narrow enough to keep the list subordinate to the scene. The 320-520 bounds keep the
+ * column usable at either end.
  *
  * The drag writes to a ref and to a CSS variable during the gesture and only commits to React state on
  * release. Setting state per `pointermove` would re-render the panel's whole subtree — the scenario list,
  * every row — on every frame of a drag, next to a live WebGL canvas.
  */
 
-const DEFAULT_WIDTH = 375;
-const MIN_WIDTH = 300;
-const MAX_WIDTH = 480;
+const DEFAULT_WIDTH = 400;
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 520;
 
 function clampWidth(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_WIDTH;
@@ -170,7 +173,7 @@ export function ResizablePanel({
         onPointerDown={startDrag}
         onKeyDown={onKeyDown}
         // Sits just outside the border so it does not overlap the list's own scrollbar.
-        className="absolute -right-[3px] bottom-0 top-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/60 focus-visible:outline-none"
+        {...stylex.props(styles.scenarioPanelResizeHandle)}
         data-testid="scenario-panel-resize-handle"
       />
     </div>

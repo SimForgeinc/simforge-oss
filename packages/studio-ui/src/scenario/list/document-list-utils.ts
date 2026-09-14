@@ -64,10 +64,6 @@ export function documentEditedAtLabel(document: ScenarioDocumentSummaryDto, nowM
   return `${SHORT_MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()} · ${formatRelativeEditedAge(editedAtMs, nowMs)}`;
 }
 
-export function formatDocumentCoverage(covered: number, total: number) {
-  return `${covered.toLocaleString()} / ${total.toLocaleString()}`;
-}
-
 export function formatLastUpdated(value: string | null | undefined) {
   if (!value) return "Never";
   const date = new Date(value);

@@ -6,12 +6,11 @@ import {
 } from "../../lib/browser/view-transition";
 
 /**
- * Helpers for the dataset index → document list View Transitions morph. The morph names a row and
- * its post-transition header with the same `view-transition-name` (`dataset-tile-{id}`) and lets the
- * browser cross-fade-and-translate between the two snapshots.
+ * Helpers for the document list ↔ editor View Transitions morph. The morph names a row and its
+ * post-transition counterpart with the same `view-transition-name` (`document-card-{id}`) and lets
+ * the browser cross-fade-and-translate between the two snapshots.
  */
 
-const DATASET_TRANSITION_NAME_PREFIX = "dataset-tile-";
 const DOCUMENT_TRANSITION_NAME_PREFIX = "document-card-";
 
 /**
@@ -22,10 +21,6 @@ function sanitiseIdent(value: string): string {
   let out = value.replace(/[^a-zA-Z0-9_-]/g, "_");
   if (/^[0-9-]/.test(out)) out = `_${out}`;
   return out || "_";
-}
-
-export function datasetTileTransitionName(datasetId: string): string {
-  return `${DATASET_TRANSITION_NAME_PREFIX}${sanitiseIdent(datasetId)}`;
 }
 
 export function documentCardTransitionName(documentId: string): string {

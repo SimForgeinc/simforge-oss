@@ -1,5 +1,8 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioScenarioRail.stylex";
+import { mergeStyleProps } from "../../components/stylex";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
@@ -85,40 +88,40 @@ export function ScenarioScenarioRail({
 
   return (
     <aside
-      className="flex h-full w-[220px] shrink-0 flex-col border-r border-white/15 bg-transparent"
+      {...stylex.props(styles.scenarioScenarioRail)}
       data-testid="scenario-scenario-rail"
       aria-label="Scenarios in this dataset"
     >
       <div
-        className="space-y-2 border-b border-white/15 p-3"
+        {...stylex.props(styles.scenarioScenarioHeader)}
         data-testid="scenario-scenario-header"
       >
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <h2 className="font-meta text-micro font-bold uppercase tracking-meta-wider text-foreground">
+        <div {...stylex.props(styles.divFlex)}>
+          <h2 {...stylex.props(styles.scenarios)}>
             Scenarios
           </h2>
-          <span className="font-meta text-micro tabular-nums text-white/70">
+          <span {...stylex.props(styles.spanMetaMicro)}>
             {documents.length}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2">
+        <div {...stylex.props(styles.divFlex2)}>
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="flex min-w-0 flex-1 items-center gap-1 truncate font-meta text-micro uppercase tracking-meta-wider text-white/75 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...stylex.props(styles.backToAllDatasetsButton)}
               title="Back to all datasets"
             >
-              <ChevronLeft className="size-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">{datasetName ?? "Dataset"}</span>
+              <ChevronLeft {...stylex.props(styles.chevronleftIcon)} aria-hidden="true" />
+              <span {...stylex.props(styles.spanTruncate)}>{datasetName ?? "Dataset"}</span>
             </button>
           ) : (
             <Link
               href={`/dashboard/scenario/${encodeURIComponent(datasetId)}`}
-              className="min-w-0 flex-1 truncate font-meta text-micro uppercase tracking-meta-wider text-white/75 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...stylex.props(styles.openTheFullScenarioListLink)}
               title="Open the full scenario list"
             >
-              <LayoutList className="mr-1 inline size-3" aria-hidden="true" />
+              <LayoutList {...stylex.props(styles.layoutlistIcon)} aria-hidden="true" />
               {datasetName ?? "Dataset"}
             </Link>
           )}
@@ -132,10 +135,10 @@ export function ScenarioScenarioRail({
             title="Dataset status"
             onClick={onToggleStatus}
           >
-            <BarChart3 className="size-3.5" aria-hidden="true" />
+            <BarChart3 {...stylex.props(styles.barchart3Icon)} aria-hidden="true" />
           </Button>
         </div>
-        <div className="flex items-center gap-1">
+        <div {...stylex.props(styles.divFlex3)}>
           <Button
             type="button"
             size="icon"
@@ -145,7 +148,7 @@ export function ScenarioScenarioRail({
             title="Previous scenario (Alt+↑)"
             onClick={onSelectPrevious}
           >
-            <ChevronUp className="size-3.5" aria-hidden="true" />
+            <ChevronUp {...stylex.props(styles.chevronupIcon)} aria-hidden="true" />
           </Button>
           <Button
             type="button"
@@ -156,7 +159,7 @@ export function ScenarioScenarioRail({
             title="Next scenario (Alt+↓)"
             onClick={onSelectNext}
           >
-            <ChevronDown className="size-3.5" aria-hidden="true" />
+            <ChevronDown {...stylex.props(styles.chevrondownIcon)} aria-hidden="true" />
           </Button>
           <Button
             type="button"
@@ -168,9 +171,9 @@ export function ScenarioScenarioRail({
             onClick={onToggleAutoplay}
           >
             {autoplayPlaying ? (
-              <Pause className="size-3" aria-hidden="true" />
+              <Pause {...stylex.props(styles.pauseIcon)} aria-hidden="true" />
             ) : (
-              <Play className="size-3" aria-hidden="true" />
+              <Play {...stylex.props(styles.playIcon)} aria-hidden="true" />
             )}
             Review
           </Button>
@@ -180,21 +183,21 @@ export function ScenarioScenarioRail({
             type="button"
             size="sm"
             variant="ghost"
-            xstyle={[rail.footerAction, rail.footerActionShort]}
+            xstyle={rail.footerAction}
             disabled={creating}
             onClick={onCreateDocument}
           >
             {creating ? (
               <CloudActivityIndicator />
             ) : (
-              <Plus className="size-3" aria-hidden="true" />
+              <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
             )}
             Add Scenario
           </Button>
         ) : null}
         {autoplayPlaying ? (
           <div
-            className="h-px w-full bg-white/15"
+            {...stylex.props(styles.timeUntilTheNextScenario)}
             role="progressbar"
             aria-label="Time until the next scenario"
             aria-valuenow={Math.round(autoplayProgress * 100)}
@@ -202,16 +205,16 @@ export function ScenarioScenarioRail({
             aria-valuemax={100}
           >
             <div
-              className="h-full bg-primary transition-[width] duration-100 ease-linear motion-reduce:transition-none"
+              {...stylex.props(styles.div)}
               style={{ width: `${autoplayProgress * 100}%` }}
             />
           </div>
         ) : null}
       </div>
 
-      <div className="scenario-glass-scrollbar min-h-0 flex-1 overflow-y-auto px-3">
+      <div {...mergeStyleProps(stylex.props(styles.div2), "scenario-glass-scrollbar")}>
         {error ? (
-          <p className="px-1 py-2 text-meta text-destructive" role="alert">
+          <p {...stylex.props(styles.alert)} role="alert">
             {error}
           </p>
         ) : null}
@@ -223,7 +226,7 @@ export function ScenarioScenarioRail({
             title="Loading scenarios"
           />
         ) : documents.length === 0 ? (
-          <p className="px-1 py-2 text-meta text-white/75">
+          <p {...stylex.props(styles.noScenariosInThisDatasetYet)}>
             No scenarios in this dataset yet.
           </p>
         ) : (
@@ -245,15 +248,15 @@ export function ScenarioScenarioRail({
                     )}
                     data-document-id={document.id}
                   >
-                    <span className="line-clamp-2 text-meta font-medium leading-tight">
+                    <span {...stylex.props(styles.spanMetaMedium)}>
                       {documentName(document)}
                     </span>
-                    <span className="truncate font-meta text-micro uppercase tracking-meta-tight text-white/70">
+                    <span {...stylex.props(styles.spanTruncateMetaMicro)}>
                       {documentMapLabel(document)} · {document.roleCount}{" "}
                       {document.roleCount === 1 ? "role" : "roles"}
                     </span>
                     {document.hasRender ? (
-                      <span className="font-meta text-micro uppercase tracking-meta-tight text-green-400">
+                      <span {...stylex.props(styles.rendered)}>
                         Rendered
                       </span>
                     ) : null}

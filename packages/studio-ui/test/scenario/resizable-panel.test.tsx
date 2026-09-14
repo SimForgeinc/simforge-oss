@@ -46,8 +46,8 @@ afterEach(cleanup);
 describe("ResizablePanel", () => {
   it("uses the compact default width when nothing is stored", () => {
     renderPanel();
-    expect(DEFAULT_PANEL_WIDTH).toBe(375);
-    expect(panelWidth()).toBe(375);
+    expect(DEFAULT_PANEL_WIDTH).toBe(400);
+    expect(panelWidth()).toBe(400);
   });
 
   it("renders its children", () => {
