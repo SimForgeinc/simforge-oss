@@ -5,7 +5,6 @@
 html {
   scroll-behavior: smooth;
   font-size: 100%;
-  scrollbar-gutter: stable;
 }
 
 /* Keep scroll position and overflow discoverable without visually dominating the UI. */
