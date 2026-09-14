@@ -21,57 +21,90 @@ export type NavItem = {
   disabled?: boolean;
 };
 
-export const DASHBOARD_APPS: NavItem[] = [
+export type NavGroup = {
+  id: string;
+  label: string;
+  description: string;
+  apps: NavItem[];
+};
+
+/** Product apps, as the app switcher presents them: three areas of work. */
+export const DASHBOARD_APP_GROUPS: NavGroup[] = [
   {
-    href: "/dashboard/map-assets",
-    label: "Maps",
-    description: "CARLA map library and bridges",
-    icon: Map,
-    match: (p) => p.startsWith("/dashboard/map-assets"),
+    id: "exploration",
+    label: "Exploration",
+    description: "Install maps and drive them",
+    apps: [
+      {
+        href: "/dashboard/map-assets",
+        label: "Maps",
+        description: "CARLA map library and bridges",
+        icon: Map,
+        match: (p) => p.startsWith("/dashboard/map-assets"),
+      },
+      {
+        href: "/drive",
+        label: "Drive",
+        description: "Drive a car on an installed map",
+        icon: CarFront,
+        match: (p) => p.startsWith("/drive"),
+      },
+    ],
   },
   {
-    href: "/dashboard/assets",
+    id: "scenarios",
+    label: "Scenarios",
+    description: "Author datasets, evaluate them, ship them",
+    apps: [
+      {
+        href: "/dashboard/scenario",
+        label: "Datasets",
+        description: "Scenario datasets and authoring",
+        icon: Database,
+        match: (p) => p.startsWith("/dashboard/scenario"),
+      },
+      {
+        href: "/dashboard/evaluation",
+        label: "Evaluation",
+        description: "Eval campaigns, playback, and promotion",
+        icon: FlaskConical,
+        match: (p) => p.startsWith("/dashboard/evaluation"),
+      },
+      {
+        href: "/dashboard/dataset-export",
+        label: "Exports",
+        description: "Package datasets for download",
+        icon: PackageCheck,
+        match: (p) => p.startsWith("/dashboard/dataset-export"),
+      },
+    ],
+  },
+  {
+    id: "assets",
     label: "Assets",
-    description: "3D models and maps for scenarios",
-    icon: Boxes,
-    match: (p) => p.startsWith("/dashboard/assets"),
-  },
-  {
-    href: "/dashboard/scenario",
-    label: "Datasets",
-    description: "Scenario datasets and authoring",
-    icon: Database,
-    match: (p) => p.startsWith("/dashboard/scenario"),
-  },
-  {
-    href: "/dashboard/evaluation",
-    label: "Evaluation",
-    description: "Eval campaigns, playback, and promotion",
-    icon: FlaskConical,
-    match: (p) => p.startsWith("/dashboard/evaluation"),
-  },
-  {
-    href: "/dashboard/models",
-    label: "Models",
-    description: "Download, verify and remove model weights",
-    icon: Brain,
-    match: (p) => p.startsWith("/dashboard/models"),
-  },
-  {
-    href: "/dashboard/dataset-export",
-    label: "Exports",
-    description: "Package datasets for download",
-    icon: PackageCheck,
-    match: (p) => p.startsWith("/dashboard/dataset-export"),
-  },
-  {
-    href: "/drive",
-    label: "Drive",
-    description: "Drive a car on an installed map",
-    icon: CarFront,
-    match: (p) => p.startsWith("/drive"),
+    description: "3D assets and model weights",
+    apps: [
+      {
+        href: "/dashboard/assets",
+        label: "Assets",
+        description: "3D models and maps for scenarios",
+        icon: Boxes,
+        match: (p) => p.startsWith("/dashboard/assets"),
+      },
+      {
+        href: "/dashboard/models",
+        label: "Models",
+        description: "Download, verify and remove model weights",
+        icon: Brain,
+        match: (p) => p.startsWith("/dashboard/models"),
+      },
+    ],
   },
 ];
+
+export const DASHBOARD_APPS: NavItem[] = DASHBOARD_APP_GROUPS.flatMap(
+  (group) => group.apps,
+);
 
 /** Utility surfaces reachable from the app switcher footer; not product apps. */
 export const DASHBOARD_UTILITIES: NavItem[] = [

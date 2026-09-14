@@ -28,7 +28,6 @@ import {
 /** The breakpoints this overlay responds to. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
-const XL = "@media (min-width: 1280px)";
 const REDUCED = "@media (prefers-reduced-motion: reduce)";
 
 /** Tailwind's default transition curve and its `transition-colors` set. */
@@ -252,15 +251,53 @@ export const styles = stylex.create({
     filter: "blur(90px)",
   },
 
-  // relative grid gap-3 sm:grid-cols-2 xl:grid-cols-4
-  grid: {
+  /** The three areas of work, stacked. */
+  groups: {
     position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2.25rem",
+  },
+  group: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.875rem",
+  },
+  // flex items-baseline gap-3 border-b border-white/[0.08] pb-2.5
+  groupHead: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: "0.75rem",
+    paddingBottom: "0.625rem",
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
+    borderBottomColor: "rgb(255 255 255 / 0.08)",
+  },
+  // font-meta text-[10px] font-bold uppercase tracking-[0.18em] text-white/70
+  groupLabel: {
+    margin: 0,
+    fontFamily: text.fontMeta,
+    fontSize: "10px",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMetaWider,
+    color: "rgb(255 255 255 / 0.7)",
+  },
+  // text-[11px] text-white/35
+  groupDescription: {
+    margin: 0,
+    fontSize: "11px",
+    color: "rgb(255 255 255 / 0.35)",
+  },
+
+  // grid gap-3 sm:grid-cols-2 lg:grid-cols-3 — no area holds more than three apps
+  grid: {
     display: "grid",
     gap: "0.75rem",
     gridTemplateColumns: {
       default: null,
       [SM]: "repeat(2, minmax(0, 1fr))",
-      [XL]: "repeat(4, minmax(0, 1fr))",
+      [LG]: "repeat(3, minmax(0, 1fr))",
     },
   },
 

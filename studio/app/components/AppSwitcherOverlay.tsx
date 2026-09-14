@@ -9,7 +9,7 @@ import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
 import { CloudConnectionChip } from "@/app/components/cloud/CloudConnectionCard";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
-import { DASHBOARD_APPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
+import { DASHBOARD_APP_GROUPS, DASHBOARD_UTILITIES } from "@/app/lib/dashboard-nav";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 export function AppSwitcherOverlay({
@@ -62,8 +62,31 @@ export function AppSwitcherOverlay({
               data-testid="app-switcher-sky-ambience"
               {...stylex.props(styles.ambience)}
             />
-            <div {...stylex.props(styles.grid)} aria-label="SimForge apps">
-              {DASHBOARD_APPS.map((app, index) => {
+            <div {...stylex.props(styles.groups)} aria-label="SimForge apps">
+              {DASHBOARD_APP_GROUPS.map((group, groupIndex) => {
+                const offset = DASHBOARD_APP_GROUPS.slice(0, groupIndex).reduce(
+                  (count, previous) => count + previous.apps.length,
+                  0,
+                );
+                const headingId = `app-switcher-group-${group.id}`;
+                return (
+                  <section
+                    aria-labelledby={headingId}
+                    data-testid={`app-switcher-group-${group.id}`}
+                    key={group.id}
+                    {...stylex.props(styles.group)}
+                  >
+                    <header {...stylex.props(styles.groupHead)}>
+                      <h2 id={headingId} {...stylex.props(styles.groupLabel)}>
+                        {group.label}
+                      </h2>
+                      <p {...stylex.props(styles.groupDescription)}>
+                        {group.description}
+                      </p>
+                    </header>
+                    <div {...stylex.props(styles.grid)}>
+                      {group.apps.map((app, appIndex) => {
+                const index = offset + appIndex;
                 const active = !app.disabled && app.match(pathname);
                 const content = (
                   <>
@@ -167,6 +190,10 @@ export function AppSwitcherOverlay({
                   >
                     {content}
                   </Link>
+                );
+              })}
+                    </div>
+                  </section>
                 );
               })}
             </div>
