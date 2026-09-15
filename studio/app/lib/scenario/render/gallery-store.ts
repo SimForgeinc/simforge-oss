@@ -1,6 +1,7 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryOne, queryRows } from "@/app/lib/db/data-api";
-import type { ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
+import type { GalleryPageDto, ScenarioGalleryItemDto } from "@simforge-oss/studio-host";
+import type { GalleryScope } from "./gallery-scope";
 
 /**
  * Render gallery reads and the hide/unhide mutation.
@@ -306,4 +307,38 @@ export async function countHiddenRenderJobsForDocument(
     { workspace_id: context.workspaceId, document_id: documentId },
   );
   return Number(row?.hidden_count ?? 0);
+}
+
+
+// ── Gallery page ─────────────────────────────────────────────────────
+
+/**
+ * One page of the gallery plus the hidden count that belongs with it.
+ *
+ * The count is fetched alongside the items so the client can offer "show N
+ * hidden" without a second round-trip, and it is paired with the items *here*
+ * because the pairing is per scope: a revision scope counts that revision's
+ * hidden jobs, a document scope counts the document's across revisions, and
+ * getting that pairing wrong reports someone else's hidden total next to these
+ * tiles. Hidden jobs are never in `items` — that is the point of the hide —
+ * but they stay reachable individually through `[jobId]/detail`.
+ */
+export async function listGalleryPage(
+  context: AppContext,
+  scope: GalleryScope,
+  options: { limit?: number } = {},
+): Promise<GalleryPageDto> {
+  const [items, hiddenCount] = await Promise.all([
+    scope.kind === "revision"
+      ? listRevisionRenderGallery(context, scope.revisionId, options)
+      : scope.kind === "document"
+        ? listDocumentRenderGallery(context, scope.documentId, options)
+        : listRenderGallery(context, { limit: options.limit, jobMode: scope.jobMode }),
+    scope.kind === "revision"
+      ? countHiddenRenderJobs(context, scope.revisionId)
+      : scope.kind === "document"
+        ? countHiddenRenderJobsForDocument(context, scope.documentId)
+        : countHiddenRenderJobs(context),
+  ]);
+  return { items, hiddenCount };
 }

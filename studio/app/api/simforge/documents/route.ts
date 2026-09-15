@@ -4,6 +4,7 @@ import {
   createScenarioDocument,
   listScenarioDocuments,
 } from "@/app/lib/scenario/document-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   const datasetId = new URL(request.url).searchParams.get("datasetId");
   return await scenarioJsonWithEtag(request, {
     documents: await listScenarioDocuments(auth.context, 50, datasetId),
-  });
+  } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.documents.list>);
 }
 
 export async function POST(request: Request) {

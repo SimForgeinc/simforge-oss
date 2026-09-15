@@ -319,6 +319,16 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
   return (await readLocalMapCatalog(signal)).maps;
 }
 
+/**
+ * The maps the editor can open on this host — protocol `maps.list`. Installed
+ * for the browser and not behind a Cloud session the host does not have; the
+ * `LocalMapDescriptor` extras stay server-side, the wire carries the
+ * `ScenarioMapDescriptorDto` fields.
+ */
+export async function listEditorMapCatalog(signal?: AbortSignal): Promise<LocalMapDescriptor[]> {
+  return (await listLocalMapCatalog(signal)).filter((map) => map.installed.browser && !map.locked);
+}
+
 function studioMapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {
   return {
     id: map.mapVersionId,

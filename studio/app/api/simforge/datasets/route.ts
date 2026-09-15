@@ -1,6 +1,7 @@
 import { connection, NextResponse } from "next/server";
 import { CreateScenarioDatasetSchema } from "@/app/lib/scenario/contracts";
 import { createScenarioDataset, listScenarioDatasets } from "@/app/lib/scenario/dataset-store";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   readJson,
   requireScenarioContext,
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   if (auth.response) return auth.response;
   return await scenarioJsonWithEtag(request, {
     datasets: await listScenarioDatasets(auth.context),
-  });
+  } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.datasets.list>);
 }
 
 export async function POST(request: Request) {

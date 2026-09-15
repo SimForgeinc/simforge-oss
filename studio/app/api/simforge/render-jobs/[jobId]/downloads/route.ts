@@ -4,6 +4,7 @@ import {
   presignArtifactsForContext,
 } from "@/app/lib/scenario/render/artifact-store";
 import { sameOriginWhenLocal } from "@/app/lib/s3/local-object-redirect";
+import { STUDIO_HOST_PROTOCOL, type EndpointResponse } from "@simforge-oss/studio-host";
 import {
   requireScenarioContext,
   requireScenarioMutableRenderJobContext,
@@ -48,13 +49,12 @@ export async function GET(_request: Request, route: Context) {
   const access = await requireScenarioMutableRenderJobContext(auth.context, jobId, "read");
   if (access.response) return access.response;
   const artifacts = await listRenderJobArtifacts(auth.context, jobId);
-  const items = (await presignArtifactsForContext(auth.context, artifacts)).map((item) => ({
-    ...item,
-    url: item.url === null ? null : sameOriginWhenLocal(item.url),
-  }));
+  const items = (await presignArtifactsForContext(auth.context, artifacts)).map((item) =>
+    item.url === null ? item : { ...item, url: sameOriginWhenLocal(item.url) },
+  );
 
   return NextResponse.json(
-    { items, urlTtlSeconds: 3600 },
+    { items, urlTtlSeconds: 3600 } satisfies EndpointResponse<typeof STUDIO_HOST_PROTOCOL.jobs.renderJobDownloads>,
     { headers: SCENARIO_PRIVATE_CACHE_HEADERS },
   );
 }

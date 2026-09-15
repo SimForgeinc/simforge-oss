@@ -617,7 +617,15 @@ export async function createScenarioRevision(
           map_asset_id: traffic.mapAssetId, map_version_id: traffic.mapVersionId,
         },
       );
-      if (!bound || traffic.mapVersionId !== current.mapVersionId) throw new Error("materialized_traffic_binding_invalid");
+      // A refusal, not a fault: the caller named traffic evidence that does not
+      // bind to this document at this map version, which is a thing a client can
+      // be told and fix. Thrown, it left the route as a bodiless 500 and the
+      // typed client reported `request_failed_500` — indistinguishable from the
+      // host being broken. Nothing has been written at this point, so returning
+      // commits an empty transaction rather than needing a rollback.
+      if (!bound || traffic.mapVersionId !== current.mapVersionId) {
+        return { kind: "traffic_binding_invalid" as const };
+      }
     }
     if (input.idempotencyKey) {
       const existing = await tx.queryOne<RevisionRow>(
