@@ -60,10 +60,13 @@ function workspacePlan(dev: boolean, port: number, hostname: string): LocalHostP
         : [nextBin, 'start', '-p', String(port), '-H', hostname],
       cwd: studioRoot,
     },
+    // `bin/simforge.js` imports the built `dist/main.js`, which a source
+    // checkout does not have: in dev the worker runs through tsx on the same
+    // sources the server is serving, exactly like `next dev` above.
     worker: {
       command: process.execPath,
       args: [
-        resolve(cliRoot, 'bin', 'simforge.js'),
+        ...(dev ? [tsxCli, resolve(cliRoot, 'src', 'main.ts')] : [resolve(cliRoot, 'bin', 'simforge.js')]),
         'worker',
         '--host',
         `http://${hostname}:${port}`,
