@@ -210,6 +210,10 @@ export function ScenarioCoverageMap({
     <div {...stylex.props(styles.root, xstyle)} data-testid="scenario-coverage-map">
       <MapCanvas
         ref={mapRef}
+        // Same self-hosted worker the Maps app uses: MapLibre's bundled worker
+        // does not survive the app's bundler, and without it the canvas draws
+        // nothing at all.
+        workerUrl="/maplibre/maplibre-gl-worker.mjs"
         mapStyle={VOYAGER_STYLE_URL}
         initialViewState={{ longitude: -98, latitude: 39, zoom: 2.4 }}
         interactiveLayerIds={[COVERAGE_FILL]}
