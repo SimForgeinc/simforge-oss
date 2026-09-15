@@ -85,11 +85,12 @@ GPU clocks/power are **not pinned** on the shared RTX 5080: the current observed
 
 ## OpenResearch experiments and optimizer loop
 
-`orx` is wired using its actual local schema, not a checked-in guessed YAML format. Initialize a repository project once, then create child experiment nodes with the CLI's real commands:
+`orx` is wired using its actual local schema, not a checked-in guessed YAML format. `orx up` starts the local dashboard; an existing checkout is imported there, then child experiment nodes are created with the CLI's real commands:
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
-orx up --no-browser --no-agent
+orx up --no-browser --no-agent --port 4799
+# Import this checkout in the dashboard, then copy the returned local project ID.
 orx projects
 orx create-experiment <PROJECT_ID> \
   --title 'Eliminate unused render work' \
@@ -105,15 +106,17 @@ The actual schema is: a local project ID, experiment title/description, optional
 
 `scripts/benchmarks/dispatch-optimizers.mjs` is re-runnable. It creates two isolated worktrees, dispatches both directions concurrently, then serializes benchmark measurement and appends one JSONL row per direction to `artifacts/benchmarks/scoreboard.jsonl`. The agent prompts tell each optimizer what it may change and which invariants it must preserve. A row is written even when the agent fails, the benchmark cannot run, the candidate is inside noise, or the quality gate rejects it.
 
-This box has authenticated proof only for:
+The dispatcher accepts `--runner codex` or `--runner claude`; it maps them to the installed CLIs and enforces `--max-time` as a subprocess timeout. A custom executable is also accepted. On this box, `orx up` reported Codex authenticated and Claude requiring `claude auth login`; no unavailable Claude run is presented as evidence.
+
+For Codex, the concrete non-interactive shape is:
 
 ```sh
-omp-starline --model opus-5 --auto-approve --no-title \
-  --cwd <optimizer-worktree> --max-time 0.15h \
-  -p @/tmp/simforge-unused-work-elimination.md < /dev/null
+codex exec --model opus-5 --dangerously-bypass-approvals-and-sandbox \
+  --skip-git-repo-check --cd <optimizer-worktree> \
+  "<direction prompt>"
 ```
 
-`--runner` and `--model` remain dispatcher parameters so a future configured model is one line of configuration, but the only accepted exercised runner/model pair here is `omp-starline`/`opus-5`. The installed `claude` command was OAuth-expired/unavailable and Codex CLI's ChatGPT authentication rejected the allowed Astra model; neither is substituted silently.
+Model authentication and quota are part of the recorded scoreboard row; a failed optimizer invocation is retained as a rejected row rather than silently replaced.
 
 ## Baseline ledger
 

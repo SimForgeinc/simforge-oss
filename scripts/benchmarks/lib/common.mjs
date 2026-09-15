@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile, stat, writeFile, mkdir, rm } from 'node:fs/promises';
-import { hostname, loadavg, platform, release, totalmem } from 'node:os';
+import { cpus, hostname, loadavg, platform, release, totalmem } from 'node:os';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
@@ -44,16 +44,20 @@ export function run(argv, options = {}) {
     });
     const stdout = [];
     const stderr = [];
+    let timedOut = false;
+    let timer = null;
     child.stdout.on('data', (chunk) => { stdout.push(chunk); options.onStdout?.(chunk); });
     child.stderr.on('data', (chunk) => { stderr.push(chunk); options.onStderr?.(chunk); });
     child.once('error', reject);
-    child.once('close', (code, signal) => resolve({
+    child.once('close', (code, signal) => { if (timer) clearTimeout(timer); resolve({
       code: code ?? -1,
-      signal,
+      signal: timedOut ? "SIGTERM" : signal,
       pid: child.pid,
       stdout: Buffer.concat(stdout).toString('utf8'),
       stderr: Buffer.concat(stderr).toString('utf8'),
-    }));
+      timedOut,
+    }); });
+    if (Number.isFinite(options.timeoutMs) && options.timeoutMs > 0) timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, options.timeoutMs);
     options.onSpawn?.(child);
   });
 }
@@ -262,4 +266,3 @@ export function progressFraction(value) {
   }
   return null;
 }
-EOF

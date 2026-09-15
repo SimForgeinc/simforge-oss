@@ -2,13 +2,14 @@
 /**
  * Dispatch two bounded, isolated optimization directions concurrently, then
  * serialize measurement and append an accepted or rejected row to the shared
- * scoreboard. The model and runner are parameters; this box has been proven
- * only with omp-starline + opus-5. Rejected rows are never discarded.
+ * scoreboard. The runner is explicit: `codex` and `claude` map to their
+ * installed non-interactive CLIs; a custom executable may be supplied for a
+ * site-local runner. Rejected rows are never discarded.
  */
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { parseArgs, requireArg, run, runJson, sha256, writeJson } from './lib/common.mjs';
+import { parseArgs, run, sha256, writeJson } from './lib/common.mjs';
 
 const ROOT = process.cwd();
 const DEFAULT_SCOREBOARD = 'artifacts/benchmarks/scoreboard.jsonl';
@@ -29,20 +30,36 @@ function outputFor(root, direction) { return path.resolve(root, `artifacts/bench
 async function branchExists(name) { return (await run(['git', 'show-ref', '--verify', '--quiet', `refs/heads/${name}`])).code === 0; }
 
 async function prepareWorktree(root, direction, worktree) {
-  if ((await run(['git', 'worktree', 'list', '--porcelain'])).stdout.includes(`worktree ${worktree}\n`)) return;
+  if ((await run(['git', 'worktree', 'list', '--porcelain'], { cwd: root })).stdout.includes(`worktree ${worktree}\n`)) return;
   const branch = `bench/optimizer-${direction.id}`;
-  if (await branchExists(branch)) await run(['git', 'worktree', 'remove', '--force', worktree]);
+  if (await branchExists(branch)) await run(['git', 'worktree', 'remove', '--force', worktree], { cwd: root });
   const result = await run(['git', 'worktree', 'add', '-B', branch, worktree, 'HEAD'], { cwd: root });
   if (result.code !== 0) throw new Error(`cannot create optimizer worktree: ${result.stderr}`);
 }
 
+function durationMs(value) {
+  const match = String(value).trim().match(/^(\d+(?:\.\d+)?)(ms|s|m|h)?$/i);
+  if (!match) throw new Error(`--max-time must be a duration such as 15m or 0.25h, got ${value}`);
+  const amount = Number(match[1]);
+  return amount * ({ ms: 1, s: 1e3, m: 6e4, h: 3.6e6 }[(match[2] ?? 'm').toLowerCase()]);
+}
+
+function optimizerCommand(runner, model, direction, worktree) {
+  if (runner === 'codex') return ['codex', 'exec', '--model', model, '--dangerously-bypass-approvals-and-sandbox', '--skip-git-repo-check', '--cd', worktree, direction.prompt];
+  if (runner === 'claude') return ['claude', '-p', direction.prompt, '--model', model, '--dangerously-skip-permissions'];
+  return [runner, direction.prompt];
+}
+
 async function runOptimizer({ runner, model, direction, worktree, maxTime }) {
   const promptFile = path.join('/tmp', `simforge-${direction.id}.md`);
-  await writeJson(`${promptFile}.json`, { direction: direction.id, prompt: direction.prompt });
-  await (await import('node:fs/promises')).writeFile(promptFile, direction.prompt + '\n');
-  if (runner !== 'omp-starline') throw new Error(`runner ${runner} was not exercised on this box; use --runner omp-starline`);
-  const result = await run(['omp-starline', '--model', model, '--auto-approve', '--no-title', '--cwd', worktree, '--max-time', maxTime, '-p', `@${promptFile}`], { cwd: worktree });
-  return { direction: direction.id, runner, model, code: result.code, stdout: result.stdout.slice(-4000), stderr: result.stderr.slice(-4000), worktree };
+  await writeFile(promptFile, `${direction.prompt}\n`, 'utf8');
+  let result;
+  try {
+    result = await run(optimizerCommand(runner, model, direction, worktree), { cwd: worktree, timeoutMs: durationMs(maxTime) });
+  } catch (error) {
+    result = { code: -1, signal: null, stdout: '', stderr: String(error?.stack ?? error) };
+  }
+  return { direction: direction.id, runner, model, maxTime, code: result.code, signal: result.signal, stdout: result.stdout.slice(-4000), stderr: result.stderr.slice(-4000), worktree, promptFile };
 }
 
 async function readReport(file) {
@@ -78,9 +95,9 @@ async function orxExperiment(project, direction, root) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const runner = args.get('runner') ?? 'omp-starline';
+  const runner = args.get('runner') ?? 'codex';
   const model = args.get('model') ?? 'opus-5';
-  const maxTime = args.get('max-time') ?? '0.15h';
+  const maxTime = args.get('max-time') ?? '15m';
   const scoreboard = path.resolve(args.get('scoreboard') ?? DEFAULT_SCOREBOARD);
   const worktreeRoot = path.resolve(args.get('worktrees') ?? path.join(ROOT, '..'));
   const dataRoot = args.get('data-root');
@@ -113,8 +130,7 @@ async function main() {
     const entry = {
       schema: 'simforge.benchmark-scoreboard-entry/v1', recordedAt: new Date().toISOString(), direction: direction.id,
       benchmark: direction.benchmark, runner, model, worktree, agent, orxExperiment: orx[index], measurement: candidate,
-      gate: noiseGate, status: noiseGate.accepted ? 'accepted' : 'rejected',
-      rejectionRecorded: !noiseGate.accepted,
+      gate: noiseGate, status: noiseGate.accepted ? 'accepted' : 'rejected', rejectionRecorded: !noiseGate.accepted,
     };
     entries.push(entry);
     await appendScore(scoreboard, { ...entry, entrySha256: sha256(entry) });
@@ -125,4 +141,3 @@ async function main() {
 }
 
 await main();
-EOF
