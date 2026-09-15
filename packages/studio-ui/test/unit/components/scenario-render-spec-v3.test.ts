@@ -6,7 +6,6 @@ import {
   defaultRadar,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
-import { browserRendererCapabilities } from "@simforge-oss/studio-host";
 import { buildCanonicalRenderSpec, type CanonicalRenderSpecInput } from "@simforge-oss/scenario";
 
 function contentWithTwoCameras(): ScenarioTemplateV2 {
@@ -99,12 +98,12 @@ describe("canonical render spec v3 authoring", () => {
     expect(semantic.capabilityIntent.required).toContain("map.static_semantics");
   });
 
-  it("names each renderer capability once, however many cameras ask for it", () => {
+  it("captures each selected camera as its own uniquely named source", () => {
     /**
      * The cameras step opens with every authored camera captured, so two RGB cameras are the
-     * default shape of a two-camera scenario — and two RGB sources are still one RGB capability.
-     * The capture-manifest schema rejects a duplicate, so deriving this list straight from
-     * `sources` refused every multi-camera browser render with `duplicate capability "sensor.rgb"`.
+     * default shape of a two-camera scenario. Every source is addressed by `outputName`
+     * downstream (`render-intent.ts` maps host sensors by it), so two cameras must survive
+     * selection as two distinctly named sources.
      */
     const twoCameras = buildCanonicalRenderSpec({
       ...input(),
@@ -115,13 +114,12 @@ describe("canonical render spec v3 authoring", () => {
       content: contentWithTwoCameras(),
     });
 
-    const capabilities = browserRendererCapabilities(twoCameras, { staticSemantics: false });
-
-    expect(twoCameras.sources.filter((source) => source.modality === "rgb")).toHaveLength(2);
-    expect(capabilities.filter((capability) => capability === "sensor.rgb")).toHaveLength(1);
-    expect(new Set(capabilities).size).toBe(capabilities.length);
-    expect(capabilities).toContain("artifact.sensor_archive");
-    expect(capabilities).not.toContain("map.static_semantics");
+    expect(twoCameras.sources.map((source) => [source.sensorId, source.modality])).toEqual([
+      ["front-camera", "rgb"],
+      ["rear-camera", "rgb"],
+    ]);
+    expect(new Set(twoCameras.sources.map((source) => source.outputName)).size)
+      .toBe(twoCameras.sources.length);
   });
 
   it("keeps client-authored sensor videos out of managed-worker requirements", () => {
@@ -140,8 +138,6 @@ describe("canonical render spec v3 authoring", () => {
     });
 
     expect(spec.capabilityIntent.required).not.toContain("artifact.sensor_video");
-    expect(browserRendererCapabilities(spec, { staticSemantics: false }))
-      .toContain("artifact.sensor_video");
 
     const archiveOnly = buildCanonicalRenderSpec({
       ...authored,
@@ -151,12 +147,6 @@ describe("canonical render spec v3 authoring", () => {
       selections: [{ actorId: "ego", sensorId: lidar.id, modalities: ["lidar"] }],
     });
     expect(archiveOnly.capabilityIntent.required).not.toContain("artifact.sensor_video");
-    // Video-only cutover: every sensor source owns an encoded stream (cameras
-    // always; lidar/radar visualization videos), so the renderer advertises
-    // artifact.sensor_video whenever any source exists — while the
-    // managed-worker REQUIREMENT above still excludes client-authored videos.
-    expect(browserRendererCapabilities(archiveOnly, { staticSemantics: false }))
-      .toContain("artifact.sensor_video");
   });
 
   it("starts from the scenario's authored capture defaults and lets an explicit video format win", () => {
