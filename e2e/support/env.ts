@@ -17,6 +17,12 @@ export const E2E_ENV = {
   stagingWorkspaceId: "SIMFORGE_E2E_STAGING_WORKSPACE_ID",
   /** Parent directory for per-run isolated data roots; defaults to the OS temp dir. */
   dataRoot: "SIMFORGE_E2E_DATA_ROOT",
+  /**
+   * A seeded data root to clone for each test, giving it an *installed* map
+   * and real scenarios. Without one a test starts empty, and installing a
+   * map costs a multi-gigabyte closure download per run.
+   */
+  seedDataRoot: "SIMFORGE_E2E_SEED_DATA_ROOT",
   /** Keep the isolated roots after a run instead of removing them. */
   keepDataRoot: "SIMFORGE_E2E_KEEP_DATA_ROOT",
   /** `dev` (default, `next dev`) or `start` (serves a previous `next build`). */

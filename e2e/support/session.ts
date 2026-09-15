@@ -41,6 +41,14 @@ export type LaunchBrowserStudioOptions = {
   hostMode?: HostMode;
   env?: Record<string, string>;
   readyTimeoutMs?: number;
+  /**
+   * Runs against the fresh page before it navigates anywhere. The hook exists
+   * for `addInitScript`: a script that must be present when the page's first
+   * scripts run — such as the `preserveDrawingBuffer` wrapper the pixel
+   * readback depends on — cannot be installed after `goto`, because the
+   * WebGL context is taken during mount.
+   */
+  beforeNavigate?: (page: Page) => Promise<void>;
 };
 
 export type LaunchElectronStudioOptions = {
@@ -87,6 +95,7 @@ export async function launchBrowserStudio(
     context.register(() => browser?.close());
     browserContext = await browser.newContext({ viewport: options.viewport ?? { width: 1440, height: 900 } });
     const page = await browserContext.newPage();
+    await options.beforeNavigate?.(page);
     const route = options.route ?? DEFAULT_ROUTE;
     // The ticket URL's loopback hostname is the origin that receives the
     // HttpOnly trusted-local cookie; retain that origin for every later page
