@@ -164,6 +164,101 @@ export const styles = stylex.create({
     marginBlock: space.xs,
     backgroundColor: colors.glassRaised,
   },
+  /**
+   * A home section's heading: "On this computer", then the organization's name.
+   *
+   * The rail is 3.5rem wide, which is the whole constraint here. The label is micro type that wraps
+   * and clamps to two lines ("ON THIS / COMPUTER"), and the full string is always in the tooltip
+   * beside it — so a long organization name degrades to a truncated heading with a readable
+   * tooltip, never to a rail that has been widened to fit one tenant's name. Tracking is near zero
+   * rather than the meta face's usual `trackingMeta`, which would push "COMPUTER" past the rail's
+   * inner width on its own.
+   */
+  section: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: space.xxs,
+    paddingInline: space.xxs,
+    paddingTop: { default: space.lg, ":first-child": space.none },
+    paddingBottom: space.xxs,
+  },
+  sectionLabel: {
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 2,
+    overflow: "hidden",
+    width: "100%",
+    textAlign: "center",
+    fontFamily: text.fontMeta,
+    fontSize: "0.5625rem",
+    lineHeight: 1.2,
+    fontWeight: text.weightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.02em",
+    overflowWrap: "anywhere",
+    color: colors.textSubtle,
+    cursor: "default",
+    outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+  },
+  /** The section's own state, when there is something to say instead of tiles: "Signed out". */
+  sectionNote: {
+    width: "100%",
+    textAlign: "center",
+    fontFamily: text.fontMeta,
+    fontSize: "0.5rem",
+    lineHeight: 1.2,
+    textTransform: "uppercase",
+    letterSpacing: "0.02em",
+    overflowWrap: "anywhere",
+    color: colors.textFaint,
+  },
+  /**
+   * A cloud dataset's tile. It states presence, so it drops the pointer affordances the local tile
+   * has: opening a dataset happens at its home, and this strip has no transfer actions.
+   */
+  iconStatic: {
+    cursor: "default",
+    opacity: { default: 0.62, ":hover": 0.78, ":focus-visible": 0.78 },
+    transform: { default: "none", ":hover": "none", ":active": "none" },
+  },
+  /** The signed-out cloud section's way in. Dashed, so it reads as an opening rather than a tile. */
+  connectButton: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
+    color: { default: colors.textSubtle, ":hover": colors.text },
+    borderWidth: "1px",
+    borderStyle: "dashed",
+    borderColor: { default: colors.lineStrong, ":hover": colors.accent },
+    transitionProperty: TRANSITION_PROPERTY,
+    transitionDuration: motion.durFast,
+    transitionTimingFunction: motion.easeStandard,
+  },
+  /** The remainder marker at the foot of a capped cloud section: a count, not a tile. */
+  overflowButton: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
+    color: { default: colors.textSubtle, ":hover": colors.text },
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    fontWeight: text.weightSemibold,
+    letterSpacing: "0.02em",
+  },
+  // sr-only
+  srOnly: {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: space.none,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: 0,
+  },
   tooltipTitle: {
     fontWeight: text.weightSemibold,
   },
