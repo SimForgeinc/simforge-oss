@@ -38,7 +38,7 @@ export type StoredSimulationPreview = {
  * xodr-local ledger (`x`, `y = -z`, `frame: 'xodr-local'`). Storing the scene
  * copy made every saved simulation fail admission on download and recompile.
  */
-function traceToXodrFrame(trace: PlaybackBundle["trace"]): SimTrace {
+export function traceToXodrFrame(trace: PlaybackBundle["trace"]): SimTrace {
   const actors: SimTrace["ticks"]["actors"] = {};
   for (const [id, track] of Object.entries(trace.ticks.actors)) {
     const { z, ...rest } = track;

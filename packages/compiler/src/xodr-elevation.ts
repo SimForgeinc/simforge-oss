@@ -6,6 +6,8 @@
 
 import { pointOf, type TopologyIndex, type TopologyLane } from '@simforge-oss/engine';
 
+import { nearestLane, OFF_NETWORK_BOUND_M } from './off-network.js';
+
 interface LaneGeometry {
   readonly lane: TopologyLane;
   readonly points: readonly { readonly x: number; readonly y: number }[];
@@ -239,7 +241,16 @@ export function buildXodrElevationResolver(
           }
         }
       }
-      if (!nearest || nearest.d > SPATIAL_CELL_M) throw new Error(`xodr_elevation_unresolvable${label}`);
+      if (!nearest || nearest.d > OFF_NETWORK_BOUND_M) {
+        // Only on the failure path, so an exhaustive search is affordable: the
+        // caller is about to abort, and a refusal without a distance in it is
+        // what made this failure unreadable in the first place.
+        const truth = nearestLane(topology, x, y);
+        const distance = truth ? `${truth.distanceM.toFixed(1)}m_from_${truth.rsl}` : 'no_lane_in_map';
+        throw new Error(
+          `xodr_elevation_unresolvable${label}:x=${x.toFixed(1)}:y=${y.toFixed(1)}:${distance}:bound=${OFF_NETWORK_BOUND_M}m`,
+        );
+      }
       return nearest.elevation;
     }
     const conflicting = tier.find((candidate) =>

@@ -1,4 +1,7 @@
-import { admitSimulationPreview } from '@simforge-oss/playback';
+import { findOffNetworkDepartures, offNetworkMessage } from '@simforge-oss/compiler';
+import { createMapBundle } from '@simforge-oss/compiler/node';
+import { admitSimulationPreview, traceToXodrFrame } from '@simforge-oss/playback';
+import type { PlaybackBundle } from '@simforge-oss/playback';
 import { browserRevisionTraffic } from '@simforge-oss/playback/traffic';
 import { boolFlag, optionalString, parseArgs } from '../args.js';
 import { createHash } from 'node:crypto';
@@ -60,6 +63,7 @@ export async function materializeRevisionEvidence(session: HostSession, document
   const map = (await host.artifacts.listMaps()).find((entry) => entry.mapVersionId === document.mapVersionId);
   if (!map) throw new CliError('map_missing', 'The scenario map is not installed on this host.', { detail: { mapVersionId: document.mapVersionId } });
 
+  await assertOnDrivableNetwork(session, map, bundle);
   const traffic = browserRevisionTraffic(document.content, map, bundle);
   if (!traffic) {
     throw new CliError('sumo_evidence_unsupported', 'This draft runs ambient traffic through SUMO; freeze it from Studio, which owns the SUMO bridge.', { detail: { documentId: document.id } });
@@ -77,6 +81,41 @@ export async function materializeRevisionEvidence(session: HostSession, document
     artifact.artifact.sourceInputDigest,
   );
   return { ambient: ambientProvenanceForRevisionTraffic(artifact, profile, map), materializedTraffic };
+}
+
+/**
+ * Refuse a scenario whose actors drive off the drivable network before a
+ * revision exists for it.
+ *
+ * The ASAM export resolves a road-surface elevation for every tick of the
+ * replay trace, and refuses a position with no road under it rather than
+ * inventing a height for terrain the OpenDRIVE profile does not describe.
+ * Asking the same question here, of the saved simulation the freeze already
+ * downloads, costs one topology fetch and turns a post-hoc
+ * `export_failed: xodr_elevation_unresolvable` into an answer the author can
+ * act on: which actor, when it leaves, how far off it gets, and what to change.
+ */
+async function assertOnDrivableNetwork(
+  session: HostSession,
+  map: { readonly sourceMapId: string; readonly topologyUrl: string },
+  bundle: PlaybackBundle,
+): Promise<void> {
+  const response = await fetch(new URL(map.topologyUrl, session.baseUrl), { headers: session.headers, redirect: 'error' });
+  if (!response.ok) {
+    throw new CliError('map_topology_download_failed', `Map topology download failed (${response.status}).`, {
+      detail: { topologyUrl: map.topologyUrl },
+    });
+  }
+  const topology = createMapBundle({
+    mapId: map.sourceMapId,
+    topology: new Uint8Array(await response.arrayBuffer()),
+  }).topology;
+  // A playback bundle carries the y-up scene copy; the resolver and this
+  // check both work in the xodr-local frame, so convert rather than measure
+  // a mirrored trajectory.
+  const departures = findOffNetworkDepartures(traceToXodrFrame(bundle.trace), topology);
+  if (departures.length === 0) return;
+  throw new CliError('actor_off_drivable_network', offNetworkMessage(departures), { detail: { departures } });
 }
 
 export const SCENARIO_COMMANDS = ['list', 'show'] as const;
