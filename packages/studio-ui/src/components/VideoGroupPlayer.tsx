@@ -72,7 +72,7 @@ export function VideoGroupPlayer({
     setVideoCount(videosRef.current.size);
   }, []);
 
-  // RAF loop: sync progress from leader video and auto-loop
+  // RAF loop: sync progress from the timing leader.
   useEffect(() => {
     if (!playing) {
       cancelAnimationFrame(rafId.current);
@@ -87,11 +87,14 @@ export function VideoGroupPlayer({
         setProgress(leader.currentTime / leaderDuration);
         setDuration(leaderDuration);
 
+        // Camera playback follows normal media semantics: reaching the end
+        // stops the group. It must not silently jump back to zero, otherwise a
+        // scrubber appears to repeat the same segment forever.
         if (leader.ended) {
-          for (const v of videos) {
-            v.currentTime = 0;
-            void v.play().catch(() => {});
-          }
+          setProgress(1);
+          setPlaying(false);
+          for (const v of videos) v.pause();
+          return;
         }
       }
       rafId.current = requestAnimationFrame(tick);
