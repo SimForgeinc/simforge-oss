@@ -58,6 +58,7 @@ export const DASHBOARD_APPS: NavItem[] = [
     href: "/dashboard/evaluation",
     label: "Evaluation",
     description: "Policies and metrics",
+    icon: FlaskConical,
     highlights: [
       "AlpaMayo evaluation",
       "Closed-loop model-in-the-loop",
