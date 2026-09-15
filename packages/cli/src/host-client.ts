@@ -1,18 +1,18 @@
 import { URL } from 'node:url';
-import { checkHostProtocolVersion } from '@simforge-oss/studio-host';
+import { HostOrigin, checkHostProtocolVersion, hostPath } from '@simforge-oss/studio-host';
 import { readLocalHostState } from '@simforge-oss/studio-host/node';
 import { CliError } from './errors.js';
 
 export type HostRequestOptions = { dataRoot?: string; headers?: HeadersInit };
 
-const CAPABILITIES_PATH = '/api/simforge/host/capabilities';
+const CAPABILITIES_PATH = hostPath('/api/simforge/host/capabilities');
 
-function loopback(origin: string): URL {
+function loopback(origin: string): HostOrigin {
   const url = new URL(origin);
   if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
     throw new CliError('bad_value', 'The local Studio host must use an HTTP loopback origin.', { path: '--origin' });
   }
-  return url;
+  return HostOrigin.fromConfigured(url.origin, 'packaged');
 }
 
 function authorized(controlToken: string, init: RequestInit, extra?: HeadersInit): RequestInit {
@@ -38,12 +38,12 @@ function authorized(controlToken: string, init: RequestInit, extra?: HeadersInit
  */
 const verifiedHosts = new Map<string, Promise<void>>();
 
-function verifyHostProtocol(base: URL, controlToken: string): Promise<void> {
-  const key = base.origin;
+function verifyHostProtocol(host: HostOrigin, controlToken: string): Promise<void> {
+  const key = host.hrefForCookie();
   let pending = verifiedHosts.get(key);
   if (!pending) {
     pending = (async () => {
-      const response = await fetch(new URL(CAPABILITIES_PATH, base), authorized(controlToken, {}));
+      const response = await fetch(host.toURL(CAPABILITIES_PATH), authorized(controlToken, {}));
       if (!response.ok) {
         throw new CliError('host_unavailable', `The Studio host at ${key} answered ${response.status} to the capabilities probe.`);
       }
@@ -65,9 +65,9 @@ function verifyHostProtocol(base: URL, controlToken: string): Promise<void> {
 export async function hostFetch(path: string, options: HostRequestOptions = {}, init: RequestInit = {}): Promise<Response> {
   const state = await readLocalHostState(options.dataRoot ? { SIMFORGE_CLOUD_ROOT: options.dataRoot } : process.env);
   if (!state) throw new CliError('host_unavailable', 'No running local Studio host was found. Start SimForge Studio first.');
-  const base = loopback(state.baseUrl);
-  await verifyHostProtocol(base, state.controlToken);
-  return fetch(new URL(path, base), authorized(state.controlToken, init, options.headers));
+  const host = loopback(state.baseUrl);
+  await verifyHostProtocol(host, state.controlToken);
+  return fetch(host.toURL(hostPath(path)), authorized(state.controlToken, init, options.headers));
 }
 
 export async function hostRequest<T>(path: string, options: HostRequestOptions = {}, init: RequestInit = {}): Promise<T> {

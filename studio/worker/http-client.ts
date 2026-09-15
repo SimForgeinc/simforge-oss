@@ -7,7 +7,7 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { fileURLToPath } from "node:url";
 import { simforgeEnv } from "../lib/simforge-env";
-import { checkHostProtocolVersion } from "@simforge-oss/studio-host";
+import { HostOrigin, checkHostProtocolVersion, hostPath } from "@simforge-oss/studio-host";
 
 import type { RenderInputFile } from "@simforge-oss/render";
 
@@ -55,6 +55,12 @@ export class CpuJobsClient {
    * client, because the host has to change, not the worker's luck.
    */
   private protocolHandshake: Promise<void> | null = null;
+  /**
+   * The supervisor chose where the host binds and handed this worker that
+   * address; when it is plain HTTP on a network address, that choice is the
+   * operator's acknowledgement, so it is not re-litigated here.
+   */
+  private readonly host: HostOrigin;
 
   constructor(
     private readonly baseUrl: URL,
@@ -68,6 +74,7 @@ export class CpuJobsClient {
   ) {
     if (!token) throw new Error("SIMFORGE_RENDER_WORKER_TOKEN is required.");
     this.workerId = workerId;
+    this.host = HostOrigin.fromConfigured(baseUrl.origin, "packaged", { plaintextNetworkAcknowledged: true });
   }
 
   offeredEngines(): readonly LocalRenderEngine[] {
@@ -314,7 +321,7 @@ export class CpuJobsClient {
   private verifyHostProtocol(signal: AbortSignal): Promise<void> {
     if (!this.protocolHandshake) {
       const handshake = (async () => {
-        const response = await fetch(new URL("/api/simforge/host/capabilities", this.baseUrl), {
+        const response = await fetch(this.host.toURL(hostPath("/api/simforge/host/capabilities")), {
           headers: { authorization: `Bearer ${this.token}` },
           signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),
         });
@@ -340,7 +347,7 @@ export class CpuJobsClient {
     method: "POST" | "PATCH" = "POST",
   ): Promise<JsonObject | null> {
     await this.verifyHostProtocol(signal);
-    const response = await fetch(new URL(path, this.baseUrl), {
+    const response = await fetch(this.host.toURL(hostPath(path)), {
       method,
       headers: {
         authorization: `Bearer ${this.token}`,
