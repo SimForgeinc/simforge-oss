@@ -33,15 +33,10 @@ const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
  */
 export function AppSwitcherGraphicsLevel() {
   const preference = useRenderingPreference() ?? "high";
-  const index = SCENARIO_AUTHORING_QUALITY_CHOICES.findIndex(
-    (choice) => choice.id === preference,
-  );
-  const current =
-    SCENARIO_AUTHORING_QUALITY_CHOICES[index === -1 ? 0 : index];
-  const next =
-    SCENARIO_AUTHORING_QUALITY_CHOICES[
-      ((index === -1 ? 0 : index) + 1) % SCENARIO_AUTHORING_QUALITY_CHOICES.length
-    ];
+  const levels = SCENARIO_AUTHORING_QUALITY_CHOICES;
+  const at = levels.findIndex((choice) => choice.id === preference);
+  const current = levels[at] ?? levels[0];
+  const next = levels[(Math.max(at, 0) + 1) % levels.length] ?? levels[0];
   const Icon = LEVEL_ICONS[current.id];
 
   return (
