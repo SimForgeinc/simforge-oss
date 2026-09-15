@@ -201,11 +201,17 @@ async function main() {
   await mkdir(config.output, { recursive: true });
   const runs = [];
   for (let index = 0; index < config.repeats; index += 1) runs.push(await runIteration(config, index, index === 0 ? 'cold' : 'warm'));
+  let qualityGate = { status: "not-run", reason: "No --reference supplied." };
+  if (args.get("reference")) {
+    const gateOut = path.join(config.output, "quality-gate.json");
+    const gate = await run([process.execPath, path.join(ROOT, "scripts/benchmarks/quality-gate.mjs"), "--reference", path.resolve(args.get("reference")), "--candidate", config.output, "--out", gateOut], { cwd: ROOT });
+    qualityGate = { status: gate.code === 0 ? "passed" : "rejected", report: await readJson(gateOut).catch(() => null), stderr: gate.stderr.slice(-4000) };
+  }
   const reportBase = {
     schema: 'simforge.cli-render-benchmark/v1', benchmark: 'cli-render', generatedAt: new Date().toISOString(),
     sourceRevision: (await run(['git', 'rev-parse', 'HEAD'], { cwd: ROOT })).stdout.trim(),
     corpus: config, runs, aggregate: aggregate(runs, config),
-    qualityGate: args.get('reference') ? { reference: args.get('reference'), command: 'node scripts/benchmarks/quality-gate.mjs' } : { status: 'not-run', reason: 'No --reference supplied.' },
+    qualityGate,
     limitations: {
       compileAndAssetSplit: 'render submit wall time includes freeze, map/asset preparation, and scenario compile; the host DTO exposes no independent counters.',
       nativeAvailability: config.engine === 'native' ? 'Requested native; a failed run is rejected rather than relabelled.' : 'Browser engine requested explicitly; these numbers are CLI orchestration around browser rendering, not native rendering.',

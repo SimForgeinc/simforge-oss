@@ -5,7 +5,7 @@
  * is no accepted speed win. ffmpeg is used for PSNR/SSIM and VMAF when the
  * installed build exposes libvmaf.
  */
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs, requireArg, run, sha256, writeJson, collectDirectoryFiles } from './lib/common.mjs';
@@ -39,12 +39,14 @@ async function ffmpegMetric(filter, reference, candidate, scratch) {
   let text = `${result.stdout}\n${result.stderr}`;
   try { text += `\n${await readFile(log, 'utf8')}`; } catch { /* VMAF may only log to stderr. */ }
   const matches = filter === 'psnr'
-    ? [...text.matchAll(/(?:psnr_avg|average):([0-9.]+)/g)]
+    ? [...text.matchAll(/(?:psnr_avg|average):([0-9.]+|inf)/gi)]
     : filter === 'ssim'
       ? [...text.matchAll(/All:([0-9.]+)/g)]
       : [...text.matchAll(/(?:mean|aggregate).*?(?:vmaf_score|score)[^0-9]*([0-9.]+)/gi)];
   await rm(log, { force: true }).catch(() => undefined);
-  return { value: matches.length ? Number(matches.at(-1)[1]) : null, available: result.code === 0 && matches.length > 0, stderr: result.stderr.slice(-1000) };
+  const token = matches.at(-1)?.[1] ?? null;
+  const value = token?.toLowerCase() === 'inf' ? 1000 : (token === null ? null : Number(token));
+  return { value, available: result.code === 0 && matches.length > 0, stderr: result.stderr.slice(-1000) };
 }
 
 function scrub(value) {
