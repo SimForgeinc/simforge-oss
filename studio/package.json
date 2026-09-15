@@ -25,6 +25,7 @@
     "test:models": "tsx --test app/lib/models/__tests__/model-run-store.test.ts worker/__tests__/model-run-loop.test.ts",
     "test:map-cache": "tsx --test app/lib/map-cache/__tests__/service.test.ts && node --test desktop/__tests__/map-cache.test.mjs",
     "test:eval": "tsx --test app/lib/evaluation/__tests__/eval-api.test.ts",
+  "test:host-protocol": "tsx --test worker/__tests__/host-protocol.test.ts",
     "test:hifi-preview": "tsx --test app/lib/hifi-preview/__tests__/camera-roundtrip.test.ts worker/__tests__/native-ready-map.test.ts worker/__tests__/payload-framing.test.ts",
     "test:fresh-schema": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts",
     "test:onboarding": "tsx --test app/lib/host/__tests__/onboarding-gate.test.ts app/components/map-preparation/__tests__/useMapPreparation.test.ts",
