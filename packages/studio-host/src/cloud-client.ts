@@ -1,5 +1,6 @@
 import type {
   StudioCloudAccount,
+  StudioCloudAccountDeletion,
   StudioCloudInvitation,
   StudioCloudOrganization,
   StudioCloudPublishResult,
@@ -59,7 +60,14 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
   const fetchImpl = options.fetch ?? fetch;
   const baseUrl = options.baseUrl?.replace(/\/+$/, "") ?? "";
 
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  /**
+   * `preferServerMessage` keeps the local service's message instead of the
+   * product copy below. Used by the destructive verbs, whose refusals are
+   * specific in a way generic copy cannot be — which organization blocks the
+   * deletion and how many members it has, or the fact that a rejected password
+   * deleted nothing.
+   */
+  async function request<T>(path: string, init: RequestInit = {}, preferServerMessage = false): Promise<T> {
     const response = await fetchImpl(`${baseUrl}${CLOUD}${path}`, {
       ...init,
       cache: "no-store",
@@ -73,10 +81,13 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
     }
     const body = (await response.json().catch(() => null)) as ErrorBody | null;
     const code = body?.error ?? `request_failed_${response.status}`;
+    const known = preferServerMessage
+      ? body?.message ?? STUDIO_CLOUD_ERROR_MESSAGES[code]
+      : STUDIO_CLOUD_ERROR_MESSAGES[code] ?? body?.message;
     throw new StudioHostRequestError(
       code,
       response.status,
-      STUDIO_CLOUD_ERROR_MESSAGES[code] ?? body?.message ?? (body?.error ? undefined : `Request failed (${response.status}).`),
+      known ?? (body?.error ? undefined : `Request failed (${response.status}).`),
     );
   }
 
@@ -116,6 +127,13 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
     },
     updateAccount(input, signal) {
       return request<StudioCloudAccount>("/account", { method: "PATCH", body: JSON.stringify(input), signal });
+    },
+    deleteAccount(input, signal) {
+      return request<StudioCloudAccountDeletion>(
+        "/account",
+        { method: "DELETE", body: JSON.stringify(input), signal },
+        true,
+      );
     },
     revokeSession(id, signal) {
       return request<{ ok: true }>(`/account/sessions/${encodeURIComponent(id)}`, { method: "DELETE", signal });

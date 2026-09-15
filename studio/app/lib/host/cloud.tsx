@@ -15,6 +15,7 @@ import {
   isDesktopShell,
   StudioHostRequestError,
   type StudioCloudAccount,
+  type StudioCloudAccountDeletion,
   type StudioCloudInvitation,
   type StudioCloudProvider,
   type StudioCloudService,
@@ -68,6 +69,19 @@ export type StudioCloudConnection = {
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<boolean>;
   updateAccount(input: { name: string }): Promise<StudioCloudAccount | null>;
   revokeSession(id: string): Promise<boolean>;
+  /**
+   * Irreversibly delete the signed-in account, re-authenticating with the
+   * password. Answers `false` and sets `error` when the Cloud refuses, leaving
+   * the account and this sign-in untouched. On success `status` becomes
+   * disconnected and {@link accountDeleted} carries what was destroyed.
+   */
+  deleteAccount(input: { password: string }): Promise<boolean>;
+  /**
+   * The last completed deletion, kept across the signed-in -> signed-out
+   * transition so the signed-out surface can say what happened. Cleared by the
+   * next sign-in or sign-up.
+   */
+  accountDeleted: StudioCloudAccountDeletion | null;
   acceptInvitation(id: string): Promise<boolean>;
   declineInvitation(id: string): Promise<boolean>;
   acceptInvitationLink(token: string): Promise<boolean>;
@@ -98,6 +112,7 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
+  const [accountDeleted, setAccountDeleted] = useState<StudioCloudAccountDeletion | null>(null);
   const poll = useRef<AbortController | null>(null);
   const mapScope = status?.state === "connected" ? `${status.user?.id}:${status.activeOrganizationId}` : status?.state;
   useEffect(() => {
@@ -249,8 +264,14 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
       closeAccountPanel: () => setAccountPanelOpen(false),
       refresh,
       connect,
-      signIn: (input) => withStatus("Sign-in failed.", () => studioCloud.signIn(input)),
-      signUp: (input) => withStatus("The account could not be created.", () => studioCloud.signUp(input)),
+      signIn: (input) => {
+        setAccountDeleted(null);
+        return withStatus("Sign-in failed.", () => studioCloud.signIn(input));
+      },
+      signUp: (input) => {
+        setAccountDeleted(null);
+        return withStatus("The account could not be created.", () => studioCloud.signUp(input));
+      },
       verifyEmail: (code) => withStatus("The code could not be checked.", () => studioCloud.verifyEmail({ code })),
       resendVerification: () => withStatus("A new code could not be sent.", () => studioCloud.resendVerification()),
       forgotPassword: async (email) => (await perform("The reset code could not be sent.", () => studioCloud.forgotPassword({ email }))) !== null,
@@ -260,6 +281,20 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
         setStatus((current) => current?.user ? { ...current, user: { ...current.user, name: account.user.name } } : current);
       }),
       revokeSession: async (id) => (await perform("The device could not be signed out.", () => studioCloud.revokeSession(id))) !== null,
+      accountDeleted,
+      deleteAccount: async (input) => {
+        const deletion = await perform("The account could not be deleted.", async () => {
+          const result = await studioCloud.deleteAccount(input);
+          // The Cloud revoked every session in the same transaction and the
+          // local service has already dropped the credential, so read the
+          // now signed-out status rather than leaving the dashboard showing
+          // an account that no longer exists.
+          setStatus(await studioCloud.status());
+          return result;
+        });
+        setAccountDeleted(deletion);
+        return deletion !== null;
+      },
       acceptInvitation: async (id) => (await perform("The invitation could not be accepted.", () => studioCloud.acceptInvitation(id))) !== null,
       declineInvitation: async (id) => (await perform("The invitation could not be declined.", () => studioCloud.declineInvitation(id))) !== null,
       acceptInvitationLink: async (token) => (await perform("The invite link could not be used.", () => studioCloud.acceptInvitationLink(token))) !== null,
@@ -268,7 +303,7 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
       listInvitations: loadInvitations,
       listOrganizations: loadOrganizations,
     }),
-    [status, loading, error, accountPanelOpen, refresh, connect, perform, withStatus],
+    [status, loading, error, accountPanelOpen, accountDeleted, refresh, connect, perform, withStatus],
   );
 
   return <StudioCloudContext.Provider value={value}>{children}</StudioCloudContext.Provider>;

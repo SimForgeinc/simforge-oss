@@ -143,6 +143,7 @@ const COMMANDS = [
   { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
   { name: 'cloud sign-in|sign-up|verify-email|resend-code|forgot-password|reset-password|sign-out', summary: 'headless SimCloud account flows: --email (plus --name for sign-up, --code for verify/reset); the password comes from SIMFORGE_CLOUD_PASSWORD, --password-stdin or a no-echo prompt, never from argv' },
+  { name: 'cloud delete-account', summary: 'permanently delete the signed-in SimCloud account; needs --yes and the password (same sources as sign-in), closes any organization it is the only member of, and keeps everything on this computer' },
   { name: 'cloud status|connect|organizations|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
