@@ -35,9 +35,9 @@ import {
  * `/api/simforge/host/pair` is exempt for the same reason: a shell claiming a
  * pairing code has no credentials yet, and the minting half checks the bearer.
  *
- * Without a control token (the server was started bare, `next dev`, outside
- * the supervisor) the gate cannot verify anything and refuses application
- * traffic rather than degrading to an open loopback service.
+ * When `SIMFORGE_LOCAL_OPEN_ACCESS=1`, the local daemon is intentionally
+ * unauthenticated for a private LAN/tailnet development session. This is
+ * explicit and opt-in; it bypasses only the host gate, not Cloud credentials.
  */
 
 const EXEMPT_PATHS = new Set(["/api/simforge/cloud/callback", "/api/simforge/host/session", "/api/simforge/host/pair"]);
@@ -48,6 +48,7 @@ function json(status: number, error: string, detail: string) {
 }
 
 export function proxy(request: NextRequest) {
+  if (process.env.SIMFORGE_LOCAL_OPEN_ACCESS === "1") return NextResponse.next();
   if (EXEMPT_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
   const controlToken = process.env[LOCAL_HOST_TOKEN_ENV];
   if (!controlToken) {
