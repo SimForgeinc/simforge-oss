@@ -285,7 +285,9 @@ function ProfileCard({
       <dl {...stylex.props(plate.facts)}>
         <div {...stylex.props(plate.fact)}>
           <dt {...stylex.props(plate.factLabel)}>Organization</dt>
-          <dd {...stylex.props(plate.factValue, plate.truncate)}>
+          {/* Wraps rather than truncating: an organization name plus a role is
+              routinely wider than this column, and the name is the fact. */}
+          <dd {...stylex.props(plate.factValue)}>
             {organization
               ? `${organization.name} · ${organization.role}`
               : connected

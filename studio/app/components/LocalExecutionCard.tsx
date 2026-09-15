@@ -10,13 +10,20 @@ import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { card, local, readyPill, action } from "@/app/components/host-status-cards.stylex";
 import { studioHost } from "@/app/lib/host";
 
+/**
+ * One fact. The value WRAPS rather than truncating: these are the strings an
+ * operator copies when an install is wrong - a data folder, a runtime path, a
+ * content digest, a target triple - and `card.truncate` hid the end of every
+ * one of them behind an ellipsis, with the full text reachable only as a
+ * tooltip. `local.rowValue` breaks mid-token because paths carry no spaces.
+ */
 function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div {...stylex.props(local.row)}>
       <dt {...stylex.props(card.factLabel, local.rowLabel)}>
         {label}
       </dt>
-      <dd {...stylex.props(local.rowValue, card.truncate, mono && card.mono)} title={value}>
+      <dd {...stylex.props(local.rowValue, mono && card.mono)} title={value}>
         {value}
       </dd>
     </div>
