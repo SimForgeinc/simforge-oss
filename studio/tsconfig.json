@@ -53,6 +53,7 @@
       "@simforge-oss/maps/ingest": ["../packages/maps/src/ingest.ts"],
       "@simforge-oss/maps/topology": ["../packages/maps/src/topology.ts"],
       "@simforge-oss/maps/opendrive": ["../packages/maps/src/opendrive.ts"],
+      "@simforge-oss/maps/coordinate-frame": ["../packages/maps/src/coordinate-frame.ts"],
       "@simforge-oss/openscenario": ["../packages/openscenario/src/index.ts"],
       "@simforge-oss/openscenario/esmini": ["../packages/openscenario/src/esmini/index.ts"],
       "@simforge-oss/openscenario/execution-plan": ["../packages/openscenario/src/execution-plan.ts"],

@@ -9,6 +9,7 @@ import type {
   ScenarioExportDto,
   ScenarioGalleryItemDto,
   ScenarioMapDescriptorDto,
+  ScenarioMapCoverageDto,
   ScenarioMaterializedTrafficReferenceDto,
   ScenarioOperationalJobDto,
   ScenarioRatingAggregateDto,
@@ -57,6 +58,7 @@ type UploadReservation = {
 const DATASET_READ_KEY = "datasets";
 const TAG_READ_KEY = "tags";
 const MAP_READ_KEY = "maps";
+const MAP_FOOTPRINT_READ_KEY = "map-footprints";
 const CAPABILITIES_READ_KEY = "capabilities";
 const MAP_SHARE_MS = 5 * 60_000;
 const RENDER_JOBS = "/api/simforge/render-jobs";
@@ -415,6 +417,14 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
         MAP_READ_KEY,
         MAP_SHARE_MS,
         async () => (await request<{ maps: ScenarioMapDescriptorDto[] }>("/api/simforge/maps")).maps.map(mapEntry),
+        signal,
+      );
+    },
+    listMapFootprints(signal) {
+      return shared.read(
+        MAP_FOOTPRINT_READ_KEY,
+        MAP_SHARE_MS,
+        () => request<ScenarioMapCoverageDto>("/api/simforge/maps/footprints"),
         signal,
       );
     },
