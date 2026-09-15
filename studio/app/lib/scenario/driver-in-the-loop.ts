@@ -8,6 +8,7 @@
  * — so that a refusal is a 409 with a reason rather than a dead drive screen.
  */
 
+import { competingMotionInteractions } from "@simforge-oss/editor";
 import {
   instantiateSensorRig,
   type ScenarioTemplateV2,
@@ -88,9 +89,21 @@ export function resolveDriverRole(
 
 /**
  * The variation's content: the base scenario with a sensor rig guaranteed on
- * the driven actor. The recorded clip itself is written by the drive session
- * once it exists, through the same `replaceActorMotion` the editor uses, so
- * nothing here touches choreography.
+ * the driven actor and that actor's authored motion already displaced.
+ *
+ * The rig is there because the render action is disabled without a sensor
+ * profile, so a variation created for driving would otherwise be born
+ * un-renderable.
+ *
+ * The motion has to go *here*, before the drive, not when the take is saved.
+ * `replaceActorMotion` does displace it on save — but the world the human
+ * drives is compiled from this content, so an authored route left on the
+ * driven actor is compiled into the drive: the engine spawns the actor at that
+ * route's implied velocity and keeps the route as a second claim on the same
+ * body. On a scenario whose route steps 167 m per second that is a van handed
+ * to the driver at 620 km/h, which then spins out and slides for the rest of
+ * the clip no matter what the human does. Every other actor keeps its
+ * choreography; the driver's take is the only motion being replaced.
  */
 export function driverInTheLoopContent(
   template: ScenarioTemplateV2,
@@ -98,18 +111,39 @@ export function driverInTheLoopContent(
 ): ScenarioTemplateV2 {
   const role = template.roles.find((candidate) => candidate.id === roleId);
   if (!role) throw new Error(`Cannot prepare a drive for missing actor "${roleId}".`);
-  if (role.actor.sensors.length > 0) return template;
-  const sensors = instantiateSensorRig(DRIVER_SENSOR_RIG_ID, {
-    class: role.actor.class,
-    ...(role.actor.dims === undefined ? {} : { dims: role.actor.dims }),
-  });
+  const displaced = new Set(
+    competingMotionInteractions(template.choreography.interactions, roleId).map(
+      (interaction) => interaction.id,
+    ),
+  );
+  const sensors = role.actor.sensors.length > 0
+    ? null
+    : instantiateSensorRig(DRIVER_SENSOR_RIG_ID, {
+        class: role.actor.class,
+        ...(role.actor.dims === undefined ? {} : { dims: role.actor.dims }),
+      });
+  if (sensors === null && displaced.size === 0) return template;
   return {
     ...template,
-    roles: template.roles.map((candidate) =>
-      candidate.id === roleId
-        ? { ...candidate, actor: { ...candidate.actor, sensors } }
-        : candidate,
-    ),
+    ...(displaced.size === 0
+      ? {}
+      : {
+          choreography: {
+            ...template.choreography,
+            interactions: template.choreography.interactions.filter(
+              (interaction) => !displaced.has(interaction.id),
+            ),
+          },
+        }),
+    ...(sensors === null
+      ? {}
+      : {
+          roles: template.roles.map((candidate) =>
+            candidate.id === roleId
+              ? { ...candidate, actor: { ...candidate.actor, sensors } }
+              : candidate,
+          ),
+        }),
   };
 }
 

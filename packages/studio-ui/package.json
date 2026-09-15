@@ -305,6 +305,10 @@
         "types": "./dist/scenario/editor/ScenarioTimelineDock.d.ts",
         "default": "./dist/scenario/editor/ScenarioTimelineDock.js"
       },
+      "./scenario/drive-route": {
+        "types": "./dist/scenario/drive-route.d.ts",
+        "default": "./dist/scenario/drive-route.js"
+      },
       "./scenario/editor/authoring-quality": {
         "types": "./dist/scenario/editor/authoring-quality.d.ts",
         "default": "./dist/scenario/editor/authoring-quality.js"
@@ -780,6 +784,11 @@
       "development": "./src/scenario/editor/ScenarioTimelineDock.tsx",
       "types": "./dist/scenario/editor/ScenarioTimelineDock.d.ts",
       "default": "./dist/scenario/editor/ScenarioTimelineDock.js"
+    },
+    "./scenario/drive-route": {
+      "development": "./src/scenario/drive-route.ts",
+      "types": "./dist/scenario/drive-route.d.ts",
+      "default": "./dist/scenario/drive-route.js"
     },
     "./scenario/editor/authoring-quality": {
       "development": "./src/scenario/editor/authoring-quality.ts",

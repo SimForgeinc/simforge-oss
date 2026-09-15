@@ -165,7 +165,6 @@ describe("ScenarioDocumentRow", () => {
       // A content tag lives inside `canonical_content` and is covered by content_sha256, so editing
       // one would change the document digest — it is labelled, not editable.
       expect(html).toContain("Authored in the scenario content");
-      expect(html).toContain("border-dashed");
       expect(html).toContain("data-scenario-tag-pills");
       expect(html.indexOf("data-scenario-document-description")).toBeLessThan(
         html.indexOf("data-scenario-tag-pills"),

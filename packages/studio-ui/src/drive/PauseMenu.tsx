@@ -15,11 +15,14 @@ const CAMERA_LABELS: Readonly<Record<DriveCameraKind, string>> = {
   orbit: "Orbit",
 };
 
+/**
+ * The key map, minus the handbrake: whether Space is a handbrake at all
+ * depends on the runtime behind this session, so that row is built per render.
+ */
 const KEY_HELP: readonly (readonly [string, string])[] = [
   ["W / ↑", "Throttle"],
   ["S / ↓", "Brake"],
   ["A D / ← →", "Steer"],
-  ["Space", "Handbrake"],
   ["R", "Drive the clip again"],
   ["C", "Camera"],
   ["M", "Mute"],
@@ -204,6 +207,7 @@ export function PauseMenu({
   muted,
   volume,
   gamepadConnected,
+  handbrake,
   debug,
   onResume,
   onCameraKind,
@@ -217,6 +221,12 @@ export function PauseMenu({
   /** Master volume, 0..1. */
   volume: number;
   gamepadConnected: boolean;
+  /**
+   * Whether the runtime behind this drive holds a real handbrake. Where it does
+   * not, the command layer folds Space into the brake pedal, and saying
+   * "Handbrake" would promise a control the car does not have.
+   */
+  handbrake: boolean;
   debug: boolean;
   onResume: () => void;
   onCameraKind: (kind: DriveCameraKind) => void;
@@ -226,6 +236,11 @@ export function PauseMenu({
   onExit: () => void;
 }) {
   const level = muted ? 0 : volume;
+  const keys: readonly (readonly [string, string])[] = [
+    ...KEY_HELP.slice(0, 3),
+    ["Space", handbrake ? "Handbrake" : "Brake hard (no handbrake on this runtime)"],
+    ...KEY_HELP.slice(3),
+  ];
   return (
     <div
       {...stylex.props(driveChrome.menuLayer)}
@@ -311,9 +326,9 @@ export function PauseMenu({
           <div>
             <p {...stylex.props(driveChrome.sectionLabel)}>Controls</p>
             <dl {...stylex.props(styles.keys)}>
-              {KEY_HELP.map(([keys, label]) => (
+              {keys.map(([caps, label]) => (
                 <div {...stylex.props(styles.keyPair)} key={label}>
-                  <dt {...stylex.props(styles.keyCap)}>{keys}</dt>
+                  <dt {...stylex.props(styles.keyCap)}>{caps}</dt>
                   <dd {...stylex.props(styles.keyLabel)}>{label}</dd>
                 </div>
               ))}
