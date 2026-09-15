@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { requireAppContext } from "@/app/lib/db/app-context";
+// Blocks rather than prerenders: this route resolves the app context. See ../page.tsx.
+export const instant = false;
 
 /**
  * `?policy=<id>&policy=<id>[&policy=...]`, in order; the first is the baseline.

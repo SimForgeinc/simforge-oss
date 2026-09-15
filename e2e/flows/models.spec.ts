@@ -195,6 +195,22 @@ async function ok<T>(studio: StudioLike, path: string, init: { method?: string; 
 }
 
 /**
+ * Complete first-run setup through the product's own route.
+ *
+ * A fresh data root opens on the onboarding gate, which covers the dashboard:
+ * the screen under it renders but is hidden, so every assertion against it
+ * fails on visibility rather than on content. Dismissing it the way the
+ * product does is a precondition of driving any dashboard screen, not a
+ * relaxation of one.
+ */
+async function completeFirstRunSetup(session: { api<T>(path: string, init?: RequestInit): Promise<T> }) {
+  await session.api("/api/simforge/host/setup", {
+    method: "PUT",
+    body: JSON.stringify({ mode: "local", quality: "roads-only" }),
+  });
+}
+
+/**
  * A studio host with its own model assets root and no route to Hugging Face.
  *
  * `HF_ENDPOINT` points at a port nothing listens on: the stub lane asserts
@@ -214,10 +230,7 @@ async function isolatedStudio(
       ...extraEnv,
     },
   });
-  await session.api("/api/simforge/host/setup", {
-    method: "PUT",
-    body: JSON.stringify({ mode: "local", quality: "roads-only" }),
-  });
+  await completeFirstRunSetup(session);
   return Object.assign(session, { assetsRoot });
 }
 
@@ -933,10 +946,17 @@ test.describe("model evaluation — fixture engine lane (contracts only, no accu
 test.describe("staging open-loop upload flow (Alpamayo 1.5 / 2 Super)", () => {
   test("the upload launcher gates the flow on capability before any cloud call", async ({ studio }, testInfo) => {
     test.setTimeout(240_000);
+    await completeFirstRunSetup(studio);
     await studio.goto("/dashboard/evaluation");
     const page = studio.page;
 
     await expect(page.getByTestId("evaluation-workspace")).toBeVisible({ timeout: 120_000 });
+    // This host has no SimCloud session, so the cloud run list cannot be read.
+    // The rail has to say that and stop, in both words: an unreadable list is
+    // never reported as a list still loading, because the run rail holds `null`
+    // jobs in both cases and only one of them will ever change.
+    await expect(page.getByText("Cloud runs are unavailable")).toBeVisible();
+    await expect(page.getByText("Loading runs…")).toHaveCount(0);
     // The product promise for this flow, stated on the screen: approximate,
     // exploratory, unscored.
     await expect(page.getByText("This exploratory workflow is approximate and unscored.")).toBeVisible();
@@ -976,6 +996,7 @@ test.describe("staging open-loop upload flow (Alpamayo 1.5 / 2 Super)", () => {
 
     const videoPath = process.env.SIMFORGE_E2E_DRIVING_VIDEO!;
     const page = studio.page;
+    await completeFirstRunSetup(studio);
     await studio.goto("/dashboard/evaluation");
     await expect(page.getByTestId("evaluation-workspace")).toBeVisible({ timeout: 120_000 });
 

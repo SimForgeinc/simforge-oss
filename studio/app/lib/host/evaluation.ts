@@ -43,7 +43,7 @@ export function useEvaluationGateway(organizationId: string | null = null): Eval
  * own reason attached: the model picker prints it instead of silently offering
  * a local run that would fail.
  */
-export function useHostExecutionSnapshot(workspaceId: string | null): HostExecutionSnapshot {
+export function useHostExecutionSnapshot(organizationId: string | null): HostExecutionSnapshot {
   const capabilities = useStudioHostCapabilities(studioHost);
   const cloud = useStudioCloudStatus();
 
@@ -60,7 +60,7 @@ export function useHostExecutionSnapshot(workspaceId: string | null): HostExecut
             : { available: false, reason: runtime.reason },
       cloud: {
         connected: status?.state === "connected",
-        workspaceId,
+        organizationId,
         reason:
           status === null
             ? "Checking the SimCloud connection…"
@@ -71,5 +71,5 @@ export function useHostExecutionSnapshot(workspaceId: string | null): HostExecut
                 : "Connect a SimCloud account in Settings to submit cloud runs. Cloud runs do not require downloading any weights.",
       },
     };
-  }, [capabilities.capabilities, cloud.status, workspaceId]);
+  }, [capabilities.capabilities, cloud.status, organizationId]);
 }

@@ -42,7 +42,7 @@ export function RunRail({
   onSelectRun,
   onSelectLocalRun,
   onNewPrediction,
-  workspacePicker,
+  organizationPicker,
   listError,
 }: {
   /** Null while the first page of cloud jobs is still loading, or if it failed. */
@@ -56,7 +56,7 @@ export function RunRail({
   onSelectRun: (jobId: string) => void;
   onSelectLocalRun: (runId: string) => void;
   onNewPrediction: () => void;
-  workspacePicker?: React.ReactNode;
+  organizationPicker?: React.ReactNode;
 }) {
   const groups: RailGroup[] = groupRunsByScenario(jobs ?? [], scenarioTitles).map((group) => ({
     key: group.key,
@@ -127,24 +127,28 @@ export function RunRail({
             <Plus aria-hidden="true" />
             New prediction
           </Button>
-          {workspacePicker}
+          {organizationPicker}
         </div>
       }
       groups={groups}
+      status={
+        // The cloud list failing is true of the section whether or not this
+        // machine has runs of its own. Saying it only in the empty state hid
+        // it behind the first local run: the list looked complete and was not.
+        listError ? (
+          <p {...stylex.props(styles.status)}>
+            <span {...stylex.props(styles.statusTitle)}>Cloud runs are unavailable</span>
+            {listError} Runs started on this machine still appear here.
+          </p>
+        ) : null
+      }
       empty={
         <EmptyState
-          title={
-            listError
-              ? "Cloud runs are unavailable"
-              : jobs === null
-                ? "Loading runs…"
-                : "No runs yet"
-          }
-          description={
-            listError
-              ? `${listError} Runs started on this machine still appear here.`
-              : "Runs you submit here and from the web portal both appear in this list, for everyone in the workspace."
-          }
+          // A failed list is not a pending one: `jobs` stays null when the
+          // request rejected, and calling that "loading" is the spin this
+          // rail is not allowed to do. The failure itself is stated above.
+          title={jobs === null && listError === null ? "Loading runs…" : "No runs yet"}
+          description="Runs you submit here and from the web portal both appear in this list, for everyone in the workspace."
         />
       }
     />

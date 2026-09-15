@@ -71,6 +71,7 @@ export function RailList({
   title,
   count,
   actions,
+  status,
   groups,
   empty,
   ariaLabel,
@@ -80,6 +81,12 @@ export function RailList({
   count?: number | null;
   /** The section's primary action and its workspace picker. */
   actions?: ReactNode;
+  /**
+   * Something true of the whole section, above the list and regardless of it:
+   * a source the section could not read. It is not the empty state, because a
+   * section with rows from one source and a failure from another has both.
+   */
+  status?: ReactNode;
   groups: readonly RailGroup[];
   /** Shown instead of the list when there is nothing in it. */
   empty?: ReactNode;
@@ -118,6 +125,7 @@ export function RailList({
         {actions}
       </div>
       <div {...stylex.props(styles.scroller)} onKeyDown={onKeyDown}>
+        {status ? <div {...stylex.props(styles.status)}>{status}</div> : null}
         {hasRows ? (
           groups
             .filter((group) => group.rows.length > 0)

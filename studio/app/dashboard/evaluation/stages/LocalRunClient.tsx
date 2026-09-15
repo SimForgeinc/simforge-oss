@@ -13,7 +13,7 @@ import * as stylex from "@stylexjs/stylex";
  * same thing they mean on a cloud run.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { readEvalResultManifest, RefusalNotice } from "@simforge-oss/studio-ui/evaluation";
 import type { EvalResultManifest } from "@simforge-oss/studio-ui/evaluation";
@@ -63,29 +63,6 @@ export function LocalRunClient({ runId }: { runId: string }) {
         const row = payload.run;
         setRun(row);
         setError(null);
-
-        // The run row's `metrics` is a summary; the manifest is the result. Read
-        // it through the same reader the cloud screen uses, so a document this
-        // build cannot understand is reported rather than silently skipped.
-        if (row.status === "succeeded" || row.status === "failed") {
-          const manifestResponse = await fetch(
-            `/api/simforge/local-runs/${encodeURIComponent(runId)}/result`,
-            { cache: "no-store", signal },
-          );
-          if (manifestResponse.ok) {
-            const read = readEvalResultManifest(await manifestResponse.json());
-            if (read.ok) {
-              setManifest(read.value);
-              setManifestProblem(null);
-            } else {
-              setManifestProblem(`This run's result.json could not be displayed: ${read.reason}`);
-            }
-          } else if (manifestResponse.status !== 404) {
-            setManifestProblem(
-              `This run's result.json could not be read (${manifestResponse.status}).`,
-            );
-          }
-        }
       } catch (cause) {
         if (signal.aborted) return;
         setError(`The run could not be read: ${cause instanceof Error ? cause.message : String(cause)}`);
@@ -96,6 +73,52 @@ export function LocalRunClient({ runId }: { runId: string }) {
 
   const live = run === null || run.status === "queued" || run.status === "running";
   useVisiblePolling(refresh, POLL_MS, live, runId);
+
+  /**
+   * The result document, read once the run has reached a terminal status.
+   *
+   * Deliberately its own request rather than a second leg of the poll above.
+   * `useVisiblePolling` aborts the in-flight request whenever `enabled`
+   * changes, and `enabled` is exactly "this run is still live" — so reading
+   * the manifest inside the polling callback meant the first read of a
+   * finished run aborted itself between the run row and the manifest, and a
+   * run that was already terminal when the screen opened never showed its
+   * result at all: only the run row's metrics summary.
+   *
+   * Read through the same reader the cloud screen uses, so a document this
+   * build cannot understand is reported rather than silently skipped.
+   */
+  const terminal = run !== null && (run.status === "succeeded" || run.status === "failed");
+  useEffect(() => {
+    setManifest(null);
+    setManifestProblem(null);
+    if (!terminal) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`/api/simforge/local-runs/${encodeURIComponent(runId)}/result`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const read = readEvalResultManifest(await response.json());
+          if (read.ok) setManifest(read.value);
+          else setManifestProblem(`This run's result.json could not be displayed: ${read.reason}`);
+          return;
+        }
+        // 404 is the honest answer while the worker has not written it yet.
+        if (response.status !== 404) {
+          setManifestProblem(`This run's result.json could not be read (${response.status}).`);
+        }
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        setManifestProblem(
+          `This run's result.json could not be read: ${cause instanceof Error ? cause.message : String(cause)}`,
+        );
+      }
+    })();
+    return () => controller.abort();
+  }, [runId, terminal]);
 
   return (
     <div {...stylex.props(styles.content6)} >

@@ -8,7 +8,7 @@ function job(id: string, createdAt: string, params: unknown = null): ComputeJob 
     kind: "alpamayo.openloop",
     status: "succeeded",
     origin: "desktop",
-    workspaceId: "w1",
+    organizationId: "w1",
     submittedByUserId: "u1",
     submittedByEmail: null,
     model: { family: "alpamayo-1.5", revision: "a".repeat(40), quant: "bf16" },
