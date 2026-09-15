@@ -120,7 +120,7 @@ export type HostExecutionSnapshot = {
    */
   cloud: {
     connected: boolean;
-    workspaceId: string | null;
+    organizationId: string | null;
     reason: string | null;
     kinds?: Readonly<Partial<Record<ModelFamilyId, readonly ComputeJobKind[]>>> | null;
   };

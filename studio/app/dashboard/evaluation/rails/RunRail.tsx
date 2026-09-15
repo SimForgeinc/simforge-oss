@@ -42,7 +42,7 @@ export function RunRail({
   onSelectRun,
   onSelectLocalRun,
   onNewPrediction,
-  workspacePicker,
+  organizationPicker,
   listError,
 }: {
   /** Null while the first page of cloud jobs is still loading, or if it failed. */
@@ -56,7 +56,7 @@ export function RunRail({
   onSelectRun: (jobId: string) => void;
   onSelectLocalRun: (runId: string) => void;
   onNewPrediction: () => void;
-  workspacePicker?: React.ReactNode;
+  organizationPicker?: React.ReactNode;
 }) {
   const groups: RailGroup[] = groupRunsByScenario(jobs ?? [], scenarioTitles).map((group) => ({
     key: group.key,
@@ -127,7 +127,7 @@ export function RunRail({
             <Plus aria-hidden="true" />
             New prediction
           </Button>
-          {workspacePicker}
+          {organizationPicker}
         </div>
       }
       groups={groups}

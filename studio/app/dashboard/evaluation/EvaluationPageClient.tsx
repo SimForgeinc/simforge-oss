@@ -189,10 +189,10 @@ export function EvaluationPageClient() {
         onSelectRun={selectRun}
         onSelectLocalRun={(runId) => select({ section: "runs", local: runId })}
         onNewPrediction={() => select({ section: "runs" })}
-        workspacePicker={
+        organizationPicker={
           organizations && organizations.length > 0 ? (
-            <div {...stylex.props(styles.workspace)}>
-              <span {...stylex.props(styles.workspaceLabel)}>Organization</span>
+            <div {...stylex.props(styles.organization)}>
+              <span {...stylex.props(styles.organizationLabel)}>Organization</span>
               <SelectMenu
                 label="SimCloud organization"
                 value={organizationId ?? ""}

@@ -3,12 +3,12 @@ import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.style
 
 export const styles = stylex.create({
   /** The workspace picker in the rail header. */
-  workspace: {
+  organization: {
     display: "flex",
     flexDirection: "column",
     gap: space.xs,
   },
-  workspaceLabel: {
+  organizationLabel: {
     fontFamily: text.fontMeta,
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
