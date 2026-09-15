@@ -220,7 +220,7 @@ async function installArchive(archive: string, root: string, log: (detail: strin
 }
 
 /** Builds the runtime here. The developer path: it needs a Rust toolchain. */
-async function buildRuntimeFromSource(root: string, log: (detail: string) => void): Promise<void> {
+async function buildRuntimeFromSource(root: string, log: (detail: string) => void): Promise<string> {
   const scripts = runtimeScripts();
   if (!(await exists(join(scripts, "package-runtime.mjs")))) {
     throw new Error("This installation has no runtime source to build from.");
@@ -233,8 +233,8 @@ async function buildRuntimeFromSource(root: string, log: (detail: string) => voi
   });
   const report = lastJson<{ archive?: string }>(packaged);
   if (!report.archive) throw new Error("package-runtime.mjs produced no archive");
-  await installArchive(report.archive, root, log);
-  log("Installed the runtime built from source.");
+  const installed = await installArchive(report.archive, root, log);
+  return `Built and installed the runtime from source: ${installed.version} (${installed.revision?.slice(0, 12) ?? "unknown revision"}) in ${join(root, "bin")}.`;
 }
 
 /**
@@ -247,15 +247,14 @@ async function installRuntime(root: string, log: (detail: string) => void): Prom
   const explicit = process.env.SIMFORGE_NATIVE_RUNTIME_ARCHIVE?.trim();
   if (explicit) {
     log(`Installing the archive named by SIMFORGE_NATIVE_RUNTIME_ARCHIVE: ${explicit}`);
-    await installArchive(explicit, root, log);
-    return join(root, "bin");
+    const installed = await installArchive(explicit, root, log);
+    return `Installed the local archive ${explicit}: ${installed.version} (${installed.revision?.slice(0, 12) ?? "unknown revision"}) in ${join(root, "bin")}.`;
   }
 
   const fromSource = /^(1|true|yes)$/iu.test(process.env.SIMFORGE_NATIVE_RUNTIME_FROM_SOURCE?.trim() ?? "");
   if (fromSource) {
     log("SIMFORGE_NATIVE_RUNTIME_FROM_SOURCE is set: building the runtime from source instead of installing the published artifact.");
-    await buildRuntimeFromSource(root, log);
-    return join(root, "bin");
+    return buildRuntimeFromSource(root, log);
   }
 
   let fetched: FetchedRuntime | null = null;
@@ -265,7 +264,9 @@ async function installRuntime(root: string, log: (detail: string) => void): Prom
       process.execPath,
       [join(runtimeScripts(), "fetch-runtime.mjs"), "--root", root, "--abi", String(ABI_VERSION)],
       repoRoot(),
-      (line) => log(line.slice(0, 160)),
+      // stdout is the JSON report this function parses; only progress lines
+      // are worth showing a user.
+      (line) => { if (!line.startsWith("{")) log(line.slice(0, 160)); },
     );
     fetched = lastJson<FetchedRuntime>(output);
   } catch (error) {
@@ -274,10 +275,7 @@ async function installRuntime(root: string, log: (detail: string) => void): Prom
     log(`No prebuilt runtime is published for this platform (${code}); building it from source instead, which needs a Rust toolchain.`);
   }
 
-  if (!fetched) {
-    await buildRuntimeFromSource(root, log);
-    return join(root, "bin");
-  }
+  if (!fetched) return buildRuntimeFromSource(root, log);
 
   log(
     `Verified the prebuilt runtime ${fetched.version} (${fetched.revision.slice(0, 12)}) for ${fetched.target}: sha256 ${fetched.sha256.slice(0, 12)}…, ${fetched.sizeBytes} bytes, binding ABI ${fetched.abi} matches the ABI ${ABI_VERSION} this build requires${fetched.cached ? " (already in the download cache)" : ""}.`,
@@ -288,8 +286,7 @@ async function installRuntime(root: string, log: (detail: string) => void): Prom
       `the installed runtime reports ${installed.version}/${installed.revision} but the pinned artifact is ${fetched.version}/${fetched.revision}; the archive does not hold the runtime it was published as`,
     );
   }
-  log(`Installed the prebuilt runtime ${fetched.version} (${fetched.revision.slice(0, 12)}); no source build was needed.`);
-  return join(root, "bin");
+  return `Installed the published runtime ${fetched.version} (${fetched.revision.slice(0, 12)}) for ${fetched.target} in ${join(root, "bin")}: sha256 ${fetched.sha256.slice(0, 12)}… verified, binding ABI ${fetched.abi}. No source build was needed.`;
 }
 
 async function installEncoders(log: (detail: string) => void): Promise<string> {

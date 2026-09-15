@@ -82,6 +82,9 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libx11-dev libxkbcommon-dev libwayland-dev libasound2-dev libudev-dev pkg-config
 
+      - name: Verify the release pin and the binding ABI this build satisfies
+        run: node --test scripts/__tests__/native-runtime-release.test.mjs
+
       - name: Prepare the pinned NASA sky plates
         # Gitignored derivatives the render service cannot build a scene
         # without; build-runner.mjs refuses to build without them and
