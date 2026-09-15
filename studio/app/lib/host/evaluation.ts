@@ -67,8 +67,8 @@ export function useHostExecutionSnapshot(organizationId: string | null): HostExe
             : status.state === "connected"
               ? null
               : status.state === "expired"
-                ? "Your SimCloud session expired. Reconnect in Settings to submit cloud runs."
-                : "Connect a SimCloud account in Settings to submit cloud runs. Cloud runs do not require downloading any weights.",
+                ? "Your SimCloud session expired. Sign in again in SimCloud to submit cloud runs."
+                : "Connect a SimCloud account in SimCloud to submit cloud runs. Cloud runs do not require downloading any weights.",
       },
     };
   }, [capabilities.capabilities, cloud.status, organizationId]);

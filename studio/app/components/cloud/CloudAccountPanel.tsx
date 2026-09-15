@@ -2,7 +2,7 @@
 
 import { LoaderCircle, LogOut, MailCheck, UserCog } from "lucide-react";
 import Link from "next/link";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudProvider, StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -12,12 +12,15 @@ import { banner, form } from "@/app/components/cloud/cloud-account.stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
- * Every SimCloud account flow, inline. The panel follows the connector's
- * status: signed out (or expired) shows the sign-in form with sign-up and
- * password reset one step away; signed in shows the account, the
- * verification banner until the address is verified, and sign-out. Only the
- * Google/GitHub buttons leave the app, for the system browser. Passwords and
- * codes go from these inputs to the local service and no further.
+ * The SimCloud account flows, inline, as the pieces every surface composes.
+ *
+ * {@link CloudAccountPanel} is the whole thing for a small surface (the
+ * onboarding sheet): it follows the connector's status and shows the sign-in
+ * form, the browser hop, or the signed-in account. The SimCloud panel imports
+ * the same pieces and arranges them itself, so there is exactly one
+ * implementation of each flow. Only the Google/GitHub buttons leave the app,
+ * for the system browser. Passwords and codes go from these inputs to the
+ * local service and no further.
  */
 
 const PROVIDER_LABELS: Record<StudioCloudProvider, string> = {
@@ -37,12 +40,13 @@ export function CloudAccountPanel({ onSignedIn, xstyle }: {
   if (state === null) {
     return <p {...stylex.props(form.intro, xstyle)}>Checking the SimCloud connection…</p>;
   }
-  if (state === "connecting") return <BrowserHop xstyle={xstyle} />;
+  if (state === "connecting") return <CloudBrowserHop xstyle={xstyle} />;
   if (state === "connected" && cloud.status?.user) return <SignedIn status={cloud.status} xstyle={xstyle} />;
-  return <SignedOut status={cloud.status!} onSignedIn={onSignedIn} xstyle={xstyle} />;
+  return <CloudSignInForm status={cloud.status!} onSignedIn={onSignedIn} xstyle={xstyle} />;
 }
 
-function BrowserHop({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
+/** The social hop: the provider's page owns the flow until the browser returns. */
+export function CloudBrowserHop({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
   const { disconnect } = useStudioCloudStatus();
   return (
     <div {...stylex.props(form.root, xstyle)} data-testid="cloud-account-browser-hop">
@@ -65,12 +69,35 @@ function BrowserHop({ xstyle }: { xstyle?: stylex.StyleXStyles }) {
 }
 
 function SignedIn({ status, xstyle }: { status: StudioCloudStatus; xstyle?: stylex.StyleXStyles }) {
-  const { loading, error, disconnect, verifyEmail, resendVerification } = useStudioCloudStatus();
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  return (
+    <div {...stylex.props(form.root, xstyle)} data-testid="cloud-account-signed-in">
+      <CloudVerifyEmailBanner status={status} />
+      <CloudSignOutAction
+        before={
+          <Button asChild xstyle={form.secondary} variant="outline">
+            <Link href="/dashboard/simcloud">
+              <UserCog {...stylex.props(form.icon)} aria-hidden="true" />
+              Manage account
+            </Link>
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+/**
+ * The verification banner, shown until the address is verified. Renders
+ * nothing for a verified account, so a caller can place it unconditionally.
+ */
+export function CloudVerifyEmailBanner({ status }: { status: StudioCloudStatus }) {
+  const { loading, error, verifyEmail, resendVerification } = useStudioCloudStatus();
   const [code, setCode] = useState("");
   const [resent, setResent] = useState(false);
   const codeId = useId();
-  const user = status.user!;
+  const user = status.user;
+
+  if (!user || user.emailVerified) return null;
 
   const submitCode = async (event: FormEvent) => {
     event.preventDefault();
@@ -78,95 +105,113 @@ function SignedIn({ status, xstyle }: { status: StudioCloudStatus; xstyle?: styl
   };
 
   return (
-    <div {...stylex.props(form.root, xstyle)} data-testid="cloud-account-signed-in">
-      {!user.emailVerified ? (
-        <form {...stylex.props(banner.root)} onSubmit={(event) => void submitCode(event)} data-testid="cloud-account-verify">
-          <p {...stylex.props(banner.title)}>
-            <MailCheck {...stylex.props(form.icon)} aria-hidden="true" />
-            Verify your email address
-          </p>
-          <p {...stylex.props(banner.detail)}>
-            We emailed a 6-digit code to {user.email ?? "your address"}. Enter it here to unlock workspace
-            invitations and everything else that needs a verified account.
-          </p>
-          <div {...stylex.props(form.row)}>
-            <label {...stylex.props(form.label)} htmlFor={codeId}>Code</label>
-            <Input
-              id={codeId}
-              xstyle={[form.input, form.code]}
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              required
-              value={code}
-              onChange={(event) => setCode(event.currentTarget.value.replace(/\D/g, ""))}
-            />
-            <Button xstyle={form.submit} disabled={loading || code.length !== 6} type="submit">
-              Verify
-            </Button>
-            <button
-              {...stylex.props(form.link)}
-              disabled={loading}
-              onClick={() => void resendVerification().then((ok) => setResent(ok))}
-              type="button"
-            >
-              {resent ? "Code sent again" : "Resend code"}
-            </button>
-          </div>
-          {error ? <p {...stylex.props(form.error)} role="alert">{error}</p> : null}
-        </form>
-      ) : null}
-
-      {confirmSignOut ? (
-        <div
-          {...stylex.props(cloud.confirm)}
-          role="alertdialog"
-          aria-labelledby="cloud-sign-out-title"
-          aria-describedby="cloud-sign-out-detail"
+    <form {...stylex.props(banner.root)} onSubmit={(event) => void submitCode(event)} data-testid="cloud-account-verify">
+      <p {...stylex.props(banner.title)}>
+        <MailCheck {...stylex.props(form.icon)} aria-hidden="true" />
+        Verify your email address
+      </p>
+      <p {...stylex.props(banner.detail)}>
+        We emailed a 6-digit code to {user.email ?? "your address"}. Enter it here to unlock organization
+        invitations and everything else that needs a verified account.
+      </p>
+      <div {...stylex.props(form.row)}>
+        <label {...stylex.props(form.label)} htmlFor={codeId}>Code</label>
+        <Input
+          id={codeId}
+          xstyle={[form.input, form.code]}
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          pattern="[0-9]{6}"
+          maxLength={6}
+          required
+          value={code}
+          onChange={(event) => setCode(event.currentTarget.value.replace(/\D/g, ""))}
+        />
+        <Button xstyle={form.submit} disabled={loading || code.length !== 6} type="submit">
+          Verify
+        </Button>
+        <button
+          {...stylex.props(form.link)}
+          disabled={loading}
+          onClick={() => void resendVerification().then((ok) => setResent(ok))}
+          type="button"
         >
-          <p id="cloud-sign-out-title" {...stylex.props(cloud.confirmTitle)}>Sign out of SimCloud?</p>
-          <p id="cloud-sign-out-detail" {...stylex.props(cloud.confirmDetail)}>
-            Maps that need an account and cloud storage lock until you sign in again. Local projects, renders and
-            documents on this computer are kept.
-          </p>
-          <div {...stylex.props(cloud.confirmActions)}>
-            <Button
-              xstyle={action.amber}
-              disabled={loading}
-              onClick={() => {
-                setConfirmSignOut(false);
-                void disconnect();
-              }}
-              type="button"
-            >
-              <LogOut {...stylex.props(action.icon)} aria-hidden="true" />
-              Sign out
-            </Button>
-            <Button autoFocus xstyle={action.outline} onClick={() => setConfirmSignOut(false)} type="button" variant="outline">
-              Stay signed in
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div {...stylex.props(form.row)}>
-          <Button asChild xstyle={form.secondary} variant="outline">
-            <Link href="/dashboard/account">
-              <UserCog {...stylex.props(form.icon)} aria-hidden="true" />
-              Manage account
-            </Link>
-          </Button>
-          <Button xstyle={form.secondary} disabled={loading} onClick={() => setConfirmSignOut(true)} type="button" variant="outline">
-            <LogOut {...stylex.props(form.icon)} aria-hidden="true" />
+          {resent ? "Code sent again" : "Resend code"}
+        </button>
+      </div>
+      {error ? <p {...stylex.props(form.error)} role="alert">{error}</p> : null}
+    </form>
+  );
+}
+
+/**
+ * Sign out, which always asks first: it revokes this installation's session
+ * upstream and clears the credential from this computer's vault, so
+ * account-only maps and cloud storage lock until the next sign-in.
+ */
+export function CloudSignOutAction({ before }: { before?: ReactNode }) {
+  const { loading, disconnect } = useStudioCloudStatus();
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div
+        {...stylex.props(cloud.confirm)}
+        role="alertdialog"
+        aria-labelledby="cloud-sign-out-title"
+        aria-describedby="cloud-sign-out-detail"
+      >
+        <p id="cloud-sign-out-title" {...stylex.props(cloud.confirmTitle)}>Sign out of SimCloud?</p>
+        <p id="cloud-sign-out-detail" {...stylex.props(cloud.confirmDetail)}>
+          This computer&apos;s session is revoked in SimCloud and the sign-in is removed from this computer.
+          Maps that need an account and cloud storage lock until you sign in again. Local projects, renders and
+          documents on this computer are kept, and other devices stay signed in.
+        </p>
+        <div {...stylex.props(cloud.confirmActions)}>
+          <Button
+            xstyle={action.amber}
+            data-testid="cloud-sign-out-confirm"
+            disabled={loading}
+            onClick={() => {
+              setConfirming(false);
+              void disconnect();
+            }}
+            type="button"
+          >
+            <LogOut {...stylex.props(action.icon)} aria-hidden="true" />
             Sign out
           </Button>
+          <Button autoFocus xstyle={action.outline} onClick={() => setConfirming(false)} type="button" variant="outline">
+            Stay signed in
+          </Button>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div {...stylex.props(form.row)}>
+      {before}
+      <Button
+        xstyle={form.secondary}
+        data-testid="cloud-sign-out"
+        disabled={loading}
+        onClick={() => setConfirming(true)}
+        type="button"
+        variant="outline"
+      >
+        <LogOut {...stylex.props(form.icon)} aria-hidden="true" />
+        Sign out
+      </Button>
     </div>
   );
 }
 
-function SignedOut({ status, onSignedIn, xstyle }: {
+/**
+ * The one way in: email and password, with sign-up, password reset and the
+ * configured social providers all one step away. Never a dead end.
+ */
+export function CloudSignInForm({ status, onSignedIn, xstyle }: {
   status: StudioCloudStatus;
   onSignedIn?: () => void;
   xstyle?: stylex.StyleXStyles;
@@ -308,7 +353,7 @@ function SignedOut({ status, onSignedIn, xstyle }: {
       {cloud.error ? <p {...stylex.props(form.error)} role="alert">{cloud.error}</p> : null}
 
       <div {...stylex.props(form.between)}>
-        <Button xstyle={form.submit} disabled={busy} type="submit">
+        <Button xstyle={form.submit} data-testid="cloud-account-submit" disabled={busy} type="submit">
           {busy ? <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> : null}
           {mode === "sign-up" ? "Create account" : mode === "forgot" ? "Send code" : mode === "reset" ? "Set new password" : "Sign in"}
         </Button>

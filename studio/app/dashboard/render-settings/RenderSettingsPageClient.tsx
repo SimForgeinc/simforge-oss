@@ -7,14 +7,21 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProfileMapPreparation } from "@/app/components/ProfileMapPreparation";
-import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
-import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
+import { AppStage } from "@/app/components/AppStage";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { readRenderingPreference, saveRenderingPreference, type RenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { MapAssetCacheStorage } from "@simforge-oss/studio-ui/components/MapAssetCacheStorage";
 import type { ScenarioMapOption } from "@simforge-oss/studio-ui/scenario/list/document-map-groups";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import { styles } from "./render-settings-page.stylex";
+
+/**
+ * Render Settings in the app switcher's chrome: `AppStage` supplies the smoke
+ * backdrop and the fixed, non-scrolling stage, and the surface itself is the
+ * single-page `RenderSelectionPanel` this route already used — which carries
+ * its own heading, so the stage omits its own.
+ */
+
 type Preparation = {
   profile: RenderingPreference;
   redownload?: boolean;
@@ -36,7 +43,6 @@ const RenderSelectionPanel = dynamic(
 );
 
 export function RenderSettingsPageClient() {
-  useSetPageTitle("Render Settings");
   const router = useRouter();
   const [currentProfile, setCurrentProfile] =
     useState<RenderingPreference | null>(null);
@@ -99,49 +105,46 @@ export function RenderSettingsPageClient() {
   const finish = () => router.push("/dashboard/map-assets");
 
   return (
-    <div {...stylex.props(styles.root)}>
-      <SkyCloudBackdrop />
-      <div {...stylex.props(styles.scroll)}>
-        {preparation ? (
-          <ProfileMapPreparation
-            profile={preparation.profile}
-            redownload={preparation.redownload}
-            onContinue={finish}
-            onSkip={finish}
-          />
-        ) : (
-          <RenderSelectionPanel
-            manifestUrl={benchmarkTarget?.browserManifestUrl ?? null}
-            mapLabel={benchmarkTarget?.label ?? "Current map"}
-            catalogReady={benchmarkCatalogReady}
-            currentQuality={currentProfile ?? "minimal"}
-            onChoose={choose}
-            titleId="render-settings-title"
-            descriptionId="render-settings-description"
-            footer={
-              <div {...stylex.props(styles.footer)}>
-                <MapAssetCacheStorage refreshKey={currentProfile} />
-                {currentProfile ? (
-                  <div {...stylex.props(styles.footerRow)}>
-                    <Button
-                      xstyle={styles.cacheButton}
-                      onClick={() => setConfirmRedownload(true)}
-                      type="button"
-                      variant="outline"
-                    >
-                      <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
-                      Delete cache and re-download {PROFILE_LABELS[currentProfile]}
-                    </Button>
-                    <p {...stylex.props(styles.current)}>
-                      Current setting: {PROFILE_LABELS[currentProfile]}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            }
-          />
-        )}
-      </div>
+    <AppStage eyebrow="Utility" title="Render Settings" ownsHeading testId="render-settings-panel">
+      {preparation ? (
+        <ProfileMapPreparation
+          profile={preparation.profile}
+          redownload={preparation.redownload}
+          onContinue={finish}
+          onSkip={finish}
+        />
+      ) : (
+        <RenderSelectionPanel
+          manifestUrl={benchmarkTarget?.browserManifestUrl ?? null}
+          mapLabel={benchmarkTarget?.label ?? "Current map"}
+          catalogReady={benchmarkCatalogReady}
+          currentQuality={currentProfile ?? "minimal"}
+          onChoose={choose}
+          titleId="render-settings-title"
+          descriptionId="render-settings-description"
+          footer={
+            <div {...stylex.props(styles.footer)}>
+              <MapAssetCacheStorage refreshKey={currentProfile} />
+              {currentProfile ? (
+                <div {...stylex.props(styles.footerRow)}>
+                  <Button
+                    xstyle={styles.cacheButton}
+                    onClick={() => setConfirmRedownload(true)}
+                    type="button"
+                    variant="outline"
+                  >
+                    <DatabaseZap {...stylex.props(styles.icon)} aria-hidden="true" />
+                    Delete cache and re-download {PROFILE_LABELS[currentProfile]}
+                  </Button>
+                  <p {...stylex.props(styles.current)}>
+                    Current setting: {PROFILE_LABELS[currentProfile]}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          }
+        />
+      )}
 
       {pendingProfile ? (
         <ConfirmationPanel
@@ -166,7 +169,7 @@ export function RenderSettingsPageClient() {
           onPrimary={() => void clearThenPrepare(currentProfile)}
         />
       ) : null}
-    </div>
+    </AppStage>
   );
 }
 

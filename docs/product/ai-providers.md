@@ -3,7 +3,7 @@
 SimForge Studio ships without any AI credentials. One feature calls an external
 AI service and is switched off — with an explicit, actionable message — until
 the user configures a provider under **Settings → AI providers**
-(`/dashboard/settings/ai-providers`):
+(`/dashboard/settings`, the AI providers pane):
 
 | Feature | Where | Provider |
 |---|---|---|

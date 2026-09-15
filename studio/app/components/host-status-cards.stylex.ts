@@ -241,47 +241,11 @@ export const lamp = stylex.create({
   },
 });
 
-/** The SimCloud connection card. */
+/**
+ * The SimCloud sign-out confirmation, which every surface that can sign out
+ * shares. Sign-out locks account-only maps, so it always asks first.
+ */
 export const cloud = stylex.create({
-  // truncate font-mono text-xs text-white/55
-  email: {
-    fontFamily: text.fontMono,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "rgba(255, 255, 255, 0.55)",
-  },
-  // mt-3 grid gap-x-6 gap-y-1 text-[11px] text-white/40 sm:grid-cols-2
-  facts: {
-    marginTop: "0.75rem",
-    display: "grid",
-    gridTemplateColumns: { default: "none", [SM]: "repeat(2, minmax(0, 1fr))" },
-    columnGap: space.xxl,
-    rowGap: space.xs,
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.4)",
-  },
-  // flex gap-2
-  fact: {
-    display: "flex",
-    gap: space.md,
-  },
-  // mt-3 flex items-start gap-2 text-xs text-amber-300/90
-  sessionNotice: {
-    marginTop: "0.75rem",
-    display: "flex",
-    alignItems: "flex-start",
-    gap: space.md,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: AMBER_300_90,
-  },
-  // mt-0.5 size-3.5 shrink-0
-  sessionNoticeIcon: {
-    marginTop: "0.125rem",
-    width: "0.875rem",
-    height: "0.875rem",
-    flexShrink: 0,
-  },
   // flex w-full flex-col gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4
   confirm: {
     display: "flex",
