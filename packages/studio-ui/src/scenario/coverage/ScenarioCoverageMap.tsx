@@ -5,9 +5,9 @@
  *
  * The datasets list shows *where* the authored scenarios are: one polygon per
  * installed map — its OpenDRIVE extents rectangle projected to WGS84 by
- * `/api/simforge/maps/footprints` — over the CARTO Voyager basemap, labelled
- * with the map's name and how many scenarios it holds. Clicking a region
- * selects that map; clicking bare basemap clears the selection.
+ * `/api/simforge/maps/footprints` — over the product's monochrome basemap,
+ * labelled with the map's name and how many scenarios it holds. Clicking a
+ * region selects that map; clicking bare basemap clears the selection.
  *
  * This is the whole 2D surface: no measure tools, no satellite, no terrain, no
  * WebGL city. Opening a scenario for editing is what mounts the 3D world, and
@@ -24,13 +24,25 @@ import type { LngLatBoundsLike, MapLayerMouseEvent, MapRef } from "react-map-gl/
 import type { Feature, FeatureCollection, Polygon } from "geojson";
 import type { ScenarioMapCoverageDto } from "@simforge-oss/studio-host";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { BASEMAPS } from "../../lib/maps/basemaps";
+import {
+  DEFAULT_BASEMAP,
+  MAP_ACCENT,
+  MONOCHROME_RAMPS,
+  PLATE_BASEMAP_STYLE,
+  fetchMonochromeBasemapStyle,
+  type BasemapStyle,
+} from "../../lib/maps/basemaps";
 import { useStudioHost } from "../../host";
 import type { ScenarioMapGroup } from "../list/document-map-groups";
 import { styles } from "./ScenarioCoverageMap.stylex";
 
-/** The pale, labelled CARTO style: a reference map, not a picture. */
-const VOYAGER_STYLE_URL = BASEMAPS.find((basemap) => basemap.id === "voyager")!.url;
+/**
+ * Coverage ink, on the basemap's own ramp: `ramp.label` is the rung that reads
+ * against the ground whichever way the ramp runs, and the accent is the one
+ * saturated colour on the surface — so a covered region is grey until it is
+ * hovered or selected, and then it is the product's yellow.
+ */
+const COVERAGE_RAMP = MONOCHROME_RAMPS[DEFAULT_BASEMAP];
 
 /** Fly duration for a focus change, matching the editor hand-off fade. */
 const FLY_MS = 1600;
@@ -93,6 +105,24 @@ export function ScenarioCoverageMap({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [hoveredMapVersionId, setHoveredMapVersionId] = useState<string | null>(null);
+  // The plate until the recoloured ground lands: the canvas needs a style now.
+  const [basemapStyle, setBasemapStyle] = useState<BasemapStyle>(PLATE_BASEMAP_STYLE);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMonochromeBasemapStyle(DEFAULT_BASEMAP)
+      .then((style) => {
+        if (!cancelled) setBasemapStyle(style);
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        // The plate stays: coverage over an empty ground still answers "where".
+        setLoadError(reason instanceof Error ? reason.message : "The basemap could not be loaded.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -195,9 +225,15 @@ export function ScenarioCoverageMap({
     map.once("moveend", () => onFocusSettled?.());
   }, [allBounds, boundsByMapVersionId, focusedMapVersionId, onFocusSettled, ready]);
 
-  const activeIds = useMemo(
-    () => [hoveredMapVersionId, selectedMapVersionId].filter((id): id is string => id !== null),
-    [hoveredMapVersionId, selectedMapVersionId],
+  // Hover and selection are separate rungs of the accent, so pointing at a
+  // region never looks like having chosen it.
+  const hoveredIds = useMemo(
+    () => (hoveredMapVersionId ? [hoveredMapVersionId] : []),
+    [hoveredMapVersionId],
+  );
+  const selectedIds = useMemo(
+    () => (selectedMapVersionId ? [selectedMapVersionId] : []),
+    [selectedMapVersionId],
   );
 
   const onMapClick = (event: MapLayerMouseEvent) => {
@@ -214,7 +250,7 @@ export function ScenarioCoverageMap({
         // does not survive the app's bundler, and without it the canvas draws
         // nothing at all.
         workerUrl="/maplibre/maplibre-gl-worker.mjs"
-        mapStyle={VOYAGER_STYLE_URL}
+        mapStyle={basemapStyle as never}
         initialViewState={{ longitude: -98, latitude: 39, zoom: 2.4 }}
         interactiveLayerIds={[COVERAGE_FILL]}
         cursor={hoveredMapVersionId ? "pointer" : "grab"}
@@ -233,24 +269,30 @@ export function ScenarioCoverageMap({
           <Layer
             id={COVERAGE_FILL}
             type="fill"
-            paint={{ "fill-color": "#0a0a0a", "fill-opacity": 0.16 }}
+            paint={{ "fill-color": COVERAGE_RAMP.label, "fill-opacity": 0.1 }}
           />
           <Layer
             id="scenario-coverage-outline"
             type="line"
-            paint={{ "line-color": "#0a0a0a", "line-width": 1.2, "line-opacity": 0.45 }}
+            paint={{ "line-color": COVERAGE_RAMP.label, "line-width": 1.2, "line-opacity": 0.35 }}
           />
           <Layer
-            id="scenario-coverage-active-fill"
+            id="scenario-coverage-hover-fill"
             type="fill"
-            filter={["in", ["get", "mapVersionId"], ["literal", activeIds]]}
-            paint={{ "fill-color": "#e8e044", "fill-opacity": 0.42 }}
+            filter={["in", ["get", "mapVersionId"], ["literal", hoveredIds]]}
+            paint={{ "fill-color": MAP_ACCENT, "fill-opacity": 0.2 }}
           />
           <Layer
-            id="scenario-coverage-active-outline"
+            id="scenario-coverage-selected-fill"
+            type="fill"
+            filter={["in", ["get", "mapVersionId"], ["literal", selectedIds]]}
+            paint={{ "fill-color": MAP_ACCENT, "fill-opacity": 0.45 }}
+          />
+          <Layer
+            id="scenario-coverage-selected-outline"
             type="line"
-            filter={["in", ["get", "mapVersionId"], ["literal", activeIds]]}
-            paint={{ "line-color": "#0a0a0a", "line-width": 2.4, "line-opacity": 0.9 }}
+            filter={["in", ["get", "mapVersionId"], ["literal", selectedIds]]}
+            paint={{ "line-color": MAP_ACCENT, "line-width": 2.4, "line-opacity": 0.95 }}
           />
         </Source>
 

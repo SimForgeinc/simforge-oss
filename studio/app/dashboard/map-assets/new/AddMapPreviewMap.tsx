@@ -2,7 +2,7 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "../map-assets.stylex";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import Map, { Source, Layer, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -10,8 +10,12 @@ import {
   ROAD_NETWORK_FEATURE_TYPES,
   DEFAULT_ENABLED_FEATURE_TYPE_IDS,
 } from "@/app/lib/maps/frontend/road-network-feature-types";
-
-const DARK_BASEMAP = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+import {
+  DEFAULT_BASEMAP,
+  PLATE_BASEMAP_STYLE,
+  fetchMonochromeBasemapStyle,
+  type BasemapStyle,
+} from "@simforge-oss/studio-ui/lib/maps/basemaps";
 
 type Bbox = { min_lat: number; min_lng: number; max_lat: number; max_lng: number };
 
@@ -33,6 +37,23 @@ function fitToBbox(map: MapRef, bbox: Bbox) {
 
 export default function AddMapPreviewMap({ geojson, bbox, onThumbnailReady }: Props) {
   const mapRef = useRef<MapRef>(null);
+  // The plate until the recoloured ground lands: the canvas needs a style now,
+  // and a CARTO URL here would flash the colourful original.
+  const [basemapStyle, setBasemapStyle] = useState<BasemapStyle>(PLATE_BASEMAP_STYLE);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMonochromeBasemapStyle(DEFAULT_BASEMAP)
+      .then((style) => {
+        if (!cancelled) setBasemapStyle(style);
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to resolve basemap style:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const bboxRef = useRef<Bbox | null>(bbox);
   bboxRef.current = bbox;
 
@@ -96,7 +117,7 @@ export default function AddMapPreviewMap({ geojson, bbox, onThumbnailReady }: Pr
     <Map
       ref={mapRef}
       workerUrl="/maplibre/maplibre-gl-worker.mjs"
-      mapStyle={DARK_BASEMAP}
+      mapStyle={basemapStyle as never}
       initialViewState={{ longitude: 0, latitude: 20, zoom: 1 }}
       {...stylex.props(styles.staticCanvas)}
       attributionControl={false}

@@ -6,7 +6,11 @@ import type { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
-import { BASEMAPS, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
+import {
+  PLATE_BASEMAP_STYLE,
+  type BasemapId,
+  type BasemapStyle,
+} from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   DEFAULT_BASEMAP_LAYER_VISIBILITY,
   resolveBasemapStyleWithImagery,
@@ -237,9 +241,9 @@ export function MapAssetsMapView({
   onCloseClusterPopover,
   children,
 }: MapAssetsMapViewProps) {
-  const [resolvedMapStyle, setResolvedMapStyle] = useState<object | string>(
-    BASEMAPS.find((entry) => entry.id === basemapId)!.url,
-  );
+  // The plate until the recoloured ground lands: the canvas needs a style now,
+  // and a CARTO URL here would flash the colourful original.
+  const [resolvedMapStyle, setResolvedMapStyle] = useState<BasemapStyle>(PLATE_BASEMAP_STYLE);
 
   const mountLoggedRef = useRef(false);
   const mapLoadedRef = useRef(false);
@@ -368,10 +372,9 @@ export function MapAssetsMapView({
         }
       })
       .catch((error) => {
+        // The plate stays: the recolour needs the fetched style, so there is no
+        // colourful URL to fall back to that would have loaded either.
         console.error("Failed to resolve basemap style:", error);
-        if (!cancelled) {
-          setResolvedMapStyle(BASEMAPS.find((entry) => entry.id === basemapId)!.url);
-        }
       });
 
     return () => {

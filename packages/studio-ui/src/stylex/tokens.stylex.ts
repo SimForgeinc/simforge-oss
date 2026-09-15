@@ -65,6 +65,11 @@ export const colors = stylex.defineVars({
   textSubtle: "rgba(255, 255, 255, 0.5)",
   textFaint: "rgba(255, 255, 255, 0.35)",
 
+  // Ink on the fixed plate. White in both themes because the plate under it is
+  // fixed dark - `text` follows the theme and would vanish on map chrome or
+  // render glass in the light one.
+  textOnPlate: "#ffffff",
+
   // Structural hairlines. `line` is the editor's; `lineStrong` is the raised
   // glass edge. Both are white-on-dark so they read as light catching an edge.
   line: "rgba(255, 255, 255, 0.08)",

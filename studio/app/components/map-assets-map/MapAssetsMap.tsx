@@ -40,7 +40,7 @@ import {
   ALL_RUNTIME_LANE_TYPE_IDS,
   type RuntimeLaneTypeId,
 } from "@/app/lib/editor-map/runtime-layer-visibility";
-import { DEFAULT_BASEMAP, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
+import { DEFAULT_BASEMAP } from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   DEFAULT_BASEMAP_LAYER_VISIBILITY,
   type BasemapLayerVisibility,
@@ -574,7 +574,6 @@ export default function MapAssetsMap({
   onSatelliteEnabledChange,
   enableMeasureTool = false,
 }: MapAssetsMapProps) {
-  const [basemapId, _setBasemapId] = useState<BasemapId>(DEFAULT_BASEMAP);
   // Satellite toggle is controllable: when the parent passes `satelliteEnabled`
   // (to persist across map switches / in the URL) it wins; otherwise fall back
   // to internal state so uncontrolled consumers keep working.
@@ -1331,7 +1330,7 @@ export default function MapAssetsMap({
   // stays, because it is the way back out.
   return (
     <MapAssetsMapView
-      basemapId={basemapId}
+      basemapId={DEFAULT_BASEMAP}
       basemapLayerVisibility={basemapLayerVisibility}
       satelliteImagery={satelliteEnabled ? availableSatelliteImagery : null}
       showSatelliteToggle={hasSatelliteImagery && mapViewMode !== "twin"}
