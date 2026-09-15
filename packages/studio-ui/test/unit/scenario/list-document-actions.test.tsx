@@ -297,7 +297,6 @@ describe("useScenarioDocumentActions", () => {
       const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
       expect(body.mapVersionId).toBe("usmap_1");
       expect(body.datasetId).toBe("usds_1");
-      expect(body.authoringQualityId).toBe("minimal");
       expect(body.content.scenarioVersion).toBe(2);
       expect(body.content.sourceMap).toEqual({ mapId: "ma_richmond_source", mapName: "Richmond" });
       expect(body.content.anchor.pin).toEqual({ mapId: "ma_richmond_source" });

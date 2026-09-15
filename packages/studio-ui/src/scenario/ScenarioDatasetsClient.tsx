@@ -39,6 +39,7 @@ import {
 } from "./list/scenarioViewState";
 import { paneLoading } from "./scenario-controls.stylex";
 import { runDatasetMorph } from "./list/datasetMorph";
+import { driveHref } from "./drive-route";
 
 /** Shared width key for the floating dataset/scenario sidebar. */
 const SCENARIO_LIST_WIDTH_KEY = "uniscenario.scenario-list-width.v2";
@@ -53,15 +54,6 @@ type RenderTarget = Pick<
 
 function datasetHref(datasetId: string) {
   return `/dashboard/scenario/${encodeURIComponent(datasetId)}`;
-}
-
-/**
- * Where a Driver in the Loop drive happens: its own route, because the drive
- * takes the whole screen and owns the viewer, while this page keeps the world
- * scene beside the list alive.
- */
-function driveHref(documentId: string, roleId: string) {
-  return `/dashboard/scenario/${encodeURIComponent(documentId)}/drive?actor=${encodeURIComponent(roleId)}`;
 }
 
 function errorMessage(error: unknown, fallback: string) {

@@ -46,7 +46,12 @@ editor, plays back, and renders.
     the button rather than a dead drive screen.
   - `driverInTheLoopContent` — attaches the `basic-dash-camera` rig
     (`instantiateSensorRig`) when the driven actor has no sensors, because the list disables render
-    without a sensor profile. An actor that already has sensors is untouched.
+    without a sensor profile. An actor that already has sensors is untouched. It also displaces the
+    driven actor's authored motion (`competingMotionInteractions`) *before* the drive: the world the
+    human drives is compiled from this content, so an authored route left on the driven actor is
+    spawned and stepped by the engine — on a scenario whose route steps 167 m per second that hands
+    the driver a van at 620 km/h which spins out and slides for the rest of the clip. Every other
+    actor keeps its choreography.
 - `duplicateScenarioDocument` takes `derivation` and `content`, so the variation is written with its
   own digest in the same transaction as its parent edge.
 
@@ -58,8 +63,9 @@ editor, plays back, and renders.
 - `useScenarioDocumentActions.startDriverInTheLoop` POSTs, splices the variation into the list — the
   drive leaves the page, and coming back to a list that had forgotten the variation would read as a
   lost drive — and returns the drive target.
-- `ScenarioDatasetsClient` owns the navigation to `/dashboard/drive/<documentId>?actor=<roleId>`; the
-  dataset column never routes on its own, because it keeps the world scene beside it alive.
+- `packages/studio-ui/src/scenario/drive-route.ts` is the one constructor of the drive URL
+  (`/dashboard/drive/<documentId>?actor=<roleId>`); `ScenarioDatasetsClient` owns the navigation,
+  because the dataset column keeps the world scene beside it alive and never routes on its own.
 
 ### Driving and saving
 
@@ -67,7 +73,10 @@ editor, plays back, and renders.
   renders `DriverInTheLoopDrive`, which resolves the installed map entry and its lane topology.
 - `DriveSession` is take-only: it compiles the variation once, drives the resolved actor from
   t = 0 (`beginTake`), and shows the clip countdown from the world clock. The scenario's other
-  actors run around the driver. `R` drives the clip again.
+  actors run around the driver. `R` drives the clip again. The wheel and pedals go through
+  `setDriverCommand`, not `control`: the driver command is held across physics substeps and is the
+  only one of the two that carries a handbrake, so `control` silently dropped Space. Where the
+  runtime has no held-command surface the pause menu says so rather than promising a handbrake.
 - On `TakeEvent { kind: 'complete' }` the session applies `recordedManualDrive` to its live
   `EditorDocument` and hands the finished template to `onSaveClip`, which PATCHes the variation and
   returns to the list. A failed take or a rejected save keeps the drive on screen with the reason and
@@ -95,8 +104,11 @@ and round-tripped through a `localStorage` mailbox. All of it is gone:
 ## Verification
 
 - `studio/app/lib/scenario/__tests__/driver-in-the-loop.test.ts` — role resolution (only vehicle,
-  declared subject, explicit request, ambiguity, pedestrian, missing actor) and variation content
-  (rig added, existing rig kept, nothing else changed).
+  declared subject, explicit request, ambiguity, pedestrian, missing actor), variation content (rig
+  added, existing rig kept, the driven actor's authored motion displaced and every other actor's
+  kept), and the drive route contract: the URL `driveHref` emits is turned back into the App Router
+  directory it claims and that directory must hold a `page.tsx`. That last one exists because it
+  did not hold: the button minted a variation and then navigated to a route that never existed.
 - `packages/studio-ui/test/unit/scenario/list-document-row.test.tsx` — the button calls its handler,
   is inert on a read-only dataset, and is absent without a handler.
 - `packages/editor/src/manual-drive.test.ts` — a recorded track still follows its actor when the

@@ -421,7 +421,7 @@ export function DriveSession({
     inputRef.current?.setEnabled(!paused);
     if (!source || !egoActorId || source.status !== "running") return;
     if (paused) {
-      source.control({ actorId: egoActorId, steer: 0, throttle: 0, brake: 1 });
+      source.setDriverCommand({ steer: 0, throttle: 0, brake: 1, handbrake: false });
       source.transport.stop();
     } else {
       source.transport.play();
@@ -506,16 +506,24 @@ export function DriveSession({
       previous?.(dtS);
       const input = inputRef.current;
       if (input && !pausedRef.current) {
-        // The command is held by the runtime and applied at every physics
-        // substep, so pushing it once per rendered frame is the whole of
-        // driving: the gearbox picks reverse off the brake pedal at a
-        // standstill by itself, exactly as an automatic does.
+        // `setDriverCommand`, not `control`: the driver command is held by the
+        // runtime and applied at every physics substep, so pushing it once per
+        // rendered frame is the whole of driving, and it is the only one of the
+        // two that carries a handbrake — `ControlInput` has no such field, so
+        // routing the drive through `control` silently dropped the Space key
+        // the pause menu documents. The gearbox picks reverse off the brake
+        // pedal at a standstill by itself, exactly as an automatic does.
         //
         // The input layer signs steering as a driver reads a wheel (-1 is full
         // left); the physics signs it as a yaw (+ is counter-clockwise, i.e.
         // left). This is the one place the two conventions meet.
         const command = input.sample(dtS);
-        source.control({ actorId: egoActorId, steer: -command.steer, throttle: command.throttle, brake: command.brake });
+        source.setDriverCommand({
+          steer: -command.steer,
+          throttle: command.throttle,
+          brake: command.brake,
+          handbrake: command.handbrake,
+        });
       }
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
@@ -653,6 +661,7 @@ export function DriveSession({
           cameraKind={cameraKind}
           debug={debug}
           gamepadConnected={gamepadConnected}
+          handbrake={source?.heldDriverCommand === true}
           muted={muted}
           onCameraKind={(kind) => {
             rigRef.current.setKind(kind);
