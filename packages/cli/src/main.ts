@@ -317,7 +317,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
     case 'daemon': {
       const args = parseArgs(argv.slice(1), {
         booleans: [...GLOBAL_BOOLEANS, 'dev', 'no-worker'],
-        values: ['port', 'data-root', 'cloud-origin'],
+        values: ['port', 'data-root', 'cloud-origin', 'hostname'],
       });
       return daemonCommand({
         port: optionalInt(args, 'port'),
@@ -325,6 +325,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         dev: boolFlag(args, 'dev'),
         noWorker: boolFlag(args, 'no-worker'),
         cloudOrigin: optionalString(args, 'cloud-origin'),
+        hostname: optionalString(args, 'hostname'),
       });
     }
     case 'cloud': {

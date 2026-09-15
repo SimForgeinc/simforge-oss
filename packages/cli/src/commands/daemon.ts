@@ -23,6 +23,14 @@ export type DaemonOptions = {
   readonly dev?: boolean;
   readonly noWorker?: boolean;
   readonly cloudOrigin?: string;
+  /**
+   * Address the server binds. Defaults to loopback: a daemon is private until
+   * an operator says otherwise. `0.0.0.0` exposes the host's gate on every
+   * interface, which is authorized by the control token rather than by the
+   * caller's address, so the link itself must be private (a tailnet or a TLS
+   * terminator) - see docs/engineering/remote-studio-host.md.
+   */
+  readonly hostname?: string;
 };
 
 const require = createRequire(import.meta.url);
@@ -44,9 +52,24 @@ function runStudioScript(tsxCli: string, script: string): Promise<void> {
   });
 }
 
+/**
+ * Wildcard binds are addresses to listen on, not addresses to call:
+ * `http://0.0.0.0:<port>` names no destination, so a worker given one cannot
+ * reach the server it belongs to. Every other bind is a real address and is
+ * also the *only* one the server answers on - binding `100.64.0.1` does not
+ * serve loopback - so the worker must use the bound address itself rather
+ * than assume its own machine is reachable at `127.0.0.1`.
+ */
+const WILDCARD_BINDS: ReadonlySet<string> = new Set(['0.0.0.0', '::', '[::]', '*']);
+
+export function workerBaseUrl(hostname: string, port: number): string {
+  return WILDCARD_BINDS.has(hostname) ? `http://127.0.0.1:${port}` : `http://${hostname}:${port}`;
+}
+
 function workspacePlan(dev: boolean, port: number, hostname: string): LocalHostPlan {
   const nextBin = require.resolve('next/dist/bin/next', { paths: [studioRoot] });
   const tsxCli = require.resolve('tsx/cli', { paths: [studioRoot] });
+  const workerHost = workerBaseUrl(hostname, port);
   return {
     // Seed runs migrations in its own process so the CLI never loads the Next
     // application's modules. It closes PGlite before the server takes ownership.
@@ -55,8 +78,11 @@ function workspacePlan(dev: boolean, port: number, hostname: string): LocalHostP
     },
     server: {
       command: process.execPath,
+      // `-H` in both modes: a daemon told to bind an address binds it whether
+      // or not it is serving a build, and `next dev` without it serves
+      // loopback only however the daemon was invoked.
       args: dev
-        ? [nextBin, 'dev', '--webpack', '-p', String(port)]
+        ? [nextBin, 'dev', '--webpack', '-p', String(port), '-H', hostname]
         : [nextBin, 'start', '-p', String(port), '-H', hostname],
       cwd: studioRoot,
     },
@@ -69,7 +95,7 @@ function workspacePlan(dev: boolean, port: number, hostname: string): LocalHostP
         ...(dev ? [tsxCli, resolve(cliRoot, 'src', 'main.ts')] : [resolve(cliRoot, 'bin', 'simforge.js')]),
         'worker',
         '--host',
-        `http://${hostname}:${port}`,
+        workerHost,
         '--token',
         '${SIMFORGE_RENDER_WORKER_TOKEN}',
       ],
@@ -91,7 +117,13 @@ export async function daemonCommand(options: DaemonOptions = {}): Promise<number
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new CliError('bad_value', `Invalid port ${String(options.port ?? process.env.PORT)}.`, { path: '--port' });
   }
-  const hostname = '127.0.0.1';
+  // `HOSTNAME` is what `localHostConfig()` reads and what
+  // docs/engineering/remote-studio-host.md tells an operator to set, so the
+  // CLI honours it rather than pinning loopback and silently ignoring it.
+  const hostname = (options.hostname ?? process.env.HOSTNAME ?? '127.0.0.1').trim();
+  if (hostname === '') {
+    throw new CliError('bad_value', 'Empty --hostname; pass an address to bind, or omit it for loopback.', { path: '--hostname' });
+  }
   return runLocalHost(workspacePlan(dev, port, hostname), {
     port,
     hostname,
