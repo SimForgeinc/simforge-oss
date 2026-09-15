@@ -23,6 +23,8 @@ export type DaemonOptions = {
   readonly dev?: boolean;
   readonly noWorker?: boolean;
   readonly cloudOrigin?: string;
+  /** Explicitly disable the local host gate for private development networks. */
+  readonly openAccess?: boolean;
   /**
    * Address the server binds. Defaults to loopback: a daemon is private until
    * an operator says otherwise. `0.0.0.0` exposes the host's gate on every
@@ -105,6 +107,7 @@ function workspacePlan(dev: boolean, port: number, hostname: string): LocalHostP
 }
 
 export async function daemonCommand(options: DaemonOptions = {}): Promise<number> {
+  if (options.openAccess) process.env.SIMFORGE_LOCAL_OPEN_ACCESS = "1";
   if (options.dataRoot) process.env.SIMFORGE_CLOUD_ROOT = resolve(options.dataRoot);
   if (options.cloudOrigin) process.env.SIMFORGE_CLOUD_ORIGIN = options.cloudOrigin;
   const dev = options.dev === true;
