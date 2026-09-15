@@ -2,20 +2,11 @@
  * StyleX styles for `AppSwitcherOverlay` — the full-screen app switcher that
  * the top bar's logo button opens.
  *
- * Translated one-for-one from the Tailwind the overlay shipped with: literal
- * rems where the utility compiled to a literal rem, Tailwind's own transition
- * curve and durations, and the same `rgb(r g b / a)` channels the slash-opacity
- * utilities produced. Nothing here changes a pixel.
- *
- * Radii are absent throughout. The Tailwind config resolves the whole radius
- * scale to `0` and `styles.css` re-asserts it with
- * `*, *::before, *::after { border-radius: 0 !important }`, so `rounded-full`,
- * `rounded-xl` and `rounded-[20px]` contributed nothing to render here.
- *
- * The backdrop's `animate-in`/`animate-out` pair came from
- * `tailwindcss-animate`; the dialog's own fade came from `styles.css`, where
- * it was the `app-switcher-center-fade` class. Both are written out below,
- * each with the `prefers-reduced-motion` cancel the original carried.
+ * The surface is deliberately plain: a centred column with three tabs and one
+ * footer line. The overlay and dialog fades are the ones the switcher shipped
+ * with (`tailwindcss-animate`'s `fade-in-0`/`fade-out-0` and the former
+ * `app-switcher-center-fade` class in `styles.css`), each keeping the
+ * `prefers-reduced-motion` cancel the original carried.
  */
 
 import * as stylex from "@stylexjs/stylex";
@@ -28,14 +19,6 @@ import {
 /** The breakpoints this overlay responds to. */
 const SM = "@media (min-width: 640px)";
 const LG = "@media (min-width: 1024px)";
-/** Wide and tall enough that every card fits on one screen without scrolling. */
-const ONE_PAGE = "@media (min-width: 1024px) and (min-height: 720px)";
-/**
- * The scrolling fallback's card grid: wide but too short for one page. Kept
- * disjoint from `ONE_PAGE` because StyleX gives two matching media rules on
- * one property equal weight, and then order, not intent, would decide.
- */
-const SHORT_WIDE = "@media (min-width: 640px) and (max-height: 719.98px)";
 const REDUCED = "@media (prefers-reduced-motion: reduce)";
 
 /** Tailwind's default transition curve and its `transition-colors` set. */
@@ -51,16 +34,10 @@ const COLOR_TRANSITION =
 const FOCUS_RING = `0 0 0 2px ${colors.accent}`;
 const FOCUS_RING_INSET = `inset 0 0 0 2px ${colors.accent}`;
 
-/** `hover:shadow-[…]` and the active card's resting elevation. */
-const CARD_SHADOW_ACTIVE =
-  "inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 50px rgba(0, 0, 0, 0.18)";
-const CARD_SHADOW_HOVER = "0 20px 55px rgba(0, 0, 0, 0.25)";
-
 /**
- * `animate-in fade-in-0` / `animate-out fade-out-0` from `tailwindcss-animate`,
- * written out. The plugin's `enter`/`exit` keyframes carry the identity
- * transform alongside the opacity, and it is kept: it is what puts the
- * backdrop on its own compositing layer for the duration of the fade.
+ * `animate-in fade-in-0` / `animate-out fade-out-0` from `tailwindcss-animate`:
+ * the plugin animates from its own reset transform, so the frame it starts
+ * from is an explicit identity transform, not `none`.
  */
 const IDENTITY_TRANSFORM =
   "translate3d(0, 0, 0) scale3d(1, 1, 1) rotate(0)";
@@ -73,13 +50,7 @@ const exit = stylex.keyframes({
 
 /**
  * The dialog's own fade, formerly `.app-switcher-center-fade[data-state]` in
- * `styles.css`: 180ms out of nothing on open, 120ms back on close, both with
- * `animation-fill-mode: both` so Radix's exit state holds the last frame
- * until it unmounts the content.
- *
- * Opacity-only, deliberately. This surface is centred by a `transform` in
- * other compositions, and a keyframe that animated `transform` would replace
- * that centring for the duration of the fade.
+ * `styles.css`: 180ms out of nothing on open, 120ms back on close.
  */
 const centerFadeIn = stylex.keyframes({
   from: { opacity: 0 },
@@ -88,30 +59,6 @@ const centerFadeIn = stylex.keyframes({
 const centerFadeOut = stylex.keyframes({
   from: { opacity: 1 },
   to: { opacity: 0 },
-});
-
-/**
- * The card's hover state, published to its own descendants.
- *
- * StyleX styles an element by itself: there is no `group-hover`, because there
- * is no selector reaching from a parent's `:hover` down to a child. The card
- * sets these custom properties on itself instead, its descendants read them,
- * and the substituted value changes when the card is hovered — so each child's
- * own `transition` still animates exactly as the `group-hover:` utilities did.
- *
- * Each carries the finished value rather than a scalar to interpolate, so an
- * un-hovered art tile computes to `transform: none` and stays out of its own
- * stacking context, exactly as it did under the utilities.
- *
- * The three `*Idle` values exist because only the non-current cards dim and
- * desaturate their art: a current card's art is already at full opacity with a
- * yellow drop shadow, and hovering it must not disturb that.
- */
-export const artTransform = stylex.defineVars({ value: "none" });
-export const artIdleOpacity = stylex.defineVars({ value: "0.45" });
-export const artIdleFilter = stylex.defineVars({ value: "grayscale(100%)" });
-export const metaIdleInk = stylex.defineVars({
-  value: "rgb(255 255 255 / 0.35)",
 });
 
 export const styles = stylex.create({
@@ -192,13 +139,11 @@ export const styles = stylex.create({
   },
 
   /**
-   * fixed right-5 top-5 z-20 grid size-10 place-items-center rounded-full
-   * text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white
-   * focus-visible:outline-none focus-visible:ring-2
-   * focus-visible:ring-[#E8E044] sm:right-8 sm:top-8
+   * fixed right-5 top-5 z-20 grid size-10 place-items-center text-white/40
+   * transition-colors hover:bg-white/[0.06] hover:text-white
+   * focus-visible:ring-2 focus-visible:ring-[#E8E044] sm:right-8 sm:top-8
    *
-   * `z-20` is local to the dialog's own stacking context — it lifts the close
-   * button over the card grid, not over anything in the page — so it stays a
+   * `z-20` is local to the dialog's own stacking context, so it stays a
    * literal rather than joining the app-wide `layers` scale.
    */
   close: {
@@ -225,200 +170,59 @@ export const styles = stylex.create({
   closeIcon: { width: "1.25rem", height: "1.25rem" },
 
   /**
-   * The page frame. On a one-page viewport it is exactly the dialog's height,
-   * split into the stage (which takes what is left) and the footer; smaller
-   * viewports fall back to a centred column that scrolls.
+   * The page frame: a centred column, narrow enough that three tabs read as
+   * one row of choices rather than a wall of cards. It is never taller than
+   * the viewport, so the switcher does not scroll on a desktop screen.
    */
   container: {
     position: "relative",
     marginInline: "auto",
     display: "grid",
-    gridTemplateRows: {
-      default: "auto auto",
-      [ONE_PAGE]: "minmax(0, 1fr) auto",
-    },
     alignContent: "center",
+    gap: "1.5rem",
     minHeight: "100%",
-    height: { default: null, [ONE_PAGE]: "100%" },
     width: "100%",
-    maxWidth: "1280px",
-    gap: { default: "2rem", [ONE_PAGE]: "1.25rem" },
+    maxWidth: "940px",
     paddingInline: { default: "1.25rem", [SM]: "2rem" },
-    paddingTop: { default: "5rem", [ONE_PAGE]: "4.25rem" },
-    paddingBottom: { default: "5rem", [ONE_PAGE]: "1.5rem" },
+    paddingBlock: "5rem",
   },
 
-  /**
-   * pointer-events-none absolute -left-24 top-0 h-56 w-96 rounded-full
-   * bg-[#E8E044]/[0.055] blur-[90px]
-   *
-   * The one warm light in the scene, thrown from off-canvas left.
-   */
-  ambience: {
-    pointerEvents: "none",
-    position: "absolute",
-    left: "-6rem",
-    top: 0,
-    height: "14rem",
-    width: "24rem",
-    backgroundColor: "rgb(232 224 68 / 0.055)",
-    filter: "blur(90px)",
-  },
-
-  /**
-   * The card groups. One-page: side by side, the exploration column narrower
-   * than the scenarios column; otherwise stacked.
-   */
-  stage: {
-    position: "relative",
+  /** The three product tabs: stacked on narrow viewports, a row from LG. */
+  tabs: {
     display: "grid",
-    minHeight: 0,
-    gap: { default: "2rem", [ONE_PAGE]: "0.75rem" },
+    gap: "0.75rem",
     gridTemplateColumns: {
       default: null,
-      [ONE_PAGE]: "minmax(0, 1fr) minmax(0, 1.45fr)",
+      [LG]: "repeat(3, minmax(0, 1fr))",
     },
-  },
-  /** A group: its label rail, then its cards. */
-  band: {
-    display: "grid",
-    minHeight: 0,
-    gap: "0.75rem",
-    gridTemplateColumns: { default: null, [LG]: "2rem minmax(0, 1fr)" },
-  },
-  /**
-   * The group label. Horizontal above the cards on narrow viewports; from LG
-   * it turns into a spine down the cards' left edge, reading upward with the
-   * name at the foot and the description at the head.
-   */
-  bandRail: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    writingMode: { default: null, [LG]: "vertical-rl" },
-    transform: { default: null, [LG]: "rotate(180deg)" },
-  },
-  // font-meta text-[10px] font-bold uppercase tracking-[0.18em] text-white/70
-  bandLabel: {
-    margin: 0,
-    fontFamily: text.fontMeta,
-    fontSize: "10px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
-    color: "rgb(255 255 255 / 0.7)",
-    whiteSpace: "nowrap",
-  },
-  bandRule: {
-    flexGrow: 1,
-    minWidth: "1px",
-    minHeight: "1px",
-    height: { default: "1px", [LG]: "auto" },
-    width: { default: "auto", [LG]: "1px" },
-    backgroundColor: "rgb(255 255 255 / 0.1)",
-  },
-  // text-[11px] text-white/35
-  bandDescription: {
-    margin: 0,
-    fontSize: "11px",
-    color: "rgb(255 255 255 / 0.35)",
-    whiteSpace: "nowrap",
   },
 
-  /** The cards of a group; one-page: a column of equal rows. */
-  bandGrid: {
-    display: "grid",
-    minHeight: 0,
-    gap: "0.75rem",
-    gridAutoRows: { default: null, [ONE_PAGE]: "minmax(0, 1fr)" },
-  },
-  bandColumns: (count: number) => ({
-    gridTemplateColumns: {
-      default: null,
-      [SHORT_WIDE]: `repeat(${Math.min(count, 2)}, minmax(0, 1fr))`,
-      [ONE_PAGE]: "minmax(0, 1fr)",
-    },
-  }),
-
   /**
-   * group relative flex min-h-60 flex-col overflow-hidden rounded-[20px]
-   * border p-5 transition-[border-color,background-color,box-shadow,transform]
-   * duration-300 focus-visible:outline-none focus-visible:ring-2
-   * focus-visible:ring-[#E8E044] motion-reduce:transition-none sm:min-h-64
-   * sm:p-6
-   *
-   * The published values replace the `group` marker: the art tile's shift,
-   * fade and desaturation and the footer rule's ink all lived on
-   * `group-hover:` utilities. They are published from the shared base so a
-   * disabled card keeps the hover response it has today — a disabled `<button>`
-   * still matches `:hover`, and `.group:hover` reached it too.
+   * One tab: a hairline plate with its name, what the page is, and the three
+   * things it does. No artwork, no badge, no index.
    */
-  card: {
-    [artTransform.value]: {
-      default: "none",
-      ":hover": "translate(-0.25rem, 0) scale(1.04)",
-    },
-    [artIdleOpacity.value]: { default: "0.45", ":hover": "0.8" },
-    [artIdleFilter.value]: {
-      default: "grayscale(100%)",
-      ":hover": "grayscale(0)",
-    },
-    [metaIdleInk.value]: {
-      default: "rgb(255 255 255 / 0.35)",
-      ":hover": "rgb(255 255 255 / 0.7)",
-    },
-    position: "relative",
+  tab: {
     display: "flex",
-    minHeight: { default: "15rem", [SHORT_WIDE]: "16rem", [ONE_PAGE]: 0 },
     flexDirection: "column",
-    overflow: "hidden",
+    gap: "0.5rem",
+    minWidth: 0,
     borderWidth: 1,
     borderStyle: "solid",
-    padding: { default: "1.25rem", [SM]: "1.5rem" },
+    paddingInline: "1rem",
+    paddingBlock: "1rem",
+    textAlign: "left",
     transitionProperty: {
-      default: "border-color, background-color, box-shadow, transform",
+      default: "border-color, background-color, color",
       [REDUCED]: "none",
     },
-    transitionDuration: "300ms",
+    transitionDuration: "150ms",
     transitionTimingFunction: EASE,
     outlineWidth: { default: null, ":focus-visible": "2px" },
     outlineStyle: { default: null, ":focus-visible": "solid" },
     outlineColor: { default: null, ":focus-visible": "transparent" },
     outlineOffset: { default: null, ":focus-visible": "2px" },
   },
-  // cursor-not-allowed border-white/[0.05] bg-black/20 opacity-60
-  cardDisabled: {
-    cursor: "not-allowed",
-    borderColor: "rgb(255 255 255 / 0.05)",
-    backgroundColor: "rgb(0 0 0 / 0.2)",
-    opacity: 0.6,
-    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
-  },
-  /**
-   * border-[#E8E044]/25
-   * bg-[linear-gradient(145deg,rgba(232,224,68,0.09),rgba(255,255,255,0.025))]
-   * shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(0,0,0,0.18)]
-   */
-  cardActive: {
-    borderColor: "rgb(232 224 68 / 0.25)",
-    backgroundImage:
-      "linear-gradient(145deg, rgba(232,224,68,0.09), rgba(255,255,255,0.025))",
-    boxShadow: {
-      default: CARD_SHADOW_ACTIVE,
-      ":focus-visible": `${FOCUS_RING}, ${CARD_SHADOW_ACTIVE}`,
-    },
-  },
-  /**
-   * border-white/[0.08] bg-white/[0.025] hover:-translate-y-1
-   * hover:border-white/20 hover:bg-white/[0.05]
-   * hover:shadow-[0_20px_55px_rgba(0,0,0,0.25)]
-   *
-   * Hover and focus can be true at once, and Tailwind renders both shadows
-   * then — the ring and the elevation are separate slots in one `box-shadow`.
-   * The combined key restores that; without it the last matching condition
-   * would silently drop the lift shadow off a focused card the pointer is over.
-   */
-  cardIdle: {
+  tabIdle: {
     borderColor: {
       default: "rgb(255 255 255 / 0.08)",
       ":hover": "rgb(255 255 255 / 0.2)",
@@ -427,252 +231,80 @@ export const styles = stylex.create({
       default: "rgb(255 255 255 / 0.025)",
       ":hover": "rgb(255 255 255 / 0.05)",
     },
-    transform: { default: "none", ":hover": "translateY(-0.25rem)" },
-    boxShadow: {
-      default: null,
-      ":hover": CARD_SHADOW_HOVER,
-      ":focus-visible": FOCUS_RING,
-      ":hover:focus-visible": `${FOCUS_RING}, ${CARD_SHADOW_HOVER}`,
-    },
+    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
+  },
+  tabActive: {
+    borderColor: "rgb(232 224 68 / 0.25)",
+    backgroundColor: "rgb(232 224 68 / 0.07)",
+    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
+  },
+  tabDisabled: {
+    cursor: "not-allowed",
+    borderColor: "rgb(255 255 255 / 0.05)",
+    backgroundColor: "rgb(0 0 0 / 0.2)",
+    opacity: 0.6,
+    boxShadow: { default: null, ":focus-visible": FOCUS_RING },
   },
 
-  // relative z-10 flex items-center justify-between
-  cardHead: {
-    position: "relative",
-    zIndex: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  // font-meta text-[9px] font-semibold tracking-[0.18em] text-white/30
-  cardIndex: {
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: 600,
-    letterSpacing: text.trackingMetaWider,
-    color: "rgb(255 255 255 / 0.3)",
-  },
-
-  /**
-   * rounded-full border px-2.5 py-1 font-meta text-[8px] font-bold uppercase
-   * tracking-[0.13em]
-   */
-  badge: {
-    borderWidth: 1,
-    borderStyle: "solid",
-    paddingInline: "0.625rem",
-    paddingBlock: "0.25rem",
-    fontFamily: text.fontMeta,
-    fontSize: "8px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.13em",
-  },
-  // border-white/[0.07] text-white/25
-  badgeDisabled: {
-    borderColor: "rgb(255 255 255 / 0.07)",
-    color: "rgb(255 255 255 / 0.25)",
-  },
-  // border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
-  badgeActive: {
-    borderColor: "rgb(232 224 68 / 0.3)",
-    backgroundColor: "rgb(232 224 68 / 0.1)",
-    color: colors.accent,
-  },
-  // border-white/10 text-white/40
-  badgeIdle: {
-    borderColor: "rgb(255 255 255 / 0.1)",
-    color: "rgb(255 255 255 / 0.4)",
-  },
-
-  /**
-   * pointer-events-none absolute -right-4 top-7 grid size-40 place-items-center
-   * transition-[transform,opacity,filter] duration-500 group-hover:-translate-x-1
-   * group-hover:scale-[1.04]
-   */
-  art: {
-    pointerEvents: "none",
-    position: "absolute",
-    right: "-1rem",
-    top: "1.75rem",
-    display: "grid",
-    width: "10rem",
-    height: "10rem",
-    placeItems: "center",
-    transform: artTransform.value,
-    transitionProperty: "transform, opacity, filter",
-    transitionDuration: "500ms",
-    transitionTimingFunction: EASE,
-  },
-  // opacity-100 drop-shadow-[0_16px_34px_rgba(232,224,68,0.14)]
-  artActive: {
-    opacity: 1,
-    filter: "drop-shadow(0 16px 34px rgba(232,224,68,0.14))",
-  },
-  // opacity-45 grayscale group-hover:opacity-80 group-hover:grayscale-0
-  artIdle: {
-    opacity: artIdleOpacity.value,
-    filter: artIdleFilter.value,
-  },
-  // size-40 object-contain
-  artImage: { width: "10rem", height: "10rem", objectFit: "contain" },
-  /** The single card of a one-card group: a larger tile, lower in the card. */
-  artHero: {
-    right: { default: "-1rem", [ONE_PAGE]: "0.5rem" },
-    top: { default: "1.75rem", [ONE_PAGE]: "22%" },
-    width: { default: "10rem", [ONE_PAGE]: "18rem" },
-    height: { default: "10rem", [ONE_PAGE]: "18rem" },
-  },
-  artImageHero: {
-    width: { default: "10rem", [ONE_PAGE]: "18rem" },
-    height: { default: "10rem", [ONE_PAGE]: "18rem" },
-    objectFit: "contain",
-  },
-
-  /**
-   * relative z-10 mt-20 block max-w-[75%] text-left
-   *
-   * One-page cards are as tall as their row, so the copy sits at the foot.
-   */
-  copy: {
-    position: "relative",
-    zIndex: 10,
-    marginTop: { default: "5rem", [ONE_PAGE]: "auto" },
-    display: "block",
-    maxWidth: "75%",
-    textAlign: "left",
-  },
-  // block font-display text-2xl font-semibold tracking-[-0.035em]
-  title: {
-    display: "block",
-    fontFamily: text.fontDisplay,
-    fontSize: "1.5rem",
-    lineHeight: "2rem",
-    fontWeight: 600,
-    letterSpacing: "-0.035em",
-  },
-  titleActive: { color: colors.accent },
-  titleIdle: { color: "#fff" },
-  // mt-2 block text-xs leading-5 text-white/45
-  description: {
-    marginTop: "0.5rem",
-    display: "block",
-    fontSize: "0.75rem",
-    lineHeight: "1.25rem",
-    color: "rgb(255 255 255 / 0.45)",
-  },
-
-  /**
-   * relative z-10 mt-6 flex items-center justify-between border-t pt-4
-   * text-left font-meta text-[9px] font-bold uppercase tracking-[0.14em]
-   */
-  meta: {
-    position: "relative",
-    zIndex: 10,
-    marginTop: "1.5rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopStyle: "solid",
-    paddingTop: "1rem",
-    textAlign: "left",
-    fontFamily: text.fontMeta,
-    fontSize: "9px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
-  },
-  // border-[#E8E044]/20 text-[#E8E044]
-  metaActive: {
-    borderTopColor: "rgb(232 224 68 / 0.2)",
-    color: colors.accent,
-  },
-  // border-white/[0.07] text-white/35 group-hover:text-white/70
-  metaIdle: {
-    borderTopColor: "rgb(255 255 255 / 0.07)",
-    color: metaIdleInk.value,
-  },
-  // text-base leading-none
-  metaArrow: { fontSize: "1rem", lineHeight: 1 },
-
-  /**
-   * grid gap-3 lg:grid-cols-[…]: workspace, the compact library group, the
-   * cloud account, then the utilities.
-   */
-  footerGrid: {
-    display: "grid",
-    gap: "0.75rem",
-    gridTemplateColumns: {
-      default: null,
-      [LG]: "minmax(0,1.1fr) minmax(0,0.8fr) minmax(0,1fr) minmax(300px,1.25fr)",
-    },
-  },
-
-  /**
-   * flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07]
-   * bg-white/[0.025] px-3 py-2.5
-   */
-  workspace: {
-    display: "flex",
-    minWidth: 0,
-    alignItems: "center",
-    gap: "0.75rem",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.07)",
-    backgroundColor: "rgb(255 255 255 / 0.025)",
-    paddingInline: "0.75rem",
-    paddingBlock: "0.625rem",
-  },
-  // size-4 shrink-0 text-[#E8E044]
-  workspaceIcon: {
+  tabHead: { display: "flex", alignItems: "center", gap: "0.5rem" },
+  tabIcon: {
     width: "1rem",
     height: "1rem",
     flexShrink: 0,
-    color: colors.accent,
+    color: "rgb(255 255 255 / 0.45)",
   },
-  // min-w-0 flex-1
-  workspaceBody: { minWidth: 0, flexGrow: 1, flexShrink: 1, flexBasis: "0%" },
-  // mb-0.5 font-meta text-[8px] font-bold uppercase tracking-[0.16em]
-  // text-white/30
-  workspaceLabel: {
-    marginBottom: "0.125rem",
+  tabIconActive: { color: colors.accent },
+  tabTitle: {
+    fontFamily: text.fontDisplay,
+    fontSize: "1.125rem",
+    lineHeight: "1.5rem",
+    fontWeight: 600,
+    letterSpacing: "-0.03em",
+  },
+  tabTitleActive: { color: colors.accent },
+  tabTitleIdle: { color: "#fff" },
+  tabDescription: {
     fontFamily: text.fontMeta,
-    fontSize: "8px",
+    fontSize: "10px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWide,
     color: "rgb(255 255 255 / 0.3)",
   },
-  // truncate text-xs font-semibold text-white/80
-  workspaceName: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
-    fontWeight: 600,
-    color: "rgb(255 255 255 / 0.8)",
+  /** The three capability phrases, one per line. */
+  tabHighlights: {
+    display: "grid",
+    gap: "0.125rem",
+    marginTop: "0.25rem",
   },
-  // truncate text-[10px] text-white/35
-  workspaceHint: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: "10px",
-    color: "rgb(255 255 255 / 0.35)",
+  tabHighlight: {
+    fontSize: "0.75rem",
+    lineHeight: "1.125rem",
+    color: "rgb(255 255 255 / 0.45)",
   },
 
-  /**
-   * grid gap-1 rounded-xl border border-white/[0.07] bg-white/[0.025] p-1
-   *
-   * The column track came from an inline `style` because it counts the
-   * utilities at runtime; `utilityColumns` below keeps that a style, not a
-   * hand-written inline declaration.
-   */
-  utilities: {
+  /** Utilities on the left, account and graphics level on the right. */
+  footer: {
     display: "grid",
+    gap: "0.75rem",
+    alignItems: "center",
+    gridTemplateColumns: {
+      default: null,
+      [LG]: "minmax(0, 1fr) auto",
+    },
+  },
+  footerAside: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: { default: "flex-start", [LG]: "flex-end" },
+    gap: "0.5rem",
+    minWidth: 0,
+  },
+
+  /** grid gap-1 border border-white/[0.07] bg-white/[0.025] p-1 */
+  utilities: {
+    display: "flex",
+    flexWrap: "wrap",
     gap: "0.25rem",
     borderWidth: 1,
     borderStyle: "solid",
@@ -680,25 +312,21 @@ export const styles = stylex.create({
     backgroundColor: "rgb(255 255 255 / 0.025)",
     padding: "0.25rem",
   },
-  utilityColumns: (count: number) => ({
-    gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`,
-  }),
 
   /**
-   * flex min-h-12 items-center justify-center gap-2 rounded-lg px-2 text-center
-   * text-[10px] font-medium transition-colors focus-visible:outline-none
-   * focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E8E044]
+   * flex min-h-8 items-center gap-2 px-2 text-[10px] font-medium
+   * transition-colors focus-visible:ring-2 focus-visible:ring-inset
+   * focus-visible:ring-[#E8E044]
    */
   utility: {
     display: "flex",
-    minHeight: "3rem",
+    minHeight: "2rem",
     alignItems: "center",
-    justifyContent: "center",
-    gap: "0.5rem",
+    gap: "0.375rem",
     paddingInline: "0.5rem",
-    textAlign: "center",
     fontSize: "10px",
     fontWeight: 500,
+    whiteSpace: "nowrap",
     transitionProperty: COLOR_TRANSITION,
     transitionDuration: "150ms",
     transitionTimingFunction: EASE,
@@ -721,17 +349,35 @@ export const styles = stylex.create({
   // size-3.5 shrink-0
   utilityIcon: { width: "0.875rem", height: "0.875rem", flexShrink: 0 },
 
-  /** Graphics level row under the footer grid: a caption, then four utility-styled buttons. */
-  graphics: {
-    marginTop: "0.75rem",
+  /**
+   * The graphics level: one square icon button that advances to the next
+   * level, sized to the utility row beside it.
+   */
+  graphicsButton: {
     display: "grid",
-    gap: "0.375rem",
+    placeItems: "center",
+    width: "2.25rem",
+    height: "2.25rem",
+    flexShrink: 0,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: {
+      default: "rgb(255 255 255 / 0.07)",
+      ":hover": "rgb(255 255 255 / 0.2)",
+    },
+    backgroundColor: {
+      default: "rgb(255 255 255 / 0.025)",
+      ":hover": "rgb(255 255 255 / 0.05)",
+    },
+    color: { default: colors.accent, ":hover": colors.accent },
+    transitionProperty: COLOR_TRANSITION,
+    transitionDuration: "150ms",
+    transitionTimingFunction: EASE,
+    outlineWidth: { default: null, ":focus-visible": "2px" },
+    outlineStyle: { default: null, ":focus-visible": "solid" },
+    outlineColor: { default: null, ":focus-visible": "transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": FOCUS_RING_INSET },
   },
-  graphicsHead: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    paddingInline: "0.25rem",
-  },
-  graphicsLabel: { marginBottom: 0 },
+  graphicsIcon: { width: "1rem", height: "1rem" },
 });

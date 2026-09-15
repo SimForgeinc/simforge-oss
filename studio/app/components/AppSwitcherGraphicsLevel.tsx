@@ -1,53 +1,60 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { MonitorCog } from "lucide-react";
+import { SignalHigh, SignalLow, SignalMedium, SignalZero } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   saveRenderingPreference,
   useRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
-import { SCENARIO_AUTHORING_QUALITY_CHOICES } from "@simforge-oss/studio-ui/lib/scenario/contracts";
+import {
+  SCENARIO_AUTHORING_QUALITY_CHOICES,
+  type ScenarioAuthoringQuality,
+} from "@simforge-oss/studio-ui/lib/scenario/contracts";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
 
 /**
- * The graphics level, right in the app switcher: one button per level, the
- * saved one lit. Choosing writes the shared preference, which every open
- * viewport follows live (scene, editor and drive all subscribe), so the level
- * changes where the user is rather than on the next page.
+ * One icon for the four levels, lowest to highest, so the button shows where
+ * the preference sits without spending a row on labels.
+ */
+const LEVEL_ICONS: Record<ScenarioAuthoringQuality, LucideIcon> = {
+  "roads-only": SignalZero,
+  "ultra-low-3d": SignalLow,
+  minimal: SignalMedium,
+  high: SignalHigh,
+};
+
+/**
+ * The graphics level as a single button: it shows the saved level and clicking
+ * advances to the next one, wrapping at the top. Writing the shared preference
+ * is what every open viewport follows live (scene, editor and drive all
+ * subscribe), so the level changes where the user is rather than on the next
+ * page.
  */
 export function AppSwitcherGraphicsLevel() {
   const preference = useRenderingPreference() ?? "high";
+  const index = SCENARIO_AUTHORING_QUALITY_CHOICES.findIndex(
+    (choice) => choice.id === preference,
+  );
+  const current =
+    SCENARIO_AUTHORING_QUALITY_CHOICES[index === -1 ? 0 : index];
+  const next =
+    SCENARIO_AUTHORING_QUALITY_CHOICES[
+      ((index === -1 ? 0 : index) + 1) % SCENARIO_AUTHORING_QUALITY_CHOICES.length
+    ];
+  const Icon = LEVEL_ICONS[current.id];
+
   return (
-    <div {...stylex.props(styles.graphics)} data-testid="app-switcher-graphics-level">
-      <div {...stylex.props(styles.graphicsHead)}>
-        <MonitorCog {...stylex.props(styles.workspaceIcon)} aria-hidden="true" />
-        <p {...stylex.props(styles.workspaceLabel, styles.graphicsLabel)}>Graphics level</p>
-      </div>
-      <div
-        aria-label="Graphics level"
-        role="radiogroup"
-        {...stylex.props(styles.utilities, styles.utilityColumns(SCENARIO_AUTHORING_QUALITY_CHOICES.length))}
-      >
-        {SCENARIO_AUTHORING_QUALITY_CHOICES.map((choice) => {
-          const active = choice.id === preference;
-          return (
-            <button
-              aria-checked={active}
-              {...stylex.props(styles.utility, active ? styles.utilityActive : styles.utilityIdle)}
-              data-quality={choice.id}
-              key={choice.id}
-              onClick={() => {
-                if (!active) saveRenderingPreference(choice.id);
-              }}
-              role="radio"
-              title={choice.gpuMemoryGuidance}
-              type="button"
-            >
-              {choice.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      aria-label={`Graphics level: ${current.label}. Switch to ${next.label}.`}
+      {...stylex.props(styles.graphicsButton)}
+      data-quality={current.id}
+      data-testid="app-switcher-graphics-level"
+      onClick={() => saveRenderingPreference(next.id)}
+      title={`Graphics level: ${current.label} — ${current.gpuMemoryGuidance}. Click for ${next.label}.`}
+      type="button"
+    >
+      <Icon {...stylex.props(styles.graphicsIcon)} aria-hidden="true" />
+    </button>
   );
 }
