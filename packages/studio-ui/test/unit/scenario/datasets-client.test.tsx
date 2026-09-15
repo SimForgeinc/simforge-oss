@@ -210,8 +210,24 @@ describe("ScenarioDatasetsClient", () => {
     expect(screen.getByTestId("scenario-dataset-description").textContent).toBe(
       "Fifty cut-ins at highway speed.",
     );
-    expect(header.contains(screen.getByRole("searchbox", { name: "Filter scenarios by name" }))).toBe(true);
+    // The tools are icons in the header's top-right corner; the search field only
+    // appears once its button is pressed, and closing it clears the query.
+    expect(screen.queryByRole("searchbox", { name: "Filter scenarios by name" })).toBeNull();
     expect(header.contains(screen.getByRole("button", { name: "Filter scenarios" }))).toBe(true);
+    expect(header.contains(screen.getByRole("button", { name: "Edit tags" }))).toBe(true);
+    // Corner, not a toolbar row: the tools end the row the dataset name opens,
+    // and the scenario/render counts that used to sit under it are gone.
+    const titleRow = screen.getByRole("heading", { name: "Cut-in corpus" }).closest("div");
+    const tools = screen.getByRole("button", { name: "Edit tags" }).parentElement;
+    expect(titleRow?.lastElementChild).toBe(tools);
+    expect(header.textContent).not.toMatch(/\d+\s+scenarios?/i);
+    expect(header.textContent).not.toMatch(/rendered/i);
+    fireEvent.click(screen.getByRole("button", { name: "Search scenarios" }));
+    const search = screen.getByRole("searchbox", { name: "Filter scenarios by name" });
+    expect(header.contains(search)).toBe(true);
+    fireEvent.change(search, { target: { value: "cut-in" } });
+    fireEvent.click(screen.getByRole("button", { name: "Hide scenario search" }));
+    expect(screen.queryByRole("searchbox", { name: "Filter scenarios by name" })).toBeNull();
     expect(header.contains(screen.getByTestId("scenario-add-scenario"))).toBe(true);
     // And "Add scenario" again as the last row of the list, like Slack's "Add channels".
     const index = screen.getByTestId("scenario-document-index");

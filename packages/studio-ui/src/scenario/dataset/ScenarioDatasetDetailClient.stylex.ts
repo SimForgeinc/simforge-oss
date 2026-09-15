@@ -64,6 +64,13 @@ export const styles = stylex.create({
     flexShrink: 0,
     opacity: 0.7,
   },
+  /** Search, filter, tags and add, in the top-right corner of the header. */
+  headerActions: {
+    display: "flex",
+    flexShrink: 0,
+    alignItems: "center",
+    gap: space.xs,
+  },
   headerAdd: {
     width: "1.75rem",
     height: "1.75rem",
@@ -84,15 +91,6 @@ export const styles = stylex.create({
   descriptionEmpty: {
     fontStyle: "italic",
     color: colors.textFaint,
-  },
-  meta: {
-    margin: 0,
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
-    color: "rgb(255 255 255 / 0.55)",
   },
   toolbar: {
     display: "flex",

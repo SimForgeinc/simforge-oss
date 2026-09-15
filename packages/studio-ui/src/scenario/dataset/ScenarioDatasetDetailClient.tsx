@@ -100,6 +100,10 @@ export function ScenarioDatasetDetailClient({
   const [notice, setNotice] = useState<string | null>(null);
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchRevealed, setSearchRevealed] = useState(false);
+  // An active query keeps the field on screen: hiding it would filter the list
+  // with nothing on screen saying why rows are missing.
+  const searchOpen = searchRevealed || query.length > 0;
 
   const reportError = useCallback((errorValue: unknown, fallback: string) => {
     setError(errorValue instanceof Error ? errorValue.message : fallback);
@@ -256,6 +260,13 @@ export function ScenarioDatasetDetailClient({
     setTagEditorOpen((open) => !open);
   }, []);
 
+  const toggleSearch = useCallback(() => {
+    setSearchRevealed((revealed) => {
+      if (revealed) setQuery("");
+      return !revealed;
+    });
+  }, []);
+
   const openScenarioImport = useScenarioOpenScenarioImport({
     datasetId,
     maps,
@@ -346,27 +357,61 @@ export function ScenarioDatasetDetailClient({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {datasetEditable ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  xstyle={styles.headerAdd}
-                  aria-label="Add scenario"
-                  data-testid="scenario-add-scenario"
-                >
-                  {addBusy ? (
-                    <CloudActivityIndicator />
-                  ) : (
-                    <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              {addScenarioMenu}
-            </DropdownMenu>
-          ) : null}
+          <div {...stylex.props(styles.headerActions)}>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              xstyle={[chip.base, control.iconSm, searchOpen ? chip.on : chip.off]}
+              aria-pressed={searchOpen}
+              aria-label={searchOpen ? "Hide scenario search" : "Search scenarios"}
+              title={searchOpen ? "Hide scenario search" : "Search scenarios"}
+              onClick={toggleSearch}
+            >
+              <Search {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
+            </Button>
+            <ScenarioTagFilterDropdown
+              tags={tagManager.tags}
+              creatorOptions={creatorOptions}
+              selectedTagFilter={tagManager.selectedTagFilter}
+              selectedCreatorFilter={tagManager.selectedCreatorFilter}
+              onSelectTagFilter={tagManager.selectTagFilter}
+              onSelectCreatorFilter={tagManager.selectCreatorFilter}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              xstyle={[chip.base, control.iconSm, tagEditorOpen ? chip.on : chip.off]}
+              aria-pressed={tagEditorOpen}
+              aria-label={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+              title={tagEditorOpen ? "Close tag editor" : "Edit tags"}
+              onClick={toggleTagEditor}
+            >
+              <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
+            </Button>
+            {datasetEditable ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    xstyle={styles.headerAdd}
+                    aria-label="Add scenario"
+                    data-testid="scenario-add-scenario"
+                  >
+                    {addBusy ? (
+                      <CloudActivityIndicator />
+                    ) : (
+                      <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                {addScenarioMenu}
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
         <p
           {...stylex.props(
@@ -377,45 +422,23 @@ export function ScenarioDatasetDetailClient({
         >
           {dataset.description || "No description"}
         </p>
-        <p {...stylex.props(styles.meta)}>
-          {list.documents.length}{" "}
-          {list.documents.length === 1 ? "scenario" : "scenarios"}
-          {list.readiness ? ` · ${list.readiness.rendered} rendered` : null}
-          {!datasetEditable ? " · Read-only" : null}
-        </p>
-        <div {...stylex.props(styles.toolbar)}>
-          <div {...stylex.props(styles.searchField)}>
-            <Search {...stylex.props(styles.searchIcon)} aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.currentTarget.value)}
-              placeholder="Filter scenarios"
-              aria-label="Filter scenarios by name"
-              {...stylex.props(styles.searchInput)}
-            />
+        {searchOpen ? (
+          <div {...stylex.props(styles.toolbar)}>
+            <div {...stylex.props(styles.searchField)}>
+              <Search {...stylex.props(styles.searchIcon)} aria-hidden="true" />
+              <input
+                // Opening the field is the request to type in it.
+                autoFocus
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                placeholder="Filter scenarios"
+                aria-label="Filter scenarios by name"
+                {...stylex.props(styles.searchInput)}
+              />
+            </div>
           </div>
-          <ScenarioTagFilterDropdown
-            tags={tagManager.tags}
-            creatorOptions={creatorOptions}
-            selectedTagFilter={tagManager.selectedTagFilter}
-            selectedCreatorFilter={tagManager.selectedCreatorFilter}
-            onSelectTagFilter={tagManager.selectTagFilter}
-            onSelectCreatorFilter={tagManager.selectCreatorFilter}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            xstyle={[chip.base, control.iconSm, tagEditorOpen ? chip.on : chip.off]}
-            aria-pressed={tagEditorOpen}
-            aria-label={tagEditorOpen ? "Close tag editor" : "Edit tags"}
-            title={tagEditorOpen ? "Close tag editor" : "Edit tags"}
-            onClick={toggleTagEditor}
-          >
-            <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
-          </Button>
-        </div>
+        ) : null}
       </header>
       {combinedError || notice ? (
         <div {...stylex.props(styles.messages)}>

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../lib/utils";
-import { chip, menu } from "../scenario-controls.stylex";
+import { chip, control, menu } from "../scenario-controls.stylex";
 
 export type ScenarioCreatorFilterOption = {
   value: string;
@@ -48,12 +48,13 @@ export function ScenarioTagFilterDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
+          size="icon"
           variant="outline"
-          xstyle={[chip.base, hasActiveFilter ? chip.on : chip.off]}
+          xstyle={[chip.base, control.iconSm, hasActiveFilter ? chip.on : chip.off]}
           aria-label="Filter scenarios"
+          title="Filter scenarios"
         >
           <Filter {...stylex.props(styles.filterFilter)} aria-hidden="true" />
-          Filter
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" xstyle={menu.width220}>
