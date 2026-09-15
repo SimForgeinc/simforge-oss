@@ -49,6 +49,8 @@ async function fixture(t, { state = "disconnected", workspaceStatus = 200, cloud
   const requests = [];
   const capability = {
     schema: "simforge.studio-host-capabilities/v1",
+    protocolVersion: 1,
+    transports: ["http"],
     host: { kind: "local", label: "Installed Studio", version: "1.0.0" },
     identity: { mode: "fixed-local", userId: "private-user", workspaceId: "private-workspace" },
     persistence: { kind: "pglite-filesystem", dataRoot },

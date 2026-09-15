@@ -5,7 +5,10 @@ import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/li
 /**
  * What this host can do right now: identity mode, persistence, registered
  * render workers, and whether the native runner is installed. Also the local
- * readiness probe the desktop shell and supervisor wait on.
+ * readiness probe the desktop shell and supervisor wait on, and the protocol
+ * handshake: `protocolVersion`/`transports` are what every client (desktop
+ * shell, CLI, worker) checks with `checkHostProtocolVersion` before it loads a
+ * page or issues a call, so an incompatible host is refused up front.
  */
 export async function GET() {
   const auth = await requireScenarioContext();

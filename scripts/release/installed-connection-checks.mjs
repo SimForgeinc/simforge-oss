@@ -141,6 +141,7 @@ export async function readInstalledHostRecord(dataRoot) {
 function capabilitiesValid(body) {
   const runtime = body?.execution?.nativeRuntime;
   return object(body) && body.schema === "simforge.studio-host-capabilities/v1" &&
+    Number.isInteger(body.protocolVersion) && Array.isArray(body.transports) && body.transports.every(text) &&
     body.host?.kind === "local" && text(body.host.label) && nullableText(body.host.version) &&
     body.identity?.mode === "fixed-local" && text(body.identity.userId) && text(body.identity.workspaceId) &&
     body.persistence?.kind === "pglite-filesystem" && text(body.persistence.dataRoot) &&

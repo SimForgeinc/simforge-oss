@@ -7,6 +7,7 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { fileURLToPath } from "node:url";
 import { simforgeEnv } from "../lib/simforge-env";
+import { checkHostProtocolVersion } from "@simforge-oss/studio-host";
 
 import type { RenderInputFile } from "@simforge-oss/render";
 
@@ -40,8 +41,20 @@ type ReservedRecording = {
 
 type JsonObject = Record<string, unknown>;
 
+class HostProtocolMismatch extends Error {
+  override readonly name = "HostProtocolMismatch";
+}
+
 export class CpuJobsClient {
   readonly workerId: string;
+  /**
+   * The host protocol handshake, once per client: the first call probes the
+   * capability document and refuses a host that speaks another protocol
+   * version (or none) before any job is claimed. A transport failure of the
+   * probe is retried on the next call; an incompatibility is final for this
+   * client, because the host has to change, not the worker's luck.
+   */
+  private protocolHandshake: Promise<void> | null = null;
 
   constructor(
     private readonly baseUrl: URL,
@@ -298,6 +311,27 @@ export class CpuJobsClient {
     );
   }
 
+  private verifyHostProtocol(signal: AbortSignal): Promise<void> {
+    if (!this.protocolHandshake) {
+      const handshake = (async () => {
+        const response = await fetch(new URL("/api/simforge/host/capabilities", this.baseUrl), {
+          headers: { authorization: `Bearer ${this.token}` },
+          signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),
+        });
+        if (!response.ok) {
+          throw new Error(`worker API capabilities probe returned ${response.status}: ${(await response.text()).slice(0, 2_048)}`);
+        }
+        const protocol = checkHostProtocolVersion(await response.json().catch(() => null));
+        if (!protocol.ok) throw new HostProtocolMismatch(`the Studio host at ${this.baseUrl.origin} is incompatible with this worker: ${protocol.reason}`);
+      })();
+      this.protocolHandshake = handshake;
+      handshake.catch((error: unknown) => {
+        if (!(error instanceof HostProtocolMismatch)) this.protocolHandshake = null;
+      });
+    }
+    return this.protocolHandshake;
+  }
+
   private async request(
     path: string,
     payload: unknown,
@@ -305,6 +339,7 @@ export class CpuJobsClient {
     allowNoContent = false,
     method: "POST" | "PATCH" = "POST",
   ): Promise<JsonObject | null> {
+    await this.verifyHostProtocol(signal);
     const response = await fetch(new URL(path, this.baseUrl), {
       method,
       headers: {
