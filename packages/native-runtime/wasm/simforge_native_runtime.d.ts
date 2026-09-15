@@ -407,7 +407,7 @@ export class WorldSnapshot {
     kinds: any[];
     laneRsls: any[];
     /**
-     * `(N, 5)` rows `[x, z, headingRad, speedMps, s]`, scene frame.
+     * `(N, 6)` rows `[x, z, headingRad, speedMps, s, longitudinalSpeedMps]`, scene frame.
      */
     pose: Float64Array;
     present: Uint8Array;
