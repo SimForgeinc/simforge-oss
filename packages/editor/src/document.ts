@@ -31,6 +31,7 @@ import {
   type ParamDecl,
   type PropPlacement,
   type Variant,
+  instantiateSensorRig,
   type ActorSensor,
   type ScenarioTemplateV2,
   type TemplateFileStore,
@@ -410,6 +411,14 @@ const APP_VERSION = '0.1.0-editor';
 /** Exact canonical authored 30 mph vehicle speed in SI units. */
 export { DEFAULT_AUTHORED_VEHICLE_SPEED_KPH, DEFAULT_AUTHORED_VEHICLE_SPEED_MPS };
 
+/**
+ * The rig a placed actor starts with: the cheapest built-in that makes a
+ * scenario renderable. Same preset the drive path uses
+ * (`driver-in-the-loop.ts:24`), deliberately — a first render should not
+ * require the heaviest rig we ship.
+ */
+const STARTER_SENSOR_RIG_ID = 'basic-dash-camera';
+
 /** Autosave debounce. Long enough to coalesce a drag, short enough to trust. */
 const AUTOSAVE_DEBOUNCE_MS = 400;
 
@@ -656,6 +665,39 @@ export class EditorDocument {
     return ids;
   }
 
+  /**
+   * Sensors a newly placed actor starts with.
+   *
+   * A scenario is renderable only through an authored sensor
+   * (`authoredRenderSensors`, render-spec-builders.ts:80; `render submit`
+   * refuses with `no_sensors` at render-submit.ts:57-61, and the render action
+   * in the scenario list is disabled the same way). Placement used to hand
+   * every actor `sensors: []`, so a scenario stayed un-renderable until the
+   * author found Sensor Setup in the inspector — the only writer of sensors in
+   * the product (`replaceActorSensors` below). On a fresh installation that is
+   * the whole first-run wall: the map gallery's default document arrives with
+   * no actors, and the first one placed could not render either.
+   *
+   * The drive path already decided this question the same way and for the same
+   * reason: `driver-in-the-loop.ts:119-124` instantiates `basic-dash-camera`
+   * on a driven role with no sensors, because "a variation created for driving
+   * would otherwise be born un-renderable". This is that rule applied one step
+   * earlier, at placement.
+   *
+   * Only the first sensor-bearing actor gets a rig. A second car is traffic,
+   * not a second ego, and giving ten placed cars ten dash cameras would put
+   * ten sensor choices in front of anyone submitting a render.
+   */
+  #starterSensors(kind: ReturnType<typeof actorKindFor>, input: NewActor): ActorSensor[] {
+    if (kind !== 'vehicle' || input.static === true) return [];
+    if (sensorSubjectRole(this.#doc.data) !== undefined) return [];
+    const dims = getEntry(input.catalogId).dims;
+    return [...instantiateSensorRig(STARTER_SENSOR_RIG_ID, {
+      class: simulationClassFor(input.catalogId),
+      dims: { length: dims.l, width: dims.w, height: dims.h },
+    })];
+  }
+
   /** Add one role inside an open transaction. Shared by `add` and `addWithInteractions`. */
   #addActor(input: NewActor): string {
     const kind = actorKindFor(input.catalogId);
@@ -670,7 +712,7 @@ export class EditorDocument {
         catalogId: input.catalogId,
         dims: { length: dims.l, width: dims.w, height: dims.h },
         static: kind === 'prop' || input.static === true,
-        sensors: [],
+        sensors: this.#starterSensors(kind, input),
       },
       pose: {
         position: { x: q(input.x), y: q(input.y), z: q(input.z) },
