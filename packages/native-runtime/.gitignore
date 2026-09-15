@@ -1,4 +1,6 @@
-dist/
+# Trailing-slash patterns match directories only, so a symlink named `dist`
+# (the documented local staging step) was not ignored and got committed.
+dist
 native/*.node
 native/index.d.ts
 wasm/
