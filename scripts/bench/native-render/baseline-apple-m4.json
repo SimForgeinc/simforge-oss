@@ -1,0 +1,172 @@
+{
+  "schema": "simforge.native-render-bench/v1",
+  "label": "baseline",
+  "createdAt": "2026-09-14T19:47:45.369Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "gpu": "Apple M4",
+    "node": "v24.11.1"
+  },
+  "code": {
+    "gitSha": "b2f5e8b1",
+    "serviceBinary": "/Users/maikyon/Library/Application Support/simforge/native-runtime/bin/native-render-service",
+    "serviceSha256": "c9925d40f35f1b7740e64cc4d94172b872a2a606205d2cd803fcf18445ffc9f8"
+  },
+  "fixture": {
+    "path": "/Users/maikyon/simforge-bench/richmond",
+    "intentId": "usri_bf2c0f118b5b4247b7b92a64",
+    "clip": {
+      "startSeconds": 0,
+      "endSeconds": 2
+    }
+  },
+  "rig": {
+    "sources": [
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xg7-1-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-2-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-3-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-4-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-5-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-6-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-7-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-8-lidar",
+        "modality": "lidar",
+        "width": null,
+        "height": null
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-radar-mu1gxbj6-89jpqono-radar",
+        "modality": "radar",
+        "width": null,
+        "height": null
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-chase-cam-trailing-rgb",
+        "modality": "rgb",
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "rgb": 8,
+    "lidar": 1,
+    "radar": 1
+  },
+  "ticks": 48,
+  "timings": {
+    "wallMs": 252491,
+    "startupMs": 35511,
+    "loopMs": 215891,
+    "loopTicks": 47,
+    "msPerTick": 4593.4,
+    "msPerSourceTick": 459.3,
+    "serviceMs": 220844,
+    "serviceShareOfLoop": 100.2,
+    "encodeFlushMs": 869,
+    "projectedFullClipMin": 36.7
+  },
+  "evidence": {
+    "traceSha256": "95fa49b0f8228ffda80843f5ae2a129b8025f5d270fa803dbf972e9aeeec5127",
+    "videos": [
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-chase-cam-trailing-rgb",
+        "frameCount": 48,
+        "sha256": "bcc7541136b8cb872f93209f9c4331148452a2ec4126d7d2da859410277bbee7",
+        "sizeBytes": 461529
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-radar-mu1gxbj6-89jpqono-radar",
+        "frameCount": 48,
+        "sha256": "26f2e0b79ff26eddb68ea6d6b59e35f3624676ed7513ae8be481fd78607f3c24",
+        "sizeBytes": 28001
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xg7-1-rgb",
+        "frameCount": 48,
+        "sha256": "20db3879146596b8cabf801ee2b817ddae1d1d96d9d1cfb98c40149f1cee908c",
+        "sizeBytes": 346663
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-2-rgb",
+        "frameCount": 48,
+        "sha256": "e18ad56c61836ebc487cd6427acfac31a5f72016d160aa581a0b97dd7b5a52e0",
+        "sizeBytes": 497009
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-3-rgb",
+        "frameCount": 48,
+        "sha256": "b3181e1d5e34e1f3369e70870ef2a788c78a81dc538333fa0b784f88e9175dcb",
+        "sizeBytes": 148780
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-4-rgb",
+        "frameCount": 48,
+        "sha256": "57fdffc19954a403dfb34016ce82e04d79524724938042cf78971974a4b4102f",
+        "sizeBytes": 702628
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-5-rgb",
+        "frameCount": 48,
+        "sha256": "664e88f5a1f62a59369ff985c0d24129716d41beadd33f9ff147009e83bf0c7a",
+        "sizeBytes": 163411
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-6-rgb",
+        "frameCount": 48,
+        "sha256": "4f295d3a49982c997fcf54c58de1a49ced8599fb7ddefcac396a5d6c2c008891",
+        "sizeBytes": 782914
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-7-rgb",
+        "frameCount": 48,
+        "sha256": "44b6b35ed71f4f6ecc8da4250a5be249ba46480c2a1acd7de9ad2f9db24708c9",
+        "sizeBytes": 452237
+      },
+      {
+        "outputName": "vehicle-mu0s7qbn-r395p1ez-sensor-mu0s7xgc-8-lidar",
+        "frameCount": 48,
+        "sha256": "95f744368babab9d55c02c3103c55a0583762b990d7cd597870c046c800f2ddb",
+        "sizeBytes": 2863350
+      }
+    ]
+  },
+  "workspace": "/Users/maikyon/simforge-bench/results/baseline-m4",
+  "comparison": null
+}

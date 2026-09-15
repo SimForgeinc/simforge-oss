@@ -114,22 +114,26 @@ export async function removeLocalHostState(env: NodeJS.ProcessEnv = process.env)
  */
 export async function waitForLocalHostReady(
   baseUrl: string,
-  options: { timeoutMs?: number; intervalMs?: number; isAlive?: () => boolean; signal?: AbortSignal; headers?: Record<string, string> } = {},
+  options: { timeoutMs?: number; isAlive?: () => boolean; headers?: Record<string, string> } = {},
 ): Promise<boolean> {
   const deadline = Date.now() + (options.timeoutMs ?? 120_000);
-  const intervalMs = options.intervalMs ?? 500;
+  // Capabilities probes the local runtime (engine binaries, worker state) and
+  // can take several seconds on a loaded machine; readiness asks "is the
+  // server answering", so the per-request budget must not track the poll
+  // cadence or a slow-but-healthy host reads as never ready.
+  const requestTimeoutMs = 20_000;
   while (Date.now() < deadline) {
-    if (options.signal?.aborted || options.isAlive?.() === false) return false;
+    if (options.isAlive?.() === false) return false;
     try {
       const response = await fetch(`${baseUrl}/api/simforge/host/capabilities`, {
         headers: options.headers,
-        signal: AbortSignal.timeout(intervalMs * 4),
+        signal: AbortSignal.timeout(requestTimeoutMs),
       });
       if (response.ok) return true;
     } catch {
       // not listening yet
     }
-    await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
+    await new Promise<void>((resolve) => setTimeout(resolve, 500));
   }
   return false;
 }

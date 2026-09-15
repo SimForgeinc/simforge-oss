@@ -4,7 +4,6 @@ import { listScenarioRatingAggregates } from "@/app/lib/scenario/rating-store";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -17,8 +16,6 @@ import {
  * `workspace_id = :workspace_id`, so ids outside the caller's workspace simply return nothing.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = ScenarioRatingBatchSchema.safeParse(await readJson(request));

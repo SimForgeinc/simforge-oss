@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { remapUploadedCamera } from "./params";
+import { remapUploadedCamera } from "@simforge-oss/evaluation/client";
 
 describe("uploaded camera reassignment", () => {
   it("can correct arbitrary file order when all seven slots are occupied", () => {

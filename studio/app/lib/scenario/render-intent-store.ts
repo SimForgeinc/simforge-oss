@@ -1,6 +1,6 @@
 import type { AppContext } from "@/app/lib/db/app-context";
 import { withTransaction } from "@/app/lib/db/data-api";
-import { RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput } from "@simforge-oss/render/native";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
@@ -161,7 +161,14 @@ function selectedSensorHosts(input: SubmitScenarioRenderIntent, lineage: Immutab
     }
     foundActorIds.add(value.id);
     catalogIdByActor.set(value.id, value.actor.catalogId);
-    for (const authoredSensor of value.actor.sensors ?? []) {
+    // The platform's trailing chase camera is authored by the render contract,
+    // not the document: a source with its id is admitted only against the
+    // canonical mount, unless the actor authors its own.
+    const authoredSensors = [...(value.actor.sensors ?? [])];
+    if (!authoredSensors.some((sensor) => (sensor as { id?: unknown } | null)?.id === PRONTO_CHASE_CAMERA_SENSOR_ID)) {
+      authoredSensors.push(PRONTO_CHASE_CAMERA_SENSOR);
+    }
+    for (const authoredSensor of authoredSensors) {
       if (!authoredSensor || typeof authoredSensor !== "object") continue;
       const sensor = authoredSensor as {
         id?: unknown;
@@ -203,13 +210,17 @@ function buildIntent(
   const content = typeof lineage.canonical_content === "string"
     ? JSON.parse(lineage.canonical_content) as Record<string, unknown>
     : lineage.canonical_content;
+  // The wizard renders a prefix of the frozen clip: the intent must start at
+  // the scenario origin and end inside the authored choreography, otherwise
+  // the schedule would ask the engine for ticks the revision never verified.
   const clipSeconds = (content.choreography as { clipSeconds?: unknown } | undefined)?.clipSeconds;
   if (
     typeof clipSeconds !== "number"
     || input.renderSpec.clip.startSeconds !== 0
-    || input.renderSpec.clip.endSeconds !== clipSeconds
+    || input.renderSpec.clip.endSeconds <= 0
+    || input.renderSpec.clip.endSeconds > clipSeconds
   ) {
-    throw new Error("pronto_render_must_cover_full_clip");
+    throw new Error("pronto_render_clip_out_of_bounds");
   }
   if (
     input.engine === "native"

@@ -22,8 +22,8 @@ import type {
   ComputeJobInputRole,
   ComputeJobModelRef,
   ComputeJobSubmission,
-} from "./contracts";
-import type { EvaluationGateway } from "./gateway";
+} from "@simforge-oss/evaluation/client";
+import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
 import { MODEL_CATALOG } from "./model-catalog";
 import type { ModelFamilyId, ModelQuant } from "./model-catalog";
 

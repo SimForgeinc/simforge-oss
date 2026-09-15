@@ -4,14 +4,11 @@ import { text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
 
 export const styles = stylex.create({
-  shell: { display: "flex", height: "100%", flexDirection: "column", overflowY: "auto" },
   content: { display: "flex", flexDirection: "column", gap: "1.25rem", paddingInline: "1.25rem", paddingBlock: "1.25rem", "@media (min-width: 640px)": { paddingInline: "1.5rem" } },
   content4: { display: "flex", flexDirection: "column", gap: "1rem", paddingInline: "1.25rem", paddingBlock: "1.25rem", "@media (min-width: 640px)": { paddingInline: "1.5rem" } },
   content6: { display: "flex", flexDirection: "column", rowGap: "1.5rem", paddingInline: "1.25rem", paddingBlock: "1.25rem", "@media (min-width: 640px)": { paddingInline: "1.5rem" } },
-  grid2: { display: "grid", gridTemplateColumns: "repeat(1,minmax(0,1fr))", gap: "1rem", "@media (min-width: 640px)": { gridTemplateColumns: "repeat(2,minmax(0,1fr))" } },
   grid4: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "1rem", "@media (min-width: 640px)": { gridTemplateColumns: "repeat(4,minmax(0,1fr))" } },
   grid3: { display: "grid", gridTemplateColumns: "repeat(1,minmax(0,1fr))", gap: "1rem", "@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3,minmax(0,1fr))" } },
-  dl3: { display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", columnGap: "1rem", fontSize: ".875rem", lineHeight: "1.25rem" },
   dlProvenance: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", columnGap: "1.5rem", rowGap: ".5rem", fontSize: ".875rem", lineHeight: "1.25rem", "@media (min-width: 640px)": { gridTemplateColumns: "repeat(3,minmax(0,1fr))" } },
   dlState: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", columnGap: "1rem", rowGap: ".5rem", fontFamily: text.fontMono, fontSize: ".875rem", lineHeight: "1.25rem" },
   dlRun: { display: "grid", columnGap: "2rem", rowGap: ".5rem", fontSize: ".875rem", lineHeight: "1.25rem", "@media (min-width: 640px)": { gridTemplateColumns: "repeat(4,minmax(0,1fr))" } },
@@ -41,9 +38,7 @@ export const styles = stylex.create({
   ddBreakAll: { marginTop: ".125rem", wordBreak: "break-all", color: "hsl(var(--foreground))" },
   /** `min-w-0 truncate` — run/manifest <dd> values ellipsise inside their grid track instead of widening it. */
   truncateValue: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  numeric: { textAlign: "right", fontFamily: text.fontMono }, numericTinyMuted: { textAlign: "right", fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" }, delta: { textAlign: "right", fontFamily: text.fontMono },
-  /** `text-emerald-600 dark:text-emerald-400` — the shell is permanently dark, so the dark value is folded. */
-  deltaPositive: { color: "rgb(52,211,153)" }, deltaNegative: { color: "hsl(var(--destructive))" },
+  numeric: { textAlign: "right", fontFamily: text.fontMono }, numericTinyMuted: { textAlign: "right", fontFamily: text.fontMono, fontSize: ".75rem", lineHeight: "1rem", color: "hsl(var(--muted-foreground))" },
   icon: { width: "1rem", height: "1rem", marginRight: ".375rem" }, iconBare: { width: "1rem", height: "1rem" }, iconTopShrink: { marginTop: ".125rem", width: "1rem", height: "1rem", flexShrink: 0 },
   spinnerSm: { width: ".875rem", height: ".875rem", animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite", color: "hsl(var(--muted-foreground))" },
   spinnerPlain: { width: "1rem", height: "1rem", animationName: spin, animationDuration: "1s", animationTimingFunction: "linear", animationIterationCount: "infinite" },

@@ -21,7 +21,7 @@ import {
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getAppContext } from "@/app/lib/db/app-context";
 import { queryOne } from "@/app/lib/db/data-api";
-import { readJson, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson } from "@/app/lib/scenario/http";
 
 /** Generating variants is local work; publishing them is still S3 plus a transaction. */
 export const maxDuration = 300;
@@ -32,8 +32,6 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ mapVersionId: string }> },
 ) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

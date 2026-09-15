@@ -22,10 +22,10 @@ import type {
   FramesManifest,
   OpenLoopResult,
   TrajectoriesDocument,
-} from "./contracts";
-import { readOpenLoopResult } from "./contracts";
-import type { EvaluationGateway } from "./gateway";
-import { ComputeApiError } from "./gateway";
+} from "@simforge-oss/evaluation/client";
+import { readOpenLoopResult } from "@simforge-oss/evaluation/client";
+import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
+import { ComputeApiError } from "@simforge-oss/evaluation/client";
 import { jobStatusPresentation } from "./presentation";
 
 const POLL_INTERVAL_MS = 3000;

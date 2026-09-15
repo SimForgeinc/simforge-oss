@@ -11,7 +11,7 @@
 //
 // Packaged, the supervisor is `<resources>/studio/studio/host/host.mjs` from
 // the stage `desktop/stage.mjs` produced (see `stage-manifest.json`); from a
-// workspace (`pnpm desktop`, after `pnpm build`) it is `scripts/start.ts`
+// workspace (`pnpm desktop`, after `pnpm build`) it is `simforge daemon`
 // through the installed `tsx`.
 
 import { spawn } from "node:child_process";
@@ -70,9 +70,15 @@ async function supervisorCommand() {
     }
     return { args: [join(stageRoot, manifest.hostEntry)], cwd: join(stageRoot, "studio") };
   }
+  // The workspace host is the CLI daemon on live sources. `tsx/cli` would
+  // fork the real host as a grandchild, and the record it publishes would
+  // then carry a pid this shell never matches. Load tsx as a loader instead so
+  // the supervisor process *is* the host.
   const studioRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-  const tsxCli = createRequire(import.meta.url).resolve("tsx/cli");
-  return { args: [tsxCli, join(studioRoot, "scripts", "start.ts")], cwd: studioRoot };
+  const tsxLoader = createRequire(import.meta.url).resolve("tsx");
+  // Repository layout: the unpackaged shell only ever runs from the workspace.
+  const cliMain = join(studioRoot, "..", "packages", "cli", "src", "main.ts");
+  return { args: ["--import", tsxLoader, cliMain, "daemon"], cwd: studioRoot };
 }
 
 /**
@@ -139,7 +145,6 @@ export function createLocalHost({ port, dataRoot, env, onExit }) {
         ...hostEnv,
         ELECTRON_RUN_AS_NODE: "1",
         PORT: String(selectedPort),
-        SIMFORGE_API_BASE_URL: hostEnv.SIMFORGE_API_BASE_URL?.trim() || `http://127.0.0.1:${selectedPort}`,
         HOSTNAME: "127.0.0.1",
         SIMFORGE_LOCAL_WORKER: hostEnv.SIMFORGE_LOCAL_WORKER ?? "1",
       },
@@ -166,8 +171,6 @@ export function createLocalHost({ port, dataRoot, env, onExit }) {
       isAlive: () => supervisor !== null && supervisor.exitCode === null,
     });
     if (!ready) throw new Error(`The local Studio host did not become ready at ${state.baseUrl}.`);
-    const contract = await checkContract(state.baseUrl, state.controlToken);
-    if (!contract.ok) throw new Error(`The bundled Studio host does not match this application: ${contract.reason}.`);
     controlToken = state.controlToken;
     return { baseUrl: state.baseUrl, owned: true };
   }

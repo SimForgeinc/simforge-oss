@@ -9,7 +9,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableContext,
-  requireScenarioMutationOrigin,
   scenarioJsonWithEtag,
 } from "@/app/lib/scenario/http";
 
@@ -28,8 +27,6 @@ export async function GET(request: Request, route: Context) {
 }
 
 export async function PATCH(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { datasetId } = await route.params;
@@ -59,8 +56,6 @@ export async function PATCH(request: Request, route: Context) {
 export const PUT = PATCH;
 
 export async function DELETE(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { datasetId } = await route.params;

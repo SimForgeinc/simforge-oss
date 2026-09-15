@@ -21,6 +21,7 @@ import {
   MapChooser,
 } from "./states/EditorStatePanels";
 import { defaultAuthoringQuality } from "./authoring-quality";
+import { RENDERING_PREFERENCE_CHANGE_EVENT } from "../../components/rendering-preference";
 import {
   notifyScenario,
   useScenarioWorkspaceStatus,
@@ -146,6 +147,7 @@ function ScenarioEditorWorkspace({
   const [primedRecordId, setPrimedRecordId] = useState<string | null>(null);
   const recordRef = useRef<ScenarioDocumentDto | null>(null);
   const qualityRef = useRef<ScenarioAuthoringQuality | null>(null);
+  const changeQualityRef = useRef<(next: ScenarioAuthoringQuality) => Promise<void>>(async () => {});
   const mapRef = useRef<ScenarioMapEntry | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDocumentRef = useRef<EditorDocument | null>(null);
@@ -418,6 +420,17 @@ function ScenarioEditorWorkspace({
 
   useEffect(() => () => void flushRef.current(), []);
 
+  // The app switcher (and the rendering benchmark) write the shared
+  // preference; the open document follows it the same way its own selector
+  // does, so switching level mid-edit changes this viewport, not the next one.
+  useEffect(() => {
+    const onPreference = (event: Event) => {
+      void changeQualityRef.current((event as CustomEvent<ScenarioAuthoringQuality>).detail);
+    };
+    window.addEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);
+    return () => window.removeEventListener(RENDERING_PREFERENCE_CHANGE_EVENT, onPreference);
+  }, []);
+
   const changeQuality = useCallback(async (next: ScenarioAuthoringQuality) => {
     setQuality(next);
     const current = recordRef.current;
@@ -432,6 +445,7 @@ function ScenarioEditorWorkspace({
     setSaveState("dirty");
     await persist({ authoringQualityId: next });
   }, [persist]);
+  changeQualityRef.current = changeQuality;
 
   // Boot and failure conditions, published rather than rendered. Only one can be
   // blocking at a time and the gate resolves severity itself, so the order here

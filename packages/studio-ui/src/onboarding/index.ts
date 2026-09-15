@@ -2,6 +2,11 @@
 export { HeroBackdrop } from "./HeroBackdrop";
 export { WelcomeScreen } from "./WelcomeScreen";
 export {
+  NativeRenderScreen,
+  type NativeRenderInstallRow,
+  type NativeRenderInstallView,
+} from "./NativeRenderScreen";
+export {
   MapSelectionScreen,
   type OnboardingMapOption,
   type OnboardingPreparation,

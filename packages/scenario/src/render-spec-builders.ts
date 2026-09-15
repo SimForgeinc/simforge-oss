@@ -1,0 +1,229 @@
+import {
+  PRONTO_CHASE_CAMERA_SENSOR,
+  PRONTO_CHASE_CAMERA_SENSOR_ID,
+  hasTrailingChaseCamera,
+  RENDER_SPEC_V3_SCHEMA,
+  parseRenderSpecV3,
+  renderDefaultSource,
+  templateRenderDefaults,
+  type ActorSensor,
+  type Environment,
+  type RenderModality,
+  type RenderSpecV3,
+  type ScenarioTemplateV2,
+} from "./index.js";
+
+export type AuthoredRenderSensor = {
+  actorId: string;
+  actorLabel: string;
+  sensor: ActorSensor;
+};
+
+export type SensorModalitySelection = {
+  actorId: string;
+  sensorId: string;
+  modalities: readonly RenderModality[];
+};
+
+export type CanonicalRenderSpecInput = {
+  content: ScenarioTemplateV2;
+  selections: readonly SensorModalitySelection[];
+  clip: { startSeconds: number; endSeconds: number };
+  video: {
+    width: number;
+    height: number;
+    fps: number;
+    container: "webm" | "mp4";
+    codec: string;
+    quality: "draft" | "standard" | "high";
+  } | null;
+  artifacts: readonly ("video" | "manifest" | "frames" | "sensorArchive" | "annotations" | "trace")[];
+  staticSemantics: boolean;
+  fidelity: "review" | "dataset";
+  /** Render-time environment override; the draft's authored environment when absent. */
+  environment?: Environment;
+};
+
+export const RENDER_MODALITY_ORDER: readonly RenderModality[] = [
+  "rgb",
+  "depth",
+  "semantic",
+  "instance",
+  "lidar",
+  "radar",
+];
+
+/**
+ * What a pass is called in the interface.
+ *
+ * `humanize` title-cases each word, which turns the two initialisms into "Rgb" and "Lidar". That
+ * was survivable as body text inside a card and is not as a column header.
+ */
+const RENDER_MODALITY_LABELS: Record<string, string> = {
+  rgb: "RGB",
+  depth: "Depth",
+  semantic: "Semantic",
+  instance: "Instance",
+  lidar: "LiDAR",
+  radar: "Radar",
+};
+
+export function renderModalityLabel(modality: RenderModality): string {
+  return RENDER_MODALITY_LABELS[modality] ?? modality;
+}
+
+/**
+ * Every enabled sensor an actor authors, plus the platform's trailing chase
+ * camera on each sensor host that does not author one (the first role when no
+ * role carries a sensor): every render ships the drive-along view.
+ */
+export function authoredRenderSensors(content: ScenarioTemplateV2 | null): AuthoredRenderSensor[] {
+  if (!content) return [];
+  const hosts = content.roles.filter((role) => role.actor.sensors.some((sensor) => sensor.enabled));
+  const chaseHosts = new Set((hosts.length > 0 ? hosts : content.roles.slice(0, 1)).map((role) => role.id));
+  return content.roles.flatMap((role) => {
+    const sensors = role.actor.sensors.filter((sensor) => sensor.enabled);
+    if (chaseHosts.has(role.id) && !hasTrailingChaseCamera(sensors)) sensors.push(PRONTO_CHASE_CAMERA_SENSOR);
+    return sensors.map((sensor) => ({
+      actorId: role.id,
+      actorLabel: role.label ?? role.id,
+      sensor,
+    }));
+  });
+}
+
+/**
+ * The trailing chase camera is a presentation view outside the measurement rig; both the CARLA
+ * and native pipelines only render it as RGB.
+ */
+export function supportedModalities(sensor: ActorSensor): readonly RenderModality[] {
+  if (sensor.id === PRONTO_CHASE_CAMERA_SENSOR_ID) return ["rgb"];
+  if (sensor.type === "dash_camera") return ["rgb", "depth", "semantic", "instance"];
+  if (sensor.type === "lidar") return ["lidar"];
+  return ["radar"];
+}
+
+/**
+ * What a backend can capture from a sensor. The native retained engine renders
+ * RGB cameras and casts lidar/radar itself; the camera derivatives (depth,
+ * semantic, instance) remain browser/CARLA outputs.
+ */
+export function backendModalities(backend: "native" | "browser" | "carla" | "esmini", sensor: ActorSensor): readonly RenderModality[] {
+  const supported = supportedModalities(sensor);
+  return backend === "native" ? supported.filter((modality) => modality === "rgb" || modality === "lidar" || modality === "radar") : supported;
+}
+
+export function defaultModalities(sensor: ActorSensor): readonly RenderModality[] {
+  if (sensor.type === "dash_camera") return ["rgb"];
+  if (sensor.type === "lidar") return ["lidar"];
+  return ["radar"];
+}
+
+/**
+ * Capture attributes per source: an explicit video format wins for image sensors; otherwise the
+ * capture configuration the template authored for that sensor (`simforge.render-defaults`);
+ * otherwise the renderer's own defaults.
+ */
+export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): RenderSpecV3 {
+  const sensorByKey = new Map(
+    authoredRenderSensors(input.content).map((option) => [sensorKey(option.actorId, option.sensor.id), option.sensor]),
+  );
+  const defaults = templateRenderDefaults(input.content);
+  const sources = input.selections.flatMap((selection) => {
+    const sensor = sensorByKey.get(sensorKey(selection.actorId, selection.sensorId));
+    if (!sensor) throw new Error(`Unknown authored sensor ${selection.actorId}/${selection.sensorId}.`);
+    const supported = new Set(supportedModalities(sensor));
+    return RENDER_MODALITY_ORDER
+      .filter((modality) => selection.modalities.includes(modality))
+      .map((modality) => {
+        if (!supported.has(modality)) {
+          throw new Error(`${sensor.type} sensor ${sensor.id} does not support ${modality}.`);
+        }
+        const authored = renderDefaultSource(defaults, selection.actorId, sensor.id, modality);
+        const common = {
+          actorId: selection.actorId,
+          sensorId: sensor.id,
+          outputName: `${selection.actorId}-${sensor.id}-${modality}`,
+          transform: {
+            position: sensor.mount.position,
+            rotation: sensor.mount.rotation,
+          },
+          modality,
+        };
+        if (sensor.type === "dash_camera") {
+          const capture = authored && authored.modality !== "lidar" && authored.modality !== "radar" ? authored.attributes : null;
+          return {
+            ...common,
+            modality,
+            attributes: {
+              width: input.video?.width ?? capture?.width ?? 1280,
+              height: input.video?.height ?? capture?.height ?? 720,
+              fps: input.video?.fps ?? capture?.fps ?? 24,
+              horizontalFovDeg: sensor.camera.horizontalFovDeg,
+              nearM: sensor.camera.nearM,
+              farM: sensor.camera.farM,
+            },
+          };
+        }
+        if (sensor.type === "lidar") {
+          const capture = authored?.modality === "lidar" ? authored.attributes : null;
+          return {
+            ...common,
+            modality: "lidar" as const,
+            attributes: {
+              // A 64-beam, 1.2 Mpt/s spinner at 10 Hz: ~1900 azimuth steps
+              // per revolution, dense enough that a scan reads as the scene.
+              channels: capture?.channels ?? 64,
+              rangeM: sensor.field.farM,
+              pointsPerSecond: capture?.pointsPerSecond ?? 1_200_000,
+              rotationFrequencyHz: capture?.rotationFrequencyHz ?? 10,
+              upperFovDeg: sensor.field.verticalFovDeg / 2,
+              lowerFovDeg: -sensor.field.verticalFovDeg / 2,
+              horizontalFovDeg: sensor.field.horizontalFovDeg,
+            },
+          };
+        }
+        const capture = authored?.modality === "radar" ? authored.attributes : null;
+        return {
+          ...common,
+          modality: "radar" as const,
+          attributes: {
+            horizontalFovDeg: sensor.field.horizontalFovDeg,
+            verticalFovDeg: sensor.field.verticalFovDeg,
+            rangeM: sensor.field.farM,
+            pointsPerSecond: capture?.pointsPerSecond ?? 1_500,
+          },
+        };
+      });
+  });
+
+  const artifacts = [...new Set(["manifest" as const, ...input.artifacts])];
+  const required = [
+    ...sources.map((source) => `sensor.${source.modality}`),
+    ...artifacts.map((artifact) => artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`),
+    "environment.authored",
+    "timing.fixed_step",
+
+    ...(input.staticSemantics && sources.some((source) => source.modality === "semantic")
+      ? ["map.static_semantics"]
+      : []),
+  ];
+  return parseRenderSpecV3({
+    schema: RENDER_SPEC_V3_SCHEMA,
+    sources,
+    clip: input.clip,
+    ...(input.video ? { video: input.video } : {}),
+    artifacts,
+    capabilityIntent: {
+      required: [...new Set(required)],
+      preferred: [],
+      fidelity: input.fidelity,
+    },
+    authoredEnvironment: input.environment ?? input.content.environment,
+  });
+}
+
+
+export function sensorKey(actorId: string, sensorId: string): string {
+  return `${actorId}:${sensorId}`;
+}

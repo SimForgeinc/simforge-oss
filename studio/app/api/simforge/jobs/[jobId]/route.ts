@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 import { cancelOperationalJob, getOperationalJob } from "@/app/lib/scenario/jobs/store";
@@ -19,8 +18,6 @@ export async function GET(_request: Request, route: Context) {
 }
 
 export async function DELETE(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { jobId } = await route.params;

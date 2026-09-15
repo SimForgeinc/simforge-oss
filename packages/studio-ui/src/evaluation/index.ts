@@ -12,11 +12,9 @@
  * must not call its routes.
  */
 
-export * from "./contracts";
-export * from "./gateway";
+export * from "@simforge-oss/evaluation/client";
 export * from "./input-kinds";
 export * from "./model-catalog";
-export * from "./params";
 export * from "./presentation";
 export * from "./projection";
 export * from "./render-handoff";
@@ -38,3 +36,28 @@ export { JobHistory, JobStatusBadge } from "./components/JobHistory";
 export { ModelPicker, type ModelSelection } from "./components/ModelPicker";
 export { RefusalNotice } from "./components/RefusalNotice";
 export { TrajectoryPlot } from "./components/TrajectoryPlot";
+
+/** The master-detail workspace: section strip, grouped rail, stage. */
+export { EvaluationShell, EVALUATION_RAIL_WIDTH_KEY } from "./workspace/EvaluationShell";
+export { EvaluationSectionStrip } from "./workspace/EvaluationSectionStrip";
+export { LaunchStage } from "./workspace/LaunchStage";
+export { RailList, type RailGroup, type RailRow } from "./workspace/RailList";
+export {
+  groupRunsByScenario,
+  sourceRenderJobId,
+  sourceRenderJobIds,
+  UPLOADED_CLIPS_GROUP_KEY,
+  type RunGroup,
+  type RunGroupKind,
+} from "./workspace/groupRunsByScenario";
+export { JOB_POLL_INTERVAL_MS, useJobList, type JobList } from "./workspace/useJobList";
+export {
+  EVALUATION_SELECTION_STORAGE_KEY,
+  hasSelection,
+  parseSelection,
+  serializeSelection,
+  useEvaluationSelection,
+  type EvaluationSection,
+  type EvaluationSelection,
+  type EvaluationSelectionHandle,
+} from "./workspace/useEvaluationSelection";

@@ -1,0 +1,113 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, space, text } from "../../stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  // flex items-baseline justify-between gap-2 font-meta text-micro uppercase tracking-meta-wider
+  divFlexMetaMicro: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.md,
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    lineHeight: text.lineMicro,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMetaWider,
+  },
+  // text-muted-foreground
+  span: {
+    color: colors.mutedForeground,
+  },
+  // tabular-nums text-foreground
+  span2: {
+    fontVariantNumeric: "tabular-nums",
+    color: colors.text,
+  },
+  // mt-1 h-1 w-full bg-muted
+  progressbar: {
+    marginTop: space.xs,
+    height: space.xs,
+    width: "100%",
+    backgroundColor: colors.muted,
+  },
+  // h-full bg-primary
+  div: {
+    height: "100%",
+    backgroundColor: colors.primary,
+  },
+  // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
+  datasetStatus: {
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    lineHeight: text.lineMicro,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMetaWidest,
+    color: colors.mutedForeground,
+  },
+  // truncate text-sm font-semibold text-foreground
+  pTruncateSmSemibold: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: text.sizeSm,
+    lineHeight: "1.25rem",
+    fontWeight: text.weightSemibold,
+    color: colors.text,
+  },
+  // space-y-2
+  div2: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.md,
+  },
+  // font-meta text-micro uppercase tracking-meta-widest text-muted-foreground
+  contributors: {
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    lineHeight: text.lineMicro,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMetaWidest,
+    color: colors.mutedForeground,
+  },
+  // mt-1 text-xs text-muted-foreground
+  noNamedContributorsYet: {
+    marginTop: space.xs,
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: colors.mutedForeground,
+  },
+  // mt-1 space-y-1
+  ul: {
+    marginTop: space.xs,
+    display: "flex",
+    flexDirection: "column",
+    gap: space.xs,
+  },
+  // flex items-baseline justify-between gap-2 text-xs
+  liFlexXs: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.md,
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+  },
+  // min-w-0 truncate text-foreground
+  spanTruncate: {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: colors.text,
+  },
+  // shrink-0 font-meta text-micro uppercase tracking-meta text-muted-foreground
+  spanMetaMicroUppercase: {
+    flexShrink: 0,
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    lineHeight: text.lineMicro,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMeta,
+    color: colors.mutedForeground,
+  },
+});

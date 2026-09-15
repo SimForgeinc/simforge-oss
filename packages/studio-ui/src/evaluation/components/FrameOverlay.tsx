@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
 import { styles as s } from "./evaluation-components.stylex";
-import type { OpenLoopItem, TrajectoryProjection } from "../contracts";
+import type { OpenLoopItem, TrajectoryProjection } from "@simforge-oss/evaluation/client";
 import { createProjector, projectPolyline } from "../projection";
 
 export type FrameSource =

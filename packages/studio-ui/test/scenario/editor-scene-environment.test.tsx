@@ -7,12 +7,15 @@ import type { CityViewer, CityWeatherAppearance } from "@simforge-oss/viewer";
 import type { EditorDocument } from "@simforge-oss/editor";
 import type { ActorRenderer } from "@simforge-oss/viewer";
 import {
+  DEFAULT_ENVIRONMENT,
+  EnvironmentSchema,
   TIME_OF_DAY_PRESETS,
   WEATHER_PRESETS,
   type Environment,
 } from "@simforge-oss/scenario";
 import { EditorSceneEnvironmentBridge } from "../../src/scenario/editor/EditorSceneEnvironmentBridge";
 import {
+  applyDefaultSceneEnvironment,
   applyEditorSceneEnvironment,
   resolveEditorSceneEnvironment,
 } from "../../src/scenario/editor/scene-environment";
@@ -24,6 +27,60 @@ import { withSceneMinutes } from "../../src/scenario/editor/scene-time";
 afterEach(cleanup);
 
 describe("SimForge editor Three.js environment", () => {
+  it("gives a viewer with no document the same sky a fresh scenario opens with", () => {
+    // A document that authored no environment resolves through the schema.
+    const fresh = EnvironmentSchema.parse({});
+    const { viewer, setWeatherAppearance } = fakeViewer();
+
+    const restore = applyDefaultSceneEnvironment(viewer, "high");
+    expect(setWeatherAppearance).toHaveBeenCalledTimes(1);
+    const browsing = setWeatherAppearance.mock.calls[0]![0];
+    setWeatherAppearance.mockClear();
+    applyEditorSceneEnvironment(viewer, fresh, { quality: "high" });
+    expect(setWeatherAppearance.mock.calls[0]![0]).toEqual(browsing);
+    expect(fresh).toEqual(DEFAULT_ENVIRONMENT);
+
+    restore();
+    expect(setWeatherAppearance).toHaveBeenLastCalledWith(null);
+  });
+
+  it("applies renderer fidelity before the sky, with or without a document", () => {
+    // The fidelity switch hides the sun and sky; a sky applied first is lost.
+    const browsing = fakeViewer();
+    const view = render(
+      <EditorSceneEnvironmentBridge active document={null} quality="ultra-low-3d" viewer={browsing.viewer} />,
+    );
+    expect(browsing.setAuthoringFidelity).toHaveBeenCalledWith(
+      expect.objectContaining({ ultraLow: true }),
+    );
+    expect(browsing.setWeatherAppearance).toHaveBeenCalledTimes(1);
+    expect(browsing.setAuthoringFidelity.mock.invocationCallOrder[0]!)
+      .toBeLessThan(browsing.setWeatherAppearance.mock.invocationCallOrder[0]!);
+    view.unmount();
+    expect(browsing.setWeatherAppearance).toHaveBeenLastCalledWith(null);
+
+    const authored = fakeViewer();
+    const document = new FakeEditorDocument(environment("clear", "dusk"));
+    render(
+      <EditorSceneEnvironmentBridge
+        active
+        document={document as unknown as EditorDocument}
+        quality="high"
+        viewer={authored.viewer}
+      />,
+    );
+    expect(authored.setAuthoringFidelity.mock.invocationCallOrder[0]!)
+      .toBeLessThan(authored.setWeatherAppearance.mock.invocationCallOrder[0]!);
+
+    // A host-owned viewer gets neither fidelity nor a browsing sky from the bridge.
+    const hosted = fakeViewer();
+    render(
+      <EditorSceneEnvironmentBridge active document={null} ownsViewer={false} quality="high" viewer={hosted.viewer} />,
+    );
+    expect(hosted.setAuthoringFidelity).not.toHaveBeenCalled();
+    expect(hosted.setWeatherAppearance).not.toHaveBeenCalled();
+  });
+
   it("resolves every canonical weather and time preset into renderer-owned effects", () => {
     for (const weather of WEATHER_PRESETS) {
       const appearance = resolveEditorSceneEnvironment(environment(weather, "noon"));
@@ -267,19 +324,26 @@ function environment(
 
 function fakeViewer(): {
   viewer: CityViewer;
+  setAuthoringFidelity: Mock<(modes: object) => void>;
   setStreetLightsEnabled: Mock<(enabled: boolean) => void>;
   setWeatherAppearance: Mock<(appearance: CityWeatherAppearance | null) => void>;
   setWeatherTimeSeconds: Mock<(timeSeconds: number | null) => void>;
 } {
+  const setAuthoringFidelity = vi.fn<(modes: object) => void>();
   const setStreetLightsEnabled = vi.fn<(enabled: boolean) => void>();
   const setWeatherAppearance = vi.fn<(appearance: CityWeatherAppearance | null) => void>();
   const setWeatherTimeSeconds = vi.fn<(timeSeconds: number | null) => void>();
   return {
     viewer: {
+      setAuthoringFidelity,
+      setLayerVisible: vi.fn(),
+      setLiveQuality: vi.fn(),
+      setRenderingSuspended: vi.fn(),
       setStreetLightsEnabled,
       setWeatherAppearance,
       setWeatherTimeSeconds,
     } as unknown as CityViewer,
+    setAuthoringFidelity,
     setStreetLightsEnabled,
     setWeatherAppearance,
     setWeatherTimeSeconds,

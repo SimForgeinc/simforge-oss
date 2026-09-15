@@ -4,7 +4,6 @@ import { createHifiPreviewRequest } from "@/app/lib/hifi-preview/store";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 import { kickHifiPreviewExecutor } from "@/worker/hifi-preview";
 
@@ -14,8 +13,6 @@ import { kickHifiPreviewExecutor } from "@/worker/hifi-preview";
  * `/api/hifi-preview/[requestId]` for the artifact URL + provenance.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CreateHifiPreviewSchema.safeParse(await readJson(request));

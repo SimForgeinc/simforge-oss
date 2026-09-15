@@ -8,9 +8,10 @@ import { DriveButton, DrivePill, driveChrome } from "./chrome";
 import { driveColors, driveRadius, driveText } from "./drive.stylex";
 
 const CAMERA_LABELS: Readonly<Record<DriveCameraKind, string>> = {
-  chase: "Chase",
+  chase: "Trailing",
+  cockpit: "Driver",
   hood: "Hood",
-  cockpit: "Cockpit",
+  birdseye: "Bird's-eye",
   orbit: "Orbit",
 };
 

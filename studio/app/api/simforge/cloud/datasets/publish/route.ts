@@ -5,7 +5,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 const PublishSchema = z.strictObject({
@@ -23,8 +22,6 @@ const PublishSchema = z.strictObject({
  * the workspace's, enforced on the server.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = PublishSchema.safeParse(await readJson(request));

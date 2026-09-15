@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioDatasetStatusPanel.stylex";
 import { useMemo } from "react";
 import type {
   ScenarioDatasetReadinessDto,
@@ -21,21 +23,21 @@ function CoverageBar({
   const ratio = total > 0 ? Math.min(1, covered / total) : 0;
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-2 font-meta text-micro uppercase tracking-meta-wider">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="tabular-nums text-foreground">
+      <div {...stylex.props(styles.divFlexMetaMicro)}>
+        <span {...stylex.props(styles.span)}>{label}</span>
+        <span {...stylex.props(styles.span2)}>
           {covered} / {total}
         </span>
       </div>
       <div
-        className="mt-1 h-1 w-full bg-muted"
+        {...stylex.props(styles.progressbar)}
         role="progressbar"
         aria-label={`${label} coverage`}
         aria-valuenow={covered}
         aria-valuemin={0}
         aria-valuemax={total}
       >
-        <div className="h-full bg-primary" style={{ width: `${ratio * 100}%` }} />
+        <div {...stylex.props(styles.div)} style={{ width: `${ratio * 100}%` }} />
       </div>
     </div>
   );
@@ -96,31 +98,31 @@ export function ScenarioDatasetStatusPanel({
       data-testid="scenario-dataset-status"
     >
       <div>
-        <p className="font-meta text-micro uppercase tracking-meta-widest text-muted-foreground">
+        <p {...stylex.props(styles.datasetStatus)}>
           Dataset status
         </p>
-        <p className="truncate text-sm font-semibold text-foreground">{datasetName ?? "Dataset"}</p>
+        <p {...stylex.props(styles.pTruncateSmSemibold)}>{datasetName ?? "Dataset"}</p>
       </div>
-      <div className="space-y-2">
+      <div {...stylex.props(styles.div2)}>
         <CoverageBar label="Rendered" covered={readiness?.rendered ?? 0} total={total} />
         <CoverageBar label="Cosmos" covered={readiness?.cosmosed ?? 0} total={total} />
         <CoverageBar label="VLM" covered={readiness?.vlmed ?? 0} total={total} />
       </div>
       <div>
-        <p className="font-meta text-micro uppercase tracking-meta-widest text-muted-foreground">
+        <p {...stylex.props(styles.contributors)}>
           Contributors
         </p>
         {contributors.length === 0 ? (
-          <p className="mt-1 text-xs text-muted-foreground">No named contributors yet.</p>
+          <p {...stylex.props(styles.noNamedContributorsYet)}>No named contributors yet.</p>
         ) : (
-          <ul className="mt-1 space-y-1">
+          <ul {...stylex.props(styles.ul)}>
             {contributors.slice(0, 8).map((contributor) => (
               <li
                 key={contributor.name}
-                className="flex items-baseline justify-between gap-2 text-xs"
+                {...stylex.props(styles.liFlexXs)}
               >
-                <span className="min-w-0 truncate text-foreground">{contributor.name}</span>
-                <span className="shrink-0 font-meta text-micro uppercase tracking-meta text-muted-foreground">
+                <span {...stylex.props(styles.spanTruncate)}>{contributor.name}</span>
+                <span {...stylex.props(styles.spanMetaMicroUppercase)}>
                   {contributor.authored} authored
                   {contributor.edited > 0 ? ` · ${contributor.edited} edited` : ""}
                 </span>

@@ -172,6 +172,8 @@ export * from './schema/v2/index.js';
 export * from './expr/index.js';
 export * from './semantic-ledger.js';
 export * from './render-spec.js';
+export * from './render-spec-builders.js';
+export const EMPTY_AMBIENT_CONFIG_SHA256 = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a';
 export * from './render-defaults.js';
 export * from './render-intent.js';
 export * from './situation.js';

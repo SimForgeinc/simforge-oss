@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { populateMapMetadata } from "@/app/lib/maps/metadata/populate-map-metadata";
-import { requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
 
 type RouteContext = { params: Promise<{ mapAssetId: string }> };
 
@@ -10,8 +9,6 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * search-index rebuild). Thin HTTP wrapper around `populateMapMetadata`.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   try {
     const { mapAssetId } = await params;
     if (!mapAssetId?.trim()) {

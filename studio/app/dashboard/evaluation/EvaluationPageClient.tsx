@@ -1,229 +1,356 @@
 "use client";
 
-import { FlaskConical, GitCompareArrows } from "lucide-react";
+/**
+ * The evaluation workspace on the desktop.
+ *
+ * One page, three columns: the section strip, a rail of what exists, and the
+ * stage that shows the one thing selected. What is open is query state written
+ * with `replaceState`, not a route — opening a run must not re-run a server
+ * component, and the six screens this replaced were six full page loads around
+ * the same data.
+ *
+ * This client owns the data every section reads and nothing else: the rails
+ * render lists, the stages render one thing, and neither fetches what the
+ * other already has.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
-import Link from "next/link";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
-import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@simforge-oss/studio-ui/components/ui/card";
 import { EmptyState } from "@simforge-oss/studio-ui/components/ui/empty-state";
-import { PageHeader } from "@simforge-oss/studio-ui/components/ui/page-header";
+import { SelectMenu } from "@simforge-oss/studio-ui/components/ui/select-menu";
+import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@simforge-oss/studio-ui/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@simforge-oss/studio-ui/components/ui/tabs";
+  EvaluationShell,
+  LaunchStage,
+  RefusalNotice,
+  jobStatusPresentation,
+  sourceRenderJobIds,
+  useEvaluationSelection,
+  useJobList,
+  type EvaluationSelection,
+  type LocalRunLauncher,
+} from "@simforge-oss/studio-ui/evaluation";
+import type { StudioCloudWorkspace } from "@simforge-oss/studio-host";
 import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
-import type { ModelVersionRecord } from "@/app/lib/models/contracts";
-import { CloudRunsClient } from "./CloudRunsClient";
-import { formatScore, PanelMessage, StatusBadge, useJsonFetch } from "./shared";
+import type { ModelRunRecord, ModelVersionRecord } from "@/app/lib/models/contracts";
+import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
+import { LocalRunUnavailable, startLocalRun } from "@/app/lib/host/local-runs";
+import { CampaignRail } from "./rails/CampaignRail";
+import { ModelRail } from "./rails/ModelRail";
+import { RunRail } from "./rails/RunRail";
+import { useScenarioTitles } from "./rails/useScenarioTitles";
+import { CampaignStage } from "./stages/CampaignStage";
+import { CompareClient } from "./stages/CompareClient";
+import { EpisodePlaybackClient } from "./stages/EpisodePlaybackClient";
+import { LocalRunClient } from "./stages/LocalRunClient";
+import { PolicyDetailClient } from "./stages/PolicyDetailClient";
+import { RunDetailClient } from "./stages/RunDetailClient";
+import { VersionDetailClient } from "./stages/VersionDetailClient";
+import { useJsonFetch } from "./shared";
 import { styles } from "./evaluation-page.stylex";
 
-function CampaignCard({ campaign }: { campaign: EvalCampaignSummary }) {
-  const [policyA, policyB] = campaign.policies;
+export function EvaluationPageClient() {
+  const { selection, select, selectSection } = useEvaluationSelection();
+  const [workspaces, setWorkspaces] = useState<StudioCloudWorkspace[] | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [localRunsRefresh, setLocalRunsRefresh] = useState(0);
+  const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
+
+  const gateway = useEvaluationGateway(workspaceId);
+  const host = useHostExecutionSnapshot(workspaceId);
+  const { jobs, error: jobsError } = useJobList(gateway, submittedJobId);
+
+  const localRuns = useJsonFetch<{ runs: ModelRunRecord[] }>("/api/models/runs", localRunsRefresh);
+  const campaigns = useJsonFetch<{ campaigns: EvalCampaignSummary[] }>("/api/evaluation/campaigns");
+  const versions = useJsonFetch<{ versions: ModelVersionRecord[] }>("/api/models/versions");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/simforge/cloud/workspaces", { signal: controller.signal, cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`workspaces request failed (${response.status})`);
+        const payload = (await response.json()) as { workspaces?: StudioCloudWorkspace[] };
+        setWorkspaces(payload.workspaces ?? []);
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted) return;
+        setWorkspaces([]);
+        setError(
+          cause instanceof Error
+            ? `Your SimCloud workspaces could not be listed: ${cause.message}`
+            : "Your SimCloud workspaces could not be listed.",
+        );
+      });
+    return () => controller.abort();
+  }, []);
+
+  const renderJobIds = useMemo(() => sourceRenderJobIds(jobs ?? []), [jobs]);
+  const scenarioTitles = useScenarioTitles(renderJobIds);
+
+  const localRunList = localRuns.kind === "ready" ? localRuns.data.runs : [];
+  const campaignList = campaigns.kind === "ready" ? campaigns.data.campaigns : [];
+  const versionList = versions.kind === "ready" ? versions.data.versions : [];
+
+  const selectRun = useCallback((jobId: string) => select({ section: "runs", run: jobId }), [select]);
+
+  /**
+   * Start the run on this machine. Local execution is a real path, not a label:
+   * the inputs are staged on disk, the local model-run queue leases the run, and
+   * the worker writes the same result manifest a cloud run produces.
+   */
+  const runLocally = useCallback<LocalRunLauncher>(
+    async ({ selection: model, prepared, params }) => {
+      try {
+        const started = await startLocalRun({
+          family: model.family,
+          quant: model.quant,
+          files: prepared.sourceFiles,
+          params,
+          seed: typeof params.seed === "number" ? params.seed : 0,
+        });
+        setError(null);
+        setLocalRunsRefresh((key) => key + 1);
+        select({ section: "runs", local: started.runId });
+      } catch (cause) {
+        setError(
+          cause instanceof LocalRunUnavailable
+            ? cause.message
+            : `The local run could not be started: ${cause instanceof Error ? cause.message : String(cause)}`,
+        );
+      }
+    },
+    [select],
+  );
+
+  const selectedCampaign =
+    selection.section === "campaigns" && selection.campaign
+      ? (campaignList.find((entry) => entry.campaignId === selection.campaign) ?? null)
+      : null;
+  const selectedVersion =
+    selection.section === "models" && selection.version
+      ? (versionList.find((entry) => entry.id === selection.version) ?? null)
+      : null;
+  const selectedJob =
+    selection.section === "runs" && selection.run
+      ? ((jobs ?? []).find((job) => job.id === selection.run) ?? null)
+      : null;
+
+  const pageTitle =
+    selection.section === "campaigns"
+      ? (selectedCampaign?.name ?? "Campaigns")
+      : selection.section === "models"
+        ? (selectedVersion?.name ?? "Models")
+        : selectedJob
+          ? `${selectedJob.model.family} run`
+          : "Evaluation";
+  useSetPageTitle(pageTitle);
+
+  const rail =
+    selection.section === "campaigns" ? (
+      <CampaignRail
+        campaigns={campaignList}
+        loading={campaigns.kind === "loading"}
+        selectedCampaignId={selection.campaign ?? null}
+        selectedPolicyId={selection.policy ?? null}
+        onSelectCampaign={(campaignId) => select({ section: "campaigns", campaign: campaignId })}
+        onSelectPolicy={(campaignId, policyId) =>
+          select({ section: "campaigns", campaign: campaignId, policy: policyId })
+        }
+      />
+    ) : selection.section === "models" ? (
+      <ModelRail
+        versions={versionList}
+        loading={versions.kind === "loading"}
+        selectedVersionId={selection.version ?? null}
+        onSelectVersion={(versionId) => select({ section: "models", version: versionId })}
+      />
+    ) : (
+      <RunRail
+        jobs={jobs}
+        localRuns={localRunList}
+        scenarioTitles={scenarioTitles}
+        selectedRunId={selection.run ?? null}
+        selectedLocalRunId={selection.local ?? null}
+        onSelectRun={selectRun}
+        onSelectLocalRun={(runId) => select({ section: "runs", local: runId })}
+        onNewPrediction={() => select({ section: "runs" })}
+        workspacePicker={
+          workspaces && workspaces.length > 0 ? (
+            <div {...stylex.props(styles.workspace)}>
+              <span {...stylex.props(styles.workspaceLabel)}>Workspace</span>
+              <SelectMenu
+                label="SimCloud workspace"
+                value={workspaceId ?? ""}
+                options={[
+                  { value: "", label: "Active account workspace" },
+                  ...workspaces.map((workspace) => ({
+                    value: workspace.id,
+                    label: `${workspace.name} (${workspace.role})`,
+                  })),
+                ]}
+                onChange={(value) => setWorkspaceId(value || null)}
+              />
+            </div>
+          ) : null
+        }
+      />
+    );
+
+  const overlayMessage = error ?? jobsError;
+
+  function renderStage() {
+    if (selection.section === "models") {
+      if (!selection.version) {
+        return versions.kind === "loading" ? (
+          <CloudLoadingSurface scope="pane" title="Loading models" detail="Reading the local model registry." />
+        ) : (
+          <EmptyState
+            xstyle={styles.stagePad}
+            title="Pick a model version"
+            description="A version's detail shows its provenance, its eval runs and the promotion gate."
+          />
+        );
+      }
+      return <VersionDetailClient versionId={selection.version} />;
+    }
+
+    if (selection.section === "campaigns") {
+      if (!selection.campaign) {
+        return campaigns.kind === "loading" ? (
+          <CloudLoadingSurface scope="pane" title="Loading campaigns" detail="Reading the runs root." />
+        ) : (
+          <EmptyState
+            xstyle={styles.stagePad}
+            title="Pick a campaign"
+            description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
+          />
+        );
+      }
+      const campaignId = selection.campaign;
+      if (selection.compare) {
+        return (
+          <CompareClient
+            campaignId={campaignId}
+            policies={selection.compare}
+            onSelectPolicy={(policyId) =>
+              select({ section: "campaigns", campaign: campaignId, policy: policyId })
+            }
+            onSelectEpisode={(episodeId) =>
+              select({ section: "campaigns", campaign: campaignId, episode: episodeId })
+            }
+            onSelectCampaign={(next) => select({ section: "campaigns", campaign: next })}
+          />
+        );
+      }
+      if (selection.episode) {
+        return (
+          <EpisodePlaybackClient
+            campaignId={campaignId}
+            episodeId={selection.episode}
+            onSelectPolicy={(policyId) =>
+              select({ section: "campaigns", campaign: campaignId, policy: policyId })
+            }
+          />
+        );
+      }
+      if (selection.policy) {
+        return (
+          <PolicyDetailClient
+            campaignId={campaignId}
+            policyId={selection.policy}
+            onSelectEpisode={(episodeId) =>
+              select({
+                section: "campaigns",
+                campaign: campaignId,
+                policy: selection.policy,
+                episode: episodeId,
+              })
+            }
+            onSelectVersion={(versionId) => select({ section: "models", version: versionId })}
+          />
+        );
+      }
+      if (!selectedCampaign) {
+        return campaigns.kind === "loading" ? (
+          <CloudLoadingSurface scope="pane" title="Loading campaign" detail="Reading the runs root." />
+        ) : (
+          <EmptyState
+            xstyle={styles.stagePad}
+            title="This campaign is not in the runs root"
+            description={`No ledger was found for ${campaignId}.`}
+          />
+        );
+      }
+      return (
+        <CampaignStage
+          campaign={selectedCampaign}
+          selectedPolicyId={null}
+          onSelectPolicy={(policyId) =>
+            select({ section: "campaigns", campaign: campaignId, policy: policyId })
+          }
+          onSelectVersion={(versionId) => select({ section: "models", version: versionId })}
+          onCompare={(policyIds) =>
+            select({ section: "campaigns", campaign: campaignId, compare: policyIds })
+          }
+        />
+      );
+    }
+
+    if (selection.run) return <RunDetailClient jobId={selection.run} />;
+    if (selection.local) return <LocalRunClient runId={selection.local} />;
+    if (jobs === null) {
+      return (
+        <CloudLoadingSurface
+          scope="pane"
+          title="Loading runs"
+          detail="Reading this workspace's evaluation runs."
+        />
+      );
+    }
+    return (
+      <LaunchStage
+        gateway={gateway}
+        host={host}
+        runtime={null}
+        onSubmitted={(job) => {
+          setSubmittedJobId(job.id);
+          selectRun(job.id);
+        }}
+        onRunLocally={runLocally}
+        recent={(jobs ?? []).filter((job) => !jobStatusPresentation(job.status).live)}
+        onSelectRun={selectRun}
+      />
+    );
+  }
+
+  const stage = renderStage();
   return (
-    <Card data-testid={`campaign-${campaign.campaignId}`}>
-      <CardHeader xstyle={styles.campaignHeader}>
-        <div>
-          <CardTitle xstyle={styles.cardTitle}>{campaign.name}</CardTitle>
-          <CardDescription>
-            {campaign.campaignId} · {campaign.episodes} episodes
-            {campaign.createdAt ? ` · created ${new Date(campaign.createdAt).toLocaleString()}` : ""}
-            {campaign.hasReport ? " · report ready" : ""}
-          </CardDescription>
-        </div>
-        {policyA && policyB ? (
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={{
-                pathname: `/dashboard/evaluation/${campaign.campaignId}/compare`,
-                // Repeated `policy` rather than the retired a/b pair: the page
-                // takes any number of columns and the first is the baseline.
-                query: { policy: [policyA.policyId, policyB.policyId] },
+    <EvaluationShell
+      section={selection.section}
+      onSectionChange={selectSection}
+      rail={rail}
+      stage={stage}
+      overlay={
+        overlayMessage ? (
+          <>
+            <span {...stylex.props(styles.overlayMessage)}>{overlayMessage}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setError(null);
+                setLocalRunsRefresh((key) => key + 1);
               }}
             >
-              <GitCompareArrows {...stylex.props(styles.icon)} />
-              Compare models
-            </Link>
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Policy (run)</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Model version</TableHead>
-              <TableHead xstyle={styles.right}>Driving score</TableHead>
-              <TableHead xstyle={styles.right}>Route completion</TableHead>
-              <TableHead xstyle={styles.right}>Episodes</TableHead>
-              <TableHead xstyle={styles.right}>Last completed</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {campaign.policies.map((policy) => (
-              <TableRow key={policy.policyId}>
-                <TableCell>
-                  <Link
-                    {...stylex.props(styles.link)}
-                    href={`/dashboard/evaluation/${campaign.campaignId}/policies/${policy.policyId}`}
-                  >
-                    {policy.policyId}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status="complete" />
-                </TableCell>
-                <TableCell>
-                  {policy.modelVersionId ? (
-                    <Link
-                      {...stylex.props(styles.modelLink)}
-                      href={`/dashboard/evaluation/versions/${policy.modelVersionId}`}
-                    >
-                      {policy.modelVersionId.slice(0, 12)}…
-                    </Link>
-                  ) : (
-                    <span {...stylex.props(styles.muted)}>unregistered</span>
-                  )}
-                </TableCell>
-                <TableCell xstyle={styles.numeric}>
-                  {formatScore(policy.meanScore)}
-                </TableCell>
-                <TableCell xstyle={styles.numeric}>
-                  {formatScore(policy.meanRouteCompletion)}
-                </TableCell>
-                <TableCell xstyle={styles.numeric}>{policy.episodes}</TableCell>
-                <TableCell xstyle={styles.numericMuted}>
-                  {policy.lastCompletedAt
-                    ? new Date(policy.lastCompletedAt).toLocaleTimeString()
-                    : "—"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ModelVersionsCard({ versions }: { versions: ModelVersionRecord[] }) {
-  return (
-    <Card data-testid="model-versions">
-      <CardHeader>
-        <CardTitle xstyle={styles.cardTitle}>Model versions</CardTitle>
-        <CardDescription>
-          Registry state and promotion gates — promote from a version&apos;s detail page.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {versions.length === 0 ? (
-          <PanelMessage>No registered model versions.</PanelMessage>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Version</TableHead>
-                <TableHead>Family</TableHead>
-                <TableHead>Quant</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Promoted run</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {versions.map((version) => (
-                <TableRow key={version.id}>
-                  <TableCell>
-                    <Link
-                      {...stylex.props(styles.link)}
-                      href={`/dashboard/evaluation/versions/${version.id}`}
-                    >
-                      {version.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{version.family}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{version.quant}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={version.status} />
-                  </TableCell>
-                  <TableCell xstyle={styles.promoted}>
-                    {version.promotedRunId ? `${version.promotedRunId.slice(0, 12)}…` : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-export function EvaluationPageClient() {
-  useSetPageTitle("Evaluation");
-  const campaigns = useJsonFetch<{ campaigns: EvalCampaignSummary[] }>(
-    "/api/evaluation/campaigns",
-  );
-  const versions = useJsonFetch<{ versions: ModelVersionRecord[] }>("/api/models/versions");
-  return (
-    <div {...stylex.props(styles.page)}>
-      <PageHeader
-        title="Video prediction"
-        description="Upload one driving video or synchronized camera views for an unscored AlpaMayo trajectory and reasoning overlay."
-      />
-      <Tabs {...stylex.props(styles.tabs)} defaultValue="runs">
-        <TabsList xstyle={styles.tabList}>
-          <TabsTrigger value="runs">Video prediction</TabsTrigger>
-          <TabsTrigger value="campaigns">Research campaigns</TabsTrigger>
-        </TabsList>
-
-        <TabsContent xstyle={styles.tabContent} value="runs">
-          <CloudRunsClient />
-        </TabsContent>
-
-        <TabsContent value="campaigns">
-          <div {...stylex.props(styles.campaignList)}>
-            {campaigns.kind === "loading" ? <PanelMessage>Loading campaigns…</PanelMessage> : null}
-            {campaigns.kind === "error" ? (
-              <PanelMessage>Failed to load campaigns: {campaigns.message}</PanelMessage>
-            ) : null}
-            {campaigns.kind === "ready" && campaigns.data.campaigns.length === 0 ? (
-              <EmptyState
-                icon={<FlaskConical {...stylex.props(styles.emptyIcon)} />}
-                title="No eval campaigns yet"
-                description="Campaign ledgers are read from the runs root (simforge-assets/runs/<campaignId>/ledger.jsonl)."
-              />
-            ) : null}
-            {campaigns.kind === "ready"
-              ? campaigns.data.campaigns.map((campaign) => (
-                  <CampaignCard key={campaign.campaignId} campaign={campaign} />
-                ))
-              : null}
-            {versions.kind === "ready" ? (
-              <ModelVersionsCard versions={versions.data.versions} />
-            ) : null}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+              Try again
+            </Button>
+          </>
+        ) : null
+      }
+    />
   );
 }

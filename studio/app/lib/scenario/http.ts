@@ -10,11 +10,6 @@ import {
   type ScenarioDatasetAction,
 } from "./dataset-store";
 
-/** Local app mutations are accepted from localhost, desktop shells, and tunnels. */
-export function requireScenarioMutationOrigin(_request: Request): NextResponse | null {
-  return null;
-}
-
 export async function requireScenarioContext(): Promise<
   { context: AppContext; response?: never } | { context?: never; response: NextResponse }
 > {
@@ -42,10 +37,8 @@ export async function requireScenarioContext(): Promise<
  * Mutability is DERIVED, never read from a stored column — see §6.5 and the
  * header of migration `20260805014000`.
  *
- * This is deliberately separate from and additional to
- * `requireScenarioMutationOrigin`: that guard answers "did a browser on an
- * allowlisted origin send this?", this one answers "may this caller do this to
- * this dataset?". Every mutation route needs both.
+ * Origin policy is enforced separately by proxy.ts; this gate answers whether
+ * the caller may mutate this dataset.
  */
 export async function requireScenarioMutableContext(
   context: AppContext,

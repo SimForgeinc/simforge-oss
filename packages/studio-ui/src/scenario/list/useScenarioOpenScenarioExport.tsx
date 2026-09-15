@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./useScenarioOpenScenarioExport.stylex";
 import { useStudioHost } from "../../host";
 import { useCallback, useState } from "react";
 import { Archive } from "lucide-react";
@@ -64,7 +66,7 @@ export function useScenarioOpenScenarioExport({
 
   const menuItem = (
     <DropdownMenuItem disabled={busy} onSelect={() => void exportOpenScenario()}>
-      <Archive className="mr-2 size-3.5" aria-hidden="true" />
+      <Archive {...stylex.props(styles.exportOpenSCENARIOArchive)} aria-hidden="true" />
       Export OpenSCENARIO
     </DropdownMenuItem>
   );

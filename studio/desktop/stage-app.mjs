@@ -19,12 +19,22 @@ const studioRoot = resolve(desktopDir, "..");
 /** The preload the cache owner ships; staged verbatim, never bundled. */
 export const CACHE_PRELOAD = "cache-preload.cjs";
 /**
- * Static pages the shell loads from the asar, and their stylesheets.
- * `starting.html`, `host-exited.html` and `cloud-loading.css` are generated
- * from `CloudLoadingSurface` by desktop/build-shell-pages.mjs and committed;
- * staging copies them, so packaging needs no React or StyleX toolchain.
+ * Static pages the shell loads from the asar, with their stylesheets, the
+ * script that hydrates them and the face they render in. All but `shell.css`
+ * are generated from `CloudLoadingSurface` by desktop/build-shell-pages.mjs
+ * and committed; staging copies them, so packaging needs no React or StyleX
+ * toolchain.
  */
-export const PAGES = ["starting.html", "host-exited.html", "cloud-loading.css", "shell.css"];
+export const PAGES = [
+  "starting.html",
+  "host-exited.html",
+  "cloud-loading.css",
+  "cloud-loading.js",
+  "barlow-400.woff2",
+  "barlow-500.woff2",
+  "barlow-600.woff2",
+  "shell.css",
+];
 /** Exactly what app.asar holds. */
 export const APP_FILES = ["main.mjs", CACHE_PRELOAD, ...PAGES, "icon.png", "package.json"].sort();
 

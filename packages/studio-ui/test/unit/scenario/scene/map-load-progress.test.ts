@@ -34,7 +34,7 @@ describe("scene map loading progress", () => {
       { peakOutstanding: 3, percent: 70 },
     );
     expect(next.progress.phase).toBe("assets");
-    expect(next.progress.detail).toContain("1 uploading");
+    expect(next.progress.detail).toBe("Uploading 1 file to the GPU…");
     expect(next.progress.percent).toBeLessThan(94);
   });
 
@@ -51,7 +51,7 @@ describe("scene map loading progress", () => {
     });
   });
 
-  it("shows byte progress and live speed for one large building asset", () => {
+  it("reports how much of the map is loaded, without a transfer rate", () => {
     const next = sceneLoadProgressFromSnapshot(
       "Belmont",
       {
@@ -62,6 +62,8 @@ describe("scene map loading progress", () => {
         downloads: {
           active: 1,
           transferredBytes: 320 * 1024 * 1024,
+          cachedBytes: 0,
+          discoveryComplete: true,
           totalBytes: 480 * 1024 * 1024,
           bytesPerSecond: 18.4 * 1024 * 1024,
           stalledForMs: 0,
@@ -70,18 +72,44 @@ describe("scene map loading progress", () => {
       { peakOutstanding: 1, percent: 55 },
     );
 
+    expect(next.progress.message).toBe("Loading Belmont");
+    expect(next.progress.detail).toBe("1 file to go…");
     expect(next.progress.download).toEqual({
       transferred: "320 MB",
       total: "480 MB",
-      speed: "18.4 MB/s",
       stalled: false,
       stalledFor: null,
     });
+    expect(next.progress.activity).toBe(320 * 1024 * 1024);
     expect(next.progress.percent).toBe(78);
     expect(next.progress.percentExact).toBe(true);
   });
 
-  it("calls out a transfer that has stopped receiving bytes", () => {
+  it("counts bytes the browser already held as loaded and moves the activity token with them", () => {
+    const snapshot = (transferredBytes: number) => ({
+      ...base,
+      loading: 3,
+      queued: 0,
+      uploading: 0,
+      downloads: {
+        active: 3,
+        transferredBytes,
+        cachedBytes: 100 * 1024 * 1024,
+        discoveryComplete: true,
+        totalBytes: 300 * 1024 * 1024,
+        bytesPerSecond: null,
+        stalledForMs: 0,
+      },
+    });
+    const first = sceneLoadProgressFromSnapshot("Belmont", snapshot(10 * 1024 * 1024), { peakOutstanding: 3, percent: 55 });
+    const second = sceneLoadProgressFromSnapshot("Belmont", snapshot(11 * 1024 * 1024), first.tracker);
+
+    expect(first.progress.download).toMatchObject({ transferred: "110 MB", total: "400 MB" });
+    expect(first.progress.detail).toBe(second.progress.detail);
+    expect(second.progress.activity).toBeGreaterThan(first.progress.activity!);
+  });
+
+  it("calls out a load that has stopped receiving data as the host being busy, not the network", () => {
     const next = sceneLoadProgressFromSnapshot(
       "Belmont",
       {
@@ -92,6 +120,8 @@ describe("scene map loading progress", () => {
         downloads: {
           active: 1,
           transferredBytes: 37 * 1024 * 1024,
+          cachedBytes: 0,
+          discoveryComplete: true,
           totalBytes: 400 * 1024 * 1024,
           bytesPerSecond: 0,
           stalledForMs: 8_200,
@@ -100,11 +130,10 @@ describe("scene map loading progress", () => {
       { peakOutstanding: 1, percent: 55 },
     );
 
-    expect(next.progress.download).toMatchObject({
-      speed: "0 B/s",
-      stalled: true,
-      stalledFor: "8s",
-    });
-    expect(next.progress.detail).toContain("connection may be stalled");
+    expect(next.progress.download).toMatchObject({ stalled: true, stalledFor: "8s" });
+    expect(next.progress.detail).toBe(
+      "No map data has arrived for 8s. The local host may be busy; the load resumes on its own when it answers.",
+    );
+    expect(next.progress.detail).not.toMatch(/connection|download/i);
   });
 });

@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { NextResponse } from "next/server";
 import {
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -36,8 +35,6 @@ function localInputsRoot(): string {
 }
 
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 

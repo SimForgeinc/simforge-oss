@@ -12,7 +12,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { cn } from "../../lib/utils";
 import { styles as s } from "./evaluation-components.stylex";
-import type { OpenLoopItem } from "../contracts";
+import type { OpenLoopItem } from "@simforge-oss/evaluation/client";
 
 const WIDTH = 320;
 const HEIGHT = 420;

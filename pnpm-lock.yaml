@@ -154,6 +154,9 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../engine
+      '@simforge-oss/evaluation':
+        specifier: workspace:*
+        version: link:../evaluation
       '@simforge-oss/map-pipeline':
         specifier: workspace:*
         version: link:../map-pipeline
@@ -172,12 +175,18 @@ importers:
       '@simforge-oss/openscenario':
         specifier: workspace:*
         version: link:../openscenario
+      '@simforge-oss/playback':
+        specifier: workspace:*
+        version: link:../playback
       '@simforge-oss/render':
         specifier: workspace:*
         version: link:../render
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
+      '@simforge-oss/studio':
+        specifier: workspace:*
+        version: link:../../studio
       '@simforge-oss/studio-host':
         specifier: workspace:*
         version: link:../studio-host
@@ -305,6 +314,9 @@ importers:
       '@simforge-oss/engine':
         specifier: workspace:*
         version: link:../engine
+      '@simforge-oss/model-store':
+        specifier: workspace:*
+        version: link:../model-store
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
@@ -623,13 +635,22 @@ importers:
       '@simforge-oss/native-runtime':
         specifier: workspace:*
         version: link:../native-runtime
+      '@simforge-oss/playback':
+        specifier: workspace:*
+        version: link:../playback
       '@simforge-oss/scenario':
         specifier: workspace:*
         version: link:../scenario
+      proper-lockfile:
+        specifier: ^4.1.2
+        version: 4.1.2
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.1
+      '@types/proper-lockfile':
+        specifier: ^4.1.4
+        version: 4.1.4
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
@@ -1013,9 +1034,6 @@ importers:
       proj4:
         specifier: ^2.19.10
         version: 2.21.0
-      proper-lockfile:
-        specifier: ^4.1.2
-        version: 4.1.2
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -1062,6 +1080,9 @@ importers:
       '@babel/core':
         specifier: ^7.26.8
         version: 7.29.7(supports-color@7.2.0)
+      '@fontsource/barlow':
+        specifier: 5.3.0
+        version: 5.3.0
       '@stylexjs/babel-plugin':
         specifier: ^0.19.0
         version: 0.19.0(supports-color@7.2.0)
@@ -1077,9 +1098,6 @@ importers:
       '@types/pg':
         specifier: ^8.15.5
         version: 8.23.1
-      '@types/proper-lockfile':
-        specifier: ^4.1.4
-        version: 4.1.4
       '@types/react':
         specifier: 19.2.18
         version: 19.2.18
@@ -1925,6 +1943,9 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@fontsource/barlow@5.3.0':
+    resolution: {integrity: sha512-tGR0y6QObRtKv71MOth44222+mdNFM/ZWFWDV1VLzNbG4oK9PNRlyJzmkck4vHAi9ibHBXgt4SlY51amFP55CA==}
 
   '@gltf-transform/core@4.4.2':
     resolution: {integrity: sha512-qsWKwNSwK+2s834Mt4xbYcyHqCrgNFP7hIv5s487JxebngRfDgelpghNF+kSswGb2/NuapasfK3UViFoSJJoMg==}
@@ -7300,6 +7321,8 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
 
   '@floating-ui/utils@0.2.12': {}
+
+  '@fontsource/barlow@5.3.0': {}
 
   '@gltf-transform/core@4.4.2':
     dependencies:

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPresignedGetUrl } from "@/app/lib/s3/s3-presign";
 import { assertMapUsable, MapAccessError } from "@/app/lib/cloud/access";
+import { bundledMap, bundledMemberUrl } from "@/app/lib/cloud/bundled-maps";
 import { mapAccessErrorResponse, streamCachedObject } from "@/app/lib/cloud/asset-response";
 import { CloudConnectionError, primeCloudSession } from "@/app/lib/cloud/connection";
 import { getRegisteredMap, MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
@@ -40,7 +41,15 @@ async function thumbnail(request: Request, route: Context, headOnly: boolean) {
     // installation's access (anonymous RFS or the active account), never a
     // caller-supplied location.
     await assertLocalMapAccess(mapVersionId);
-    const upstream = await upstreamGet(`/api/simforge/maps/${encodeURIComponent(mapVersionId)}/thumbnail`, request.signal);
+    const upstream = await (async () => {
+      // A bundled public map's preview is one member of its browser closure,
+      // served by the registry CDN; the Cloud is not consulted.
+      const bundled = bundledMap(mapVersionId);
+      const preview = bundled?.plans.browser.assets.find((asset) => asset.relativePath === "derived/thumbnail.webp");
+      return bundled && preview
+        ? fetch(bundledMemberUrl(bundled, preview.sha256), { signal: request.signal })
+        : upstreamGet(`/api/simforge/maps/${encodeURIComponent(mapVersionId)}/thumbnail`, request.signal);
+    })();
     if (!upstream.ok) {
       await discardResponseBody(upstream);
       return NextResponse.json({ error: "map_thumbnail_unavailable" }, { status: upstream.status === 404 ? 404 : 502, headers: NO_STORE });

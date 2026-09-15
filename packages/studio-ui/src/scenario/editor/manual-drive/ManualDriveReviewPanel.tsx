@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ManualDriveReviewPanel.stylex";
 import { AlertTriangle, Gauge, Route, Timer, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -65,7 +67,7 @@ export function ManualDriveReviewPanel({
   if (!mounted) return null;
   return createPortal(
     <div
-      className="pointer-events-auto fixed inset-0 z-[150] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+      {...stylex.props(styles.manualDriveReviewBackdrop)}
       data-testid="manual-drive-review-backdrop"
     >
       <section
@@ -73,61 +75,61 @@ export function ManualDriveReviewPanel({
         aria-describedby="manual-drive-review-description"
         aria-labelledby="manual-drive-review-title"
         aria-modal="true"
-        className="w-full max-w-md border border-white/15 bg-[#111111]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.7)] focus:outline-none"
+        {...stylex.props(styles.manualDriveReview)}
         data-testid="manual-drive-review"
         role="dialog"
         tabIndex={-1}
       >
-        <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center bg-[#E8E044] text-black">
-            <Route aria-hidden="true" className="size-5" />
+        <div {...stylex.props(styles.divFlex)}>
+          <span {...stylex.props(styles.spanFlexIcon)}>
+            <Route aria-hidden="true" {...stylex.props(styles.routeIcon)} />
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]">
+          <div {...stylex.props(styles.div)}>
+            <p {...stylex.props(styles.manualDrive)}>
               Manual drive
             </p>
-            <h2 className="mt-1 text-lg font-semibold" id="manual-drive-review-title">
+            <h2 {...stylex.props(styles.manualDriveReviewTitle)} id="manual-drive-review-title">
               Review the take for {actorLabel}
             </h2>
           </div>
           <button
             aria-label="Discard take"
-            className="flex size-8 shrink-0 items-center justify-center text-white/55 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+            {...stylex.props(styles.discardTakeButton)}
             onClick={recorder.discardReview}
             type="button"
           >
-            <X aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" {...stylex.props(styles.xIcon)} />
           </button>
         </div>
 
-        <div className="mt-5 space-y-3" id="manual-drive-review-description">
-          <dl className="grid grid-cols-3 gap-2 border-t border-white/10 pt-3 text-center">
+        <div {...stylex.props(styles.manualDriveReviewDescription)} id="manual-drive-review-description">
+          <dl {...stylex.props(styles.dlGrid)}>
             <div>
-              <dt className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-[0.14em] text-white/40">
-                <Timer aria-hidden="true" className="size-3" /> Clip
+              <dt {...stylex.props(styles.dtFlexUppercase)}>
+                <Timer aria-hidden="true" {...stylex.props(styles.clipTimer)} /> Clip
               </dt>
-              <dd className="mt-1 text-sm font-semibold" data-testid="manual-drive-review-clip">
+              <dd {...stylex.props(styles.manualDriveReviewClip)} data-testid="manual-drive-review-clip">
                 {review.recording.clipSeconds}s
               </dd>
             </div>
             <div>
-              <dt className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-[0.14em] text-white/40">
-                <Route aria-hidden="true" className="size-3" /> Driven
+              <dt {...stylex.props(styles.dtFlexUppercase2)}>
+                <Route aria-hidden="true" {...stylex.props(styles.drivenRoute)} /> Driven
               </dt>
-              <dd className="mt-1 text-sm font-semibold" data-testid="manual-drive-review-distance">
+              <dd {...stylex.props(styles.manualDriveReviewDistance)} data-testid="manual-drive-review-distance">
                 {summary.distanceM.toFixed(0)} m
               </dd>
             </div>
             <div>
-              <dt className="flex items-center justify-center gap-1 text-[9px] uppercase tracking-[0.14em] text-white/40">
-                <Gauge aria-hidden="true" className="size-3" /> Peak
+              <dt {...stylex.props(styles.dtFlexUppercase3)}>
+                <Gauge aria-hidden="true" {...stylex.props(styles.peakGauge)} /> Peak
               </dt>
-              <dd className="mt-1 text-sm font-semibold" data-testid="manual-drive-review-speed">
+              <dd {...stylex.props(styles.manualDriveReviewSpeed)} data-testid="manual-drive-review-speed">
                 {summary.maxSpeedKph.toFixed(0)} km/h
               </dd>
             </div>
           </dl>
-          <p className="border-t border-white/10 pt-3 text-sm leading-6 text-white/75" data-testid="manual-drive-review-samples">
+          <p {...stylex.props(styles.manualDriveReviewSamples)} data-testid="manual-drive-review-samples">
             {review.recording.samples.length} poses captured from the simulation clock, from 0s to {review.recording.clipSeconds}s.
             Playback follows these recorded poses and their timing exactly.
           </p>
@@ -137,42 +139,42 @@ export function ManualDriveReviewPanel({
               data-testid="manual-drive-review-refusal"
               role="alert"
             >
-              <AlertTriangle aria-hidden="true" className="mt-1 size-4 shrink-0" />
+              <AlertTriangle aria-hidden="true" {...stylex.props(styles.alerttriangleIcon)} />
               <p>
                 This take cannot be saved: {refusal} {actorLabel} keeps the motion it has now.
               </p>
             </div>
           ) : (
-            <div className="border-t border-white/10 pt-3 text-sm leading-6 text-white/75" data-testid="manual-drive-review-replacement">
+            <div {...stylex.props(styles.manualDriveReviewReplacement)} data-testid="manual-drive-review-replacement">
               <p>
                 {replacing
                   ? <>Saving replaces {actorLabel}&rsquo;s motion for the whole clip &mdash; {replacing}.</>
                   : <>Saving makes this take {actorLabel}&rsquo;s motion for the whole clip.</>}
               </p>
               {review.replaces.otherMotion.length > 0 ? (
-                <p className="mt-1">
+                <p {...stylex.props(styles.it)}>
                   It {replacing ? "also " : ""}removes {review.replaces.otherMotion.length === 1 ? "one other motion action" : `${review.replaces.otherMotion.length} other motion actions`} on this actor:{" "}
-                  <strong className="font-semibold text-white">
+                  <strong {...stylex.props(styles.strongSemibold)}>
                     {review.replaces.otherMotion.map((interaction) => interaction.label ?? interaction.verb).join(", ")}
                   </strong>.
                 </p>
               ) : null}
-              <p className="mt-1 text-white/55">
+              <p {...stylex.props(styles.lights)}>
                 Lights, horn and other state actions on this actor, and every other actor, stay as they are.
                 Save is one undo step.
               </p>
             </div>
           )}
           {failure ? (
-            <p className="text-sm leading-6 text-amber-200" data-testid="manual-drive-review-failure" role="alert">
+            <p {...stylex.props(styles.manualDriveReviewFailure)} data-testid="manual-drive-review-failure" role="alert">
               {failure}
             </p>
           ) : null}
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-4">
+        <div {...stylex.props(styles.divFlex2)}>
           <button
-            className="h-10 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-white/70 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+            {...stylex.props(styles.manualDriveReviewDiscardButton)}
             data-testid="manual-drive-review-discard"
             onClick={recorder.discardReview}
             type="button"
@@ -180,7 +182,7 @@ export function ManualDriveReviewPanel({
             Discard
           </button>
           <button
-            className="h-10 border border-[#E8E044]/50 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-[#E8E044] transition-colors hover:bg-[#E8E044]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+            {...stylex.props(styles.manualDriveReviewRerecordButton)}
             data-testid="manual-drive-review-rerecord"
             onClick={() => run(recorder.rerecord)}
             type="button"
@@ -189,7 +191,7 @@ export function ManualDriveReviewPanel({
           </button>
           <button
             autoFocus={!refusal}
-            className="h-10 bg-[#E8E044] px-5 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-[#f4ed55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40"
+            {...stylex.props(styles.manualDriveReviewSaveButton)}
             data-testid="manual-drive-review-save"
             disabled={Boolean(refusal)}
             onClick={() => run(recorder.saveReview)}

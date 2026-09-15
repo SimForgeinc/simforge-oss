@@ -164,6 +164,8 @@ export const RenderLidarAttributesSchema = z.strictObject({
   rotationFrequencyHz: z.number().finite().positive().max(240),
   upperFovDeg: z.number().finite().min(-180).max(180),
   lowerFovDeg: z.number().finite().min(-180).max(180),
+  /** Azimuth coverage; 360 is a full spinning revolution per scan. */
+  horizontalFovDeg: z.number().finite().min(5).max(360).default(360),
 }).check((ctx) => {
   if (ctx.value.upperFovDeg <= ctx.value.lowerFovDeg) {
     ctx.issues.push({

@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { CompleteScenarioMaterializedTrafficSchema } from "@/app/lib/scenario/contracts";
-import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
 import { completeMaterializedTraffic } from "@/app/lib/scenario/materialized-traffic-store";
+import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ documentId: string }> };
 export async function POST(request: Request, route: Context) {
-  const origin = requireScenarioMutationOrigin(request);
-  if (origin) return origin;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CompleteScenarioMaterializedTrafficSchema.safeParse(await readJson(request));

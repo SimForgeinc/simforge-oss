@@ -16,6 +16,7 @@ import {
 import { ensureMapAsset, materializeMapAssets, resolveCachedMapAsset } from "@/app/lib/map-cache/service";
 import { listScenarioMapDescriptors } from "@/app/lib/scenario/document-store";
 import { assertMapUsable, MapAccessError } from "./access";
+import { BUNDLED_MAPS } from "./bundled-maps";
 import {
   CloudConnectionError,
   cloudPublicRequest,
@@ -131,11 +132,24 @@ export async function upstreamGet(path: string, signal?: AbortSignal): Promise<R
     : cloudPublicRequest(path, { method: "GET" }, signal);
 }
 
+/**
+ * Bundled public maps are always in the upstream view. Anonymously they are
+ * the whole catalog and the Cloud is not consulted at all; with an account
+ * the Cloud's list wins for the same identity and the bundle fills any gap,
+ * so a Cloud that stops serving Richmond anonymously never empties a first run.
+ */
+function withBundled<T extends { mapVersionId: string }>(upstream: T[], bundled: T[]): T[] {
+  const seen = new Set(upstream.map((map) => map.mapVersionId));
+  return [...upstream, ...bundled.filter((map) => !seen.has(map.mapVersionId))];
+}
+
 async function fetchUpstreamCatalog(signal?: AbortSignal): Promise<UpstreamDescriptor[]> {
   await primeCloudSession();
-  const scope = cloudSessionScope().scope;
+  const session = cloudSessionScope();
+  const bundled = BUNDLED_MAPS.map((map) => map.descriptor);
+  if (!session.active) return bundled;
   const cached = state.catalog;
-  if (cached && cached.scope === scope && cached.expiresAt > Date.now()) return cached.value;
+  if (cached && cached.scope === session.scope && cached.expiresAt > Date.now()) return cached.value;
   const response = await upstreamGet("/api/simforge/maps", signal);
   if (!response.ok) {
     await discardResponseBody(response);
@@ -143,18 +157,20 @@ async function fetchUpstreamCatalog(signal?: AbortSignal): Promise<UpstreamDescr
   }
   const payload = await response.json() as { maps?: unknown };
   const maps = Array.isArray(payload.maps) ? payload.maps as UpstreamDescriptor[] : [];
-  const value = maps.filter((map) =>
+  const value = withBundled(maps.filter((map) =>
     typeof map?.mapVersionId === "string" && /^[A-Za-z0-9_-]{8,128}$/.test(map.mapVersionId)
-    && typeof map.label === "string" && typeof map.sourceMapId === "string");
-  state.catalog = { scope, expiresAt: Date.now() + CATALOG_TTL_MS, value };
+    && typeof map.label === "string" && typeof map.sourceMapId === "string"), bundled);
+  state.catalog = { scope: session.scope, expiresAt: Date.now() + CATALOG_TTL_MS, value };
   return value;
 }
 
 async function fetchUpstreamPlan(profile: MapProfile, signal?: AbortSignal): Promise<UpstreamPlanMap[]> {
   await primeCloudSession();
-  const scope = cloudSessionScope().scope;
+  const session = cloudSessionScope();
+  const bundled = BUNDLED_MAPS.map((map) => map.plans[profile]);
+  if (!session.active) return bundled;
   const cached = state.plans.get(profile);
-  if (cached && cached.scope === scope && cached.expiresAt > Date.now()) return cached.value;
+  if (cached && cached.scope === session.scope && cached.expiresAt > Date.now()) return cached.value;
   const response = await upstreamGet(`/api/simforge/maps/cache-plan?profile=${profile}`, signal);
   if (!response.ok) {
     await discardResponseBody(response);
@@ -175,8 +191,9 @@ async function fetchUpstreamPlan(profile: MapProfile, signal?: AbortSignal): Pro
       }
     }
   }
-  state.plans.set(profile, { scope, expiresAt: Date.now() + CATALOG_TTL_MS, value: maps });
-  return maps;
+  const value = withBundled(maps, bundled);
+  state.plans.set(profile, { scope: session.scope, expiresAt: Date.now() + CATALOG_TTL_MS, value });
+  return value;
 }
 
 /** Forget cached upstream reads; the next catalog call reflects the current session. */
@@ -240,23 +257,35 @@ async function closureBytesByMap(signal?: AbortSignal): Promise<Map<string, { br
   return sizes;
 }
 
+export type LocalMapCatalog = {
+  maps: LocalMapDescriptor[];
+  /**
+   * Whether the configured Cloud answered the catalog request. Anonymously
+   * the Cloud is the only source of the public Richmond Field Station map, so
+   * a first run with an unreachable Cloud has nothing to offer; the message
+   * is what the onboarding screen shows instead of an empty list.
+   */
+  upstream: { reachable: true } | { reachable: false; message: string };
+};
+
 /**
  * Every map this installation can show: registered local maps first, then
  * upstream maps not yet installed. Upstream unreachable is not an error here —
- * the local catalog stands on its own; the connection status says why.
+ * the local catalog stands on its own — but it is reported, because a fresh
+ * installation has no local catalog to stand on.
  */
-export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapDescriptor[]> {
+export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapCatalog> {
   await primeCloudSession();
   const session = cloudSessionScope();
   const local = await listScenarioMapDescriptors(localContext());
   const closureBytes = await closureBytesByMap(signal);
-  const result: LocalMapDescriptor[] = [];
+  const maps: LocalMapDescriptor[] = [];
   const seen = new Set<string>();
   for (const descriptor of local) {
     const registered = await getRegisteredMap(descriptor.mapVersionId);
     const access = registered?.access ?? "local";
     seen.add(descriptor.mapVersionId);
-    result.push({
+    maps.push({
       ...descriptor,
       access,
       locked: access === "cloud" && !session.active,
@@ -265,15 +294,17 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
     });
   }
   let upstream: UpstreamDescriptor[] = [];
+  let reachability: LocalMapCatalog["upstream"] = { reachable: true };
   try {
     upstream = await fetchUpstreamCatalog(signal);
   } catch (error) {
     if (!(error instanceof CloudConnectionError)) throw error;
+    reachability = { reachable: false, message: error.message };
   }
   for (const map of upstream) {
     if (seen.has(map.mapVersionId)) continue;
     seen.add(map.mapVersionId);
-    result.push({
+    maps.push({
       ...localizeDescriptor(map),
       access: accessOf(map),
       locked: false,
@@ -281,7 +312,11 @@ export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
       closureBytes: closureBytes.get(map.mapVersionId) ?? null,
     });
   }
-  return result;
+  return { maps, upstream: reachability };
+}
+
+export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapDescriptor[]> {
+  return (await readLocalMapCatalog(signal)).maps;
 }
 
 function studioMapEntry(map: ScenarioMapDescriptorDto): StudioMapEntry {

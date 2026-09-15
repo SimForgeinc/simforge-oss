@@ -7,7 +7,6 @@ import { getRegisteredMap, MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry
 import { getScenarioMapBrowserAssets } from "@/app/lib/scenario/document-store";
 import {
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -41,8 +40,6 @@ function parseRequests(value: unknown): DownloadRequest[] | null {
 }
 
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const body = await request.json().catch(() => null) as { assets?: unknown } | null;

@@ -287,7 +287,9 @@ export async function cancelOperationalJobWithResult(
         activeAttemptId = activeAttempt?.id ?? null;
         // A render executed on the local CPU lane (browser capture or local
         // native Bevy) holds its lease in cpu_job_attempts; close it here so
-        // the reaper never requeues a job the user already cancelled.
+        // the reaper never requeues a job the user already cancelled. Its id
+        // is not a render_attempts row, so it must never be recorded as the
+        // cancelled event's render_attempt_id (job_events FKs that column).
         const localAttempt = await tx.queryOne<{ id: string }>(
           `UPDATE simforge.cpu_job_attempts
               SET attempt_state = 'cancelled', completed_at = COALESCE(completed_at, NOW()),
@@ -297,10 +299,7 @@ export async function cancelOperationalJobWithResult(
             RETURNING id`,
           { workspace_id: context.workspaceId, job_id: jobId, detail },
         );
-        if (localAttempt) {
-          activeAttemptId ??= localAttempt.id;
-          releaseLocalNativeMap(localAttempt.id);
-        }
+        if (localAttempt) releaseLocalNativeMap(localAttempt.id);
         await tx.execute(
           `UPDATE simforge.artifact_uploads SET upload_state = 'cancelled'
             WHERE workspace_id = :workspace_id AND render_job_id = :job_id

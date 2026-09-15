@@ -8,13 +8,12 @@ import type { CatalogId } from "@simforge-oss/asset-catalog";
 import { EditorDocument, type LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
 import type { ManualDriveRecording } from "@simforge-oss/scenario";
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
-import type { CityViewer, CityViewerOptions } from "@simforge-oss/viewer";
+import type { CityViewer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { ManualDriveTakeSession } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
-import { AUTHORING_QUALITY } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
-import { applyDefaultSceneEnvironment } from "@simforge-oss/studio-ui/scenario/editor/scene-environment";
+import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import {
   DriveCameraRig,
   DriveHud,
@@ -49,7 +48,6 @@ import { driveFrame } from "./drive-session.stylex";
 import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
-import { DrivingControls } from "./DrivingControls";
 import { ManualDriveTakeReview } from "./ManualDriveTake";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 const WORLD_TICK_HZ = 20;
@@ -264,24 +262,6 @@ export function DriveSession({
     setViewer(ready);
     setBridge(createTruthViewerBridge(ready, { layer: "drive-live", groundLift: true }));
   }, []);
-
-  useEffect(() => {
-    if (!viewer) return;
-    return applyDefaultSceneEnvironment(viewer, quality);
-  }, [quality, viewer]);
-
-  useEffect(() => {
-    if (!viewer) return;
-    const preset = AUTHORING_QUALITY[quality];
-    viewer.setLiveQuality(preset.live);
-    viewer.setRenderingSuspended(false);
-    viewer.setAuthoringFidelity({
-      ultraLow: preset.ultraLow,
-      roadsOnly: preset.roadsOnly,
-      cinematicLighting: preset.cinematicLighting,
-    });
-    viewer.setLayerVisible("vegetation", preset.vegetation);
-  }, [quality, viewer]);
 
   const ambientTraffic = useDriveAmbientTraffic({
     document,
@@ -502,8 +482,12 @@ export function DriveSession({
         // substep, so pushing it once per rendered frame is the whole of
         // driving: the gearbox picks reverse off the brake pedal at a
         // standstill by itself, exactly as an automatic does.
+        //
+        // The input layer signs steering as a driver reads a wheel (-1 is full
+        // left); the physics signs it as a yaw (+ is counter-clockwise, i.e.
+        // left). This is the one place the two conventions meet.
         const command = input.sample(dtS);
-        source.control({ actorId: egoActorId, steer: command.steer, throttle: command.throttle, brake: command.brake });
+        source.control({ actorId: egoActorId, steer: -command.steer, throttle: command.throttle, brake: command.brake });
       }
       const actor = bridge.rendered(egoActorId);
       if (!actor) return;
@@ -607,7 +591,7 @@ export function DriveSession({
         }}
         onMapLoaded={() => setMapLoaded(true)}
         onReady={onViewerReady}
-        options={viewerOptions(quality)}
+        options={sceneViewerOptions(quality)}
         role="application"
         tabIndex={0}
       />
@@ -629,7 +613,6 @@ export function DriveSession({
         units={units}
         vehicleLabel={vehicleLabel}
       />
-      <DrivingControls source={takePhase.kind === "review" || takePhase.kind === "saving" ? null : source} actorId={takePhase.kind === "review" || takePhase.kind === "saving" ? null : egoActorId} />
       {reviewedTake ? (
         <ManualDriveTakeReview
           recording={reviewedTake}
@@ -678,15 +661,6 @@ export function DriveSession({
       ) : null}
     </div>
   );
-}
-
-function viewerOptions(quality: ScenarioAuthoringQuality): CityViewerOptions {
-  const preset = AUTHORING_QUALITY[quality];
-  return {
-    maxPixelRatio: preset.maxPixelRatio,
-    antialias: preset.antialias,
-    cinematicLighting: preset.cinematicLighting,
-  };
 }
 
 function errorMessage(error: unknown): string {

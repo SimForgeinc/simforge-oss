@@ -7,7 +7,7 @@ import { TruthStreamClient } from '@simforge-oss/training-env/browser';
 
 import { playbackMapEntry } from '@simforge-oss/studio-ui/lib/scenario/maps';
 import { ScenarioWorkerClient } from '@simforge-oss/studio-ui/lib/scenario/playback/scenarioWorkerClient';
-import { previewAmbientTrafficProfile } from '@simforge-oss/studio-ui/scenario/scene/previewPolicy';
+import { previewAmbientTrafficProfile } from '@simforge-oss/playback/traffic';
 import {
   assertControllableActor,
   authoredRoleIdForActor,

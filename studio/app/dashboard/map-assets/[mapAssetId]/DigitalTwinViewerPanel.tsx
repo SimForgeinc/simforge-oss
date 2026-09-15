@@ -13,6 +13,9 @@ import type {
   ViewerPath,
   ViewerPoint3,
 } from "@simforge-oss/viewer";
+import { useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
+import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
 import type { SearchResultMarker } from "@/app/components/map-assets-map/layers/SearchResultMarkersLayer";
 
 const CityViewDynamic = dynamic(
@@ -65,8 +68,10 @@ export function DigitalTwinViewerPanel({
   const [has3D, setHas3D] = useState<boolean | null>(hasArtifact ? true : null);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const viewerRef = useRef<CityViewer | null>(null);
+  const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [mapGeneration, setMapGeneration] = useState(0);
   const previousResetNonce = useRef(resetViewNonce);
+  const quality = useRenderingPreference() ?? "high";
 
   useEffect(() => {
     setHas3D(hasArtifact ? true : null);
@@ -128,6 +133,7 @@ export function DigitalTwinViewerPanel({
 
   const onReady = useCallback((viewer: CityViewer) => {
     viewerRef.current = viewer;
+    setViewer(viewer);
   }, []);
 
   if (has3D === null) {
@@ -166,8 +172,9 @@ export function DigitalTwinViewerPanel({
   return (
     <div className={stylex.props(styles.s_801).className}>
       <CityViewDynamic
+        key={quality}
         manifestUrl={manifestUrl}
-        options={{ assetVariant: "auto", ktx2TranscoderPath: "/basis/" }}
+        options={sceneViewerOptions(quality, { assetVariant: "auto", ktx2TranscoderPath: "/basis/" })}
         onReady={onReady}
         onMapLoaded={() => setMapGeneration((generation) => generation + 1)}
         onError={(error) => setViewerError(error instanceof Error ? error.message : String(error))}
@@ -176,6 +183,7 @@ export function DigitalTwinViewerPanel({
         tabIndex={0}
         className={stylex.props(styles.s_778).className}
       />
+      <EditorSceneEnvironmentBridge active={mapGeneration > 0} document={null} quality={quality} viewer={viewer} />
     </div>
   );
 }

@@ -24,9 +24,6 @@ describe("ScenarioPreviewTimeline", () => {
     );
 
     const timeline = screen.getByTestId("scenario-preview-timeline");
-    expect(timeline.className).toContain("w-full");
-    expect(timeline.className).toContain("bg-black/15");
-    expect(timeline.className).toContain("backdrop-blur-[72px]");
     expect(timeline.style.borderRadius).toBe("20px");
     expect(timeline.style.backdropFilter).toContain("blur(72px)");
     expect(screen.getByTestId("scenario-preview-timeline-glass")).toBeTruthy();
@@ -34,11 +31,6 @@ describe("ScenarioPreviewTimeline", () => {
     expect(screen.queryByText("Timeline")).toBeNull();
 
     const playButton = screen.getByRole("button", { name: "Play scenario preview" });
-    expect(playButton.className).toContain("border-0");
-    expect(playButton.className).toContain("bg-transparent");
-    expect(playButton.className).toContain("shadow-none");
-    expect(playButton.className).toContain("text-white/85");
-    expect(playButton.className).not.toContain("bg-[#E8E044]");
     fireEvent.click(playButton);
     expect(onPlayPause).toHaveBeenCalledOnce();
     fireEvent.change(screen.getByRole("slider", { name: "Scenario preview time" }), {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { invalidateUpstreamCatalog } from "@/app/lib/cloud/maps";
 import { transferErrorResponse } from "@/app/lib/cloud/projects";
-import { readJson, requireScenarioMutationOrigin, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
+import { readJson, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 
 /**
  * The shape every local account mutation route shares: trusted-origin check,
@@ -19,8 +19,6 @@ export async function cloudAuthMutation<S extends z.ZodTypeAny = z.ZodUndefined>
   },
   handler: (body: z.output<S>, signal: AbortSignal) => Promise<unknown>,
 ): Promise<NextResponse> {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   let body = undefined as z.output<S>;
   if (options.body) {
     const parsed = options.body.safeParse(await readJson(request));

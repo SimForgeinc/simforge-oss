@@ -22,7 +22,6 @@ import {
 import type { MeshySubmitInput } from "@/app/lib/meshy/client";
 import {
   readJson,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 interface GenerationStartRouteContext {
@@ -30,8 +29,6 @@ interface GenerationStartRouteContext {
 }
 
 export async function POST(request: NextRequest, { params }: GenerationStartRouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

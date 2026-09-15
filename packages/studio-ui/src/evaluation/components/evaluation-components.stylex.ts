@@ -16,6 +16,19 @@ export const styles = stylex.create({
   section6: { display: "flex", flexDirection: "column", gap: "1.5rem" },
   section8: { display: "flex", flexDirection: "column", gap: "2rem" },
   section10: { display: "flex", flexDirection: "column", gap: "2.5rem" },
+  /**
+   * The launcher as the whole stage rather than one section of a scrolling
+   * page: it is the only thing on screen, so it holds a reading measure and
+   * centres instead of filling an arbitrarily wide viewport.
+   */
+  launcherStage: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2rem",
+    width: "100%",
+    maxWidth: "56rem",
+    marginInline: "auto",
+  },
   stack1: { display: "flex", flexDirection: "column", gap: "0.25rem" },
   stack15: { display: "flex", flexDirection: "column", gap: "0.375rem" },
   stack2: { display: "flex", flexDirection: "column", gap: "0.5rem" },

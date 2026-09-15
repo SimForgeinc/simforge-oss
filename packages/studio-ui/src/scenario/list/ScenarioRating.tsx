@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioRating.stylex";
 import { Star } from "lucide-react";
 import type { ScenarioRatingAggregateDto } from "../../lib/scenario/contracts";
 import { Badge } from "../../components/ui/badge";
@@ -30,9 +32,9 @@ export function ScenarioRating({
 }) {
   const rating = aggregate?.viewerScore ?? 0;
   return (
-    <div className="mt-2 flex min-h-5 flex-wrap items-center gap-1.5">
+    <div {...stylex.props(styles.divFlex)}>
       <div
-        className="flex items-center gap-1"
+        {...stylex.props(styles.ratingFor)}
         role="radiogroup"
         aria-label={`Rating for ${documentName}`}
         data-scenario-rating={rating}
@@ -63,7 +65,7 @@ export function ScenarioRating({
         })}
       </div>
       <span
-        className="font-meta text-micro uppercase tracking-meta-narrow text-muted-foreground"
+        {...stylex.props(styles.spanMetaMicroUppercase)}
         data-scenario-rating-aggregate=""
       >
         {saving || loading ? (

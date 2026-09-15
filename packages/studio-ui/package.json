@@ -891,6 +891,21 @@
       "development": "./src/scenario/scene/useIdleStreetTour.ts",
       "types": "./dist/scenario/scene/useIdleStreetTour.d.ts",
       "default": "./dist/scenario/scene/useIdleStreetTour.js"
+    },
+    "./evaluation/gateway": {
+      "development": "./src/evaluation/gateway.ts",
+      "types": "./dist/evaluation/gateway.d.ts",
+      "default": "./dist/evaluation/gateway.js"
+    },
+    "./evaluation/params": {
+      "development": "./src/evaluation/params.ts",
+      "types": "./dist/evaluation/params.d.ts",
+      "default": "./dist/evaluation/params.js"
+    },
+    "./evaluation/contracts": {
+      "development": "./src/evaluation/contracts.ts",
+      "types": "./dist/evaluation/contracts.d.ts",
+      "default": "./dist/evaluation/contracts.js"
     }
   },
   "files": [

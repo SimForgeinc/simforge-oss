@@ -218,7 +218,7 @@ function WorkspacesSection() {
   const cloud = useStudioCloudStatus();
   const load = useCallback((signal: AbortSignal) => cloud.listWorkspaces(signal), [cloud.listWorkspaces]);
   const workspaces = useLoader<StudioCloudWorkspace[]>(load, true);
-  const active = cloud.status?.activeWorkspaceId ?? null;
+  const active = cloud.status?.activeOrganizationId ?? null;
   const [switching, setSwitching] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -243,17 +243,17 @@ function WorkspacesSection() {
       {workspaces.data && workspaces.data.length > 0 ? (
         <ul {...stylex.props(styles.list)}>
           {workspaces.data.map((workspace) => (
-            <li key={workspace.id} {...stylex.props(styles.item)} data-active={workspace.id === active || undefined}>
+            <li key={workspace.id} {...stylex.props(styles.item)} data-active={workspace.organizationId === active || undefined}>
               <div {...stylex.props(styles.itemBody)}>
                 <p {...stylex.props(styles.itemTitle)}>
                   {workspace.name}
-                  {workspace.id === active ? <span {...stylex.props(styles.tag)}>Active</span> : null}
+                  {workspace.organizationId === active ? <span {...stylex.props(styles.tag)}>Active</span> : null}
                 </p>
                 <p {...stylex.props(styles.itemDetail)}>{workspace.role}</p>
               </div>
-              {workspace.id !== active ? (
-                <Button xstyle={[form.secondary, styles.compact]} disabled={cloud.loading || switching !== null} onClick={() => void choose(workspace.id)} type="button" variant="outline">
-                  {switching === workspace.id ? <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> : null}
+              {workspace.organizationId !== active ? (
+                <Button xstyle={[form.secondary, styles.compact]} disabled={cloud.loading || switching !== null} onClick={() => void choose(workspace.organizationId)} type="button" variant="outline">
+                  {switching === workspace.organizationId ? <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> : null}
                   Make active
                 </Button>
               ) : null}

@@ -2,6 +2,7 @@ import { discardResponseBody } from "@/app/lib/cloud/drain";
 import { SUMO_RUNTIME_VERSION } from "@simforge-oss/studio-ui/lib/scenario/sumo-runtime";
 import { localObjectPath, readLocalObjectMetadata } from "@/app/lib/s3/s3-object";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/db/config";
+import { bundledMap, bundledMemberUrl } from "./bundled-maps";
 import { cloudPublicRequest, cloudRequest, cloudSessionScope, primeCloudSession } from "./connection";
 import {
   MAP_CACHE_BUCKET,
@@ -243,6 +244,14 @@ async function signedDownloadUrl(
   relativePath: string,
   signal?: AbortSignal,
 ): Promise<string> {
+  // A bundled public map is delivered by the registry CDN, addressed by the
+  // member digest this installation already holds: nothing to sign.
+  const bundled = bundledMap(map.mapVersionId);
+  if (bundled) {
+    const member = map[profile].get(relativePath);
+    if (!member) throw new MapAccessError("NotFound", "map_asset_not_found", `${relativePath} is not in the ${profile} closure`);
+    return bundledMemberUrl(bundled, member.sha256);
+  }
   const poolKey = `${map.mapVersionId}\0${profile}`;
   let pool = pools.get(poolKey);
   if (!pool) {

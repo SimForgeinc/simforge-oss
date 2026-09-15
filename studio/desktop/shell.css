@@ -1,21 +1,28 @@
 /*
- * The page frame around the desktop shell's two pre-rendered surfaces
- * (starting.html, host-exited.html). They render outside the Next app, so
- * nothing in packages/studio-ui is reachable at runtime — but the surface
- * itself is not restated here: desktop/build-shell-pages.mjs compiles
- * `CloudLoadingSurface` and writes its markup and its atomic CSS to
- * cloud-loading.css, together with the custom properties lifted from
- * packages/studio-ui/src/styles.css.
+ * The page frame around the desktop shell's two surfaces (starting.html,
+ * host-exited.html). They render outside the Next app, so nothing in
+ * packages/studio-ui is reachable at runtime — but the surface itself is not
+ * restated here: desktop/build-shell-pages.mjs compiles `CloudLoadingSurface`
+ * and writes its markup, its atomic CSS (cloud-loading.css, with the custom
+ * properties lifted from packages/studio-ui/src/styles.css) and the script
+ * that hydrates it into the live component.
  *
  * What is left is what a document needs before that stylesheet applies: the
- * three next/font faces the shell cannot load, the sharp-corner reset, the
- * page background, and the window drag strip.
+ * faces next/font is not here to load, the sharp-corner reset, the page
+ * background, and the window drag strip.
  */
 
+/* Barlow is the body face (app/layout.tsx); the surface renders nothing in
+ * the display or heavy faces, so only Barlow ships. The files are copied from
+ * @fontsource/barlow by desktop/build-shell-pages.mjs. */
+@font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url("barlow-400.woff2") format("woff2"); }
+@font-face { font-family: Barlow; font-weight: 500; font-display: swap; src: url("barlow-500.woff2") format("woff2"); }
+@font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url("barlow-600.woff2") format("woff2"); }
+
 :root {
-  /* next/font instances in the app; a system stack here. The meta face is a
-   * system stack in styles.css too and arrives with the lifted variables. */
-  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The meta and mono faces are system stacks in styles.css too and arrive
+   * with the lifted variables. */
+  --font-body: Barlow, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
   --font-heavy: var(--font-body);
 }

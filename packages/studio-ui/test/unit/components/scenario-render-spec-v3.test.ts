@@ -6,11 +6,8 @@ import {
   defaultRadar,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
-import {
-  browserRendererCapabilities,
-  buildCanonicalRenderSpec,
-  type CanonicalRenderSpecInput,
-} from "../../../src/scenario/editor/render/render-spec-v3";
+import { browserRendererCapabilities } from "@simforge-oss/studio-host";
+import { buildCanonicalRenderSpec, type CanonicalRenderSpecInput } from "@simforge-oss/scenario";
 
 function contentWithTwoCameras(): ScenarioTemplateV2 {
   const content = contentWithCamera() as unknown as {

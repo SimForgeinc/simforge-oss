@@ -10,7 +10,7 @@ import {
   LOCAL_USER_ID,
   LOCAL_WORKSPACE_ID,
 } from "../app/lib/auth/session";
-import { queryRows, withTransaction } from "../app/lib/db/data-api";
+import { queryRows, shutdownDatabase, withTransaction } from "../app/lib/db/data-api";
 import { LOCAL_ARTIFACT_BUCKET } from "../app/lib/db/config";
 import {
   publishRegistryInstallation,
@@ -317,4 +317,6 @@ export async function seed(): Promise<void> {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await seed();
+  // Release PGlite before exiting so the next owner (the server) opens it cleanly.
+  await shutdownDatabase();
 }

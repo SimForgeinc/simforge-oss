@@ -1,5 +1,8 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./DatasetRenderPane.stylex";
+import { mergeStyleProps } from "../../components/stylex";
 import { useStudioHost } from "../../host";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
@@ -97,7 +100,7 @@ export function DatasetRenderPane({
   return (
     <aside
       aria-label="Render workspace"
-      className="render-view-enter absolute inset-0 z-20 flex min-h-0 flex-col text-foreground"
+      {...mergeStyleProps(stylex.props(styles.scenarioDatasetRenderPane), "render-view-enter")}
       data-testid="scenario-dataset-render-pane"
     >
       {loading || !document ? (
@@ -107,31 +110,31 @@ export function DatasetRenderPane({
           title="Loading scenario renders"
         />
       ) : error ? (
-        <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="max-w-md text-sm text-destructive">{error}</p>
-          <div className="flex items-center gap-2">
+        <div {...stylex.props(styles.divFlex)}>
+          <p {...stylex.props(styles.pSm)}>{error}</p>
+          <div {...stylex.props(styles.divFlex2)}>
             <Button type="button" variant="outline" onClick={() => void load()}>
-              <RefreshCw className="size-3.5" aria-hidden="true" />
+              <RefreshCw {...stylex.props(styles.tryAgainRefreshCw)} aria-hidden="true" />
               Try again
             </Button>
             <Button type="button" variant="ghost" onClick={onClose}>
-              <X className="size-3.5" aria-hidden="true" />
+              <X {...stylex.props(styles.closeX)} aria-hidden="true" />
               Close
             </Button>
           </div>
         </div>
       ) : !document ? (
-        <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="max-w-md text-sm text-muted-foreground">
+        <div {...stylex.props(styles.divFlex3)}>
+          <p {...stylex.props(styles.theSavedScenarioDetailsAreNo)}>
             The saved scenario details are not available yet.
           </p>
-          <div className="flex items-center gap-2">
+          <div {...stylex.props(styles.divFlex4)}>
             <Button type="button" variant="outline" onClick={() => void load()}>
-              <RefreshCw className="size-3.5" aria-hidden="true" />
+              <RefreshCw {...stylex.props(styles.tryAgainRefreshCw2)} aria-hidden="true" />
               Try again
             </Button>
             <Button type="button" variant="ghost" onClick={onClose}>
-              <X className="size-3.5" aria-hidden="true" />
+              <X {...stylex.props(styles.closeX2)} aria-hidden="true" />
               Close
             </Button>
           </div>

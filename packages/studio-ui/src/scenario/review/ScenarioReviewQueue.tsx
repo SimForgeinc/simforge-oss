@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioReviewQueue.stylex";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ClipboardCheck, RefreshCw } from "lucide-react";
@@ -193,7 +195,7 @@ export function ScenarioReviewQueue() {
   }, [activeId, items, rateDocument]);
 
   return (
-    <div className="flex min-h-full flex-col bg-background">
+    <div {...stylex.props(styles.divFlex)}>
       <PageHeader
         eyebrow="Operator review"
         title="Scenario review queue"
@@ -217,20 +219,20 @@ export function ScenarioReviewQueue() {
         }
       />
 
-      <div className="border-b border-border/70 bg-card/25 px-5 py-3 sm:px-6">
+      <div {...stylex.props(styles.div)}>
         <div
-          className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground"
+          {...stylex.props(styles.reviewQueueKeyboardShortcuts)}
           aria-label="Review queue keyboard shortcuts"
         >
-          <span className="font-medium text-foreground">Shortcuts</span>
+          <span {...stylex.props(styles.shortcuts)}>Shortcuts</span>
           <span>
-            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-foreground">
+            <kbd {...stylex.props(styles.kbdMono)}>
               1–5
             </kbd>{" "}
             rate selected
           </span>
           <span>
-            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-foreground">
+            <kbd {...stylex.props(styles.kbdMono2)}>
               n
             </kbd>{" "}
             next scenario
@@ -241,13 +243,13 @@ export function ScenarioReviewQueue() {
       {error && (
         <div
           role="alert"
-          className="border-b border-destructive/40 bg-destructive/10 px-5 py-3 text-sm text-destructive sm:px-6"
+          {...stylex.props(styles.alert)}
         >
           {error}
         </div>
       )}
 
-      <div className="flex-1 px-5 py-5 sm:px-6">
+      <div {...stylex.props(styles.div2)}>
         {loading ? (
           <CloudLoadingSurface
           scope="pane"
@@ -257,12 +259,12 @@ export function ScenarioReviewQueue() {
           />
         ) : items.length === 0 ? (
           <EmptyState
-            icon={<ClipboardCheck className="size-6" aria-hidden />}
+            icon={<ClipboardCheck {...stylex.props(styles.clipboardcheckIcon)} aria-hidden />}
             title="Nothing left to review"
             description="Every scenario in this workspace has at least one rating. New scenarios appear here as they are created."
           />
         ) : (
-          <ul className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <ul {...stylex.props(styles.ulGrid)}>
             {items.map((item) => {
               const isActive = item.documentId === activeId;
               const isSaving = savingIds.has(item.documentId);
@@ -296,13 +298,13 @@ export function ScenarioReviewQueue() {
                       }
                     />
 
-                    <div className="min-w-0 space-y-1">
-                      <h3 className="truncate text-sm font-semibold text-foreground">{item.title}</h3>
-                      <p className="text-xs text-muted-foreground">
+                    <div {...stylex.props(styles.div3)}>
+                      <h3 {...stylex.props(styles.h3TruncateSmSemibold)}>{item.title}</h3>
+                      <p {...stylex.props(styles.pXs)}>
                         {item.mapLabel ?? "No map"} · {formatDate(item.createdAt)}
                       </p>
                       {item.description && (
-                        <p className="line-clamp-2 text-xs text-muted-foreground/90">
+                        <p {...stylex.props(styles.pXs2)}>
                           {item.description}
                         </p>
                       )}
@@ -310,7 +312,7 @@ export function ScenarioReviewQueue() {
 
                     {/* v2's classification context, standing in for v1's INTENTION_FIELDS — see the
                         note in review-contracts.ts for why those seven fields are not portable. */}
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div {...stylex.props(styles.divFlex2)}>
                       <Badge variant="outline">{item.reviewState}</Badge>
                       {item.archetype && <Badge variant="secondary">{item.archetype}</Badge>}
                       {item.contentTags.slice(0, 3).map((tag) => (
@@ -331,7 +333,7 @@ export function ScenarioReviewQueue() {
                     </div>
 
                     <div
-                      className="mt-auto flex items-center gap-1.5"
+                      {...stylex.props(styles.rate)}
                       role="group"
                       aria-label={`Rate ${item.title}`}
                     >
@@ -363,7 +365,7 @@ export function ScenarioReviewQueue() {
         )}
 
         {nextCursor && items.length > 0 && (
-          <div className="mt-5 flex justify-center">
+          <div {...stylex.props(styles.divFlex3)}>
             <Button
               type="button"
               variant="outline"

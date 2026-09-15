@@ -5,14 +5,11 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ datasetId: string }> };
 
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CreateScenarioDatasetItemSchema.safeParse(await readJson(request));

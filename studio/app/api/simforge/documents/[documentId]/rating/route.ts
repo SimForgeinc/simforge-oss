@@ -9,7 +9,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableDocumentContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ documentId: string }> };
@@ -21,8 +20,6 @@ type Context = { params: Promise<{ documentId: string }> };
  * a cookie-authenticated state change.
  */
 export async function PUT(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { documentId } = await route.params;
@@ -46,8 +43,6 @@ export async function PUT(request: Request, route: Context) {
 }
 
 export async function DELETE(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { documentId } = await route.params;

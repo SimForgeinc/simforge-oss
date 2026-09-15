@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioRailHost.stylex";
 import { useStudioHost } from "../../host";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -137,7 +139,7 @@ export function ScenarioRailHost({
 
   return (
     <>
-      <div className="flex h-full min-h-0">
+      <div {...stylex.props(styles.divFlex)}>
         <ScenarioScenarioRail
           datasetId={datasetId}
           datasetName={dataset?.name ?? null}
@@ -169,7 +171,7 @@ export function ScenarioRailHost({
           onBack={onBack}
         />
         {statusOpen ? (
-          <div className="w-[240px] shrink-0 overflow-y-auto border-r border-border p-2">
+          <div {...stylex.props(styles.div)}>
             <ScenarioDatasetStatusPanel
               datasetName={dataset?.name ?? null}
               readiness={scenarioListCache.readinessByDataset[datasetId] ?? null}

@@ -3,7 +3,6 @@ import { installRecord, installState, uninstall, type ModelFamilyId } from "@sim
 import { MODEL_CATALOG, MODEL_FAMILIES } from "@simforge-oss/model-store/catalog";
 import {
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -50,8 +49,6 @@ export async function GET(_request: Request, context: Context) {
  * gone from this machine.
  */
 export async function DELETE(request: Request, context: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const family = await resolveFamily(context);

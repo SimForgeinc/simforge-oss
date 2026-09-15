@@ -8,7 +8,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableRevisionContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -23,8 +22,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CreateValidationRunSchema.safeParse(await readJson(request));

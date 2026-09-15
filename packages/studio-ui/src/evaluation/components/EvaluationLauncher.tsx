@@ -16,15 +16,15 @@ import type {
   ComputeJobKind,
   ComputeJobModelRef,
   ComputeJobSubmission,
-} from "../contracts";
-import type { EvaluationGateway } from "../gateway";
-import { ComputeApiError } from "../gateway";
+} from "@simforge-oss/evaluation/client";
+import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
+import { ComputeApiError } from "@simforge-oss/evaluation/client";
 import { MODEL_CATALOG, type ModelFamilyId } from "../model-catalog";
 import {
   buildOpenLoopParams,
   remapUploadedCamera,
   type UploadedVideoCamera,
-} from "../params";
+} from "@simforge-oss/evaluation/client";
 import type { HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
 import { formatCentsRange, submissionIdempotencyKey } from "../presentation";
 
@@ -71,12 +71,20 @@ export function EvaluationLauncher({
   runtime,
   onSubmitted,
   onRunLocally,
+  variant = "section",
 }: {
   gateway: EvaluationGateway;
   host: HostExecutionSnapshot;
   runtime: ModelRuntimeSnapshot | null;
   onSubmitted: (job: ComputeJob) => void;
   onRunLocally?: LocalRunLauncher;
+  /**
+   * `section` is the launcher inside a page of sections, which is what
+   * `EvaluationWorkspace` renders. `stage` is the launcher as the whole
+   * stage: same steps, its own measure, no surrounding page chrome to align
+   * with. It affects nothing but the container.
+   */
+  variant?: "section" | "stage";
 }) {
   const [selection, setSelection] = useState<ModelSelection>(defaultSelection);
   const [prepared, setPrepared] = useState<PreparedInput | null>(null);
@@ -240,7 +248,11 @@ export function EvaluationLauncher({
   };
 
   return (
-    <div {...stylex.props(s.section8)} data-testid="evaluation-launcher">
+    <div
+      {...stylex.props(variant === "stage" ? s.launcherStage : s.section8)}
+      data-testid="evaluation-launcher"
+      data-variant={variant}
+    >
       <section {...stylex.props(s.section3)}>
         <StepHeading
           index={1}

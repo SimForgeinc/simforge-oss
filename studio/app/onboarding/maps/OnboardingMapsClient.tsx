@@ -16,7 +16,7 @@ import {
   type ScenarioAuthoringQuality,
 } from "@/app/lib/scenario/contracts";
 
-const MAP_GALLERY_PATH = "/dashboard/map-assets";
+const NATIVE_RENDER_PATH = "/onboarding/native-render";
 
 const CatalogSchema = z.object({
   maps: z.array(
@@ -26,10 +26,15 @@ const CatalogSchema = z.object({
       locality: z.string().nullable(),
       thumbnailUrl: z.string().nullable(),
       browserManifestUrl: z.string().nullable(),
+      access: z.enum(["public", "local", "cloud"]),
       locked: z.boolean(),
       closureBytes: z.object({ browser: z.number(), semantic: z.number() }).nullable(),
     }),
   ),
+  upstream: z.discriminatedUnion("reachable", [
+    z.object({ reachable: z.literal(true) }),
+    z.object({ reachable: z.literal(false), message: z.string() }),
+  ]),
 });
 
 const CacheStatusSchema = z.object({ availableBytes: z.number().nullable() });
@@ -53,6 +58,7 @@ export function OnboardingMapsClient() {
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const finishing = useRef(false);
   const preparation = useMapPreparation({ mapVersionIds: selection });
   const cloudState = cloud.status?.state ?? null;
@@ -85,16 +91,21 @@ export function OnboardingMapsClient() {
           // rather than a number half the size of the download it starts.
           bytes: map.closureBytes ? map.closureBytes.browser + map.closureBytes.semantic : null,
           locked: map.locked,
+          // The Cloud's public map (Richmond Field Station) is part of every
+          // installation: listed as included, never offered as a choice.
+          required: map.access === "public",
         }));
       setMaps(available);
       // Everything this installation may download is pre-selected: locally
       // that is Richmond Field Station, signed in it is the whole library.
-      // A selection the user already made survives a catalog refresh.
-      setSelection((current) =>
-        current.length > 0
-          ? current
-          : available.filter((map) => !map.locked).map((map) => map.mapVersionId),
-      );
+      // A selection the user already made survives a catalog refresh, but
+      // the required maps are always in it.
+      setSelection((current) => {
+        const required = available.filter((map) => map.required).map((map) => map.mapVersionId);
+        if (current.length === 0) return available.filter((map) => !map.locked).map((map) => map.mapVersionId);
+        return [...current, ...required.filter((id) => !current.includes(id))];
+      });
+      setCatalogError(catalog.upstream.reachable ? null : catalog.upstream.message);
       setError(null);
       setLoading(false);
     })().catch((reason: unknown) => {
@@ -126,7 +137,7 @@ export function OnboardingMapsClient() {
     if (preparation.phase !== "complete" || finishing.current) return;
     finishing.current = true;
     void completeStudioSetup({ mode: signedIn ? "cloud" : "local", quality })
-      .then(() => router.replace(MAP_GALLERY_PATH))
+      .then(() => router.replace(NATIVE_RENDER_PATH))
       .catch((reason: unknown) => {
         finishing.current = false;
         setError(reason instanceof Error ? reason.message : "Setup could not be completed.");
@@ -135,6 +146,7 @@ export function OnboardingMapsClient() {
 
   return (
     <MapSelectionScreen
+      catalogError={catalogError}
       error={error ?? cloud.error}
       freeBytes={freeBytes}
       loading={loading}
@@ -150,11 +162,12 @@ export function OnboardingMapsClient() {
       onSignIn={cloud.openAccountPanel}
       onSkip={preparation.skip}
       onToggle={(mapVersionId) =>
-        setSelection((current) =>
-          current.includes(mapVersionId)
+        setSelection((current) => {
+          if (maps.some((map) => map.mapVersionId === mapVersionId && map.required)) return current;
+          return current.includes(mapVersionId)
             ? current.filter((id) => id !== mapVersionId)
-            : [...current, mapVersionId],
-        )
+            : [...current, mapVersionId];
+        })
       }
       preparation={preparation}
       quality={quality}

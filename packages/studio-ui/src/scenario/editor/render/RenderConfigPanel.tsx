@@ -1,5 +1,6 @@
 "use client";
 
+import { ALPAMAYO_RENDER_WIDTH, ALPAMAYO_RENDER_HEIGHT } from "@simforge-oss/scenario";
 import { useStudioHost } from "../../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import type { ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
@@ -38,15 +39,7 @@ import {
 } from "./RenderWizardChrome";
 import { RenderSettingsFields } from "./RenderSettingsFields";
 import { formatElapsed } from "./render-view-model";
-import {
-  authoredRenderSensors,
-  buildCanonicalRenderSpec,
-  defaultModalities,
-  renderModalityLabel,
-  sensorKey,
-  supportedModalities,
-  type AuthoredRenderSensor,
-} from "./render-spec-v3";
+import { authoredRenderSensors, buildCanonicalRenderSpec, defaultModalities, renderModalityLabel, sensorKey, backendModalities, type AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderConfigPanel.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
@@ -60,7 +53,7 @@ const RENDERER_RESOLUTIONS: readonly VideoResolution[] = [
   // The Alpamayo models preprocess to 512x384, so a render at that size is the
   // one a model reads unresized. Rendering 720p for a model run costs render
   // time and then throws the extra pixels away.
-  { width: 512, height: 384, label: "512x384 (model native)" },
+  { width: ALPAMAYO_RENDER_WIDTH, height: ALPAMAYO_RENDER_HEIGHT, label: `${ALPAMAYO_RENDER_WIDTH}x${ALPAMAYO_RENDER_HEIGHT} (model native)` },
 ];
 /**
  * Frame rates offered for a render.
@@ -273,15 +266,10 @@ export function RenderConfigPanel({
   const hostCapabilities = hostCapabilitiesState.capabilities;
   const localExecution = hostCapabilities?.execution.localRender !== undefined;
   const [stepIndex, setStepIndex] = useState(0);
-  const sensorOptions = useMemo(
-    () => managedSensorOptions(currentContent).filter(
-      (option) => backend !== "native" || option.sensor.type === "dash_camera",
-    ),
-    [backend, currentContent],
-  );
+  const sensorOptions = useMemo(() => managedSensorOptions(currentContent), [currentContent]);
   const [selectedSensorKeys, setSelectedSensorKeys] = useState<string[]>([]);
   const [modalitiesBySensor, setModalitiesBySensor] = useState<Record<string, RenderModality[]>>({});
-  const [kinds, setKinds] = useState<RenderModality[]>(["rgb", "lidar", "radar"]);
+  const kinds = new Set(Object.values(modalitiesBySensor).flat());
   /**
    * The video format the scenario authored as its capture default (`simforge.render-defaults`),
    * offered first and selected until the author picks another. A carrier that is not a valid
@@ -389,9 +377,7 @@ export function RenderConfigPanel({
   useEffect(() => {
     setModalitiesBySensor((current) => Object.fromEntries(sensorOptions.map((option) => {
       const key = sensorOptionKey(option);
-      const supported = new Set(
-        backend === "native" ? ["rgb" as const] : supportedModalities(option.sensor),
-      );
+      const supported = new Set(backendModalities(backend, option.sensor));
       const preserved = current[key]?.filter((modality) => supported.has(modality));
       return [key, preserved && preserved.length > 0 ? preserved : [...defaultModalities(option.sensor)].filter((modality) => supported.has(modality))];
     })));
@@ -407,7 +393,7 @@ export function RenderConfigPanel({
       actorId: option.actorId,
       sensorId: option.sensor.id,
       modalities: (modalitiesBySensor[sensorOptionKey(option)] ?? []).filter(
-        (modality) => (backend === "native" ? modality === "rgb" : supportedModalities(option.sensor).includes(modality)),
+        (modality) => backendModalities(backend, option.sensor).includes(modality),
       ),
     })).filter((selection) => selection.modalities.length > 0),
     [backend, modalitiesBySensor, selectedSensors],
@@ -489,13 +475,10 @@ export function RenderConfigPanel({
   }
 
   function toggleKind(kind: RenderModality) {
-    const enabling = !kinds.includes(kind);
-    setKinds((current) => enabling
-      ? [...current, kind]
-      : current.filter((candidate) => candidate !== kind));
+    const enabling = !kinds.has(kind);
     setModalitiesBySensor((current) => Object.fromEntries(sensorOptions.map((option) => {
       const key = sensorOptionKey(option);
-      const supported = supportedModalities(option.sensor);
+      const supported = backendModalities(backend, option.sensor);
       const values = current[key] ?? [...defaultModalities(option.sensor)];
       if (!supported.includes(kind)) return [key, values];
       return [key, enabling
@@ -795,7 +778,7 @@ export function RenderConfigPanel({
               hint={backend === "carla"
                 ? "Supported modalities follow each sensor. The CARLA worker's preflight decides whether the selection fits its hardware."
                 : backend === "native"
-                  ? "Select authored RGB cameras for the receipt-validated native master scene."
+                  ? "RGB cameras, LiDAR and radar render on this machine; every video is time-locked to the same fixed-step clock."
                   : "Choose the authored sensors and modalities this browser render should capture."}
               title={`Which sensors should ${engineOption.label} capture?`}
             />
@@ -828,7 +811,7 @@ export function RenderConfigPanel({
                         </span>
                       </label>
                       <div {...stylex.props(styles.flexWrapGap1)}>
-                        {(backend === "native" ? ["rgb" as const] : supportedModalities(option.sensor)).map((modality) => {
+                        {backendModalities(backend, option.sensor).map((modality) => {
                           const enabled = modalitiesBySensor[key]?.includes(modality) ?? false;
                           return (
                             <button
@@ -857,7 +840,7 @@ export function RenderConfigPanel({
               <StepHeading hint="What each selected sensor produces." title="Kinds" />
               <div {...stylex.props(styles.flexWrapGap15)}>
                 {SENSOR_KINDS.filter((kind) => backend !== "native" || kind.id === "rgb").map((kind) => {
-                  const enabled = kinds.includes(kind.id);
+                  const enabled = kinds.has(kind.id);
                   return (
                     <button
                       aria-pressed={enabled}

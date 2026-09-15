@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioEditorSurface.stylex";
 import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -43,7 +45,6 @@ import {
   shouldReleaseFollowedActor,
   type FrameableActor,
 } from "./camera-framing";
-import { AUTHORING_QUALITY } from "./authoring-quality";
 import { EditorOverlayHost } from "./inspector/EditorOverlayHost";
 import { EditorConfigurationBlockProvider } from "./inspector/EditorDetailsPanel";
 import { TrafficLightDetailsPanel } from "./inspector/TrafficLightDetailsPanel";
@@ -360,22 +361,6 @@ export function ScenarioEditorSurface({
   }, [localViewer, map.label]);
 
   useEffect(() => () => cancelLocalModelSettleRef.current?.(), []);
-
-  useEffect(() => {
-    // The integrated datasets workspace owns one persistent viewer. Its world
-    // host also owns renderer fidelity, so changing UI modes must not rewrite
-    // quality, vegetation, or suspension state on that shared instance.
-    if (!viewer || externalWorld) return;
-    const preset = AUTHORING_QUALITY[quality];
-    viewer.setLiveQuality(preset.live);
-    viewer.setRenderingSuspended(false);
-    viewer.setAuthoringFidelity({
-      ultraLow: preset.ultraLow,
-      roadsOnly: preset.roadsOnly,
-      cinematicLighting: preset.cinematicLighting,
-    });
-    viewer.setLayerVisible("vegetation", preset.vegetation);
-  }, [externalWorld, quality, viewer]);
 
   const { controller, editorDocument, state, error } = useEditorRuntime({
     record,
@@ -934,6 +919,9 @@ export function ScenarioEditorSurface({
       <EditorSceneEnvironmentBridge
         active={active && environmentSceneReady}
         document={editorDocument}
+        // The integrated datasets workspace keeps one persistent viewer across
+        // modes; its world host owns that viewer's fidelity and browsing sky.
+        ownsViewer={!externalWorld}
         quality={quality}
         viewer={viewer}
         actorRenderer={sharedActorRenderer ?? null}
@@ -990,7 +978,7 @@ export function ScenarioEditorSurface({
                   sumoAvailable={Boolean(map.sumoNetworkSha256)}
                 />
               ) : (
-                <div className="grid h-32 place-items-center text-xs text-muted-foreground">
+                <div {...stylex.props(styles.divGridXs)}>
                   <CloudActivityIndicator label="Loading traffic configuration…" />
                 </div>
               )}
@@ -1031,14 +1019,14 @@ export function ScenarioEditorSurface({
               canvas={externalWorld ? (viewer?.renderer.domElement ?? null) : null}
             />
           ) : state?.mode && state.mode !== "idle" ? (
-            <div className="pointer-events-auto">
+            <div {...stylex.props(styles.div)}>
               <EditorModeBanner state={state} controller={controller} />
             </div>
           ) : state ? (
-            <div className="pointer-events-none flex flex-col items-center gap-2">
+            <div {...stylex.props(styles.divFlex)}>
               {clipboardNotice ? (
                 <p
-                  className="pointer-events-none rounded-md border border-border/70 bg-black/85 px-3 py-1 text-xs text-white shadow-lg backdrop-blur-md"
+                  {...stylex.props(styles.clipboardNotice)}
                   data-testid="clipboard-notice"
                   role="status"
                 >
@@ -1051,27 +1039,27 @@ export function ScenarioEditorSurface({
         }
         floatingOverlay={environmentSceneReady && editorDocument ? (
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-auto max-h-[min(65vh,520px)] justify-center px-4"
+            {...stylex.props(styles.floatingTimelineLayer)}
             data-left-panel-open={String(expandedTool !== null)}
             data-testid="floating-timeline-layer"
           >
             {/* 920px is the previous 736px widened by a quarter: the clips need the
                 horizontal room more than the viewport needs the margin, and the
                 name column can now be traded against the track by dragging. */}
-            <div className="pointer-events-auto relative h-auto max-h-[min(65vh,520px)] w-full max-w-[920px] min-w-0">
+            <div {...stylex.props(styles.divRelative)}>
               {/* Absolutely positioned rather than stacked above the card: the
                   timeline's height is constrained and user-draggable, and a
                   flow sibling would take height from the track. Escape is bound
                   only while playback is inspecting (V1TimelineRail), so the hint
                   appears exactly when the key does something. */}
               {sharedPlayback?.inspecting ? (
-                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-xs text-white">
+                <p {...stylex.props(styles.pressEscapeToExitSimulation)}>
                   Press Escape to exit simulation
                 </p>
               ) : null}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl"
+                {...stylex.props(styles.divAbsolute)}
               />
               <EditorTimelineOverlayBridge
                 document={editorDocument}
@@ -1202,18 +1190,18 @@ function RoutePointSpeedWarningOverlay({
         return (
           <div
             aria-live="polite"
-            className="pointer-events-none fixed z-[90] max-w-56 -translate-x-1/2 -translate-y-full pb-3"
+            {...stylex.props(styles.routePointSpeedWarning)}
             data-point-warning-id={warning.id}
             data-testid="route-point-speed-warning"
             key={warning.id}
             role="status"
             style={{ left: position.x, top: position.y }}
           >
-            <div className="relative border border-amber-300/80 bg-black/90 px-3 py-2 text-center text-[11px] font-medium leading-snug text-amber-100 shadow-lg backdrop-blur-md">
+            <div {...stylex.props(styles.divRelativeMedium)}>
               {warning.message}
               <span
                 aria-hidden="true"
-                className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-amber-300/80 bg-black"
+                {...stylex.props(styles.spanAbsoluteIcon)}
               />
             </div>
           </div>

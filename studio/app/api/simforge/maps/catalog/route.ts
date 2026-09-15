@@ -1,11 +1,15 @@
 import { connection } from "next/server";
-import { listLocalMapCatalog } from "@/app/lib/cloud/maps";
+import { readLocalMapCatalog } from "@/app/lib/cloud/maps";
 import { requireScenarioContext, scenarioJsonWithEtag } from "@/app/lib/scenario/http";
 
-/** Available downloads and installed maps, including explicit account/installation state. */
+/**
+ * The local map catalog plus whether the Cloud answered for it. Consumers
+ * that only want the maps ignore `upstream`; first-run onboarding reads it,
+ * because with no local maps and no Cloud it has nothing to offer.
+ */
 export async function GET(request: Request) {
   await connection();
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
-  return scenarioJsonWithEtag(request, { maps: await listLocalMapCatalog(request.signal) });
+  return scenarioJsonWithEtag(request, await readLocalMapCatalog(request.signal));
 }

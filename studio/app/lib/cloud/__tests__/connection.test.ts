@@ -135,7 +135,7 @@ function seedCredential(overrides: Partial<Record<string, unknown>> = {}) {
     refreshToken: "sfd_rt_first",
     sessionExpiresAt: now + 30 * 86_400_000,
     user: { id: "user_1", email: "ada@example.test", name: "Ada", emailVerified: false },
-    activeWorkspaceId: null,
+    activeOrganizationId: null,
     ...overrides,
   }));
 }
@@ -177,7 +177,7 @@ test("a rejected bearer token is refreshed once and the call retried", async () 
   const { getCloudAccount, getCloudStatus } = connection;
   const account = await getCloudAccount();
   assert.equal(account.user.name, "Ada Lovelace");
-  assert.equal(account.activeWorkspaceId, "org_1");
+  assert.equal(account.activeOrganizationId, "org_1");
   assert.deepEqual(account.sessions.map((session) => [session.id, session.current]), [["sess_1", true]]);
 
   const sequence = calls.map((call) => `${call.method} ${call.path} ${call.authorization ?? "-"}`);
@@ -190,10 +190,10 @@ test("a rejected bearer token is refreshed once and the call retried", async () 
   const stored = JSON.parse(vault.entries.get(`cloud:${origin}`) ?? "null");
   assert.equal(stored.accessToken, "sfd_at_second");
   assert.equal(stored.user.emailVerified, true);
-  assert.equal(stored.activeWorkspaceId, "org_1");
+  assert.equal(stored.activeOrganizationId, "org_1");
   const status = await getCloudStatus();
   assert.equal(status.state, "connected");
-  assert.equal(status.activeWorkspaceId, "org_1");
+  assert.equal(status.activeOrganizationId, "org_1");
   assert.equal(status.user?.emailVerified, true);
 });
 

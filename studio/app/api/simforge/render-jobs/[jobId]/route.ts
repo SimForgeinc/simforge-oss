@@ -4,7 +4,6 @@ import { cancelOperationalJobWithResult } from "@/app/lib/scenario/jobs/store";
 import {
   requireScenarioContext,
   requireScenarioMutableRenderJobContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -21,8 +20,6 @@ export async function GET(_request: Request, route: Context) {
 }
 
 export async function DELETE(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { jobId } = await route.params;

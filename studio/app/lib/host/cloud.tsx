@@ -99,7 +99,7 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const poll = useRef<AbortController | null>(null);
-  const mapScope = status?.state === "connected" ? `${status.user?.id}:${status.activeWorkspaceId}` : status?.state;
+  const mapScope = status?.state === "connected" ? `${status.user?.id}:${status.activeOrganizationId}` : status?.state;
   useEffect(() => {
     if (!mapScope || mapScope === "connecting") return;
     const controller = new AbortController();

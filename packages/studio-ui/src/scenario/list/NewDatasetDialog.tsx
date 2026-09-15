@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./NewDatasetDialog.stylex";
 import { useId } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
@@ -38,26 +40,26 @@ export function NewDatasetDialog({
   const nameId = useId();
   if (!open) return null;
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div {...stylex.props(styles.divFixedFlex)}>
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        {...stylex.props(styles.closeNewDatasetDialogButton)}
         aria-label="Close new dataset dialog"
         onClick={() => {
           if (!busy) onClose();
         }}
       />
       <div
-        className="relative z-10 w-full max-w-sm border border-border bg-background p-5 shadow-2xl"
+        {...stylex.props(styles.dialog)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <h2 id={titleId} className="text-base font-semibold text-foreground">
+        <h2 id={titleId} {...stylex.props(styles.h2BaseSemibold)}>
           {title}
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-        <label htmlFor={nameId} className="sr-only">
+        <p {...stylex.props(styles.pXs)}>{description}</p>
+        <label htmlFor={nameId} {...stylex.props(styles.labelSrOnly)}>
           {placeholder}
         </label>
         <Input
@@ -82,8 +84,8 @@ export function NewDatasetDialog({
           `UNIQUE (workspace_id, name)` is not partial, so a soft-deleted dataset still holds its
           name and the fix is to type a different one right here.
         */}
-        {error ? <CopyableErrorMessage message={error} className="mt-3 text-xs" /> : null}
-        <div className="mt-5 flex justify-end gap-2">
+        {error ? <CopyableErrorMessage message={error} {...stylex.props(styles.copyableerrormessageXs)} /> : null}
+        <div {...stylex.props(styles.divFlex)}>
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onClose}>
             Cancel
           </Button>

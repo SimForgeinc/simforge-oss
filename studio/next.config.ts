@@ -72,7 +72,7 @@ const nextConfig: NextConfig = {
    * source and hands SWC plain JS/TS with the StyleX calls already rewritten.
    *
    * Consequence: the studio must be built and served with `--webpack`, which
-   * every script in `package.json` and `scripts/local-host.ts` already does.
+   * every script in `package.json` and the `simforge daemon` supervisor already do.
    */
   webpack(config) {
     config.resolve.extensionAlias = {

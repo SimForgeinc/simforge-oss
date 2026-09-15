@@ -47,7 +47,8 @@ export class CpuJobsClient {
     private readonly baseUrl: URL,
     private readonly token: string,
     workerId = `local-render-${process.pid}`,
-    private readonly engines: readonly LocalRenderEngine[] = ["browser"],
+    /** Engines to claim for; read per poll so a runtime installed mid-session is offered without a restart. */
+    private readonly engines: readonly LocalRenderEngine[] | (() => readonly LocalRenderEngine[]) = ["browser"],
     private readonly requestTimeoutMs = 30_000,
     /** Multi-gigabyte native videos stream to the local object store; the control-plane timeout is far too short for them. */
     private readonly uploadTimeoutMs = 60 * 60_000,
@@ -56,10 +57,14 @@ export class CpuJobsClient {
     this.workerId = workerId;
   }
 
+  offeredEngines(): readonly LocalRenderEngine[] {
+    return typeof this.engines === "function" ? this.engines() : this.engines;
+  }
+
   async claim(signal: AbortSignal, leaseSeconds = 300): Promise<CpuJobClaim | null> {
     const response = await this.request(
       "/api/simforge/internal/cpu-jobs/claim",
-      { workerId: this.workerId, leaseSeconds, families: [JOB_FAMILY], engines: this.engines },
+      { workerId: this.workerId, leaseSeconds, families: [JOB_FAMILY], engines: this.offeredEngines() },
       signal,
       true,
     );

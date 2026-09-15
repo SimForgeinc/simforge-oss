@@ -116,10 +116,15 @@ StyleX compiles ahead of time, so something must transform the
   options. The Electron shell shows two pages before the Next host answers,
   loaded from `app.asar` with `loadFile` — no bundler, no React, no StyleX at
   runtime — and they must be the product's loading screen, not a copy of it.
-  So the script compiles `CloudLoadingSurface` with `stylexBabelConfig`,
-  server-renders it, and writes `starting.html`, `host-exited.html` and
-  `cloud-loading.css` (the atomic rules plus the `:root`/`.dark` custom
-  properties lifted from `styles.css`) into `studio/desktop`. The output is
+  So the script compiles `CloudLoadingSurface` with `stylexBabelConfig` and
+  builds it twice from one element tree: server-rendered to static markup
+  for the first paint, and bundled for the browser (`cloud-loading.js`,
+  React, `three` and the animated `AppSwitcherSkyScene` included) so the
+  page hydrates into the live component. It writes `starting.html`,
+  `host-exited.html`, `cloud-loading.css` (the atomic rules plus the
+  `:root`/`.dark` custom properties lifted from `styles.css`), the script,
+  and the Barlow faces (`barlow-*.woff2`, from `@fontsource/barlow`, since
+  next/font is not there to load them) into `studio/desktop`. The output is
   committed, because unpackaged Studio loads those pages straight from that
   directory; re-run `pnpm -F @simforge-oss/studio desktop:pages` after
   changing the surface, its backdrop or the tokens they read, and

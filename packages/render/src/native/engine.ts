@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import { once } from 'node:events';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,11 +20,13 @@ import {
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative } from './lowering.js';
-import { createNativeCameraSchedule } from './camera-schedule.js';
+import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
+import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
+import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
 import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { startNativeRenderService, terminateProcess } from './service-process.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, linkOrCopy } from './actor-assets.js';
-import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
+import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
 import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers, type NativeMapClosure } from './map-closure.js';
@@ -61,12 +64,15 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
     'timing.fixed_step',
     'environment.authored',
     'sensor.rgb',
+    'sensor.lidar',
+    'sensor.radar',
     'artifact.video',
     'artifact.manifest',
     'artifact.trace',
+    'artifact.sensor_archive',
     'map.static_semantics',
   ],
-  modalities: ['rgb'],
+  modalities: ['rgb', 'lidar', 'radar'],
   limits: {
     maxSimultaneousSensors: 64,
     maxWidth: 4096,
@@ -104,6 +110,7 @@ interface Encoder {
   readonly source: RenderSourceV3;
   readonly width: number;
   readonly height: number;
+  readonly framesPerSecond: number;
   readonly process: ChildProcessByStdio<Writable, null, Readable>;
   readonly path: string;
   readonly stderr: string[];
@@ -111,12 +118,17 @@ interface Encoder {
   frames: number;
 }
 
-function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3): Encoder {
-  if (source.modality !== 'rgb') throw new Error(`native retained adapter cannot encode ${source.modality}`);
+interface VideoFormat {
+  readonly width: number;
+  readonly height: number;
+  readonly framesPerSecond: number;
+}
+
+function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3, format: VideoFormat): Encoder {
   const child = spawn(ffmpeg, [
     '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba',
-    '-s', `${source.attributes.width}x${source.attributes.height}`,
-    '-r', String(source.attributes.fps), '-i', 'pipe:0',
+    '-s', `${format.width}x${format.height}`,
+    '-r', String(format.framesPerSecond), '-i', 'pipe:0',
     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart', outputPath,
   ], { stdio: ['pipe', 'ignore', 'pipe'] });
@@ -127,7 +139,7 @@ function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3
     if (stderr.length > 32) stderr.shift();
   });
   return {
-    source, width: source.attributes.width, height: source.attributes.height,
+    source, width: format.width, height: format.height, framesPerSecond: format.framesPerSecond,
     process: child, path: outputPath, stderr, completion: once(child, 'exit'), frames: 0,
   };
 }
@@ -138,6 +150,30 @@ async function finishEncoder(encoder: Encoder): Promise<void> {
   if (code !== 0) {
     throw new Error(`ffmpeg exited code=${String(code)} signal=${String(signal)}\n${encoder.stderr.join('')}`);
   }
+}
+
+interface SensorArchive {
+  readonly path: string;
+  readonly writer: StreamingZipWriter;
+  receipt: { sha256: string; byteLength: number } | null;
+}
+
+/** One zip per structured sensor holding every tick's raw service payload (PLY / CSV). */
+async function openSensorArchive(filePath: string): Promise<SensorArchive> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const stream = createWriteStream(filePath);
+  const sink = new HashedArtifactSink(
+    { role: 'sensor-archive', actorId: null, sensorId: null, modality: 'frames' },
+    'application/zip',
+    {
+      write: (chunk) => new Promise<void>((resolve, reject) => {
+        stream.write(chunk, (error) => (error ? reject(error) : resolve()));
+      }),
+      close: () => new Promise<void>((resolve, reject) => stream.end((error?: Error | null) => (error ? reject(error) : resolve()))),
+      abort: async () => { stream.destroy(); },
+    },
+  );
+  return { path: filePath, writer: new StreamingZipWriter(sink), receipt: null };
 }
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
@@ -161,9 +197,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
-      if (sources.some((source) => source.modality !== 'rgb')) {
-        throw new Error('native retained engine currently accepts RGB render sources only');
-      }
+      const unsupported = sources.find((source) => source.modality !== 'rgb' && source.modality !== 'lidar' && source.modality !== 'radar');
+      if (unsupported) throw new Error(`native retained engine does not render ${unsupported.modality} sources`);
       const rgbSchedules = context.schedules.filter((schedule) => {
         const source = sources.find((candidate) => candidate.outputName === schedule.sourceId);
         return source?.modality === 'rgb';
@@ -222,6 +257,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const lowering = lowerOpenScenarioToNative(xosc.toString('utf8'), xoscInput.sha256, rgbSchedules);
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
+      const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
+      // Lidar and radar videos ride the cameras' fixed-step clock: one frame
+      // per simulated tick, so every video of the run is time-locked.
+      const sensorVideo = nativeSensorVideoFormat(intent);
+      const wantsSensorArchive = intent.renderSpec.artifacts.includes('sensorArchive');
       const traceRelative = 'trace/native-trace.json';
       const tracePath = path.join(context.workspace, traceRelative);
       await writeJson(tracePath, {
@@ -263,6 +303,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const { client } = session;
 
       const encoders = new Map<string, Encoder>();
+      const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
+      const archives = new Map<string, SensorArchive>();
       const scheduleBySource = new Map(rgbSchedules.map((schedule) => [schedule.sourceId, schedule]));
       let serverMs = 0;
       const frameIdentities: NativeFrameIdentity[] = [];
@@ -277,7 +319,18 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
         for (const source of sources) {
           const outputPath = path.join(context.workspace, 'video', `${source.outputName}.mp4`);
-          encoders.set(source.outputName, startEncoder(ffmpeg, outputPath, source));
+          const format: VideoFormat = source.modality === 'rgb'
+            ? { width: source.attributes.width, height: source.attributes.height, framesPerSecond: source.attributes.fps }
+            : sensorVideo;
+          encoders.set(source.outputName, startEncoder(ffmpeg, outputPath, source, format));
+          if (source.modality === 'lidar') {
+            rasterizers.set(source.outputName, new LidarVideoRasterizer(format.width, format.height, source.attributes.rangeM, source.transform.position.y));
+          } else if (source.modality === 'radar') {
+            rasterizers.set(source.outputName, new RadarVideoRasterizer(format.width, format.height, source.attributes.horizontalFovDeg, source.attributes.rangeM));
+          }
+          if (wantsSensorArchive && source.modality !== 'rgb') {
+            archives.set(source.outputName, await openSensorArchive(path.join(context.workspace, 'sensors', `${source.outputName}.zip`)));
+          }
         }
         const wantedMicros = new Map<string, Set<number>>();
         for (const [sourceId, schedule] of scheduleBySource) wantedMicros.set(sourceId, new Set(scheduleFrameMicros(schedule)));
@@ -286,6 +339,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           if (context.signal.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error('native render aborted');
           const response = await client.renderBundle({
             sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'],
+            // The non-camera rig is retained by the service: declare it once.
+            ...(tick === 0 && sensorRigs.lidars.length > 0 ? { lidars: sensorRigs.lidars } : {}),
+            ...(tick === 0 && sensorRigs.radars.length > 0 ? { radars: sensorRigs.radars } : {}),
           });
           if (response.frame.simTick !== tick) {
             throw new Error(`native service answered tick ${tick} with a frame for tick ${response.frame.simTick}`);
@@ -294,6 +350,23 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           frameIdentities.push(response.frame);
           const frameMicros = Math.round(lowering.frameTimes[tick]! * 1_000_000);
           for (const frame of response.frames) {
+            if (frame.pass === 'lidar' || frame.pass === 'radar') {
+              const encoder = encoders.get(frame.sensorId);
+              const rasterizer = rasterizers.get(frame.sensorId);
+              if (!encoder || !rasterizer) throw new Error(`native service returned unknown ${frame.pass} sensor ${frame.sensorId}`);
+              const payload = await client.readFrame(frame);
+              const rgba = rasterizer instanceof LidarVideoRasterizer
+                ? rasterizer.frame(parseLidarPly(payload))
+                : rasterizer.frame(parseRadarCsv(payload));
+              if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
+              encoder.frames += 1;
+              const archive = archives.get(frame.sensorId);
+              if (archive) {
+                const extension = frame.pass === 'lidar' ? 'ply' : 'csv';
+                await archive.writer.add(`tick-${String(tick).padStart(6, '0')}.${extension}`, payload, context.signal);
+              }
+              continue;
+            }
             if (frame.pass !== 'rgb' || !wantedMicros.get(frame.sensorId)?.has(frameMicros)) continue;
             const encoder = encoders.get(frame.sensorId);
             if (!encoder) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
@@ -309,6 +382,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         }
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 0, total: 1, unit: 'items' });
         await Promise.all([...encoders.values()].map(finishEncoder));
+        for (const archive of archives.values()) archive.receipt = await archive.writer.close(context.signal);
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 1, total: 1, unit: 'items' });
         encodingComplete = true;
       } finally {
@@ -317,6 +391,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             encoder.process.stdin.destroy();
             terminateProcess(encoder.process);
           }
+          for (const archive of archives.values()) await archive.writer.abort(new Error('native render did not complete'));
         }
         await session.close();
       }
@@ -326,22 +401,33 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       for (const encoder of [...encoders.values()].sort((left, right) => left.source.outputName.localeCompare(right.source.outputName))) {
         const digest = await hashFile(encoder.path);
         const relativePath = path.relative(context.workspace, encoder.path);
-        const schedule = scheduleBySource.get(encoder.source.outputName);
-        if (!schedule) throw new Error(`native render produced ${encoder.source.outputName} without a schedule`);
-        if (encoder.frames !== schedule.frameCount) {
-          throw new Error(`native render encoded ${encoder.frames} frames for ${encoder.source.outputName}; its schedule requires ${schedule.frameCount}`);
+        const expectedFrames = encoder.source.modality === 'rgb'
+          ? scheduleBySource.get(encoder.source.outputName)?.frameCount
+          : sensorVideo.frameCount;
+        if (expectedFrames === undefined) throw new Error(`native render produced ${encoder.source.outputName} without a schedule`);
+        if (encoder.frames !== expectedFrames) {
+          throw new Error(`native render encoded ${encoder.frames} frames for ${encoder.source.outputName}; its schedule requires ${expectedFrames}`);
         }
         videoRecords.push({
           actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, relativePath,
           width: encoder.width, height: encoder.height,
-          framesPerSecond: schedule.framesPerSecond, frameCount: encoder.frames,
+          framesPerSecond: encoder.framesPerSecond, frameCount: encoder.frames,
           sha256: digest.sha256, sizeBytes: digest.sizeBytes,
         });
         artifacts.push({
-          identity: { role: 'video', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: 'rgb' },
+          identity: { role: 'video', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: encoder.source.modality },
           relativePath, sha256: digest.sha256, sizeBytes: digest.sizeBytes,
           mediaType: 'video/mp4', frameCount: encoder.frames,
         });
+        const archive = archives.get(encoder.source.outputName);
+        if (archive) {
+          if (!archive.receipt) throw new Error(`sensor archive for ${encoder.source.outputName} was not closed`);
+          artifacts.push({
+            identity: { role: 'sensorArchive', actorId: encoder.source.actorId, sensorId: encoder.source.sensorId, modality: encoder.source.modality },
+            relativePath: path.relative(context.workspace, archive.path), sha256: archive.receipt.sha256, sizeBytes: archive.receipt.byteLength,
+            mediaType: 'application/zip', frameCount: encoder.frames,
+          });
+        }
       }
       artifacts.push({
         identity: { role: 'trace', actorId: null, sensorId: null, modality: null },

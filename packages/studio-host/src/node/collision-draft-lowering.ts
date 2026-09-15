@@ -944,6 +944,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
           rotationFrequencyHz: capture.rotationFrequencyHz,
           upperFovDeg: sensor.field.verticalFovDeg / 2,
           lowerFovDeg: -sensor.field.verticalFovDeg / 2,
+          horizontalFovDeg: sensor.field.horizontalFovDeg,
         },
       };
     }

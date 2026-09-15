@@ -6,14 +6,11 @@ import {
   requireScenarioContext,
   requireScenarioMutableContext,
   requireScenarioMutableDocumentContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ documentId: string }> };
 
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = DuplicateScenarioDocumentSchema.safeParse((await readJson(request)) ?? {});

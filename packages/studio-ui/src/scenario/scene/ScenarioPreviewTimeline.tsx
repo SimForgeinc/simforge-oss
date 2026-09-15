@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioPreviewTimeline.stylex";
 import { Clapperboard, Pause, Play } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { SCENARIO_FLOATING_CARD_CLASSNAME } from "../floating-card";
@@ -68,32 +70,32 @@ export function ScenarioPreviewTimeline({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
+        {...stylex.props(styles.scenarioPreviewTimelineGlass)}
         data-testid="scenario-preview-timeline-glass"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.11] via-white/[0.025] to-black/10" />
-        <div className="absolute -left-8 -top-14 size-28 rounded-full bg-[#E8E044]/10 blur-3xl" />
-        <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
+        <div {...stylex.props(styles.divAbsolute)} />
+        <div {...stylex.props(styles.divAbsoluteIcon)} />
+        <div {...stylex.props(styles.divAbsolute2)} />
       </div>
 
       <button
         aria-label={playback.playing ? "Pause scenario preview" : "Play scenario preview"}
-        className="relative z-10 grid size-8 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 text-white/85 shadow-none transition-[color,transform] hover:scale-110 hover:bg-transparent hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]/70 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:scale-100"
+        {...stylex.props(styles.buttonRelativeGridIcon)}
         disabled={playback.disabled}
         onClick={playback.onPlayPause}
         type="button"
       >
         {playback.playing ? (
-          <Pause aria-hidden="true" className="size-4 fill-current" />
+          <Pause aria-hidden="true" {...stylex.props(styles.pauseIcon)} />
         ) : (
-          <Play aria-hidden="true" className="ml-0.5 size-4 fill-current" />
+          <Play aria-hidden="true" {...stylex.props(styles.playIcon)} />
         )}
       </button>
 
-      <div className="relative z-10 flex min-w-0 flex-1 items-center">
+      <div {...stylex.props(styles.divRelativeFlex)}>
         <input
           aria-label="Scenario preview time"
-          className="relative z-10 h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/20 accent-[#E8E044] [&::-moz-range-progress]:h-1.5 [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-[#E8E044] [&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-black [&::-moz-range-thumb]:bg-[#E8E044] [&::-webkit-slider-thumb]:mt-[-3px] [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-black [&::-webkit-slider-thumb]:bg-[#E8E044] [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full disabled:cursor-not-allowed disabled:opacity-45"
+          {...stylex.props(styles.scenarioPreviewTimeInput)}
           disabled={playback.disabled}
           max={endTime}
           min={playback.startTime}
@@ -103,10 +105,10 @@ export function ScenarioPreviewTimeline({
           value={time}
         />
         {cinematic?.enabled && cinematic.cutTimes.length > 0 ? (
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 h-3 -translate-y-1/2" data-testid="scenario-preview-cut-markers">
+          <div aria-hidden="true" {...stylex.props(styles.scenarioPreviewCutMarkers)} data-testid="scenario-preview-cut-markers">
             {cinematic.cutTimes.map((cutTime) => (
               <span
-                className="absolute top-0 h-3 w-px -translate-x-1/2 bg-white/45"
+                {...stylex.props(styles.spanAbsolute)}
                 key={cutTime}
                 style={{
                   left: `${((Math.max(playback.startTime, Math.min(endTime, cutTime)) - playback.startTime) / (endTime - playback.startTime)) * 100}%`,
@@ -117,7 +119,7 @@ export function ScenarioPreviewTimeline({
         ) : null}
       </div>
 
-      <span className="relative z-10 shrink-0 font-mono text-[9px] tabular-nums text-white/65">
+      <span {...stylex.props(styles.spanRelativeMono)}>
         {formatTime(time - playback.startTime)} / {formatTime(endTime - playback.startTime)}
       </span>
 
@@ -135,7 +137,7 @@ export function ScenarioPreviewTimeline({
           title={cinematic.enabled ? "Cinematic camera on" : "Cinematic camera off"}
           type="button"
         >
-          <Clapperboard aria-hidden="true" className="size-3.5" />
+          <Clapperboard aria-hidden="true" {...stylex.props(styles.clapperboardIcon)} />
           {cinematic.enabled && cinematic.shotLabel ? (
             <span data-testid="scenario-preview-shot-label">{cinematic.shotLabel}</span>
           ) : null}

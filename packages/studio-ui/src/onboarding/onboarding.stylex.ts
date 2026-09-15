@@ -2,11 +2,16 @@
  * StyleX styles for the first-run onboarding screens.
  *
  * Onboarding is the one place in Studio that is not instrument chrome: it is a
- * marketing-adjacent surface with its own near-black canvas (`#050607`) and the
- * teal hero palette the download page promised. Those two colours are the
- * screen's own art direction rather than product tokens, so they stay literal
- * here; everything that belongs to the product — the accent, the type scale,
- * the spacing rhythm, the destructive colour — comes from the shared tokens.
+ * marketing-adjacent surface over the animated hero the download page
+ * promised, on a near-black canvas (`#050607`, painted by the host's route
+ * layout). The white-alpha glass and the teal hero palette are the screen's
+ * own art direction rather than product tokens, so they stay literal here;
+ * everything that belongs to the product — the accent, the type scale, the
+ * spacing rhythm, the destructive colour — comes from the shared tokens.
+ *
+ * Both steps render into one column: the welcome copy and the map setup are
+ * the same type, the same actions row and the same footnote, so moving from
+ * one to the other swaps content in place rather than changing layouts.
  *
  * Radii are deliberately `radii.none` throughout: the product's radius scale
  * resolves every step to `0`, so the `rounded-2xl`/`rounded-full` utilities
@@ -19,9 +24,6 @@ import * as stylex from "@stylexjs/stylex";
 
 import { colors, radii, space, text } from "../stylex/tokens.stylex";
 
-/** The onboarding canvas, shared by both screens and the route layout. */
-export const CANVAS = "#050607";
-
 /**
  * Custom property carrying a single install row's completed fraction as a
  * percentage string. One static class paints every row; only this variable
@@ -29,63 +31,12 @@ export const CANVAS = "#050607";
  */
 export const PROGRESS_VAR = "--onboarding-progress";
 
-/** Teal hero wash behind the map picker. The welcome screen animates instead. */
-const MAP_CANVAS_GRADIENT =
-  "radial-gradient(120% 90% at 78% -10%, #153c4e 0%, #0b1a24 45%, #050607 100%)";
-
 const spin = stylex.keyframes({
   from: { transform: "rotate(0deg)" },
   to: { transform: "rotate(360deg)" },
 });
 
 export const onboarding = stylex.create({
-  /* ── Screen shells ─────────────────────────────────────────────── */
-  welcomeScreen: {
-    position: "relative",
-    display: "grid",
-    placeItems: "center",
-    minHeight: "100svh",
-    overflow: "hidden",
-    backgroundColor: CANVAS,
-    paddingInline: space.xxl,
-    paddingBlock: "3rem",
-    color: "#ffffff",
-  },
-  mapScreen: {
-    position: "relative",
-    minHeight: "100svh",
-    overflow: "hidden",
-    backgroundColor: CANVAS,
-    backgroundImage: MAP_CANVAS_GRADIENT,
-    paddingInline: { default: space.xxl, "@media (min-width: 640px)": "2.5rem" },
-    paddingBlock: "2.5rem",
-    color: "#ffffff",
-  },
-  welcomeColumn: {
-    position: "relative",
-    zIndex: 10,
-    width: "100%",
-    maxWidth: "42rem",
-  },
-  mapColumns: {
-    position: "relative",
-    zIndex: 10,
-    display: "grid",
-    gap: space.xxxl,
-    width: "100%",
-    maxWidth: "72rem",
-    marginInline: "auto",
-    gridTemplateColumns: {
-      default: null,
-      "@media (min-width: 1024px)": "minmax(0, 1fr) 20rem",
-    },
-  },
-  sidebar: {
-    position: { default: null, "@media (min-width: 1024px)": "sticky" },
-    top: { default: null, "@media (min-width: 1024px)": "2.5rem" },
-    alignSelf: { default: null, "@media (min-width: 1024px)": "start" },
-  },
-
   /* ── Type ──────────────────────────────────────────────────────── */
   eyebrow: {
     fontFamily: text.fontMeta,
@@ -102,26 +53,12 @@ export const onboarding = stylex.create({
     fontWeight: 600,
     letterSpacing: "-0.025em",
   },
-  mapTitle: {
-    marginTop: space.md,
-    fontSize: "1.875rem",
-    lineHeight: "2.25rem",
-    fontWeight: 600,
-    letterSpacing: "-0.025em",
-  },
   welcomeLede: {
     marginTop: "1.25rem",
     maxWidth: "36rem",
     fontSize: "1rem",
     lineHeight: "1.75rem",
     color: "rgba(255, 255, 255, 0.75)",
-  },
-  mapLede: {
-    marginTop: space.md,
-    maxWidth: "42rem",
-    fontSize: "0.875rem",
-    lineHeight: "1.5rem",
-    color: "rgba(255, 255, 255, 0.55)",
   },
   accountNote: {
     marginTop: space.xxl,
@@ -148,12 +85,6 @@ export const onboarding = stylex.create({
     fontSize: "0.75rem",
     lineHeight: "1rem",
     color: colors.textSubtle,
-  },
-  qualityFootnote: {
-    marginTop: space.lg,
-    fontSize: "11px",
-    lineHeight: "1rem",
-    color: colors.textFaint,
   },
 
   /* ── Actions ───────────────────────────────────────────────────── */
@@ -188,29 +119,6 @@ export const onboarding = stylex.create({
     gap: space.md,
   },
 
-  /* ── Signed-out notice ─────────────────────────────────────────── */
-  lockedNotice: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: space.lg,
-    marginTop: "1.25rem",
-    paddingInline: space.xl,
-    paddingBlock: space.lg,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: radii.none,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-  },
-  lockedNoticeText: {
-    minWidth: 0,
-    flex: 1,
-    fontSize: "0.75rem",
-    lineHeight: "1.25rem",
-    color: "rgba(255, 255, 255, 0.55)",
-  },
-
   /* ── Catalog ───────────────────────────────────────────────────── */
   catalogLoading: {
     display: "flex",
@@ -221,21 +129,22 @@ export const onboarding = stylex.create({
     lineHeight: "1.25rem",
     color: "rgba(255, 255, 255, 0.45)",
   },
-  mapGrid: {
+  /**
+   * One row per map, over the hero. The rows share the welcome buttons'
+   * glass treatment rather than the map gallery's cards: this is the same
+   * surface the user just pressed "Continue locally" on.
+   */
+  mapList: {
     display: "grid",
-    gap: space.lg,
-    marginTop: space.xxl,
-    gridTemplateColumns: {
-      default: null,
-      "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
-      "@media (min-width: 1280px)": "repeat(3, minmax(0, 1fr))",
-    },
+    gap: space.md,
+    marginTop: "2rem",
   },
-  mapCard: {
+  mapRow: {
     display: "flex",
-    height: "100%",
-    flexDirection: "column",
-    overflow: "hidden",
+    alignItems: "center",
+    gap: space.lg,
+    paddingInline: space.lg,
+    paddingBlock: space.md,
     borderWidth: 1,
     borderStyle: "solid",
     borderRadius: radii.none,
@@ -243,28 +152,41 @@ export const onboarding = stylex.create({
     transitionDuration: "150ms",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
   },
-  mapCardIdle: {
+  mapRowIdle: {
     cursor: "pointer",
     borderColor: {
-      default: colors.line,
-      ":hover": "rgba(255, 255, 255, 0.2)",
+      default: "rgba(255, 255, 255, 0.14)",
+      ":hover": "rgba(255, 255, 255, 0.3)",
     },
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
-  mapCardSelected: {
+  mapRowSelected: {
     cursor: "pointer",
     borderColor: "rgba(232, 224, 68, 0.7)",
-    backgroundColor: "rgba(232, 224, 68, 0.06)",
+    backgroundColor: "rgba(232, 224, 68, 0.08)",
   },
-  mapCardLocked: {
+  /** The public map: not a choice, so no pointer affordance. */
+  mapRowIncluded: {
+    borderColor: "rgba(232, 224, 68, 0.7)",
+    backgroundColor: "rgba(232, 224, 68, 0.08)",
+  },
+  mapRowLocked: {
     cursor: "not-allowed",
-    borderColor: "rgba(255, 255, 255, 0.05)",
+    borderColor: "rgba(255, 255, 255, 0.08)",
     backgroundColor: "rgba(255, 255, 255, 0.02)",
-    opacity: 0.45,
+    opacity: 0.55,
   },
-  thumbnail: {
-    position: "relative",
+  mapRowControl: {
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+    width: "1.25rem",
+    height: "1.25rem",
+  },
+  mapRowThumbnail: {
     display: "block",
+    flexShrink: 0,
+    width: "4rem",
     aspectRatio: "16 / 9",
     overflow: "hidden",
     backgroundColor: "rgba(0, 0, 0, 0.4)",
@@ -274,41 +196,32 @@ export const onboarding = stylex.create({
     height: "100%",
     objectFit: "cover",
   },
-  lockedVeil: {
-    position: "absolute",
-    inset: 0,
-    display: "grid",
-    placeItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-  },
-  lockedVeilLabel: {
+  mapRowMeta: {
     display: "flex",
-    alignItems: "center",
-    gap: space.sm,
-    fontSize: "11px",
-    fontWeight: 600,
+    flexShrink: 0,
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: space.xxs,
+  },
+  includedTag: {
+    fontFamily: text.fontMeta,
+    fontSize: "9px",
+    fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: colors.accent,
   },
-  mapCardBody: {
-    display: "flex",
-    flex: 1,
-    alignItems: "flex-start",
-    gap: space.lg,
-    paddingInline: space.xl,
-    paddingBlock: space.lg,
+  lockedTag: {
+    fontFamily: text.fontMeta,
+    fontSize: "9px",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: text.trackingMeta,
+    color: "rgba(255, 255, 255, 0.5)",
   },
   checkbox: {
-    marginTop: space.xs,
     width: "1rem",
     height: "1rem",
-    accentColor: colors.accent,
-  },
-  radio: {
-    marginTop: space.xs,
-    width: "0.875rem",
-    height: "0.875rem",
     accentColor: colors.accent,
   },
   mapCardText: {
@@ -323,7 +236,7 @@ export const onboarding = stylex.create({
     fontSize: "0.875rem",
     lineHeight: "1.25rem",
     fontWeight: 500,
-    color: "rgba(255, 255, 255, 0.85)",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   mapCardLocality: {
     display: "block",
@@ -333,101 +246,116 @@ export const onboarding = stylex.create({
     whiteSpace: "nowrap",
     fontSize: "0.75rem",
     lineHeight: "1rem",
-    color: "rgba(255, 255, 255, 0.4)",
+    color: "rgba(255, 255, 255, 0.45)",
   },
   mapCardSize: {
     fontFamily: text.fontMono,
     fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.45)",
+    color: "rgba(255, 255, 255, 0.5)",
   },
 
   /* ── Graphics level ────────────────────────────────────────────── */
+  qualityField: {
+    marginTop: "2rem",
+    minWidth: 0,
+    padding: 0,
+    borderWidth: 0,
+  },
   legend: {
     fontFamily: text.fontMeta,
     fontSize: "9px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMetaWider,
-    color: "rgba(255, 255, 255, 0.4)",
+    color: "rgba(255, 255, 255, 0.45)",
   },
-  qualityList: {
+  /** One segmented control; the selected segment reads as the accent chip. */
+  qualitySegments: {
     display: "grid",
-    gap: space.md,
-    marginTop: space.lg,
+    gridTemplateColumns: { default: "repeat(2, minmax(0, 1fr))", "@media (min-width: 640px)": "repeat(4, minmax(0, 1fr))" },
+    gap: space.sm,
+    marginTop: space.md,
   },
-  qualityOption: {
+  qualitySegment: {
     display: "flex",
-    alignItems: "flex-start",
-    gap: space.lg,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.xxs,
+    minHeight: "2.75rem",
+    paddingInline: space.md,
+    paddingBlock: space.sm,
     cursor: "pointer",
-    paddingInline: space.lg,
-    paddingBlock: "0.625rem",
     borderWidth: 1,
     borderStyle: "solid",
     borderRadius: radii.none,
+    fontSize: "0.8125rem",
+    lineHeight: "1rem",
+    fontWeight: 500,
+    textAlign: "center",
     transitionProperty: "color, background-color, border-color",
     transitionDuration: "150ms",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    ":focus-within": { outline: `2px solid ${colors.accent}`, outlineOffset: "2px" },
   },
-  qualityOptionIdle: {
+  qualitySegmentIdle: {
     borderColor: {
-      default: colors.line,
-      ":hover": "rgba(255, 255, 255, 0.2)",
+      default: "rgba(255, 255, 255, 0.14)",
+      ":hover": "rgba(255, 255, 255, 0.3)",
     },
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    color: "rgba(255, 255, 255, 0.75)",
   },
-  qualityOptionSelected: {
-    borderColor: "rgba(232, 224, 68, 0.7)",
-    backgroundColor: "rgba(232, 224, 68, 0.06)",
-  },
-  qualityLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: space.md,
-    fontSize: "0.875rem",
-    lineHeight: "1.25rem",
-    fontWeight: 500,
-    color: "rgba(255, 255, 255, 0.85)",
+  qualitySegmentSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
+    color: colors.accentText,
   },
   recommendedTag: {
     fontFamily: text.fontMeta,
-    fontSize: "9px",
+    fontSize: "8px",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: text.trackingMeta,
-    color: colors.accent,
+    opacity: 0.8,
   },
   qualityGuidance: {
-    display: "block",
-    marginTop: space.xxs,
-    fontSize: "11px",
-    lineHeight: "1rem",
-    color: "rgba(255, 255, 255, 0.4)",
+    marginTop: space.md,
+    fontSize: "0.75rem",
+    lineHeight: "1.25rem",
+    color: "rgba(255, 255, 255, 0.45)",
+  },
+  srOnly: {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: 0,
   },
 
   /* ── Disk summary ──────────────────────────────────────────────── */
-  summary: {
-    display: "grid",
-    gap: space.md,
-    marginTop: space.xxl,
-    paddingTop: space.xl,
-    borderTopWidth: 1,
-    borderTopStyle: "solid",
-    borderTopColor: "rgba(255,255,255,0.1)",
+  summaryLine: {
+    display: "flex",
+    flexWrap: "wrap",
+    columnGap: space.md,
+    rowGap: space.xs,
+    marginTop: space.xl,
+    marginBottom: 0,
     fontSize: "0.75rem",
     lineHeight: "1rem",
   },
-  summaryRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: space.lg,
-  },
   summaryTerm: {
-    color: "rgba(255, 255, 255, 0.4)",
+    color: "rgba(255, 255, 255, 0.45)",
   },
   summaryValue: {
+    marginInlineStart: 0,
+    marginInlineEnd: space.lg,
     fontFamily: text.fontMono,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255, 255, 255, 0.85)",
   },
   errorNote: {
     marginTop: space.xl,
@@ -440,21 +368,18 @@ export const onboarding = stylex.create({
     lineHeight: "1rem",
     color: colors.danger,
   },
-  /* ── Icons and download action ─────────────────────────────────── */
+
+  /* ── Icons ─────────────────────────────────────────────────────── */
   icon: {
     width: "1rem",
     height: "1rem",
-  },
-  /** Only the locked-notice `Lock` carried `shrink-0` at baseline. */
-  iconNoShrink: {
-    flexShrink: 0,
   },
   iconSmall: {
     width: "0.875rem",
     height: "0.875rem",
   },
-  iconWarning: {
-    color: "#E8E044",
+  iconAccent: {
+    color: colors.accent,
   },
   iconDanger: {
     color: "hsl(var(--destructive))",
@@ -470,15 +395,6 @@ export const onboarding = stylex.create({
     animationDuration: "1s",
     animationIterationCount: "infinite",
     animationTimingFunction: "linear",
-  },
-  downloadAction: {
-    marginTop: space.lg,
-    width: "100%",
-    height: "3rem",
-    borderRadius: radii.full,
-    backgroundColor: "#E8E044",
-    color: "#000000",
-    ":hover": { backgroundColor: "rgba(232, 224, 68, 0.85)" },
   },
 });
 

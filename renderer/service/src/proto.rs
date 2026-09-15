@@ -41,6 +41,11 @@ pub struct CameraAttach {
     /// false and retain their calibrated rigid orientation.
     #[serde(default)]
     pub look_at_actor: bool,
+    /// Keep the attached actor's own geometry in this view. A rigid sensor
+    /// mount must not see its host (the camera sits inside the body shell),
+    /// but a trailing chase camera exists to show it.
+    #[serde(default)]
+    pub host_visible: bool,
 }
 
 /// Hard cap on one framed message; guards against a corrupt length prefix.

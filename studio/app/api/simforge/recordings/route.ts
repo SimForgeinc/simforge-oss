@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 import {
@@ -52,8 +51,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const origin = requireScenarioMutationOrigin(request);
-  if (origin) return origin;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CreateWithArtifactsSchema.safeParse(await readJson(request));

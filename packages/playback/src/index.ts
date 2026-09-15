@@ -1,4 +1,5 @@
 export * from './canonicalPreview';
+export * from './simulation-preview';
 export * from './controller';
 export * from './liveSimulationPlan';
 export * from './mapRuntime';

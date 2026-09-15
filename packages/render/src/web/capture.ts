@@ -1,5 +1,5 @@
 import { fixedStepCaptureFrames, samplePlaybackActors, type PlaybackBundle, type PlaybackController, type SampledActor } from '@simforge-oss/playback';
-import { lowerRenderSpecToBrowser, type BrowserCameraRenderPass, type BrowserRenderPass, type RenderSpecV3, type ResolvedFrameSchedule } from '@simforge-oss/scenario';
+import { lowerRenderSpecToBrowser, type BrowserCameraRenderPass, type BrowserRenderPass, type RenderSpecV3, type ResolvedFrameSchedule, PRONTO_CHASE_CAMERA_SENSOR_ID } from '@simforge-oss/scenario';
 import type { CityViewer } from '@simforge-oss/viewer';
 import { Matrix4, PerspectiveCamera, Quaternion, Vector3, type Object3D } from 'three';
 import { HashedArtifactSink, StreamingZipWriter, sensorFramePath, throwIfAborted, type ArtifactReceipt, type ArtifactSinkFactory } from './artifacts.js';
@@ -210,7 +210,8 @@ function capturePass(input: { pass: BrowserRenderPass; frameIndex: number; fps: 
   if (pass.modality !== 'lidar' && pass.modality !== 'radar') {
     const camera = input.cameras.get(passKey(pass)) ?? new PerspectiveCamera(); input.cameras.set(passKey(pass), camera); applySensorCamera(camera, input.world, pass);
     const common = { renderer: input.viewer.renderer, scene: input.viewer.scene, camera, width: pass.width, height: pass.height, nearM: pass.nearM, farM: pass.farM, resourcePool: input.resources, resourceKey: passKey(pass), onTiming };
-    const restoreHost = hideSensorHost(input.viewer.scene, pass.actorId);
+    // A rigid mount sits inside its host's body shell; the trailing chase camera exists to show it.
+    const restoreHost = pass.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID ? () => {} : hideSensorHost(input.viewer.scene, pass.actorId);
     try {
       if (pass.modality === 'rgb') return { pixels: renderOffscreenRgba(common) };
       if (pass.modality === 'depth') return { depth: captureLinearDepthMeters(common) };

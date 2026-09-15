@@ -23,7 +23,7 @@ import type {
   ModelQuant,
 } from "./model-catalog";
 import { MODEL_CATALOG } from "./model-catalog";
-import type { ComputeJobKind, ComputeJobStatus } from "./contracts";
+import type { ComputeJobKind, ComputeJobStatus } from "@simforge-oss/evaluation/client";
 
 /** Highest precision first: what a user would pick if the hardware allowed it. */
 const PRECISION_PREFERENCE: readonly ModelQuant[] = ["bf16", "fp8", "nf4"] as const;

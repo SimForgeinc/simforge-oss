@@ -4,19 +4,19 @@ import { createRenderEngine, resolveBinary } from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
 describe('native retained engine adapter', () => {
-  it('declares only the observable RGB and artifact contract', () => {
+  it('declares cameras, cast lidar/radar, and the artifact contract - not camera derivatives', () => {
     const engine = createRenderEngine({ binary: '/bin/true' });
     expect(engine.capabilities).toMatchObject({
       engineId: 'bevy-retained',
       backend: 'native',
-      modalities: ['rgb'],
+      modalities: ['rgb', 'lidar', 'radar'],
       requiresGpu: true,
     });
     expect(engine.capabilities.capabilities).toEqual(expect.arrayContaining([
-      'sensor.rgb', 'artifact.video', 'artifact.manifest', 'artifact.trace',
+      'sensor.rgb', 'sensor.lidar', 'sensor.radar', 'artifact.video', 'artifact.manifest', 'artifact.trace', 'artifact.sensor_archive',
     ]));
     expect(engine.capabilities.capabilities).not.toEqual(expect.arrayContaining([
-      'sensor.depth', 'sensor.semantic', 'sensor.instance', 'sensor.lidar', 'sensor.radar',
+      'sensor.depth', 'sensor.semantic', 'sensor.instance',
     ]));
   });
 

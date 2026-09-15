@@ -21,7 +21,7 @@ import { styles as s } from "./evaluation-components.stylex";
 import type { ModelFamilyId, ModelQuant } from "../model-catalog";
 import { MODEL_CATALOG, MODEL_FAMILIES } from "../model-catalog";
 import type { ExecutionTarget, HostExecutionSnapshot, ModelRuntimeSnapshot } from "../presentation";
-import type { ComputeJobKind } from "../contracts";
+import type { ComputeJobKind } from "@simforge-oss/evaluation/client";
 import { executionOffers, formatBytes, highestOfferedQuant, runtimeKey } from "../presentation";
 import { SelectMenu } from "../../components/ui/select-menu";
 

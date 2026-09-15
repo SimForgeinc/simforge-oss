@@ -14,23 +14,36 @@ import { CpuJobsClient, downloadInputs } from "./http-client.js";
 import { NativeMapFailure, runNativeClaim } from "./native-render.js";
 import type { CpuJobClaim, LocalRenderEngine } from "./types.js";
 
+export const WORKER_CAPABILITIES = [
+  "native-render",
+  "browser-render",
+  "carla-render",
+  "compile",
+  "model-run",
+] as const;
+export type WorkerCapability = (typeof WORKER_CAPABILITIES)[number];
+
+function configuredCapabilities(): ReadonlySet<WorkerCapability> | null {
+  const raw = simforgeEnv("SIMFORGE_WORKER_CAPABILITIES")?.trim();
+  if (!raw) return null;
+  const values = raw.split(",").map((value) => value.trim()).filter(Boolean);
+  const unknown = values.filter((value): value is string => !(WORKER_CAPABILITIES as readonly string[]).includes(value));
+  if (unknown.length > 0) throw new Error(`Unknown worker capability: ${unknown.join(", ")}`);
+  return new Set(values as WorkerCapability[]);
+}
+
 export type LocalWorkerHandle = {
   readonly done: Promise<void>;
   stop(reason?: unknown): void;
 };
 
-/**
- * Which render engines this worker offers, decided from the same on-disk
- * probe the host reports in its capabilities. A missing dependency removes
- * the engine from the claim scope; the host then reports it not ready and
- * never leases such a job into a certain failure.
- */
 export function offeredEngines(): { engines: LocalRenderEngine[]; reasons: Record<LocalRenderEngine, readonly string[]> } {
+  const configured = configuredCapabilities();
   const native = probeLocalNativeRender();
   const browser = probeLocalBrowserRender(process.env, chromium.executablePath());
   const engines: LocalRenderEngine[] = [];
-  if (browser.ready) engines.push("browser");
-  if (native.ready) engines.push("native");
+  if (browser.ready && (!configured || configured.has("browser-render"))) engines.push("browser");
+  if (native.ready && (!configured || configured.has("native-render"))) engines.push("native");
   return { engines, reasons: { browser: browser.reasons, native: native.reasons } };
 }
 
@@ -41,28 +54,45 @@ export function startLocalWorker(baseUrl: string | URL): LocalWorkerHandle {
     || "simforge-local-worker";
   const workerId = simforgeEnv("RENDER_WORKER_ID")?.trim()
     || `local-${hostname().replace(/[^A-Za-z0-9._:-]/g, "-")}-${process.pid}`;
+  const configured = configuredCapabilities();
   const offered = offeredEngines();
   process.stdout.write(`${JSON.stringify({
     component: "simforge-local-render-worker",
     event: "worker.engines",
     engines: offered.engines,
+    capabilities: configured ? [...configured] : ["native-render", "browser-render", "compile"],
     unavailable: Object.fromEntries(Object.entries(offered.reasons).filter(([, reasons]) => reasons.length > 0)),
   })}\n`);
-  const client = new CpuJobsClient(new URL(baseUrl), token, workerId, offered.engines);
-  const done = Promise.all([
-    runClaimLoop(client, controller.signal),
-    runCompilerLoop(baseUrl, token, controller.signal),
-  ]).then(() => undefined);
+  // The runtime can be installed while this worker runs (onboarding offers
+  // it); the probe is a few stats, so each poll offers what is on disk now
+  // and announces a change the same way the first poll did.
+  let announced = offered.engines.join(",");
+  const client = new CpuJobsClient(new URL(baseUrl), token, workerId, () => {
+    const now = offeredEngines();
+    const key = now.engines.join(",");
+    if (key !== announced) {
+      announced = key;
+      process.stdout.write(`${JSON.stringify({
+        component: "simforge-local-render-worker",
+        event: "worker.engines",
+        engines: now.engines,
+        capabilities: configured ? [...configured] : ["native-render", "browser-render", "compile"],
+        unavailable: Object.fromEntries(Object.entries(now.reasons).filter(([, reasons]) => reasons.length > 0)),
+      })}\n`);
+    }
+    return now.engines;
+  });
+  const loops: Promise<void>[] = [runClaimLoop(client, controller.signal)];
+  if (!configured || configured.has("compile")) {
+    loops.push(runCompilerLoop(baseUrl, token, controller.signal));
+  }
+  const done = Promise.all(loops).then(() => undefined);
   return {
     done,
     stop(reason = new Error("local render worker stopped")) {
       controller.abort(reason);
     },
   };
-}
-
-export function localWorkerEnabled(argv: readonly string[] = process.argv.slice(2)): boolean {
-  return process.env.SIMFORGE_LOCAL_WORKER === "1" || argv.includes("--with-worker");
 }
 
 async function runClaimLoop(client: CpuJobsClient, signal: AbortSignal): Promise<void> {

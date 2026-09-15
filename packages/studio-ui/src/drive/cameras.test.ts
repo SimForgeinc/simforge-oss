@@ -87,6 +87,20 @@ describe("desired camera poses", () => {
     expect(camera.eyeY).toBeGreaterThan(ego.y);
   });
 
+  it("looks straight down on the car from the bird's-eye view, nose up the screen", () => {
+    const ego = pose({ x: 10, z: -4, headingRad: 1.1 });
+    const camera = desiredCameraPose("birdseye", ego, DIMS, orbit(), blank());
+    expect(camera.targetX).toBe(ego.x);
+    expect(camera.targetZ).toBe(ego.z);
+    expect(camera.eyeY - ego.y).toBeGreaterThan(20);
+    // Near-vertical, never exactly vertical: the small trailing offset is what
+    // resolves world-up into "heading up the screen".
+    const trail = Math.hypot(camera.eyeX - ego.x, camera.eyeZ - ego.z);
+    expect(trail).toBeGreaterThan(0);
+    expect(trail).toBeLessThan(DIMS.l);
+    expect(forwardDot(camera, ego)).toBeGreaterThan(0);
+  });
+
   it("writes into the supplied pose so the render loop never allocates", () => {
     const into = blank();
     expect(desiredCameraPose("chase", pose(), DIMS, orbit(), into)).toBe(into);

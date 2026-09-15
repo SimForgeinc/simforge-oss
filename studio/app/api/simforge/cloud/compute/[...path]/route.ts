@@ -9,9 +9,9 @@ import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/li
  *
  * The renderer holds no cloud credentials — the local service does — so the
  * shared evaluation UI talks to this prefix and the local service attaches the
- * bearer token. Nothing is interpreted here: the path, query, body and status
- * pass through so the desktop and the web portal are literally using one API,
- * and a contract change on the SimCloud side needs no edit in this file.
+ * bearer token. The legacy workspace query is discarded; only an explicit
+ * workspace header overrides the session's active organization. Other query
+ * parameters, the body and the response status pass through.
  *
  * Uploads are deliberately *not* proxied. Reserve/complete are control-plane
  * calls that come through here, but the bytes go straight from the renderer to
@@ -27,7 +27,8 @@ async function proxy(request: Request, path: string[]): Promise<Response> {
   if (auth.response) return auth.response;
 
   const suffix = path.map((segment) => encodeURIComponent(segment)).join("/");
-  const query = new URL(request.url).search;
+  const url = new URL(request.url);
+  url.searchParams.delete("workspaceId");
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
@@ -39,7 +40,7 @@ async function proxy(request: Request, path: string[]): Promise<Response> {
 
   try {
     const response = await cloudRequest(
-      `/api/simforge/compute/${suffix}${query}`,
+      `/api/simforge/compute/${suffix}${url.search}`,
       { method: request.method, headers, body },
       {
         workspaceId: request.headers.get(WORKSPACE_HEADER) ?? undefined,

@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ManualDriveDetailsPanel.stylex";
 import { Gamepad2 } from "lucide-react";
 import { useState } from "react";
 import type { ManualDriveInteraction } from "@simforge-oss/editor";
@@ -40,36 +42,36 @@ export function ManualDriveDetailsPanel({
       onClose={onClose}
       onDelete={onDelete}
       preview={(
-        <div className="flex flex-col items-center gap-1 text-center">
-          <Gamepad2 aria-hidden="true" className="size-9 text-[#E8E044]" />
-          <strong className="text-xs font-medium text-white">Manual drive</strong>
-          <span className="text-[9px] uppercase tracking-[0.16em] text-white/40" data-testid="manual-drive-status">
+        <div {...stylex.props(styles.divFlex)}>
+          <Gamepad2 aria-hidden="true" {...stylex.props(styles.gamepad2Icon)} />
+          <strong {...stylex.props(styles.manualDrive)}>Manual drive</strong>
+          <span {...stylex.props(styles.manualDriveStatus)} data-testid="manual-drive-status">
             {clipMismatch ? "Clip length changed" : "Recorded"}
           </span>
         </div>
       )}
       testId="scenario-manual-drive-panel"
     >
-      <div className="space-y-3" data-interaction-id={interaction.id} data-testid={`manual-drive-details-${interaction.id}`}>
-        <p className="text-[10px] leading-4 text-white/55">
+      <div {...stylex.props(styles.manualDriveDetails)} data-interaction-id={interaction.id} data-testid={`manual-drive-details-${interaction.id}`}>
+        <p {...stylex.props(styles.p)}>
           {recording.samples.length} poses over {recording.clipSeconds}s · {summary.distanceM.toFixed(0)} m · peak {summary.maxSpeedKph.toFixed(0)} km/h.
         </p>
         {clipMismatch ? (
-          <p className="text-[10px] leading-4 text-amber-200" data-testid="manual-drive-clip-mismatch" role="alert">
+          <p {...stylex.props(styles.manualDriveClipMismatch)} data-testid="manual-drive-clip-mismatch" role="alert">
             Recorded for a {recording.clipSeconds}s clip; the clip is now {clipSeconds}s. Record it again.
           </p>
         ) : null}
-        <p className="text-[10px] leading-4 text-white/45">
+        <p {...stylex.props(styles.ownsThisActorRsquo)}>
           Owns this actor&rsquo;s motion from 0s to the end of the clip. It cannot be shortened or moved on the timeline.
         </p>
         {waiting ? (
-          <div className="space-y-2" data-testid="manual-drive-waiting">
-            <p className="text-[10px] leading-4 text-[#E8E044]">
+          <div {...stylex.props(styles.manualDriveWaiting)} data-testid="manual-drive-waiting">
+            <p {...stylex.props(styles.recorderOpenInAnotherTabFini)}>
               Recorder open in another tab. Finish the drive there; the take comes back here for review.
               This recording stays until the new take is saved.
             </p>
             <button
-              className="editor-motion flex h-8 w-full items-center justify-center rounded-lg border border-white/15 px-3 text-[10px] font-semibold text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]"
+              {...stylex.props(styles.manualDriveStopWaitingButton)}
               data-testid="manual-drive-stop-waiting"
               onClick={recorder?.abandonTake}
               type="button"
@@ -80,7 +82,7 @@ export function ManualDriveDetailsPanel({
         ) : (
           <>
             <button
-              className="editor-motion flex h-10 w-full items-center justify-center rounded-lg border border-[#E8E044] bg-[#E8E044] px-3 text-xs font-semibold text-black hover:bg-[#f4ed5d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40"
+              {...stylex.props(styles.manualDriveRecordButton)}
               data-testid={`manual-drive-record-${interaction.id}`}
               disabled={!recorder}
               onClick={() => setFailure(recorder ? recorder.startTake(interaction.actor) : "The recorder is not available here.")}
@@ -88,13 +90,13 @@ export function ManualDriveDetailsPanel({
             >
               Record again
             </button>
-            <p className="text-[10px] leading-4 text-white/45">
+            <p {...stylex.props(styles.recordingAgainReplacesThisTa)}>
               Recording again replaces this take only after you review and save the new one.
             </p>
           </>
         )}
         {failure ? (
-          <p className="text-[10px] leading-4 text-amber-200" data-testid="manual-drive-record-failure" role="alert">
+          <p {...stylex.props(styles.manualDriveRecordFailure)} data-testid="manual-drive-record-failure" role="alert">
             {failure}
           </p>
         ) : null}

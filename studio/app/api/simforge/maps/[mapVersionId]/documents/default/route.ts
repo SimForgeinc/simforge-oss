@@ -15,7 +15,6 @@ import {
 import { ensureDefaultScenarioDataset } from "@/app/lib/scenario/dataset-store";
 import {
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 import { withSceneMinutes } from "@simforge-oss/studio-ui/scenario/editor/scene-time";
@@ -26,8 +25,6 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ mapVersionId: string }> },
 ) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;

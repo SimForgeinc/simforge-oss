@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioDocumentRow.stylex";
 import { useState } from "react";
 import type { MutableRefObject } from "react";
 import {
@@ -214,7 +216,7 @@ function DocumentActionCluster({
   const renderDisabled = !document.hasSensorProfile;
 
   return (
-    <div className="flex shrink-0 items-center justify-end gap-1">
+    <div {...stylex.props(styles.divFlex)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -228,22 +230,22 @@ function DocumentActionCluster({
             {anyBusy ? (
               <CloudActivityIndicator />
             ) : (
-              <MoreHorizontal className="size-3.5" aria-hidden="true" />
+              <MoreHorizontal {...stylex.props(styles.morehorizontalIcon)} aria-hidden="true" />
             )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" xstyle={menu.width160}>
           <DropdownMenuItem onSelect={() => onDownloadDocument(document)}>
-            <Download className="mr-2 size-3.5" aria-hidden="true" />
+            <Download {...stylex.props(styles.downloadJSONDownload)} aria-hidden="true" />
             Download JSON
           </DropdownMenuItem>
           {openScenarioExport.menuItem}
           <DropdownMenuItem disabled={!mutable} onSelect={() => onEditDetails(document)}>
-            <Pencil className="mr-2 size-3.5" aria-hidden="true" />
+            <Pencil {...stylex.props(styles.editDetailsPencil)} aria-hidden="true" />
             Edit details
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => onDuplicateDocument(document)}>
-            <CopyPlus className="mr-2 size-3.5" aria-hidden="true" />
+            <CopyPlus {...stylex.props(styles.duplicateCopyPlus)} aria-hidden="true" />
             Duplicate
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -251,7 +253,7 @@ function DocumentActionCluster({
             disabled={!mutable}
             onSelect={() => onDeleteDocument(document)}
           >
-            <Trash2 className="mr-2 size-3.5" aria-hidden="true" />
+            <Trash2 {...stylex.props(styles.deleteTrash2)} aria-hidden="true" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -279,7 +281,7 @@ function DocumentActionCluster({
             onSetRenamingDocumentId(null);
             onCommitRename(document, draft);
           }}
-          className="h-7 w-28 border border-primary/40 bg-background px-1.5 text-xs font-medium text-foreground outline-none focus:border-primary"
+          {...stylex.props(styles.renameInput)}
         />
       ) : null}
       <Button
@@ -304,7 +306,7 @@ function DocumentActionCluster({
           onEditDocument(document);
         }}
       >
-        <Pencil className="size-3.5" aria-hidden="true" />
+        <Pencil {...stylex.props(styles.pencilIcon)} aria-hidden="true" />
       </Button>
       {/* The fork/variations affordance is hidden by decision (2026-08-04): cross-map variations is
           dropped along with the archive export-package and the old play preview, and preview is being
@@ -330,8 +332,8 @@ function DocumentActionCluster({
           data-scenario-variations-toggle=""
           onClick={() => onToggleVariations(document)}
         >
-          <GitBranch className="size-3.5" aria-hidden="true" />
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-3 items-center justify-center bg-primary px-0.5 font-meta text-micro font-bold leading-3 text-primary-foreground">
+          <GitBranch {...stylex.props(styles.gitbranchIcon)} aria-hidden="true" />
+          <span {...stylex.props(styles.spanAbsoluteFlexMeta)}>
             {variationCount}
           </span>
         </Button>
@@ -369,7 +371,7 @@ function DocumentActionCluster({
                 onRenderDocument(document);
               }}
             >
-              <Video className="size-3.5" aria-hidden="true" />
+              <Video {...stylex.props(styles.videoIcon)} aria-hidden="true" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -526,7 +528,7 @@ export function ScenarioDocumentRow({
       )}
       data-render-dimmed={renderDimmed ? "true" : undefined}
     >
-      <div className="min-w-0 flex-1">
+      <div {...stylex.props(styles.div)}>
         <button
           type="button"
           className={cn(
@@ -541,14 +543,14 @@ export function ScenarioDocumentRow({
         {!advancedMode && isVariation ? (
           <span
             data-scenario-variation-tag=""
-            className="mt-1 mr-1 inline-flex rounded-full border border-sky-400/45 bg-sky-400/10 px-1.5 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-sky-300"
+            {...stylex.props(styles.variation)}
           >
             Variation
           </span>
         ) : null}
         {!labelByMap ? (
           <div
-            className="mt-1 line-clamp-2 text-[12px] leading-snug text-white/70"
+            {...stylex.props(styles.div2)}
             data-scenario-document-description=""
           >
             {document.description?.trim() || "No description"}
@@ -558,14 +560,14 @@ export function ScenarioDocumentRow({
           tagDropTarget || document.tags.length > 0 || document.contentTags.length > 0
         ) ? (
           <div
-            className="mt-2 flex flex-wrap gap-1.5"
+            {...stylex.props(styles.tagsFor)}
             aria-label={`Tags for ${label}`}
             data-scenario-tag-pills=""
           >
             {tagDropTarget ? (
               <span
                 data-scenario-tag-drop-prompt=""
-                className="rounded-full border border-primary/70 bg-primary/15 px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-primary"
+                {...stylex.props(styles.letGoToApplyTag)}
               >
                 Let go to apply tag
               </span>
@@ -573,7 +575,7 @@ export function ScenarioDocumentRow({
             {document.tags.map((tag) => (
               <span
                 key={tag.id}
-                className="rounded-full border px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight"
+                {...stylex.props(styles.spanMetaUppercase)}
                 style={tagChipStyle(tag.color)}
               >
                 {tag.label}
@@ -584,7 +586,7 @@ export function ScenarioDocumentRow({
               <span
                 key={`content-${tag}`}
                 title="Authored in the scenario content — not editable here"
-                className="rounded-full border border-dashed border-border px-2 py-0.5 font-meta text-[9px] uppercase tracking-meta-tight text-muted-foreground"
+                {...stylex.props(styles.authoredInTheScenarioContent)}
               >
                 {tag}
               </span>
@@ -592,14 +594,14 @@ export function ScenarioDocumentRow({
           </div>
         ) : null}
         {advancedMode && (lastEditorName || editedLabel) ? (
-          <div className="mt-1 flex flex-col gap-0.5 font-meta text-micro uppercase tracking-meta text-white/70">
+          <div {...stylex.props(styles.divFlexMetaMicro)}>
             {lastEditorName ? (
-              <div className="truncate" data-scenario-last-edited-by="">
+              <div {...stylex.props(styles.divTruncate)} data-scenario-last-edited-by="">
                 {`Last edited by: ${lastEditorName}`}
               </div>
             ) : null}
             {editedLabel ? (
-              <div className="truncate" data-scenario-edited-at="">
+              <div {...stylex.props(styles.divTruncate2)} data-scenario-edited-at="">
                 {`Edited: ${editedLabel}`}
               </div>
             ) : null}

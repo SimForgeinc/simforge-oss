@@ -6,7 +6,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableRenderJobContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -40,8 +39,6 @@ const CreatePostprocessSchema = z.object({
  * violation is not.
  */
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { jobId } = await route.params;

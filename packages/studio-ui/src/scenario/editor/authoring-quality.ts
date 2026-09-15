@@ -1,5 +1,6 @@
+import type { CityViewerOptions } from "@simforge-oss/viewer";
 import type { ScenarioAuthoringQuality } from "../../lib/scenario/contracts";
-import { readRenderingPreference } from "../../components/rendering-preference"
+import { readRenderingPreference } from "../../components/rendering-preference";
 
 const MB = 1024 * 1024;
 
@@ -118,4 +119,24 @@ export function actorFitPoints(
       [actor.x + halfL, actor.y + actor.dims.h, actor.z + halfW] as const,
     ];
   });
+}
+
+/**
+ * Construction-time `CityView` options for a quality preset. Every Studio
+ * surface that mounts its own viewer builds its options here, so the editor,
+ * the drive game and the map viewer are the same renderer configuration;
+ * `extra` is for surface-specific asset plumbing (transcoder paths), never
+ * for lighting.
+ */
+export function sceneViewerOptions(
+  quality: ScenarioAuthoringQuality,
+  extra?: CityViewerOptions,
+): CityViewerOptions {
+  const preset = AUTHORING_QUALITY[quality];
+  return {
+    maxPixelRatio: preset.maxPixelRatio,
+    antialias: preset.antialias,
+    cinematicLighting: preset.cinematicLighting,
+    ...extra,
+  };
 }

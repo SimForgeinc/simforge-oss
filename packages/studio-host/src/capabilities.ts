@@ -110,6 +110,35 @@ export type LocalRenderCapability = {
   reasons: string[];
 };
 
+export type NativeRenderInstallStep = {
+  name: "sky-assets" | "runtime" | "encoder" | "actor-assets";
+  state: "pending" | "running" | "done" | "failed";
+  /** Latest progress line, the installed path, or the failure. */
+  detail: string | null;
+};
+
+/**
+ * Whether the native render engine's runtime is on this machine and, while
+ * the host installs it, how far along that is. `installed` is the probe's
+ * verdict, never inferred from a finished install.
+ */
+export type NativeRenderInstall = {
+  state: "not-installed" | "installing" | "installed" | "failed";
+  runtimeRoot: string;
+  installed: boolean;
+  /** What the probe still finds missing. */
+  reasons: string[];
+  steps: NativeRenderInstallStep[];
+  error: string | null;
+};
+
+export type StudioWorkerNode = {
+  id: string;
+  engines: readonly string[];
+  capabilities: unknown;
+  lastHeartbeatAt: string | null;
+};
+
 export type StudioHostCapabilities = {
   schema: typeof STUDIO_HOST_CAPABILITIES_SCHEMA;
   host: { kind: StudioHostKind; label: string; version: string | null };
@@ -124,6 +153,8 @@ export type StudioHostCapabilities = {
      * key is an unsupported engine, which the UI must never submit.
      */
     renderWorkers: Partial<Record<ScenarioRendererEngine, RenderWorkerCapability>>;
+    /** Registered workers seen by the control plane or local CPU presence lane. */
+    workerNodes: readonly StudioWorkerNode[];
     nativeRuntime: NativeRuntimeCapability;
     /** Present only on hosts that render on this machine; see {@link LocalRenderCapability}. */
     localRender?: LocalRenderCapability;

@@ -4,13 +4,14 @@ import { LoaderCircle, LogIn } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { StudioCloudStatus } from "@simforge-oss/studio-host";
 import { Button } from "../components/ui/button";
-import { HeroBackdrop } from "./HeroBackdrop";
 import { onboarding } from "./onboarding.stylex";
 
 /**
- * The first screen of a fresh installation: sign in to SimCloud, or continue
- * locally with the one public map. Props only — the host app owns the account
- * sheet, the connection state and where each action leads.
+ * The first onboarding step: sign in to SimCloud, or continue locally with
+ * the one public map. Renders into the host's onboarding column - the hero
+ * behind it and the column geometry belong to the host's route layout, so
+ * the next step can replace this copy in place. Props only: the host app
+ * owns the account sheet, the connection state and where each action leads.
  */
 export function WelcomeScreen({
   cloudState,
@@ -33,13 +34,10 @@ export function WelcomeScreen({
   const connected = cloudState === "connected";
 
   return (
-    <main
-      {...stylex.props(onboarding.welcomeScreen)}
+    <section
       data-testid="onboarding-welcome"
       data-cloud-state={cloudState ?? "unknown"}
     >
-      <HeroBackdrop />
-      <section {...stylex.props(onboarding.welcomeColumn)}>
         <p {...stylex.props(onboarding.eyebrow)}>SimForge Studio</p>
         <h1 {...stylex.props(onboarding.welcomeTitle)}>Welcome to SimForge Studio</h1>
         <p {...stylex.props(onboarding.welcomeLede)}>
@@ -95,7 +93,6 @@ export function WelcomeScreen({
         <p {...stylex.props(onboarding.footnote)}>
           You can sign in later from Settings; nothing here is permanent.
         </p>
-      </section>
-    </main>
+    </section>
   );
 }

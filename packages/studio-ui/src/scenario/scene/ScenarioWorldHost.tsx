@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { ActorRenderer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
@@ -9,7 +9,9 @@ import { readRenderingPreference,
 RENDERING_PREFERENCE_CHANGE_EVENT,
 type RenderingPreference, } from "../../components/rendering-preference"
 import { useRegisterRenderingBenchmarkTarget } from "../../components/rendering-benchmark-target"
+import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
 import { AUTHORING_QUALITY } from "../editor/authoring-quality";
+import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
   animateMapCamera,
   MAP_ZOOM_IN_MS,
@@ -118,6 +120,8 @@ export function ScenarioWorldHost({
   );
   const quality = AUTHORING_QUALITY[preference];
   const uploadBudget = transitionPhase === "idle" ? null : BOOT_UPLOAD_BUDGET;
+  const uploadBudgetRef = useRef(uploadBudget);
+  uploadBudgetRef.current = uploadBudget;
   const reactId = useId();
   const instanceIdRef = useRef(`world-${reactId}`);
   const targetRef = useRef(target);
@@ -224,17 +228,25 @@ export function ScenarioWorldHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingTarget, stableTarget]);
 
+  // No document here, so the browsing sky is the schema's default
+  // environment - the same one a fresh scenario opens with.
+  const restoreEnvironmentRef = useRef<() => void>(() => undefined);
+  const applyEnvironment = useCallback((viewer: CityViewer) => {
+    restoreEnvironmentRef.current();
+    restoreEnvironmentRef.current = applyDefaultSceneEnvironment(viewer, preference);
+  }, [preference]);
+  useEffect(() => () => restoreEnvironmentRef.current(), []);
+
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
     const changed = appliedPreferenceRef.current !== preference;
     appliedPreferenceRef.current = preference;
-    viewer.setAuthoringFidelity({
-      ultraLow: quality.ultraLow,
-      roadsOnly: quality.roadsOnly,
-      cinematicLighting: quality.cinematicLighting,
-    });
-    viewer.setLayerVisible("vegetation", quality.vegetation);
+    // Fidelity first, sky second: the fidelity switch hides the sun and sky
+    // the browsing environment installs. The live budget is the one the upload
+    // effect above holds at this moment, read through its own dependencies.
+    applySceneFidelity(viewer, preference, { ...quality.live, ...(uploadBudgetRef.current ?? {}) });
+    if (changed) applyEnvironment(viewer);
     // A preset switch turns the real shadow map on or off, so the painted
     // stand-in blobs have to change with it.
     if (supportsRealtimeShadowQuery(viewer) && actorRendererRef.current) {
@@ -321,7 +333,7 @@ export function ScenarioWorldHost({
     );
     // This effect owns the imperative renderer response to a saved profile.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preference, quality]);
+  }, [applyEnvironment, preference, quality]);
 
   useEffect(() => {
     if (!stableTarget) return;
@@ -461,13 +473,8 @@ export function ScenarioWorldHost({
               message: `Preparing ${retainedTarget.label}`,
               detail: "Starting the renderer and loading map metadata…",
             });
-            viewer.setLiveQuality({ ...quality.live, ...BOOT_UPLOAD_BUDGET });
-            viewer.setAuthoringFidelity({
-              ultraLow: quality.ultraLow,
-              roadsOnly: quality.roadsOnly,
-              cinematicLighting: quality.cinematicLighting,
-            });
-            viewer.setLayerVisible("vegetation", quality.vegetation);
+            applySceneFidelity(viewer, preference, { ...quality.live, ...BOOT_UPLOAD_BUDGET });
+            applyEnvironment(viewer);
             if (supportsMapCameraTransition(viewer)) {
               viewer.controls.setEnabled(
                 transitionPhaseRef.current === "idle" && interactiveRef.current,

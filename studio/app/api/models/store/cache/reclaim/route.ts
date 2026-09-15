@@ -6,7 +6,6 @@ import {
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 /**
@@ -21,8 +20,6 @@ import {
  * failing one.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 

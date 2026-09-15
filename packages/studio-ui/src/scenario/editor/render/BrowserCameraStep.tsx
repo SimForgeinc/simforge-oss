@@ -4,14 +4,7 @@ import { Camera, Radar } from "lucide-react";
 import type { RenderModality } from "@simforge-oss/scenario";
 import { humanize } from "./recording-panel-fields";
 import { RenderWizardBody, RenderWizardFooter } from "./RenderWizardChrome";
-import {
-  defaultModalities,
-  RENDER_MODALITY_ORDER,
-  renderModalityLabel,
-  sensorKey,
-  supportedModalities,
-  type AuthoredRenderSensor,
-} from "./render-spec-v3";
+import { defaultModalities, RENDER_MODALITY_ORDER, renderModalityLabel, sensorKey, supportedModalities, type AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./BrowserCameraStep.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";

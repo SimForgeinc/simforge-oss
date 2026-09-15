@@ -88,7 +88,7 @@ const CredentialSchema = z.object({
     name: z.string().nullable(),
     emailVerified: z.boolean(),
   }),
-  activeWorkspaceId: z.string().min(1).nullable().default(null),
+  activeOrganizationId: z.string().min(1).nullable().default(null),
 });
 type Credential = z.infer<typeof CredentialSchema>;
 
@@ -141,7 +141,7 @@ const InvitationsResponseSchema = z.object({
 });
 
 const OrganizationResponseSchema = z.object({ organization_id: z.string().min(1) });
-const ActiveWorkspaceResponseSchema = z.object({ active_organization_id: z.string().min(1).nullable() });
+const ActiveOrganizationResponseSchema = z.object({ active_organization_id: z.string().min(1).nullable() });
 
 type Pending = {
   state: string;
@@ -304,7 +304,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       state: "connecting",
       origin,
       user: null,
-      activeWorkspaceId: null,
+      activeOrganizationId: null,
       providers,
       credentialPersistence: persistence,
       sessionExpiresAt: null,
@@ -317,7 +317,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       state: "expired",
       origin,
       user: toUser(credential),
-      activeWorkspaceId: credential.activeWorkspaceId,
+      activeOrganizationId: credential.activeOrganizationId,
       providers,
       credentialPersistence: persistence,
       sessionExpiresAt: new Date(credential.sessionExpiresAt).toISOString(),
@@ -329,7 +329,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       state: "connected",
       origin,
       user: toUser(credential),
-      activeWorkspaceId: credential.activeWorkspaceId,
+      activeOrganizationId: credential.activeOrganizationId,
       providers,
       credentialPersistence: persistence,
       sessionExpiresAt: new Date(credential.sessionExpiresAt).toISOString(),
@@ -342,7 +342,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
     state: state.message ? "error" : "disconnected",
     origin,
     user: null,
-    activeWorkspaceId: null,
+    activeOrganizationId: null,
     providers,
     credentialPersistence: persistence,
     sessionExpiresAt: null,
@@ -563,7 +563,7 @@ async function adoptAccount(payload: unknown): Promise<StudioCloudAccount> {
       name: account.user.name ?? null,
       emailVerified: account.user.email_verified,
     },
-    activeWorkspaceId: account.active_organization_id,
+    activeOrganizationId: account.active_organization_id,
   }));
   return {
     user: {
@@ -572,7 +572,7 @@ async function adoptAccount(payload: unknown): Promise<StudioCloudAccount> {
       name: account.user.name ?? null,
       emailVerified: account.user.email_verified,
     },
-    activeWorkspaceId: account.active_organization_id,
+    activeOrganizationId: account.active_organization_id,
     sessions: account.sessions.map((session) => ({
       id: session.id,
       label: session.label,
@@ -642,8 +642,8 @@ export async function setCloudActiveWorkspace(organizationId: string, signal?: A
     body: { organization_id: organizationId },
     signal,
   });
-  const active = parseOrInvalid(ActiveWorkspaceResponseSchema, payload, "workspace").active_organization_id;
-  await patchCredential((current) => ({ ...current, activeWorkspaceId: active }));
+  const active = parseOrInvalid(ActiveOrganizationResponseSchema, payload, "workspace").active_organization_id;
+  await patchCredential((current) => ({ ...current, activeOrganizationId: active }));
   return getCloudStatus();
 }
 
@@ -738,7 +738,7 @@ function credentialFromToken(
       name: token.user.name ?? null,
       emailVerified: token.user.email_verified,
     },
-    activeWorkspaceId: state.credential?.user.id === token.user.id ? state.credential.activeWorkspaceId : null,
+    activeOrganizationId: state.credential?.user.id === token.user.id ? state.credential.activeOrganizationId : null,
   };
 }
 
@@ -812,7 +812,7 @@ async function refreshCredential(current: Credential, signal?: AbortSignal): Pro
         throw new CloudConnectionError("cloud_unreachable", `token refresh failed (${result.status})`);
       }
       // Same sign-in: the connection scope is unchanged by rotation.
-      const next = { ...credentialFromToken(result.token, current.origin, current.connectionId), activeWorkspaceId: current.activeWorkspaceId };
+      const next = { ...credentialFromToken(result.token, current.origin, current.connectionId), activeOrganizationId: current.activeOrganizationId };
       await storeCredential(next, current.origin);
       return next;
     } finally {

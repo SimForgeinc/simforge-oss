@@ -15,7 +15,6 @@ import { storeOpenScenarioSourceArtifact } from "@/app/lib/scenario/open-scenari
 import {
   requireScenarioContext,
   requireScenarioMutableContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 const MAX_MULTIPART_BYTES = MAX_XOSC_BYTES + 64 * 1024;
@@ -67,8 +66,6 @@ function analysisWithResolutionDiagnostic<T extends ReturnType<typeof analyzeOpe
 }
 
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 

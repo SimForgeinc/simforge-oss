@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { CompleteScenarioSimulationPreviewSchema } from "@/app/lib/scenario/contracts";
 import { completeSimulationPreview } from "@/app/lib/scenario/simulation-preview-store";
-import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext } from "@/app/lib/scenario/http";
 type Context = { params: Promise<{ documentId: string }> };
-export async function POST(request: Request, route: Context) { const origin=requireScenarioMutationOrigin(request); if(origin)return origin; const auth=await requireScenarioContext(); if(auth.response)return auth.response; const {documentId}=await route.params; const access=await requireScenarioMutableDocumentContext(auth.context,documentId,"mutateContent"); if(access.response)return access.response; const parsed=CompleteScenarioSimulationPreviewSchema.safeParse(await readJson(request)); if(!parsed.success)return NextResponse.json({error:"invalid_simulation_preview"},{status:400}); const value=await completeSimulationPreview(auth.context,documentId,parsed.data); return value?NextResponse.json(value):NextResponse.json({error:"stale_simulation_preview"},{status:409}); }

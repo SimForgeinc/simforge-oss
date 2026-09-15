@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./RenderEvaluationHandoff.stylex";
 /**
  * "Evaluate this render" — the handoff from a finished render to a model run.
  *
@@ -109,27 +111,27 @@ export function RenderEvaluationHandoff({
 
   return (
     <section className={cn("space-y-4", className)} data-testid="render-evaluation-handoff">
-      <header className="space-y-1">
-        <h2 className="text-sm font-semibold text-foreground">Evaluate this render</h2>
-        <p className="text-xs leading-5 text-muted-foreground">
+      <header {...stylex.props(styles.header)}>
+        <h2 {...stylex.props(styles.evaluateThisRender)}>Evaluate this render</h2>
+        <p {...stylex.props(styles.theRenderedCamerasBecomeTheC)}>
           The rendered cameras become the clip a model reads. The trajectory the simulation executed
           becomes the reference it is scored against — simulation truth, not recorded ground truth,
           and the result says so.
         </p>
       </header>
 
-      <dl className="grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2">
-        <div className="min-w-0">
-          <dt className="uppercase tracking-wide text-muted-foreground">Rendered cameras</dt>
-          <dd className="mt-1 font-mono text-foreground">
+      <dl {...stylex.props(styles.dlGridXs)}>
+        <div {...stylex.props(styles.div)}>
+          <dt {...stylex.props(styles.renderedCameras)}>Rendered cameras</dt>
+          <dd {...stylex.props(styles.ddMono)}>
             {renderedSlots.length > 0
               ? renderedSlots.map((slot) => `${slot} · ${SLOT_NAMES[slot] ?? "unknown"}`).join("  ")
               : "none that map to a model camera slot"}
           </dd>
         </div>
-        <div className="min-w-0">
-          <dt className="uppercase tracking-wide text-muted-foreground">Render job</dt>
-          <dd className="mt-1 truncate font-mono text-foreground">{source.renderJobId}</dd>
+        <div {...stylex.props(styles.div2)}>
+          <dt {...stylex.props(styles.renderJob)}>Render job</dt>
+          <dd {...stylex.props(styles.ddTruncateMono)}>{source.renderJobId}</dd>
         </div>
       </dl>
 
@@ -166,7 +168,7 @@ export function RenderEvaluationHandoff({
       ) : null}
 
       {plan && plan.check.compatible ? (
-        <p className="text-xs leading-5 text-muted-foreground" data-testid="handoff-ready">
+        <p {...stylex.props(styles.handoffReady)} data-testid="handoff-ready">
           Camera slots {plan.check.slots.join(", ")} satisfy this model. The clip bundle is built by
           the control plane from this render's own manifest, trace and camera videos — the frames and
           poses come from the render, and any instant without a real sample is refused rather than
@@ -176,30 +178,30 @@ export function RenderEvaluationHandoff({
 
       {error ? <RefusalNotice title="Handoff failed" reasons={[error]} /> : null}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div {...stylex.props(styles.divFlex)}>
         <Button
           type="button"
           disabled={!plan?.check.compatible || !offer?.available || busy}
           onClick={() => void submit()}
           data-testid="render-evaluation-submit"
         >
-          {busy ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : null}
+          {busy ? <Loader2 aria-hidden="true" {...stylex.props(styles.loader2Icon)} /> : null}
           Evaluate this render
-          <ArrowRight aria-hidden="true" className="size-4" />
+          <ArrowRight aria-hidden="true" {...stylex.props(styles.arrowrightIcon)} />
         </Button>
         {progress ? (
-          <span className="text-xs text-muted-foreground" data-testid="handoff-progress">
+          <span {...stylex.props(styles.handoffProgress)} data-testid="handoff-progress">
             {progress.detail}
           </span>
         ) : null}
       </div>
 
       {provenance ? (
-        <section className="space-y-2 border-border border-t pt-3" data-testid="handoff-provenance">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <section {...stylex.props(styles.handoffProvenance)} data-testid="handoff-provenance">
+          <h3 {...stylex.props(styles.chainOfCustody)}>
             Chain of custody
           </h3>
-          <ol className="space-y-1.5 text-xs">
+          <ol {...stylex.props(styles.olXs)}>
             {[
               ["Scenario", `${provenance.scenarioDocumentId} · ${provenance.scenarioContentSha256.slice(0, 16)}`],
               ["Render job", provenance.renderJobId],
@@ -233,9 +235,9 @@ export function RenderEvaluationHandoff({
               ["Model", `${provenance.model.family} @ ${provenance.model.revision.slice(0, 12)} · ${provenance.model.quant}`],
               ["Evaluation run", provenance.computeJobId],
             ].map(([label, value]) => (
-              <li key={label} className="flex min-w-0 gap-3">
-                <span className="w-32 shrink-0 uppercase tracking-wide text-muted-foreground">{label}</span>
-                <span className="min-w-0 truncate font-mono text-foreground">{value}</span>
+              <li key={label} {...stylex.props(styles.liFlex)}>
+                <span {...stylex.props(styles.spanUppercase)}>{label}</span>
+                <span {...stylex.props(styles.spanTruncateMono)}>{value}</span>
               </li>
             ))}
           </ol>

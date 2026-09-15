@@ -170,7 +170,10 @@ export function SensorSetupModal({
                           instantiateSensorRig(
                             preset,
                             actor,
-                            preset.id === PRONTO_SENSOR_RIG.id
+                            // Pronto and Alpamayo rigs name their sensors after
+                            // the dataset cameras the model server addresses by
+                            // slot; the evaluation handoff maps sensor id -> slot.
+                            preset.id === PRONTO_SENSOR_RIG.id || preset.id.startsWith("alpamayo-")
                               ? (template) => template.id
                               : undefined,
                           ),

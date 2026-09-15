@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./route-states.stylex";
 import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
@@ -67,22 +69,22 @@ export function ScenarioSegmentError({ error, reset }: RouteErrorProps) {
   const detail = error.message || "The scenario workspace is temporarily unavailable.";
 
   return (
-    <div className="mx-auto flex min-h-64 max-w-3xl flex-col items-center justify-center px-6 text-center">
+    <div {...stylex.props(styles.divFlex)}>
       <ScenarioWorkspaceErrorState
         statusKey="scenario:segment-error"
         label="Scenario workspace failed to load"
         detail={detail}
         actionHref={null}
       />
-      <h2 className="text-lg font-semibold">Scenario workspace failed to load</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+      <h2 {...stylex.props(styles.scenarioWorkspaceFailedToLoa)}>Scenario workspace failed to load</h2>
+      <p {...stylex.props(styles.pSm)}>{detail}</p>
       {/*
         `error.digest` is the only handle on the server-side stack, and it is the one thing a user can
         usefully quote in a report. Rendered only when present — an empty "Reference:" line reads as
         something having gone wrong with the error page itself.
       */}
       {error.digest ? (
-        <p className="mt-1 font-mono text-micro text-muted-foreground">Reference: {error.digest}</p>
+        <p {...stylex.props(styles.reference)}>Reference: {error.digest}</p>
       ) : null}
       <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>
         Try again
@@ -104,14 +106,14 @@ export function ScenarioDatasetError({ error, reset }: RouteErrorProps) {
   }, [error]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
-      <div className="w-full max-w-lg space-y-3">
-        <h1 className="font-display text-lg font-semibold">This dataset could not be loaded.</h1>
+    <section {...stylex.props(styles.sectionFlex)}>
+      <div {...stylex.props(styles.div)}>
+        <h1 {...stylex.props(styles.thisDatasetCouldNotBeLoaded)}>This dataset could not be loaded.</h1>
         <CopyableErrorMessage
           message={error.message || "The scenario list failed to load."}
           copyText={error.digest ? `${error.message}\ndigest: ${error.digest}` : error.message}
         />
-        <div className="flex gap-2">
+        <div {...stylex.props(styles.divFlex2)}>
           <Button type="button" onClick={reset}>
             Try again
           </Button>
@@ -126,9 +128,9 @@ export function ScenarioDatasetError({ error, reset }: RouteErrorProps) {
 
 export function ScenarioReviewError({ error, reset }: RouteErrorProps) {
   return (
-    <div className="mx-auto flex min-h-64 max-w-3xl flex-col items-center justify-center px-6 text-center">
-      <h2 className="text-lg font-semibold">Failed to open the scenario review queue</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
+    <div {...stylex.props(styles.divFlex3)}>
+      <h2 {...stylex.props(styles.failedToOpenTheScenarioRevie)}>Failed to open the scenario review queue</h2>
+      <p {...stylex.props(styles.pSm2)}>
         {error.message || "The review queue is temporarily unavailable."}
       </p>
       <Button xstyle={control.spaceAbove5} type="button" onClick={reset}>

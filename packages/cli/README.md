@@ -86,6 +86,24 @@ simforge job list
 simforge worker reconcile|capacity
 simforge cas ingest <path> | cas verify <sha256>
 ```
+
+### Remote worker
+
+Run the same CPU/render worker used by `simforge daemon` against any HTTP(S)
+host, including a host reachable over Tailscale:
+
+```bash
+simforge worker --host http://127.0.0.1:5199 --token "$SIMFORGE_RENDER_WORKER_TOKEN"
+simforge worker --host https://host.tailnet.example --token "$WORKER_TOKEN" \
+  --id gpu-box-1 --capabilities native-render,browser-render --data-root /tmp/simforge-worker
+```
+
+`--host` must be an HTTP(S) origin and `--token` is mandatory. The worker
+probes its installed engines and sends that set with every lease request;
+`--capabilities` only narrows the automatic probe (`native-render`,
+`browser-render`, `carla-render`, `compile`, and `model-run` are accepted).
+`--data-root` is scratch space for claim inputs and outputs, not a host
+database or asset root.
 ## Local Alpamayo driving
 
 `drive` runs the pinned local Alpamayo 1.5 policy against the fixed-step
@@ -481,29 +499,49 @@ refused by `pull`; re-ingest them.
 
 ## Local Studio and SimCloud operations
 
-The installed Studio remains the authority for local persistence and cloud
-credentials. The CLI talks to that running local host; it never stores or
-prints tokens and never follows redirects away from loopback:
+Every verb below talks to the running local host over loopback with the
+control token from `host.json`; the CLI never stores or prints credentials.
+Output is JSON; add `--pretty` for humans. No host running → `host_unavailable`.
 
 ```bash
-simforge cloud status
-simforge cloud connect --origin https://staging.simforge.ai
-simforge cloud workspaces
-simforge cloud datasets --workspace <workspace-id>
-simforge cloud artifacts --workspace <workspace-id>
-simforge cloud dataset-import --workspace <workspace-id> --dataset <dataset-id>
-simforge cloud dataset-publish --workspace <workspace-id> --dataset <dataset-id> [--remote-dataset <id>]
-simforge cloud artifact-import --workspace <workspace-id> --artifact <artifact-id>
-simforge cloud artifact-upload --workspace <workspace-id> --artifact <artifact-id>
-simforge cloud dataset-links
-simforge cloud artifact-links
-simforge cloud disconnect
+simforge daemon [--port 5199] [--data-root ~/.simforge/cloud] [--no-worker] [--dev]
+simforge host status | stop | open [--next /dashboard/scenario]
+
+simforge scenario list [--dataset <id>] | show <documentId>
+simforge render submit --scenario <documentId> --engine native|browser|carla --seconds <n> \
+  [--start 0] [--fps 20] [--resolution 1280x720] [--quality preview|standard|high|cinematic] \
+  [--sensors actorId:sensorId,...] [--environment noon|dusk|night|dawn|...]
+simforge render list [--scenario <documentId>] | status <jobId> | wait <jobId> [--timeout 3600] \
+  | cancel <jobId> | artifacts <jobId> [--out <dir>]
+
+simforge cloud status | connect --provider google|github [--cloud-origin <url>] | disconnect | workspaces
+simforge cloud datasets|artifacts --workspace <id>
+simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --workspace <id> --dataset|--artifact <id>
+simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
+simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] [--seed 1] [--samples 4] \
+  [--ego-speed 0] [--camera-height 1.5] [--fov 90] [--prediction-hz 1] [--dry-run]
 ```
 
-`cloud connect` emits the real authorization URL for approval in the system
-browser. `datasets` and `artifacts` require an explicit workspace. Starting
-Studio is still a desktop concern; the CLI fails with a structured
-`host_unavailable` error when no local host is running.
+`simforge daemon` is the local host: migrations and seed, the API server, the
+render worker, one supervisor, `host.json` in the data root. The desktop shell
+execs the same command and only adds a window.
+
+`render submit` freezes the draft the way the Studio wizard does (reuse a
+succeeded export of the current draft, else build revision evidence from the
+saved browser simulation and wait for the OpenSCENARIO export), then submits;
+`submit && wait && artifacts --out` is the whole agent loop. Two limits are
+deliberate: a draft with no saved simulation fails with
+`simulation_preview_missing` (open it in Studio once so the browser engine
+simulates it), and a draft whose ambient traffic runs through SUMO fails with
+`sumo_evidence_unsupported` (only the Studio session drives the SUMO bridge).
+
+`cloud eval submit` uploads each rendered camera whose sensor id is a dataset
+camera name (`camera_front_wide_120fov`, ...) as a `video` input at its
+Alpamayo slot and runs an exploratory, unscored open-loop prediction.
+`--family` accepts only families whose camera contract takes uploaded views; a
+render missing a required slot is refused (`rig_incompatible`) rather than
+scored partially. The workspace comes from the session's active organisation;
+`--workspace <id>` overrides it.
 
 ## Current execution boundaries
 

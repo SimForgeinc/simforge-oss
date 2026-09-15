@@ -1,19 +1,22 @@
 /**
  * Drive cameras.
  *
- * Four views over one car, all expressed as an eye/target pair so the viewer's
- * camera rig can be driven with `setView` and nothing else. Chase and orbit are
- * spring-damped: the target pose is recomputed every frame from the car's pose
- * and the camera is pulled towards it, which is what makes a chase camera lag
- * into corners and settle without ringing. Hood and cockpit are rigidly bolted
- * to the body — a spring there reads as a loose camera mount.
+ * Five views over one car, all expressed as an eye/target pair so the viewer's
+ * camera rig can be driven with `setView` and nothing else. Chase, bird's-eye
+ * and orbit are spring-damped: the target pose is recomputed every frame from
+ * the car's pose and the camera is pulled towards it, which is what makes a
+ * chase camera lag into corners and settle without ringing. Hood and cockpit
+ * are rigidly bolted to the body — a spring there reads as a loose camera mount.
  *
  * The springs are critically damped by construction (damping = 2*sqrt(k)), so
  * there is exactly one tuning number per view and no overshoot to chase.
  */
 
-/** The four views, in the order the camera key cycles them. */
-export const DRIVE_CAMERA_KINDS = ['chase', 'hood', 'cockpit', 'orbit'] as const;
+/**
+ * The five views, in the order the camera key cycles them: trailing (chase),
+ * driver (cockpit), hood, bird's-eye, then the free orbit.
+ */
+export const DRIVE_CAMERA_KINDS = ['chase', 'cockpit', 'hood', 'birdseye', 'orbit'] as const;
 export type DriveCameraKind = (typeof DRIVE_CAMERA_KINDS)[number];
 
 /** Where the car is, this rendered frame. Ground-contact origin, as the renderer uses. */
@@ -66,6 +69,15 @@ const CHASE_FOV = 62;
 const HOOD_FOV = 68;
 /** Cockpit: driver's eye, offset to the left of centre as a left-hand-drive car is. */
 const COCKPIT_FOV = 72;
+/**
+ * Bird's-eye: straight down from well above the roof, heading-up. The eye is
+ * trailed a hair behind the car so the view direction is never exactly
+ * vertical, which keeps the viewer's world-up from degenerating and makes the
+ * car's nose point to the top of the screen.
+ */
+const BIRDSEYE_HEIGHT_M = 42;
+const BIRDSEYE_TRAIL_M = 1.5;
+const BIRDSEYE_FOV = 55;
 const ORBIT_FOV = 55;
 export const ORBIT_MIN_DISTANCE_M = 4;
 export const ORBIT_MAX_DISTANCE_M = 60;
@@ -134,6 +146,17 @@ export function desiredCameraPose(
     return into;
   }
 
+  if (kind === 'birdseye') {
+    into.eyeX = pose.x - forwardX * BIRDSEYE_TRAIL_M;
+    into.eyeY = pose.y + BIRDSEYE_HEIGHT_M;
+    into.eyeZ = pose.z - forwardZ * BIRDSEYE_TRAIL_M;
+    into.targetX = pose.x;
+    into.targetY = pose.y;
+    into.targetZ = pose.z;
+    into.fov = BIRDSEYE_FOV;
+    return into;
+  }
+
   const yaw = pose.headingRad + orbit.yawRad;
   const pitch = Math.max(ORBIT_MIN_PITCH_RAD, Math.min(ORBIT_MAX_PITCH_RAD, orbit.pitchRad));
   const distance = Math.max(ORBIT_MIN_DISTANCE_M, Math.min(ORBIT_MAX_DISTANCE_M, orbit.distanceM));
@@ -170,7 +193,7 @@ export function springVelocity(
 const MAX_SPRING_STEP_S = 0.1;
 
 /**
- * A smoothed camera over the four views.
+ * A smoothed camera over the five views.
  *
  * Holds the eye/target spring state so a view switch keeps continuity where it
  * should (chase to orbit glides) and snaps where a spring would be wrong

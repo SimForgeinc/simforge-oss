@@ -1,5 +1,6 @@
 export * from './model';
 export * from './provider';
+export * from './revision-traffic';
 export * from './candidatePool';
 export * from './robustness';
 export * from './robustnessGate';

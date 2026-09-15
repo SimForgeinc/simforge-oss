@@ -11,9 +11,9 @@
  * needs.
  */
 
-import type { EvaluationGateway } from "./gateway";
-import { ComputeApiError } from "./gateway";
-import type { UploadPurpose } from "./contracts";
+import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
+import { ComputeApiError } from "@simforge-oss/evaluation/client";
+import type { UploadPurpose } from "@simforge-oss/evaluation/client";
 import { hashFileSha256 } from "./sha256";
 
 export type UploadPhase = "hashing" | "reserving" | "uploading" | "completing" | "done";

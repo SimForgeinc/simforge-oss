@@ -56,7 +56,7 @@ let trustedOrigin = "";
  *
  * `SIMFORGE_CLOUD_ROOT` overrides it (isolated qualification, developers). A
  * workspace shell (`pnpm desktop`) keeps the CLI default so `pnpm dev`,
- * `pnpm host:stop` and the shell agree on one host record. An installed app
+ * `simforge host stop` and the shell agree on one host record. An installed app
  * whose OS location holds no database yet adopts an existing `~/.simforge/cloud`
  * from earlier builds rather than presenting an empty Studio.
  */

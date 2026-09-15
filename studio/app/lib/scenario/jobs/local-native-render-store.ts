@@ -446,9 +446,10 @@ function identityKey(identity: RenderArtifactIdentity): string {
 }
 
 /**
- * The closure a native run produces: one mp4 per RGB source plus manifest,
- * trace and diagnostics. This is the engine's evidence contract
- * (`nativeEvidenceFailure`), not a per-spec selection.
+ * The closure a native run produces: one mp4 per RGB, lidar and radar source
+ * plus manifest, trace and diagnostics, and a raw-payload zip per structured
+ * sensor when the spec asked for sensor archives. This is the engine's
+ * evidence contract (`nativeEvidenceFailure`), not a per-spec selection.
  */
 function expectedNativeClosure(intentValue: unknown): Set<string> {
   const intent = parseRenderIntent(intentValue);
@@ -456,9 +457,13 @@ function expectedNativeClosure(intentValue: unknown): Set<string> {
   for (const role of ["manifest", "trace", "diagnostics"] as const) {
     expected.add(identityKey({ role, actorId: null, sensorId: null, modality: null }));
   }
+  const archives = intent.renderSpec.artifacts.includes("sensorArchive");
   for (const source of intent.renderSpec.sources) {
-    if (source.modality !== "rgb") continue;
-    expected.add(identityKey({ role: "video", actorId: source.actorId, sensorId: source.sensorId, modality: "rgb" }));
+    if (source.modality !== "rgb" && source.modality !== "lidar" && source.modality !== "radar") continue;
+    expected.add(identityKey({ role: "video", actorId: source.actorId, sensorId: source.sensorId, modality: source.modality }));
+    if (archives && source.modality !== "rgb") {
+      expected.add(identityKey({ role: "sensorArchive", actorId: source.actorId, sensorId: source.sensorId, modality: source.modality }));
+    }
   }
   return expected;
 }

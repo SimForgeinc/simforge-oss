@@ -1240,4 +1240,882 @@ export const styles = stylex.create({
     backgroundColor: "rgb(232 224 68 / 0.65)",
     color: "rgb(0 0 0 / 1)",
   },
+  // z-30 flex min-h-0 w-full shrink-0 flex-col text-white
+  scenarioTimelineDock: {
+    zIndex: layers.sticky,
+    display: "flex",
+    minHeight: 0,
+    width: "100%",
+    flexShrink: 0,
+    flexDirection: "column",
+    color: "rgb(255 255 255 / 1)",
+  },
+  // absolute left-1/2 top-0 z-40 flex h-3 w-24 -translate-x-1/2 cursor-ns-resize touch-none items-start justify-center pt-1
+  timelineHeightResizeHandle: {
+    position: "absolute",
+    left: "50%",
+    top: "0",
+    zIndex: 40,
+    display: "flex",
+    height: space.lg,
+    width: "6rem",
+    transform: "translateX(-50%)",
+    cursor: "ns-resize",
+    touchAction: "none",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: space.xs,
+  },
+  // h-1 w-10 rounded-full bg-white/35 transition-colors hover:bg-[#E8E044]/70
+  span: {
+    height: space.xs,
+    width: "2.5rem",
+    backgroundColor: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(232 224 68 / 0.7)" },
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionDuration: "150ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  // group absolute inset-y-0 z-40 -ml-1.5 w-3 cursor-col-resize touch-none
+  timelineSplitResizeHandle: {
+    position: "absolute",
+    top: "0",
+    bottom: "0",
+    zIndex: 40,
+    marginLeft: `calc(-1 * ${space.sm})`,
+    width: space.lg,
+    cursor: "col-resize",
+    touchAction: "none",
+  },
+  // relative z-10 grid h-12 shrink-0 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] overflow-hidden rounded-t-[24px] border-b border-white/10 bg-gradient-to-r from-[#E8E044]/[0.07] via-white/[0.025] to-transparent
+  timelineTopbar: {
+    position: "relative",
+    zIndex: layers.raised,
+    display: "grid",
+    height: "3rem",
+    flexShrink: 0,
+    gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
+    overflow: "hidden",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundImage: `linear-gradient(to right, rgb(232 224 68 / 0.07), rgb(255 255 255 / 0.025), transparent)`,
+  },
+  // flex min-w-0 items-center justify-center overflow-hidden border-r border-white/10
+  divFlex: {
+    display: "flex",
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderRightWidth: "1px",
+    borderRightStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+  },
+  // flex w-max flex-col items-center justify-center gap-0.5 px-2
+  divFlex2: {
+    display: "flex",
+    width: "max-content",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.xxs,
+    paddingInline: space.md,
+  },
+  // whitespace-nowrap text-center text-[8px] font-bold uppercase tracking-[0.12em] text-[#E8E044]
+  timeline: {
+    whiteSpace: "nowrap",
+    textAlign: "center",
+    fontSize: "8px",
+    fontWeight: text.weightBold,
+    textTransform: "uppercase",
+    letterSpacing: "0.12em",
+    color: colors.accent,
+  },
+  // relative min-w-0 self-stretch cursor-pointer
+  timelineInlineRuler: {
+    position: "relative",
+    minWidth: 0,
+    alignSelf: "stretch",
+    cursor: "pointer",
+  },
+  // mb-0 h-full border-b-0 bg-black/20
+  timelineruler: {
+    marginBottom: "0",
+    height: "100%",
+    borderBottomWidth: 0,
+    backgroundColor: "rgb(0 0 0 / 0.2)",
+  },
+  // pointer-events-none absolute inset-y-0 z-20 w-px bg-[#E8E044] shadow-[0_0_10px_rgba(232,224,68,0.65)]
+  timelinePlayhead: {
+    pointerEvents: "none",
+    position: "absolute",
+    top: "0",
+    bottom: "0",
+    zIndex: 20,
+    width: "1px",
+    backgroundColor: colors.accent,
+    boxShadow: "0 0 10px rgba(232,224,68,0.65)",
+  },
+  // group pointer-events-auto absolute -left-2 inset-y-0 w-4 cursor-ew-resize touch-none bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
+  timelinePlayheadDragHandleButton: {
+    pointerEvents: "auto",
+    position: "absolute",
+    left: `calc(-1 * ${space.md})`,
+    top: "0",
+    bottom: "0",
+    width: space.xl,
+    cursor: "ew-resize",
+    touchAction: "none",
+    backgroundColor: "transparent",
+    padding: "0",
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.accent}` },
+  },
+  // relative z-10 min-h-0 flex-1 overflow-hidden bg-black/10
+  semanticTimeline: {
+    position: "relative",
+    zIndex: layers.raised,
+    minHeight: 0,
+    flex: "1 1 0%",
+    overflow: "hidden",
+    backgroundColor: "rgb(0 0 0 / 0.1)",
+  },
+  // absolute inset-0 overflow-y-auto
+  divAbsolute: {
+    position: "absolute",
+    inset: "0",
+    overflowY: "auto",
+  },
+  // min-h-full pb-12
+  div: {
+    minHeight: "100%",
+    paddingBottom: "3rem",
+  },
+  // m-3 grid h-24 place-items-center border border-dashed border-white/15 px-4 text-center text-xs text-white/35
+  pGridXs: {
+    margin: space.lg,
+    display: "grid",
+    height: "6rem",
+    placeItems: "center",
+    borderWidth: "1px",
+    borderStyle: "dashed",
+    borderColor: "rgb(255 255 255 / 0.15)",
+    paddingInline: space.xl,
+    textAlign: "center",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: "rgb(255 255 255 / 0.35)",
+  },
+  // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-black/20
+  timelineSignalLane: {
+    display: "grid",
+    height: "2.5rem",
+    gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundColor: "rgb(0 0 0 / 0.2)",
+  },
+  // flex min-w-0 items-stretch overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.06]
+  divFlex3: {
+    display: "flex",
+    minWidth: 0,
+    alignItems: "stretch",
+    overflow: "hidden",
+    borderRightWidth: "1px",
+    borderRightStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundColor: "rgb(232 224 68 / 0.06)",
+  },
+  // flex w-max items-stretch self-stretch
+  divFlex4: {
+    display: "flex",
+    width: "max-content",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+  },
+  // editor-motion flex items-center gap-1.5 px-2 text-left text-[9px] text-[#E8E044] hover:bg-[#E8E044]/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#E8E044]
+  timelineFocusSignalButton: {
+    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", "@media (prefers-reduced-motion: reduce)": "none" },
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+    paddingInline: space.md,
+    textAlign: "left",
+    fontSize: "9px",
+    color: colors.accent,
+    backgroundColor: { default: null, ":hover": "rgb(232 224 68 / 0.1)" },
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": `inset 0 0 0 1px ${colors.accent}` },
+  },
+  // size-3 shrink-0
+  trafficconeIcon: {
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // whitespace-nowrap
+  light: {
+    whiteSpace: "nowrap",
+  },
+  // flex items-center gap-1.5 px-2 text-[9px] text-[#E8E044]/80
+  divFlex5: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+    paddingInline: space.md,
+    fontSize: "9px",
+    color: "rgb(232 224 68 / 0.8)",
+  },
+  // size-3 shrink-0
+  trafficconeIcon2: {
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // whitespace-nowrap
+  lights: {
+    whiteSpace: "nowrap",
+  },
+  // editor-motion grid w-6 shrink-0 place-items-center border-l border-white/10 text-white/35 hover:bg-red-500/15 hover:text-red-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-red-300
+  timelineRemoveSignalControlButton: {
+    transitionProperty: { default: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity", "@media (prefers-reduced-motion: reduce)": "none" },
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    transitionDuration: { default: "150ms", "@media (prefers-reduced-motion: reduce)": "0s" },
+    display: "grid",
+    width: space.xxl,
+    flexShrink: 0,
+    placeItems: "center",
+    borderLeftWidth: "1px",
+    borderLeftStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    color: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(252 165 165 / 1)" },
+    backgroundColor: { default: null, ":hover": "rgb(239 68 68 / 0.15)" },
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": `inset 0 0 0 1px rgb(252 165 165 / 1)` },
+  },
+  // size-3
+  trash2Icon: {
+    width: space.lg,
+    height: space.lg,
+  },
+  // relative my-2 cursor-pointer overflow-hidden bg-white/[0.025]
+  divRelative: {
+    position: "relative",
+    marginBlock: space.md,
+    cursor: "pointer",
+    overflow: "hidden",
+    backgroundColor: "rgb(255 255 255 / 0.025)",
+  },
+  // grid border-b border-white/10
+  timelineWorldLane: {
+    display: "grid",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+  },
+  // relative z-10 flex min-w-0 items-start overflow-hidden border-r border-white/10 bg-[#E8E044]/[0.04] text-[#E8E044]/80
+  timelineWorldIdentity: {
+    position: "relative",
+    zIndex: layers.raised,
+    display: "flex",
+    minWidth: 0,
+    alignItems: "flex-start",
+    overflow: "hidden",
+    borderRightWidth: "1px",
+    borderRightStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundColor: "rgb(232 224 68 / 0.04)",
+    color: "rgb(232 224 68 / 0.8)",
+  },
+  // flex w-max items-start gap-1.5 px-2 py-2
+  divFlex6: {
+    display: "flex",
+    width: "max-content",
+    alignItems: "flex-start",
+    gap: space.sm,
+    paddingInline: space.md,
+    paddingBlock: space.md,
+  },
+  // mt-0.5 size-3 shrink-0
+  globe2Icon: {
+    marginTop: space.xxs,
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // whitespace-nowrap text-[9px] font-medium
+  scene: {
+    whiteSpace: "nowrap",
+    fontSize: "9px",
+    fontWeight: text.weightMedium,
+  },
+  // grid border-b border-white/10
+  timelineActorLane: {
+    display: "grid",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+  },
+  // flex w-max items-start gap-1.5 px-2 py-2
+  divFlex7: {
+    display: "flex",
+    width: "max-content",
+    alignItems: "flex-start",
+    gap: space.sm,
+    paddingInline: space.md,
+    paddingBlock: space.md,
+  },
+  // flex items-center gap-1.5 rounded-sm text-left enabled:cursor-pointer enabled:hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E8E044]
+  focusActorButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+    textAlign: "left",
+    cursor: { default: null, ":enabled": "pointer" },
+    color: { default: null, ":enabled:hover": "rgb(255 255 255 / 1)" },
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": `0 0 0 1px ${colors.accent}` },
+  },
+  // whitespace-nowrap text-[9px] font-medium
+  spanMedium: {
+    whiteSpace: "nowrap",
+    fontSize: "9px",
+    fontWeight: text.weightMedium,
+  },
+  // inline-flex size-4 shrink-0 items-center justify-center bg-transparent p-0 text-white/35 transition-colors hover:bg-transparent hover:text-red-300 focus-visible:bg-transparent focus-visible:text-red-300 focus-visible:outline-none
+  timelineDeleteButton: {
+    display: "inline-flex",
+    width: space.xl,
+    height: space.xl,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: { default: "transparent", ":hover": "transparent", ":focus-visible": "transparent" },
+    padding: "0",
+    color: { default: "rgb(255 255 255 / 0.35)", ":hover": "rgb(252 165 165 / 1)", ":focus-visible": "rgb(252 165 165 / 1)" },
+    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    transitionDuration: "150ms",
+    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+  },
+  // size-3.5
+  trash2Icon2: {
+    width: "0.875rem",
+    height: "0.875rem",
+  },
+  // flex cursor-pointer items-center px-2 text-[9px] uppercase tracking-[0.12em] text-white/25
+  timelineStaticIdentityOnly: {
+    display: "flex",
+    cursor: "pointer",
+    alignItems: "center",
+    paddingInline: space.md,
+    fontSize: "9px",
+    textTransform: "uppercase",
+    letterSpacing: "0.12em",
+    color: "rgb(255 255 255 / 0.25)",
+  },
+  // relative cursor-pointer bg-black/15
+  timelineInteractionGap: {
+    position: "relative",
+    cursor: "pointer",
+    backgroundColor: "rgb(0 0 0 / 0.15)",
+  },
+  // absolute inset-0 grid place-items-center text-[8px] text-white/20
+  spanAbsoluteGrid: {
+    position: "absolute",
+    inset: "0",
+    display: "grid",
+    placeItems: "center",
+    fontSize: "8px",
+    color: "rgb(255 255 255 / 0.2)",
+  },
+  // grid h-10 grid-cols-[var(--timeline-identity-width)_minmax(0,1fr)] border-b border-white/10 bg-[#E8E044]/[0.025]
+  timelineReasoningTraceLane: {
+    display: "grid",
+    height: "2.5rem",
+    gridTemplateColumns: "var(--timeline-identity-width) minmax(0,1fr)",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundColor: "rgb(232 224 68 / 0.025)",
+  },
+  // flex min-w-0 items-center overflow-hidden border-r border-white/10 text-[#E8E044]/80
+  divFlex8: {
+    display: "flex",
+    minWidth: 0,
+    alignItems: "center",
+    overflow: "hidden",
+    borderRightWidth: "1px",
+    borderRightStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    color: "rgb(232 224 68 / 0.8)",
+  },
+  // flex w-max items-center gap-1.5 px-2
+  divFlex9: {
+    display: "flex",
+    width: "max-content",
+    alignItems: "center",
+    gap: space.sm,
+    paddingInline: space.md,
+  },
+  // size-3 shrink-0
+  braincircuitIcon: {
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.08em]
+  reasoning: {
+    whiteSpace: "nowrap",
+    fontSize: "8px",
+    fontWeight: text.weightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+  },
+  // relative cursor-pointer bg-black/15
+  divRelative2: {
+    position: "relative",
+    cursor: "pointer",
+    backgroundColor: "rgb(0 0 0 / 0.15)",
+  },
+  // absolute inset-0 grid place-items-center text-[8px] text-white/20
+  spanAbsoluteGrid2: {
+    position: "absolute",
+    inset: "0",
+    display: "grid",
+    placeItems: "center",
+    fontSize: "8px",
+    color: "rgb(255 255 255 / 0.2)",
+  },
+  // block truncate
+  spanTruncate: {
+    display: "block",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  // flex flex-col items-center gap-1 text-center
+  divFlex10: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: space.xs,
+    textAlign: "center",
+  },
+  // size-8 text-[#E8E044]
+  braincircuitIcon2: {
+    width: space.xxxl,
+    height: space.xxxl,
+    color: colors.accent,
+  },
+  // text-[10px] font-semibold text-white
+  reasoningTrace: {
+    fontSize: "10px",
+    fontWeight: text.weightSemibold,
+    color: "rgb(255 255 255 / 1)",
+  },
+  // text-[8px] text-white/40
+  observationAndAction: {
+    fontSize: "8px",
+    color: "rgb(255 255 255 / 0.4)",
+  },
+  // grid grid-cols-2 gap-2
+  divGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: space.md,
+  },
+  // min-w-0 text-[8px] uppercase tracking-[0.1em] text-white/45
+  labelUppercase: {
+    minWidth: 0,
+    fontSize: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "rgb(255 255 255 / 0.45)",
+  },
+  // mt-1 h-8 w-full min-w-0 rounded-md border border-white/10 bg-white/[0.04] px-2 text-[10px] normal-case text-white outline-none focus:border-[#E8E044]/60
+  input: {
+    marginTop: space.xs,
+    height: space.xxxl,
+    width: "100%",
+    minWidth: 0,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
+    backgroundColor: "rgb(255 255 255 / 0.04)",
+    paddingInline: space.md,
+    fontSize: "10px",
+    textTransform: "none",
+    color: "rgb(255 255 255 / 1)",
+    outline: "2px solid transparent",
+    outlineOffset: "2px",
+  },
+  // block text-[8px] uppercase tracking-[0.1em] text-white/45
+  observation: {
+    display: "block",
+    fontSize: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "rgb(255 255 255 / 0.45)",
+  },
+  // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
+  textarea: {
+    marginTop: space.xs,
+    minHeight: "6rem",
+    width: "100%",
+    resize: "vertical",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
+    backgroundColor: "rgb(255 255 255 / 0.04)",
+    padding: space.md,
+    fontSize: "10px",
+    textTransform: "none",
+    lineHeight: "1.625",
+    color: "rgb(255 255 255 / 1)",
+    outline: "2px solid transparent",
+    outlineOffset: "2px",
+  },
+  // block text-[8px] uppercase tracking-[0.1em] text-white/45
+  action: {
+    display: "block",
+    fontSize: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "rgb(255 255 255 / 0.45)",
+  },
+  // mt-1 min-h-24 w-full resize-y rounded-md border border-white/10 bg-white/[0.04] p-2 text-[10px] normal-case leading-relaxed text-white outline-none focus:border-[#E8E044]/60
+  textarea2: {
+    marginTop: space.xs,
+    minHeight: "6rem",
+    width: "100%",
+    resize: "vertical",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: "rgb(255 255 255 / 0.1)", ":focus": "rgb(232 224 68 / 0.6)" },
+    backgroundColor: "rgb(255 255 255 / 0.04)",
+    padding: space.md,
+    fontSize: "10px",
+    textTransform: "none",
+    lineHeight: "1.625",
+    color: "rgb(255 255 255 / 1)",
+    outline: "2px solid transparent",
+    outlineOffset: "2px",
+  },
+  // grid grid-cols-1 gap-1.5 border-t border-white/10 pt-3
+  divGrid2: {
+    display: "grid",
+    gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
+    gap: space.sm,
+    borderTopWidth: "1px",
+    borderTopStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    paddingTop: space.lg,
+  },
+  // h-8 rounded-md bg-[#E8E044] px-3 text-[10px] font-semibold text-black disabled:opacity-40
+  saveTraceButton: {
+    height: space.xxxl,
+    backgroundColor: colors.accent,
+    paddingInline: space.lg,
+    fontSize: "10px",
+    fontWeight: text.weightSemibold,
+    color: "rgb(0 0 0 / 1)",
+    opacity: { default: null, ":disabled": 0.4 },
+  },
+  // flex h-8 items-center justify-center gap-1.5 rounded-md border border-red-300/20 text-[9px] text-red-200 hover:bg-red-300/10
+  buttonFlex: {
+    display: "flex",
+    height: space.xxxl,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgb(252 165 165 / 0.2)",
+    fontSize: "9px",
+    color: "rgb(254 202 202 / 1)",
+    backgroundColor: { default: null, ":hover": "rgb(252 165 165 / 0.1)" },
+  },
+  // size-3
+  deleteTraceTrash2: {
+    width: space.lg,
+    height: space.lg,
+  },
+  // relative cursor-pointer overflow-hidden bg-black/15
+  interactionRow: {
+    position: "relative",
+    cursor: "pointer",
+    overflow: "hidden",
+    backgroundColor: "rgb(0 0 0 / 0.15)",
+  },
+  // contents
+  interactionTrack: {
+    display: "contents",
+  },
+  // absolute inset-x-0 top-1/2 h-px bg-white/[0.06]
+  divAbsolute2: {
+    position: "absolute",
+    left: "0",
+    right: "0",
+    top: "50%",
+    height: "1px",
+    backgroundColor: "rgb(255 255 255 / 0.06)",
+  },
+  // pointer-events-none absolute inset-y-0 z-[5] w-px -translate-x-1/2 bg-amber-300/80 shadow-[0_0_6px_rgba(252,211,77,0.45)] before:absolute before:left-1/2 before:top-0 before:size-1 before:-translate-x-1/2 before:rounded-full before:bg-amber-200
+  timelineTriggerDeadline: {
+    pointerEvents: "none",
+    position: "absolute",
+    top: "0",
+    bottom: "0",
+    zIndex: 5,
+    width: "1px",
+    transform: "translateX(-50%)",
+    backgroundColor: "rgb(252 211 77 / 0.8)",
+    boxShadow: "0 0 6px rgba(252,211,77,0.45)",
+    "::before": { content: "", position: "absolute", left: "50%", top: "0", width: space.xs, height: space.xs, transform: "translateX(-50%)", backgroundColor: "rgb(254 240 138 / 1)" },
+  },
+  // flex h-full min-w-0 flex-1 items-center gap-1 overflow-hidden px-2 text-[8px] font-medium disabled:pointer-events-none
+  interactionExpandButton: {
+    display: "flex",
+    height: "100%",
+    minWidth: 0,
+    flex: "1 1 0%",
+    alignItems: "center",
+    gap: space.xs,
+    overflow: "hidden",
+    paddingInline: space.md,
+    fontSize: "8px",
+    fontWeight: text.weightMedium,
+    pointerEvents: { default: null, ":disabled": "none" },
+  },
+  // inline-flex h-3 shrink-0 items-center gap-0.5 rounded-sm border border-current/20 bg-black/15 px-0.5 text-[6px] font-semibold uppercase tracking-[0.04em]
+  timelineCause: {
+    display: "inline-flex",
+    height: space.lg,
+    flexShrink: 0,
+    alignItems: "center",
+    gap: space.xxs,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "color-mix(in srgb, currentColor 20%, transparent)",
+    backgroundColor: "rgb(0 0 0 / 0.15)",
+    paddingInline: space.xxs,
+    fontSize: "6px",
+    fontWeight: text.weightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  // size-1.5
+  clock3Icon: {
+    width: space.sm,
+    height: space.sm,
+  },
+  // size-1.5
+  zapIcon: {
+    width: space.sm,
+    height: space.sm,
+  },
+  // size-2.5 shrink-0
+  lockIcon: {
+    width: "0.625rem",
+    height: "0.625rem",
+    flexShrink: 0,
+  },
+  // truncate
+  spanTruncate2: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  // ml-auto size-2.5 shrink-0
+  timelineConflictAlertTriangle: {
+    marginLeft: "auto",
+    width: "0.625rem",
+    height: "0.625rem",
+    flexShrink: 0,
+  },
+  // fixed z-[90] overflow-y-auto rounded-2xl border border-white/15 bg-[linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))] p-3 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72),0_0_0_1px_rgba(232,224,68,0.12)] backdrop-blur-2xl
+  timelineContextMenu: {
+    position: "fixed",
+    zIndex: layers.editorTop,
+    overflowY: "auto",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.15)",
+    backgroundImage: "linear-gradient(150deg,rgba(30,30,27,0.98),rgba(10,10,10,0.98))",
+    padding: space.lg,
+    color: "rgb(255 255 255 / 1)",
+    boxShadow: "0 24px 80px rgba(0,0,0,0.72),0 0 0 1px rgba(232,224,68,0.12)",
+    backdropFilter: "blur(40px)",
+  },
+  // mb-3 flex items-start gap-3 border-b border-white/10 pb-2.5
+  headerFlex: {
+    marginBottom: space.lg,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: space.lg,
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    paddingBottom: "0.625rem",
+  },
+  // mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-[#E8E044]/30 bg-[#E8E044]/10 text-[#E8E044]
+  spanGridIcon: {
+    marginTop: space.xxs,
+    display: "grid",
+    width: "1.75rem",
+    height: "1.75rem",
+    flexShrink: 0,
+    placeItems: "center",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgb(232 224 68 / 0.3)",
+    backgroundColor: "rgb(232 224 68 / 0.1)",
+    color: colors.accent,
+  },
+  // size-4
+  plusIcon: {
+    width: space.xl,
+    height: space.xl,
+  },
+  // min-w-0 flex-1
+  div2: {
+    minWidth: 0,
+    flex: "1 1 0%",
+  },
+  // text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E8E044]
+  addAt: {
+    fontSize: "10px",
+    fontWeight: text.weightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.16em",
+    color: colors.accent,
+  },
+  // mt-0.5 truncate text-xs text-white/60
+  pTruncateXs: {
+    marginTop: space.xxs,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: text.sizeXs,
+    lineHeight: "1rem",
+    color: "rgb(255 255 255 / 0.6)",
+  },
+  // grid size-7 place-items-center rounded-lg text-lg leading-none text-white/45 hover:bg-white/10 hover:text-white
+  closeActionMenuButton: {
+    display: "grid",
+    width: "1.75rem",
+    height: "1.75rem",
+    placeItems: "center",
+    fontSize: text.sizeLg,
+    lineHeight: "1",
+    color: { default: "rgb(255 255 255 / 0.45)", ":hover": "rgb(255 255 255 / 1)" },
+    backgroundColor: { default: null, ":hover": "rgb(255 255 255 / 0.1)" },
+  },
+  // grid gap-2 sm:grid-cols-2
+  divGrid3: {
+    display: "grid",
+    gap: space.md,
+    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+  },
+  // flex items-center gap-1.5
+  spanFlex: {
+    display: "flex",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  // size-3.5 shrink-0
+  routeiconIcon: {
+    width: "0.875rem",
+    height: "0.875rem",
+    flexShrink: 0,
+  },
+  // size-3.5 shrink-0
+  gamepad2Icon: {
+    width: "0.875rem",
+    height: "0.875rem",
+    flexShrink: 0,
+  },
+  // sm:col-span-2
+  div3: {
+    gridColumn: { default: null, "@media (min-width: 640px)": "span 2 / span 2" },
+  },
+  // rounded-xl border border-white/10 bg-white/[0.035] p-2
+  timelineContextGroup: {
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgb(255 255 255 / 0.1)",
+    backgroundColor: "rgb(255 255 255 / 0.035)",
+    padding: space.md,
+  },
+  // mb-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/40
+  h3SemiboldUppercase: {
+    marginBottom: space.sm,
+    paddingInline: space.xs,
+    fontSize: "9px",
+    fontWeight: text.weightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.15em",
+    color: "rgb(255 255 255 / 0.4)",
+  },
+  // grid grid-cols-2 gap-1
+  divGrid4: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: space.xs,
+  },
+  // min-h-8 rounded-lg border border-transparent bg-black/20 px-2 py-1.5 text-left text-[10px] leading-tight text-white/70 hover:border-[#E8E044]/35 hover:bg-[#E8E044]/10 hover:text-[#E8E044] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8E044]
+  menuitemButton: {
+    minHeight: space.xxxl,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: { default: "transparent", ":hover": "rgb(232 224 68 / 0.35)" },
+    backgroundColor: { default: "rgb(0 0 0 / 0.2)", ":hover": "rgb(232 224 68 / 0.1)" },
+    paddingInline: space.md,
+    paddingBlock: space.sm,
+    textAlign: "left",
+    fontSize: "10px",
+    lineHeight: text.lineTight,
+    color: { default: "rgb(255 255 255 / 0.7)", ":hover": colors.accent },
+    outline: { default: null, ":focus-visible": "2px solid transparent" },
+    outlineOffset: { default: null, ":focus-visible": "2px" },
+    boxShadow: { default: null, ":focus-visible": `0 0 0 2px ${colors.accent}` },
+  },
+  // mt-0.5 size-4 shrink-0 text-[#E8E044]
+  timelineActorIcon: {
+    marginTop: space.xxs,
+    width: space.xl,
+    height: space.xl,
+    flexShrink: 0,
+    color: colors.accent,
+  },
+  // mt-0.5 size-3 shrink-0
+  timelineActorIconPersonStanding: {
+    marginTop: space.xxs,
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // mt-0.5 size-3 shrink-0
+  timelineActorIconBox: {
+    marginTop: space.xxs,
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
+  // mt-0.5 size-3 shrink-0
+  timelineActorIconCarFront: {
+    marginTop: space.xxs,
+    width: space.lg,
+    height: space.lg,
+    flexShrink: 0,
+  },
 });

@@ -9,7 +9,7 @@ import {
   renameGalleryAsset,
 } from "@/app/lib/asset-gallery/store";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
-import { readJson, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson } from "@/app/lib/scenario/http";
 
 type AssetRouteContext = { params: Promise<{ assetId: string }> };
 
@@ -40,8 +40,6 @@ export async function GET(request: NextRequest, { params }: AssetRouteContext) {
 }
 
 export async function PATCH(request: NextRequest, { params }: AssetRouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;
@@ -85,8 +83,6 @@ export async function PATCH(request: NextRequest, { params }: AssetRouteContext)
 }
 
 export async function DELETE(request: NextRequest, { params }: AssetRouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

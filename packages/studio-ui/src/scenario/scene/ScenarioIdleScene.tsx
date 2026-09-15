@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioIdleScene.stylex";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActorRenderer } from "@simforge-oss/viewer";
 import type { CameraView, CityViewer } from "@simforge-oss/viewer";
@@ -47,7 +49,6 @@ import { useCinematicPreview } from "./useCinematicPreview";
 import { rememberCinematicPreviewEnabled } from "../list/scenarioViewState";
 import { scenarioListCache } from "../list/scenarioListCache";
 
-export { mapSupportsScenarioPreview, previewAmbientTrafficProfile } from "./previewPolicy";
 
 const MAP_ERROR_GRACE_MS = 8_000;
 const AUTHORED_ACTOR_FRAME_MS = 900;
@@ -281,7 +282,6 @@ export function ScenarioIdleScene({
     () => map && mapSupportsScenarioPreview(map) ? playbackMapEntry(map) : null,
     [map],
   );
-  const handleSumoFallback = useCallback(() => undefined, []);
   const playbackState = usePlaybackControllerState(playback.controller);
   const showPreviewTimeline = Boolean(document && hasAuthoredTimelineData(document.content));
   const sceneError = Boolean(
@@ -331,11 +331,11 @@ export function ScenarioIdleScene({
           />
         ) : (
           <div
-            className="pointer-events-none absolute right-4 top-4 z-10 max-w-sm"
+            {...stylex.props(styles.scenarioIdleStatus)}
             data-testid="scenario-idle-status"
             role={session.failed || showSceneError || message.startsWith("Preview unavailable") ? "alert" : "status"}
           >
-            <span className="inline-flex rounded-md border border-black/10 bg-white/90 px-3 py-2 text-xs font-medium text-black/65 shadow-sm backdrop-blur-md">
+            <span {...stylex.props(styles.spanXsMedium)}>
               {message}
             </span>
           </div>
@@ -344,7 +344,7 @@ export function ScenarioIdleScene({
 
       {active && showPreviewTimeline ? (
         <div
-          className="pointer-events-auto absolute bottom-4 right-4 z-10 w-[min(760px,calc(100%_-_2rem))]"
+          {...stylex.props(styles.scenarioPreviewTimelineAncho)}
           data-testid="scenario-preview-timeline-anchor"
         >
           <ScenarioPreviewTimeline
@@ -379,7 +379,6 @@ export function ScenarioIdleScene({
           evidenceRequest={session.evidenceRequest}
           onEvidenceComplete={session.completeRevisionEvidence}
           onEvidenceFailure={session.failRevisionEvidence}
-          onFallback={handleSumoFallback}
         />
       ) : null}
     </div>
@@ -415,7 +414,7 @@ export function SumoPreviewTraffic({
   evidenceRequest: ScenarioSession["evidenceRequest"];
   onEvidenceComplete: (requestKey: string, artifact: MaterializedTrafficArtifactEnvelope) => void;
   onEvidenceFailure: (requestKey: string, reason: unknown) => void;
-  onFallback: (reason: string) => void;
+  onFallback?: (reason: string) => void;
 }) {
   const playbackState = usePlaybackControllerState(playback.controller);
   const extensions = document.content.extensions;
@@ -526,7 +525,7 @@ export function SumoPreviewTraffic({
     demandFocuses,
     onFallback: (reason) => {
       if (evidenceRequest) onEvidenceFailure(evidenceRequest.key, reason);
-      onFallback(reason);
+      onFallback?.(reason);
     },
     acceleratedSignalCycles,
     allSignalsGreen,

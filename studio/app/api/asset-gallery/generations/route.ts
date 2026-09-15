@@ -19,7 +19,6 @@ import { fetchMeshyBalance, meshyConfigured, MeshyUnavailableError } from "@/app
 import { ASSET_GENERATION_NOT_CONFIGURED_MESSAGE } from "@/app/lib/ai-providers/contracts";
 import {
   readJson,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 export async function GET(request: NextRequest) {
@@ -62,8 +61,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

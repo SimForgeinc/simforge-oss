@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./CopyableErrorMessage.stylex";
 import { useCallback, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
@@ -99,7 +101,7 @@ export function CopyableErrorMessage({
 
   return (
     <div className={cn(containerClassByVariant[variant], className)} role="alert">
-      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{message}</span>
+      <span {...stylex.props(styles.span)}>{message}</span>
       <button
         type="button"
         onClick={handleCopy}
@@ -108,9 +110,9 @@ export function CopyableErrorMessage({
         className={buttonClassByVariant[variant]}
       >
         {copied ? (
-          <Check className="size-3" aria-hidden="true" />
+          <Check {...stylex.props(styles.checkIcon)} aria-hidden="true" />
         ) : (
-          <Copy className="size-3" aria-hidden="true" />
+          <Copy {...stylex.props(styles.copyIcon)} aria-hidden="true" />
         )}
         {variant === "box" ? <span>{copied ? "Copied" : "Copy"}</span> : null}
       </button>

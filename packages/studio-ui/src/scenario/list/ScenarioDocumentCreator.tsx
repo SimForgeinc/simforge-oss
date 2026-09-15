@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioDocumentCreator.stylex";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { ChevronDown, MoreHorizontal, Pencil, Plus, Tags, Trash2 } from "lucide-react";
@@ -240,7 +242,7 @@ export function ScenarioDocumentCreator({
       <div key={document.id} data-scenario-with-variations="">
         {row}
         <div
-          className="ml-4 border-l border-primary/30"
+          {...stylex.props(styles.div)}
           data-scenario-variations-sublist=""
         >
           {/* One nesting level. A variation of a variation is still listed under its own source. */}
@@ -274,16 +276,16 @@ export function ScenarioDocumentCreator({
           onBeginTagDrag={beginTagDrag}
         />
       ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div {...stylex.props(styles.divFlex)}>
         {!datasetEditable ? (
-          <div className="border-b border-border px-3 py-3">
-            <div className="border-l border-primary/60 pl-3 text-xs text-foreground">
+          <div {...stylex.props(styles.div2)}>
+            <div {...stylex.props(styles.thisIsASharedOrReadOnlyDatas)}>
               This is a shared or read-only dataset. Open scenarios from it, or copy one into a
               workspace dataset before editing.
             </div>
           </div>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto" data-testid="scenario-document-list">
+        <div {...stylex.props(styles.scenarioDocumentList)} data-testid="scenario-document-list">
           {documentsLoading && documents.length === 0 ? (
             <CloudLoadingSurface
           scope="pane"
@@ -292,13 +294,13 @@ export function ScenarioDocumentCreator({
               title="Loading scenarios"
             />
           ) : documents.length === 0 ? (
-            <div className="border-b border-white/10 px-3 py-4 text-sm text-muted-foreground">
+            <div {...stylex.props(styles.divSm)}>
               {totalDocumentCount > 0
                 ? "No scenarios match the current filter."
                 : "No scenarios in this dataset yet."}
             </div>
           ) : (
-            <div className="space-y-0">
+            <div {...stylex.props(styles.div3)}>
               {documentGroups.map((group) => (
                 <MapDocumentGroup
                   key={group.groupKey}
@@ -312,7 +314,7 @@ export function ScenarioDocumentCreator({
                 </MapDocumentGroup>
               ))}
               {hasMoreDocuments ? (
-                <div className="border-t border-white/10 p-3">
+                <div {...stylex.props(styles.div4)}>
                   <Button
                     type="button"
                     variant="ghost"
@@ -374,23 +376,23 @@ function MapDocumentGroup({
             advancedMode ? "py-2" : "py-3",
           )}
         >
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-foreground">
+          <div {...stylex.props(styles.div5)}>
+            <div {...stylex.props(styles.divTruncateSmSemibold)}>
               {group.displayLabel}
             </div>
-            <div className="mt-1 font-meta text-micro uppercase tracking-meta-widest text-white/70">
+            <div {...stylex.props(styles.divMetaMicroUppercase)}>
               {group.documents.length} {group.documents.length === 1 ? "scenario" : "scenarios"}
             </div>
           </div>
           <span className="flex size-7 shrink-0 items-center justify-center text-foreground/70 transition-transform group-aria-expanded/map:rotate-180 motion-reduce:transition-none">
-            <ChevronDown className="size-4" aria-hidden="true" />
+            <ChevronDown {...stylex.props(styles.chevrondownIcon)} aria-hidden="true" />
           </span>
         </div>
       </button>
       {expanded ? (
         <div
           data-scenario-group-body=""
-          className="space-y-0 border-t border-white/10"
+          {...stylex.props(styles.div6)}
         >
           {children}
         </div>
@@ -459,11 +461,11 @@ function ScenarioTagTools({
       )}
       data-scenario-tag-tools-mode={tagEditorMode ? "editor" : "filter"}
     >
-      <div className="space-y-3">
-        <section className="relative space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-meta text-micro uppercase tracking-meta-widest text-muted-foreground">
-              <Tags className="size-3.5 text-primary" aria-hidden="true" />
+      <div {...stylex.props(styles.div7)}>
+        <section {...stylex.props(styles.sectionRelative)}>
+          <div {...stylex.props(styles.divFlex2)}>
+            <div {...stylex.props(styles.divFlexMetaMicro)}>
+              <Tags {...stylex.props(styles.tagsIcon)} aria-hidden="true" />
               {tagEditorMode ? "Add Tags" : "Filter"}
             </div>
             {tagEditorMode ? (
@@ -476,21 +478,21 @@ function ScenarioTagTools({
                 aria-expanded={createOpen}
                 onClick={() => setCreateOpen((open) => !open)}
               >
-                <Plus className="size-3" aria-hidden="true" />
+                <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
               </Button>
             ) : null}
           </div>
           {tagEditorMode && createOpen ? (
             <form
               data-testid="scenario-tag-create-form"
-              className="absolute right-0 top-8 z-30 w-full space-y-1.5 border border-primary/40 bg-popover p-1.5 shadow-lg"
+              {...stylex.props(styles.scenarioTagCreateForm)}
               onSubmit={(event) => {
                 event.preventDefault();
                 onCreateTag();
                 setCreateOpen(false);
               }}
             >
-              <div className="flex gap-1.5">
+              <div {...stylex.props(styles.divFlex3)}>
                 <Input
                   autoFocus
                   type="text"
@@ -518,11 +520,11 @@ function ScenarioTagTools({
           ) : null}
         </section>
 
-        <section className="space-y-1.5">
-          <div className="font-meta text-micro uppercase tracking-meta-widest text-muted-foreground">
+        <section {...stylex.props(styles.section)}>
+          <div {...stylex.props(styles.divMetaMicroUppercase2)}>
             {tagEditorMode ? "Drag tags" : "Sort by tags"}
           </div>
-          <p className="text-meta leading-4 text-muted-foreground">
+          <p {...stylex.props(styles.pMeta)}>
             {tagEditorMode
               ? "Drag a tag onto a scenario row to assign it."
               : "Click a tag to filter the scenario list."}
@@ -537,9 +539,9 @@ function ScenarioTagTools({
               All scenarios
             </Button>
           ) : null}
-          <div className="flex flex-col gap-1.5">
+          <div {...stylex.props(styles.divFlex4)}>
             {tags.length === 0 ? (
-              <div className="border border-dashed border-border px-2 py-3 text-xs text-muted-foreground">
+              <div {...stylex.props(styles.divXs)}>
                 {tagEditorMode
                   ? "Create tags, then drag them onto scenario rows."
                   : "Create tags from Add Tags to filter scenarios."}
@@ -597,7 +599,7 @@ function ScenarioTagTools({
                         }}
                         onBlur={commitTagRename}
                         aria-label={`Rename the ${tag.label} tag`}
-                        className="h-6 min-w-0 flex-1 border border-primary/50 bg-background px-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        {...stylex.props(styles.renameTheInput)}
                       />
                     ) : (
                       <button
@@ -605,13 +607,13 @@ function ScenarioTagTools({
                         onClick={() => onSelectTagFilter(tag.id)}
                         disabled={tagEditorMode}
                         aria-pressed={isFilter}
-                        className="min-w-0 flex-1 truncate text-left"
+                        {...stylex.props(styles.buttonTruncate)}
                       >
                         {tag.label}
                       </button>
                     )}
                     {tagEditorMode ? (
-                      <div className="relative">
+                      <div {...stylex.props(styles.divRelative)}>
                         <button
                           type="button"
                           // The chip itself starts a drag on pointerdown, so the menu button has to
@@ -622,12 +624,12 @@ function ScenarioTagTools({
                           }
                           aria-label={`Tag actions for ${tag.label}`}
                           aria-expanded={openTagMenuId === tag.id}
-                          className="flex size-6 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          {...stylex.props(styles.tagActionsForButton)}
                         >
-                          <MoreHorizontal className="size-3.5" aria-hidden="true" />
+                          <MoreHorizontal {...stylex.props(styles.morehorizontalIcon)} aria-hidden="true" />
                         </button>
                         {openTagMenuId === tag.id ? (
-                          <div className="absolute right-0 top-7 z-40 w-32 space-y-1 border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                          <div {...stylex.props(styles.divAbsolute)}>
                             <ScenarioTagColorPicker
                               selectedColor={color}
                               onSelectColor={(nextColor) => onSetTagColor(tag.id, nextColor)}
@@ -635,25 +637,25 @@ function ScenarioTagTools({
                             />
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              {...stylex.props(styles.buttonFlexXs)}
                               onClick={() => {
                                 setEditingTagId(tag.id);
                                 setEditingTagName(tag.label);
                                 setOpenTagMenuId(null);
                               }}
                             >
-                              <Pencil className="size-3" aria-hidden="true" />
+                              <Pencil {...stylex.props(styles.renamePencil)} aria-hidden="true" />
                               Rename
                             </button>
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              {...stylex.props(styles.buttonFlexXs2)}
                               onClick={() => {
                                 onDeleteTag(tag.id);
                                 setOpenTagMenuId(null);
                               }}
                             >
-                              <Trash2 className="size-3" aria-hidden="true" />
+                              <Trash2 {...stylex.props(styles.deleteTrash2)} aria-hidden="true" />
                               Delete
                             </button>
                           </div>
@@ -666,7 +668,7 @@ function ScenarioTagTools({
             )}
           </div>
           {selectedTagFilter ? (
-            <div className="font-meta text-micro uppercase tracking-meta text-muted-foreground">
+            <div {...stylex.props(styles.showing)}>
               Showing {visibleDocumentCount} of {documentCount}
             </div>
           ) : null}
@@ -687,7 +689,7 @@ function ScenarioTagColorPicker({
 }) {
   const activeColor = (selectedColor ?? DEFAULT_SCENARIO_TAG_COLOR).toLowerCase();
   return (
-    <div className="flex flex-wrap gap-1" role="group" aria-label={label}>
+    <div {...stylex.props(styles.group)} role="group" aria-label={label}>
       {DEFAULT_SCENARIO_TAG_COLORS.map((color) => (
         <button
           key={color}

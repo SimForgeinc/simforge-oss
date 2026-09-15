@@ -51,6 +51,13 @@ export const TIME_OF_DAY_PRESETS = [
 
 /** Weather preset. */
 export const WeatherSchema = z.enum(WEATHER_PRESETS);
+/**
+ * The one default sky. A fresh scenario, an opened scenario that never set
+ * its environment, and every viewer with no document at all (map gallery,
+ * dataset browsing, drive) resolve to this; nothing else defines a default.
+ */
+export const DEFAULT_WEATHER: Weather = 'cloudy';
+export const DEFAULT_TIME_OF_DAY: TimeOfDay = 'dusk';
 /** Time-of-day preset. */
 export const TimeOfDaySchema = z.enum(TIME_OF_DAY_PRESETS);
 
@@ -129,8 +136,8 @@ export const SurfacePatchSchema = z.strictObject({
 
 /** The `environment` block. */
 export const EnvironmentSchema = z.strictObject({
-  weather: WeatherSchema.default('cloudy'),
-  timeOfDay: TimeOfDaySchema.default('dusk'),
+  weather: WeatherSchema.default(DEFAULT_WEATHER),
+  timeOfDay: TimeOfDaySchema.default(DEFAULT_TIME_OF_DAY),
   /**
    * Tyre-road friction multiplier against the map's nominal value. 1 = dry
    * asphalt. Set it explicitly when the scenario is *about* friction; leave it
@@ -156,6 +163,8 @@ export const EnvironmentSchema = z.strictObject({
 
 /** Resolved environment block. */
 export type Environment = z.infer<typeof EnvironmentSchema>;
+/** The resolved environment of a document that authored nothing. */
+export const DEFAULT_ENVIRONMENT: Environment = EnvironmentSchema.parse({});
 /** The `environment` block as authored. */
 export type EnvironmentInput = z.input<typeof EnvironmentSchema>;
 /** A localised surface patch. */

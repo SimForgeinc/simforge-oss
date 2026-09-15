@@ -5,7 +5,6 @@ import type { MapProfile } from "@/app/lib/cloud/map-registry";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 
@@ -37,8 +36,6 @@ export async function GET(request: Request, route: Context) {
  * state immediately; progress is real member/byte accounting of the transfer.
  */
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { mapVersionId } = await route.params;

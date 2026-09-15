@@ -12,7 +12,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableDocumentContext,
-  requireScenarioMutationOrigin,
   scenarioJsonWithEtag,
 } from "@/app/lib/scenario/http";
 
@@ -28,8 +27,6 @@ export async function GET(request: Request, route: Context) {
 }
 
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = CreateScenarioRevisionSchema.safeParse(await readJson(request));

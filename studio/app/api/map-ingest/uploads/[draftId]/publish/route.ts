@@ -10,7 +10,6 @@ import { queryOne } from "@/app/lib/db/data-api";
 import { upsertMapAsset } from "@/app/lib/db/map-asset-store";
 import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 import {
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 import { buildCityManifest, buildSemantics } from "@/app/lib/map-ingest/server/city-manifest";
 import { buildMapColliderDerivative } from "@/app/lib/map-ingest/server/colliders";
@@ -94,8 +93,6 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ draftId: string }> },
 ) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

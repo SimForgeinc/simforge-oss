@@ -929,7 +929,11 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
 fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), String> {
     for (index, cam) in cameras.iter().enumerate() {
         ensure_camera(state, cam);
-        let host = cam.attach.as_ref().map(|attach| attach.actor_id.as_str());
+        let host = cam
+            .attach
+            .as_ref()
+            .filter(|attach| !attach.host_visible)
+            .map(|attach| attach.actor_id.as_str());
         state
             .app
             .set_camera_host(&cam.sensor_id, host)

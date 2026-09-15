@@ -14,7 +14,7 @@ import type {
 import type { ScenarioAuthoringQuality } from "../../../lib/scenario/contracts";
 import { CloudActivityIndicator } from "../../../components/CloudLoadingSurface";
 import { cn } from "../../../lib/utils";
-import { AUTHORING_QUALITY } from "../authoring-quality";
+import { sceneViewerOptions } from "../authoring-quality";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorCanvasRegion.stylex";
 
@@ -51,7 +51,7 @@ export function EditorCanvasRegion({
   externalWorld?: boolean;
   children?: ReactNode;
 }) {
-  const preset = AUTHORING_QUALITY[quality];
+  const viewerOptions = sceneViewerOptions(quality);
   const activeViewerRef = useRef<CityViewer | null>(null);
   const registerViewer = useCallback((viewer: CityViewer) => {
     activeViewerRef.current = viewer;
@@ -77,11 +77,7 @@ export function EditorCanvasRegion({
         <EditorCityViewInstance
           key={quality}
           manifestUrl={map.manifestUrl}
-          options={{
-            maxPixelRatio: preset.maxPixelRatio,
-            antialias: preset.antialias,
-            cinematicLighting: preset.cinematicLighting,
-          }}
+          options={viewerOptions}
           onViewerReady={registerViewer}
           onViewerMapLoaded={reportMapLoaded}
           className={stylex.props(styles.wideTall).className}

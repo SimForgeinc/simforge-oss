@@ -1,6 +1,12 @@
 "use client";
 
 import { useStudioHost } from "../../host";
+import { ambientProvenanceForRevisionTraffic, type ScenarioRevisionEvidenceDto } from "@simforge-oss/studio-host";
+import {
+  materializeBrowserRevisionTraffic,
+  previewAmbientTrafficProfile,
+  previewExecutionTrafficProvider,
+} from "@simforge-oss/playback/traffic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DashCameraSensor, ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { ActorRenderer } from "@simforge-oss/viewer";
@@ -12,11 +18,7 @@ import {
   type SumoTrafficStatus,
 } from "@simforge-oss/playback/traffic";
 import { ambientTrafficProfileFromExtensions } from "@simforge-oss/playback/traffic";
-import type {
-  ScenarioAmbientProvenance,
-  ScenarioDocumentDto,
-  ScenarioMaterializedTrafficReference,
-} from "../../lib/scenario/contracts";
+import type { ScenarioDocumentDto } from "../../lib/scenario/contracts";
 import { contentHash, type MaterializedTrafficArtifactEnvelope } from "@simforge-oss/engine";
 import {
   CollisionActorOverrides,
@@ -33,21 +35,10 @@ import { loadSumoAssets } from "../../lib/scenario/ambient/sumoAssets";
 import { uploadAndConsumeMaterializedTraffic } from "../../lib/scenario/editor/materialized-traffic";
 import { normalizeAuthoringGraph } from "@simforge-oss/editor";
 import type { ScenarioMapOption } from "../list/document-map-groups";
-import {
-  mapSupportsScenarioPreview,
-  previewAmbientTrafficProfile,
-  previewExecutionTrafficProvider,
-} from "./previewPolicy";
+import { mapSupportsScenarioPreview } from "./previewPolicy";
 import { pickRandomMap, preloadMapManifests } from "./mapCatalog";
-import {
-  ambientProvenanceForRevisionTraffic,
-  materializeBrowserRevisionTraffic,
-} from "./revisionEvidence";
 
-export type ScenarioRevisionEvidence = {
-  readonly ambient: ScenarioAmbientProvenance;
-  readonly materializedTraffic: ScenarioMaterializedTrafficReference;
-};
+export type ScenarioRevisionEvidence = ScenarioRevisionEvidenceDto;
 
 export type ScenarioEvidenceRequest = {
   readonly key: string;

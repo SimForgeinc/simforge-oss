@@ -4,7 +4,6 @@ import { promoteModelVersion } from "@/app/lib/models/model-registry-store";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ versionId: string }> };
@@ -14,8 +13,6 @@ type Context = { params: Promise<{ versionId: string }> };
  * openloop/policy_episode run of this version, or this returns 409.
  */
 export async function POST(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = PromoteModelVersionSchema.safeParse(await readJson(request));

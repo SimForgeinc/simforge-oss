@@ -45,7 +45,7 @@ vi.mock("@simforge-oss/viewer/react", async () => {
   const React = await import("react");
   class FakeCityViewer {
     readonly renderer: { domElement: HTMLCanvasElement };
-    readonly scene = { add: vi.fn() };
+    readonly scene = { add: vi.fn(), getObjectByName: () => undefined };
     constructor(canvas: HTMLCanvasElement, options: unknown) {
       constructions(options);
       this.renderer = { domElement: canvas };
@@ -55,6 +55,8 @@ vi.mock("@simforge-oss/viewer/react", async () => {
     setLiveQuality = setLiveQuality;
     setAuthoringFidelity = setAuthoringFidelity;
     setLayerVisible = setLayerVisible;
+    setRenderingSuspended = vi.fn();
+    setWeatherAppearance = vi.fn();
   }
   return {
     CityView({

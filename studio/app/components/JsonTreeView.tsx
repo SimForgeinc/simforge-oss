@@ -36,8 +36,8 @@ function PrimitiveValue({ value, onHighlightId, onSelectId, knownIds }: Primitiv
     return (
       <span {...stylex.props(styles.inline)}>
         <span {...stylex.props(styles.uuid)}>{str}</span>
-        {isKnown && onHighlightId && <button type="button" onClick={() => onHighlightId(str)} title="Highlight on map" {...stylex.props(styles.action)}><Eye className="size-3" /></button>}
-        {isKnown && onSelectId && <button type="button" onClick={() => onSelectId(str)} title="Select on map" {...stylex.props(styles.action, styles.actionSelect)}><LocateFixed className="size-3" /></button>}
+        {isKnown && onHighlightId && <button type="button" onClick={() => onHighlightId(str)} title="Highlight on map" {...stylex.props(styles.action)}><Eye {...stylex.props(styles.eyeIcon)} /></button>}
+        {isKnown && onSelectId && <button type="button" onClick={() => onSelectId(str)} title="Select on map" {...stylex.props(styles.action, styles.actionSelect)}><LocateFixed {...stylex.props(styles.locatefixedIcon)} /></button>}
       </span>
     );
   }

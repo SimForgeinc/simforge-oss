@@ -8,7 +8,7 @@
  * coefficients yields null, and the caller falls back to the bird's-eye plot.
  */
 
-import type { TrajectoryProjection } from "./contracts";
+import type { TrajectoryProjection } from "@simforge-oss/evaluation/client";
 
 /** Distortion models whose coefficient order this implementation actually knows. */
 const KNOWN_DISTORTION_MODELS = ["none", "pinhole", "plumb_bob", "radtan", "opencv", "rational_polynomial"];

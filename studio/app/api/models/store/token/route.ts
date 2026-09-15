@@ -8,7 +8,6 @@ import {
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 /**
@@ -28,8 +27,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 
@@ -54,8 +51,6 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   return NextResponse.json({ removed: await clearHfToken(), ...(await vaultStatus()) });

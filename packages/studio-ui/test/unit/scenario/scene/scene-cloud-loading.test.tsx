@@ -29,7 +29,6 @@ function SceneCover({ progress, onRetry }: { progress: SceneLoadProgress; onRetr
   return <CloudLoadingSurface scope="screen" {...useSceneLoadingSurfaceProps(progress, onRetry)} />;
 }
 
-/** The surface carries the cache-all-assets action, which reaches the host for the map catalog. */
 function renderTransition(element: ReactElement) {
   return render(
     <StudioHostTestProvider>
@@ -62,22 +61,19 @@ describe("the scene load cover", () => {
     );
     expect(screen.queryByTestId("scene-loading-prerender-cover")).toBeNull();
     expect(screen.queryByTestId("scene-loading-transition")).toBeNull();
-    expect(screen.getByRole("button", { name: "Tip: Click here to cache all assets." }))
-      .toBeTruthy();
   });
 
-  it("shows exact transfer progress and calls out a stalled asset", async () => {
+  it("shows how much of the map is loaded and calls out a stall without network framing", async () => {
     renderTransition(
       <SceneCover
         progress={{
           phase: "assets",
           percent: 61,
-          message: "Loading Belmont assets",
-          detail: "The connection may be stalled.",
+          message: "Loading Belmont",
+          detail: "No map data has arrived for 8s.",
           download: {
             transferred: "37.0 MB",
             total: "400 MB",
-            speed: "0 B/s",
             stalled: true,
             stalledFor: "8s",
           },
@@ -86,9 +82,9 @@ describe("the scene load cover", () => {
     );
 
     const telemetry = await screen.findByTestId("cloud-loading-telemetry");
-    expect(telemetry.textContent).toContain("37.0 MB / 400 MB");
-    expect(telemetry.textContent).toContain("0 B/s");
-    expect(telemetry.textContent).toContain("No bytes received for 8s");
+    expect(telemetry.textContent).toContain("37.0 MB of 400 MB");
+    expect(telemetry.textContent).not.toMatch(/\/s|download/i);
+    expect(telemetry.textContent).toContain("No data received for 8s");
   });
 
   it("publishes an actionable error through the same surface", async () => {

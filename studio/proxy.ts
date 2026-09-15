@@ -47,7 +47,7 @@ export function proxy(request: NextRequest) {
   if (EXEMPT_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
   const controlToken = process.env[LOCAL_HOST_TOKEN_ENV];
   if (!controlToken) {
-    return json(503, "host_unsupervised", "The Studio host is running without a supervisor control token; start it with `pnpm dev`, `pnpm start` or the desktop app.");
+    return json(503, "host_unsupervised", "The Studio host is running without a supervisor control token; start it with `simforge daemon`, `pnpm dev` or the desktop app.");
   }
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (bearer !== undefined) {
@@ -59,7 +59,7 @@ export function proxy(request: NextRequest) {
   }
   const session = request.cookies.get(LOCAL_HOST_SESSION_COOKIE)?.value;
   if (!secretsEqual(session, localHostSessionToken(controlToken))) {
-    return json(401, "local_access_denied", "No trusted local session; open Studio through the desktop app or `pnpm host:open`.");
+    return json(401, "local_access_denied", "No trusted local session; open Studio through the desktop app or `simforge host open`.");
   }
   if (!READ_METHODS.has(request.method)) {
     const origin = request.headers.get("origin");

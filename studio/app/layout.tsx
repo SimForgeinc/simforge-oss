@@ -1,3 +1,5 @@
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./layout.stylex";
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Barlow, Chakra_Petch } from "next/font/google";
 import { Toaster } from "sonner";
@@ -90,7 +92,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${display.variable} ${body.variable} ${heavy.variable}`}>
-      <body className="min-h-svh">
+      <body {...stylex.props(styles.body)}>
         {children}
         <Toaster theme="dark" richColors position="bottom-right" />
       </body>

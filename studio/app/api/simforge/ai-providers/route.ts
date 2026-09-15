@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { UpdateAiProviderSettingsSchema } from "@/app/lib/ai-providers/contracts";
 import { getAiProviderSettingsStatus, updateAiProviderSettings } from "@/app/lib/ai-providers/settings";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
-import { readJson, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson } from "@/app/lib/scenario/http";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
 
 /** Store/clear provider keys in the OS vault. */
 export async function PATCH(request: NextRequest) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;
 

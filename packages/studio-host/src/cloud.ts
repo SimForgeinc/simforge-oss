@@ -16,8 +16,8 @@ export type StudioCloudStatus = {
   state: "disconnected" | "connecting" | "connected" | "expired" | "error";
   origin: string;
   user: StudioCloudUser | null;
-  /** The workspace this sign-in acts in; `null` until the account reports one. */
-  activeWorkspaceId: string | null;
+  /** The organization this sign-in acts in; `null` until the account reports one. */
+  activeOrganizationId: string | null;
   providers: StudioCloudProvider[];
   credentialPersistence: "os-vault" | "session";
   /** Expiry of the server-issued session, not a renderer-created access grant. */
@@ -27,6 +27,7 @@ export type StudioCloudStatus = {
 
 export type StudioCloudWorkspace = {
   id: string;
+  organizationId: string;
   name: string;
   role: string;
 };
@@ -45,7 +46,7 @@ export type StudioCloudSession = {
 
 export type StudioCloudAccount = {
   user: StudioCloudUser;
-  activeWorkspaceId: string | null;
+  activeOrganizationId: string | null;
   sessions: StudioCloudSession[];
 };
 

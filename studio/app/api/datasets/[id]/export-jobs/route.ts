@@ -27,7 +27,6 @@ import { queryOne } from "@/app/lib/db/data-api";
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
   SCENARIO_PRIVATE_CACHE_HEADERS,
 } from "@/app/lib/scenario/http";
 import { LOCAL_ARTIFACT_BUCKET } from "@/app/lib/s3/s3-config";
@@ -89,8 +88,6 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { id: datasetId } = await context.params;

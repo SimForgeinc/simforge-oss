@@ -130,16 +130,16 @@ export function CloudStoragePanel() {
     setArtifactLinks(artifactLinkRows);
   }, []);
 
-  const activeWorkspaceId = cloud.status?.activeWorkspaceId ?? null;
+  const activeOrganizationId = cloud.status?.activeOrganizationId ?? null;
   const loadWorkspaces = useCallback(async () => {
     const rows = await studioCloud.listWorkspaces();
     setWorkspaces(rows);
     // The account's active workspace first; a choice made here is kept while it still exists.
     setWorkspaceId((current) => {
       if (current && rows.some((row) => row.id === current)) return current;
-      return (activeWorkspaceId && rows.some((row) => row.id === activeWorkspaceId) ? activeWorkspaceId : rows[0]?.id) ?? null;
+      return (rows.find((row) => row.organizationId === activeOrganizationId) ?? rows[0])?.id ?? null;
     });
-  }, [activeWorkspaceId]);
+  }, [activeOrganizationId]);
 
   const loadWorkspaceContent = useCallback(async (id: string) => {
     const [datasets, artifacts] = await Promise.all([

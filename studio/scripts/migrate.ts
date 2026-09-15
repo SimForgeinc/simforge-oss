@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execute, executeScript, queryRows } from "../app/lib/db/data-api";
+import { execute, executeScript, queryRows, shutdownDatabase } from "../app/lib/db/data-api";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDirectory = resolve(appRoot, "migrations");
@@ -40,4 +40,6 @@ export async function migrate(): Promise<string[]> {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await migrate();
   console.log("migrations complete");
+  // Release PGlite before exiting so the next owner (the server) opens it cleanly.
+  await shutdownDatabase();
 }

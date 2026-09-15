@@ -14,18 +14,17 @@ import {
   createHttpEvaluationGateway,
   DESKTOP_COMPUTE_PROXY_PATH,
   type EvaluationGateway,
-  type HostExecutionSnapshot,
-} from "@simforge-oss/studio-ui/evaluation";
+} from "@simforge-oss/evaluation/client";
+import type { HostExecutionSnapshot } from "@simforge-oss/studio-ui/evaluation";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { studioHost } from "@/app/lib/host";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
- * One gateway per workspace selection. Reads go through the proxy unscoped;
- * writes must name the workspace, so the header travels with every request
- * rather than being remembered per call site.
+ * The session's active organization supplies the default workspace. A picker
+ * selection is an explicit override carried by the gateway's workspace header.
  */
-export function useEvaluationGateway(workspaceId: string | null): EvaluationGateway {
+export function useEvaluationGateway(workspaceId: string | null = null): EvaluationGateway {
   return useMemo(
     () =>
       createHttpEvaluationGateway({
@@ -59,15 +58,13 @@ export function useHostExecutionSnapshot(workspaceId: string | null): HostExecut
             ? { available: true, reason: null }
             : { available: false, reason: runtime.reason },
       cloud: {
-        connected: status?.state === "connected" && workspaceId !== null,
+        connected: status?.state === "connected",
         workspaceId,
         reason:
           status === null
             ? "Checking the SimCloud connection…"
             : status.state === "connected"
-              ? workspaceId === null
-                ? "Choose a SimCloud workspace to submit cloud runs into."
-                : null
+              ? null
               : status.state === "expired"
                 ? "Your SimCloud session expired. Reconnect in Settings to submit cloud runs."
                 : "Connect a SimCloud account in Settings to submit cloud runs. Cloud runs do not require downloading any weights.",

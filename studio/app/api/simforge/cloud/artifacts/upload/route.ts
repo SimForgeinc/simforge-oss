@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { transferErrorResponse } from "@/app/lib/cloud/projects";
 import { uploadCloudArtifact } from "@/app/lib/cloud/storage";
-import { readJson, requireScenarioContext, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson, requireScenarioContext } from "@/app/lib/scenario/http";
 
 const UploadSchema = z.strictObject({
   workspaceId: z.string().trim().min(1).max(128),
@@ -16,8 +16,6 @@ const UploadSchema = z.strictObject({
  * verified the stored digest; a refused completion surfaces as its own code.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = UploadSchema.safeParse(await readJson(request));

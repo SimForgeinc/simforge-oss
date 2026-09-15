@@ -5,7 +5,6 @@ import {
   readJson,
   requireScenarioContext,
   requireScenarioMutableDocumentContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ documentId: string }> };
@@ -18,8 +17,6 @@ type Context = { params: Promise<{ documentId: string }> };
  * read-only or shared dataset must not be re-labelled from outside.
  */
 export async function PUT(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { documentId } = await route.params;

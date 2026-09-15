@@ -12,7 +12,6 @@
  * visible.
  */
 
-import { useCallback, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Ban, ExternalLink, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
@@ -29,20 +28,12 @@ import {
 } from "../../components/ui/table";
 import { EmptyState } from "../../components/ui/empty-state";
 import { cn } from "../../lib/utils";
-import { useVisiblePolling } from "../../lib/use-visible-polling";
-import type { ComputeJob } from "../contracts";
-import type { EvaluationGateway } from "../gateway";
-import { ComputeApiError } from "../gateway";
-import {
-  elapsedSeconds,
-  formatCents,
-  formatSeconds,
-  jobStatusPresentation,
-} from "../presentation";
+import type { ComputeJob } from "@simforge-oss/evaluation/client";
+import type { EvaluationGateway } from "@simforge-oss/evaluation/client";
+import { useJobList } from "../workspace/useJobList";
+import { elapsedSeconds, formatCents, formatSeconds, jobStatusPresentation } from "../presentation";
 import type { JobStatusTone } from "../presentation";
 import { RefusalNotice } from "./RefusalNotice";
-
-const POLL_INTERVAL_MS = 4000;
 
 const TONE_STYLES: Record<JobStatusTone, XStyle> = {
   neutral: s.toneNeutral,
@@ -76,61 +67,7 @@ export function JobHistory({
   refreshToken?: unknown;
   className?: string;
 }) {
-  const [jobs, setJobs] = useState<ComputeJob[] | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState<string | null>(null);
-
-  const refresh = useCallback(
-    async (signal: AbortSignal) => {
-      try {
-        const page = await gateway.listJobs({ limit: 25, signal });
-        setJobs(page.jobs);
-        setNextCursor(page.nextCursor);
-        setError(null);
-      } catch (cause) {
-        if (signal.aborted) return;
-        setError(
-          cause instanceof ComputeApiError ? cause.message : "The job list could not be loaded.",
-        );
-      }
-    },
-    [gateway],
-  );
-
-  const anyLive = jobs?.some((job) => jobStatusPresentation(job.status).live) ?? true;
-  useVisiblePolling(refresh, POLL_INTERVAL_MS, true, `${anyLive}:${String(refreshToken)}`);
-
-  const loadMore = async () => {
-    if (!nextCursor) return;
-    try {
-      const page = await gateway.listJobs({ limit: 25, cursor: nextCursor });
-      setJobs((current) => [...(current ?? []), ...page.jobs]);
-      setNextCursor(page.nextCursor);
-    } catch (cause) {
-      setError(cause instanceof ComputeApiError ? cause.message : "More jobs could not be loaded.");
-    }
-  };
-
-  const cancel = async (job: ComputeJob) => {
-    setCancelling(job.id);
-    try {
-      const result = await gateway.cancelJob(job.id);
-      setJobs((current) =>
-        (current ?? []).map((entry) =>
-          entry.id === job.id ? { ...entry, status: result.status, cancellable: false } : entry,
-        ),
-      );
-    } catch (cause) {
-      setError(
-        cause instanceof ComputeApiError
-          ? cause.message
-          : `${job.id} could not be cancelled: ${String(cause)}`,
-      );
-    } finally {
-      setCancelling(null);
-    }
-  };
+  const { jobs, error, nextCursor, cancelling, loadMore, cancel } = useJobList(gateway, refreshToken);
 
   if (jobs === null) {
     return (

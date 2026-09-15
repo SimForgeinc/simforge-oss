@@ -4,14 +4,11 @@ import { deleteScenarioTag, updateScenarioTag } from "@/app/lib/scenario/tag-sto
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ tagId: string }> };
 
 export async function PATCH(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = UpdateScenarioTagSchema.safeParse(await readJson(request));
@@ -33,8 +30,6 @@ export async function PATCH(request: Request, route: Context) {
 }
 
 export async function DELETE(request: Request, route: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const { tagId } = await route.params;

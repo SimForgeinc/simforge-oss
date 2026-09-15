@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./useScenarioOpenScenarioImport.stylex";
 import { useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileUp } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
@@ -115,12 +117,12 @@ export function useScenarioOpenScenarioImport({
   };
 
   const dialog = open ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <button type="button" aria-label="Close OpenSCENARIO dialog" className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
-      <div className="relative z-10 max-h-[88vh] w-full max-w-2xl space-y-4 overflow-y-auto border border-border bg-background p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="xosc-import-title" data-testid="xosc-import-dialog">
+    <div {...stylex.props(styles.divFixedFlex)}>
+      <button type="button" aria-label="Close OpenSCENARIO dialog" {...stylex.props(styles.closeOpenSCENARIODialogButton)} onClick={close} />
+      <div {...stylex.props(styles.xoscImportDialog)} role="dialog" aria-modal="true" aria-labelledby="xosc-import-title" data-testid="xosc-import-dialog">
         <div>
-          <h2 id="xosc-import-title" className="text-lg font-semibold text-foreground">Open OpenSCENARIO as reference</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 id="xosc-import-title" {...stylex.props(styles.xoscImportTitle)}>Open OpenSCENARIO as reference</h2>
+          <p {...stylex.props(styles.createANewScenarioFromThePar)}>
             Create a new scenario from the parts we can convert. The original file stays attached as the source reference.
           </p>
         </div>
@@ -130,35 +132,35 @@ export function useScenarioOpenScenarioImport({
           type="file"
           accept=".xosc,application/xml,text/xml"
           aria-label="Choose OpenSCENARIO file"
-          className="hidden"
+          {...stylex.props(styles.chooseOpenSCENARIOFileInput)}
           onChange={(event) => { const next = event.target.files?.[0]; if (next) void analyze(next); }}
         />
         <Button type="button" variant="outline" xstyle={list.fileChooser} disabled={busy} onClick={() => inputRef.current?.click()}>
-          {busy && !result ? <CloudActivityIndicator /> : <FileUp className="size-4" aria-hidden="true" />}
+          {busy && !result ? <CloudActivityIndicator /> : <FileUp {...stylex.props(styles.fileupIcon)} aria-hidden="true" />}
           {file ? file.name : "Choose .xosc file"}
         </Button>
 
-        {error ? <div role="alert" className="border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive">{error}</div> : null}
+        {error ? <div role="alert" {...stylex.props(styles.alert)}>{error}</div> : null}
 
         {result ? (
-          <div className="space-y-4" data-testid="xosc-import-report">
-            <div className="grid gap-2 border border-border bg-surface-deep p-3 text-sm sm:grid-cols-2">
-              <div><span className="text-muted-foreground">Format:</span> {result.analysis.standard}</div>
-              <div><span className="text-muted-foreground">Size:</span> {result.analysis.source.byteLength.toLocaleString()} bytes</div>
-              <div className="sm:col-span-2 break-all"><span className="text-muted-foreground">SHA-256:</span> {result.analysis.source.sha256}</div>
+          <div {...stylex.props(styles.xoscImportReport)} data-testid="xosc-import-report">
+            <div {...stylex.props(styles.divGridSm)}>
+              <div><span {...stylex.props(styles.format)}>Format:</span> {result.analysis.standard}</div>
+              <div><span {...stylex.props(styles.size)}>Size:</span> {result.analysis.source.byteLength.toLocaleString()} bytes</div>
+              <div {...stylex.props(styles.div)}><span {...stylex.props(styles.sha256)}>SHA-256:</span> {result.analysis.source.sha256}</div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                {result.resolution.status === "resolved" ? <CheckCircle2 className="size-4 text-emerald-500" /> : <AlertTriangle className="size-4 text-amber-500" />}
+            <div {...stylex.props(styles.div2)}>
+              <div {...stylex.props(styles.divFlexSmMedium)}>
+                {result.resolution.status === "resolved" ? <CheckCircle2 {...stylex.props(styles.checkcircle2Icon)} /> : <AlertTriangle {...stylex.props(styles.alerttriangleIcon)} />}
                 Map {result.resolution.status}
                 {result.resolution.requestedIdentity ? ` from ${result.resolution.requestedIdentity}` : " — choose explicitly"}
               </div>
-              <label className="block text-sm">
-                <span className="mb-1 block text-muted-foreground">Map</span>
+              <label {...stylex.props(styles.labelSm)}>
+                <span {...stylex.props(styles.map)}>Map</span>
                 <select
                   aria-label="Resolved map"
-                  className="h-10 w-full border border-input bg-background px-3"
+                  {...stylex.props(styles.resolvedMapSelect)}
                   value={selectedMapVersionId}
                   onChange={(event) => setSelectedMapVersionId(event.target.value)}
                 >
@@ -166,23 +168,23 @@ export function useScenarioOpenScenarioImport({
                   {maps.map((map) => <option key={map.mapVersionId} value={map.mapVersionId}>{map.label}</option>)}
                 </select>
               </label>
-              {result.resolution.status === "ambiguous" ? <p className="text-xs text-amber-600">Multiple maps matched. No map was selected automatically.</p> : null}
-              {result.resolution.status === "unresolved" ? <p className="text-xs text-amber-600">No known map matched. Select the intended map; this importer never guesses.</p> : null}
-              {result.resolution.status === "conflict" ? <p className="text-xs text-destructive">The file contains contradictory strong map identity. Correct the file before importing.</p> : null}
+              {result.resolution.status === "ambiguous" ? <p {...stylex.props(styles.multipleMapsMatchedNoMapWasS)}>Multiple maps matched. No map was selected automatically.</p> : null}
+              {result.resolution.status === "unresolved" ? <p {...stylex.props(styles.noKnownMapMatchedSelectTheIn)}>No known map matched. Select the intended map; this importer never guesses.</p> : null}
+              {result.resolution.status === "conflict" ? <p {...stylex.props(styles.theFileContainsContradictory)}>The file contains contradictory strong map identity. Correct the file before importing.</p> : null}
             </div>
 
-            <div className="border border-border p-3" data-testid="xosc-conversion-summary">
-              <h3 className="text-sm font-semibold">What will be converted</h3>
-              <ul className="mt-2 space-y-1 text-xs">
+            <div {...stylex.props(styles.xoscConversionSummary)} data-testid="xosc-conversion-summary">
+              <h3 {...stylex.props(styles.whatWillBeConverted)}>What will be converted</h3>
+              <ul {...stylex.props(styles.ulXs)}>
                 <li>{result.analysis.capabilities.supported} {result.analysis.capabilities.supported === 1 ? "part" : "parts"} will carry over.</li>
                 <li>{result.analysis.capabilities.approximated} {result.analysis.capabilities.approximated === 1 ? "part" : "parts"} will be simplified.</li>
                 <li>{result.analysis.capabilities.unsupported} {result.analysis.capabilities.unsupported === 1 ? "part" : "parts"} will remain only in the source file.</li>
               </ul>
               {result.analysis.capabilities.unsupported > 0 ? (
-                <label className="mt-3 flex items-start gap-2 text-xs">
+                <label {...stylex.props(styles.labelFlexXs)}>
                   <input
                     checked={acknowledgedUnsupported}
-                    className="mt-0.5 size-4"
+                    {...stylex.props(styles.xoscUnsupportedAcknowledgemeInput)}
                     data-testid="xosc-unsupported-acknowledgement"
                     onChange={(event) => setAcknowledgedUnsupported(event.target.checked)}
                     type="checkbox"
@@ -193,12 +195,12 @@ export function useScenarioOpenScenarioImport({
             </div>
 
             <details>
-              <summary className="cursor-pointer text-sm font-medium">Technical conversion details</summary>
-              <ul className="mt-2 space-y-2" aria-label="OpenSCENARIO import diagnostics">
+              <summary {...stylex.props(styles.technicalConversionDetails)}>Technical conversion details</summary>
+              <ul {...stylex.props(styles.openscenarioImportDiagnostic)} aria-label="OpenSCENARIO import diagnostics">
                 {result.analysis.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.code}-${index}`} className="border border-border p-2 text-xs">
-                    <div className="font-mono">{diagnostic.disposition.toUpperCase()} · {diagnostic.path} · {diagnostic.code}</div>
-                    <div className="mt-1 text-muted-foreground">{diagnostic.message}</div>
+                  <li key={`${diagnostic.code}-${index}`} {...stylex.props(styles.liXs)}>
+                    <div {...stylex.props(styles.divMono)}>{diagnostic.disposition.toUpperCase()} · {diagnostic.path} · {diagnostic.code}</div>
+                    <div {...stylex.props(styles.div3)}>{diagnostic.message}</div>
                   </li>
                 ))}
               </ul>
@@ -206,7 +208,7 @@ export function useScenarioOpenScenarioImport({
           </div>
         ) : null}
 
-        <div className="flex justify-end gap-2">
+        <div {...stylex.props(styles.divFlex)}>
           <Button type="button" variant="outline" disabled={busy} onClick={close}>Cancel</Button>
           <Button
             type="button"

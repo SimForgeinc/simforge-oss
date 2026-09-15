@@ -6,7 +6,6 @@ import {
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 /**
@@ -17,8 +16,6 @@ import {
  * check ran per file, so "verified" never means more than it did.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 

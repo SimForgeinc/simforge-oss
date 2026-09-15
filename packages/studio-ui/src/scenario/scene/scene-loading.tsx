@@ -1,12 +1,13 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./scene-loading.stylex";
 import { useMemo } from "react";
 import { RotateCcw } from "lucide-react";
 import type { CloudLoadingSurfaceProps } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
 import { scene } from "../scenario-controls.stylex";
 import type { SceneLoadProgress } from "./map-load-progress";
-import { CacheAllMapAssetsButton } from "./CacheAllMapAssetsButton";
 
 /**
  * A scene load, expressed as `CloudLoadingSurface` props.
@@ -28,23 +29,19 @@ export function useSceneLoadingSurfaceProps(
       detail: progress.detail,
       progress: failed ? undefined : (progress.percent ?? null),
       telemetry: progress.download,
+      activityToken: progress.activity,
       phase: progress.phase,
       role: failed ? "alert" : "status",
-      icon: failed ? <RotateCcw className="size-5" aria-hidden="true" /> : undefined,
-      children: (
-        <>
-          {failed && onRetry ? (
-            <Button
-              xstyle={scene.retry}
-              onClick={onRetry}
-            >
-              <RotateCcw className="size-4" aria-hidden="true" />
-              Try again
-            </Button>
-          ) : null}
-          <CacheAllMapAssetsButton />
-        </>
-      ),
+      icon: failed ? <RotateCcw {...stylex.props(styles.rotateccwIcon)} aria-hidden="true" /> : undefined,
+      children: failed && onRetry ? (
+        <Button
+          xstyle={scene.retry}
+          onClick={onRetry}
+        >
+          <RotateCcw {...stylex.props(styles.tryAgainRotateCcw)} aria-hidden="true" />
+          Try again
+        </Button>
+      ) : null,
     }),
     [failed, onRetry, progress],
   );

@@ -66,7 +66,7 @@ export interface UseSumoTrafficOptions {
   readonly collisionActorOverrides?: CollisionActorOverrides;
   readonly focus: SumoDemandFocus | null;
   readonly demandFocuses: readonly SumoDemandFocus[];
-  readonly onFallback: (reason: string) => void;
+  readonly onFallback?: (reason: string) => void;
   readonly acceleratedSignalCycles: boolean;
   readonly allSignalsGreen: boolean;
   /** A fresh recorder owned by one explicit, full Play run. */
@@ -171,7 +171,7 @@ export function useSumoTraffic(
         sampleHeight: options.sampleHeight,
         phaseAfterReset: "ready",
         setStatus,
-        onFallback: (reason) => onFallback.current(reason),
+        onFallback: (reason) => onFallback.current?.(reason),
       });
     }
     previousMode.current = options.mode;
@@ -380,7 +380,7 @@ export function useSumoTraffic(
           reason instanceof Error ? reason.message : String(reason);
         options.renderer?.clearLayer("sumo-traffic");
         setStatus({ phase: "fallback", actorCount: 0, reason: message });
-        onFallback.current(message);
+        onFallback.current?.(message);
       });
     return () => {
       cancelled = true;
@@ -451,7 +451,7 @@ export function useSumoTraffic(
         sampleHeight: options.sampleHeight,
         phaseAfterReset: "running",
         setStatus,
-        onFallback: (reason) => onFallback.current(reason),
+        onFallback: (reason) => onFallback.current?.(reason),
       });
       return;
     }
@@ -618,7 +618,7 @@ export function useSumoTraffic(
           reason instanceof Error ? reason.message : String(reason);
         options.renderer?.clearLayer("sumo-traffic");
         setStatus({ phase: "fallback", actorCount: 0, reason: message });
-        onFallback.current(message);
+        onFallback.current?.(message);
       });
   }, [
     options.focus,
@@ -737,7 +737,7 @@ export function useSumoTraffic(
           reason instanceof Error ? reason.message : String(reason);
         reset.renderer?.clearLayer("sumo-traffic");
         reset.setStatus({ phase: "fallback", actorCount: 0, reason: message });
-        reset.onFallback(message);
+        reset.onFallback?.(message);
       });
   }
 
@@ -877,7 +877,7 @@ export function useSumoTraffic(
           reason instanceof Error ? reason.message : String(reason);
         options.renderer?.clearLayer("sumo-traffic");
         setStatus({ phase: "fallback", actorCount: 0, reason: message });
-        onFallback.current(message);
+        onFallback.current?.(message);
       });
   }
 
@@ -1031,7 +1031,7 @@ interface SumoResetRequest {
   readonly sampleHeight: ((x: number, z: number) => number | null) | null;
   readonly phaseAfterReset: "ready" | "running";
   readonly setStatus: (status: SumoTrafficStatus) => void;
-  readonly onFallback: (reason: string) => void;
+  readonly onFallback?: (reason: string) => void;
 }
 
 export function trafficMetrics(

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { importCloudDataset, transferErrorResponse } from "@/app/lib/cloud/projects";
-import { readJson, requireScenarioContext, requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
+import { readJson, requireScenarioContext } from "@/app/lib/scenario/http";
 
 const ImportSchema = z.strictObject({
   workspaceId: z.string().trim().min(1).max(128),
@@ -16,8 +16,6 @@ const ImportSchema = z.strictObject({
  * be prepared under this connection. Nothing is written in either case.
  */
 export async function POST(request: Request) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
   const parsed = ImportSchema.safeParse(await readJson(request));

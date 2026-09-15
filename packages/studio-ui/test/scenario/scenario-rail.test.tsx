@@ -58,9 +58,6 @@ describe("ScenarioScenarioRail", () => {
         atomFor(railStyles.footerAction, property),
       );
     }
-    expect(screen.getByTestId("scenario-scenario-rail").className).toContain(
-      "bg-transparent",
-    );
     expect(screen.getByTestId("scenario-scenario-header").nextElementSibling?.className).toContain(
       "scenario-glass-scrollbar",
     );

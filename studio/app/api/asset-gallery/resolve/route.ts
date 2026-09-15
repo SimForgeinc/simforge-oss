@@ -4,12 +4,9 @@ import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
 import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {
   readJson,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 export async function POST(request: NextRequest) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
 
   const auth = await requireRouteSession(request);
   if (!auth.ok) return auth.response;

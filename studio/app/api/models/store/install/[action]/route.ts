@@ -8,7 +8,6 @@ import {
 import {
   readJson,
   requireScenarioContext,
-  requireScenarioMutationOrigin,
 } from "@/app/lib/scenario/http";
 
 type Context = { params: Promise<{ action: string }> };
@@ -24,8 +23,6 @@ const ACTIONS = ["pause", "resume", "cancel"] as const;
  * bytes should be an explicit act rather than the default reading of "stop".
  */
 export async function POST(request: Request, context: Context) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   const auth = await requireScenarioContext();
   if (auth.response) return auth.response;
 

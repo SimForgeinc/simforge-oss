@@ -23,30 +23,11 @@ import {
   TooltipTrigger,
 } from "../../components/ui/tooltip";
 import { menu } from "../scenario-controls.stylex";
+import { datasetHue, datasetMonogram } from "../../lib/monogram";
 
 /** Datasets the workspace owns can be edited; shared and system-managed ones are read-only (§6.5). */
 export function isDatasetEditable(dataset: ScenarioDatasetDto): boolean {
   return dataset.visibility === "workspace" && !dataset.isSystemManaged;
-}
-
-/** Two letters that stand in for the name: the initials of its first two words, else its first two characters. */
-export function datasetMonogram(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return `${words[0]![0]}${words[1]![0]}`;
-  return (words[0] ?? "?").slice(0, 2);
-}
-
-/**
- * A hue that is a pure function of the id, so a dataset keeps its colour across renders, reloads and
- * reorderings. FNV-1a over the id; the alpha-free HSL keeps every hue readable under white text.
- */
-export function datasetHue(datasetId: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < datasetId.length; i += 1) {
-    hash ^= datasetId.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0) % 360;
 }
 
 /**

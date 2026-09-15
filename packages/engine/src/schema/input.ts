@@ -134,6 +134,17 @@ export const routeSpecSchema = z.discriminatedUnion('kind', [
     kind: z.literal('polyline'),
     /** A single point is a zero-length route: the actor stays where it is. */
     points: z.array(scenePointSchema).min(1),
+    /**
+     * Station stops the compiler materializes from a world path; the native
+     * engine dwells at each. Kept verbatim so the validated input hashes to
+     * the same identity the engine recorded in the trace header.
+     */
+    stopControls: z.array(z.object({
+      id: z.string().min(1),
+      s: nonNeg,
+      dwellS: nonNeg,
+      coordinationId: z.string().min(1).optional(),
+    })).min(1).optional(),
   }),
   z.object({
     kind: z.literal('timedPolyline'),

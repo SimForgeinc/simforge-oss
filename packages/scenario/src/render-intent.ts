@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { RenderSpecV3Schema } from './render-spec.js';
 import { EntityIdSchema } from './schema/v1.js';
+import { DashCameraSensorSchema, type ActorSensor, type DashCameraSensor } from './schema/v2/sensors.js';
 import { Sha256 } from './sha256.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
@@ -10,6 +11,30 @@ export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
  * measurement rig so a render can ship a drive-along view without restating the rig counts.
  */
 export const PRONTO_CHASE_CAMERA_SENSOR_ID = 'chase-cam-trailing' as const;
+
+/**
+ * The one trailing chase camera every render carries when the host does not
+ * author its own: behind and above the actor, pitched down so the vehicle sits
+ * in the lower third with the road ahead. Both engines keep the host's own
+ * geometry visible in this view (a rigid rig mount hides it), and the intent
+ * store admits a source with this id only when it matches this mount exactly,
+ * so the definition is the lineage.
+ */
+export const PRONTO_CHASE_CAMERA_SENSOR: DashCameraSensor = DashCameraSensorSchema.parse({
+  id: PRONTO_CHASE_CAMERA_SENSOR_ID,
+  type: 'dash_camera',
+  label: 'Trailing chase camera',
+  mount: {
+    position: { x: -7.5, y: 3.2, z: 0 },
+    rotation: { yawRad: 0, pitchRad: -0.24, rollRad: 0 },
+  },
+  camera: { horizontalFovDeg: 70, verticalFovDeg: 42, aspectRatio: 1.777778, nearM: 0.1, farM: 1_000 },
+});
+
+/** Whether an authored sensor list already carries a trailing chase camera. */
+export function hasTrailingChaseCamera(sensors: readonly ActorSensor[]): boolean {
+  return sensors.some((sensor) => sensor.id === PRONTO_CHASE_CAMERA_SENSOR_ID && sensor.enabled);
+}
 
 export const RenderSha256Schema = z.string().regex(
   /^[0-9a-f]{64}$/,

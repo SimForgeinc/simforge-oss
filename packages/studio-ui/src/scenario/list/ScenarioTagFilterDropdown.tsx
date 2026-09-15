@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./ScenarioTagFilterDropdown.stylex";
 import { Filter } from "lucide-react";
 import type { ScenarioTagDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
@@ -50,7 +52,7 @@ export function ScenarioTagFilterDropdown({
           xstyle={[chip.base, hasActiveFilter ? chip.on : chip.off]}
           aria-label="Filter scenarios"
         >
-          <Filter className="size-3.5" aria-hidden="true" />
+          <Filter {...stylex.props(styles.filterFilter)} aria-hidden="true" />
           Filter
         </Button>
       </DropdownMenuTrigger>
@@ -99,8 +101,8 @@ export function ScenarioTagFilterDropdown({
                 )}
                 aria-hidden="true"
               />
-              <span className="min-w-0 flex-1 truncate">{creator.label}</span>
-              <span className="text-micro text-muted-foreground">{creator.count}</span>
+              <span {...stylex.props(styles.spanTruncate)}>{creator.label}</span>
+              <span {...stylex.props(styles.spanMicro)}>{creator.count}</span>
             </DropdownMenuItem>
           ))
         )}
@@ -126,12 +128,12 @@ export function ScenarioTagFilterDropdown({
                 as a class. The border is a token so an unset colour still reads as a swatch.
               */}
               <span
-                className="size-2 border border-border"
+                {...stylex.props(styles.spanIcon)}
                 style={tag.color ? { backgroundColor: tag.color } : undefined}
                 aria-hidden="true"
               />
-              <span className="min-w-0 flex-1 truncate">{tag.label}</span>
-              <span className="text-micro text-muted-foreground">{tag.documentCount}</span>
+              <span {...stylex.props(styles.spanTruncate2)}>{tag.label}</span>
+              <span {...stylex.props(styles.spanMicro2)}>{tag.documentCount}</span>
             </DropdownMenuItem>
           ))
         )}

@@ -63,10 +63,20 @@ import { templateNew, templateValidate } from './commands/template.js';
 import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
+import { scenarioCommand } from './commands/scenario.js';
+import { renderSubmitCommand } from './commands/render-submit.js';
+import { renderJobsCommand, RENDER_JOB_COMMANDS } from './commands/render-jobs.js';
 import { drive } from './commands/drive.js';
 import { corpusBuildCommand, corpusPrewarm } from './commands/corpus.js';
 import { RUNNER_GROUPS, runRunner, type RunnerGroup } from './commands/runner.js';
 import { cloudCommand } from './commands/cloud.js';
+import { daemonCommand } from './commands/daemon.js';
+
+import { workerCommand } from './commands/worker.js';
+import { cloudEvalCommand } from './commands/cloud-eval.js';
+import { hostCommand } from './commands/host.js';
+/** `--pretty` is the only flag every verb shares; `--help` is handled before dispatch. */
+const GLOBAL_BOOLEANS = ['pretty'];
 
 const COMMANDS = [
   { name: 'maps list', summary: 'list immutable maps and versions in the configured registry' },
@@ -93,6 +103,25 @@ const COMMANDS = [
   { name: 'import', summary: 'OpenSCENARIO XML 1.4 → v2 template draft, with a lossy-feature report' },
   { name: 'catalog batch', summary: 'resumable catalog materialization + simulation with an attempt ledger' },
   { name: 'batch', summary: 'sites × draws matrix: instantiate → simulate → evaluate' },
+  { name: 'scenario list', summary: 'list scenario documents on the running local host (all datasets or --dataset <id>)' },
+  { name: 'scenario show', summary: 'print one scenario document with its authored content' },
+  { name: 'scenario freeze', summary: 'freeze the current draft into a revision with an execution package (reuses one when current)' },
+  { name: 'cloud eval capabilities', summary: 'which model families and job kinds the connected SimCloud workspace can run' },
+  { name: 'cloud eval submit', summary: 'evaluate a finished render open-loop in SimCloud' },
+  { name: 'cloud eval list', summary: 'list open-loop evaluation jobs in the workspace' },
+  { name: 'cloud eval status', summary: 'print one evaluation job' },
+  { name: 'cloud eval wait', summary: 'block until an evaluation job finishes; non-zero exit when it fails' },
+  { name: 'cloud eval artifacts', summary: 'list a finished evaluation\'s metrics and artifacts' },
+  { name: 'worker', summary: 'run a remote-capable render/compute worker (--host --token [--id] [--capabilities])' },
+  { name: 'host status', summary: 'report whether the local Studio host is running and what it can execute' },
+  { name: 'host stop', summary: 'ask the running local host to shut down cleanly (start one with `simforge daemon`)' },
+  { name: 'host open', summary: 'open the running local host in the browser with a trusted one-use session (--next <path>)' },
+  { name: 'render list', summary: 'list render jobs on the local host, optionally --scenario <documentId>' },
+  { name: 'render status', summary: 'print one render job' },
+  { name: 'render wait', summary: 'block until a render job finishes; non-zero exit when it fails' },
+  { name: 'render cancel', summary: 'request cancellation of a queued or running render job' },
+  { name: 'render artifacts', summary: 'list a finished render job\'s artifacts, or download them with --out <dir>' },
+  { name: 'render submit', summary: 'freeze a scenario and submit a render job to the local host: --scenario <id> --engine native --seconds 5' },
   { name: 'render run', summary: 'execute one immutable render intent with the browser, CARLA, or native engine' },
   { name: 'render hash', summary: 'compute the canonical SHA-256 identity of a render intent' },
   { name: 'corpus build', summary: 'decode dev-assets GLB tiles into the checksummed sensor corpus (--map, or --maps a,b)' },
@@ -116,7 +145,6 @@ const COMMANDS = [
   { name: 'cloud status|connect|disconnect|workspaces|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
-const GLOBAL_BOOLEANS = ['pretty', 'help'];
 
 function usage(pretty: boolean): number {
   const maps = availableMaps();
@@ -274,25 +302,32 @@ async function dispatch(argv: readonly string[]): Promise<number> {
 
   const sub = argv[1];
 
+  if (head === 'worker' && (sub === 'reconcile' || sub === 'capacity')) {
+    return runnerPassthrough('worker', argv.slice(1));
+  }
+  if (head === 'worker') return workerCommand(argv.slice(1));
+
   if ((RUNNER_GROUPS as readonly string[]).includes(head)) {
     return runnerPassthrough(head as RunnerGroup, argv.slice(1));
   }
 
   switch (head) {
-    case 'cloud': {
-      const args = parseArgs(argv.slice(2), {
-        booleans: [...GLOBAL_BOOLEANS],
-        values: ['data-root', 'origin', 'workspace', 'dataset', 'artifact', 'remote-dataset'],
+    case 'daemon': {
+      const args = parseArgs(argv.slice(1), {
+        booleans: [...GLOBAL_BOOLEANS, 'dev', 'no-worker'],
+        values: ['port', 'data-root', 'cloud-origin'],
       });
-      return cloudCommand(sub, {
-        pretty: boolFlag(args, 'pretty'),
+      return daemonCommand({
+        port: optionalInt(args, 'port'),
         dataRoot: optionalString(args, 'data-root'),
-        origin: optionalString(args, 'origin'),
-        workspaceId: optionalString(args, 'workspace'),
-        datasetId: optionalString(args, 'dataset'),
-        artifactId: optionalString(args, 'artifact'),
-        remoteDatasetId: optionalString(args, 'remote-dataset'),
+        dev: boolFlag(args, 'dev'),
+        noWorker: boolFlag(args, 'no-worker'),
+        cloudOrigin: optionalString(args, 'cloud-origin'),
       });
+    }
+    case 'cloud': {
+      if (sub === 'eval') return cloudEvalCommand(argv.slice(2));
+      return cloudCommand(argv.slice(1));
     }
     case 'maps': {
       if (sub === 'list') {
@@ -795,8 +830,13 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         pretty: boolFlag(args, 'pretty'),
       });
     }
-
+    case 'host':
+      return hostCommand(argv.slice(1));
+    case 'scenario':
+      return scenarioCommand(argv.slice(1));
     case 'render': {
+      if (sub === 'submit') return renderSubmitCommand(argv.slice(2));
+      if ((RENDER_JOB_COMMANDS as readonly string[]).includes(sub ?? '')) return renderJobsCommand(argv.slice(1));
       if (sub === 'hash') {
         const args = parseArgs(argv.slice(2), { booleans: GLOBAL_BOOLEANS });
         return renderHash(positional(args, 0, 'render-intent.json'), boolFlag(args, 'pretty'));
@@ -820,7 +860,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         });
       }
       throw new CliError('unknown_command', `simforge render ${sub ?? ''}`.trim(), {
-        detail: { known: ['run', 'hash'] },
+        detail: { known: ['submit', ...RENDER_JOB_COMMANDS, 'run', 'hash'] },
       });
     }
     case 'drive': {

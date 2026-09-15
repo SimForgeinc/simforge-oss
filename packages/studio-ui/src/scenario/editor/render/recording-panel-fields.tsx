@@ -2,7 +2,7 @@
 
 import { CloudSun } from "lucide-react";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
-import type { AuthoredRenderSensor } from "./render-spec-v3";
+import type { AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./recording-panel-fields.stylex";
 

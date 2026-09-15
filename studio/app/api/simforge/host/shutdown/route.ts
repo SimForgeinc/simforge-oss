@@ -6,7 +6,7 @@ import { shutdownDatabase } from "@/app/lib/db/data-api";
  * Ask the local supervisor to stop the Next server and the interactive
  * workers. Authorized by the per-start control token in `host.json` (the same
  * secret the access gate accepts), so only the desktop shell or
- * `pnpm host:stop` on this machine can call it.
+ * `simforge host stop` on this machine can call it.
  *
  * POSIX: SIGTERM the supervisor, which forwards it to the server and worker
  * so each drains at a safe boundary. Windows has no catchable signals —

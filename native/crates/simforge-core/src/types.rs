@@ -446,7 +446,7 @@ pub struct RouteStationStop {
     pub id: String,
     pub s: f64,
     pub dwell_s: f64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coordination_id: Option<String>,
 }
 
@@ -474,7 +474,10 @@ pub enum RouteSpec {
     #[serde(rename_all = "camelCase")]
     Polyline {
         points: Vec<ScenePoint>,
-        #[serde(default)]
+        /// Absent when empty: the serialized input is the identity that
+        /// `trace.header.inputHash` and the JS validator both hash, so a
+        /// field the authored contract never wrote must not appear.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         stop_controls: Vec<RouteStationStop>,
     },
     /// Exact scene-space position constraints. Time owns the actor through
@@ -4464,6 +4467,26 @@ mod tests {
         let b = parse_scenario_input_value(&v).unwrap().normalized();
         assert_eq!(a.actors[0].id, "alpha");
         assert_eq!(a.content_hash().unwrap(), b.content_hash().unwrap());
+    }
+
+    /// The trace header hashes the serialized input; the JS validator hashes
+    /// the same JSON after its own parse, which drops keys the authored
+    /// contract never defined. A polyline route must therefore serialize with
+    /// no engine-only keys when it has no station stops.
+    #[test]
+    fn polyline_route_identity_survives_json_round_trip() {
+        let mut v = minimal();
+        v["actors"].as_array_mut().unwrap().push(json!({
+            "id": "alpha", "kind": "pedestrian",
+            "initial": { "pose": { "x": 1, "z": 2, "headingRad": 0.5 }, "speedMps": 1.2 },
+            "behavior": { "route": { "kind": "polyline", "points": [{ "x": 1, "z": 2 }, { "x": 4, "z": 2 }] } }
+        }));
+        let input = parse_scenario_input_value(&v).unwrap().normalized();
+        let serialized = serde_json::to_value(&input).unwrap();
+        let route = &serialized["actors"][0]["behavior"]["route"];
+        assert!(route.get("stopControls").is_none(), "empty stopControls leaked into the identity: {route}");
+        let reparsed = parse_scenario_input_value(&serialized).unwrap().normalized();
+        assert_eq!(input.content_hash().unwrap(), reparsed.content_hash().unwrap());
     }
 
     #[test]

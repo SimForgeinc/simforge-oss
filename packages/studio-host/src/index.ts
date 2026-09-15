@@ -18,3 +18,4 @@ export {
   STUDIO_CLOUD_ERROR_MESSAGES,
   type HttpStudioCloudServiceOptions,
 } from "./cloud-client";
+export { ambientProvenanceForRevisionTraffic } from "./revision-evidence";

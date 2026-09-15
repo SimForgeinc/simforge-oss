@@ -130,6 +130,27 @@ function videoKey(video: { actorId: string | null; sensorId: string | null }): s
  * source's quantized frame timestamps — the same derivation the engine ran —
  * and the actor closure the intent pinned as `actors.native-closure`.
  */
+/**
+ * The video every lidar and radar source of a native render is encoded at.
+ * Structured sensors carry no image size of their own; their visualisation
+ * takes the first camera's frame and the union of the camera schedules'
+ * ticks, so the sensor videos are frame-locked to the cameras.
+ */
+export function nativeSensorVideoFormat(intent: RenderIntentV1): { width: number; height: number; framesPerSecond: number; frameCount: number } {
+  const cameras = [...intent.renderSpec.sources]
+    .filter((source) => source.modality === 'rgb')
+    .sort((left, right) => left.outputName.localeCompare(right.outputName));
+  const lead = cameras[0];
+  if (!lead || lead.modality !== 'rgb') throw new Error('native render requires at least one RGB camera');
+  const schedules = createFixedSchedules(intent).filter((schedule) => cameras.some((camera) => camera.outputName === schedule.sourceId));
+  return {
+    width: lead.attributes.width,
+    height: lead.attributes.height,
+    framesPerSecond: Math.max(...schedules.map((schedule) => schedule.framesPerSecond)),
+    frameCount: unionFrameMicros(schedules).length,
+  };
+}
+
 export function nativeRunExpectations(
   intent: RenderIntentV1,
   lease: { readonly intentSha256: string; readonly executionPackageControlSha256: string },
@@ -139,7 +160,14 @@ export function nativeRunExpectations(
   const scheduleBySource = new Map(createFixedSchedules(intent).map((schedule) => [schedule.sourceId, schedule]));
   const schedules: FixedSchedule[] = [];
   const videos = new Map<string, { width: number; height: number; framesPerSecond: number; frameCount: number }>();
+  const sensorVideo = intent.renderSpec.sources.some((source) => source.modality === 'lidar' || source.modality === 'radar')
+    ? nativeSensorVideoFormat(intent)
+    : null;
   for (const source of intent.renderSpec.sources) {
+    if (source.modality === 'lidar' || source.modality === 'radar') {
+      videos.set(videoKey(source), sensorVideo!);
+      continue;
+    }
     if (source.modality !== 'rgb') continue;
     const schedule = scheduleBySource.get(source.outputName);
     if (!schedule) throw new Error(`native render source ${source.outputName} has no fixed schedule`);
@@ -185,7 +213,7 @@ export function nativeEvidenceFailure(
     || roleCount('diagnostics') !== 1
     || roleCount('trace') !== 1
     || videos.length === 0
-    || reservations.some((item) => !['video', 'manifest', 'trace', 'diagnostics'].includes(item.role))
+    || reservations.some((item) => !['video', 'manifest', 'trace', 'diagnostics', 'sensorArchive'].includes(item.role))
     || videos.some((item) => item.mediaType !== 'video/mp4')
   ) {
     return 'native_artifact_evidence_incomplete';

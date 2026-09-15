@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
 import { refreshMapSearchIndex } from "@/app/lib/maps/search-index/refresh-search-index";
-import { requireScenarioMutationOrigin } from "@/app/lib/scenario/http";
 
 type RouteContext = { params: Promise<{ mapAssetId: string }> };
 
@@ -13,8 +12,6 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * the rebuild landed.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const originError = requireScenarioMutationOrigin(request);
-  if (originError) return originError;
   try {
     const { mapAssetId } = await params;
     if (!mapAssetId?.trim()) {

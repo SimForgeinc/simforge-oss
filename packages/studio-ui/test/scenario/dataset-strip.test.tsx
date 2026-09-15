@@ -2,11 +2,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScenarioDatasetDto } from "../../src/lib/scenario/contracts";
-import {
-  DatasetStrip,
-  datasetHue,
-  datasetMonogram,
-} from "../../src/scenario/rail/DatasetStrip";
+import { datasetHue, datasetMonogram } from "../../src/lib/monogram";
+import { DatasetStrip } from "../../src/scenario/rail/DatasetStrip";
 
 /**
  * The dataset strip — the icon column at the far left of the scenario workspace.

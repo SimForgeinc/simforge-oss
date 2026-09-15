@@ -14,8 +14,8 @@ import { STUDIO_ROOT } from "./paths";
 
 /**
  * A Studio host the harness started and owns: the real supervisor
- * (`studio/scripts/boot.ts` or `start.ts`) with this test's isolated data
- * root, so migrations, seed, `host.json` and the access gate all behave
+ * (`simforge daemon`) with this test's isolated data root, so migrations,
+ * seed, `host.json` and the access gate all behave
  * exactly as they do for a developer running `pnpm dev`.
  */
 export type LocalHost = {
@@ -82,8 +82,8 @@ async function waitForHostRecord(context: E2eContext, child: ChildProcess, port:
 export async function startLocalHost(context: E2eContext, options: StartLocalHostOptions = {}): Promise<LocalHost> {
   const hostMode = options.hostMode ?? currentHostMode();
   const port = await reserveLoopbackPort();
-  const script = join(STUDIO_ROOT, "scripts", hostMode === "dev" ? "boot.ts" : "start.ts");
-  const child = spawn(process.execPath, [require.resolve("tsx/cli"), script], {
+  const script = join(STUDIO_ROOT, "..", "packages", "cli", "src", "main.ts");
+  const child = spawn(process.execPath, [require.resolve("tsx/cli"), script, "daemon", ...(hostMode === "dev" ? ["--dev"] : [])], {
     cwd: STUDIO_ROOT,
     stdio: ["ignore", "inherit", "inherit"],
     env: {

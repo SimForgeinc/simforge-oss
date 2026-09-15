@@ -16,7 +16,9 @@
 
 import { delimiter, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { localHostConfig, runLocalHost, type LocalHostPlan } from "../scripts/local-host";
+import { localHostConfig, runLocalHost, type LocalHostPlan } from "@simforge-oss/studio-host/node";
+import { seed } from "../scripts/seed";
+import { shutdownDatabase } from "../app/lib/db/data-api";
 import { assertStagePlatform, readStageManifest } from "./stage-manifest.mjs";
 
 const studioRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -41,6 +43,14 @@ process.env.PATH = [dirname(staged(manifest.tools.ffmpeg)), process.env.PATH ?? 
 
 const config = localHostConfig();
 const plan: LocalHostPlan = {
+  bootstrap: async () => {
+    try {
+      await seed();
+    } finally {
+      // Only the server may own the persistent database after bootstrap.
+      await shutdownDatabase();
+    }
+  },
   server: { command: process.execPath, args: [staged(manifest.server)], cwd: studioRoot },
   worker: { command: process.execPath, args: [staged(manifest.workerEntry)], cwd: studioRoot },
 };

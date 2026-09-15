@@ -8,11 +8,13 @@ import {
   type RenderWorkerCapability,
   type ScenarioRendererEngine,
   type StudioHostCapabilities,
+  type StudioWorkerNode,
 } from "@simforge-oss/studio-host";
 import { probeNativeRuntime } from "@simforge-oss/studio-host/node";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { LOCAL_CLOUD_ROOT } from "@/app/lib/db/config";
 import { queryRows } from "@/app/lib/db/data-api";
+import { liveLocalWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
 import { localRenderCapability, localRenderWorkers } from "./local-render";
 
 const HEARTBEAT_WINDOW = "90 seconds";
@@ -63,12 +65,47 @@ async function registeredRenderWorkerCapabilities(): Promise<Partial<Record<Scen
   }
   return result;
 }
+async function registeredWorkerNodes(): Promise<StudioWorkerNode[]> {
+  const environment = process.env.SIMFORGE_ENV?.trim() ?? "dev";
+  const rows = await queryRows<{
+    id: string;
+    renderer_engine: string | null;
+    capabilities: string | Record<string, unknown> | null;
+    last_heartbeat_at: string | null;
+  }>(
+    `SELECT id, renderer_engine, capabilities::text AS capabilities, last_heartbeat_at::text AS last_heartbeat_at
+       FROM simforge.worker_nodes
+      WHERE environment = :environment
+      ORDER BY id`,
+    { environment },
+  );
+  const nodes = rows.map((row) => ({
+    id: row.id,
+    engines: row.renderer_engine ? [row.renderer_engine] : [],
+    capabilities: typeof row.capabilities === "string"
+      ? JSON.parse(row.capabilities)
+      : row.capabilities ?? {},
+    lastHeartbeatAt: row.last_heartbeat_at,
+  }));
+  const known = new Set(nodes.map((node) => node.id));
+  for (const worker of liveLocalWorkers()) {
+    if (known.has(worker.workerId)) continue;
+    nodes.push({
+      id: worker.workerId,
+      engines: [...worker.engines],
+      capabilities: [...worker.engines],
+      lastHeartbeatAt: worker.lastSeenAt,
+    });
+  }
+  return nodes;
+}
 
 export async function getLocalHostCapabilities(context: AppContext): Promise<StudioHostCapabilities> {
-  const [version, fleetWorkers, nativeRuntime] = await Promise.all([
+  const [version, fleetWorkers, nativeRuntime, workerNodes] = await Promise.all([
     localStudioVersion(),
     registeredRenderWorkerCapabilities(),
     probeNativeRuntime(),
+    registeredWorkerNodes(),
   ]);
   const localRender = localRenderCapability();
   return {
@@ -86,6 +123,7 @@ export async function getLocalHostCapabilities(context: AppContext): Promise<Stu
       browserSimulation: true,
       // Registered fleet nodes (if any were approved against this host) first, then this
       // machine's own lanes, which are the truth for a local install.
+      workerNodes,
       renderWorkers: { ...fleetWorkers, ...localRenderWorkers(localRender) },
       nativeRuntime,
       localRender,

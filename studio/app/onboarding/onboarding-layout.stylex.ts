@@ -1,16 +1,29 @@
 import * as stylex from "@stylexjs/stylex";
+import { space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
- * The onboarding route shell. `#050607` is the onboarding canvas — the screens
- * in `@simforge-oss/studio-ui/onboarding` paint the same colour, and this layer
- * exists so the area outside a short screen matches rather than falling back to
- * the dashboard background.
+ * The onboarding route shell: one full-height canvas with the hero behind it
+ * and one centred column the steps render into. `#050607` is the onboarding
+ * canvas the hero gradient fades to, so the area outside a short step matches
+ * rather than falling back to the dashboard background.
  */
 export const layout = stylex.create({
   shell: {
+    position: "relative",
+    display: "grid",
+    placeItems: "center",
     minHeight: "100svh",
+    overflow: "hidden",
     backgroundColor: "#050607",
+    paddingInline: space.xxl,
+    paddingBlock: "3rem",
     color: "#ffffff",
+  },
+  column: {
+    position: "relative",
+    zIndex: 10,
+    width: "100%",
+    maxWidth: "42rem",
   },
   /**
    * Onboarding has no top bar, so in the desktop shell nothing would drag the

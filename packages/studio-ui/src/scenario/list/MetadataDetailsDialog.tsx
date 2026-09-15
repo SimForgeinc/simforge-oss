@@ -1,5 +1,7 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
+import { styles } from "./MetadataDetailsDialog.stylex";
 import { useId } from "react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
 import { Button } from "../../components/ui/button";
@@ -58,28 +60,28 @@ export function MetadataDetailsDialog({
   const canSubmit = Boolean(name.trim()) && !busy;
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div {...stylex.props(styles.divFixedFlex)}>
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        {...stylex.props(styles.closeButton)}
         aria-label={`Close ${title}`}
         onClick={() => {
           if (!busy) onClose();
         }}
       />
       <div
-        className="relative z-10 w-full max-w-lg border border-border bg-background p-5 shadow-2xl"
+        {...stylex.props(styles.dialog)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <h2 id={titleId} className="text-base font-semibold text-foreground">
+        <h2 id={titleId} {...stylex.props(styles.h2BaseSemibold)}>
           {title}
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">{intro}</p>
+        <p {...stylex.props(styles.pXs)}>{intro}</p>
         <label
           htmlFor={nameId}
-          className="mt-4 block font-meta text-micro uppercase tracking-meta-wide text-muted-foreground"
+          {...stylex.props(styles.labelMetaMicroUppercase)}
         >
           {nameLabel}
         </label>
@@ -104,7 +106,7 @@ export function MetadataDetailsDialog({
         />
         <label
           htmlFor={descriptionId}
-          className="mt-4 block font-meta text-micro uppercase tracking-meta-wide text-muted-foreground"
+          {...stylex.props(styles.labelMetaMicroUppercase2)}
         >
           {descriptionLabel}
         </label>
@@ -119,11 +121,11 @@ export function MetadataDetailsDialog({
             }
           }}
           placeholder={descriptionPlaceholder}
-          className="mt-1.5 min-h-28 w-full resize-y border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          {...stylex.props(styles.textareaSm)}
           disabled={busy}
         />
-        {error ? <CopyableErrorMessage message={error} className="mt-3 text-xs" /> : null}
-        <div className="mt-5 flex justify-end gap-2">
+        {error ? <CopyableErrorMessage message={error} {...stylex.props(styles.copyableerrormessageXs)} /> : null}
+        <div {...stylex.props(styles.divFlex)}>
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onClose}>
             Cancel
           </Button>

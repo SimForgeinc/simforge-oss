@@ -7,19 +7,20 @@
 // product uses everywhere else, but a page loaded from app.asar with
 // `loadFile` has no bundler, no React and no StyleX at runtime.
 //
-// So they are pre-rendered here: `CloudLoadingSurface` is compiled with the
-// same StyleX Babel options the app compiles with (studio/stylex.config.mjs),
-// server-rendered to static markup, and its atomic CSS written beside it.
-// The pages are literally the component's output — not a second design
-// tracking it by hand — and they ship as three plain files with relative
-// hrefs, which is all `loadFile` can serve.
+// So they are built here, twice from one source: `CloudLoadingSurface` is
+// compiled with the same StyleX Babel options the app compiles with
+// (studio/stylex.config.mjs), server-rendered to static markup for the first
+// paint, and bundled for the browser so the page hydrates into the live
+// component - the WebGL sky and all - the moment the script runs. The pages
+// are literally the component's output, not a second design tracking it by
+// hand, and they ship as plain files with relative hrefs, which is all
+// `loadFile` can serve. Barlow, the product's body face, ships beside them
+// because next/font is not here to load it.
 //
 // The output is committed, like desktop/build/icon.*: main.mjs loads these
 // pages straight from this directory when Studio runs unpackaged, and staging
-// must stay a copy step with no toolchain of its own. Re-run this after
-// changing `CloudLoadingSurface`, `SkyCloudBackdrop` or the tokens they read;
-// `--check` fails if the committed files are stale, which is what CI wants.
-
+// must stay a copy step with no toolchain of its own. Re-run after touching
+// the surface or its styles; `--check` fails when the committed files differ.
 import { build } from "esbuild";
 import babel from "@babel/core";
 import stylexPlugin from "@stylexjs/babel-plugin";
@@ -38,14 +39,25 @@ const studioUiSrc = join(
   "src",
 );
 
-/** The generated files, in the order they are written. */
-export const GENERATED_PAGES = ["cloud-loading.css", "starting.html", "host-exited.html"];
+/** The Barlow weights the surface renders: detail 400, meta 500, title 600. */
+const BARLOW = [
+  [400, "barlow-400.woff2"],
+  [500, "barlow-500.woff2"],
+  [600, "barlow-600.woff2"],
+];
+
+/** The committed, generated files, in the order they are written. */
+export const GENERATED_PAGES = [
+  "cloud-loading.css",
+  "cloud-loading.js",
+  ...BARLOW.map(([, file]) => file),
+  "starting.html",
+  "host-exited.html",
+];
 
 /**
- * The two pages, as `CloudLoadingSurface` props.
- *
- * `backdropAnimated: false` selects the painted cloud plate over the WebGL
- * sky: there is no renderer here, and a static page cannot run one.
+ * The two pages, as `CloudLoadingSurface` props. Shared by the server render
+ * and the browser bundle, which renders the same element tree over it.
  */
 const PAGE_CONTENT = {
   "starting.html": {
@@ -57,7 +69,6 @@ const PAGE_CONTENT = {
       progressLabel: "Local host",
       progressValueLabel: "Starting",
     },
-    body: "",
   },
   "host-exited.html": {
     surface: {
@@ -67,18 +78,66 @@ const PAGE_CONTENT = {
       role: "alert",
     },
     // The shell passes the exit status as `?code=`; `loadFile` has no other
-    // way to parameterise a static page.
+    // way to parameterise a static page. The browser render fills it in.
     exitCode: true,
     // The stopped page is not working on anything: the spinner would lie.
     alertIcon: true,
-    body: `
-    <script>
-      document.getElementById("code").textContent = new URLSearchParams(location.search).get("code") ?? "unknown";
-    </script>`,
   },
 };
 
-/** `three` is only reachable through the animated backdrop, which is off here. */
+/**
+ * The element tree of one page. Runs in Node for the static markup and in the
+ * browser for hydration, so it is source text shared by both bundles.
+ *
+ * The exit status is the one thing the static page cannot know: the shell
+ * passes it as `?code=`, and `ExitCode` reads it after mount, so the server
+ * markup and the first client render agree on the placeholder.
+ */
+const PAGE_ELEMENT = `
+  function ExitCode() {
+    const [code, setCode] = useState("unknown");
+    useEffect(() => {
+      setCode(new URLSearchParams(location.search).get("code") ?? "unknown");
+    }, []);
+    return createElement(
+      "p",
+      {
+        style: {
+          marginTop: "1.5rem",
+          fontFamily: "var(--font-mono)",
+          fontSize: "11px",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "rgb(255 255 255 / 35%)",
+        },
+      },
+      "Exit code ",
+      createElement("code", null, code),
+    );
+  }
+
+  export function pageElement(name) {
+    const page = PAGES[name];
+    return createElement(
+      CloudLoadingSurface,
+      {
+        scope: "screen",
+        eyebrow: "SimForge",
+        ...page.surface,
+        icon: page.alertIcon
+          ? createElement(CircleAlert, { "aria-hidden": "true", style: { width: "1.25rem", height: "1.25rem" } })
+          : undefined,
+      },
+      page.exitCode ? createElement(ExitCode) : null,
+    );
+  }
+`;
+
+/**
+ * `three` is only reachable through the animated backdrop, and the server
+ * render never runs its effect: the canvas is SSR'd empty and the browser
+ * bundle, which does include `three`, drives it.
+ */
 const THREE_STUB = {
   name: "three-stub",
   setup(esbuild) {
@@ -117,18 +176,23 @@ const stylexLoader = (sink) => ({
   },
 });
 
-/** Server-render both pages and collect the CSS their styles compiled to. */
+/** Server-render both pages, collect the CSS their styles compiled to, and bundle the hydrating script. */
 export async function renderShellPages() {
   const rules = [];
   const outDir = await mkdtemp(join(tmpdir(), "simforge-shell-pages-"));
   try {
+    const shared = `
+      import { createElement, useEffect, useState } from "react";
+      import { CircleAlert } from "lucide-react";
+      import { CloudLoadingSurface } from ${JSON.stringify(join(studioUiSrc, "components/CloudLoadingSurface"))};
+      const PAGES = ${JSON.stringify(PAGE_CONTENT)};
+      ${PAGE_ELEMENT}
+    `;
     await build({
       stdin: {
         contents: `
-          export { createElement } from "react";
-          export { CircleAlert } from "lucide-react";
+          ${shared}
           export { renderToStaticMarkup } from "react-dom/server";
-          export { CloudLoadingSurface } from ${JSON.stringify(join(studioUiSrc, "components/CloudLoadingSurface"))};
         `,
         resolveDir: desktopDir,
         loader: "ts",
@@ -143,32 +207,46 @@ export async function renderShellPages() {
       banner: { js: "import { createRequire as __req } from 'node:module';\nconst require = __req(import.meta.url);" },
       conditions: ["development"],
       // Errors only: stubbing `three` makes esbuild warn about every symbol
-      // the unused animated backdrop imports from it.
+      // the animated backdrop imports from it.
       logLevel: "error",
       plugins: [THREE_STUB, stylexLoader(rules)],
     });
-    const { CircleAlert, CloudLoadingSurface, createElement, renderToStaticMarkup } = await import(
-      pathToFileURL(join(outDir, "surface.mjs")).href
-    );
+    const { pageElement, renderToStaticMarkup } = await import(pathToFileURL(join(outDir, "surface.mjs")).href);
+    // The browser bundle: the same tree, hydrated over the static markup. The
+    // StyleX rules it compiles are the same set; the sink is not read twice.
+    await build({
+      stdin: {
+        contents: `
+          ${shared}
+          import { hydrateRoot } from "react-dom/client";
+          hydrateRoot(document.getElementById("surface"), pageElement(document.documentElement.dataset.page));
+        `,
+        resolveDir: desktopDir,
+        loader: "ts",
+      },
+      outfile: join(outDir, "cloud-loading.js"),
+      bundle: true,
+      platform: "browser",
+      format: "iife",
+      target: "chrome140",
+      jsx: "automatic",
+      minify: true,
+      legalComments: "none",
+      define: { "process.env.NODE_ENV": '"production"' },
+      logLevel: "error",
+      plugins: [stylexLoader([])],
+    });
     const css = processStylexRules(rules.flat(), true);
-    const pages = { "cloud-loading.css": `${await themeVariables()}\n${css.trim()}\n` };
-    for (const [name, page] of Object.entries(PAGE_CONTENT)) {
-      const markup = renderToStaticMarkup(
-        createElement(
-          CloudLoadingSurface,
-          {
-            scope: "screen",
-            backdropAnimated: false,
-            eyebrow: "SimForge",
-            ...page.surface,
-            icon: page.alertIcon
-              ? createElement(CircleAlert, { "aria-hidden": "true", style: { width: "1.25rem", height: "1.25rem" } })
-              : undefined,
-          },
-          page.exitCode ? exitCodeLine(createElement) : null,
-        ),
-      );
-      pages[name] = htmlPage(name, markup, page.body);
+    const pages = {
+      "cloud-loading.css": `${await themeVariables()}\n${css.trim()}\n`,
+      "cloud-loading.js": await readFile(join(outDir, "cloud-loading.js")),
+    };
+    const barlowDir = join(dirname(require.resolve("@fontsource/barlow/package.json")), "files");
+    for (const [weight, file] of BARLOW) {
+      pages[file] = await readFile(join(barlowDir, `barlow-latin-${weight}-normal.woff2`));
+    }
+    for (const name of Object.keys(PAGE_CONTENT)) {
+      pages[name] = htmlPage(name, renderToStaticMarkup(pageElement(name)));
     }
     return pages;
   } finally {
@@ -193,37 +271,13 @@ async function themeVariables() {
 }
 
 /**
- * The exit status, as a child of the surface. The shell has no other way to
- * parameterise a static page, so the value is filled in from `?code=`.
- * @param {(type: string, props: object, ...children: unknown[]) => unknown} h
- */
-function exitCodeLine(h) {
-  return h(
-    "p",
-    {
-      style: {
-        marginTop: "1.5rem",
-        fontFamily: "var(--font-mono)",
-        fontSize: "11px",
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        color: "rgb(255 255 255 / 35%)",
-      },
-    },
-    "Exit code ",
-    h("code", { id: "code" }, "unknown"),
-  );
-}
-
-/**
  * @param {string} name
  * @param {string} markup
- * @param {string} body
  */
-function htmlPage(name, markup, body) {
+function htmlPage(name, markup) {
   return `<!doctype html>
 <!-- Generated by desktop/build-shell-pages.mjs from CloudLoadingSurface. Do not edit; run \`pnpm -F @simforge-oss/studio desktop:pages\`. -->
-<html lang="en">
+<html lang="en" data-page="${name}">
   <head>
     <meta charset="utf-8" />
     <title>SimForge Studio</title>
@@ -232,7 +286,8 @@ function htmlPage(name, markup, body) {
   </head>
   <body>
     <div class="drag"></div>
-    ${markup}${body}
+    <div id="surface">${markup}</div>
+    <script src="cloud-loading.js"></script>
   </body>
 </html>
 `;
@@ -245,14 +300,14 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import
   for (const [name, contents] of Object.entries(pages)) {
     const path = join(desktopDir, name);
     if (check) {
-      const current = await readFile(path, "utf8").catch(() => null);
-      if (current !== contents) stale.push(name);
+      const current = await readFile(path).catch(() => null);
+      if (!current || !current.equals(Buffer.from(contents))) stale.push(name);
       continue;
     }
     await writeFile(path, contents);
   }
   if (stale.length > 0) {
-    process.stderr.write(`stale shell pages: ${stale.join(", ")} — run desktop:pages\n`);
+    process.stderr.write(`stale shell pages: ${stale.join(", ")} - run desktop:pages\n`);
     process.exit(1);
   }
   process.stdout.write(`${JSON.stringify({

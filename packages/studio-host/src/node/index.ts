@@ -19,6 +19,13 @@ export {
   type LocalHostState,
 } from "./local-host-state";
 export {
+  localHostConfig,
+  runLocalHost,
+  type HostCommand,
+  type LocalHostConfig,
+  type LocalHostPlan,
+} from "./local-host-supervisor";
+export {
   COLLISION_DRAFT_INTENTION_EXTENSION,
   COLLISION_DRAFT_ROLE_EXTENSION,
   CollisionDraftCandidateError,

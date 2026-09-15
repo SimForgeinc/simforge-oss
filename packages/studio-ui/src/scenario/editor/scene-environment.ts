@@ -3,10 +3,11 @@ import type {
   CityWeatherAppearance,
   WeatherParticleBudget,
 } from "@simforge-oss/viewer";
-import type {
-  Environment,
-  TimeOfDay,
-  Weather,
+import {
+  DEFAULT_ENVIRONMENT,
+  type Environment,
+  type TimeOfDay,
+  type Weather,
 } from "@simforge-oss/scenario";
 import { resolveEditorLightingRenderScales } from "@simforge-oss/scenario/contracts";
 import type { DirectionalLight } from "three";
@@ -443,6 +444,19 @@ export function applyEditorSceneEnvironment(
     restoreSun();
     viewer.setWeatherAppearance(null);
   };
+}
+
+/**
+ * The sky for a viewer with no scenario document: the schema's default
+ * environment, so browsing a map looks exactly like opening a fresh scenario on it.
+ */
+export function applyDefaultSceneEnvironment(
+  viewer: CityViewer,
+  quality: ScenarioAuthoringQuality,
+): () => void {
+  const reducedMotion = typeof window !== "undefined"
+    && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  return applyEditorSceneEnvironment(viewer, DEFAULT_ENVIRONMENT, { quality, reducedMotion });
 }
 
 /** Pin renderer-owned weather animation to fixed scenario time during capture. */

@@ -20,7 +20,7 @@ export const SCENARIO_AUTHORING_QUALITY_IDS = [
   "high",
 ] as const;
 export type ScenarioAuthoringQuality = (typeof SCENARIO_AUTHORING_QUALITY_IDS)[number];
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "minimal" satisfies ScenarioAuthoringQuality;
+export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "high" satisfies ScenarioAuthoringQuality;
 
 export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export type ScenarioDatasetVisibility = (typeof SCENARIO_DATASET_VISIBILITIES)[number];
