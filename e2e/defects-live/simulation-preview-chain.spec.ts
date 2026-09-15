@@ -25,6 +25,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { createE2eContext, type E2eContext } from "../support/context";
+import { E2E_ENV } from "../support/env";
 import { startLocalHost, type LocalHost } from "../support/host";
 import { expect, test } from "../support/fixtures";
 
@@ -53,9 +54,45 @@ async function call<T>(host: LocalHost, path: string, init: RequestInit = {}): P
   return { status: response.status, body: body as T, text };
 }
 
+/**
+ * The map version these tests author against, or a refusal that says what is
+ * missing and how to supply it.
+ *
+ * Worth its own failure rather than an `expect(mapVersionId).toBeTruthy()`
+ * two lines into the first test, because the cause is never in this file.
+ * A host ignores an installed map *in full* when either profile is absent —
+ * it does not degrade to a browser-only map, it drops out of
+ * `/api/simforge/maps` entirely and logs `ignored incomplete installed map
+ * <name>: semantic profile is not installed`. So the observable is an empty
+ * list, and the actual problem is a half-installed corpus somewhere else on
+ * the machine. Asserting emptiness here reads as "the product lost its
+ * maps"; naming the prerequisite reads as what it is.
+ */
+async function requireAuthorableMap(host: LocalHost): Promise<string> {
+  const maps = await call<MapsBody>(host, "/api/simforge/maps");
+  if (maps.status !== 200) {
+    throw new Error(`GET /api/simforge/maps answered HTTP ${maps.status}: ${maps.text.slice(0, 300)}`);
+  }
+  const mapVersionId = maps.body.maps?.[0]?.mapVersionId;
+  if (mapVersionId === undefined) {
+    const catalog = await call<MapsBody>(host, "/api/simforge/maps/catalog");
+    const entitled = catalog.body.maps?.length ?? 0;
+    throw new Error(
+      "No installed map to author against, so this project cannot run.\n"
+      + `The catalog lists ${entitled} entitled map(s), but none is installed with BOTH the browser and `
+      + "semantic profiles, and a map missing either profile is ignored in full rather than partially.\n"
+      + `Point ${E2E_ENV.seedDataRoot} at a data root whose maps are completely installed, or install one with `
+      + "`simforge maps install <mapVersionId>` against that root first.\n"
+      + "Check the host log for `ignored incomplete installed map` to see which profile is missing.",
+    );
+  }
+  return mapVersionId;
+}
+
 test.describe("the simulation-preview reserve → complete → read chain", () => {
   let host: LocalHost;
   let context: E2eContext;
+  let authorableMapVersionId: string;
 
   /*
    * The context is created here rather than taken from the `e2e` fixture.
@@ -79,6 +116,7 @@ test.describe("the simulation-preview reserve → complete → read chain", () =
     // database fact, so the context clones a seeded data root rather than
     // symlinking a corpus — see `SIMFORGE_E2E_SEED_DATA_ROOT`.
     host = await startLocalHost(e2e);
+    authorableMapVersionId = await requireAuthorableMap(host);
   });
 
   test.afterAll(async () => {
@@ -168,8 +206,7 @@ test.describe("the simulation-preview reserve → complete → read chain", () =
   });
 
   test("a reservation against a stale draft version is refused", async () => {
-    const maps = await call<MapsBody>(host, "/api/simforge/maps");
-    const mapVersionId = maps.body.maps?.[0]?.mapVersionId;
+    const mapVersionId = authorableMapVersionId;
     const created = await call<DocumentBody>(host, `/api/simforge/maps/${mapVersionId}/documents/default`, { method: "POST" });
     const documentId = created.body.document?.id;
     const draftVersion = created.body.document?.draftVersion ?? 1;
