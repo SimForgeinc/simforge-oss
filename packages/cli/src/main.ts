@@ -142,7 +142,8 @@ const COMMANDS = [
   { name: 'models cache', summary: 'report (or with --reclaim, free) unreferenced shared model-cache entries' },
   { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
-  { name: 'cloud status|connect|disconnect|workspaces|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
+  { name: 'cloud sign-in|sign-up|verify-email|resend-code|forgot-password|reset-password|sign-out', summary: 'headless SimCloud account flows: --email (plus --name for sign-up, --code for verify/reset); the password comes from SIMFORGE_CLOUD_PASSWORD, --password-stdin or a no-echo prompt, never from argv' },
+  { name: 'cloud status|connect|workspaces|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
 

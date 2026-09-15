@@ -514,7 +514,12 @@ simforge render submit --scenario <documentId> --engine native|browser|carla --s
 simforge render list [--scenario <documentId>] | status <jobId> | wait <jobId> [--timeout 3600] \
   | cancel <jobId> | artifacts <jobId> [--out <dir>]
 
-simforge cloud status | connect --provider google|github [--cloud-origin <url>] | disconnect | workspaces
+simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | workspaces
+simforge cloud sign-in --email <address> [--password-stdin]
+simforge cloud sign-up --email <address> --name <full name> [--password-stdin]
+simforge cloud verify-email --code <6 digits> | resend-code
+simforge cloud forgot-password --email <address>
+simforge cloud reset-password --email <address> --code <6 digits> [--password-stdin]
 simforge cloud datasets|artifacts --workspace <id>
 simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --workspace <id> --dataset|--artifact <id>
 simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
@@ -542,6 +547,55 @@ Alpamayo slot and runs an exploratory, unscored open-loop prediction.
 render missing a required slot is refused (`rig_incompatible`) rather than
 scored partially. The workspace comes from the session's active organisation;
 `--workspace <id>` overrides it.
+
+### Signing in to SimCloud without a browser
+
+The account verbs are the whole email+password surface, so a headless machine
+never needs the desktop app or `connect --provider` (which does open a system
+browser). They post to the running host, which is the only credential owner:
+the session is stored in the OS vault by the host, and the CLI neither reads,
+writes nor prints it. Each verb prints the resulting connection status -
+`{"state":"connected"|"disconnected"|"expired"|...}` - so a script can assert
+on `state`.
+
+**A password is never an argv flag** (argv is readable by every process on the
+machine and lands in shell history). `--password <value>` is refused. The three
+accepted sources, in the order they are tried:
+
+1. `SIMFORGE_CLOUD_PASSWORD` in the environment.
+2. `--password-stdin`, which reads exactly one line from stdin.
+3. an interactive prompt with echo disabled, when stdin is a TTY.
+
+With none of the three available the command exits non-zero with
+`password_required` rather than waiting on a line that will never arrive.
+
+```bash
+# Sign in on a headless box, password piped in.
+printf '%s\n' "$PASSWORD" | simforge cloud sign-in --email me@example.com --password-stdin
+simforge cloud status --pretty            # state: connected
+
+# Or from the environment (CI):
+SIMFORGE_CLOUD_PASSWORD=... simforge cloud sign-in --email me@example.com
+
+# New account: sign-up signs this computer in immediately and emails a code;
+# the account stays email-unverified until the code is presented.
+simforge cloud sign-up --email me@example.com --name 'Ada Lovelace' --password-stdin < pw.txt
+simforge cloud resend-code                # if the first email did not arrive
+simforge cloud verify-email --code 123456
+
+# Forgotten password: request the code, then reset with the new password.
+# reset-password revokes every session of the account, this one included.
+simforge cloud forgot-password --email me@example.com
+simforge cloud reset-password --email me@example.com --code 123456 --password-stdin < newpw.txt
+
+simforge cloud sign-out                   # revokes upstream, clears the local vault entry
+```
+
+Errors are the Cloud's own: `invalid_credentials`, `email_unverified`,
+`invalid_code`, `code_expired`, `weak_password`, `throttled`, `email_taken`,
+each as a structured error on stderr with exit code 1. `forgot-password`
+always answers `{"ok":true}` - the Cloud does not reveal whether an address has
+an account.
 
 ## Current execution boundaries
 

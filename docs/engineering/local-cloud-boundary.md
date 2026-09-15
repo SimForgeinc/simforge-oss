@@ -155,10 +155,15 @@ commands default to the scenario's home:
 
 ```text
 simforge cloud connect [--origin URL]
+simforge cloud sign-in --email ADDRESS [--password-stdin]
+simforge cloud sign-up --email ADDRESS --name NAME [--password-stdin]
+simforge cloud verify-email --code CODE | resend-code
+simforge cloud forgot-password --email ADDRESS
+simforge cloud reset-password --email ADDRESS --code CODE [--password-stdin]
 simforge cloud status
 simforge cloud orgs
 simforge cloud use-org ORG_ID
-simforge cloud disconnect
+simforge cloud sign-out
 
 simforge scenario list [--home local|cloud] [--org ORG_ID]
 simforge scenario get SCENARIO_ID [--home ...]
@@ -170,6 +175,12 @@ simforge render submit SCENARIO_ID [--home ...]
 simforge render list|watch|cancel JOB_ID [--home ...]
 simforge worker --host HOST --token TOKEN [--capabilities ...]
 ```
+
+The account verbs make the email+password flow fully headless: `connect` is
+the only one that needs a browser (the social hop). A password never reaches
+argv - it comes from `SIMFORGE_CLOUD_PASSWORD`, `--password-stdin`, or a
+no-echo TTY prompt - and the host remains the sole credential owner, so the
+CLI never sees a token. `sign-out` is the single disconnect verb.
 
 `--home` is an origin/profile selection, not a payload tenant field. `--org` is
 required for a cloud destination when the session has no unique active
