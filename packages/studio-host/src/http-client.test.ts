@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
+import type { ScenarioDatasetDto, ScenarioDocumentDto, ScenarioRevisionDto } from "./contracts";
 import { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError } from "./errors";
 import { createHttpStudioHost } from "./http-client";
+import { ProtocolDecodeError } from "./protocol";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -10,18 +12,24 @@ function jsonResponse(body: unknown, status = 200): Response {
   } as unknown as Response;
 }
 
-const document = {
-  id: "doc-1",
-  title: "Merge",
-  draftVersion: 8,
-  authoringQualityId: "minimal" as const,
+const dataset: ScenarioDatasetDto = {
+  id: "usds_1", workspaceId: "workspace-1", name: "Field", description: null, visibility: "workspace",
+  isSystemManaged: false, systemSlug: null, isDefault: true, itemCount: 0, documentCount: 3,
+  renderSubmittedCount: 0, renderCompletedCount: 0, exportCompletedCount: 0,
+  createdByUserName: null, updatedByUserName: null, createdAt: "now", updatedAt: "now",
 };
 
-const revision = {
+const document: ScenarioDocumentDto = {
+  id: "doc-1", workspaceId: "workspace-1", title: "Merge", draftVersion: 8, schemaVersion: "2",
+  contentSha256: "a".repeat(64), content: {} as ScenarioDocumentDto["content"], mapVersionId: "map-v1",
+  datasetId: "usds_1", authoringQualityId: "minimal", createdAt: "now", updatedAt: "now", latestRevisionId: null,
+};
+
+const revision: ScenarioRevisionDto = {
   id: "revision-4", workspaceId: "workspace-1", documentId: "doc-1", revisionNumber: 4,
   sourceDraftVersion: 3, schemaVersion: "2", contentSha256: "a".repeat(64), mapVersionId: "map-v1",
-  openScenarioProfile: "ASAM OpenSCENARIO XML 1.4" as const,
-  export: { id: "export-4", format: "openscenario_xml_1_4" as const, status: "queued" as const, artifactId: null },
+  openScenarioProfile: "ASAM OpenSCENARIO XML 1.4",
+  export: { id: "export-4", format: "openscenario_xml_1_4", status: "queued", artifactId: null },
   createdAt: "now",
 };
 
@@ -38,7 +46,7 @@ const evidence = {
   },
 };
 
-function host(fetchMock: ReturnType<typeof vi.fn>) {
+function host(fetchMock: Mock) {
   return createHttpStudioHost({ fetch: fetchMock as unknown as typeof fetch });
 }
 
@@ -49,27 +57,26 @@ describe("shared catalog reads", () => {
     const fetchMock = vi.fn().mockReturnValue(promise);
     const studio = host(fetchMock);
     const controller = new AbortController();
-
     const canceled = studio.projects.listDatasets(controller.signal);
     const active = studio.projects.listDatasets();
     controller.abort();
-    resolve(jsonResponse({ datasets: [{ id: "usds_1" }] }));
-
+    resolve(jsonResponse({ datasets: [dataset] }));
     await expect(canceled).rejects.toMatchObject({ name: "AbortError" });
-    await expect(active).resolves.toEqual([{ id: "usds_1" }]);
+    await expect(active).resolves.toEqual([dataset]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("signal");
   });
 
   it("shares the map catalog and invalidates dataset reads after a mutation", async () => {
+    const created = { ...dataset, id: "usds_2", name: "New" };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ datasets: [] }))
-      .mockResolvedValueOnce(jsonResponse({ id: "usds_2", name: "New" }))
-      .mockResolvedValueOnce(jsonResponse({ datasets: [{ id: "usds_2" }] }));
+      .mockResolvedValueOnce(jsonResponse(created))
+      .mockResolvedValueOnce(jsonResponse({ datasets: [created] }));
     const studio = host(fetchMock);
     await studio.projects.listDatasets();
     await studio.projects.createDataset({ name: "New" });
-    await expect(studio.projects.listDatasets()).resolves.toEqual([{ id: "usds_2" }]);
+    await expect(studio.projects.listDatasets()).resolves.toEqual([created]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
@@ -83,7 +90,7 @@ describe("request shape", () => {
     expect(url.pathname).toBe("/api/simforge/documents/summaries");
     expect(url.searchParams.get("limit")).toBe("50");
     expect(url.searchParams.has("cursor")).toBe(false);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: "no-store" });
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: "no-store", method: "GET" });
 
     await studio.projects.listDocumentSummaries({ datasetId: "usds_1", limit: 25, cursor: "MjAyNi0wOC0wMnxh" });
     url = new URL(String(fetchMock.mock.calls[1]?.[0]), "http://localhost");
@@ -91,9 +98,20 @@ describe("request shape", () => {
     expect(url.searchParams.get("limit")).toBe("25");
   });
 
+  it("omits unset gallery filters instead of sending them as the string 'null'", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], hiddenCount: 0 }));
+    await host(fetchMock).jobs.listGallery({ documentId: "doc-1", revisionId: null, limit: 12 });
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]), "http://localhost");
+    expect([...url.searchParams.keys()].sort()).toEqual(["documentId", "limit"]);
+  });
+
   it("defaults a rating write to the browser review path", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ aggregate: null }));
-    await host(fetchMock).projects.setDocumentRating("uscn_1", { score: 4, revisionId: "usrv_1" });
+    const rating = {
+      documentId: "uscn_1", revisionId: "usrv_1", renderJobId: null, raterUserId: "u", score: 4, comment: null,
+      reviewedVia: "browser", createdAt: "now", updatedAt: "now",
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ rating, aggregate: null }));
+    await expect(host(fetchMock).projects.setDocumentRating("uscn_1", { score: 4, revisionId: "usrv_1" })).resolves.toBeNull();
     const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(init.method).toBe("PUT");
     expect(JSON.parse(String(init.body))).toEqual({ reviewedVia: "browser", score: 4, revisionId: "usrv_1" });
@@ -138,11 +156,35 @@ describe("request shape", () => {
   });
 });
 
+describe("response validation", () => {
+  it("rejects a 200 whose body does not match the contract, naming the field", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ datasets: [{ ...dataset, documentCount: "3" }] }));
+    const failure = await host(fetchMock).projects.listDatasets().catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ProtocolDecodeError);
+    expect((failure as ProtocolDecodeError).path).toBe("response.datasets[0].documentCount");
+    expect((failure as Error).message).toMatch(/expected number, got string "3"/);
+  });
+
+  it("keeps fields a newer host adds, so an additive change is not a refusal", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ...document, addedInV2: "kept" }));
+    await expect(host(fetchMock).projects.getDocument("doc-1")).resolves.toMatchObject({ id: "doc-1", addedInV2: "kept" });
+  });
+
+  it("treats a 404 on the saved simulation as 'nothing saved', not a failure", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ error: "simulation_preview_not_found" }, 404))
+      .mockResolvedValueOnce(jsonResponse({ error: "authentication_required" }, 401));
+    const studio = host(fetchMock);
+    await expect(studio.projects.getSimulationPreview("doc-1")).resolves.toBeNull();
+    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 401 });
+  });
+});
+
 describe("error mapping", () => {
   it("raises a typed version conflict carrying the server's current document when supplied", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       error: "draft_version_conflict", refetch: true, currentDraftVersion: 7,
-      current: { id: "uscn_1", title: "Server title", draftVersion: 7 },
+      current: { ...document, title: "Server title", draftVersion: 7 },
     }, 409));
     const failure = await host(fetchMock).projects.updateDocument("uscn_1", { expectedVersion: 3, title: "x" }).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ScenarioVersionConflict);
@@ -163,10 +205,10 @@ describe("error mapping", () => {
       .mockResolvedValueOnce(jsonResponse({ error: "dataset_name_taken", field: "name" }, 409))
       .mockResolvedValueOnce(jsonResponse({ error: "tag_label_taken", field: "label" }, 409));
     const studio = host(fetchMock);
-    const dataset = await studio.projects.createDataset({ name: "Taken" }).catch((error: unknown) => error);
-    expect(dataset).toBeInstanceOf(ScenarioNameConflict);
-    expect((dataset as ScenarioNameConflict).field).toBe("name");
-    expect((dataset as Error).message).toContain("already exists");
+    const taken = await studio.projects.createDataset({ name: "Taken" }).catch((error: unknown) => error);
+    expect(taken).toBeInstanceOf(ScenarioNameConflict);
+    expect((taken as ScenarioNameConflict).field).toBe("name");
+    expect((taken as Error).message).toContain("already exists");
     const tag = await studio.projects.createTag({ label: "Crash" }).catch((error: unknown) => error);
     expect((tag as ScenarioNameConflict).field).toBe("label");
   });
@@ -184,6 +226,8 @@ describe("error mapping", () => {
     expect(postprocess).toBeInstanceOf(StudioHostRequestError);
     expect((postprocess as StudioHostRequestError).code).toBe("parent_not_succeeded");
     expect((postprocess as StudioHostRequestError).status).toBe(409);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/simforge/render-jobs/usrj_1/postprocess");
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).not.toHaveProperty("parentRenderJobId");
     await expect(studio.projects.updateDataset("usds_1", { name: "x" })).rejects.toThrow("Request failed (500)");
   });
 });
@@ -195,7 +239,7 @@ describe("revisions and exports", () => {
       .resolves.toMatchObject({ revisionId: "revision-4", exportId: "export-4" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/simforge/documents/doc-1/revisions");
-    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBeUndefined();
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe("GET");
   });
 
   it("refuses to create a revision without evidence", async () => {
@@ -206,10 +250,11 @@ describe("revisions and exports", () => {
   });
 
   it("resolves the saved draft and creates with a stable key, retrying a failed export under a new key", async () => {
+    const failed = { ...revision, export: { ...revision.export, status: "failed" as const } };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ ...document, draftVersion: 3 }))
-      .mockResolvedValueOnce(jsonResponse({ revisions: [{ ...revision, export: { ...revision.export, status: "failed" } }] }))
-      .mockResolvedValueOnce(jsonResponse({ revisionId: "revision-5" }, 201));
+      .mockResolvedValueOnce(jsonResponse({ revisions: [failed] }))
+      .mockResolvedValueOnce(jsonResponse({ revisionId: "revision-5", exportId: "export-5", exportStatus: "queued", revision: { ...revision, id: "revision-5" } }, 201));
     await host(fetchMock).projects.ensureRevision({ documentId: "doc-1", evidence });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body))).toEqual({
@@ -242,5 +287,31 @@ describe("revisions and exports", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/simforge/artifacts/artifact-4?download=1");
     expect(click).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("reserved uploads", () => {
+  it("resolves a same-origin relative upload URL against the base it is already talking to", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ artifactId: "art-1", uploadRequired: true, uploadUrl: "/api/local-objects/put/art-1", headers: { "x-sig": "s" } }))
+      .mockResolvedValueOnce({ ok: true, status: 200 } as Response)
+      .mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const studio = createHttpStudioHost({ fetch: fetchMock as unknown as typeof fetch, baseUrl: "http://100.72.252.40:5421/" });
+    await studio.projects.saveSimulationPreview(document, new Uint8Array([1, 2, 3]), "d".repeat(64));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://100.72.252.40:5421/api/simforge/documents/doc-1/simulation-preview");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://100.72.252.40:5421/api/local-objects/put/art-1");
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PUT", headers: { "x-sig": "s" } });
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("http://100.72.252.40:5421/api/simforge/documents/doc-1/simulation-preview/complete");
+  });
+
+  it("uploads an absolute presigned URL as given and skips the PUT when the bytes already exist", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ artifactId: "art-2", uploadRequired: false, uploadUrl: null, headers: {} }))
+      .mockResolvedValueOnce(jsonResponse(evidence.materializedTraffic));
+    const studio = host(fetchMock);
+    const upload = { bytes: new Uint8Array(10), sha256: "b".repeat(64), sizeBytes: 10, mapAssetId: "ma_1", mapVersionId: "map-v1" };
+    await expect(studio.projects.uploadMaterializedTraffic(document, upload, "c".repeat(64))).resolves.toEqual(evidence.materializedTraffic);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toMatchObject({ artifactId: "art-2" });
   });
 });

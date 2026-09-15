@@ -2,6 +2,7 @@ export * from "./contracts";
 export * from "./capabilities";
 export * from "./desktop-map-cache";
 export * from "./cloud";
+export * from "./protocol";
 export {
   CloudOrigin,
   HostOrigin,
