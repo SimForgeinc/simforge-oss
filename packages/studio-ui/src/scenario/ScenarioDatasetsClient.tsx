@@ -55,6 +55,15 @@ function datasetHref(datasetId: string) {
   return `/dashboard/scenario/${encodeURIComponent(datasetId)}`;
 }
 
+/**
+ * Where a Driver in the Loop drive happens: its own route, because the drive
+ * takes the whole screen and owns the viewer, while this page keeps the world
+ * scene beside the list alive.
+ */
+function driveHref(documentId: string, roleId: string) {
+  return `/dashboard/scenario/${encodeURIComponent(documentId)}/drive?actor=${encodeURIComponent(roleId)}`;
+}
+
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -623,6 +632,9 @@ export function ScenarioDatasetsClient({
                 onPreviewDocument={(document) => previewDocument(document.id)}
                 onExitEdit={() => openDocument(null)}
                 onRenderDocument={(document) => toggleRenderPane(document)}
+                onDriveVariation={(documentId, roleId) =>
+                  router.push(driveHref(documentId, roleId))
+                }
                 editActiveDocumentId={openDocumentId}
                 renderActiveDocumentId={
                   datasetRightPaneMode === "render"

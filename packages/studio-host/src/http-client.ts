@@ -251,6 +251,12 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
         body: JSON.stringify(input),
       });
     },
+    startDriverInTheLoop(documentId, input = {}) {
+      return request(
+        `/api/simforge/documents/${encodeURIComponent(documentId)}/driver-in-the-loop`,
+        { method: "POST", body: JSON.stringify(input) },
+      );
+    },
     deleteDocument(documentId) {
       return request(`/api/simforge/documents/${encodeURIComponent(documentId)}`, { method: "DELETE" });
     },

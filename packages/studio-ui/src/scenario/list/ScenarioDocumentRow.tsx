@@ -7,6 +7,7 @@ import type { MutableRefObject } from "react";
 import {
   CopyPlus,
   Download,
+  Gamepad2,
   GitBranch,
   MoreHorizontal,
   Pencil,
@@ -139,6 +140,13 @@ export type ScenarioDocumentRowProps = {
   /** Close the editor and return to the list. Required for the toggle half of `editActive`. */
   onExitEdit?: () => void;
   onRenderDocument: (document: ScenarioDocumentSummaryDto) => void;
+  /**
+   * Create a Driver in the Loop variation of this scenario and drive it.
+   *
+   * Optional because the review queue renders the same row without the drive
+   * affordance; the button is absent rather than inert when it is not supplied.
+   */
+  onDriverInTheLoop?: (document: ScenarioDocumentSummaryDto) => void;
   onDownloadDocument: (document: ScenarioDocumentSummaryDto) => void;
   onDuplicateDocument: (document: ScenarioDocumentSummaryDto) => void;
   onEditDetails: (document: ScenarioDocumentSummaryDto) => void;
@@ -167,6 +175,7 @@ function DocumentActionCluster({
   onEditDocument,
   onExitEdit,
   onRenderDocument,
+  onDriverInTheLoop,
   onDownloadDocument,
   onDuplicateDocument,
   onEditDetails,
@@ -193,6 +202,7 @@ function DocumentActionCluster({
   | "onEditDocument"
   | "onExitEdit"
   | "onRenderDocument"
+  | "onDriverInTheLoop"
   | "onDownloadDocument"
   | "onDuplicateDocument"
   | "onEditDetails"
@@ -308,6 +318,42 @@ function DocumentActionCluster({
       >
         <Pencil {...stylex.props(styles.pencilIcon)} aria-hidden="true" />
       </Button>
+      {onDriverInTheLoop ? (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                xstyle={[
+                  control.iconSm,
+                  control.flatBackground,
+                  mutable ? row.quiet : row.disabled,
+                ]}
+                aria-label={`Create a Driver in the Loop variation of ${label}`}
+                aria-disabled={!mutable || undefined}
+                data-scenario-driver-in-the-loop=""
+                onClick={() => {
+                  if (!mutable || anyBusy) return;
+                  onDriverInTheLoop(document);
+                }}
+              >
+                {anyBusy ? (
+                  <CloudActivityIndicator />
+                ) : (
+                  <Gamepad2 {...stylex.props(styles.gamepadIcon)} aria-hidden="true" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {mutable
+                ? "Driver in the Loop: drive this scenario's car yourself and keep the drive as a variation"
+                : "This dataset is read-only"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
       {/* The fork/variations affordance is hidden by decision (2026-08-04): cross-map variations is
           dropped along with the archive export-package and the old play preview, and preview is being
           rebuilt on the ported studio playback runtime. The props stay on the contract rather than being
@@ -426,6 +472,7 @@ export function ScenarioDocumentRow({
   onEditDocument,
   onExitEdit,
   onRenderDocument,
+  onDriverInTheLoop,
   onDownloadDocument,
   onDuplicateDocument,
   onEditDetails,
@@ -636,6 +683,7 @@ export function ScenarioDocumentRow({
         onEditDocument={onEditDocument}
         onExitEdit={onExitEdit}
         onRenderDocument={onRenderDocument}
+        onDriverInTheLoop={onDriverInTheLoop}
         onDownloadDocument={onDownloadDocument}
         onDuplicateDocument={onDuplicateDocument}
         onEditDetails={onEditDetails}

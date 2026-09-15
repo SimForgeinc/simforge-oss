@@ -20,7 +20,7 @@ import {
 } from "@simforge-oss/scenario";
 
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
-import { competingMotionRefusal } from "../manual-drive/authoring";
+import { competingMotionRefusal } from "../competing-motion";
 import { uniqueTimelineInteractionId } from "./v1-timeline-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./CanonicalInteractionComposer.stylex";

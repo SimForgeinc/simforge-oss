@@ -37,7 +37,6 @@ import {
   actionsForActor,
   interactionForAction,
   isManualDrive,
-  MANUAL_DRIVE_ACTION_ID,
   setExclusiveCustomTimedRoute,
   type ActionDefinition,
   type EditorDocument,
@@ -83,7 +82,7 @@ import { DynamicActorCatalogIcon, isDynamicActorCatalogId } from '../regions/Dyn
 import { cn } from "../../../lib/utils";
 import { isUnconfiguredSimpleTimedRoute } from "../simple-route-status";
 import { isCustomTimedRoute } from "../simple-timed-routes";
-import { competingMotionRefusal } from "../manual-drive/authoring";
+import { competingMotionRefusal } from "../competing-motion";
 import { notifyScenario } from "../status";
 import { TimelineCarlaCompatibilityMarker } from "./TimelineCarlaCompatibilityMarker";
 import { TimelineRuler } from "./TimelineRuler";
@@ -162,8 +161,6 @@ export type V1TimelineRailProps = {
   onSelectInteraction?: (interactionId: string, actorId: string) => void;
   onClearSelection?: () => void;
   onSelectSignal?: (headId: string) => void;
-  /** Opens the take recorder for an actor; the document is untouched until a take is saved. */
-  onStartManualDrive?: (actorId: string) => string | null;
   disableInteractionCreation?: boolean;
   lockSimpleTimedRoutes?: boolean;
   readOnly?: boolean;
@@ -294,7 +291,6 @@ export function V1TimelineRail({
   onSelectInteraction,
   onClearSelection,
   onSelectSignal,
-  onStartManualDrive,
   disableInteractionCreation = false,
   lockSimpleTimedRoutes = false,
   readOnly = false,
@@ -533,18 +529,6 @@ export function V1TimelineRail({
     );
     if (!definition) return;
     const actor = { id: role.id, label: actorLabels.get(role.id) ?? role.id };
-    if (definition.id === MANUAL_DRIVE_ACTION_ID) {
-      // Nothing enters the document here: the recorder opens, and only a
-      // reviewed, saved take becomes the actor's Manual drive.
-      const failure = onStartManualDrive
-        ? onStartManualDrive(role.id)
-        : "Manual drive recording is not available in this editor.";
-      if (failure) {
-        notifyScenario({ severity: "warning", source: "authoring", message: "Manual drive not started", detail: failure });
-      }
-      setContextMenu(null);
-      return;
-    }
     const refusal = competingMotionRefusal(document, actor, definition);
     if (refusal) {
       notifyScenario({ severity: "warning", source: "authoring", message: "Motion is owned by a Manual drive", detail: refusal });
@@ -1818,7 +1802,6 @@ function ContextActionMenu({
               >
                 <span {...stylex.props(styles.spanFlex)}>
                   {action.id === 'custom_route' ? <RouteIcon aria-hidden="true" {...stylex.props(styles.routeiconIcon)} /> : null}
-                  {action.id === MANUAL_DRIVE_ACTION_ID ? <Gamepad2 aria-hidden="true" {...stylex.props(styles.gamepad2Icon)} /> : null}
                   <span>{action.label}</span>
                 </span>
               </ActionMenuButton>

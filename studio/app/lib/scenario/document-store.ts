@@ -304,11 +304,21 @@ export async function listScenarioDocumentSummaries(
  * a revision would share the original's id, title and dataset and would move the original's
  * `latest_revision_id`. `derived_from_revision_id` pins the exact immutable revision the copy was
  * taken from when one exists — v1 could not say that, because `draft_json` was mutable underneath.
+ *
+ * `derivation` says which kind of child this is: a plain `copy`, or a `variation` — the same map,
+ * the same parent edge, but content deliberately different from its parent, which is what a Driver
+ * in the Loop drive produces. `content` carries that difference; omitted, the child is byte-for-byte
+ * its parent and therefore shares its `content_sha256`.
  */
 export async function duplicateScenarioDocument(
   context: AppContext,
   documentId: string,
-  input: { title?: string; datasetId?: string } = {},
+  input: {
+    title?: string;
+    datasetId?: string;
+    derivation?: "copy" | "variation";
+    content?: ScenarioTemplateV2;
+  } = {},
 ): Promise<{ kind: "created"; document: ScenarioDocumentDto } | { kind: "not_found" }> {
   return withTransaction(async (tx) => {
     const sourceRow = await tx.queryOne<DocumentRow>(
@@ -330,6 +340,8 @@ export async function duplicateScenarioDocument(
     if (!dataset) return { kind: "not_found" as const };
 
     const copyId = scenarioId("uscn");
+    const derivation = input.derivation ?? "copy";
+    const content = input.content ?? source.content;
     const title = (input.title ?? `${source.title} Copy`).slice(0, 200);
     await tx.execute(
       `INSERT INTO simforge.documents (
@@ -340,7 +352,7 @@ export async function duplicateScenarioDocument(
        ) VALUES (
          :id, :workspace_id, :title, :schema_version, :map_version_id, :dataset_id,
          :user_id, :user_id,
-         'copy', :source_document_id, :source_revision_id,
+         :derivation_kind, :source_document_id, :source_revision_id,
          :user_id, NOW()
        )`,
       {
@@ -353,9 +365,11 @@ export async function duplicateScenarioDocument(
         user_id: context.userId,
         source_document_id: source.id,
         source_revision_id: source.latestRevisionId,
+        derivation_kind: derivation,
       },
     );
-    // Copy the draft content verbatim so the copy's content_sha256 equals the source's.
+    // A plain copy stores the parent's content verbatim, so their digests match; a variation stores
+    // the content the caller prepared and gets a digest of its own.
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content,
@@ -368,8 +382,8 @@ export async function duplicateScenarioDocument(
         document_id: copyId,
         workspace_id: context.workspaceId,
         schema_version: source.schemaVersion,
-        content: source.content,
-        content_sha256: canonicalContentSha256(source.content),
+        content,
+        content_sha256: canonicalContentSha256(content),
         map_version_id: source.mapVersionId,
         authoring_quality_id: source.authoringQualityId,
         user_id: context.userId,

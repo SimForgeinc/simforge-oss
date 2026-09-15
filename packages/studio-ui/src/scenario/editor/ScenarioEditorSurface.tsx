@@ -105,8 +105,6 @@ import { usePlaybackControllerState } from "../../lib/scenario/playback/usePlayb
 import { useMapSignalOverlays } from "../../lib/scenario/useMapSignalOverlays";
 import { useScenarioNotification } from "./status";
 import { configureCustomRouteAtClipStart } from "./custom-route-configuration";
-import { ManualDriveReviewPanel } from "./manual-drive/ManualDriveReviewPanel";
-import { useManualDriveRecorder } from "./manual-drive/use-manual-drive-recorder";
 import { EditorSceneEnvironmentBridge } from "./EditorSceneEnvironmentBridge";
 import {
   collectSimulationIssues,
@@ -884,21 +882,6 @@ export function ScenarioEditorSurface({
     setTransportError(result.configured ? null : "Custom route could not be configured at this timestamp.");
   }, [controller, editorDocument, sharedPlayback, setTransportError, viewer]);
 
-  const manualDriveActorLabel = useCallback(
-    (actorId: string) =>
-      editorDocument
-        ? timelineActorLabels(editorDocument.data.roles).get(actorId) ?? actorId
-        : actorId,
-    [editorDocument],
-  );
-  const manualDrive = useManualDriveRecorder({
-    document: editorDocument,
-    documentId: record?.id ?? null,
-    datasetId,
-    map,
-    actorLabel: manualDriveActorLabel,
-  });
-
   const localSceneLoading = useSceneLoadingSurfaceProps(
     localMapLoadError
       ? failedSceneLoadProgress(map.label, localMapLoadError)
@@ -1074,7 +1057,6 @@ export function ScenarioEditorSurface({
                 onFrameActor={frameActorAtPlayhead}
                 onFrameSignal={frameSignalHead}
                 onConfigureCustomRoute={configureCustomRoute}
-                onStartManualDrive={manualDrive.startTake}
               />
             </div>
           </div>
@@ -1276,7 +1258,6 @@ function EditorTimelineOverlayBridge({
   onFrameActor,
   onFrameSignal,
   onConfigureCustomRoute,
-  onStartManualDrive,
 }: {
   document: EditorDocument;
   state: EditorState | null;
@@ -1290,7 +1271,6 @@ function EditorTimelineOverlayBridge({
   onFrameActor: (actorId: string) => void;
   onFrameSignal: (headId: string) => void;
   onConfigureCustomRoute: (interactionId: string) => void;
-  onStartManualDrive: (actorId: string) => string | null;
 }) {
   const { selection, actions } = useEditorOverlay();
   const [tutorialRouteInteractionId, setTutorialRouteInteractionId] = useState<string | null>(null);
@@ -1552,7 +1532,6 @@ function EditorTimelineOverlayBridge({
       }}
       onClearSelection={actions.clear}
       onSelectSignal={takeSignalControl}
-      onStartManualDrive={onStartManualDrive}
       readOnly={false}
       />
     </>

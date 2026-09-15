@@ -5,13 +5,18 @@ import { Vector3 } from "three";
 import { toast } from "sonner";
 import * as stylex from "@stylexjs/stylex";
 import type { CatalogId } from "@simforge-oss/asset-catalog";
-import { EditorDocument, type LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
-import type { ManualDriveRecording } from "@simforge-oss/scenario";
+import {
+  EditorDocument,
+  recordedManualDrive,
+  type LaneIndex,
+  type ScenarioMapEntry,
+} from "@simforge-oss/editor";
+import type { ManualDriveRecording, ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { TruthFrame } from "@simforge-oss/training-env/browser";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { CityView } from "@simforge-oss/viewer/react";
 import { EditorSceneEnvironmentBridge } from "@simforge-oss/studio-ui/scenario/editor/EditorSceneEnvironmentBridge";
-import type { ManualDriveTakeSession } from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
+import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { AMBIENT_TRAFFIC_PROVIDER_EXTENSION_KEY } from "@simforge-oss/playback/traffic";
 import { sceneViewerOptions } from "@simforge-oss/studio-ui/scenario/editor/authoring-quality";
 import {
@@ -45,11 +50,9 @@ import {
 import { createTruthViewerBridge, type TruthViewerBridge } from "@/app/lib/live-world/truth-viewer-bridge";
 import { useWorldSource } from "@/app/lib/live-world/use-world-source";
 import { driveFrame } from "./drive-session.stylex";
-import { createDriveScenario, drivingLanes, pickDriveSpawn, type DriveSpawn } from "./drive-scenario";
+import { drivingLanes } from "./drive-lanes";
 import { actorIsPresent, readEgoTelemetry } from "./frame-telemetry";
 
-import { ManualDriveTakeReview } from "./ManualDriveTake";
-import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 const WORLD_TICK_HZ = 20;
 /** Orbit drag sensitivity, radians per pixel. */
 const ORBIT_DRAG_RAD_PER_PX = 0.006;
@@ -58,7 +61,8 @@ const ORBIT_ZOOM_PER_NOTCH = 1.1;
 const HORN_PULSE_MS = 700;
 
 /**
- * One driving session: a world, a car, a camera and a HUD.
+ * One driving session: a scenario, the actor a human took over, a camera and a
+ * HUD.
  *
  * The game loop is the viewer's own frame hook, in this order: read the input
  * device, push the driver command to the physics runtime, move the camera to
@@ -69,40 +73,48 @@ const HORN_PULSE_MS = 700;
  *
  * Nothing in that loop causes a React render. The HUD is written through refs,
  * and the component re-renders only when a human changes something.
+ *
+ * The whole session is a recording: the world starts at t = 0 and the clip ends
+ * itself at the scenario's `clipSeconds`, at which point the recorded poses are
+ * handed to `onSaveClip` as the driven actor's motion. There is no free drive
+ * and no review step — a drive the human did not like is driven again.
  */
 export function DriveSession({
+  content,
   map,
   laneIndex,
   catalogId,
-  color,
   vehicleLabel,
   quality,
-  take = null,
-  onChangeCar,
+  roleId,
+  onSaveClip,
+  onSaved,
   onExit,
 }: {
+  /** The variation being driven, already carrying the driven actor's sensors. */
+  content: ScenarioTemplateV2;
   map: ScenarioMapEntry;
   laneIndex: LaneIndex;
   catalogId: CatalogId;
-  color: string;
   vehicleLabel: string;
   quality: ScenarioAuthoringQuality;
-  take?: ManualDriveTakeSession | null;
-  onChangeCar: () => void;
+  /** The actor the human drives, resolved before the session mounted. */
+  roleId: string;
+  /** Persist the driven template. Rejecting leaves the take on screen, retryable. */
+  onSaveClip: (template: ScenarioTemplateV2) => Promise<void>;
+  onSaved: () => void;
   onExit: () => void;
 }) {
-  const [spawn, setSpawn] = useState<DriveSpawn | null>(null);
-  const [spawnError, setSpawnError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
   const [document, setDocument] = useState<EditorDocument | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null);
   const [source, setSource] = useState<AuthoredWorldSource | null>(null);
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [bridge, setBridge] = useState<TruthViewerBridge | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [egoActorId, setEgoActorId] = useState<string | null>(null);
   const [takePhase, setTakePhase] = useState<
-    { kind: "idle" } | { kind: "recording" } | { kind: "review"; recording: ManualDriveRecording } | { kind: "saving" }
-  >({ kind: "idle" });
+    { kind: "recording" } | { kind: "saving"; recording: ManualDriveRecording } | { kind: "failed" }
+  >({ kind: "recording" });
   const [takeError, setTakeError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [units, setUnits] = useState<SpeedUnits>("kmh");
@@ -113,6 +125,9 @@ export function DriveSession({
   const [cameraKind, setCameraKind] = useState<DriveCameraKind>("chase");
   const lanes = useMemo(() => drivingLanes(laneIndex), [laneIndex]);
   const [gamepadConnected, setGamepadConnected] = useState(false);
+  /** How far into the clip the simulation is, sampled for the countdown only. */
+  const [clipElapsedS, setClipElapsedS] = useState(0);
+  const clipSeconds = content.choreography.clipSeconds;
   const hudRef = useRef<DriveHudHandle | null>(null);
   const inputRef = useRef<DriveInput | null>(null);
   const rigRef = useRef(new DriveCameraRig());
@@ -131,41 +146,29 @@ export function DriveSession({
   pausedRef.current = paused;
   debugRef.current = debug;
 
-  const respawn = useCallback(() => {
-    const next = pickDriveSpawn(laneIndex, lanes);
-    if (!next) {
-      setSpawnError(`${map.label} has no connected drivable lane to start on.`);
-      return;
-    }
-    setSpawnError(null);
-    setSpawn(next);
-  }, [laneIndex, lanes, map.label]);
+  // The driver needs to know how much clip is left, and the world clock is the
+  // only honest source for that — wall time drifts from it whenever the tab
+  // holds. Four samples a second is enough for a whole-second readout and keeps
+  // this off the render path.
+  useEffect(() => {
+    if (!source || takePhase.kind !== "recording") return;
+    setClipElapsedS(source.transport.time);
+    const timer = setInterval(() => setClipElapsedS(source.transport.time), 250);
+    return () => clearInterval(timer);
+  }, [source, takePhase.kind]);
 
-  useEffect(() => respawn(), [respawn]);
-
-  // A respawn is a new one-car scenario and therefore a new world: the authored
-  // world is compiled from the document, so moving the player is not an edit to
-  // a running session but a fresh one. Everything else (viewer, map, camera
-  // rig) is kept, which is what makes a respawn feel instant.
+  // One world per session: the variation is compiled once and driven from t = 0.
+  // A take that goes wrong restarts the same world through `beginTake`, so
+  // nothing here has to be rebuilt to drive again.
   useEffect(() => {
     let disposed = false;
     let created: { document: EditorDocument; source: AuthoredWorldSource } | null = null;
-    if (!spawn) return;
-    const open = async (): Promise<{ document: EditorDocument; source: AuthoredWorldSource; roleId: string }> => {
-      if (take) {
-        const nextDocument = await EditorDocument.openBlank(map);
-        nextDocument.importTemplate(take.content);
-        return {
-          document: nextDocument,
-          source: await createAuthoredWorldSource({ document: nextDocument, map, tickHz: WORLD_TICK_HZ }),
-          roleId: take.actorRoleId,
-        };
-      }
-      const scenario = await createDriveScenario({ map, catalogId, color, spawn });
+    const open = async (): Promise<{ document: EditorDocument; source: AuthoredWorldSource }> => {
+      const nextDocument = await EditorDocument.openBlank(map);
+      nextDocument.importTemplate(content);
       return {
-        document: scenario.document,
-        source: await createAuthoredWorldSource({ document: scenario.document, map, tickHz: WORLD_TICK_HZ, endless: true }),
-        roleId: scenario.roleId,
+        document: nextDocument,
+        source: await createAuthoredWorldSource({ document: nextDocument, map, tickHz: WORLD_TICK_HZ }),
       };
     };
     void open().then((scenario) => {
@@ -177,44 +180,39 @@ export function DriveSession({
       }
       created = { document: scenario.document, source: nextSource };
       setDocument(scenario.document);
-      setRoleId(scenario.roleId);
       setSource(nextSource);
     })
       .catch((error: unknown) => {
         if (disposed) return;
-        setSpawnError(errorMessage(error));
+        setStartError(errorMessage(error));
         toast.error("Drive could not start the world", { description: errorMessage(error) });
       });
     return () => {
       disposed = true;
       setSource(null);
       setDocument(null);
-      setRoleId(null);
       setEgoActorId(null);
       created?.source.close();
       created?.document.dispose();
     };
-  }, [catalogId, color, map, spawn, take]);
+  }, [content, map]);
 
-  // role id has to be resolved through the source before it can be driven.
+  // The role is authored; the actor id it compiled to has to be resolved through
+  // the source before it can be driven.
   useEffect(() => {
-    if (!source || !roleId || source.status !== "running") return;
+    if (!source || source.status !== "running") return;
     try {
       const actorId = source.selectEgo(roleId);
-      if (!actorId) throw new Error("The session scenario produced no drivable vehicle");
-      source.setEgo(actorId, take ? "take" : "free");
+      if (!actorId) throw new Error("This scenario produced no drivable vehicle for the drive");
+      source.setEgo(actorId, "take");
       setEgoActorId(actorId);
       spawnedAtRef.current = performance.now();
-      if (take) {
-        setTakePhase({ kind: "recording" });
-        source.beginTake();
-      } else {
-        source.transport.play();
-      }
+      setTakePhase({ kind: "recording" });
+      source.beginTake();
     } catch (error) {
-      setSpawnError(errorMessage(error));
+      setStartError(errorMessage(error));
     }
-  }, [roleId, source, take, world.status]);
+  }, [roleId, source, world.status]);
   useEffect(() => {
     if (!source) return;
     latestFrameRef.current = null;
@@ -240,23 +238,56 @@ export function DriveSession({
 
   useEffect(() => {
     if (!bridge) return;
-    bridge.setFollow(egoActorId, take ? "dash" : "chase");
-  }, [bridge, egoActorId, take]);
-  // A take's outcome arrives once through the source: a sealed recording goes
-  // to review; a failure leaves the take retryable with its reason on screen.
+    bridge.setFollow(egoActorId, "dash");
+  }, [bridge, egoActorId]);
+  // The take's outcome arrives once through the source: a sealed recording is
+  // saved into the scenario, and a failure leaves the drive retryable with its
+  // reason on screen.
   useEffect(() => {
-    if (!source || !take) return;
+    if (!source) return;
     return source.subscribeTakes((event) => {
       if (event.kind === "complete") {
         setTakeError(null);
-        setTakePhase({ kind: "review", recording: event.recording });
+        setTakePhase({ kind: "saving", recording: event.recording });
       } else {
         setTakeError(event.message);
-        setTakePhase({ kind: "idle" });
+        setTakePhase({ kind: "failed" });
       }
     });
-  }, [source, take]);
+  }, [source]);
+
+  // Saving is the end of the drive. `replaceActorMotion` is the editor's own
+  // commit path, so the clip displaces the actor's authored motion exactly as an
+  // authored take would; a rejected save keeps the drive on screen rather than
+  // losing the take the human just drove.
+  useEffect(() => {
+    if (takePhase.kind !== "saving" || !document) return;
+    let abandoned = false;
+    const { recording } = takePhase;
+    void (async () => {
+      try {
+        document.replaceActorMotion(recordedManualDrive(roleId, recording));
+        await onSaveClip(document.data);
+        if (!abandoned) onSaved();
+      } catch (error) {
+        if (abandoned) return;
+        setTakeError(errorMessage(error));
+        setTakePhase({ kind: "failed" });
+      }
+    })();
+    return () => {
+      abandoned = true;
+    };
+  }, [document, onSaveClip, onSaved, roleId, takePhase]);
   useEffect(() => () => bridge?.dispose(), [bridge]);
+
+  /** Drive the clip again: the same world, restarted at t = 0. */
+  const retryTake = useCallback(() => {
+    if (!source) return;
+    setTakeError(null);
+    setTakePhase({ kind: "recording" });
+    source.beginTake();
+  }, [source]);
 
   const onViewerReady = useCallback((ready: CityViewer) => {
     setViewer(ready);
@@ -296,7 +327,7 @@ export function DriveSession({
       return;
     }
     if (action === "reset") {
-      respawn();
+      retryTake();
       return;
     }
     if (action === "cycleCamera") {
@@ -328,11 +359,10 @@ export function DriveSession({
     }
   };
 
-  // One input device for the whole session, reached through a ref. Rebuilding
-  // it when a handler changes — a respawn replaces the document, which
-  // `toggleTraffic` closes over — would drop every key the player is holding,
-  // so the car would sit still after a reset until the throttle was pressed
-  // again.
+  // One input device for the whole session, reached through a ref. Rebuilding it
+  // when a handler changes — `toggleTraffic` closes over the document — would
+  // drop every key the player is holding, so the car would sit still mid-clip
+  // until the throttle was pressed again.
   onActionRef.current = onAction;
   useEffect(() => {
     const input = createDriveInput({
@@ -385,12 +415,8 @@ export function DriveSession({
   // command is released first so the car is not still on the throttle when the
   // world resumes.
   //
-  // Respawning from the pause menu unpauses and replaces the world in the same
-  // commit, so this effect still sees the session the respawn just closed, and
-  // React's copy of its status is a render behind. Asking the source itself is
-  // the only guard that holds: a closed source throws on a transport command,
-  // and that throw would take the whole game down. `world.status` stays in the
-  // dependencies so the new session is played the moment it reports running.
+  // `world.status` stays in the dependencies so a world that has only just
+  // started running is played the moment it reports it.
   useEffect(() => {
     inputRef.current?.setEnabled(!paused);
     if (!source || !egoActorId || source.status !== "running") return;
@@ -402,8 +428,10 @@ export function DriveSession({
     }
   }, [egoActorId, paused, source, world.status]);
 
+  // A clip is driven, not watched: a tab that loses focus mid-take would record
+  // a car nobody was steering, so the world holds until focus comes back.
   useEffect(() => {
-    if (!take || !source || takePhase.kind !== "recording") return;
+    if (!source || takePhase.kind !== "recording") return;
     const pause = () => {
       if (source.transport.playing) source.transport.stop();
     };
@@ -418,7 +446,7 @@ export function DriveSession({
       window.removeEventListener("pagehide", pause);
       window.removeEventListener("focus", resume);
     };
-  }, [source, take, takePhase.kind]);
+  }, [source, takePhase.kind]);
 
   /** Orbit view drag and zoom. The other views are fixed to the car. */
   useEffect(() => {
@@ -549,33 +577,17 @@ export function DriveSession({
   }, [bridge, egoActorId, source, viewer]);
 
   // A despawned ego (the world refused the actor, or the clip parked) must not
-  // leave the player in a frozen scene with no explanation.
+  // leave the driver in a frozen scene with no explanation.
   useEffect(() => {
     if (!egoActorId || !world.latestFrame) return;
     if (actorIsPresent(world.latestFrame, egoActorId)) return;
-    setSpawnError("The player vehicle left the world. Respawning is the way back.");
+    setStartError("The driven vehicle left the world. Driving the clip again is the way back.");
   }, [egoActorId, world.latestFrame]);
-  const reviewedTake = takePhase.kind === "review" ? takePhase.recording : null;
-  const saveTake = useCallback(async () => {
-    if (!take || !reviewedTake) return;
-    setTakePhase({ kind: "saving" });
-    try {
-      await take.onSave(reviewedTake, take.revision);
-    } catch (error) {
-      setTakeError(errorMessage(error));
-      setTakePhase({ kind: "review", recording: reviewedTake });
-    }
-  }, [reviewedTake, take]);
-  const retryTake = useCallback(() => {
-    if (!source || !take) return;
-    setTakeError(null);
-    setTakePhase({ kind: "recording" });
-    source.beginTake();
-  }, [source, take]);
 
-  const status = spawnError
+  const status = startError
     ?? (world.status === "error" ? world.error : null)
-    ?? (takePhase.kind === "idle" && takeError ? `Take failed: ${takeError}` : null)
+    ?? (takePhase.kind === "failed" ? `The drive was not recorded: ${takeError ?? "unknown reason"}` : null)
+    ?? (takePhase.kind === "saving" ? "Saving the drive into this scenario…" : null)
     ?? (!mapLoaded ? `Loading ${map.label}…` : !egoActorId ? "Starting the world…" : null);
 
   return (
@@ -587,7 +599,7 @@ export function DriveSession({
         manifestUrl={map.browserManifestUrl}
         onError={(reason) => {
           setMapLoaded(false);
-          setSpawnError(errorMessage(reason));
+          setStartError(errorMessage(reason));
         }}
         onMapLoaded={() => setMapLoaded(true)}
         onReady={onViewerReady}
@@ -613,26 +625,26 @@ export function DriveSession({
         units={units}
         vehicleLabel={vehicleLabel}
       />
-      {reviewedTake ? (
-        <ManualDriveTakeReview
-          recording={reviewedTake}
-          error={takeError}
-          onDiscard={() => {
-            if (take) take.onCancel();
-          }}
-          onRetry={retryTake}
-          onSave={() => void saveTake()}
-        />
-      ) : null}
+      <div
+        {...stylex.props(driveChrome.panelStatus, driveFrame.clip)}
+        data-testid="drive-clip-countdown"
+        role="status"
+      >
+        {takePhase.kind === "recording"
+          ? `Recording · ${Math.max(0, Math.ceil(clipSeconds - clipElapsedS))}s left`
+          : `Clip · ${clipSeconds.toFixed(0)}s`}
+      </div>
       {status ? (
         <div
           {...stylex.props(driveChrome.panelStatus, driveFrame.status)}
           data-testid="drive-status"
-          role={spawnError || takeError ? "alert" : "status"}
+          role={startError || takeError ? "alert" : "status"}
         >
           {status}
-          {takePhase.kind === "idle" && takeError ? (
-            <Button type="button" variant="outline" onClick={retryTake} data-testid="drive-take-retry">Retry</Button>
+          {takePhase.kind === "failed" ? (
+            <Button type="button" variant="outline" onClick={retryTake} data-testid="drive-take-retry">
+              Drive it again
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -646,14 +658,9 @@ export function DriveSession({
             rigRef.current.setKind(kind);
             setCameraKind(kind);
           }}
-          onChangeCar={onChangeCar}
           onDebugChange={setDebug}
           onExit={onExit}
           onMutedChange={setMuted}
-          onRespawn={() => {
-            respawn();
-            setPaused(false);
-          }}
           onResume={() => setPaused(false)}
           onVolumeChange={setVolume}
           volume={volume}

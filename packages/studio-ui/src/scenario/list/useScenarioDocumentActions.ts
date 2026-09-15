@@ -52,6 +52,10 @@ export type ScenarioDocumentActionsResult = {
     nextTitle: string,
   ) => Promise<void>;
   duplicateDocument: (document: ScenarioDocumentSummaryDto) => Promise<void>;
+  /** Create the variation to drive; resolves to the drive target, or null when it was refused. */
+  startDriverInTheLoop: (
+    document: ScenarioDocumentSummaryDto,
+  ) => Promise<{ documentId: string; roleId: string } | null>;
   deleteDocument: (document: ScenarioDocumentSummaryDto) => Promise<void>;
   downloadDocument: (document: ScenarioDocumentSummaryDto) => Promise<void>;
   handleImportFile: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -227,6 +231,36 @@ export function useScenarioDocumentActions({
         rememberScenarioSelection(created.datasetId, created.id);
       } catch (duplicateError) {
         reportError(duplicateError, "Failed to duplicate scenario.");
+      } finally {
+        setBusyDocumentId(null);
+      }
+    },
+    [reportError, spliceDocument, trackPending, studioHost],
+  );
+
+  /**
+   * Driver in the Loop.
+   *
+   * The variation is created here and driven on the drive route, so the drive always has a document
+   * to write its recorded clip into. The row is spliced in immediately: the drive leaves this page,
+   * and coming back to a list that had forgotten the variation would read as a lost drive.
+   */
+  const startDriverInTheLoop = useCallback(
+    async (document: ScenarioDocumentSummaryDto): Promise<{ documentId: string; roleId: string } | null> => {
+      setBusyDocumentId(document.id);
+      try {
+        const started = await studioHost.projects.startDriverInTheLoop(document.id);
+        const summary = {
+          ...documentSummaryFromDocument(started.document),
+          derivationKind: "variation" as const,
+          derivedFromDocumentId: document.id,
+        };
+        trackPending(started.document.datasetId, summary);
+        spliceDocument(summary);
+        return { documentId: started.document.id, roleId: started.roleId };
+      } catch (startError) {
+        reportError(startError, "Failed to start a Driver in the Loop drive.");
+        return null;
       } finally {
         setBusyDocumentId(null);
       }
@@ -412,6 +446,7 @@ export function useScenarioDocumentActions({
     createDocumentOnMap,
     commitRename,
     duplicateDocument,
+    startDriverInTheLoop,
     deleteDocument,
     downloadDocument,
     handleImportFile,

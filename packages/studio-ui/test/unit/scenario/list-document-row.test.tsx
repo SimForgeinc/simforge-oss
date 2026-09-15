@@ -478,13 +478,38 @@ describe("dropped affordances", () => {
    */
   it("does not offer the variations fork toggle, even with variations present", () => {
     render(rowElement({ variationCount: 3, onToggleVariations: () => {} }));
-    expect(screen.queryByRole("button", { name: /variation/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^(Show|Hide) \d+ variation/i })).toBeNull();
   });
 
   it("still offers edit and render, which were not dropped", () => {
     render(rowElement());
     expect(screen.getByRole("button", { name: /^Edit Cut-in on the left$/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Render Cut-in on the left$/ })).toBeTruthy();
+  });
+
+  it("offers Driver in the Loop beside Edit, and only where a drive can be started", () => {
+    const driven: string[] = [];
+    render(rowElement({ onDriverInTheLoop: (document) => driven.push(document.id) }));
+    const drive = screen.getByRole("button", {
+      name: "Create a Driver in the Loop variation of Cut-in on the left",
+    });
+    fireEvent.click(drive);
+    expect(driven).toEqual(["uscn_1"]);
+
+    cleanup();
+    // A read-only dataset shows the affordance inert rather than hiding it, so the
+    // tooltip can say why; a row with no handler at all shows nothing.
+    render(rowElement({ mutable: false, onDriverInTheLoop: (document) => driven.push(document.id) }));
+    const readOnly = screen.getByRole("button", {
+      name: "Create a Driver in the Loop variation of Cut-in on the left",
+    });
+    expect(readOnly.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(readOnly);
+    expect(driven).toEqual(["uscn_1"]);
+
+    cleanup();
+    render(rowElement());
+    expect(screen.queryByRole("button", { name: /Driver in the Loop/i })).toBeNull();
   });
 
   it("has no archive export-package or play-preview action", () => {

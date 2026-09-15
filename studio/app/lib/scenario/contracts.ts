@@ -222,6 +222,14 @@ export const DuplicateScenarioDocumentSchema = z.object({
   datasetId: z.string().trim().min(1).optional(),
 });
 
+/**
+ * Which actor the human takes over. Omitted, the server resolves the scenario's
+ * ego (or its only drivable vehicle) and refuses an ambiguous scenario.
+ */
+export const DriverInTheLoopSchema = z.object({
+  roleId: z.string().trim().min(1).optional(),
+});
+
 export const ListScenarioDocumentSummariesSchema = z.object({
   datasetId: z.string().trim().min(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
