@@ -9,7 +9,7 @@ const CLOUD_ROOT = '/api/simforge/cloud';
 
 export const CLOUD_COMMANDS = [
   'status', 'connect', 'sign-in', 'sign-up', 'verify-email', 'resend-code',
-  'forgot-password', 'reset-password', 'sign-out', 'workspaces', 'datasets',
+  'forgot-password', 'reset-password', 'sign-out', 'organizations', 'datasets',
   'artifacts', 'dataset-import', 'dataset-publish', 'artifact-import',
   'artifact-upload', 'dataset-links', 'artifact-links',
 ] as const;
@@ -46,17 +46,17 @@ export async function cloudCommand(argv: readonly string[]): Promise<number> {
     'verify-email': ['code'],
     'forgot-password': ['email'],
     'reset-password': ['email', 'code'],
-    datasets: ['workspace'],
-    artifacts: ['workspace'],
-    'dataset-import': ['workspace', 'dataset'],
-    'dataset-publish': ['workspace', 'dataset', 'remote-dataset'],
-    'artifact-import': ['workspace', 'artifact'],
-    'artifact-upload': ['workspace', 'artifact'],
+    datasets: ['org'],
+    artifacts: ['org'],
+    'dataset-import': ['org', 'dataset'],
+    'dataset-publish': ['org', 'dataset', 'remote-dataset'],
+    'artifact-import': ['org', 'artifact'],
+    'artifact-upload': ['org', 'artifact'],
   }[sub as string] ?? [];
   const args = parseArgs(argv.slice(1), { booleans: ['pretty', 'password-stdin'], values: [...COMMON, ...values] });
   const request = <T>(path: string, init: RequestInit = {}) => hostRequest<T>(`${CLOUD_ROOT}${path}`, { dataRoot: optionalString(args, 'data-root') }, init);
   const post = (path: string, body?: Record<string, unknown>) => request(path, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}) });
-  const workspaceQuery = () => `?workspaceId=${encodeURIComponent(requireValue(args, 'workspace', sub))}`;
+  const organizationQuery = () => `?organizationId=${encodeURIComponent(requireValue(args, 'org', sub))}`;
   const password = (label: string) => readPassword({ operation: sub, label, stdin: boolFlag(args, 'password-stdin') });
 
   let result: unknown;
@@ -90,26 +90,26 @@ export async function cloudCommand(argv: readonly string[]): Promise<number> {
       });
       break;
     case 'sign-out': result = await post('/disconnect'); break;
-    case 'workspaces': result = await request('/workspaces'); break;
-    case 'datasets': result = await request(`/datasets${workspaceQuery()}`); break;
-    case 'artifacts': result = await request(`/artifacts${workspaceQuery()}`); break;
+    case 'organizations': result = await request('/organizations'); break;
+    case 'datasets': result = await request(`/datasets${organizationQuery()}`); break;
+    case 'artifacts': result = await request(`/artifacts${organizationQuery()}`); break;
     case 'dataset-import':
-      result = await post('/datasets/import', { workspaceId: requireValue(args, 'workspace', sub), datasetId: requireValue(args, 'dataset', sub) });
+      result = await post('/datasets/import', { organizationId: requireValue(args, 'org', sub), datasetId: requireValue(args, 'dataset', sub) });
       break;
     case 'dataset-publish': {
       const remoteDatasetId = optionalString(args, 'remote-dataset');
       result = await post('/datasets/publish', {
-        workspaceId: requireValue(args, 'workspace', sub),
+        organizationId: requireValue(args, 'org', sub),
         datasetId: requireValue(args, 'dataset', sub),
         ...(remoteDatasetId ? { remoteDatasetId } : {}),
       });
       break;
     }
     case 'artifact-import':
-      result = await post('/artifacts/import', { workspaceId: requireValue(args, 'workspace', sub), artifactId: requireValue(args, 'artifact', sub) });
+      result = await post('/artifacts/import', { organizationId: requireValue(args, 'org', sub), artifactId: requireValue(args, 'artifact', sub) });
       break;
     case 'artifact-upload':
-      result = await post('/artifacts/upload', { workspaceId: requireValue(args, 'workspace', sub), artifactId: requireValue(args, 'artifact', sub) });
+      result = await post('/artifacts/upload', { organizationId: requireValue(args, 'org', sub), artifactId: requireValue(args, 'artifact', sub) });
       break;
     case 'dataset-links': result = await request('/datasets/links'); break;
     case 'artifact-links': result = await request('/artifacts/links'); break;

@@ -1,4 +1,4 @@
-import type { ScenarioArtifactDto, ScenarioDatasetDto, WorkspaceArtifact } from "./contracts";
+import type { IndexedArtifact, ScenarioArtifactDto, ScenarioDatasetDto } from "./contracts";
 
 /** Connection identity is independent of local project ownership and compute. */
 export type StudioCloudUser = {
@@ -25,9 +25,12 @@ export type StudioCloudStatus = {
   message: string | null;
 };
 
-export type StudioCloudWorkspace = {
+/**
+ * One SimCloud organization this account belongs to. `id` is the organization
+ * id: a cloud home has exactly one tenant and this is it.
+ */
+export type StudioCloudOrganization = {
   id: string;
-  organizationId: string;
   name: string;
   role: string;
 };
@@ -60,12 +63,12 @@ export type StudioCloudInvitation = {
 };
 
 export type StudioCloudDatasetRef = {
-  workspaceId: string;
+  organizationId: string;
   datasetId: string;
 };
 
 export type StudioCloudPublishResult = {
-  workspaceId: string;
+  organizationId: string;
   datasetId: string;
   documents: number;
   artifacts: number;
@@ -99,22 +102,22 @@ export interface StudioCloudService {
   declineInvitation(id: string, signal?: AbortSignal): Promise<{ ok: true }>;
   /** `token` is the invite token or the whole invite URL from the email. */
   acceptInvitationLink(token: string, signal?: AbortSignal): Promise<{ organizationId: string }>;
-  setActiveWorkspace(organizationId: string, signal?: AbortSignal): Promise<StudioCloudStatus>;
+  setActiveOrganization(organizationId: string, signal?: AbortSignal): Promise<StudioCloudStatus>;
   disconnect(signal?: AbortSignal): Promise<StudioCloudStatus>;
-  listWorkspaces(signal?: AbortSignal): Promise<StudioCloudWorkspace[]>;
-  listDatasets(workspaceId: string, signal?: AbortSignal): Promise<ScenarioDatasetDto[]>;
+  listOrganizations(signal?: AbortSignal): Promise<StudioCloudOrganization[]>;
+  listDatasets(organizationId: string, signal?: AbortSignal): Promise<ScenarioDatasetDto[]>;
   importDataset(source: StudioCloudDatasetRef, signal?: AbortSignal): Promise<ScenarioDatasetDto>;
   publishDataset(
-    input: { datasetId: string; workspaceId: string; remoteDatasetId?: string },
+    input: { datasetId: string; organizationId: string; remoteDatasetId?: string },
     signal?: AbortSignal,
   ): Promise<StudioCloudPublishResult>;
-  listArtifacts(workspaceId: string, signal?: AbortSignal): Promise<WorkspaceArtifact[]>;
+  listArtifacts(organizationId: string, signal?: AbortSignal): Promise<IndexedArtifact[]>;
   importArtifact(
-    source: { workspaceId: string; artifactId: string },
+    source: { organizationId: string; artifactId: string },
     signal?: AbortSignal,
   ): Promise<ScenarioArtifactDto>;
   uploadArtifact(
-    input: { artifactId: string; workspaceId: string },
+    input: { artifactId: string; organizationId: string },
     signal?: AbortSignal,
-  ): Promise<{ workspaceId: string; artifactId: string }>;
+  ): Promise<{ organizationId: string; artifactId: string }>;
 }

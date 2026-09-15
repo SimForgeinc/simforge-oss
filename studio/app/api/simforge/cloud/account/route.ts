@@ -5,7 +5,7 @@ import { getCloudAccount, updateCloudAccount } from "@/app/lib/cloud/connection"
 import { transferErrorResponse } from "@/app/lib/cloud/projects";
 import { SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 
-/** `GET /api/simforge/cloud/account` -> `StudioCloudAccount` (profile, active workspace, devices). */
+/** `GET /api/simforge/cloud/account` -> `StudioCloudAccount` (profile, active organization, devices). */
 export async function GET(request: Request) {
   await connection();
   try {

@@ -21,7 +21,7 @@ export const CLOUD_EVAL_COMMANDS = ['capabilities', 'submit', 'list', 'status', 
 const TERMINAL = new Set<ComputeJob['status']>(['succeeded', 'partial', 'failed', 'cancelled']);
 /** The launcher's order of preference for which uploaded view is the primary one. */
 const PRIMARY_PREFERENCE = [1, 0, 2, 6, 3, 5, 4] as const;
-const WORKSPACE_HEADER = 'X-SimForge-Workspace-Id';
+const ORGANIZATION_HEADER = 'X-SimForge-Organization-Id';
 
 /** Families whose camera contract accepts whatever uploaded views it is given. */
 const VIDEO_FAMILIES = MODEL_FAMILIES.filter((family) => {
@@ -29,27 +29,26 @@ const VIDEO_FAMILIES = MODEL_FAMILIES.filter((family) => {
   return cameras.required === null || cameras.variable;
 });
 
-type CloudSession = HostSession & { gateway: EvaluationGateway; workspaceHeaders: Record<string, string> };
+type CloudSession = HostSession & { gateway: EvaluationGateway; organizationHeaders: Record<string, string> };
 
 /**
- * The compute proxy resolves the workspace from the session's active
- * organisation; `--workspace` is only an explicit override for accounts that
- * belong to several.
+ * Without `--org` the compute proxy acts in the session's active organization;
+ * `--org` is the explicit choice for an account that belongs to several.
  */
-async function cloudSession(dataRoot: string | undefined, workspace: string | undefined): Promise<CloudSession> {
+async function cloudSession(dataRoot: string | undefined, organization: string | undefined): Promise<CloudSession> {
   const session = await hostSession(dataRoot);
   const status = await hostRequest<{ state: string }>('/api/simforge/cloud/status', { dataRoot });
   if (status.state !== 'connected') {
     throw new CliError('cloud_disconnected', 'The local host has no SimCloud session. Run `simforge cloud connect` first.', { detail: status });
   }
-  const workspaceHeaders: Record<string, string> = workspace ? { [WORKSPACE_HEADER]: workspace } : {};
+  const organizationHeaders: Record<string, string> = organization ? { [ORGANIZATION_HEADER]: organization } : {};
   const gateway = createHttpEvaluationGateway({
     baseUrl: session.baseUrl,
     basePath: DESKTOP_COMPUTE_PROXY_PATH,
-    workspaceId: workspace ?? null,
+    organizationId: organization ?? null,
     headers: session.headers,
   });
-  return { ...session, gateway, workspaceHeaders };
+  return { ...session, gateway, organizationHeaders };
 }
 
 function jobSummary(job: ComputeJob) {
@@ -69,7 +68,7 @@ function jobSummary(job: ComputeJob) {
   };
 }
 
-/** Upload one local artifact's bytes into the workspace; dedup by digest is the server's call. */
+/** Upload one local artifact's bytes into the organization; dedup by digest is the server's call. */
 async function uploadVideo(session: CloudSession, url: string, label: string) {
   const response = await fetch(new URL(url, session.baseUrl), { headers: session.headers, redirect: 'error' });
   if (!response.ok) throw new CliError('artifact_download_failed', `Download of ${label} failed (${response.status}).`);
@@ -186,12 +185,12 @@ async function submitRender(session: CloudSession, options: SubmitOptions, prett
 
 export async function cloudEvalCommand(argv: readonly string[]): Promise<number> {
   const sub = requireSubcommand('cloud eval', argv[0], CLOUD_EVAL_COMMANDS);
-  const common = ['data-root', 'workspace'];
+  const common = ['data-root', 'org'];
   switch (sub) {
     case 'capabilities': {
       const args = parseArgs(argv.slice(1), { booleans: ['pretty'], values: common });
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
-      emit(await hostRequest(`${DESKTOP_COMPUTE_PROXY_PATH}/capabilities`, { dataRoot: optionalString(args, 'data-root'), headers: session.workspaceHeaders }), { pretty: boolFlag(args, 'pretty') });
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
+      emit(await hostRequest(`${DESKTOP_COMPUTE_PROXY_PATH}/capabilities`, { dataRoot: optionalString(args, 'data-root'), headers: session.organizationHeaders }), { pretty: boolFlag(args, 'pretty') });
       return EXIT.ok;
     }
     case 'submit': {
@@ -229,12 +228,12 @@ export async function cloudEvalCommand(argv: readonly string[]): Promise<number>
         numTrajSamples: num('samples', 4, 1),
         dryRun: boolFlag(args, 'dry-run'),
       };
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
       return submitRender(session, options, boolFlag(args, 'pretty'));
     }
     case 'list': {
       const args = parseArgs(argv.slice(1), { booleans: ['pretty'], values: common });
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
       const page = await session.gateway.listJobs({ kind: 'alpamayo.openloop', limit: 100 });
       emit(page.jobs.map(jobSummary), { pretty: boolFlag(args, 'pretty') });
       return EXIT.ok;
@@ -243,7 +242,7 @@ export async function cloudEvalCommand(argv: readonly string[]): Promise<number>
       const args = parseArgs(argv.slice(1), { booleans: ['pretty'], values: common });
       const jobId = args.positionals[0];
       if (!jobId) throw new CliError('missing_argument', '`simforge cloud eval status` requires an evaluation job id.');
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
       emit(jobSummary(await session.gateway.getJob(jobId)), { pretty: boolFlag(args, 'pretty') });
       return EXIT.ok;
     }
@@ -252,7 +251,7 @@ export async function cloudEvalCommand(argv: readonly string[]): Promise<number>
       const jobId = args.positionals[0];
       if (!jobId) throw new CliError('missing_argument', '`simforge cloud eval wait` requires an evaluation job id.');
       const timeoutSeconds = optionalNumber(args, 'timeout') ?? 1_800;
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
       const job = await pollUntil(() => session.gateway.getJob(jobId), (value) => TERMINAL.has(value.status), {
         timeoutSeconds,
         intervalMs: 10_000,
@@ -268,7 +267,7 @@ export async function cloudEvalCommand(argv: readonly string[]): Promise<number>
       if (!jobId) throw new CliError('missing_argument', '`simforge cloud eval artifacts` requires an evaluation job id.');
       const out = optionalString(args, 'out');
       const pretty = boolFlag(args, 'pretty');
-      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'workspace'));
+      const session = await cloudSession(optionalString(args, 'data-root'), optionalString(args, 'org'));
       const job = await session.gateway.getJob(jobId);
       if (!job.result) throw new CliError('result_not_available', `Evaluation ${jobId} is ${job.status}; no result manifest yet.`);
       const artifacts = job.result.artifacts;

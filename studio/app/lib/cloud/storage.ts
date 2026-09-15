@@ -6,7 +6,7 @@ import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
-import type { ScenarioArtifactDto, WorkspaceArtifact } from "@simforge-oss/studio-host";
+import type { IndexedArtifact, ScenarioArtifactDto } from "@simforge-oss/studio-host";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { LOCAL_ARTIFACTS_DIR } from "@/app/lib/db/config";
 import { execute, queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
@@ -37,10 +37,10 @@ import { CloudTransferError, cloudResponseError } from "./projects";
 
 const TRANSFER_TIMEOUT_MS = 30 * 60_000;
 
-export async function listCloudArtifacts(workspaceId: string, signal?: AbortSignal): Promise<WorkspaceArtifact[]> {
-  const response = await cloudRequest("/api/desktop/storage/artifacts", { method: "GET" }, { workspaceId, signal });
+export async function listCloudArtifacts(organizationId: string, signal?: AbortSignal): Promise<IndexedArtifact[]> {
+  const response = await cloudRequest("/api/desktop/storage/artifacts", { method: "GET" }, { organizationId, signal });
   if (!response.ok) throw await cloudResponseError(response, "cloud_artifacts_unavailable");
-  const body = (await response.json()) as { artifacts: WorkspaceArtifact[] };
+  const body = (await response.json()) as { artifacts: IndexedArtifact[] };
   return body.artifacts;
 }
 
@@ -50,7 +50,7 @@ export async function listCloudArtifacts(workspaceId: string, signal?: AbortSign
 export type CloudArtifactLink = {
   localArtifactId: string;
   origin: string;
-  remoteWorkspaceId: string;
+  remoteOrganizationId: string;
   remoteArtifactId: string;
   direction: "import" | "upload";
   sha256: string;
@@ -71,7 +71,7 @@ function artifactLinkDto(row: ArtifactLinkRow): CloudArtifactLink {
   return {
     localArtifactId: row.local_artifact_id,
     origin: row.cloud_origin,
-    remoteWorkspaceId: row.remote_workspace_id,
+    remoteOrganizationId: row.remote_workspace_id,
     remoteArtifactId: row.remote_artifact_id,
     direction: row.direction,
     sha256: row.sha256,
@@ -97,7 +97,7 @@ async function upsertArtifactLink(
   input: {
     localArtifactId: string;
     origin: string;
-    remoteWorkspaceId: string;
+    remoteOrganizationId: string;
     remoteArtifactId: string;
     direction: "import" | "upload";
     sha256: string;
@@ -121,7 +121,7 @@ async function upsertArtifactLink(
       local_artifact_id: input.localArtifactId,
       workspace_id: context.workspaceId,
       origin: input.origin,
-      remote_workspace_id: input.remoteWorkspaceId,
+      remote_workspace_id: input.remoteOrganizationId,
       remote_artifact_id: input.remoteArtifactId,
       direction: input.direction,
       sha256: input.sha256,
@@ -239,7 +239,7 @@ async function downloadVerified(
  */
 export async function importCloudArtifact(
   context: AppContext,
-  source: { workspaceId: string; artifactId: string },
+  source: { organizationId: string; artifactId: string },
   signal?: AbortSignal,
 ): Promise<ScenarioArtifactDto> {
   const status = await getCloudStatus();
@@ -247,7 +247,7 @@ export async function importCloudArtifact(
   const response = await cloudRequest(
     `/api/simforge/artifacts/${encodeURIComponent(source.artifactId)}`,
     { method: "GET" },
-    { workspaceId: source.workspaceId, signal },
+    { organizationId: source.organizationId, signal },
   );
   if (!response.ok) throw await cloudResponseError(response, "cloud_artifact_unavailable");
   const remote = RemoteArtifactSchema.parse(await response.json());
@@ -263,7 +263,7 @@ export async function importCloudArtifact(
   await upsertArtifactLink(context, {
     localArtifactId,
     origin,
-    remoteWorkspaceId: source.workspaceId,
+    remoteOrganizationId: source.organizationId,
     remoteArtifactId: remote.id,
     direction: "import",
     sha256: remote.sha256,
@@ -276,7 +276,7 @@ export async function importCloudArtifact(
 async function materializeImportedArtifact(
   context: AppContext,
   origin: string,
-  source: { workspaceId: string; artifactId: string },
+  source: { organizationId: string; artifactId: string },
   remote: z.infer<typeof RemoteArtifactSchema>,
   signal?: AbortSignal,
 ): Promise<string> {
@@ -293,7 +293,7 @@ async function materializeImportedArtifact(
       artifactSha256: remote.sha256,
       requestPayload: {
         origin,
-        remoteWorkspaceId: source.workspaceId,
+        remoteOrganizationId: source.organizationId,
         remoteArtifactId: remote.id,
         remoteRevisionId: remote.revisionId,
         sizeBytes: remote.sizeBytes,
@@ -331,7 +331,7 @@ async function materializeImportedArtifact(
         size_bytes: remote.sizeBytes,
         metadata: {
           ...remote.metadata,
-          simcloud: { origin, workspaceId: source.workspaceId, artifactId: remote.id, revisionId: remote.revisionId },
+          simcloud: { origin, organizationId: source.organizationId, artifactId: remote.id, revisionId: remote.revisionId },
         },
         user_id: context.userId,
         producer_job_id: producerJobId,
@@ -340,7 +340,7 @@ async function materializeImportedArtifact(
           producerJobFamily: "artifact_postprocess",
           producerJobId,
           operation: "simcloud_artifact_import",
-          upstream: { origin, workspaceId: source.workspaceId, artifactId: remote.id, revisionId: remote.revisionId },
+          upstream: { origin, organizationId: source.organizationId, artifactId: remote.id, revisionId: remote.revisionId },
         },
       },
     );
@@ -481,7 +481,7 @@ async function putLocalObject(
 }
 
 /**
- * Upload one local artifact into a SimCloud workspace. The server tells us
+ * Upload one local artifact into a SimCloud organization. The server tells us
  * whether it already holds these bytes; only missing content is transferred,
  * and the transfer counts as done only after the server verified the stored
  * digest and marked the artifact available. A completion the server refuses
@@ -489,9 +489,9 @@ async function putLocalObject(
  */
 export async function uploadCloudArtifact(
   context: AppContext,
-  input: { artifactId: string; workspaceId: string },
+  input: { artifactId: string; organizationId: string },
   signal?: AbortSignal,
-): Promise<{ workspaceId: string; artifactId: string }> {
+): Promise<{ organizationId: string; artifactId: string }> {
   const status = await getCloudStatus();
   const origin = status.origin;
   const local = await readLocalArtifact(context, input.artifactId);
@@ -519,7 +519,7 @@ export async function uploadCloudArtifact(
         metadata,
       }),
     },
-    { workspaceId: input.workspaceId, signal },
+    { organizationId: input.organizationId, signal },
   );
   if (!reserveResponse.ok) throw await cloudResponseError(reserveResponse, "cloud_upload_reservation_failed");
   const reservation = ReservationSchema.parse(await reserveResponse.json());
@@ -534,7 +534,7 @@ export async function uploadCloudArtifact(
     cloudRequest(
       `/api/desktop/storage/artifacts/upload/${encodeURIComponent(reservation.transferId)}/complete`,
       { method: "POST" },
-      { workspaceId: input.workspaceId, signal },
+      { organizationId: input.organizationId, signal },
     );
   let completion = await complete();
   if (completion.status === 409 && reservation.uploadUrl) {
@@ -550,10 +550,10 @@ export async function uploadCloudArtifact(
   await upsertArtifactLink(context, {
     localArtifactId: local.id,
     origin,
-    remoteWorkspaceId: input.workspaceId,
+    remoteOrganizationId: input.organizationId,
     remoteArtifactId: completed.artifactId,
     direction: "upload",
     sha256: local.sha256,
   });
-  return { workspaceId: input.workspaceId, artifactId: completed.artifactId };
+  return { organizationId: input.organizationId, artifactId: completed.artifactId };
 }

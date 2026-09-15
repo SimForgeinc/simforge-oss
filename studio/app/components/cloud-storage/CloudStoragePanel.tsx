@@ -13,9 +13,9 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type {
+  IndexedArtifact,
   ScenarioDatasetDto,
-  StudioCloudWorkspace,
-  WorkspaceArtifact,
+  StudioCloudOrganization,
 } from "@simforge-oss/studio-host";
 import { StudioHostRequestError } from "@simforge-oss/studio-host";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
@@ -28,8 +28,8 @@ import { studioHost } from "@/app/lib/host";
 import { studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
- * Cloud Storage: what a SimCloud workspace holds next to what this computer
- * holds, with explicit import/publish/upload actions between them.
+ * Cloud Storage: what a SimCloud organization holds next to what this
+ * computer holds, with explicit import/publish/upload actions between them.
  *
  * Every transfer is an intentional click. Link records (read from the local
  * service, no connection needed) show which local datasets and artifacts are
@@ -41,7 +41,7 @@ import { studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
 type CloudDatasetLink = {
   localDatasetId: string;
   origin: string;
-  remoteWorkspaceId: string;
+  remoteOrganizationId: string;
   remoteDatasetId: string;
   remoteDatasetName: string;
   lastImportedAt: string | null;
@@ -52,7 +52,7 @@ type CloudDatasetLink = {
 type CloudArtifactLink = {
   localArtifactId: string;
   origin: string;
-  remoteWorkspaceId: string;
+  remoteOrganizationId: string;
   remoteArtifactId: string;
   direction: "import" | "upload";
   sha256: string;
@@ -98,12 +98,12 @@ export function CloudStoragePanel() {
   const cloud = useStudioCloudStatus();
   const connected = cloud.status?.state === "connected";
 
-  const [workspaces, setWorkspaces] = useState<StudioCloudWorkspace[]>([]);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<StudioCloudOrganization[]>([]);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [cloudDatasets, setCloudDatasets] = useState<ScenarioDatasetDto[]>([]);
-  const [cloudArtifacts, setCloudArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [cloudArtifacts, setCloudArtifacts] = useState<IndexedArtifact[]>([]);
   const [localDatasets, setLocalDatasets] = useState<ScenarioDatasetDto[]>([]);
-  const [localArtifacts, setLocalArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [localArtifacts, setLocalArtifacts] = useState<IndexedArtifact[]>([]);
   const [datasetLinks, setDatasetLinks] = useState<CloudDatasetLink[]>([]);
   const [artifactLinks, setArtifactLinks] = useState<CloudArtifactLink[]>([]);
   const [publishTargets, setPublishTargets] = useState<Record<string, string>>({});
@@ -111,16 +111,16 @@ export function CloudStoragePanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
-  const workspace = useMemo(
-    () => workspaces.find((candidate) => candidate.id === workspaceId) ?? null,
-    [workspaces, workspaceId],
+  const organization = useMemo(
+    () => organizations.find((candidate) => candidate.id === organizationId) ?? null,
+    [organizations, organizationId],
   );
   const origin = cloud.status?.origin ?? null;
 
   const loadLocal = useCallback(async () => {
     const [datasets, artifacts, datasetLinkRows, artifactLinkRows] = await Promise.all([
       studioHost.projects.listDatasets(),
-      studioHost.artifacts.listWorkspaceArtifacts({ limit: 200 }),
+      studioHost.artifacts.listArtifactIndex({ limit: 200 }),
       readLinks<CloudDatasetLink>("/api/simforge/cloud/datasets/links"),
       readLinks<CloudArtifactLink>("/api/simforge/cloud/artifacts/links"),
     ]);
@@ -130,18 +130,14 @@ export function CloudStoragePanel() {
     setArtifactLinks(artifactLinkRows);
   }, []);
 
-  const activeOrganizationId = cloud.status?.activeOrganizationId ?? null;
-  const loadWorkspaces = useCallback(async () => {
-    const rows = await studioCloud.listWorkspaces();
-    setWorkspaces(rows);
-    // The account's active workspace first; a choice made here is kept while it still exists.
-    setWorkspaceId((current) => {
-      if (current && rows.some((row) => row.id === current)) return current;
-      return (rows.find((row) => row.organizationId === activeOrganizationId) ?? rows[0])?.id ?? null;
-    });
-  }, [activeOrganizationId]);
+  const loadOrganizations = useCallback(async () => {
+    const rows = await studioCloud.listOrganizations();
+    setOrganizations(rows);
+    // A choice made here is kept while it still exists; otherwise the first one.
+    setOrganizationId((current) => (current && rows.some((row) => row.id === current) ? current : rows[0]?.id ?? null));
+  }, []);
 
-  const loadWorkspaceContent = useCallback(async (id: string) => {
+  const loadOrganizationContent = useCallback(async (id: string) => {
     const [datasets, artifacts] = await Promise.all([
       studioCloud.listDatasets(id),
       studioCloud.listArtifacts(id),
@@ -155,9 +151,9 @@ export function CloudStoragePanel() {
     try {
       await loadLocal();
       if (connected) {
-        await loadWorkspaces();
+        await loadOrganizations();
       } else {
-        setWorkspaces([]);
+        setOrganizations([]);
         setCloudDatasets([]);
         setCloudArtifacts([]);
       }
@@ -166,19 +162,19 @@ export function CloudStoragePanel() {
     } finally {
       setLoading(false);
     }
-  }, [connected, loadLocal, loadWorkspaces]);
+  }, [connected, loadLocal, loadOrganizations]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   useEffect(() => {
-    if (!connected || !workspaceId) return;
+    if (!connected || !organizationId) return;
     let cancelled = false;
     setLoading(true);
-    loadWorkspaceContent(workspaceId)
+    loadOrganizationContent(organizationId)
       .catch((reason: unknown) => {
-        if (!cancelled) setNotice({ tone: "error", text: describeError(reason, "Workspace content could not be loaded.") });
+        if (!cancelled) setNotice({ tone: "error", text: describeError(reason, "Organization content could not be loaded.") });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -186,14 +182,14 @@ export function CloudStoragePanel() {
     return () => {
       cancelled = true;
     };
-  }, [connected, workspaceId, loadWorkspaceContent]);
+  }, [connected, organizationId, loadOrganizationContent]);
 
   const linkForRemoteDataset = useCallback(
     (remoteDatasetId: string) =>
       datasetLinks.find(
-        (link) => link.origin === origin && link.remoteWorkspaceId === workspaceId && link.remoteDatasetId === remoteDatasetId,
+        (link) => link.origin === origin && link.remoteOrganizationId === organizationId && link.remoteDatasetId === remoteDatasetId,
       ) ?? null,
-    [datasetLinks, origin, workspaceId],
+    [datasetLinks, origin, organizationId],
   );
   const linkForLocalDataset = useCallback(
     (localDatasetId: string) => datasetLinks.find((link) => link.localDatasetId === localDatasetId) ?? null,
@@ -202,16 +198,16 @@ export function CloudStoragePanel() {
   const linkForRemoteArtifact = useCallback(
     (remoteArtifactId: string) =>
       artifactLinks.find(
-        (link) => link.origin === origin && link.remoteWorkspaceId === workspaceId && link.remoteArtifactId === remoteArtifactId,
+        (link) => link.origin === origin && link.remoteOrganizationId === organizationId && link.remoteArtifactId === remoteArtifactId,
       ) ?? null,
-    [artifactLinks, origin, workspaceId],
+    [artifactLinks, origin, organizationId],
   );
   const linkForLocalArtifact = useCallback(
     (localArtifactId: string) =>
       artifactLinks.find(
-        (link) => link.origin === origin && link.remoteWorkspaceId === workspaceId && link.localArtifactId === localArtifactId,
+        (link) => link.origin === origin && link.remoteOrganizationId === organizationId && link.localArtifactId === localArtifactId,
       ) ?? null,
-    [artifactLinks, origin, workspaceId],
+    [artifactLinks, origin, organizationId],
   );
 
   async function run(key: string, action: () => Promise<string>) {
@@ -222,7 +218,7 @@ export function CloudStoragePanel() {
       const text = await action();
       setNotice({ tone: "success", text });
       await loadLocal();
-      if (workspaceId) await loadWorkspaceContent(workspaceId);
+      if (organizationId) await loadOrganizationContent(organizationId);
     } catch (reason) {
       setNotice({ tone: "error", text: describeError(reason, "The transfer failed.") });
     } finally {
@@ -232,35 +228,35 @@ export function CloudStoragePanel() {
 
   const importDataset = (dataset: ScenarioDatasetDto) =>
     run(`import-dataset:${dataset.id}`, async () => {
-      if (!workspaceId) throw new Error("Choose a workspace first.");
-      const local = await studioCloud.importDataset({ workspaceId, datasetId: dataset.id });
+      if (!organizationId) throw new Error("Choose an organization first.");
+      const local = await studioCloud.importDataset({ organizationId, datasetId: dataset.id });
       return `"${dataset.name}" is now a local working copy (${local.documentCount} scenario${local.documentCount === 1 ? "" : "s"}, dataset "${local.name}").`;
     });
 
   const publishDataset = (dataset: ScenarioDatasetDto) =>
     run(`publish-dataset:${dataset.id}`, async () => {
-      if (!workspaceId) throw new Error("Choose a workspace first.");
+      if (!organizationId) throw new Error("Choose an organization first.");
       const link = linkForLocalDataset(dataset.id);
       const chosen = publishTargets[dataset.id];
       const remoteDatasetId =
-        chosen === "new" ? undefined : chosen ?? (link && link.remoteWorkspaceId === workspaceId && link.origin === origin ? link.remoteDatasetId : undefined);
-      const result = await studioCloud.publishDataset({ datasetId: dataset.id, workspaceId, remoteDatasetId });
+        chosen === "new" ? undefined : chosen ?? (link && link.remoteOrganizationId === organizationId && link.origin === origin ? link.remoteDatasetId : undefined);
+      const result = await studioCloud.publishDataset({ datasetId: dataset.id, organizationId, remoteDatasetId });
       return result.documents === 0
         ? `"${dataset.name}" is already up to date in SimCloud.`
         : `Published ${result.documents} scenario${result.documents === 1 ? "" : "s"} from "${dataset.name}" to SimCloud.`;
     });
 
-  const importArtifact = (artifact: WorkspaceArtifact) =>
+  const importArtifact = (artifact: IndexedArtifact) =>
     run(`import-artifact:${artifact.id}`, async () => {
-      if (!workspaceId) throw new Error("Choose a workspace first.");
-      const local = await studioCloud.importArtifact({ workspaceId, artifactId: artifact.id });
+      if (!organizationId) throw new Error("Choose an organization first.");
+      const local = await studioCloud.importArtifact({ organizationId, artifactId: artifact.id });
       return `Imported ${artifact.artifactKind} (${formatBytes(local.sizeBytes)}) to this computer.`;
     });
 
-  const uploadArtifact = (artifact: WorkspaceArtifact) =>
+  const uploadArtifact = (artifact: IndexedArtifact) =>
     run(`upload-artifact:${artifact.id}`, async () => {
-      if (!workspaceId) throw new Error("Choose a workspace first.");
-      await studioCloud.uploadArtifact({ workspaceId, artifactId: artifact.id });
+      if (!organizationId) throw new Error("Choose an organization first.");
+      await studioCloud.uploadArtifact({ organizationId, artifactId: artifact.id });
       return `Uploaded ${artifact.artifactKind} (${formatBytes(artifact.byteLength)}) to SimCloud.`;
     });
 
@@ -293,8 +289,8 @@ export function CloudStoragePanel() {
           icon={<Cloud {...stylex.props(styles.icon8)} />}
           description={
             cloud.status?.state === "expired"
-              ? "Your SimCloud session has ended. Sign in again to browse your workspaces. Nothing on this computer is affected."
-              : "Everything on this computer keeps working without an account. Signing in lets you browse your workspaces and move projects and artifacts explicitly — nothing is uploaded on sign-in."
+              ? "Your SimCloud session has ended. Sign in again to browse your organizations. Nothing on this computer is affected."
+              : "Everything on this computer keeps working without an account. Signing in lets you browse your organizations and move projects and artifacts explicitly — nothing is uploaded on sign-in."
           }
           action={
             <Button onClick={cloud.openAccountPanel} disabled={cloud.status === null || cloud.status.state === "connecting"}>
@@ -305,25 +301,25 @@ export function CloudStoragePanel() {
         />
       ) : (
         <div {...stylex.props(styles.content)}>
-          <div {...stylex.props(styles.workspaceBar)}>
-            <label {...stylex.props(styles.label)} htmlFor="cloud-storage-workspace">
-              Workspace
+          <div {...stylex.props(styles.organizationBar)}>
+            <label {...stylex.props(styles.label)} htmlFor="cloud-storage-organization">
+              Organization
             </label>
             <select
-              id="cloud-storage-workspace"
+              id="cloud-storage-organization"
               {...stylex.props(styles.select)}
-              value={workspaceId ?? ""}
-              onChange={(event) => setWorkspaceId(event.target.value || null)}
-              disabled={workspaces.length === 0 || busy !== null}
+              value={organizationId ?? ""}
+              onChange={(event) => setOrganizationId(event.target.value || null)}
+              disabled={organizations.length === 0 || busy !== null}
             >
-              {workspaces.length === 0 ? <option value="">No workspaces</option> : null}
-              {workspaces.map((row) => (
+              {organizations.length === 0 ? <option value="">No organizations</option> : null}
+              {organizations.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name} · {ROLE_LABELS[row.role] ?? row.role}
                 </option>
               ))}
             </select>
-            {workspace ? (
+            {organization ? (
               <span {...stylex.props(styles.account)}>
                 {cloud.status?.user?.email ?? cloud.status?.user?.name ?? "Signed in"} · {origin}
               </span>
@@ -344,8 +340,8 @@ export function CloudStoragePanel() {
             <ListCard
               title="Datasets in SimCloud"
               icon={<Database {...stylex.props(styles.icon4)} />}
-              subtitle={workspace ? workspace.name : "Choose a workspace"}
-              empty="This workspace has no datasets yet."
+              subtitle={organization ? organization.name : "Choose an organization"}
+              empty="This organization has no datasets yet."
               items={cloudDatasets}
               renderItem={(dataset) => {
                 const link = linkForRemoteDataset(dataset.id);
@@ -374,7 +370,7 @@ export function CloudStoragePanel() {
               items={localDatasets}
               renderItem={(dataset) => {
                 const link = linkForLocalDataset(dataset.id);
-                const linkedHere = link !== null && link.origin === origin && link.remoteWorkspaceId === workspaceId;
+                const linkedHere = link !== null && link.origin === origin && link.remoteOrganizationId === organizationId;
                 const key = `publish-dataset:${dataset.id}`;
                 const target = publishTargets[dataset.id] ?? (linkedHere ? link.remoteDatasetId : "new");
                 return (
@@ -390,7 +386,7 @@ export function CloudStoragePanel() {
                           <Badge variant="secondary">In sync with "{link.remoteDatasetName}"</Badge>
                         )
                       ) : link ? (
-                        <Badge variant="outline">Linked to another workspace</Badge>
+                        <Badge variant="outline">Linked to another organization</Badge>
                       ) : null
                     }
                     action={
@@ -425,8 +421,8 @@ export function CloudStoragePanel() {
             <ListCard
               title="Artifacts in SimCloud"
               icon={<FileBox {...stylex.props(styles.icon4)} />}
-              subtitle="Render outputs and uploads in this workspace"
-              empty="This workspace has no available artifacts."
+              subtitle="Render outputs and uploads in this organization"
+              empty="This organization has no available artifacts."
               items={importableArtifacts}
               renderItem={(artifact) => {
                 const link = linkForRemoteArtifact(artifact.id);
@@ -450,7 +446,7 @@ export function CloudStoragePanel() {
             <ListCard
               title="Artifacts on this computer"
               icon={<FileBox {...stylex.props(styles.icon4)} />}
-              subtitle="Only bytes the workspace lacks are transferred"
+              subtitle="Only bytes the organization lacks are transferred"
               empty="No local render artifacts yet. Render a scenario first."
               items={uploadableArtifacts}
               renderItem={(artifact) => {
@@ -461,7 +457,7 @@ export function CloudStoragePanel() {
                     key={artifact.id}
                     title={artifact.artifactKind}
                     detail={`${formatBytes(artifact.byteLength)} · ${artifact.mediaType} · ${artifact.sha256.slice(0, 12)}`}
-                    badge={link ? <Badge variant="secondary">{link.direction === "import" ? "Imported from this workspace" : "Uploaded"}</Badge> : null}
+                    badge={link ? <Badge variant="secondary">{link.direction === "import" ? "Imported from this organization" : "Uploaded"}</Badge> : null}
                     action={
                       <Button size="sm" variant={link ? "outline" : "default"} disabled={busy !== null} onClick={() => void uploadArtifact(artifact)}>
                         {busy === key ? <LoaderCircle {...stylex.props(styles.icon, styles.spinner)} /> : <CloudUpload {...stylex.props(styles.icon)} />}

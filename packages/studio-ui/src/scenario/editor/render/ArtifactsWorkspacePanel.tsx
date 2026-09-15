@@ -1,7 +1,7 @@
 "use client";
 
 import { useStudioHost } from "../../../host";
-import type { DisplayArtifact, PresignedArtifact, WorkspaceArtifact } from "@simforge-oss/studio-host";
+import type { DisplayArtifact, IndexedArtifact, PresignedArtifact } from "@simforge-oss/studio-host";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "../../../components/ui/input";
@@ -31,7 +31,7 @@ import { styles } from "./ArtifactsWorkspacePanel.stylex";
  */
 export function ArtifactsWorkspacePanel() {
   const studioHost = useStudioHost();
-  const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [artifacts, setArtifacts] = useState<IndexedArtifact[]>([]);
   const [kind, setKind] = useState("all");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function ArtifactsWorkspacePanel() {
     async (signal?: AbortSignal) => {
       setLoading(true);
       try {
-        const items = await studioHost.artifacts.listWorkspaceArtifacts(
+        const items = await studioHost.artifacts.listArtifactIndex(
           { artifactKind: kind === "all" ? null : kind },
           signal,
         );

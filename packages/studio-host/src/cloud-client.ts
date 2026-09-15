@@ -1,12 +1,12 @@
 import type {
   StudioCloudAccount,
   StudioCloudInvitation,
+  StudioCloudOrganization,
   StudioCloudPublishResult,
   StudioCloudService,
   StudioCloudStatus,
-  StudioCloudWorkspace,
 } from "./cloud";
-import type { ScenarioArtifactDto, ScenarioDatasetDto, WorkspaceArtifact } from "./contracts";
+import type { IndexedArtifact, ScenarioArtifactDto, ScenarioDatasetDto } from "./contracts";
 import { StudioHostRequestError } from "./errors";
 
 export type HttpStudioCloudServiceOptions = {
@@ -33,7 +33,6 @@ export const STUDIO_CLOUD_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   cloud_connect_pending: "A Google or GitHub sign-in is already waiting in your browser.",
   cloud_origin_rejected: "That SimCloud origin is not allowed.",
   cloud_unreachable: "SimCloud could not be reached. Check your connection and try again.",
-  cloud_workspace_forbidden: "You are not a member of that SimCloud workspace.",
   invalid_request: "Check the form and try again.",
   invalid_credentials: "That email or password is incorrect.",
   email_taken: "An account with that email already exists.",
@@ -44,7 +43,7 @@ export const STUDIO_CLOUD_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   throttled: "Too many attempts. Wait a moment and try again.",
   account_banned: "This account is not available.",
   invalid_token: "Your session is no longer valid. Sign in again.",
-  not_member: "You are not a member of that workspace.",
+  not_member: "You are not a member of that SimCloud organization.",
 };
 
 /**
@@ -134,19 +133,19 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
     acceptInvitationLink(token, signal) {
       return post<{ organizationId: string }>("/invitations/accept-link", { token }, signal);
     },
-    setActiveWorkspace(organizationId, signal) {
-      return post<StudioCloudStatus>("/workspaces/active", { organizationId }, signal);
+    setActiveOrganization(organizationId, signal) {
+      return post<StudioCloudStatus>("/organizations/active", { organizationId }, signal);
     },
     disconnect(signal) {
       return post<StudioCloudStatus>("/disconnect", undefined, signal);
     },
-    async listWorkspaces(signal) {
-      const body = await request<{ workspaces: StudioCloudWorkspace[] }>("/workspaces", { signal });
-      return body.workspaces;
+    async listOrganizations(signal) {
+      const body = await request<{ organizations: StudioCloudOrganization[] }>("/organizations", { signal });
+      return body.organizations;
     },
-    async listDatasets(workspaceId, signal) {
+    async listDatasets(organizationId, signal) {
       const body = await request<{ datasets: ScenarioDatasetDto[] }>(
-        `/datasets?workspaceId=${encodeURIComponent(workspaceId)}`,
+        `/datasets?organizationId=${encodeURIComponent(organizationId)}`,
         { signal },
       );
       return body.datasets;
@@ -157,9 +156,9 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
     publishDataset(input, signal) {
       return post<StudioCloudPublishResult>("/datasets/publish", input, signal);
     },
-    async listArtifacts(workspaceId, signal) {
-      const body = await request<{ artifacts: WorkspaceArtifact[] }>(
-        `/artifacts?workspaceId=${encodeURIComponent(workspaceId)}`,
+    async listArtifacts(organizationId, signal) {
+      const body = await request<{ artifacts: IndexedArtifact[] }>(
+        `/artifacts?organizationId=${encodeURIComponent(organizationId)}`,
         { signal },
       );
       return body.artifacts;
@@ -168,7 +167,7 @@ export function createHttpStudioCloudService(options: HttpStudioCloudServiceOpti
       return post<ScenarioArtifactDto>("/artifacts/import", source, signal);
     },
     uploadArtifact(input, signal) {
-      return post<{ workspaceId: string; artifactId: string }>("/artifacts/upload", input, signal);
+      return post<{ organizationId: string; artifactId: string }>("/artifacts/upload", input, signal);
     },
   };
 }

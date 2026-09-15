@@ -7,7 +7,7 @@ const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { trans
 export const styles = stylex.create({
   shell: { display: "flex", minHeight: "100%", flexDirection: "column", backgroundColor: colors.bg },
   content: { display: "flex", flexDirection: "column", gap: space.xxl, paddingInline: space.xxl, paddingBlock: "1.25rem" },
-  workspaceBar: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.lg },
+  organizationBar: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.lg },
   label: { fontSize: text.sizeXs, lineHeight: "1rem", fontWeight: text.weightMedium, color: colors.mutedForeground },
   select: { height: "2.25rem", borderWidth: "1px", borderStyle: "solid", borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.bg, paddingInline: space.lg, fontSize: text.sizeSm, lineHeight: "1.25rem", color: colors.text },
   targetSelect: { height: "2rem", maxWidth: "11rem", borderWidth: "1px", borderStyle: "solid", borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.bg, paddingInline: space.md, fontSize: text.sizeXs, lineHeight: "1rem", color: colors.text },

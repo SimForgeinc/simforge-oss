@@ -32,7 +32,7 @@ import {
   type EvaluationSelection,
   type LocalRunLauncher,
 } from "@simforge-oss/studio-ui/evaluation";
-import type { StudioCloudWorkspace } from "@simforge-oss/studio-host";
+import type { StudioCloudOrganization } from "@simforge-oss/studio-host";
 import type { EvalCampaignSummary } from "@/app/lib/evaluation/contracts";
 import type { ModelRunRecord, ModelVersionRecord } from "@/app/lib/models/contracts";
 import { useEvaluationGateway, useHostExecutionSnapshot } from "@/app/lib/host/evaluation";
@@ -53,14 +53,14 @@ import { styles } from "./evaluation-page.stylex";
 
 export function EvaluationPageClient() {
   const { selection, select, selectSection } = useEvaluationSelection();
-  const [workspaces, setWorkspaces] = useState<StudioCloudWorkspace[] | null>(null);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<StudioCloudOrganization[] | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [localRunsRefresh, setLocalRunsRefresh] = useState(0);
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
 
-  const gateway = useEvaluationGateway(workspaceId);
-  const host = useHostExecutionSnapshot(workspaceId);
+  const gateway = useEvaluationGateway(organizationId);
+  const host = useHostExecutionSnapshot(organizationId);
   const { jobs, error: jobsError } = useJobList(gateway, submittedJobId);
 
   const localRuns = useJsonFetch<{ runs: ModelRunRecord[] }>("/api/models/runs", localRunsRefresh);
@@ -69,19 +69,19 @@ export function EvaluationPageClient() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/simforge/cloud/workspaces", { signal: controller.signal, cache: "no-store" })
+    void fetch("/api/simforge/cloud/organizations", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`workspaces request failed (${response.status})`);
-        const payload = (await response.json()) as { workspaces?: StudioCloudWorkspace[] };
-        setWorkspaces(payload.workspaces ?? []);
+        if (!response.ok) throw new Error(`organizations request failed (${response.status})`);
+        const payload = (await response.json()) as { organizations?: StudioCloudOrganization[] };
+        setOrganizations(payload.organizations ?? []);
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
-        setWorkspaces([]);
+        setOrganizations([]);
         setError(
           cause instanceof Error
-            ? `Your SimCloud workspaces could not be listed: ${cause.message}`
-            : "Your SimCloud workspaces could not be listed.",
+            ? `Your SimCloud organizations could not be listed: ${cause.message}`
+            : "Your SimCloud organizations could not be listed.",
         );
       });
     return () => controller.abort();
@@ -179,20 +179,20 @@ export function EvaluationPageClient() {
         onSelectLocalRun={(runId) => select({ section: "runs", local: runId })}
         onNewPrediction={() => select({ section: "runs" })}
         workspacePicker={
-          workspaces && workspaces.length > 0 ? (
+          organizations && organizations.length > 0 ? (
             <div {...stylex.props(styles.workspace)}>
-              <span {...stylex.props(styles.workspaceLabel)}>Workspace</span>
+              <span {...stylex.props(styles.workspaceLabel)}>Organization</span>
               <SelectMenu
-                label="SimCloud workspace"
-                value={workspaceId ?? ""}
+                label="SimCloud organization"
+                value={organizationId ?? ""}
                 options={[
-                  { value: "", label: "Active account workspace" },
-                  ...workspaces.map((workspace) => ({
-                    value: workspace.id,
-                    label: `${workspace.name} (${workspace.role})`,
+                  { value: "", label: "Active account organization" },
+                  ...organizations.map((organization) => ({
+                    value: organization.id,
+                    label: `${organization.name} (${organization.role})`,
                   })),
                 ]}
-                onChange={(value) => setWorkspaceId(value || null)}
+                onChange={(value) => setOrganizationId(value || null)}
               />
             </div>
           ) : null
@@ -302,7 +302,7 @@ export function EvaluationPageClient() {
 
     if (selection.run) return <RunDetailClient jobId={selection.run} />;
     if (selection.local) return <LocalRunClient runId={selection.local} />;
-    // A failed list is not a loading list: the workspace may have no SimCloud
+    // A failed list is not a loading list: the organization may have no SimCloud
     // account at all, and starting a run is still the thing to offer. The
     // failure itself is on the overlay.
     if (jobs === null && !jobsError) {
@@ -310,7 +310,7 @@ export function EvaluationPageClient() {
         <CloudLoadingSurface
           scope="pane"
           title="Loading runs"
-          detail="Reading this workspace's evaluation runs."
+          detail="Reading this organization's evaluation runs."
         />
       );
     }

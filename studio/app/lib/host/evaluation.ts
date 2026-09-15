@@ -21,17 +21,18 @@ import { studioHost } from "@/app/lib/host";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 
 /**
- * The session's active organization supplies the default workspace. A picker
- * selection is an explicit override carried by the gateway's workspace header.
+ * Without a selection the call acts in the session's active organization; a
+ * picker selection is an explicit override carried by the gateway's
+ * organization header.
  */
-export function useEvaluationGateway(workspaceId: string | null = null): EvaluationGateway {
+export function useEvaluationGateway(organizationId: string | null = null): EvaluationGateway {
   return useMemo(
     () =>
       createHttpEvaluationGateway({
         basePath: DESKTOP_COMPUTE_PROXY_PATH,
-        workspaceId,
+        organizationId,
       }),
-    [workspaceId],
+    [organizationId],
   );
 }
 

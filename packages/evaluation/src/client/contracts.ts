@@ -143,7 +143,6 @@ export type ComputeJob = {
   kind: ComputeJobKind;
   status: ComputeJobStatus;
   origin: ComputeJobOrigin;
-  workspaceId: string;
   submittedByUserId: string;
   submittedByEmail: string | null;
   model: ComputeJobModelRef;

@@ -3,7 +3,7 @@
 import { Check, LoaderCircle, Mail } from "lucide-react";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import * as stylex from "@stylexjs/stylex";
-import type { StudioCloudAccount, StudioCloudInvitation, StudioCloudWorkspace } from "@simforge-oss/studio-host";
+import type { StudioCloudAccount, StudioCloudInvitation, StudioCloudOrganization } from "@simforge-oss/studio-host";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { useSetPageTitle } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
@@ -75,7 +75,7 @@ export function AccountPageClient() {
             <>
               <ProfileSection />
               <SecuritySection />
-              <WorkspacesSection />
+              <OrganizationsSection />
               <InvitationsSection />
             </>
           ) : null}
@@ -105,7 +105,7 @@ function ProfileSection() {
     <section aria-labelledby="account-profile-title" {...stylex.props(styles.section)} data-testid="account-profile">
       <p {...stylex.props(styles.eyebrow)}>Profile</p>
       <h2 id="account-profile-title" {...stylex.props(styles.heading)}>Name</h2>
-      <p {...stylex.props(styles.copy)}>How you appear to the members of your workspaces.</p>
+      <p {...stylex.props(styles.copy)}>How you appear to the members of your organizations.</p>
       <form {...stylex.props(form.root)} onSubmit={(event) => void submit(event)}>
         <div {...stylex.props(form.field)}>
           <label {...stylex.props(form.label)} htmlFor={id}>Name</label>
@@ -214,49 +214,27 @@ function SecuritySection() {
   );
 }
 
-function WorkspacesSection() {
+function OrganizationsSection() {
   const cloud = useStudioCloudStatus();
-  const load = useCallback((signal: AbortSignal) => cloud.listWorkspaces(signal), [cloud.listWorkspaces]);
-  const workspaces = useLoader<StudioCloudWorkspace[]>(load, true);
-  const active = cloud.status?.activeOrganizationId ?? null;
-  const [switching, setSwitching] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const choose = async (organizationId: string) => {
-    setSwitching(organizationId);
-    try {
-      setFailed(!(await cloud.setActiveWorkspace(organizationId)));
-    } finally {
-      setSwitching(null);
-    }
-  };
+  const load = useCallback((signal: AbortSignal) => cloud.listOrganizations(signal), [cloud.listOrganizations]);
+  const organizations = useLoader<StudioCloudOrganization[]>(load, true);
 
   return (
-    <section aria-labelledby="account-workspaces-title" {...stylex.props(styles.section)} data-testid="account-workspaces">
-      <p {...stylex.props(styles.eyebrow)}>Workspaces</p>
-      <h2 id="account-workspaces-title" {...stylex.props(styles.heading)}>Active workspace</h2>
-      <p {...stylex.props(styles.copy)}>The workspace cloud storage and managed inference act in. Workspaces are created and administered in SimCloud.</p>
-      {workspaces.error ? <p {...stylex.props(form.error)} role="alert">{workspaces.error}</p> : null}
-      {failed && cloud.error ? <p {...stylex.props(form.error)} role="alert">{cloud.error}</p> : null}
-      {workspaces.data === null && !workspaces.error ? <p {...stylex.props(styles.empty)}><LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> Loading workspaces…</p> : null}
-      {workspaces.data?.length === 0 ? <p {...stylex.props(styles.empty)}>You are not a member of any workspace yet. Accept an invitation below to join one.</p> : null}
-      {workspaces.data && workspaces.data.length > 0 ? (
+    <section aria-labelledby="account-organizations-title" {...stylex.props(styles.section)} data-testid="account-organizations">
+      <p {...stylex.props(styles.eyebrow)}>Organizations</p>
+      <h2 id="account-organizations-title" {...stylex.props(styles.heading)}>Your organizations</h2>
+      <p {...stylex.props(styles.copy)}>The organizations cloud storage and managed inference can act in, with your membership role. Organizations are created and administered in SimCloud.</p>
+      {organizations.error ? <p {...stylex.props(form.error)} role="alert">{organizations.error}</p> : null}
+      {organizations.data === null && !organizations.error ? <p {...stylex.props(styles.empty)}><LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> Loading organizations…</p> : null}
+      {organizations.data?.length === 0 ? <p {...stylex.props(styles.empty)}>You are not a member of any organization yet. Accept an invitation below to join one.</p> : null}
+      {organizations.data && organizations.data.length > 0 ? (
         <ul {...stylex.props(styles.list)}>
-          {workspaces.data.map((workspace) => (
-            <li key={workspace.id} {...stylex.props(styles.item)} data-active={workspace.organizationId === active || undefined}>
+          {organizations.data.map((organization) => (
+            <li key={organization.id} {...stylex.props(styles.item)}>
               <div {...stylex.props(styles.itemBody)}>
-                <p {...stylex.props(styles.itemTitle)}>
-                  {workspace.name}
-                  {workspace.organizationId === active ? <span {...stylex.props(styles.tag)}>Active</span> : null}
-                </p>
-                <p {...stylex.props(styles.itemDetail)}>{workspace.role}</p>
+                <p {...stylex.props(styles.itemTitle)}>{organization.name}</p>
+                <p {...stylex.props(styles.itemDetail)}>{organization.role}</p>
               </div>
-              {workspace.organizationId !== active ? (
-                <Button xstyle={[form.secondary, styles.compact]} disabled={cloud.loading || switching !== null} onClick={() => void choose(workspace.organizationId)} type="button" variant="outline">
-                  {switching === workspace.organizationId ? <LoaderCircle {...stylex.props(form.icon, form.spin)} aria-hidden="true" /> : null}
-                  Make active
-                </Button>
-              ) : null}
             </li>
           ))}
         </ul>
@@ -302,7 +280,7 @@ function InvitationsSection() {
   return (
     <section aria-labelledby="account-invitations-title" {...stylex.props(styles.section)} data-testid="account-invitations">
       <p {...stylex.props(styles.eyebrow)}>Invitations</p>
-      <h2 id="account-invitations-title" {...stylex.props(styles.heading)}>Workspace invitations</h2>
+      <h2 id="account-invitations-title" {...stylex.props(styles.heading)}>Organization invitations</h2>
       <p {...stylex.props(styles.copy)}>
         Invitations sent to {cloud.status?.user?.email ?? "your email"}.
         {verified ? "" : " Verify your email address above before accepting one."}
@@ -344,7 +322,7 @@ function InvitationsSection() {
         </div>
         <div {...stylex.props(form.row)}>
           <Button xstyle={form.submit} disabled={cloud.loading || link.trim().length === 0 || !verified} type="submit">
-            Join workspace
+            Join organization
           </Button>
           {joined ? <span {...stylex.props(form.success)} role="status"><Check {...stylex.props(form.icon)} aria-hidden="true" /> Joined</span> : null}
         </div>

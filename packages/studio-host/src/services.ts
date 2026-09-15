@@ -29,7 +29,7 @@ import type {
   ScenarioSimulationPreviewDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
-  WorkspaceArtifact,
+  IndexedArtifact,
 } from "./contracts";
 
 /** A published map as both the editor (`ScenarioMapEntry`) and the list surfaces need it. */
@@ -184,8 +184,8 @@ export interface StudioArtifactService {
   openArtifact(artifactId: string): Promise<void>;
   /** Resolve and trigger a browser download of an artifact. */
   downloadArtifact(artifactId: string): Promise<void>;
-  /** `artifact-index` — workspace browse, metadata only. Pair with `jobs.listDownloads` to open one. */
-  listWorkspaceArtifacts(options: { artifactKind?: string | null; limit?: number }, signal?: AbortSignal): Promise<WorkspaceArtifact[]>;
+  /** `artifact-index` — browse the home's artifacts, metadata only. Pair with `jobs.listDownloads` to open one. */
+  listArtifactIndex(options: { artifactKind?: string | null; limit?: number }, signal?: AbortSignal): Promise<IndexedArtifact[]>;
   /**
    * Resolve one browse-index artifact to a signed URL at the moment the author
    * asks to open it. Not memoised: a signature lives an hour and a cached one

@@ -4,12 +4,12 @@ import { importCloudDataset, transferErrorResponse } from "@/app/lib/cloud/proje
 import { readJson, requireScenarioContext } from "@/app/lib/scenario/http";
 
 const ImportSchema = z.strictObject({
-  workspaceId: z.string().trim().min(1).max(128),
+  organizationId: z.string().trim().min(1).max(128),
   datasetId: z.string().trim().min(1).max(128),
 });
 
 /**
- * `POST /api/simforge/cloud/datasets/import {workspaceId,datasetId}` -> the
+ * `POST /api/simforge/cloud/datasets/import {organizationId,datasetId}` -> the
  * local `ScenarioDatasetDto` holding the working copy. 409
  * `cloud_import_conflict` (with `conflicts`) when a document changed on both
  * sides; 422 `cloud_map_unavailable` (with `mapVersionIds`) when a map cannot

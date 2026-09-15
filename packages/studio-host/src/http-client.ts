@@ -17,7 +17,7 @@ import type {
   ScenarioSimulationPreviewDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
-  WorkspaceArtifact,
+  IndexedArtifact,
 } from "./contracts";
 import { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError } from "./errors";
 import type {
@@ -444,12 +444,12 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
       anchor.download = artifact.kind === "compiled-xosc" ? "scenario.xosc" : artifact.id;
       anchor.click();
     },
-    async listWorkspaceArtifacts(opts, signal) {
+    async listArtifactIndex(opts, signal) {
       const params = new URLSearchParams();
       if (opts.artifactKind) params.set("artifactKind", opts.artifactKind);
       if (opts.limit != null) params.set("limit", String(opts.limit));
       const query = params.toString();
-      const body = await request<{ items: WorkspaceArtifact[] }>(`${RENDER_JOBS}/artifact-index${query ? `?${query}` : ""}`, { signal });
+      const body = await request<{ items: IndexedArtifact[] }>(`${RENDER_JOBS}/artifact-index${query ? `?${query}` : ""}`, { signal });
       return body.items;
     },
     async resolveRenderArtifactUrl(renderJobId, artifactId, signal) {
