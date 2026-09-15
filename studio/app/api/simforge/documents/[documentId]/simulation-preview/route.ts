@@ -4,3 +4,14 @@ import { getCurrentSimulationPreview, reserveSimulationPreview } from "@/app/lib
 import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 type Context = { params: Promise<{ documentId: string }> };
 export async function GET(_request: Request, route: Context) { const auth=await requireScenarioContext(); if(auth.response)return auth.response; const {documentId}=await route.params; const value=await getCurrentSimulationPreview(auth.context,documentId); return value?NextResponse.json(value,{headers:SCENARIO_PRIVATE_CACHE_HEADERS}):NextResponse.json({error:"simulation_preview_not_found"},{status:404}); }
+export async function POST(request: Request, route: Context) {
+  const auth = await requireScenarioContext();
+  if (auth.response) return auth.response;
+  const parsed = ReserveScenarioSimulationPreviewSchema.safeParse(await readJson(request));
+  if (!parsed.success) return NextResponse.json({ error: "invalid_simulation_preview" }, { status: 400 });
+  const { documentId } = await route.params;
+  const access = await requireScenarioMutableDocumentContext(auth.context, documentId, "mutateContent");
+  if (access.response) return access.response;
+  const value = await reserveSimulationPreview(auth.context, documentId, parsed.data);
+  return value ? NextResponse.json(value) : NextResponse.json({ error: "stale_simulation_preview" }, { status: 409 });
+}

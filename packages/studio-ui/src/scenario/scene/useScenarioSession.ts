@@ -52,6 +52,13 @@ export type ScenarioSharedPlayback = {
   readonly error: string | null;
   /** Preparation failure text retained even when no playback controller exists. */
   readonly preparationMessage?: string | null;
+  /**
+   * Why persisting this trace as the document's saved simulation failed,
+   * if it did. The in-memory trace still plays, but a render needs the saved
+   * copy, so the failure is published instead of leaving the document's
+   * simulation preview a permanent 404 with nothing to explain it.
+   */
+  readonly savedSimulationError?: string | null;
   readonly inspecting: boolean;
   readonly setInspecting: (inspecting: boolean) => void;
   /** Status published by the one workspace-owned SUMO runtime. */
@@ -159,6 +166,7 @@ export function useScenarioSession({
   const [recordingCamera, setRecordingCamera] = useState<ScenarioRecordingCamera | null>(null);
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
   const [evidenceRequest, setEvidenceRequest] = useState<ScenarioEvidenceRequest | null>(null);
+  const [savedSimulationError, setSavedSimulationError] = useState<string | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
   /** The one in-flight or completed upload of the current trace, by content identity and saved version. */
   const previewSaveRef = useRef<{ key: string; abort: AbortController } | null>(null);
@@ -204,6 +212,7 @@ export function useScenarioSession({
       setMap(null);
       setBundle(null);
       setMessage(null);
+      setSavedSimulationError(null);
       return;
     }
     if (document?.id === documentId) return;
@@ -216,6 +225,7 @@ export function useScenarioSession({
     persistedDocumentIdentityRef.current = null;
     setBundle(null);
     setMessage("Preparing scenario preview…");
+    setSavedSimulationError(null);
     void studioHost.projects.getDocument(documentId, abort.signal).then((nextDocument) => {
       if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
       const canonical = withCanonicalEditorTimeline(nextDocument);
@@ -284,7 +294,16 @@ export function useScenarioSession({
       void previewRuntime()
         .then((runtime) => encodeSimulationPreview(nextBundle, target.draftVersion, runtime))
         .then(({ bytes, sha256 }) => studioHost.projects.saveSimulationPreview(target, bytes, sha256, abort.signal))
-        .catch(() => { if (previewSaveRef.current?.key === key) previewSaveRef.current = null; });
+        .then(() => { if (previewSaveRef.current?.key === key) setSavedSimulationError(null); })
+        .catch((reason: unknown) => {
+          if (previewSaveRef.current?.key !== key) return;
+          // Clearing the key lets the next pass retry; reporting the reason is
+          // what stops a failed save from presenting as a document whose saved
+          // simulation is simply missing forever.
+          previewSaveRef.current = null;
+          if ((reason as { name?: string } | null)?.name === "AbortError") return;
+          setSavedSimulationError(reason instanceof Error ? reason.message : String(reason));
+        });
     };
     // The exact trace for this content is already on screen: a mode change,
     // a title edit or an autosave echo must not drop it, re-parse it or rebuild
@@ -624,6 +643,7 @@ export function useScenarioSession({
       state: runtimePlayback.state,
       error: runtimePlayback.error,
       preparationMessage: message,
+      savedSimulationError,
       inspecting,
       setInspecting,
       sumoStatus,

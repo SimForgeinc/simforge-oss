@@ -8,7 +8,6 @@
  * reported as one.
  */
 
-import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -120,8 +119,15 @@ export function native(): typeof Native {
         '(requires the Rust toolchain); SIMFORGE_NATIVE_RUNTIME_ADDON, when set, must point at an existing build.',
     );
   }
-  const require = createRequire(import.meta.url);
-  const addon: unknown = require(candidate);
+  // `node:module` is reached through `process.getBuiltinModule` rather than
+  // imported, because webpack follows the imported `createRequire` binding and
+  // claims the call it returns: it rewrote this load into an empty context
+  // module, so the bundled Studio server threw `Cannot find module <addon>`
+  // from `webpackEmptyContext` for the addon that had just passed `existsSync`
+  // two lines above. The workspace resolves this package to a path outside
+  // `node_modules`, so Next's `serverExternalPackages` entry does not keep it
+  // out of that bundle. An addon is loaded by Node, never by a bundler.
+  const addon: unknown = process.getBuiltinModule('module').createRequire(import.meta.url)(candidate);
   assertNativeAbi(addon, candidate);
   loaded = addon;
   return loaded;

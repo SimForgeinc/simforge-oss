@@ -3,3 +3,14 @@ import { CompleteScenarioSimulationPreviewSchema } from "@/app/lib/scenario/cont
 import { completeSimulationPreview } from "@/app/lib/scenario/simulation-preview-store";
 import { readJson, requireScenarioContext, requireScenarioMutableDocumentContext } from "@/app/lib/scenario/http";
 type Context = { params: Promise<{ documentId: string }> };
+export async function POST(request: Request, route: Context) {
+  const auth = await requireScenarioContext();
+  if (auth.response) return auth.response;
+  const parsed = CompleteScenarioSimulationPreviewSchema.safeParse(await readJson(request));
+  if (!parsed.success) return NextResponse.json({ error: "invalid_simulation_preview" }, { status: 400 });
+  const { documentId } = await route.params;
+  const access = await requireScenarioMutableDocumentContext(auth.context, documentId, "mutateContent");
+  if (access.response) return access.response;
+  const value = await completeSimulationPreview(auth.context, documentId, parsed.data);
+  return value ? NextResponse.json(value) : NextResponse.json({ error: "stale_simulation_preview" }, { status: 409 });
+}
