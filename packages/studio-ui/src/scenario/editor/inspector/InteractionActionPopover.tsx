@@ -3,7 +3,7 @@
 import { Route, Trash2, Workflow } from "lucide-react";
 import type { Interaction, Trigger } from "@simforge-oss/scenario";
 
-import { isManualDrive, type EditorDocument } from "@simforge-oss/editor";
+import type { EditorDocument } from "@simforge-oss/editor";
 import { InteractionSemanticsControls } from "../timeline/InteractionSemanticsControls";
 import { InteractionTargetControls } from "../timeline/InteractionTargetControls";
 import { TriggerControls } from "../timeline/TriggerControls";
@@ -11,21 +11,17 @@ import { EditorDetailsPanel } from "./EditorDetailsPanel";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionActionPopover.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
-import { ManualDriveDetailsPanel } from "../manual-drive/ManualDriveDetailsPanel";
-import type { ManualDriveRecorder } from "../manual-drive/use-manual-drive-recorder";
 
 /** Full v2 action editor in the shared right-side details surface. */
 export function InteractionActionPopover({
   document,
   interaction,
   onConfigureCustomRoute,
-  manualDrive = null,
   onClose,
 }: {
   document: EditorDocument;
   interaction: Interaction;
   onConfigureCustomRoute?: (interactionId: string) => void;
-  manualDrive?: ManualDriveRecorder | null;
   onClose: () => void;
 }) {
   const interactions = document.data.choreography.interactions;
@@ -54,18 +50,6 @@ export function InteractionActionPopover({
   )
     ? interaction.target
     : null;
-
-  if (isManualDrive(interaction)) {
-    return (
-      <ManualDriveDetailsPanel
-        clipSeconds={document.data.choreography.clipSeconds}
-        interaction={interaction}
-        onClose={onClose}
-        onDelete={deleteInteraction}
-        recorder={manualDrive}
-      />
-    );
-  }
 
   if (customRouteTarget) {
     return (

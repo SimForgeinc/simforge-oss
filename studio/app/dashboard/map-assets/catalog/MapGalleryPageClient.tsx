@@ -43,18 +43,11 @@ import {
   type ScenarioWorldTarget,
 } from "@simforge-oss/studio-ui/scenario/scene/ScenarioWorldHost";
 import { useIdleStreetTour } from "@simforge-oss/studio-ui/scenario/scene/useIdleStreetTour";
-import {
-  MANUAL_DRIVE_TAKE_QUERY,
-  useManualDriveTakeSession,
-  type ManualDriveTakeUnavailableReason,
-} from "@simforge-oss/studio-ui/scenario/editor/manual-drive/take-handoff";
 import { LocalMapPreparationPanel } from "@/app/components/LocalMapPreparationPanel";
 import type { LocalMapDescriptor } from "@/app/lib/cloud/maps";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import { getCardStats } from "./map-card-data";
 import { MapGallerySumoTraffic } from "./MapGallerySumoTraffic";
-import { MapGalleryDrive } from "../drive/MapGalleryDrive";
-import { manualTake } from "../drive/manual-drive-take.stylex";
 
 const Map2DOverlay = dynamic(
   () => import("./Map2DOverlay").then((module) => module.Map2DOverlay),
@@ -81,12 +74,6 @@ const EMPTY_WORLD_STATE: ScenarioWorldState = {
   loadedMapVersionId: null,
   streaming: false,
   error: null,
-};
-
-const takeUnavailableCopy: Record<ManualDriveTakeUnavailableReason, string> = {
-  expired: "This take link has expired or was cancelled in the editor.",
-  delivered: "This take was already returned to the editor for review.",
-  consumed: "This take can no longer be driven from this link; start it again from the editor.",
 };
 
 /** Reuses the persistent Datasets world and its topology-bound street tour. */
@@ -202,12 +189,8 @@ export function MapGalleryPageClient({
   maps: LocalMapDescriptor[];
 }) {
   const router = useRouter();
-  const takeId = useSearchParams().get(MANUAL_DRIVE_TAKE_QUERY);
-  const takeBoundary = useManualDriveTakeSession(takeId);
-  const take = takeBoundary.state === "ready" ? takeBoundary.session : null;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [creating, setCreating] = useState(false);
-  const [driving, setDriving] = useState(false);
   const [map2DOpen, setMap2DOpen] = useState(false);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [sumoEnabled, setSumoEnabled] = useState(false);
@@ -237,18 +220,9 @@ export function MapGalleryPageClient({
     if (nextIndex >= 0) setSelectedIndex(nextIndex);
   }, [entries]);
 
-  // A take from the editor drives on the map it was recorded against.
-  useEffect(() => {
-    if (!take) return;
-    const index = entries.findIndex((candidate) => candidate.map.mapVersionId === take.mapVersionId);
-    if (index < 0) return;
-    setSelectedIndex(index);
-    setDriving(true);
-  }, [entries, take]);
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (driving || map2DOpen || mapPickerOpen) return;
+      if (map2DOpen || mapPickerOpen) return;
       const target = event.target as HTMLElement | null;
       if (
         target?.matches("input, textarea, select") ||
@@ -261,7 +235,7 @@ export function MapGalleryPageClient({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [driving, map2DOpen, mapPickerOpen, move]);
+  }, [map2DOpen, mapPickerOpen, move]);
 
   useEffect(() => {
     if (entries.length < 2) return;
@@ -283,28 +257,6 @@ export function MapGalleryPageClient({
       controller.abort();
     };
   }, [entries, selectedIndex, cloudState]);
-
-  if (takeBoundary.state === "loading") {
-    return (
-      <CloudLoadingSurface
-        detail="Reading the take and the map it was recorded against."
-        scope="pane"
-        title="Loading the manual drive take…"
-      />
-    );
-  }
-  if (takeBoundary.state === "unavailable") {
-    return (
-      <div {...stylex.props(manualTake.boundary)} role="alert" data-testid="drive-take-unavailable">
-        <div {...stylex.props(manualTake.boundaryBody)}>
-          <p>{takeUnavailableCopy[takeBoundary.reason]}</p>
-          {takeBoundary.returnHref ? (
-            <a {...stylex.props(manualTake.returnLink)} href={takeBoundary.returnHref}>Return to editor</a>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
 
   if (entries.length === 0) {
     return (
@@ -336,7 +288,7 @@ export function MapGalleryPageClient({
   const sumoLoading = sumoEnabled && sumoAvailable && sumoStatus.phase === "loading";
   const sumoFailed = sumoEnabled && sumoStatus.phase === "fallback";
   const locked = entry.map.access === "cloud" ? cloudState !== "connected" : entry.map.locked;
-  const drivable = !locked && entry.map.installed.browser;
+  const previewable = !locked && entry.map.installed.browser;
 
   const createScenario = async () => {
     if (creating || locked || !entry.map.installed.browser) return;
@@ -366,186 +318,166 @@ export function MapGalleryPageClient({
       <AddMapTopBarAction />
       <main className={stylex.props(styles.s_221).className}>
         <div className={stylex.props(styles.s_801).className}>
-          {!drivable ? (
-            // Do not mount a viewer before its local closure is installed and authorized.
-            <div
-              className={stylex.props(styles.s_223).className}
-              data-testid={locked ? "map-gallery-locked-backdrop" : "map-gallery-uninstalled-backdrop"}
-            />
-          ) : driving ? (
-            <MapGalleryDrive
-              mapVersionId={entry.map.mapVersionId}
-              onExit={() => setDriving(false)}
-              take={take}
-            />
-          ) : (
+          {previewable ? (
             <MapGalleryWorldPreview
               map={entry.map}
               onSumoStatusChange={setSumoStatus}
               sumoEnabled={sumoEnabled}
             />
+          ) : (
+            // Do not mount a viewer before its local closure is installed and authorized.
+            <div
+              className={stylex.props(styles.s_223).className}
+              data-testid={locked ? "map-gallery-locked-backdrop" : "map-gallery-uninstalled-backdrop"}
+            />
           )}
         </div>
 
-        {driving ? null : (
-          <>
-            <div className={stylex.props(styles.s_224).className} />
-            <div className={stylex.props(styles.s_225).className} />
+        <div className={stylex.props(styles.s_224).className} />
+        <div className={stylex.props(styles.s_225).className} />
 
-            <div className={stylex.props(styles.s_226).className}>
-              <button
-                type="button"
-                aria-label={sumoAvailable ? `SUMO traffic ${sumoEnabled ? "on" : "off"}` : "SUMO traffic unavailable"}
-                aria-pressed={sumoAvailable ? sumoEnabled : undefined}
-                className={stylex.props(
-                  styles.sumoToggle,
-                  sumoEnabled && sumoAvailable ? styles.sumoToggleOn : styles.sumoToggleOff,
-                  !sumoAvailable && styles.sumoToggleUnavailable,
-                ).className}
-                disabled={!sumoAvailable}
-                onClick={() => setSumoEnabled((enabled) => !enabled)}
-                title={
-                  !sumoAvailable
-                    ? "This map does not publish a SUMO traffic network."
-                    : sumoFailed
-                      ? sumoStatus.reason ?? "SUMO traffic could not start."
-                      : "Show continuously running browser SUMO traffic"
-                }
-              >
-                {sumoLoading ? (
-                  <Loader2 aria-hidden="true" className={stylex.props(styles.s_254).className} />
-                ) : sumoFailed ? (
-                  <AlertTriangle aria-hidden="true" className={stylex.props(styles.s_847).className} />
-                ) : (
-                  <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
-                )}
-                <span>
-                  {!sumoAvailable
-                    ? "SUMO unavailable"
-                    : sumoFailed
-                      ? "SUMO error"
-                      : `SUMO ${sumoEnabled ? "on" : "off"}`}
-                </span>
-                {sumoEnabled && sumoStatus.actorCount > 0 ? (
-                  <span className={stylex.props(styles.s_230).className}>{sumoStatus.actorCount}</span>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMap2DOpen(true)}
-                disabled={!entry.asset}
-                className={stylex.props(styles.s_231).className}
-                title={entry.asset ? "Open the 2D map workspace" : "No 2D map is available for this digital twin"}
-              >
-                <MapIcon aria-hidden="true" className={stylex.props(styles.s_232).className} />
-                View 2D map
-              </button>
-            </div>
-            <div
-              aria-hidden="true"
-              className={stylex.props(styles.s_233, styles.diagonalVeilMask).className}
-              data-testid="map-gallery-diagonal-veil"
-            />
+        <div className={stylex.props(styles.s_226).className}>
+          <button
+            type="button"
+            aria-label={sumoAvailable ? `SUMO traffic ${sumoEnabled ? "on" : "off"}` : "SUMO traffic unavailable"}
+            aria-pressed={sumoAvailable ? sumoEnabled : undefined}
+            className={stylex.props(
+              styles.sumoToggle,
+              sumoEnabled && sumoAvailable ? styles.sumoToggleOn : styles.sumoToggleOff,
+              !sumoAvailable && styles.sumoToggleUnavailable,
+            ).className}
+            disabled={!sumoAvailable}
+            onClick={() => setSumoEnabled((enabled) => !enabled)}
+            title={
+              !sumoAvailable
+                ? "This map does not publish a SUMO traffic network."
+                : sumoFailed
+                  ? sumoStatus.reason ?? "SUMO traffic could not start."
+                  : "Show continuously running browser SUMO traffic"
+            }
+          >
+            {sumoLoading ? (
+              <Loader2 aria-hidden="true" className={stylex.props(styles.s_254).className} />
+            ) : sumoFailed ? (
+              <AlertTriangle aria-hidden="true" className={stylex.props(styles.s_847).className} />
+            ) : (
+              <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
+            )}
+            <span>
+              {!sumoAvailable
+                ? "SUMO unavailable"
+                : sumoFailed
+                  ? "SUMO error"
+                  : `SUMO ${sumoEnabled ? "on" : "off"}`}
+            </span>
+            {sumoEnabled && sumoStatus.actorCount > 0 ? (
+              <span className={stylex.props(styles.s_230).className}>{sumoStatus.actorCount}</span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMap2DOpen(true)}
+            disabled={!entry.asset}
+            className={stylex.props(styles.s_231).className}
+            title={entry.asset ? "Open the 2D map workspace" : "No 2D map is available for this digital twin"}
+          >
+            <MapIcon aria-hidden="true" className={stylex.props(styles.s_232).className} />
+            View 2D map
+          </button>
+        </div>
+        <div
+          aria-hidden="true"
+          className={stylex.props(styles.s_233, styles.diagonalVeilMask).className}
+          data-testid="map-gallery-diagonal-veil"
+        />
 
-            <section
-              className={stylex.props(styles.s_234).className}
-              data-testid="map-gallery-editorial-overlay"
-            >
-              <div className={stylex.props(styles.s_235).className}>
-                <div className={stylex.props(styles.s_236).className}>
-                  <p className={stylex.props(styles.s_237).className}>
-                    <Sparkles aria-hidden="true" className={stylex.props(styles.s_991).className} />
-                    Simulation-ready digital twin
-                  </p>
-                  <h1
-                    className={stylex.props(styles.s_239, styles.heroTitleShadow).className}
+        <section
+          className={stylex.props(styles.s_234).className}
+          data-testid="map-gallery-editorial-overlay"
+        >
+          <div className={stylex.props(styles.s_235).className}>
+            <div className={stylex.props(styles.s_236).className}>
+              <p className={stylex.props(styles.s_237).className}>
+                <Sparkles aria-hidden="true" className={stylex.props(styles.s_991).className} />
+                Simulation-ready digital twin
+              </p>
+              <h1
+                className={stylex.props(styles.s_239, styles.heroTitleShadow).className}
+              >
+                {entry.map.label}
+              </h1>
+              <p className={stylex.props(styles.s_240).className}>
+                <MapPin aria-hidden="true" className={stylex.props(styles.s_241).className} />
+                {mapLocation(entry)}
+              </p>
+              {entry.asset?.description ? (
+                <p className={stylex.props(styles.s_242).className}>
+                  {entry.asset.description}
+                </p>
+              ) : null}
+              <div className={stylex.props(styles.s_243).className}>
+                {stats.map((stat) => (
+                  <span className={stylex.props(styles.s_940).className} key={stat.key} title={stat.tooltip}>{stat.value}</span>
+                ))}
+                {entry.asset ? (
+                  <Link
+                    href={`/dashboard/map-assets/${encodeURIComponent(entry.asset.map_asset_id)}`}
+                    className={stylex.props(styles.s_245).className}
                   >
-                    {entry.map.label}
-                  </h1>
-                  <p className={stylex.props(styles.s_240).className}>
-                    <MapPin aria-hidden="true" className={stylex.props(styles.s_241).className} />
-                    {mapLocation(entry)}
-                  </p>
-                  {entry.asset?.description ? (
-                    <p className={stylex.props(styles.s_242).className}>
-                      {entry.asset.description}
-                    </p>
-                  ) : null}
-                  <div className={stylex.props(styles.s_243).className}>
-                    {stats.map((stat) => (
-                      <span className={stylex.props(styles.s_940).className} key={stat.key} title={stat.tooltip}>{stat.value}</span>
-                    ))}
-                    {entry.asset ? (
-                      <Link
-                        href={`/dashboard/map-assets/${encodeURIComponent(entry.asset.map_asset_id)}`}
-                        className={stylex.props(styles.s_245).className}
-                      >
-                        View map details
-                        <ArrowUpRight aria-hidden="true" className={stylex.props(styles.s_991).className} />
-                      </Link>
-                    ) : null}
-                  </div>
-                  <LocalMapPreparationPanel xstyle={styles.s_247} map={entry.map} />
-                </div>
-
-                <div className={stylex.props(styles.s_248).className}>
-                  <div className={stylex.props(styles.s_908).className}>
-                    <MapArrow
-                      direction="previous"
-                      targetLabel={previous.map.label}
-                      disabled={entries.length < 2}
-                      onClick={() => move(-1)}
-                    />
-                    <button
-                      aria-label="Choose a map"
-                      className={stylex.props(styles.s_250).className}
-                      onClick={() => setMapPickerOpen(true)}
-                      title="Open map gallery"
-                      type="button"
-                    >
-                      <MapIcon aria-hidden="true" className={stylex.props(styles.s_251).className} />
-                    </button>
-                    <MapArrow
-                      direction="next"
-                      targetLabel={next.map.label}
-                      disabled={entries.length < 2}
-                      onClick={() => move(1)}
-                    />
-                    <span className={stylex.props(styles.s_252).className}>
-                      {String(selectedIndex + 1).padStart(2, "0")} / {String(entries.length).padStart(2, "0")}
-                    </span>
-                  </div>
-
-                  <div className={stylex.props(styles.heroActions).className}>
-                    <button
-                      type="button"
-                      onClick={() => setDriving(true)}
-                      disabled={!drivable}
-                      className={stylex.props(styles.s_231, styles.driveAction).className}
-                      data-testid="map-gallery-drive"
-                      title={locked ? "Connect to SimCloud to drive on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : "Spawn a car on this map and drive it"}
-                    >
-                      <CarFront aria-hidden="true" className={stylex.props(styles.s_847).className} />
-                      Drive
-                    </button>
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={createScenario}
-                      disabled={creating || !drivable}
-                      title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
-                      xstyle={styles.s_253}
-                    >
-                      {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}
-                      <span>{creating ? "Creating scenario…" : "Create scenario"}</span>
-                      {!creating ? <ArrowRight aria-hidden="true" className={stylex.props(styles.s_847).className} /> : null}
-                    </Button>
-                  </div>
-                </div>
+                    View map details
+                    <ArrowUpRight aria-hidden="true" className={stylex.props(styles.s_991).className} />
+                  </Link>
+                ) : null}
               </div>
-            </section>
-          </>
-        )}
+              <LocalMapPreparationPanel xstyle={styles.s_247} map={entry.map} />
+            </div>
+
+            <div className={stylex.props(styles.s_248).className}>
+              <div className={stylex.props(styles.s_908).className}>
+                <MapArrow
+                  direction="previous"
+                  targetLabel={previous.map.label}
+                  disabled={entries.length < 2}
+                  onClick={() => move(-1)}
+                />
+                <button
+                  aria-label="Choose a map"
+                  className={stylex.props(styles.s_250).className}
+                  onClick={() => setMapPickerOpen(true)}
+                  title="Open map gallery"
+                  type="button"
+                >
+                  <MapIcon aria-hidden="true" className={stylex.props(styles.s_251).className} />
+                </button>
+                <MapArrow
+                  direction="next"
+                  targetLabel={next.map.label}
+                  disabled={entries.length < 2}
+                  onClick={() => move(1)}
+                />
+                <span className={stylex.props(styles.s_252).className}>
+                  {String(selectedIndex + 1).padStart(2, "0")} / {String(entries.length).padStart(2, "0")}
+                </span>
+              </div>
+
+              <div className={stylex.props(styles.heroActions).className}>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={createScenario}
+                  disabled={creating || !previewable}
+                  title={locked ? "Connect to SimCloud to author on this map." : !entry.map.installed.browser ? "Prepare this map on this computer first." : undefined}
+                  xstyle={styles.s_253}
+                >
+                  {creating ? <Loader2 className={stylex.props(styles.s_254).className} /> : null}
+                  <span>{creating ? "Creating scenario…" : "Create scenario"}</span>
+                  {!creating ? <ArrowRight aria-hidden="true" className={stylex.props(styles.s_847).className} /> : null}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </main>
       {map2DOpen && entry.asset ? (
         <Map2DOverlay

@@ -102,6 +102,16 @@ export interface StudioProjectService {
     input: { expectedVersion: number; title?: string; description?: string },
   ): Promise<ScenarioDocumentDto>;
   duplicateDocument(documentId: string, input?: { title?: string; datasetId?: string }): Promise<ScenarioDocumentDto>;
+  /**
+   * Create the variation a human drives, and say which actor they take over.
+   *
+   * Resolved on the server: an unpinned scenario, one with no drivable vehicle,
+   * or one with several and no ego is refused before the variation exists.
+   */
+  startDriverInTheLoop(
+    documentId: string,
+    input?: { roleId?: string },
+  ): Promise<{ document: ScenarioDocumentDto; roleId: string }>;
   deleteDocument(documentId: string): Promise<{ ok: true }>;
 
   listTags(signal?: AbortSignal): Promise<ScenarioTagDto[]>;

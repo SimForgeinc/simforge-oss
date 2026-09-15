@@ -60,4 +60,23 @@ export const driveFrame = stylex.create({
     lineHeight: "1.25rem",
     color: driveColors.textBody,
   },
+
+  /**
+   * How much clip is left. Top-centre, above the HUD's own instruments: the
+   * countdown is the one thing that decides when the drive ends, so it sits
+   * where the driver's eyes already are rather than in a corner. Transparent to
+   * the mouse, like the status line.
+   */
+  clip: {
+    position: "absolute",
+    left: "50%",
+    top: "1rem",
+    transform: "translateX(-50%)",
+    pointerEvents: "none",
+    paddingInline: "0.75rem",
+    paddingBlock: "0.375rem",
+    fontSize: "0.75rem",
+    lineHeight: "1rem",
+    color: driveColors.textBody,
+  },
 });

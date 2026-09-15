@@ -63,6 +63,7 @@ export function ScenarioDatasetDetailClient({
   onPreviewDocument,
   onExitEdit,
   onRenderDocument,
+  onDriveVariation,
   editActiveDocumentId,
   renderActiveDocumentId,
   renderWorkLive,
@@ -77,6 +78,13 @@ export function ScenarioDatasetDetailClient({
   onPreviewDocument: (document: ScenarioDocumentSummaryDto) => void;
   onExitEdit: () => void;
   onRenderDocument: (document: ScenarioDocumentSummaryDto) => void;
+  /**
+   * Leave for the drive route with the variation this dataset just created.
+   *
+   * The navigation belongs to the caller: this column keeps the world scene
+   * beside it alive and never routes on its own.
+   */
+  onDriveVariation: (documentId: string, roleId: string) => void;
   editActiveDocumentId: string | null;
   renderActiveDocumentId: string | null;
   /** Render job liveness from the pane that owns the job state. Omit when unavailable. */
@@ -266,6 +274,16 @@ export function ScenarioDatasetDetailClient({
       return !revealed;
     });
   }, []);
+
+  // Create the variation, then hand the drive to the route. A refusal — no drivable actor, an
+  // unpinned scenario — is already reported by the action, so there is nothing to navigate to.
+  const startDriverInTheLoop = useCallback(
+    async (document: ScenarioDocumentSummaryDto) => {
+      const started = await actions.startDriverInTheLoop(document);
+      if (started) onDriveVariation(started.documentId, started.roleId);
+    },
+    [actions, onDriveVariation],
+  );
 
   const openScenarioImport = useScenarioOpenScenarioImport({
     datasetId,
@@ -556,6 +574,7 @@ export function ScenarioDatasetDetailClient({
             onEditDocument={onEditDocument}
             onExitEdit={onExitEdit}
             onRenderDocument={onRenderDocument}
+            onDriverInTheLoop={(document) => void startDriverInTheLoop(document)}
             editActiveDocumentId={editActiveDocumentId}
             onDownloadDocument={(document) =>
               void actions.downloadDocument(document)

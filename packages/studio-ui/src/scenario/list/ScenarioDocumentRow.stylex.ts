@@ -61,6 +61,11 @@ export const styles = stylex.create({
     height: "0.875rem",
   },
   // size-3.5
+  gamepadIcon: {
+    width: "0.875rem",
+    height: "0.875rem",
+  },
+  // size-3.5
   gitbranchIcon: {
     width: "0.875rem",
     height: "0.875rem",

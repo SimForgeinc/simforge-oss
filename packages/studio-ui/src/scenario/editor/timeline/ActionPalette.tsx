@@ -5,12 +5,11 @@ import { Input } from "../../../components/ui/input";
 import {
   actionsForActor,
   interactionForAction,
-  MANUAL_DRIVE_ACTION_ID,
   type EditorDocument,
 } from "@simforge-oss/editor";
 import { snapToTimeGrid } from "../../../lib/scenario/timeline";
 import type { Interaction } from "@simforge-oss/scenario";
-import { competingMotionRefusal } from "../manual-drive/authoring";
+import { competingMotionRefusal } from "../competing-motion";
 import { CanonicalInteractionComposer } from "./CanonicalInteractionComposer";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActionPalette.stylex";
@@ -39,7 +38,6 @@ export function ActionPalette({
   interactions,
   time,
   onTimeChange,
-  onStartManualDrive,
 }: {
   document: EditorDocument;
   role: Role | null;
@@ -47,8 +45,6 @@ export function ActionPalette({
   interactions: readonly Interaction[];
   time: number;
   onTimeChange: (time: number) => void;
-  /** Opens the take recorder; the document is untouched until a take is saved. */
-  onStartManualDrive?: (actorId: string) => string | null;
 }) {
   const timeId = useId();
   const clipSeconds = document.data.choreography?.clipSeconds ?? 20;
@@ -97,12 +93,6 @@ export function ActionPalette({
 
   const addAction = (action: (typeof actions)[number]) => {
     if (!role || !actorRef) return;
-    if (action.id === MANUAL_DRIVE_ACTION_ID) {
-      setRefusal(onStartManualDrive
-        ? onStartManualDrive(role.id)
-        : "Manual drive recording is not available in this editor.");
-      return;
-    }
     const blocked = competingMotionRefusal(document, actorRef, action);
     setRefusal(blocked);
     if (blocked) return;

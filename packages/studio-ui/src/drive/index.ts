@@ -22,10 +22,7 @@ export {
 // conditions and the `@simforge-oss/studio-ui/drive/drive.stylex` subpath
 // would land on `dist`; the subpath export is for consumers outside the repo.
 export { DriveButton, DrivePill, driveChrome } from "./chrome";
-export { CarPickerScreen, DRIVE_PAINT_COLORS, type DriveVehicleOption } from "./CarPickerScreen";
-export { MapPickerScreen, type DriveMapOption } from "./MapPickerScreen";
 export { PauseMenu } from "./PauseMenu";
-export { VehicleModelPreview } from "./VehicleModelPreview";
 export { DriveHud, type DriveHudFrame, type DriveHudHandle, type SpeedUnits } from "./hud/DriveHud";
 export { Minimap, type MinimapHandle, type MinimapLane } from "./hud/Minimap";
 export { createDriveInput, type DriveInput, type DriveInputOptions } from "./input/drive-input";
@@ -50,12 +47,4 @@ export {
   advanceKeyboardSteer,
   keyboardCommand,
 } from "./input/keyboard";
-export {
-  MIN_SPAWN_LANE_LENGTH_M,
-  SPAWN_ENTRY_OFFSET_M,
-  isSpawnableLane,
-  selectLaneSpawn,
-  type LaneSpawn,
-  type SpawnCandidateLane,
-} from "./spawn";
 export { emptyDriveTelemetry, type DriveTelemetry } from "./telemetry";

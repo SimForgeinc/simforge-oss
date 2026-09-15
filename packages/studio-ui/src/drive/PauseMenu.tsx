@@ -1,6 +1,6 @@
 "use client";
 
-import { Gauge, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Gauge, Volume2, VolumeX } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 
 import { DRIVE_CAMERA_KINDS, type DriveCameraKind } from "./cameras";
@@ -20,7 +20,7 @@ const KEY_HELP: readonly (readonly [string, string])[] = [
   ["S / ↓", "Brake"],
   ["A D / ← →", "Steer"],
   ["Space", "Handbrake"],
-  ["R", "Respawn"],
+  ["R", "Drive the clip again"],
   ["C", "Camera"],
   ["M", "Mute"],
   ["U", "Units"],
@@ -210,8 +210,6 @@ export function PauseMenu({
   onMutedChange,
   onVolumeChange,
   onDebugChange,
-  onRespawn,
-  onChangeCar,
   onExit,
 }: {
   cameraKind: DriveCameraKind;
@@ -225,8 +223,6 @@ export function PauseMenu({
   onMutedChange: (muted: boolean) => void;
   onVolumeChange: (volume: number) => void;
   onDebugChange: (debug: boolean) => void;
-  onRespawn: () => void;
-  onChangeCar: () => void;
   onExit: () => void;
 }) {
   const level = muted ? 0 : volume;
@@ -329,13 +325,8 @@ export function PauseMenu({
           <DriveButton data-testid="drive-resume" onClick={onResume} tone="primary">
             Resume
           </DriveButton>
-          <DriveButton data-testid="drive-respawn" onClick={onRespawn}>
-            <RotateCcw {...stylex.props(styles.icon)} aria-hidden="true" />
-            Respawn
-          </DriveButton>
-          <DriveButton onClick={onChangeCar}>Change car</DriveButton>
           <DriveButton onClick={onExit} tone="quiet" xstyle={styles.exit}>
-            Leave map
+            Leave the drive
           </DriveButton>
         </div>
       </div>
