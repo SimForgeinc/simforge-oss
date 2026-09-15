@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { COMPUTE_API_PATH } from "@simforge-oss/evaluation/client";
+import { cloudRequest } from "@/app/lib/cloud/connection";
 
 import {
   launchComparison,
@@ -110,9 +112,10 @@ export async function POST(request: Request) {
 
   const launchRequest: ComparisonLaunchRequest = parsed.data;
   const wantsCloud = launchRequest.columns.some((column) => column.target === "cloud");
-  const origin = new URL(request.url).origin;
   const capabilities = wantsCloud
-    ? await readComputeCapabilities(fetch, origin)
+    ? await readComputeCapabilities(() =>
+        cloudRequest(`${COMPUTE_API_PATH}/capabilities`, { method: "GET" }, { signal: request.signal }),
+      )
     : ({ ok: false, reason: "no cloud column requested" } as const);
 
   // Local readiness comes from the desktop model store, asked for the KIND
@@ -159,7 +162,7 @@ export async function POST(request: Request) {
     capabilities: capabilities.ok ? capabilities.capabilities : null,
     capabilitiesReason: capabilities.ok ? null : capabilities.reason,
     submitComputeJob: async (jobBody) => {
-      const response = await fetch(`${origin}/api/simforge/compute/jobs`, {
+      const response = await cloudRequest(`${COMPUTE_API_PATH}/jobs`, {
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json" },
         body: JSON.stringify(jobBody),
