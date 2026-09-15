@@ -28,7 +28,7 @@ import {
   type LaneGraph,
   type SimScenarioInput,
 } from '@simforge-oss/engine';
-import { engine } from '@simforge-oss/engine/node';
+import { engine, runtimeIdentity } from '@simforge-oss/engine/node';
 import { exportOpenScenarioXml14, type AsamExportResult, type AsamExportWarning } from '@simforge-oss/openscenario';
 import {
   OFFICIAL_OPENSCENARIO_140_XSD,
@@ -363,7 +363,15 @@ export async function compileExecutionPackage(request: ExecutionPackageRequest):
     // closure the compiler resolves against. Nothing binds those two closures,
     // so name both digests and the ambient mode that produced them - a bare
     // code sends the reader looking for a stuck job instead of a disagreement.
-    throw new Error(`materialized_traffic_source_input_digest_mismatch: claimed ${ambient.materializedTraffic.sourceInputDigest}, resolved ${sourceInputDigest} (ambient ${ambient.mode}, map ${runtimeMapName})`);
+    //
+    // Name this engine build too. The producer is the WASM build and this is
+    // the N-API addon, and `engineVersion`/`abiVersion` are identical in both
+    // by construction: an addon that predates a serialization change resolves
+    // every authored document to a different input while reporting the exact
+    // identity the browser reports. Without the addon digest here, that reads
+    // as a content or map-closure disagreement and costs a day to find.
+    const resolvedBy = runtimeIdentity();
+    throw new Error(`materialized_traffic_source_input_digest_mismatch: claimed ${ambient.materializedTraffic.sourceInputDigest}, resolved ${sourceInputDigest} (ambient ${ambient.mode}, map ${runtimeMapName}, resolved by engine ${resolvedBy.engineVersion} abi ${resolvedBy.abiVersion} addon ${resolvedBy.addonSha256.slice(0, 12)})`);
   }
 
   const canonical = await exportExecutionDocument(resolved.resolvedInput, resolved, request, sourceInputDigest);
