@@ -198,7 +198,7 @@ describe("ScenarioDatasetsClient", () => {
 
   it("keeps the dataset strip, the column header and the add affordances out of the top bar", () => {
     renderDatasetsClient();
-    const strip = screen.getByRole("navigation", { name: "Datasets" });
+    const strip = screen.getByTestId("scenario-dataset-rail");
     const header = screen.getByTestId("scenario-scenario-list-header");
     const topBar = screen.getByTestId("test-topbar-actions");
     const newDataset = screen.getByTestId("scenario-new-dataset");

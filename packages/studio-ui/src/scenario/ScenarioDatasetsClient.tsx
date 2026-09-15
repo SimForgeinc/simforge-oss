@@ -22,6 +22,9 @@ import { ScenarioDatasetDetailClient } from "./dataset/ScenarioDatasetDetailClie
 import { ScenarioEditorClient } from "./editor/ScenarioEditorClient";
 import { DatasetRenderPane } from "./render/DatasetRenderPane";
 import { DatasetStrip } from "./rail/DatasetStrip";
+import type { DatasetCloudHome } from "./rail/dataset-home";
+
+export type { DatasetCloudHome } from "./rail/dataset-home";
 import { ScenarioCoverageMap } from "./coverage/ScenarioCoverageMap";
 import { useScenarioSession } from "./scene/useScenarioSession";
 import { ScenarioSessionProvider } from "./scene/ScenarioSessionContext";
@@ -84,8 +87,16 @@ function errorMessage(error: unknown, fallback: string) {
  */
 export function ScenarioDatasetsClient({
   initialDatasets,
+  cloudHome = { state: "signed-out" },
 }: {
   initialDatasets?: ScenarioDatasetDto[];
+  /**
+   * The cloud half of the strip's home sections. The host supplies it because the SimCloud
+   * connection lives in the host, not in this package; with no host answer yet the strip shows the
+   * signed-out cloud section, which is a true statement about an unconnected installation and not
+   * an empty space.
+   */
+  cloudHome?: DatasetCloudHome;
 }) {
   const studioHost = useStudioHost();
   const router = useRouter();
@@ -652,6 +663,7 @@ export function ScenarioDatasetsClient({
           <div {...stylex.props(styles.panelGrid)}>
             <DatasetStrip
               datasets={orderedDatasets}
+              cloudHome={cloudHome}
               loading={datasets === null}
               creating={creatingDataset}
               busyDatasetId={busyDatasetId}
