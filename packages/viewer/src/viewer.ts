@@ -2230,6 +2230,10 @@ export class CityViewer {
     void Promise.all(layers.map((layer) => layer.whenCompilationIdle())).then(() => {
       this.renderer.dispose();
       this.ultraLowMaterials.dispose();
+      // The one observable proof that leaving a 3D surface actually gave the GPU
+      // resources back, rather than leaving a detached context alive behind the
+      // next screen. Logged after the renderer is gone, not when dispose starts.
+      console.info('[city-renderer]', 'cityviewer.disposed');
     });
   }
 

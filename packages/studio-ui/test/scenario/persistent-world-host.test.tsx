@@ -305,19 +305,16 @@ describe("persistent SimForge world host", () => {
 
     completeMapLoad();
 
-    await waitFor(() => expect(view.getByText("Loading One assets")).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        view.getByTestId("scenario-world-host").getAttribute("data-world-transition"),
+      ).toBe("loading"),
+    );
     expect(
       view
         .getByTestId("scenario-world-host")
         .getAttribute("data-world-loaded-map-version-id"),
     ).toBe("");
-    expect(
-      view
-        .getByTestId("scenario-world-host")
-        .getAttribute("data-world-transition"),
-    ).toBe("loading");
-    expect(view.getByText("Loading One assets")).toBeTruthy();
-    expect(view.getByText("1 downloading…")).toBeTruthy();
   });
 
   it("ignores a stale map failure after the next target starts and clears error on success", async () => {

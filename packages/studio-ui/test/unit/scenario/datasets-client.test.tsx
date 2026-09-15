@@ -19,18 +19,17 @@ import { resetScenarioListCache } from "../../../src/scenario/list/scenarioListC
 
 const push = vi.fn();
 /**
- * The world scene is stubbed out here.
+ * The coverage map is stubbed out here.
  *
- * It fetches the map catalog on mount, and this file drives `fetch` with `mockResolvedValueOnce`
- * queues — so the scene's request would consume the response queued for the dataset mutation under
- * test and the assertions would fail for a reason that has nothing to do with the list. The scene has
- * its own coverage in `test/scenario/map-preload.test.ts`.
+ * The real one owns a MapLibre instance and fetches map footprints; this file drives `fetch` with
+ * queued responses, so those requests would consume the response queued for the dataset mutation
+ * under test and the assertions would fail for a reason that has nothing to do with the list.
  *
- * The `data-testid` is kept: one test asserts the scene is the *same DOM node* across a dataset
- * selection, which is the guard against reintroducing a remount.
+ * The `data-testid` is kept: one test asserts the browsing surface is the *same DOM node* across a
+ * dataset selection, which is the guard against reintroducing a remount.
  */
-vi.mock("../../../src/scenario/scene/ScenarioIdleScene", () => ({
-  ScenarioIdleScene: () => <div data-testid="scenario-idle-scene" />,
+vi.mock("../../../src/scenario/coverage/ScenarioCoverageMap", () => ({
+  ScenarioCoverageMap: () => <div data-testid="scenario-coverage-map" />,
 }));
 vi.mock("../../../src/scenario/scene/useScenarioSession", () => ({
   useScenarioSession: ({ documentId }: { documentId: string | null }) => ({
@@ -346,7 +345,7 @@ describe("ScenarioDatasetsClient", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   });
 
-  it("switches datasets in place rather than navigating away from the world scene", () => {
+  it("switches datasets in place rather than navigating away from the coverage map", () => {
     render(
       <StudioHostTestProvider>
         <TopBarSlotProvider>
@@ -357,7 +356,7 @@ describe("ScenarioDatasetsClient", () => {
         </TopBarSlotProvider>
       </StudioHostTestProvider>,
     );
-    const scene = screen.getByTestId("scenario-idle-scene");
+    const scene = screen.getByTestId("scenario-coverage-map");
     expect(screen.getByTestId("test-topbar-title").textContent).toBe("Cut-in corpus");
     act(() => {
       screen.getByRole("button", { name: "Jaywalking" }).click();
@@ -366,11 +365,11 @@ describe("ScenarioDatasetsClient", () => {
     expect(screen.getByRole("heading", { name: "Jaywalking" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("dataset")).toBe("usds_2");
     // Two properties at once. v2's old grid linked straight to `/editor?datasetId=`, which made every
-    // sibling document unreachable; the later fix routed to the dataset page, which disposed the WebGL
-    // context and re-streamed the city. Neither is a navigation any more.
+    // sibling document unreachable; the later fix routed to the dataset page, which rebuilt the whole
+    // browsing surface. Neither is a navigation any more.
     expect(push).not.toHaveBeenCalled();
     // The same DOM node: a remount would replace it, and that is the regression this guards.
-    expect(screen.getByTestId("scenario-idle-scene")).toBe(scene);
+    expect(screen.getByTestId("scenario-coverage-map")).toBe(scene);
   });
 
   it("returns to the last opened dataset on the next visit", () => {

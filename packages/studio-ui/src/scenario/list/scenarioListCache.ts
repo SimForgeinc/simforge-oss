@@ -32,7 +32,8 @@ export type ScenarioListCache = {
    */
   pendingDocumentsByDataset: Record<string, ScenarioDocumentSummaryDto[]>;
   nextCursorByDataset: Record<string, string | null>;
-  expandedMapLabelsByDataset: Record<string, Set<string>>;
+  /** The one map group the column has open per dataset, shared with the coverage map. */
+  selectedMapVersionIdByDataset: Record<string, string>;
   selectedDocumentIdByDataset: Record<string, string>;
   tagCatalog: ScenarioTagDto[];
   tagCatalogLoaded: boolean;
@@ -41,13 +42,6 @@ export type ScenarioListCache = {
   selectedCreatorFilterByDataset: Record<string, string | null>;
   loadedDatasetIds: Set<string>;
   readinessByDataset: Record<string, ScenarioDatasetReadinessDto["summary"]>;
-  /**
-   * Whether a selected scenario previews with the cinematic camera.
-   *
-   * A viewing preference rather than per-dataset state, so it is one flag: the
-   * user who turns the cuts off wants them off for the next scenario too.
-   */
-  cinematicPreviewEnabled: boolean;
 };
 
 export const scenarioListCache: ScenarioListCache = {
@@ -57,7 +51,7 @@ export const scenarioListCache: ScenarioListCache = {
   documentsByDataset: {},
   pendingDocumentsByDataset: {},
   nextCursorByDataset: {},
-  expandedMapLabelsByDataset: {},
+  selectedMapVersionIdByDataset: {},
   selectedDocumentIdByDataset: {},
   tagCatalog: [],
   tagCatalogLoaded: false,
@@ -66,7 +60,6 @@ export const scenarioListCache: ScenarioListCache = {
   selectedCreatorFilterByDataset: {},
   loadedDatasetIds: new Set(),
   readinessByDataset: {},
-  cinematicPreviewEnabled: true,
 };
 
 /** v1's four seeded defaults, as the client-side fallback before the catalog fetch lands. */
@@ -91,7 +84,7 @@ export function resetScenarioListCache() {
   scenarioListCache.documentsByDataset = {};
   scenarioListCache.pendingDocumentsByDataset = {};
   scenarioListCache.nextCursorByDataset = {};
-  scenarioListCache.expandedMapLabelsByDataset = {};
+  scenarioListCache.selectedMapVersionIdByDataset = {};
   scenarioListCache.selectedDocumentIdByDataset = {};
   scenarioListCache.tagCatalog = [];
   scenarioListCache.tagCatalogLoaded = false;
@@ -100,5 +93,4 @@ export function resetScenarioListCache() {
   scenarioListCache.selectedCreatorFilterByDataset = {};
   scenarioListCache.loadedDatasetIds = new Set();
   scenarioListCache.readinessByDataset = {};
-  scenarioListCache.cinematicPreviewEnabled = true;
 }

@@ -36,7 +36,6 @@ import { uploadAndConsumeMaterializedTraffic } from "../../lib/scenario/editor/m
 import { normalizeAuthoringGraph } from "@simforge-oss/editor";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "./previewPolicy";
-import { pickRandomMap, preloadMapManifests } from "./mapCatalog";
 
 export type ScenarioRevisionEvidence = ScenarioRevisionEvidenceDto;
 
@@ -132,21 +131,18 @@ export function applyScenarioPresentationVisibility(
 }
 
 /**
- * Canonical in-memory simulation session for the integrated datasets workspace.
+ * Canonical in-memory simulation session for the scenario being edited.
  *
- * The worker and playback controller live for the workspace lifetime. A UI mode
- * change only changes presentation; document identity/content changes are the
- * only inputs that can fetch or compile a scenario.
+ * The worker and playback controller live for as long as the editor is mounted. Document identity
+ * and content are the only inputs that fetch or compile a scenario; presentation changes never do.
  */
 export function useScenarioSession({
   documentId,
-  listPresentationActive,
   viewer,
   actorRenderer,
   loadedMapVersionId,
 }: {
   documentId: string | null;
-  listPresentationActive: boolean;
   viewer: CityViewer | null;
   actorRenderer: ActorRenderer | null;
   loadedMapVersionId: string | null;
@@ -171,7 +167,6 @@ export function useScenarioSession({
   const preparedKeyRef = useRef<string | null>(null);
   /** Simulation identity the worker is compiling right now, so a save landing mid-compile keeps that run. */
   const compilingKeyRef = useRef<string | null>(null);
-  const pickedIdleMapRef = useRef(false);
   const evidenceCacheRef = useRef<{ key: string; evidence: ScenarioRevisionEvidence } | null>(null);
   const bundleContentIdentityRef = useRef(new WeakMap<PlaybackBundle, string>());
   const persistedDocumentIdentityRef = useRef<{
@@ -206,12 +201,9 @@ export function useScenarioSession({
       compilingKeyRef.current = null;
       persistedDocumentIdentityRef.current = null;
       setDocument(null);
+      setMap(null);
       setBundle(null);
       setMessage(null);
-      if (!pickedIdleMapRef.current) {
-        pickedIdleMapRef.current = true;
-        setMap(pickRandomMap(maps));
-      }
       return;
     }
     if (document?.id === documentId) return;
@@ -256,7 +248,7 @@ export function useScenarioSession({
       return;
     }
     // Everything that determines the trace: authored content and the immutable
-    // map. Mode and draft version only decide whether a saved copy may be used.
+    // map. The draft version only decides whether a saved copy may be used.
     const simulationKey = contentHash({
       documentId: document.id,
       content: document.content,
@@ -264,7 +256,7 @@ export function useScenarioSession({
       sourceMapId: nextMap.sourceMapId,
     });
     const sourceContentIdentity = contentHash(document.content);
-    const prepareKey = `${listPresentationActive ? "saved" : "editor"}:${simulationKey}:${document.draftVersion}`;
+    const prepareKey = `${simulationKey}:${document.draftVersion}`;
     if (preparedKeyRef.current === prepareKey) return;
     preparedKeyRef.current = prepareKey;
     const worker = () => {
@@ -374,7 +366,7 @@ export function useScenarioSession({
       compileScenarioPreview();
     });
     return () => abort.abort();
-  }, [bundle, document, documentId, listPresentationActive, maps, studioHost]);
+  }, [bundle, document, documentId, maps, studioHost]);
 
   useEffect(() => () => { previewSaveRef.current?.abort.abort(); workerRef.current?.dispose(); }, []);
 
@@ -384,7 +376,7 @@ export function useScenarioSession({
 
   const documentRef = useRef(document);
   documentRef.current = document;
-  const sumoPreloadActive = !listPresentationActive && document !== null && previewExecutionTrafficProvider(
+  const sumoPreloadActive = document !== null && previewExecutionTrafficProvider(
     ambientTrafficProviderFromExtensions(document.content.extensions),
     document.content.mapSignalPlans.length > 0,
   ) === "sumo";
@@ -412,22 +404,6 @@ export function useScenarioSession({
     });
     return () => abort.abort();
   }, [map, sumoPreloadActive]);
-
-  const bundleReady = bundle !== null;
-  useEffect(() => {
-    if (!maps?.length || (documentId && !bundleReady)) return;
-    const abort = new AbortController();
-    const preload = () => {
-      void preloadMapManifests(maps, { signal: abort.signal });
-    };
-    const idleHandle = window.requestIdleCallback?.(preload, { timeout: 5_000 });
-    const timeoutHandle = idleHandle === undefined ? window.setTimeout(preload, 4_000) : undefined;
-    return () => {
-      if (idleHandle !== undefined) window.cancelIdleCallback?.(idleHandle);
-      if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
-      abort.abort();
-    };
-  }, [bundleReady, documentId, maps]);
 
   const sampleHeight = useMemo(
     () => viewer && loadedMapVersionId === map?.mapVersionId
@@ -471,7 +447,7 @@ export function useScenarioSession({
     collisionActorOverrides,
     subscribeState: false,
   });
-  const presentationActive = listPresentationActive || inspecting || recordingCamera !== null;
+  const presentationActive = inspecting || recordingCamera !== null;
   useEffect(() => {
     const controller = runtimePlayback.controller;
     if (!controller) return;
@@ -480,13 +456,12 @@ export function useScenarioSession({
       actorRenderer,
       presentationActive,
     );
-    // The list scene owns its smooth single-actor focus transition. Keep the
-    // controller free so it cannot briefly zoom out to the full scenario first.
-    // Entering playback from the editor likewise retains the authored view.
+    // Entering playback from the editor retains the authored view, so the
+    // controller stays free rather than auto-framing the whole scenario.
     controller.setCameraPolicy(
       recordingCamera ? "dash-camera" : "free",
     );
-  }, [actorRenderer, listPresentationActive, presentationActive, recordingCamera, runtimePlayback.controller]);
+  }, [actorRenderer, presentationActive, recordingCamera, runtimePlayback.controller]);
 
   const setInspecting = useCallback((next: boolean) => {
     setInspectingState(next);
