@@ -224,9 +224,12 @@ export async function buildInitialScenarioDraft(input: {
   );
   const seededDraft = {
     ...normalizedDraft,
-    // New scenarios are persisted without server-generated actors. Once the
-    // editor has loaded the exact CARLA runtime geometry, its runtime actor
-    // bootstrap chooses a real drivable lane and creates the starter subject.
+    // New scenarios are persisted without server-generated actors, and nothing
+    // adds one later: a blank document stays blank until the author places an
+    // actor themselves. There is no runtime actor bootstrap and no starter
+    // subject — the comment that promised one described code that has never
+    // existed, and `scenario-worker.ts:355` takes a role-less template down the
+    // ambient-world path instead (traffic, no authored subject).
     // Semantic topology is intentionally reserved for scenario transfer.
     actors: normalizedDraft.actors,
     selectedActorId: normalizedDraft.selectedActorId ?? null,

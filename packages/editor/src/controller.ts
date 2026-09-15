@@ -277,7 +277,7 @@ export class EditorController extends EditorControllerInput {
         width: dims.w,
         headingRad: snapped.headingRad
       });
-      const drivingSpeedKph = defaultDrivingSpeedKph(catalogId);
+      const drivingSpeedKph = this.placementSpeedKph(catalogId, snapped.laneRef);
       const warning = drivingSpeedKph === null
         ? null
         : this.placementRouteWarning(snapped.laneRef, drivingSpeedKph);
@@ -388,7 +388,9 @@ export class EditorController extends EditorControllerInput {
       return;
     }
     const actorId = this.pendingActorId ?? this.doc.allocateActorId(catalogId);
-    const drivingSpeedKph = this.placingFreeformStatic ? null : defaultDrivingSpeedKph(catalogId);
+    const drivingSpeedKph = this.placingFreeformStatic
+      ? null
+      : this.placementSpeedKph(catalogId, pose.laneRef);
     if (drivingSpeedKph !== null) {
       if (!pose.laneRef) {
         this.flash('Place road vehicles on a valid driving lane');
@@ -845,17 +847,48 @@ export class EditorController extends EditorControllerInput {
     const heading = options.headingRad ?? 0;
     const fallbackY = options.fallbackY ?? 0;
     if (!options.static && isRoadBoundMotorVehicle(catalogId)) {
-      const speedKph = defaultDrivingSpeedKph(catalogId) ?? DEFAULT_AUTHORED_VEHICLE_SPEED_KPH;
       const resolved = resolveVehicleDrop(this.laneIndex, x, z, {
         preferredLateralM: options.preferredLateralM ?? 0,
         fallbackHeadingRad: heading,
         bodyWidthM: getEntry(catalogId).dims.w,
         radiusM: DROP_SNAP_RADIUS_M,
-        routeUsable: (anchor) => this.planLaneRoute(anchor, speedKph) !== null,
+        // The same speed the placed actor will carry, so a drop is judged
+        // usable on the road it will actually need.
+        routeUsable: (anchor) =>
+          this.planLaneRoute(anchor, this.placementSpeedKph(catalogId, anchor) ?? DEFAULT_AUTHORED_VEHICLE_SPEED_KPH) !== null,
       });
       return { ...resolved, y: this.groundY(resolved.x, resolved.z, fallbackY) };
     }
     return { outcome: 'free', x, y: this.groundY(x, z, fallbackY), z, headingRad: heading, laneRef: null };
+  }
+
+  /**
+   * A newly placed vehicle's initial speed: the class default, never above the
+   * posted limit of the lane it is placed on.
+   *
+   * `DEFAULT_AUTHORED_VEHICLE_SPEED_KPH` is 48.28032 kph — 30 mph, a US
+   * arterial figure. On the only map a signed-out installation can use (the
+   * bundled public Richmond Field Station) 95.1% of the 287 driving lanes post
+   * below it, median 40 kph and minimum 16 kph, so the class default put the
+   * first vehicle a new user places over the posted limit on 19 lanes in 20 and
+   * made the product warn about a scenario nobody had edited yet
+   * (`speed_over_limit`, map-checks.ts:127).
+   *
+   * It also inflated the road a placement needs: 20 s at 48.28 kph wants 278 m
+   * of continuous lane (`placementRouteWarning` below), against 222 m at the
+   * 40 kph the map actually posts. Measured over Richmond's lane graph, that
+   * difference alone moves the share of driving lanes whose lane-keep runway is
+   * too short for the default clip from 34.1% to 44.9% — 31 lanes warned about
+   * for no reason but an illegal default.
+   *
+   * The map validator already prefers the lane's own limit over any global
+   * (`map-checks.ts:118`); this makes the authoring default agree with it.
+   */
+  protected placementSpeedKph(catalogId: CatalogId, anchor: LaneAnchor | null): number | null {
+    const classDefault = defaultDrivingSpeedKph(catalogId);
+    if (classDefault === null || !anchor) return classDefault;
+    const posted = this.laneFor(anchor)?.speedLimitKph ?? null;
+    return posted !== null && posted > 0 ? Math.min(classDefault, posted) : classDefault;
   }
 
   protected laneFor(anchor: LaneAnchor): IndexedLane | null {
