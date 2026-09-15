@@ -550,7 +550,9 @@ running elsewhere - daemon, database, map cache, render worker and GPU on one
 box, the window on a laptop:
 
 ```bash
-# On the host machine:
+# On the host machine. Set the Cloud origin explicitly: unset, it defaults to
+# production (connection.ts:33) and every SimCloud call the GUI makes goes there.
+SIMFORGE_CLOUD_ORIGIN=https://staging.simforge.ai \
 HOSTNAME=0.0.0.0 simforge daemon --port 5421
 jq -r .controlToken ~/.simforge/cloud/host.json   # the per-start control token
 
