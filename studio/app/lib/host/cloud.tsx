@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   createHttpStudioCloudService,
+  isDesktopShell,
   StudioHostRequestError,
   type StudioCloudAccount,
   type StudioCloudInvitation,
@@ -189,7 +190,12 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
       // The provider's page belongs to the provider and opens in the system
       // browser; the app itself never navigates away from the local origin.
       const opened = window.open(authorizationUrl, "_blank", "noopener,noreferrer");
-      if (opened === null && !window.simforgeDesktop) {
+      // The desktop shell opens the provider in the system browser, so a null
+      // handle there is ordinary rather than a blocked pop-up. Ask the shell
+      // directly: this used to test for the map-cache bridge, which answers a
+      // different question and answered it wrongly in every Electron window
+      // whose preload had not run.
+      if (opened === null && !isDesktopShell()) {
         setError("Your browser blocked the sign-in window. Allow pop-ups for this app and try again.");
       }
       setStatus((current) =>

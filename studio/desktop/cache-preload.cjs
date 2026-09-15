@@ -1,6 +1,6 @@
 // Renderer bridge for the desktop map cache (sandboxed preload; CommonJS).
 //
-// Exposes exactly `window.simforgeDesktop = { version: 1, mapCache }` where
+// Exposes exactly `window.simforgeDesktop = { version: 1, shell: "desktop", mapCache }` where
 // every mapCache method forwards to a `simforge:map-cache:*` IPC handler in
 // desktop/map-cache.mjs, which relays it to the local service's protected
 // /api/simforge/map-cache/** endpoints. No fs paths, Node objects or IPC
@@ -42,6 +42,17 @@ async function call(method, ...args) {
 
 contextBridge.exposeInMainWorld("simforgeDesktop", {
   version: 1,
+  // Which shell is hosting the page, as a fact rather than an inference.
+  //
+  // `version` and `mapCache` describe one capability: can this window cache map
+  // bytes on disk. Callers that only need to know "am I in the desktop app"
+  // used to infer it from `mapCache` being present, which is a different
+  // question and answered wrongly whenever this preload fails to run — as it
+  // did for the whole life of the product, when an early return above the
+  // bridge left every Electron window looking like a browser tab. `shell` is
+  // versionless and capability-free on purpose: it must stay answerable when
+  // the map-cache half is absent, unsupported or broken.
+  shell: "desktop",
   mapCache: {
     status: () => call("status"),
     has: (query) => call("has", query),
