@@ -8,7 +8,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { LocalMapDescriptor, LocalMapInstallState } from "@/app/lib/cloud/maps";
-import { followMapInstall, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
+import { followMapInstall, mapInstallErrorMessage, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
 import { setup } from "./setup-preparation.stylex";
 
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
@@ -115,7 +115,7 @@ function ProfileRow({
           </span>
         </p>
         <p {...stylex.props(setup.rowDetail)}>
-          {running && progress ? `${formatBytes(progress.completedBytes)} of ${formatBytes(progress.bytes)} · ${progress.completedMembers} / ${progress.members} files` : ready && status.directory ? status.directory : status?.state === "error" && !requiresConnection ? status.message ?? "The local service reported an error." : error ?? detail}
+          {running && progress ? progress.members === 0 ? "Working out which files this map needs…" : `${formatBytes(progress.completedBytes)} of ${formatBytes(progress.bytes)} · ${progress.completedMembers} / ${progress.members} files` : ready && status.directory ? status.directory : status?.state === "error" && !requiresConnection ? mapInstallErrorMessage(status.message) : error ?? detail}
         </p>
         {running ? <div {...stylex.props(setup.track)} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined} aria-label={`${label} download`}><div {...stylex.props(setup.fill)} style={{ "--map-install-progress": `${percent ?? 0}%` } as CSSProperties} /></div> : null}
       </div>

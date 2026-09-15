@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { readMapInstall, startMapInstall, followMapInstall } from "@/app/lib/host/map-install";
+import { mapInstallErrorMessage, readMapInstall, startMapInstall, followMapInstall } from "@/app/lib/host/map-install";
 
 /**
  * The sequential map preparation loop, shared by first-run onboarding and
@@ -109,7 +109,7 @@ export function useMapPreparation({ mapVersionIds }: { mapVersionIds: readonly s
                 });
               },
             );
-            if (result.state !== "ready") throw new Error(result.message ?? `${label} could not be installed.`);
+            if (result.state !== "ready") throw new Error(mapInstallErrorMessage(result.message, label));
             patch(mapVersionId, { state: "ready", message: null });
           } catch (reason) {
             if (controller.signal.aborted) return;

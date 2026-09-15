@@ -14,6 +14,7 @@ import { AUTHORING_QUALITY } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
   animateMapCamera,
+  type MapModelLoadSnapshot,
   MAP_ZOOM_IN_MS,
   pulledBackMapView,
   waitForMapModelsFullyLoaded,
@@ -21,6 +22,7 @@ import {
 import {
   failedSceneLoadProgress,
   initialSceneLoadProgress,
+  mapMetadataLoadProgress,
   sceneLoadProgressFromSnapshot,
   type SceneLoadProgress,
   type SceneLoadProgressTracker,
@@ -51,6 +53,13 @@ import { authoringRuntimeReady } from "@simforge-oss/editor";
  * cover lifts, which is also the moment smoothness starts to matter.
  */
 const BOOT_UPLOAD_BUDGET = { uploadBudgetMs: 20, uploadPixelsPerFrame: 168e5 } as const;
+
+/**
+ * How often the cover re-reads the viewer while the map's own definition is
+ * still downloading. Fast enough that the overlay's stall watchdog always
+ * sees a live load move, cheap enough to run beside the boot upload budget.
+ */
+const METADATA_PROGRESS_POLL_MS = 500;
 
 export type ScenarioWorldTarget = {
   mapVersionId: string;
@@ -138,6 +147,7 @@ export function ScenarioWorldHost({
   const transitionGenerationRef = useRef(0);
   const cancelCameraAnimationRef = useRef<(() => void) | null>(null);
   const cancelModelSettleRef = useRef<(() => void) | null>(null);
+  const cancelMetadataProgressRef = useRef<(() => void) | null>(null);
   const actorRendererRef = useRef<ActorRenderer | null>(null);
   const onViewerChangeRef = useRef(onViewerChange);
   const onActorRendererChangeRef = useRef(onActorRendererChange);
@@ -185,7 +195,34 @@ export function ScenarioWorldHost({
     });
   };
 
+  /**
+   * Publish the viewer's real byte telemetry between `onReady` and
+   * `onMapLoaded`. Without it the cover holds one unchanging source for the
+   * whole of a large map's definition download and the host's 45 s stall
+   * watchdog replaces a healthy load with a "taking longer than expected"
+   * error.
+   */
+  const startMetadataProgress = (viewer: CityViewer, label: string) => {
+    cancelMetadataProgressRef.current?.();
+    const publish = () => {
+      let downloads: MapModelLoadSnapshot["downloads"];
+      try {
+        downloads = supportsMapModelReadiness(viewer) ? viewer.getStats().downloads : undefined;
+      } catch {
+        downloads = undefined;
+      }
+      updateLoadProgress(mapMetadataLoadProgress(label, downloads));
+    };
+    publish();
+    const timer = setInterval(publish, METADATA_PROGRESS_POLL_MS);
+    cancelMetadataProgressRef.current = () => {
+      clearInterval(timer);
+      cancelMetadataProgressRef.current = null;
+    };
+  };
+
   const finishCameraTransition = (viewer: CityViewer | null) => {
+    cancelMetadataProgressRef.current?.();
     cancelCameraAnimationRef.current?.();
     cancelCameraAnimationRef.current = null;
     cancelModelSettleRef.current?.();
@@ -346,6 +383,7 @@ export function ScenarioWorldHost({
     progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
     cancelCameraAnimationRef.current?.();
     cancelModelSettleRef.current?.();
+    cancelMetadataProgressRef.current?.();
     cancelModelSettleRef.current = null;
     retainedTargetRef.current = stableTarget;
     setRetainedTarget(stableTarget);
@@ -358,6 +396,7 @@ export function ScenarioWorldHost({
       actorRendererRef.current?.dispose();
       cancelCameraAnimationRef.current?.();
       cancelModelSettleRef.current?.();
+      cancelMetadataProgressRef.current?.();
       actorRendererRef.current = null;
       onActorRendererChangeRef.current(null);
       onViewerChangeRef.current(null);
@@ -432,12 +471,7 @@ export function ScenarioWorldHost({
           }}
           onReady={(viewer) => {
             viewerRef.current = viewer;
-            updateLoadProgress({
-              phase: "resolving",
-              percent: 20,
-              message: `Preparing ${retainedTarget.label}`,
-              detail: "Starting the renderer and loading map metadata…",
-            });
+            startMetadataProgress(viewer, retainedTarget.label);
             applySceneFidelity(viewer, preference, { ...quality.live, ...BOOT_UPLOAD_BUDGET });
             applyEnvironment(viewer);
             if (supportsMapCameraTransition(viewer)) {
@@ -456,6 +490,7 @@ export function ScenarioWorldHost({
           onMapLoaded={(manifestUrl) => {
             const current = targetRef.current ?? retainedTarget;
             if (manifestUrl !== current.manifestUrl) return;
+            cancelMetadataProgressRef.current?.();
             const viewer = viewerRef.current;
             // The renderer casts a real sun shadow once a map is loaded, so the
             // painted blobs under each actor would be a second, wrongly-angled
@@ -584,6 +619,7 @@ export function ScenarioWorldHost({
           onError={(reason, manifestUrl) => {
             const current = targetRef.current ?? retainedTarget;
             if (current.manifestUrl !== manifestUrl) return;
+            cancelMetadataProgressRef.current?.();
             setError(reason);
             updateLoadProgress(failedSceneLoadProgress(current.label, reason));
             updateTransitionPhase("error");
