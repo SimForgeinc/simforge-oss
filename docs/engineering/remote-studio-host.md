@@ -21,8 +21,16 @@ The supervisor binds where `HOSTNAME` says
 which defaults to `127.0.0.1`. Bind it to every interface:
 
 ```bash
+SIMFORGE_CLOUD_ORIGIN=https://staging.simforge.ai \
 HOSTNAME=0.0.0.0 simforge daemon --port 5421 --data-root ~/.simforge/cloud
 ```
+
+Set `SIMFORGE_CLOUD_ORIGIN` explicitly, even for read-only work. Unset, it
+falls back to `DEFAULT_CLOUD_ORIGIN = "https://simforge.ai"`
+(`studio/app/lib/cloud/connection.ts:33,194`) - production. That default is
+defensible for an installed desktop app and is a poor one for a host you are
+binding to a network address to experiment against, because every SimCloud
+call the GUI makes then lands on production.
 
 The host writes `<data root>/host.json` (mode 0600) with the per-start
 `controlToken`. That token is the whole authorization story: `studio/proxy.ts`
