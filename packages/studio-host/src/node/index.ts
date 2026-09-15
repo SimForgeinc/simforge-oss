@@ -18,6 +18,7 @@ export {
   waitForLocalHostReady,
   type LocalHostState,
 } from "./local-host-state";
+export { receivedUrl } from "./received-url";
 export {
   localHostConfig,
   runLocalHost,

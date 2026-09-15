@@ -20,7 +20,7 @@ const API_PREFIX = "/api/simforge/map-cache";
  * @property {import("electron").IpcMain} ipcMain
  * @property {import("electron").BrowserWindow} window  the only window allowed to call the bridge
  * @property {string} trustedOrigin  exact origin the local UI is loaded from
- * @property {string} hostBaseUrl  loopback base URL of the local host, e.g. http://127.0.0.1:5199
+ * @property {string} hostBaseUrl  base URL of the host: loopback, or the trusted origin of a remote host
  * @property {() => Promise<Record<string, string>>} hostAuthorization  headers that authenticate
  * @property {(options?: { move?: boolean }) => Promise<string | null>} chooseDirectory  native picker; null = keep current
  */
@@ -36,8 +36,12 @@ export async function installDesktopMapCache({ ipcMain, window, trustedOrigin, h
     throw new Error(`installDesktopMapCache: trustedOrigin must be an exact origin, got ${trustedOrigin}`);
   }
   const host = new URL(hostBaseUrl);
-  if (host.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(host.hostname)) {
-    throw new Error(`installDesktopMapCache: hostBaseUrl must be a loopback HTTP URL, got ${hostBaseUrl}`);
+  // The shell's host credentials go to exactly one service: the loopback host
+  // it started, or — in remote-host mode — the very origin whose pages it
+  // loads. Any other target would leak the control token to a third party.
+  const loopback = host.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(host.hostname);
+  if (!loopback && host.origin !== trustedOrigin) {
+    throw new Error(`installDesktopMapCache: hostBaseUrl must be a loopback HTTP URL or the trusted origin ${trustedOrigin}, got ${hostBaseUrl}`);
   }
   if (typeof hostAuthorization !== "function") throw new Error("installDesktopMapCache: hostAuthorization callback is required");
   if (typeof chooseDirectory !== "function") throw new Error("installDesktopMapCache: chooseDirectory callback is required");

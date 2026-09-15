@@ -1,10 +1,13 @@
 // SimForge Studio desktop shell (Electron).
 //
 // This is packaging, not a second UI: it hosts the same Next.js Studio the
-// browser serves. There is exactly one mode. The shell starts (or attaches
-// to) the bundled local Studio host and loads it from loopback; the host owns
-// the database, artifacts, the on-disk map cache and native job state under
-// one per-user data root. SimCloud is a connection the local product makes
+// browser serves. By default the shell starts (or attaches to) the bundled
+// local Studio host and loads it from loopback; the host owns the database,
+// artifacts, the on-disk map cache and native job state under one per-user
+// data root. `SIMFORGE_REMOTE_HOST` is the one opt-out: the shell becomes a
+// guest of a host on another machine, starting and supervising nothing (see
+// desktop/remote-host.mjs), which puts every filesystem the host owns on that
+// machine instead of this one. SimCloud is a connection the local product makes
 // (Settings › SimCloud account: sign-in, sign-up, verification and password
 // flows are all in-app forms the local host forwards), never a remote site
 // this window navigates to.
@@ -15,7 +18,7 @@
 // the per-start control token (native processes: this shell, the worker) or
 // the trusted-local session cookie this shell sets on its own session
 // (HttpOnly, SameSite=Strict, an HMAC of the token, never the token). Every
-// navigation or window.open outside the loopback origin goes to the system
+// navigation or window.open outside the host origin goes to the system
 // browser — docs, mailto links, and the one account flow that must leave the
 // app: Google/GitHub sign-in, which returns to the loopback callback.
 
@@ -27,6 +30,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { installDesktopMapCache } from "./map-cache.mjs";
 import { LOCAL_HOST_SESSION_COOKIE } from "@simforge-oss/studio-host/node";
 import { createLocalHost } from "./local-host.mjs";
+import { createRemoteHost, REMOTE_HOST_ENV, remoteHostTarget } from "./remote-host.mjs";
 import { PRODUCT } from "./stage-manifest.mjs";
 import { readDistributionIdentity } from "./release-identity.mjs";
 import { checkForUpdates, describeUpdate } from "./update-check.mjs";
@@ -42,8 +46,19 @@ const RENDERER_PERMISSIONS = new Set(["fullscreen", "pointerLock", "clipboard-sa
 let window = null;
 /** @type {{ dispose(): Promise<void> } | null} */
 let mapCache = null;
-/** The loopback origin whose pages may use the bridge; fixed once the host is up. */
+/** The host origin whose pages may use the bridge; fixed once the host is up. */
 let trustedOrigin = "";
+/**
+ * Set when this shell is a guest of a Studio host on another machine
+ * (`SIMFORGE_REMOTE_HOST`, see desktop/remote-host.mjs). Everything the host
+ * owns then lives on the host's filesystem, not this computer's: the
+ * database, the artifacts, the map cache folder and the native runtime. The
+ * shell features that hand a path of *this* machine to the host, or open a
+ * path of *the host* on this machine, are refused rather than silently
+ * pointing at the wrong filesystem.
+ * @type {string | null}
+ */
+let remoteHostOrigin = null;
 
 /**
  * The one per-user data root of this installation: database, artifacts,
@@ -181,10 +196,17 @@ function createWindow() {
 /**
  * The native folder picker the cache bridge calls for
  * `mapCache.chooseDirectory()`; only this process hands the chosen path to the
- * protected local service, the renderer never names a path.
+ * protected local service, the renderer never names a path. A folder on this
+ * computer means nothing to a host on another machine, so remote-host mode
+ * refuses instead of pointing the host's cache at a path it cannot write.
  * @returns {Promise<string | null>}
  */
 async function chooseDirectory() {
+  if (remoteHostOrigin) {
+    const refusal = new Error(`The map cache belongs to the Studio host at ${remoteHostOrigin} and is stored on that machine. A folder on this computer cannot hold it; change the cache location from the host machine.`);
+    refusal.name = "RemoteHostUnsupported";
+    throw refusal;
+  }
   const owner = window && !window.isDestroyed() ? window : undefined;
   const { canceled, filePaths } = await dialog.showOpenDialog(owner, {
     title: "Choose the map cache folder",
@@ -222,7 +244,7 @@ function formatBytes(bytes) {
 /** @param {{ directory: string; usedBytes: number; availableBytes: number | null; assetCount: number; activeDownloads: number; unavailable: string | null }} status */
 function describeStatus(status) {
   return [
-    `Folder: ${status.directory}`,
+    `Folder: ${status.directory}${remoteHostOrigin ? ` (on ${remoteHostOrigin})` : ""}`,
     ...(status.unavailable ? [`Location unavailable: ${status.unavailable}`] : []),
     `Stored: ${formatBytes(status.usedBytes)} in ${status.assetCount} assets`,
     `Free on disk: ${status.availableBytes === null ? "unknown" : formatBytes(status.availableBytes)}`,
@@ -244,13 +266,16 @@ const cacheMenu = {
       label: "Cache Usage…",
       click: menuAction(async () => {
         const status = await bridgeCall("status");
-        await dialog.showMessageBox({ type: "info", title: "Map cache", message: "Map cache on this computer", detail: describeStatus(status) });
+        await dialog.showMessageBox({ type: "info", title: "Map cache", message: remoteHostOrigin ? `Map cache on the Studio host ${remoteHostOrigin}` : "Map cache on this computer", detail: describeStatus(status) });
       }),
     },
     {
       label: "Open Cache Folder",
       click: menuAction(async () => {
         const status = await bridgeCall("status");
+        // The path names a folder on the host's filesystem; opening it here
+        // would open an unrelated folder of this computer, or nothing.
+        if (remoteHostOrigin) throw new Error(`The cache folder ${status.directory} is on the Studio host ${remoteHostOrigin}, not on this computer. Open it there.`);
         const failure = await shell.openPath(status.directory);
         if (failure) throw new Error(failure);
       }),
@@ -354,7 +379,7 @@ function updateMenuItem() {
   };
 }
 
-/** @param {ReturnType<typeof createLocalHost>} localHost */
+/** @param {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost>} localHost */
 function installMenu(localHost) {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     // The application menu is a macOS concept; elsewhere its roles are inert.
@@ -369,21 +394,29 @@ function installMenu(localHost) {
       submenu: [
         updateMenuItem(),
         { type: "separator" },
-        { label: "Open data folder", click: () => void shell.openPath(localHost.dataRoot) },
         {
-          label: "Local host…",
+          label: "Open data folder",
+          click: menuAction(async () => {
+            // A remote host keeps its data root on its own filesystem.
+            if (localHost.dataRoot === null) throw new Error(`The data folder belongs to the Studio host at ${trustedOrigin} and is on that machine, not this computer. Open it there.`);
+            const failure = await shell.openPath(localHost.dataRoot);
+            if (failure) throw new Error(failure);
+          }),
+        },
+        {
+          label: "Studio host…",
           click: menuAction(async () => {
             const response = await fetch(`${trustedOrigin}/api/simforge/host/capabilities`, { headers: await localHost.authorization() });
-            if (!response.ok) throw new Error(`The local host answered ${response.status}.`);
+            if (!response.ok) throw new Error(`The Studio host answered ${response.status}.`);
             const capabilities = await response.json();
             const runtime = capabilities.execution?.nativeRuntime;
             await dialog.showMessageBox({
               type: "info",
-              title: "Local host",
+              title: "Studio host",
               message: `${capabilities.host?.label ?? PRODUCT.name} ${capabilities.host?.version ?? ""}`.trim(),
               detail: [
-                `Origin: ${trustedOrigin} (${localHost.owned() ? "started by this app" : "attached"})`,
-                `Data: ${localHost.dataRoot}`,
+                `Origin: ${trustedOrigin} (${localHost.owned() ? "started by this app" : remoteHostOrigin ? "remote, not managed by this app" : "attached"})`,
+                `Data: ${localHost.dataRoot ?? `on the host machine (${trustedOrigin})`}`,
                 `Native runtime: ${runtime?.state === "available" ? `${runtime.runtime.version} (${runtime.runtime.target})` : `unavailable — ${runtime?.reason ?? "unknown"}`}`,
               ].join("\n"),
             });
@@ -394,7 +427,7 @@ function installMenu(localHost) {
   ]));
 }
 
-/** @param {ReturnType<typeof createLocalHost>} localHost */
+/** @param {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost>} localHost */
 async function shutdown(localHost) {
   const cache = mapCache;
   mapCache = null;
@@ -410,7 +443,7 @@ if (process.platform === "win32") app.setAppUserModelId(PRODUCT.appId);
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  /** @type {ReturnType<typeof createLocalHost> | null} */
+  /** @type {ReturnType<typeof createLocalHost> | ReturnType<typeof createRemoteHost> | null} */
   let localHost = null;
   app.on("second-instance", () => {
     if (window) {
@@ -424,27 +457,37 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     const win = createWindow();
     try {
-      const dataRoot = await resolveDataRoot();
-      let cloudOrigin = process.env.SIMFORGE_CLOUD_ORIGIN?.trim();
-      if (app.isPackaged) {
-        const metadata = JSON.parse(await readFile(join(pagesDir, "package.json"), "utf8"));
-        if (typeof metadata.simforgeCloudOrigin !== "string") throw new Error("The desktop package has no Cloud service origin");
-        const configured = new URL(metadata.simforgeCloudOrigin);
-        if (configured.protocol !== "https:" || configured.origin !== metadata.simforgeCloudOrigin) {
-          throw new Error("The desktop package has an invalid Cloud service origin");
-        }
-        cloudOrigin ||= metadata.simforgeCloudOrigin;
-      }
-      localHost = createLocalHost({
-        port: Number(process.env.PORT ?? (app.isPackaged ? "0" : "5199")),
-        dataRoot,
-        env: cloudOrigin ? { SIMFORGE_CLOUD_ORIGIN: cloudOrigin } : {},
-        onExit: (code) => {
-          if (window && !window.isDestroyed()) {
-            void window.loadFile(join(pagesDir, "host-exited.html"), { query: { code: String(code ?? "unknown") } });
+      // `SIMFORGE_REMOTE_HOST` points the shell at a host on another machine:
+      // it becomes a guest, starts nothing and supervises nothing. Everything
+      // else — the Cloud origin, the data root, the port — is the *host's*
+      // business in that mode, so none of it is resolved here.
+      const remote = remoteHostTarget(process.env);
+      if (remote) {
+        remoteHostOrigin = remote.baseUrl;
+        localHost = createRemoteHost(remote);
+      } else {
+        const dataRoot = await resolveDataRoot();
+        let cloudOrigin = process.env.SIMFORGE_CLOUD_ORIGIN?.trim();
+        if (app.isPackaged) {
+          const metadata = JSON.parse(await readFile(join(pagesDir, "package.json"), "utf8"));
+          if (typeof metadata.simforgeCloudOrigin !== "string") throw new Error("The desktop package has no Cloud service origin");
+          const configured = new URL(metadata.simforgeCloudOrigin);
+          if (configured.protocol !== "https:" || configured.origin !== metadata.simforgeCloudOrigin) {
+            throw new Error("The desktop package has an invalid Cloud service origin");
           }
-        },
-      });
+          cloudOrigin ||= metadata.simforgeCloudOrigin;
+        }
+        localHost = createLocalHost({
+          port: Number(process.env.PORT ?? (app.isPackaged ? "0" : "5199")),
+          dataRoot,
+          env: cloudOrigin ? { SIMFORGE_CLOUD_ORIGIN: cloudOrigin } : {},
+          onExit: (code) => {
+            if (window && !window.isDestroyed()) {
+              void window.loadFile(join(pagesDir, "host-exited.html"), { query: { code: String(code ?? "unknown") } });
+            }
+          },
+        });
+      }
       installMenu(localHost);
       const host = await localHost.start();
       trustedOrigin = new URL(host.baseUrl).origin;
@@ -457,7 +500,7 @@ if (!app.requestSingleInstanceLock()) {
         value: localHost.sessionToken(),
         httpOnly: true,
         sameSite: "strict",
-        secure: false,
+        secure: trustedOrigin.startsWith("https:"),
       });
       // Background updates: only a packaged build with a distribution identity
       // knows its channel; the first check waits for the window to be on

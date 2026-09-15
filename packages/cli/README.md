@@ -531,6 +531,39 @@ simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] 
 render worker, one supervisor, `host.json` in the data root. The desktop shell
 execs the same command and only adds a window.
 
+### Serving the GUI from another machine
+
+The daemon binds where `HOSTNAME` says (default `127.0.0.1`), and the access
+gate never treated loopback as authorization, so one host can serve a GUI
+running elsewhere - daemon, database, map cache, render worker and GPU on one
+box, the window on a laptop:
+
+```bash
+# On the host machine:
+HOSTNAME=0.0.0.0 simforge daemon --port 5421
+jq -r .controlToken ~/.simforge/cloud/host.json   # the per-start control token
+
+# On the GUI machine. The desktop shell becomes a guest: it starts,
+# supervises and stops nothing, and quitting leaves the host running.
+SIMFORGE_REMOTE_HOST=http://100.72.252.40:5421 \
+SIMFORGE_REMOTE_HOST_TOKEN=<that control token> \
+SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 simforge-studio
+```
+
+The control token, and the session cookie derived from it, are full access to
+the host and cross the network in cleartext over plain HTTP, so the link must
+be private: a WireGuard/Tailscale tailnet (the `100.x` address above is a
+Tailscale one) or a TLS terminator in front of the daemon. The shell refuses a
+non-loopback `http://` target unless `SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1`
+acknowledges the tailnet. `simforge host open` still refuses a non-loopback
+bootstrap URL, because it opens a browser on the host machine itself.
+
+Features that assumed the host's filesystem is the GUI machine's - the map
+cache folder picker and "Move cache", "Open Cache Folder", "Open data folder" -
+are refused in this mode with a message naming the host, instead of pointing
+the host at a path that exists only on the GUI machine. The full inventory and
+the deployment requirements are in `docs/engineering/remote-studio-host.md`.
+
 `render submit` freezes the draft the way the Studio wizard does (reuse a
 succeeded export of the current draft, else build revision evidence from the
 saved browser simulation and wait for the OpenSCENARIO export), then submits;

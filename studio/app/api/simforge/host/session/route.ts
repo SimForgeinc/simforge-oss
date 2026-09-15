@@ -4,6 +4,7 @@ import {
   LOCAL_HOST_SESSION_COOKIE,
   LOCAL_HOST_TOKEN_ENV,
   localHostSessionToken,
+  receivedUrl,
   secretsEqual,
 } from "@simforge-oss/studio-host/node";
 
@@ -14,6 +15,14 @@ const TICKET_LIFETIME_MS = 60_000;
  * A native caller exchanges its control token for a one-use browser ticket.
  * The control token never appears in a URL, browser history or referrer.
  * Electron sets the same session cookie directly and does not use this route.
+ *
+ * The ticket is minted against the authority the request arrived on, not the
+ * server's own view of itself (`receivedUrl`): a host bound to a network
+ * address reports `http://localhost:<port>`, so a caller on another machine
+ * would otherwise be handed a URL only the host can resolve. That is also the
+ * authority `studio/proxy.ts` compares `Origin` against for mutations, so the
+ * session this ticket bootstraps can mutate on exactly the origin it was
+ * minted for. `next` stays a same-origin relative path either way.
  */
 export async function POST(request: Request) {
   const controlToken = process.env[LOCAL_HOST_TOKEN_ENV];
@@ -25,7 +34,7 @@ export async function POST(request: Request) {
   if (!body || typeof body !== "object" || (body.next !== undefined && typeof body.next !== "string")) {
     return NextResponse.json({ error: "invalid_browser_target" }, { status: 400 });
   }
-  const origin = new URL(request.url).origin;
+  const origin = receivedUrl(request).origin;
   const next = body.next ?? "/dashboard/scenario";
   let destination: URL;
   try {
@@ -48,7 +57,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const controlToken = process.env[LOCAL_HOST_TOKEN_ENV];
-  const url = new URL(request.url);
+  const url = receivedUrl(request);
   const ticket = url.searchParams.get("ticket") ?? "";
   const entry = tickets.get(ticket);
   tickets.delete(ticket);
