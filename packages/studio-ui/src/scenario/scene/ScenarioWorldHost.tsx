@@ -15,7 +15,6 @@ import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
   animateMapCamera,
   MAP_ZOOM_IN_MS,
-  MAP_ZOOM_OUT_MS,
   pulledBackMapView,
   waitForMapModelsFullyLoaded,
 } from "./map-camera-transition";
@@ -71,7 +70,6 @@ export type ScenarioWorldState = {
 
 export type MapTransitionPhase =
   | "idle"
-  | "zooming-out"
   | "loading"
   | "zooming-in"
   | "error";
@@ -335,57 +333,24 @@ export function ScenarioWorldHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyEnvironment, preference, quality]);
 
+  // One host now lives for one editing session on one immutable map version, so this runs exactly
+  // once per mount: there is no previous world on screen to pull the camera away from. The zoom that
+  // does remain is the one into the loaded map, below.
   useEffect(() => {
     if (!stableTarget) return;
-    const retained = retainedTargetRef.current;
-    if (retained?.mapVersionId === stableTarget.mapVersionId) {
-      return;
-    }
+    if (retainedTargetRef.current?.mapVersionId === stableTarget.mapVersionId) return;
 
-    const generation = ++transitionGenerationRef.current;
+    transitionGenerationRef.current += 1;
     setError(null);
     setLoadedMapVersionId(null);
     progressTrackerRef.current = { peakOutstanding: 0, percent: 8 };
-    setLoadProgress({
-      phase: "covering",
-      percent: 5,
-      message: `Switching to ${stableTarget.label}`,
-      detail: "Keeping the current scene covered while the next map is prepared…",
-    });
     cancelCameraAnimationRef.current?.();
     cancelModelSettleRef.current?.();
     cancelModelSettleRef.current = null;
-
-    const showTarget = () => {
-      if (generation !== transitionGenerationRef.current) return;
-      retainedTargetRef.current = stableTarget;
-      setRetainedTarget(stableTarget);
-      setLoadProgress(initialSceneLoadProgress(stableTarget.label));
-      updateTransitionPhase("loading");
-    };
-    const viewer = viewerRef.current;
-    const canAnimate = Boolean(
-      supportsMapCameraTransition(viewer) &&
-        retained &&
-        loadedMapVersionIdRef.current === retained.mapVersionId &&
-        !prefersReducedMotion(),
-    );
-    if (!supportsMapCameraTransition(viewer) || !canAnimate) {
-      showTarget();
-      return;
-    }
-
-    viewer.controls.setEnabled(false);
-    viewer.setCameraPoseConstraintsEnabled(false);
-    updateTransitionPhase("zooming-out");
-    const currentView = viewer.controls.getView();
-    cancelCameraAnimationRef.current = animateMapCamera(
-      (view) => viewer.controls.applyView(view),
-      currentView,
-      pulledBackMapView(currentView),
-      MAP_ZOOM_OUT_MS,
-      showTarget,
-    );
+    retainedTargetRef.current = stableTarget;
+    setRetainedTarget(stableTarget);
+    setLoadProgress(initialSceneLoadProgress(stableTarget.label));
+    updateTransitionPhase("loading");
   }, [stableTarget]);
 
   useEffect(
@@ -631,9 +596,7 @@ export function ScenarioWorldHost({
             !interactive && "pointer-events-none",
             transitionPhase === "loading" || transitionPhase === "error"
               ? "opacity-0"
-              : transitionPhase === "zooming-out"
-                ? "opacity-80 saturate-75"
-                : "opacity-100 saturate-100 blur-0",
+              : "opacity-100 saturate-100 blur-0",
           )}
           ariaLabel={`${effectiveTarget?.label ?? retainedTarget.label} 3D world`}
           role={interactive ? "application" : "img"}

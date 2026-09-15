@@ -16,16 +16,13 @@ import { CloudActivityIndicator, CloudLoadingSurface } from "../../components/Cl
 import { cn } from "../../lib/utils";
 import { list, paneLoading } from "../scenario-controls.stylex";
 import {
-  groupDocumentsByMap,
   groupVariationsBySource,
   type ScenarioMapGroup,
-  type ScenarioMapOption,
 } from "./document-map-groups";
 import { SCENARIO_TAG_DRAG_MIME, ScenarioDocumentRow } from "./ScenarioDocumentRow";
 import {
   DEFAULT_SCENARIO_TAG_COLOR,
   DEFAULT_SCENARIO_TAG_COLORS,
-  scenarioListCache,
 } from "./scenarioListCache";
 
 type SharedRowHandlers = Pick<
@@ -57,7 +54,11 @@ export type ScenarioDocumentCreatorProps = SharedRowHandlers & {
   documentsLoadingMore: boolean;
   hasMoreDocuments: boolean;
   onLoadMoreDocuments: () => void;
-  availableMaps: ReadonlyArray<ScenarioMapOption>;
+  /** This dataset's rows grouped by map, owned by the workspace so the coverage map shares it. */
+  documentGroups: ScenarioMapGroup[];
+  /** The one open group, or `null` for none. */
+  expandedMapVersionId: string | null;
+  onToggleMapGroup: (mapVersionId: string) => void;
   advancedMode: boolean;
   tagEditorMode: boolean;
   tags: ScenarioTagDto[];
@@ -76,7 +77,6 @@ export type ScenarioDocumentCreatorProps = SharedRowHandlers & {
   onDeleteTag: (tagId: string) => void;
   onSelectTagFilter: (tagId: string | null) => void;
   onSetRating: (documentId: string, rating: number) => void;
-  onPersistViewState: () => void;
   activeDocumentId: string | null | undefined;
   /** The document open in the editor, if any. Drives the pencil's toggled state. */
   editActiveDocumentId?: string | null;
@@ -102,7 +102,9 @@ export function ScenarioDocumentCreator({
   documentsLoadingMore,
   hasMoreDocuments,
   onLoadMoreDocuments,
-  availableMaps,
+  documentGroups,
+  expandedMapVersionId,
+  onToggleMapGroup,
   advancedMode,
   tagEditorMode,
   tags,
@@ -121,7 +123,6 @@ export function ScenarioDocumentCreator({
   onDeleteTag,
   onSelectTagFilter,
   onSetRating,
-  onPersistViewState,
   activeDocumentId,
   editActiveDocumentId,
   renderActiveDocumentId,
@@ -132,16 +133,9 @@ export function ScenarioDocumentCreator({
   ...rowHandlers
 }: ScenarioDocumentCreatorProps) {
   const showTagEditorTools = advancedMode && tagEditorMode;
-  const documentGroups = useMemo(
-    () => groupDocumentsByMap(documents, availableMaps),
-    [availableMaps, documents],
-  );
   const variationsBySource = useMemo(() => groupVariationsBySource(documents), [documents]);
   const [expandedVariationRootIds, setExpandedVariationRootIds] = useState<Set<string>>(
     () => new Set(),
-  );
-  const [expandedMapKeys, setExpandedMapKeys] = useState<Set<string>>(
-    () => new Set([...(scenarioListCache.expandedMapLabelsByDataset[datasetId] ?? [])].slice(0, 1)),
   );
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
   const draggingTagIdRef = useRef<string | null>(null);
@@ -154,12 +148,6 @@ export function ScenarioDocumentCreator({
     draggingTagIdRef.current = null;
     setDraggingTagId(null);
   };
-
-  useEffect(() => {
-    setExpandedMapKeys(
-      new Set([...(scenarioListCache.expandedMapLabelsByDataset[datasetId] ?? [])].slice(0, 1)),
-    );
-  }, [datasetId]);
 
   // A pointer drag can end anywhere — including outside the window — so the drag latch is cleared
   // from the window, not from the row that happened to be under the cursor.
@@ -177,18 +165,7 @@ export function ScenarioDocumentCreator({
     if (!advancedMode) clearTagDrag();
   }, [advancedMode]);
 
-  const toggleMapGroup = (groupKey: string) => {
-    setExpandedMapKeys((current) => {
-      const next = current.has(groupKey) ? new Set<string>() : new Set([groupKey]);
-      scenarioListCache.expandedMapLabelsByDataset = {
-        ...scenarioListCache.expandedMapLabelsByDataset,
-        [datasetId]: next,
-      };
-      onPersistViewState();
-      return next;
-    });
-  };
-  const anyMapExpanded = expandedMapKeys.size > 0;
+  const anyMapExpanded = expandedMapVersionId !== null;
 
   const toggleVariationsFor = (document: ScenarioDocumentSummaryDto) => {
     setExpandedVariationRootIds((current) => {
@@ -307,9 +284,9 @@ export function ScenarioDocumentCreator({
                   key={group.groupKey}
                   group={group}
                   advancedMode={advancedMode}
-                  expanded={expandedMapKeys.has(group.groupKey)}
+                  expanded={group.mapVersionId === expandedMapVersionId}
                   anyMapExpanded={anyMapExpanded}
-                  onToggle={() => toggleMapGroup(group.groupKey)}
+                  onToggle={() => onToggleMapGroup(group.mapVersionId)}
                 >
                   {group.documents.map((document) => renderRow(document))}
                 </MapDocumentGroup>
@@ -352,8 +329,17 @@ function MapDocumentGroup({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  // Opening a group can come from the coverage map, where the group may be anywhere in the column —
+  // including below the fold. Scrolling the card itself into view is what makes a click on a region
+  // land on its scenarios rather than on an unchanged-looking list.
+  useEffect(() => {
+    if (expanded) sectionRef.current?.scrollIntoView({ block: "nearest" });
+  }, [expanded]);
+
   return (
     <section
+      ref={sectionRef}
       data-scenario-map-group=""
       data-map-version-id={group.mapVersionId || undefined}
       className={cn(

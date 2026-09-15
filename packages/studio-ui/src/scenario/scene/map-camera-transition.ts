@@ -1,7 +1,6 @@
 import type { AssetDownloadStats, CameraView } from "@simforge-oss/viewer";
 import { VisibleClock } from "../../lib/visible-clock";
 
-export const MAP_ZOOM_OUT_MS = 1_400;
 export const MAP_ZOOM_IN_MS = 1_800;
 export const MAP_MODEL_STABLE_MS = 600;
 export const MAP_MODEL_LOAD_TIMEOUT_MS = 90_000;

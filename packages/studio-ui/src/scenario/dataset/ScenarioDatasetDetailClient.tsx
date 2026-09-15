@@ -31,11 +31,14 @@ import {
   documentName,
   documentSummaryFromDocument,
 } from "../list/document-list-utils";
-import type { ScenarioMapOption } from "../list/document-map-groups";
+import {
+  groupDocumentsByMap,
+  type ScenarioMapGroup,
+  type ScenarioMapOption,
+} from "../list/document-map-groups";
 import { scenarioListCache } from "../list/scenarioListCache";
 import {
   hydrateScenarioViewStateFromStorage,
-  persistScenarioViewState,
   rememberScenarioSelection,
 } from "../list/scenarioViewState";
 import { useScenarioDocumentActions } from "../list/useScenarioDocumentActions";
@@ -68,6 +71,10 @@ export function ScenarioDatasetDetailClient({
   renderActiveDocumentId,
   renderWorkLive,
   renderCompletionGeneration = 0,
+  selectedDocumentId,
+  selectedMapVersionId,
+  onSelectMap,
+  onMapGroupsChange,
 }: {
   dataset: ScenarioDatasetDto;
   /** Open the dataset details dialog; the header menu and the description both lead here. */
@@ -91,6 +98,14 @@ export function ScenarioDatasetDetailClient({
   renderWorkLive?: boolean;
   /** Increments when the render owner settles a scope on no live work, so badges reconcile exactly once. */
   renderCompletionGeneration?: number;
+  /** The row the column shows as selected; the workspace owns it and seeds it from view state. */
+  selectedDocumentId: string | null;
+  /** The map group the coverage map has open, or `null` for none. */
+  selectedMapVersionId: string | null;
+  /** Opening or closing a group from the list side; the coverage map follows the same state. */
+  onSelectMap: (mapVersionId: string | null) => void;
+  /** Publishes this dataset's map grouping to the workspace, which draws it as coverage regions. */
+  onMapGroupsChange: (groups: ScenarioMapGroup[]) => void;
 }) {
   const studioHost = useStudioHost();
   const hydratedRef = useRef(false);
@@ -220,6 +235,23 @@ export function ScenarioDatasetDetailClient({
       })
       .sort((a, b) => documentName(a).localeCompare(documentName(b)));
   }, [activeCreatorFilter, activeTagFilter, list.documents, needle]);
+
+  /**
+   * The one grouping of this dataset's scenarios by map.
+   *
+   * The column renders it as collapsible groups and the workspace draws the same groups as coverage
+   * regions, so it is computed here — the only place that holds both the filtered rows and the map
+   * catalog — and published upward rather than derived twice from two different inputs.
+   */
+  const documentGroups = useMemo(
+    () => groupDocumentsByMap(visibleDocuments, maps),
+    [maps, visibleDocuments],
+  );
+  const onMapGroupsChangeRef = useRef(onMapGroupsChange);
+  onMapGroupsChangeRef.current = onMapGroupsChange;
+  useEffect(() => {
+    onMapGroupsChangeRef.current(documentGroups);
+  }, [documentGroups]);
 
   const renderInProgress = renderWorkLive === true;
   const completionPending =
@@ -526,7 +558,11 @@ export function ScenarioDatasetDetailClient({
             documentsLoadingMore={list.loadingMore}
             hasMoreDocuments={list.hasMore}
             onLoadMoreDocuments={() => void list.loadMore()}
-            availableMaps={maps}
+            documentGroups={documentGroups}
+            expandedMapVersionId={selectedMapVersionId}
+            onToggleMapGroup={(mapVersionId) =>
+              onSelectMap(selectedMapVersionId === mapVersionId ? null : mapVersionId)
+            }
             advancedMode
             tagEditorMode={tagEditorOpen}
             tags={tagManager.tags}
@@ -554,11 +590,7 @@ export function ScenarioDatasetDetailClient({
             onSetRating={(documentId, rating) =>
               void tagManager.setDocumentRating(documentId, rating)
             }
-            onPersistViewState={persistScenarioViewState}
-            activeDocumentId={
-              scenarioListCache.selectedDocumentIdByDataset[datasetId] ??
-              null
-            }
+            activeDocumentId={selectedDocumentId}
             renderActiveDocumentId={renderActiveDocumentId ?? null}
             busyDocumentId={actions.busyDocumentId}
             renamingDocumentId={actions.renamingDocumentId}

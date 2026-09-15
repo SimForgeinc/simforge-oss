@@ -26,10 +26,6 @@ vi.mock("../../../../src/lib/scenario/playback/usePlayback", () => ({
 }));
 vi.mock("../../../../src/lib/scenario/useMapSignalOverlays", () => ({ useMapSignalOverlays: () => null }));
 vi.mock("../../../../src/lib/scenario/ambient/sumoAssets", () => ({ loadSumoAssets: async () => ({}) }));
-vi.mock("../../../../src/scenario/scene/mapCatalog", () => ({
-  pickRandomMap: () => null,
-  preloadMapManifests: async () => 0,
-}));
 vi.mock("@simforge-oss/viewer", () => ({ indexedWorldHeightSampler: () => () => null }));
 vi.mock("../../../../src/lib/scenario/playback/simulationPreview", () => ({
   encodeSimulationPreview: async () => ({ bytes: new Uint8Array([1]), sha256: "f".repeat(64) }),
@@ -113,22 +109,18 @@ afterEach(() => {
 });
 
 describe("scenario session trace residency", () => {
-  it("keeps the compiled trace across an autosave echo and a list/editor mode change, and persists it once the content is saved", async () => {
+  it("keeps the compiled trace across an autosave echo, and persists it once the content is saved", async () => {
     const { services, saveSimulationPreview } = host(documentAt(1));
     worker.prepare.mockImplementation(async () => fakeBundle("v1"));
     const wrapper = ({ children }: { children: ReactNode }) => (
       <StudioHostProvider host={services}>{children}</StudioHostProvider>
     );
-    const rendered = renderHook(
-      ({ listPresentationActive }: { listPresentationActive: boolean }) => useScenarioSession({
-        documentId: "doc_1",
-        listPresentationActive,
-        viewer: null,
-        actorRenderer: null,
-        loadedMapVersionId: null,
-      }),
-      { wrapper, initialProps: { listPresentationActive: false } },
-    );
+    const rendered = renderHook(() => useScenarioSession({
+      documentId: "doc_1",
+      viewer: null,
+      actorRenderer: null,
+      loadedMapVersionId: null,
+    }), { wrapper });
 
     await waitFor(() => expect(rendered.result.current.bundle).not.toBeNull());
     const compiled = rendered.result.current.bundle;
@@ -147,13 +139,6 @@ describe("scenario session trace residency", () => {
     expect(worker.prepare).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(saveSimulationPreview).toHaveBeenCalledTimes(2));
     expect(saveSimulationPreview.mock.calls[1]?.[0]).toEqual({ id: "doc_1", draftVersion: 2 });
-
-    // Leaving for the list and coming back changes presentation only.
-    rendered.rerender({ listPresentationActive: true });
-    rendered.rerender({ listPresentationActive: false });
-    expect(rendered.result.current.bundle).toBe(compiled);
-    expect(worker.prepare).toHaveBeenCalledTimes(1);
-    expect(saveSimulationPreview).toHaveBeenCalledTimes(2);
   });
 
   it("drops the trace and recompiles when the authored content changes, without uploading the unsaved trace", async () => {
@@ -164,7 +149,6 @@ describe("scenario session trace residency", () => {
     );
     const rendered = renderHook(() => useScenarioSession({
       documentId: "doc_1",
-      listPresentationActive: false,
       viewer: null,
       actorRenderer: null,
       loadedMapVersionId: null,

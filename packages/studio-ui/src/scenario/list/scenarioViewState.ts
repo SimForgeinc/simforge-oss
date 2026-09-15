@@ -5,24 +5,9 @@ export const SCENARIO_VIEW_STORAGE_KEY = "simforge.scenarioDatasetView.v1";
 type PersistedScenarioViewState = {
   selectedDatasetId?: string | null;
   selectedDocumentIdByDataset?: Record<string, string>;
-  expandedMapLabelsByDataset?: Record<string, string[]>;
-  cinematicPreviewEnabled?: boolean;
+  /** The one open map group per dataset; the column opens exactly one at a time. */
+  selectedMapVersionIdByDataset?: Record<string, string>;
 };
-
-/**
- * Only the one open map group is persisted per dataset.
- *
- * The list opens exactly one group at a time (`toggleMapGroup` replaces rather than adds), so
- * storing more would restore a state the UI cannot itself produce.
- */
-function serializeExpandedMapLabels() {
-  return Object.fromEntries(
-    Object.entries(scenarioListCache.expandedMapLabelsByDataset).map(([datasetId, labels]) => [
-      datasetId,
-      [...labels].slice(0, 1),
-    ]),
-  );
-}
 
 export function persistScenarioViewState() {
   if (typeof window === "undefined") return;
@@ -32,8 +17,7 @@ export function persistScenarioViewState() {
       JSON.stringify({
         selectedDatasetId: scenarioListCache.selectedDatasetId,
         selectedDocumentIdByDataset: scenarioListCache.selectedDocumentIdByDataset,
-        expandedMapLabelsByDataset: serializeExpandedMapLabels(),
-        cinematicPreviewEnabled: scenarioListCache.cinematicPreviewEnabled,
+        selectedMapVersionIdByDataset: scenarioListCache.selectedMapVersionIdByDataset,
       }),
     );
   } catch {
@@ -53,16 +37,8 @@ export function hydrateScenarioViewStateFromStorage() {
     if (parsed.selectedDocumentIdByDataset) {
       scenarioListCache.selectedDocumentIdByDataset = parsed.selectedDocumentIdByDataset;
     }
-    if (parsed.expandedMapLabelsByDataset) {
-      scenarioListCache.expandedMapLabelsByDataset = Object.fromEntries(
-        Object.entries(parsed.expandedMapLabelsByDataset).map(([datasetId, labels]) => [
-          datasetId,
-          new Set(labels.slice(0, 1)),
-        ]),
-      );
-    }
-    if (typeof parsed.cinematicPreviewEnabled === "boolean") {
-      scenarioListCache.cinematicPreviewEnabled = parsed.cinematicPreviewEnabled;
+    if (parsed.selectedMapVersionIdByDataset) {
+      scenarioListCache.selectedMapVersionIdByDataset = parsed.selectedMapVersionIdByDataset;
     }
   } catch {
     return;
@@ -75,10 +51,5 @@ export function rememberScenarioSelection(datasetId: string, documentId: string)
     ...scenarioListCache.selectedDocumentIdByDataset,
     [datasetId]: documentId,
   };
-  persistScenarioViewState();
-}
-
-export function rememberCinematicPreviewEnabled(enabled: boolean) {
-  scenarioListCache.cinematicPreviewEnabled = enabled;
   persistScenarioViewState();
 }
