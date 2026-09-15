@@ -5,6 +5,7 @@ import {
 import { datasetScenarioId, scenarioRowId } from "./ids";
 import { queryOne, queryRows, withTransaction } from "./data-api";
 import type { AppContext } from "./app-context";
+import { scenarioMediaProxyUrl } from "@/app/lib/media-utils";
 import {
   buildInitialScenarioDraft,
   resolveScenarioMapReference,
@@ -71,7 +72,7 @@ function parseSimulationArtifacts(rows: SimulationArtifactRow[]) {
 
     const createdAt = row.finished_at ?? row.updated_at;
     const key = row.s3_recording_key;
-    const uri = `/api/scenarios/${row.scenario_id}/media?key=${encodeURIComponent(key)}`;
+    const uri = scenarioMediaProxyUrl(row.scenario_id, key);
 
     const artifact = {
       id: `runtime:${row.backend_run_id}:mp4`,

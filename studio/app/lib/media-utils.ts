@@ -33,21 +33,14 @@ export function s3UriToMapAssetProxyUrl(
 }
 
 /**
- * Converts an S3 URI (s3://bucket/key) to a same-origin proxy URL.
- * The proxy avoids CORS enforcement on range requests, which is required
- * for <video> seek and progressive buffering.
+ * Same-origin URL for one recording artifact of a scenario.
+ *
+ * The route it names (`/api/scenarios/[scenarioId]/media`) resolves the key
+ * against the artifacts actually linked to that scenario before presigning it,
+ * so a key is a name and not a capability. This is the only place the URL
+ * shape is written — a second spelling of it is how the shape came to be
+ * handed to browsers while no route module answered it.
  */
-export function s3UriToScenarioProxyUrl(
-  uri: string,
-  scenarioId: string
-): string | null {
-  if (!uri.startsWith("s3://")) return null;
-  const withoutScheme = uri.slice("s3://".length);
-  const slashIdx = withoutScheme.indexOf("/");
-  if (slashIdx === -1) return null;
-  const key = withoutScheme.slice(slashIdx + 1);
-  return `/api/scenarios/${scenarioId}/media?key=${encodeURIComponent(key)}`;
+export function scenarioMediaProxyUrl(scenarioId: string, key: string): string {
+  return `/api/scenarios/${encodeURIComponent(scenarioId)}/media?key=${encodeURIComponent(key)}`;
 }
-
-/** @deprecated Use s3UriToScenarioProxyUrl instead. */
-export const s3UriToRunProxyUrl = s3UriToScenarioProxyUrl;
