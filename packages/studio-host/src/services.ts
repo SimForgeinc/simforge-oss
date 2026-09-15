@@ -15,6 +15,7 @@ import type {
   ScenarioGalleryItemDto,
   ScenarioJobFamily,
   ScenarioJobProvenanceDto,
+  ScenarioMapCoverageDto,
   ScenarioMaterializedTrafficReferenceDto,
   ScenarioOperationalJobDto,
   ScenarioPostprocessInput,
@@ -171,6 +172,13 @@ export interface StudioProjectService {
 export interface StudioArtifactService {
   /** The usable map catalog. Refresh after installation or an authorization change. */
   listMaps(signal?: AbortSignal, options?: { fresh?: boolean }): Promise<StudioMapEntry[]>;
+  /**
+   * WGS84 footprints of the installed maps, for drawing scenario coverage on
+   * a 2D basemap. Immutable per map version, so it shares the map catalog's
+   * read window; an installed map that cannot be placed comes back under
+   * `unprojected` with its reason rather than vanishing.
+   */
+  listMapFootprints(signal?: AbortSignal): Promise<ScenarioMapCoverageDto>;
   getArtifact(artifactId: string, options?: { download?: boolean; signal?: AbortSignal }): Promise<ScenarioArtifactDto>;
   /** Resolve and open an artifact in a new tab. */
   openArtifact(artifactId: string): Promise<void>;

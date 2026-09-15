@@ -1,6 +1,6 @@
 "use client";
 
-import { BASEMAPS, type BasemapId } from "./basemaps";
+import { BASEMAPS, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   SATELLITE_MAX_ZOOM,
   SATELLITE_MIN_ZOOM,

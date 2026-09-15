@@ -1,0 +1,102 @@
+import * as stylex from "@stylexjs/stylex";
+import { colors, layers, space, text } from "../../stylex/tokens.stylex";
+
+export const styles = stylex.create({
+  root: {
+    position: "relative",
+    width: "100%",
+    height: "100%",
+    backgroundColor: colors.panelSolid,
+    overflow: "hidden",
+  },
+  map: {
+    position: "absolute",
+    inset: 0,
+  },
+  /** Map name plus scenario count, anchored on the footprint's centre. */
+  label: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: space.xxs,
+    paddingInline: space.md,
+    paddingBlock: space.xs,
+    backgroundColor: {
+      default: "rgba(10, 10, 10, 0.82)",
+      ":hover": "rgba(10, 10, 10, 0.92)",
+    },
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: {
+      default: colors.lineStrong,
+      ":hover": colors.accent,
+    },
+    color: "#ffffff",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    backdropFilter: "blur(6px)",
+  },
+  labelSelected: {
+    borderColor: colors.accent,
+    backgroundColor: "rgba(10, 10, 10, 0.94)",
+  },
+  labelName: {
+    fontSize: text.sizeXs,
+    fontWeight: text.weightMedium,
+    lineHeight: text.lineTight,
+  },
+  labelCount: {
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    letterSpacing: text.trackingMetaTight,
+    textTransform: "uppercase",
+    color: colors.textSubtle,
+    lineHeight: text.lineTight,
+  },
+  /** Bottom-left plate: load state and the maps that cannot be drawn. */
+  legend: {
+    position: "absolute",
+    left: space.xl,
+    bottom: space.xl,
+    zIndex: layers.raised,
+    display: "flex",
+    flexDirection: "column",
+    gap: space.xxs,
+    maxWidth: "18rem",
+    paddingInline: space.lg,
+    paddingBlock: space.md,
+    backgroundColor: "rgba(10, 10, 10, 0.78)",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.line,
+    backdropFilter: "blur(6px)",
+  },
+  legendTitle: {
+    fontFamily: text.fontMeta,
+    fontSize: text.sizeMicro,
+    letterSpacing: text.trackingMetaTight,
+    textTransform: "uppercase",
+    color: colors.textFaint,
+  },
+  legendRow: {
+    fontSize: text.sizeXs,
+    color: colors.textSubtle,
+    lineHeight: text.lineNormal,
+  },
+  status: {
+    position: "absolute",
+    left: "50%",
+    top: space.xl,
+    transform: "translateX(-50%)",
+    zIndex: layers.raised,
+    paddingInline: space.lg,
+    paddingBlock: space.md,
+    backgroundColor: "rgba(10, 10, 10, 0.78)",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: colors.line,
+    fontSize: text.sizeXs,
+    color: colors.textSubtle,
+    backdropFilter: "blur(6px)",
+  },
+});

@@ -173,6 +173,10 @@
         "types": "./dist/lib/hifi-preview/contracts.d.ts",
         "default": "./dist/lib/hifi-preview/contracts.js"
       },
+      "./lib/maps/basemaps": {
+        "types": "./dist/lib/maps/basemaps.d.ts",
+        "default": "./dist/lib/maps/basemaps.js"
+      },
       "./lib/maps/frontend/map-asset-cache": {
         "types": "./dist/lib/maps/frontend/map-asset-cache.d.ts",
         "default": "./dist/lib/maps/frontend/map-asset-cache.js"
@@ -368,6 +372,10 @@
       "./scenario/list/ScenarioMapPickerDialog": {
         "types": "./dist/scenario/list/ScenarioMapPickerDialog.d.ts",
         "default": "./dist/scenario/list/ScenarioMapPickerDialog.js"
+      },
+      "./scenario/coverage/ScenarioCoverageMap": {
+        "types": "./dist/scenario/coverage/ScenarioCoverageMap.d.ts",
+        "default": "./dist/scenario/coverage/ScenarioCoverageMap.js"
       },
       "./scenario/list/document-map-groups": {
         "types": "./dist/scenario/list/document-map-groups.d.ts",
@@ -607,6 +615,11 @@
       "development": "./src/lib/hifi-preview/contracts.ts",
       "types": "./dist/lib/hifi-preview/contracts.d.ts",
       "default": "./dist/lib/hifi-preview/contracts.js"
+    },
+    "./lib/maps/basemaps": {
+      "development": "./src/lib/maps/basemaps.ts",
+      "types": "./dist/lib/maps/basemaps.d.ts",
+      "default": "./dist/lib/maps/basemaps.js"
     },
     "./lib/maps/frontend/map-asset-cache": {
       "development": "./src/lib/maps/frontend/map-asset-cache.ts",
@@ -853,6 +866,11 @@
       "types": "./dist/scenario/list/ScenarioMapPickerDialog.d.ts",
       "default": "./dist/scenario/list/ScenarioMapPickerDialog.js"
     },
+    "./scenario/coverage/ScenarioCoverageMap": {
+      "development": "./src/scenario/coverage/ScenarioCoverageMap.tsx",
+      "types": "./dist/scenario/coverage/ScenarioCoverageMap.d.ts",
+      "default": "./dist/scenario/coverage/ScenarioCoverageMap.js"
+    },
     "./scenario/list/document-map-groups": {
       "development": "./src/scenario/list/document-map-groups.ts",
       "types": "./dist/scenario/list/document-map-groups.d.ts",
@@ -928,6 +946,8 @@
     "clsx": "^2.1.1",
     "fflate": "^0.8.2",
     "lucide-react": "^0.577.0",
+    "maplibre-gl": "6.4.1",
+    "react-map-gl": "8.1.3",
     "tailwind-merge": "^3.5.0",
     "three": "^0.185.0",
     "unicornstudio-react": "^2.1.9",
@@ -942,6 +962,7 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
+    "@types/geojson": "7946.0.16",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

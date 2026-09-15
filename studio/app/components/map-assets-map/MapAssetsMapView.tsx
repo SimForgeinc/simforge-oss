@@ -6,7 +6,7 @@ import type { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
 import type { MapAsset } from "@simforge-oss/studio-shared";
-import { BASEMAPS, type BasemapId } from "@/app/lib/maps/frontend/basemaps";
+import { BASEMAPS, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   DEFAULT_BASEMAP_LAYER_VISIBILITY,
   resolveBasemapStyleWithImagery,

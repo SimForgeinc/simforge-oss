@@ -40,7 +40,7 @@ import {
   ALL_RUNTIME_LANE_TYPE_IDS,
   type RuntimeLaneTypeId,
 } from "@/app/lib/editor-map/runtime-layer-visibility";
-import { DEFAULT_BASEMAP, type BasemapId } from "@/app/lib/maps/frontend/basemaps";
+import { DEFAULT_BASEMAP, type BasemapId } from "@simforge-oss/studio-ui/lib/maps/basemaps";
 import {
   DEFAULT_BASEMAP_LAYER_VISIBILITY,
   type BasemapLayerVisibility,

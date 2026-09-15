@@ -371,6 +371,29 @@ export type ScenarioMapDescriptorDto = {
   coordinateSystem: { id: string; sha256: string };
 };
 
+/**
+ * Where an installed map sits on Earth: its OpenDRIVE extents rectangle
+ * projected to WGS84, for drawing scenario coverage on a 2D basemap.
+ */
+export type ScenarioMapFootprintDto = {
+  mapVersionId: string;
+  sourceMapId: string;
+  /** Closed ring of `[lon, lat]` degrees (first point repeated last). */
+  polygon: Array<[number, number]>;
+  /** Centre of the footprint, `[lon, lat]`. */
+  center: [number, number];
+};
+
+/**
+ * Scenario coverage: the maps that can be drawn, and the installed maps that
+ * cannot, each with the reason. An installed map is never silently absent.
+ */
+export type ScenarioMapCoverageDto = {
+  footprints: ScenarioMapFootprintDto[];
+  /** Installed maps with no drawable footprint, e.g. `no georeference`. */
+  unprojected: Array<{ mapVersionId: string; sourceMapId: string; reason: string }>;
+};
+
 // ── Jobs: render jobs, validation runs, operational jobs ────────────────────
 
 export type ScenarioRenderJobStatus = "queued" | "leased" | "running" | "succeeded" | "failed" | "cancelled";
