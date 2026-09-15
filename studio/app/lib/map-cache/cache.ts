@@ -22,6 +22,7 @@ import type {
   DesktopMapCacheReceipt,
   DesktopMapCacheStatus,
 } from "@simforge-oss/studio-host";
+import type { HostOrigin } from "@simforge-oss/studio-host";
 
 import {
   abortError,
@@ -82,11 +83,19 @@ type Capability = { sha256: string; key: string; store: CacheStore };
 type MaterializedEntry = { sha256: string; bytes: number; mtimeMs: number };
 
 /**
- * Local map asset URLs are root-relative paths on this host. Absolute forms are
- * accepted only for loopback origins and reduced to their path so hostnames
- * never split the cache.
+ * Local map asset URLs are root-relative paths on this host. An absolute form
+ * is accepted when it belongs to THIS HOST and is reduced to its path so
+ * hostnames never split the cache.
+ *
+ * `host` is the authority the request arrived on, from the route that received
+ * it — not a list of names this module believes a host may have. Loopback used
+ * to be that list, which made every absolute URL fail the moment the host ran
+ * on another machine: the GUI's asset URLs carry the origin it loaded from, a
+ * tailnet or LAN address, and a host cannot recognise itself by guessing.
+ * Without a `host` only root-relative URLs are accepted, which is all a map
+ * manifest or a native job ever carries.
  */
-function parseCanonicalUrl(raw: unknown): Canonical {
+function parseCanonicalUrl(raw: unknown, host?: HostOrigin | null): Canonical {
   if (typeof raw !== "string" || raw === "") throw new MapCacheError("A map asset URL is required");
   let url: URL;
   try {
@@ -96,8 +105,10 @@ function parseCanonicalUrl(raw: unknown): Canonical {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new MapCacheError(`Invalid map asset URL: ${raw}`);
   const absolute = /^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//");
-  if (absolute && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
-    throw new MapCacheError("Only map assets served by this SimForge host can be stored on this device");
+  if (absolute && !host?.owns(url)) {
+    throw new MapCacheError(host
+      ? `Only map assets served by this SimForge host (${host.hrefForCookie()}) can be cached — ${url.origin} is somewhere else`
+      : `A map asset URL must be a root-relative path on this SimForge host — got ${url.origin}`);
   }
   url.hash = "";
   return { key: `${url.pathname}${url.search}`, url };
@@ -437,10 +448,10 @@ export class MapCacheService {
   }
 
   /** Is the asset verified on disk AND readable by the current session? Never touches the network. */
-  async has(query: unknown): Promise<boolean> {
+  async has(query: unknown, host?: HostOrigin | null): Promise<boolean> {
     if (!query || typeof query !== "object") throw new MapCacheError("has() expects { url, sha256? }");
     const { url, sha256 } = query as { url?: unknown; sha256?: unknown };
-    const canonical = parseCanonicalUrl(url);
+    const canonical = parseCanonicalUrl(url, host);
     const claimed = parseSha256(sha256);
     let target: CacheStore;
     try {
@@ -468,11 +479,11 @@ export class MapCacheService {
    * Make one asset resident and hand back its capability path. `signal`
    * cancels this subscriber (peers sharing the transfer keep it alive).
    */
-  async ensure(request: unknown, signal?: AbortSignal): Promise<DesktopMapCacheEnsureResult> {
+  async ensure(request: unknown, signal?: AbortSignal, host?: HostOrigin | null): Promise<DesktopMapCacheEnsureResult> {
     if (!request || typeof request !== "object") throw new MapCacheError("ensure() expects { requestId, url, sha256?, sizeBytes? }");
     const raw = request as Partial<Record<keyof DesktopMapCacheEnsureRequest, unknown>>;
     const requestId = parseRequestId(raw.requestId);
-    const canonical = parseCanonicalUrl(raw.url);
+    const canonical = parseCanonicalUrl(raw.url, host);
     const claimedSha256 = parseSha256(raw.sha256);
     const claimedSize = parseSize(raw.sizeBytes);
     if (this.pending.has(requestId) || this.subscribers.has(requestId)) throw new MapCacheError(`Map asset request ${requestId} is already in progress`);

@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { gzipSync } from "node:zlib";
 
+import { HostOrigin } from "@simforge-oss/studio-host/node";
 import { MapCacheService, MATERIALIZED_SIDECAR, type MapCacheAccess } from "../cache";
 import { MapCacheError } from "../store";
 import type { ResolvedSource } from "../transfer";
@@ -282,7 +283,10 @@ describe("local map cache service", () => {
     const requestsBefore = origin.requests.length;
     service = await open(root, policy.access);
     assert.equal(await service.has({ url: `${MAP}/tiles/a.bin`, sha256: digest }), true);
-    assert.equal(await service.has({ url: `http://127.0.0.1:5199${MAP}/tiles/a.bin` }), true, "verified URL alias answers without a digest, hostname-independent");
+    // Absolute needs the authority the request arrived on; the cache key is
+     // still the path, so the answer does not depend on which authority it was.
+    const here = HostOrigin.fromReceivedRequest(new Request("http://127.0.0.1:5199/api/simforge/map-cache/has", { headers: { host: "127.0.0.1:5199" } }));
+    assert.equal(await service.has({ url: `http://127.0.0.1:5199${MAP}/tiles/a.bin` }, here), true, "verified URL alias answers without a digest, hostname-independent");
     const warm = await service.ensure({ requestId: "r2", url: `${MAP}/tiles/a.bin`, sha256: digest });
     assert.equal(warm.cacheHit, true);
     assert.equal(origin.requests.length, requestsBefore, "warm restart made no HTTP requests");
@@ -417,6 +421,42 @@ describe("local map cache service", () => {
     await service.dispose();
   });
 
+  /**
+   * An absolute asset URL is this host's own when it matches the authority
+   * the request arrived on — never when it merely looks like loopback. The
+   * GUI resolves every asset URL against `window.location.origin`, so on a
+   * host reached at a network address every absolute URL used to be refused
+   * and no map could load at all.
+   */
+  it("accepts an absolute asset URL on the host's own authority, whatever that authority is", async () => {
+    const bytes = Buffer.from("network-host");
+    const digest = sha256(bytes);
+    origin.assets.set(`${MAP}/net.bin`, { bytes });
+    const root = await newRoot("host-authority");
+    const policy = fakeAccess(origin.origin);
+    policy.registry.set(`${MAP}/net.bin`, { sha256: digest, sizeBytes: bytes.length });
+    const service = await open(root, policy.access);
+    const network = HostOrigin.fromReceivedRequest(new Request("http://100.72.252.40:5432/api/simforge/map-cache/ensure", { headers: { host: "100.72.252.40:5432" } }));
+    const loopback = HostOrigin.fromReceivedRequest(new Request("http://127.0.0.1:5199/api/simforge/map-cache/ensure", { headers: { host: "127.0.0.1:5199" } }));
+
+    // The same asset, named by each machine's own view of the host.
+    const remote = await service.ensure({ requestId: "n1", url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }, undefined, network);
+    assert.ok(remote.url.length > 0);
+    assert.equal(await service.has({ url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }, network), true);
+    assert.equal(await service.has({ url: `http://127.0.0.1:5199${MAP}/net.bin`, sha256: digest }, loopback), true, "one cache entry, not one per authority");
+
+    // Another origin is still refused, and the refusal names what it compared against.
+    await assert.rejects(
+      service.ensure({ requestId: "n2", url: `https://other.example${MAP}/net.bin`, sha256: digest }, undefined, network),
+      (error: Error) => /100\.72\.252\.40:5432/.test(error.message) && /other\.example/.test(error.message),
+    );
+    // Without an authority, only a root-relative path is a local asset.
+    await assert.rejects(
+      service.ensure({ requestId: "n3", url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }),
+      /root-relative/,
+    );
+  });
+
   it("refuses foreign URLs, digests the registry disagrees with, and unknown capabilities; clear revokes", async () => {
     const bytes = Buffer.from("guarded");
     const digest = sha256(bytes);
@@ -426,7 +466,7 @@ describe("local map cache service", () => {
     policy.registry.set(`${MAP}/guarded.bin`, { sha256: digest, sizeBytes: bytes.length });
     const service = await open(root, policy.access);
 
-    await assert.rejects(service.ensure({ requestId: "x1", url: `https://other.example${MAP}/a`, sha256: digest }), /served by this SimForge host/);
+    await assert.rejects(service.ensure({ requestId: "x1", url: `https://other.example${MAP}/a`, sha256: digest }), /other\.example/); // refused: not this host's authority
     await assert.rejects(service.ensure({ requestId: "x2", url: "/api/other/thing.bin" }), /Not a local map asset URL/);
     await assert.rejects(service.ensure({ requestId: "x3", url: `${MAP}/guarded.bin`, sha256: "nope" }), /SHA-256/);
     await assert.rejects(
