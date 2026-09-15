@@ -473,6 +473,28 @@ running daemon, not only a typecheck.
   carries none (platform `DesktopWorkspace` is `{id,name,role}`), so the call
   could only ever fail. The account page lists organizations and roles instead;
   selecting an active organization returns with the platform half of step 2.
+
+  **Wire-unverified, and one known semantic gap.** The rename landed while the
+  platform desktop password grant was returning 500, so no authenticated call
+  has yet traversed the adapter: `listOrganizations`, the `organizationId`
+  query parameters, the compute header and the import/publish/upload paths are
+  typecheck- and route-verified only (a disconnected host answers 401
+  `cloud_disconnected` from `validAccessToken()` before the header is ever
+  set). The bytes on the wire are unchanged by the rename — same paths, same
+  `x-simforge-workspace-id`, same value the UI passed before — so this is a
+  naming gap, not a behavioural change. The gap: `StudioCloudOrganization.id`
+  is a platform *workspace row* id, because `listDesktopWorkspaces` selects
+  `w.id, w.name, m.role` and returns no organization id; only
+  `StudioCloudStatus.activeOrganizationId` is a true organization id. The 1:1
+  assumption rests on `workspaces.auth_organization_id … UNIQUE` in the
+  vendored baseline and has not been confirmed against the deployed schema.
+  What closes it: with a connected host, `cloud datasets --org <id>` must
+  answer 200 rather than 400 `workspace_required` / 403 `workspace_forbidden`,
+  a desktop-scope write (`artifact-upload --org`) must be accepted, and one
+  compute call must carry `x-simforge-organization-id` end to end. If the
+  tenant list yields an id that the scoped call then refuses, the 1:1
+  assumption is wrong and the platform half must expose the organization id on
+  the tenant list.
 * **Step 3, first cut — hosted billing and tenant identity out of the local
   database. DONE.**
   `studio/migrations/20260914120000_local_drop_saas_billing_identity.sql` drops

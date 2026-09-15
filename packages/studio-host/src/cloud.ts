@@ -26,8 +26,19 @@ export type StudioCloudStatus = {
 };
 
 /**
- * One SimCloud organization this account belongs to. `id` is the organization
- * id: a cloud home has exactly one tenant and this is it.
+ * One SimCloud tenant this account belongs to — a cloud home.
+ *
+ * `id` is the identifier the Cloud accepts to act in that tenant. Today the
+ * deployed desktop surface enumerates tenants as workspace rows
+ * (`/api/desktop/projects/workspaces` selects `w.id, w.name, m.role` and
+ * exposes no organization id at all), so this `id` is a platform *workspace*
+ * row id naming the tenant, not `workspaces.auth_organization_id`. It is
+ * carried opaquely and only ever handed back to the Cloud through the one
+ * legacy adapter in `studio/app/lib/cloud/connection.ts`. It becomes a real
+ * organization id when the platform half of
+ * `docs/engineering/local-cloud-boundary.md` §8 step 2 lands; until then do not
+ * compare it with `StudioCloudStatus.activeOrganizationId`, which IS an
+ * organization id (`desktop_sessions.active_organization_id`).
  */
 export type StudioCloudOrganization = {
   id: string;
