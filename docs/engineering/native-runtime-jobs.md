@@ -54,9 +54,61 @@ Build/package/install are Node scripts under `scripts/native-runtime/` and
 need only cargo, git and node on the target host (no bash, tar or sha256sum):
 
 ```
+node scripts/native-runtime/prepare-sky.mjs [--tools-dir <dir>] [--python <interp>]
 node scripts/native-runtime/package-runtime.mjs --target <triple> [--providers] [--no-sky|--sky <dir>] [--offline]
 node scripts/native-runtime/install-runtime.mjs dist/native-runtime/simforge-native-runtime-<version>-<triple>.tar.gz [--root <dir>] [--python <interp>] [--extras a,b]
 ```
+
+### Distribution: a user installs the runtime, never builds it
+
+Building needs a Rust toolchain, so it is the **developer** path. A user's
+install fetches a published archive, pinned and verified:
+
+```
+node scripts/native-runtime/fetch-runtime.mjs [--target <triple>] [--root <dir>] [--base-url <origin>] [--abi <n>]
+node scripts/native-runtime/publish-runtime.mjs [--target <triple> | --archive <path> | --from-manifest <path>] \
+  [--gpu-interop true|false] [--provenance <text>] [--tested <what ran>] [--write-pin] [--publish draft --confirm]
+```
+
+`runtime-release.json` pins one release: repository, tag, version, revision,
+the binding ABI the archives satisfy, and per target the archive name, sha256
+and length (`null` where nothing is published). `fetch-runtime.mjs` caches
+into `<install-root>/downloads/`, so a cached archive needs no network, and
+refuses rather than warns:
+
+* `runtime.abi_mismatch` — the pin's ABI is not the ABI this checkout
+  requires (`packages/native-runtime/src/shared.ts`). Checked **before**
+  downloading: a stale artifact is not worth 224 MB of transfer, and an
+  installed binding-ABI mismatch is only discovered at first render.
+* `runtime.digest_mismatch` — the bytes differ; the message names whether the
+  digest or the length failed, since a truncated download, a tampered asset
+  and a wrong pin have the same symptom and different remedies. The download
+  is discarded and nothing is installed.
+* `runtime.no_prebuilt_for_target` — nothing published for this platform;
+  `studio/app/lib/host/native-render-install.ts` then builds from source and
+  says that it did. `SIMFORGE_NATIVE_RUNTIME_FROM_SOURCE=1` asks for the
+  source build explicitly and `SIMFORGE_NATIVE_RUNTIME_ARCHIVE` installs a
+  local archive; both are for developing on the runtime itself.
+
+`publish-runtime.mjs` records the ABI only from a checkout whose Rust and
+TypeScript constants agree (`abi.mjs`; they are bumped together), re-extracts
+the archive and re-verifies its manifest closure before pinning, and refuses
+a bundle that cannot render — `--no-sky` produces a runtime with no render
+service, which installs cleanly and then fails every render, so
+`runtime.not_renderable` stops it becoming a release asset.
+
+`.github/workflows/native-runtime.yml` builds all four targets on native
+runners and, on request, creates a maintainers-only **draft** release in the
+`native-runtime-<version>-<revision12>` tag namespace (`v*` is the npm/PyPI
+stack, `studio-*` the desktop installers). As for desktop installers, making
+a release publicly downloadable is a deliberate act by the release owner:
+
+```
+gh release edit native-runtime-<version>-<revision12> --draft=false --repo SimForgeinc/simforge-oss
+```
+
+Until the draft is published and the pin from that run is committed, the
+pinned URL answers 404 and every install falls back to the source build.
 
 `build-runner.mjs` builds the runner and (unless `--no-sky`) the render
 service + library — `--features gpu-interop` only for Linux targets, where the

@@ -1,0 +1,22 @@
+{
+  "schema": "simforge.native-runtime-release/v1",
+  "comment": "Pinned prebuilt native runtime. One revision, one ABI, one archive per target. Written by scripts/native-runtime/publish-runtime.mjs --write-pin; read by fetch-runtime.mjs, which refuses bytes whose sha256/size differ and refuses the whole pin when `abi` is not the ABI this checkout requires (scripts/native-runtime/abi.mjs). A target with `archive: null` has no published artifact and falls back to the developer source build.",
+  "repository": "SimForgeinc/simforge-oss",
+  "tag": "native-runtime-0.1.0-a94ad689ecfe",
+  "version": "0.1.0",
+  "revision": "a94ad689ecfe51736c66c281b6e21e8bf00a519f",
+  "abi": 3,
+  "targets": {
+    "x86_64-unknown-linux-gnu": {
+      "archive": "simforge-native-runtime-0.1.0-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "044c3f50567d9df6d7a25805bb9be96fbf9d455a41d3029d307f16cd81ea27f3",
+      "sizeBytes": 224042983,
+      "gpuInterop": false,
+      "tested": null,
+      "provenance": "built on path-B860I-AORUS-PRO-ICE (Ubuntu 24.04) from a94ad689 with --no-gpu-interop; replace with the CI run that uploads the release asset"
+    },
+    "x86_64-pc-windows-msvc": null,
+    "aarch64-apple-darwin": null,
+    "x86_64-apple-darwin": null
+  }
+}

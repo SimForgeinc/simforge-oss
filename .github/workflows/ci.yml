@@ -40,6 +40,19 @@ jobs:
       - run: pnpm verify:naming
       - run: pnpm typecheck
       - run: pnpm test:release
+      - name: Test the repository scripts
+        # Nothing referenced scripts/__tests__ before this step: five test
+        # files sat in the tree looking like coverage and never executed.
+        # Two of them import @simforge-oss/map-pipeline's build output, so it
+        # is built first; the rest need only sources.
+        #
+        # The release pin is the load-bearing one: it names the binding ABI a
+        # published runtime archive satisfies, and a pin that has drifted from
+        # packages/native-runtime/src/shared.ts is the stale-artifact defect
+        # the verified install path exists to prevent.
+        run: |
+          pnpm --filter @simforge-oss/map-pipeline build
+          node --test scripts/__tests__/*.test.mjs
       - run: pnpm test:integration
       - run: pnpm test:portable
       - run: pnpm release:manifest

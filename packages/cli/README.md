@@ -143,7 +143,9 @@ the install root is `$SIMFORGE_NATIVE_RUNTIME_ROOT` or the OS data directory
 (`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` on Linux,
 `~/Library/Application Support/simforge/native-runtime` on macOS,
 `%LOCALAPPDATA%\simforge\native-runtime` on Windows; installed by
-`node scripts/native-runtime/install-runtime.mjs <archive>`),
+`node scripts/native-runtime/fetch-runtime.mjs` + `install-runtime.mjs <archive>`,
+which fetch the pinned published archive and verify its digest and binding ABI
+rather than building it),
 then `PATH`. The runner's stdout/stderr/exit-code contract is identical to this
 one. A durable compile-and-simulate is one `simforge.compile/v1` job (template
 input, `params.mapId/site/drawIndex/seed`) followed by one `simforge.simulate/v1`

@@ -58,8 +58,9 @@ export function NativeRenderScreen({
       <h1 {...stylex.props(onboarding.welcomeTitle)}>Render on this machine</h1>
       <p {...stylex.props(onboarding.welcomeLede)}>
         Native rendering turns a scenario into video with the built-in renderer,
-        here, without an account. It needs a one-time runtime install; the
-        first install builds the runtime from source and takes a while.
+        here, without an account. It needs a one-time runtime install: the
+        published runtime for this machine is downloaded and verified, which
+        takes a few minutes on a normal connection.
       </p>
 
       {loading ? (
