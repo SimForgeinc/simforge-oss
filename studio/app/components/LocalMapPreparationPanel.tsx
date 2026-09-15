@@ -13,6 +13,28 @@ import { setup } from "./setup-preparation.stylex";
 
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
 
+/**
+ * Where these map bytes actually are. This panel is served BY the Studio
+ * host and reports the host's filesystem, so "on this computer" is true only
+ * when the host is this computer. A shell attached to a host on another
+ * machine would otherwise label someone else's disk as the user's, the same
+ * mistake the shell menu already avoids ("remote, not managed by this app").
+ *
+ * The page's own origin is the honest signal: it is the authority this client
+ * reached the host on. Read after mount, because the server render cannot
+ * know which authority the client used, and presentation only — nothing here
+ * authorizes anything.
+ * @returns the host's origin when it is not this machine, else null
+ */
+function useRemoteHostOrigin(): string | null {
+  const [origin, setOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    const local = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(window.location.hostname);
+    setOrigin(local ? null : window.location.origin);
+  }, []);
+  return origin;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -95,6 +117,7 @@ function ProfileRow({
   actionLabel: string;
 }) {
   const { status, error, starting, start } = install;
+  const remoteHost = useRemoteHostOrigin();
   const ready = status?.state === "ready" || (status?.state === "idle" && installed);
   const running = status?.state === "materializing";
   const requiresConnection = status?.state === "error" && status.message === REQUIRES_CONNECTION;
@@ -111,7 +134,7 @@ function ProfileRow({
         <p {...stylex.props(setup.rowTitle)}>
           {label}
           <span {...stylex.props(setup.pill, ready && setup.pillReady)}>
-            {status === null ? "Checking" : ready ? "On this computer" : running ? percent === null ? "Downloading" : `${percent}%` : locked || requiresConnection ? "Needs account" : status.state === "error" ? "Failed" : "Not downloaded"}
+            {status === null ? "Checking" : ready ? (remoteHost ? "On the Studio host" : "On this computer") : running ? percent === null ? "Downloading" : `${percent}%` : locked || requiresConnection ? "Needs account" : status.state === "error" ? "Failed" : "Not downloaded"}
           </span>
         </p>
         <p {...stylex.props(setup.rowDetail)}>
@@ -138,6 +161,7 @@ function ProfileRow({
 export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescriptor; xstyle?: stylex.StyleXStyles }) {
   const cloud = useStudioCloudStatus();
   const router = useRouter();
+  const remoteHost = useRemoteHostOrigin();
   const browser = useMapInstall(map.mapVersionId, "browser");
   const semantic = useMapInstall(map.mapVersionId, "semantic");
   const requiresConnection = [browser.status, semantic.status].some(
@@ -155,7 +179,7 @@ export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescrip
       data-map-access={map.access}
       data-map-locked={String(locked)}
     >
-      <p {...stylex.props(setup.panelLabel)}>On this computer</p>
+      <p {...stylex.props(setup.panelLabel)}>{remoteHost ? `On the Studio host (${remoteHost})` : "On this computer"}</p>
       {locked ? (
         <div {...stylex.props(setup.locked)}>
           <Lock {...stylex.props(setup.lockedIcon)} aria-hidden="true" />

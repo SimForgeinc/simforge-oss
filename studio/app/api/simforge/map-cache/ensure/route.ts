@@ -1,3 +1,4 @@
+import { HostOrigin } from "@simforge-oss/studio-host/node";
 import { mapCacheErrorResponse, mapCacheJson, readMapCacheBody } from "@/app/lib/map-cache/http";
 import { getMapCacheService } from "@/app/lib/map-cache/service";
 
@@ -10,7 +11,10 @@ import { getMapCacheService } from "@/app/lib/map-cache/service";
 export async function POST(request: Request) {
   try {
     const body = await readMapCacheBody(request);
-    return mapCacheJson(await (await getMapCacheService()).ensure(body, request.signal));
+    // The authority this request arrived on is what decides whether an
+     // absolute asset URL is this host's: a remote GUI's URLs carry the
+     // origin it loaded from, which is the host's network address.
+    return mapCacheJson(await (await getMapCacheService()).ensure(body, request.signal, HostOrigin.fromReceivedRequest(request)));
   } catch (error) {
     return mapCacheErrorResponse("ensure", error);
   }

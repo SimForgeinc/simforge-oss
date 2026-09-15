@@ -116,6 +116,7 @@ const COMMANDS = [
   { name: 'host status', summary: 'report whether the local Studio host is running and what it can execute' },
   { name: 'host stop', summary: 'ask the running local host to shut down cleanly (start one with `simforge daemon`)' },
   { name: 'host open', summary: 'open the running local host in the browser with a trusted one-use session (--next <path>)' },
+  { name: 'host pair', summary: 'mint a one-use pairing code for a desktop shell on another machine (--origin <url> for a loopback or wildcard bind)' },
   { name: 'render list', summary: 'list render jobs on the local host, optionally --scenario <documentId>' },
   { name: 'render status', summary: 'print one render job' },
   { name: 'render wait', summary: 'block until a render job finishes; non-zero exit when it fails' },

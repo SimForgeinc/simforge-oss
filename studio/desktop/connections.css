@@ -1,0 +1,77 @@
+/* The connection chooser and the lost-connection page (connections.html).
+ * Theme variables come from cloud-loading.css; faces and the reset from
+ * shell.css. Everything below is the form itself. */
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 100%;
+}
+.head { display: flex; flex-direction: column; gap: 0.5rem; }
+.eyebrow, .note, .meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 45%);
+}
+.title { font-size: 1.75rem; font-weight: 600; }
+.subtitle { font-size: 1.125rem; font-weight: 600; margin: 0; }
+.detail { color: hsl(var(--muted-foreground)); line-height: 1.5; }
+code { font-family: var(--font-mono); font-size: 0.875em; color: hsl(var(--foreground)); }
+.section { display: flex; flex-direction: column; gap: 0.75rem; }
+.page [data-mode] { display: none; }
+body[data-mode="choose"] [data-mode="choose"], body[data-mode="lost"] [data-mode="lost"] { display: flex; }
+body[data-mode="choose"] [data-mode="choose"][hidden] { display: none; }
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+.row[data-selected="true"] { border-color: var(--accent-brand); }
+.row .name { font-weight: 600; }
+.row .origin { font-family: var(--font-mono); font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
+.row .status { grid-column: 1 / -1; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
+.row .status[data-state="ok"] { color: hsl(var(--signal-green)); }
+.row .status[data-state="unusable"], .row .status[data-state="refused"] { color: hsl(var(--signal-red)); }
+.row .status[data-state="unpaired"] { color: hsl(var(--signal-yellow)); }
+.row .buttons { display: flex; gap: 0.5rem; grid-row: 1 / span 2; }
+button {
+  font: inherit;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+button:hover { background: hsl(var(--accent)); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent-brand); color: #0a0a0a; border-color: var(--accent-brand); font-weight: 600; }
+button.link { align-self: flex-start; border: 0; padding: 0.25rem 0; text-decoration: underline; }
+button.link:hover { background: transparent; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; }
+.field span { font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
+.field input {
+  font: inherit;
+  padding: 0.5rem 0.625rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--input));
+  user-select: text;
+}
+.field input:focus { outline: 1px solid var(--accent-brand); }
+.plaintext { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border: 1px solid hsl(var(--signal-yellow)); }
+.check { display: flex; gap: 0.5rem; align-items: flex-start; line-height: 1.4; }
+.check input { margin-top: 0.2rem; }
+.warning { color: hsl(var(--signal-yellow)); line-height: 1.4; }
+.error { color: hsl(var(--signal-red)); line-height: 1.4; }
+.actions { display: flex; gap: 0.5rem; }
+.foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }

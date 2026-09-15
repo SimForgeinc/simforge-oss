@@ -4,10 +4,39 @@ import { readLocalHostState } from '@simforge-oss/studio-host/node';
 import { boolFlag, optionalString, parseArgs } from '../args.js';
 import { CliError, EXIT } from '../errors.js';
 import { hostRequest } from '../host-client.js';
-import { emit } from '../output.js';
+import { emit, emitLines } from '../output.js';
 import { hostSession, requireSubcommand } from './local.js';
 
-export const HOST_COMMANDS = ['status', 'stop', 'open'] as const;
+export const HOST_COMMANDS = ['status', 'stop', 'open', 'pair'] as const;
+
+const UNROUTABLE_BINDS: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[::1]', '::1', '0.0.0.0', '[::]', '::']);
+
+/**
+ * The origin a `simforge://connect` link advertises to the other machine.
+ * The host record names the bound address, which is the reachable origin for
+ * a single-interface bind and useless for a loopback or wildcard bind: a
+ * remote shell cannot dial `0.0.0.0`, and `127.0.0.1` is its own machine.
+ * Those need `--origin`; nothing is guessed.
+ */
+export function advertisedPairingOrigin(baseUrl: string, explicit: string | undefined): string {
+  if (explicit !== undefined) {
+    let url: URL;
+    try {
+      url = new URL(explicit);
+    } catch {
+      throw new CliError('bad_value', `--origin must be the host's base URL as the other machine reaches it, for example http://100.72.252.40:5421.`, { path: '--origin' });
+    }
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+      throw new CliError('bad_value', `--origin must be a bare http:// or https:// origin.`, { path: '--origin' });
+    }
+    return url.origin;
+  }
+  const bound = new URL(baseUrl);
+  if (UNROUTABLE_BINDS.has(bound.hostname)) {
+    throw new CliError('bad_value', `The host is bound to ${bound.hostname}, which another machine cannot dial. Pass --origin <url> with the address the shell will use, for example the tailnet address.`, { path: '--origin' });
+  }
+  return bound.origin;
+}
 
 function alive(pid: number): boolean {
   try {
@@ -45,10 +74,14 @@ function portBound(port: number): Promise<boolean> {
  * not an error. `host stop` asks the running host to shut down through its own
  * control route so the database closes cleanly. `host open` mints a one-use
  * browser ticket; the control token itself is only ever sent in a header.
+ * `host pair` mints a one-use pairing code for a desktop shell on another
+ * machine, so nobody copies the token by hand: the shell exchanges the code
+ * once (POST /api/simforge/host/pair, token in the response body) and keeps
+ * the token in its own OS vault.
  */
 export async function hostCommand(argv: readonly string[]): Promise<number> {
   const sub = requireSubcommand('host', argv[0], HOST_COMMANDS);
-  const args = parseArgs(argv.slice(1), { booleans: ['pretty'], values: ['data-root', ...(sub === 'open' ? ['next'] : [])] });
+  const args = parseArgs(argv.slice(1), { booleans: ['pretty'], values: ['data-root', ...(sub === 'open' ? ['next'] : sub === 'pair' ? ['origin'] : [])] });
   if (args.positionals.length) throw new CliError('bad_value', 'host commands take no positional arguments');
   const dataRoot = optionalString(args, 'data-root');
   const pretty = boolFlag(args, 'pretty');
@@ -113,6 +146,37 @@ export async function hostCommand(argv: readonly string[]): Promise<number> {
         child.once('spawn', () => { child.unref(); resolve(true); });
       });
       emit({ opened, baseUrl: state.baseUrl, ...(opened ? {} : { url: target.href }) }, { pretty });
+      return EXIT.ok;
+    }
+    case 'pair': {
+      if (!running) throw new CliError('host_unavailable', 'No running local Studio host was found. Start it with `simforge daemon`.');
+      const origin = advertisedPairingOrigin(state.baseUrl, optionalString(args, 'origin'));
+      // The host's own record, on the host's own filesystem, mode 0600: the
+      // bound address is dialled as written. A single-interface bind does not
+      // serve loopback, so the loopback-only client is the wrong tool here.
+      const response = await fetch(`${state.baseUrl}/api/simforge/host/pair`, {
+        method: 'POST',
+        redirect: 'error',
+        headers: { authorization: `Bearer ${state.controlToken}`, 'content-type': 'application/json' },
+        body: '{}',
+      });
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok || !body || typeof body !== 'object' || !('code' in body) || typeof body.code !== 'string' || !('expiresAt' in body)) {
+        const code = body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' ? body.error : `request_failed_${response.status}`;
+        throw new CliError(code, `The host did not mint a pairing code (${response.status}).`);
+      }
+      const link = `simforge://connect?${new URLSearchParams({ origin, code: body.code })}`;
+      if (pretty) {
+        emitLines([
+          `Pairing code: ${body.code}   (expires ${String(body.expiresAt)}, one use)`,
+          `Host origin:  ${origin}`,
+          '',
+          'In SimForge Studio on the other machine: Connection > Switch Connection... > Pair with a host on another machine, then paste',
+          `  ${link}`,
+        ]);
+      } else {
+        emit({ code: body.code, expiresAt: body.expiresAt, origin, connect: link }, { pretty });
+      }
       return EXIT.ok;
     }
   }
