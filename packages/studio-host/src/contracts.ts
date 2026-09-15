@@ -700,7 +700,8 @@ export type ArtifactMetadata = ScenarioRenderArtifactDto & {
   expiresInSeconds?: undefined;
 };
 
-export type WorkspaceArtifact = ScenarioRenderArtifactDto & { renderJobId: string | null };
+/** An artifact from `artifact-index` — the home's browse index, metadata only. */
+export type IndexedArtifact = ScenarioRenderArtifactDto & { renderJobId: string | null };
 
 /** Either shape. Components that only display metadata accept both. */
-export type DisplayArtifact = PresignedArtifact | ArtifactMetadata | WorkspaceArtifact;
+export type DisplayArtifact = PresignedArtifact | ArtifactMetadata | IndexedArtifact;

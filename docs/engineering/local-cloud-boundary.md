@@ -448,6 +448,46 @@ for two homes becoming co-authoritative.
 | 5. Ship explicit copy/move | **OSS CLI/UI + Platform transfer endpoints:** implement manifest staging, digest verification, ID remapping, copy, and move; transfer the scenario closure and successful linked outputs; delete all sync link code. | Copy leaves source unchanged and creates an independent destination root. Move removes source only after verified destination commit. A missing map/byte or destination conflict leaves source unchanged. No import/publish/sync status or link table exists. |
 | 6. Remove dead surface and re-run boundary audit | **Both repos:** delete cloud proxy data routes, desktop project routes, workspace APIs, aliases, legacy migration callers, and obsolete docs/CLI verbs. Keep only cloud account/org management and canonical data routes. | Route/DTO/schema search finds no new `workspaceId`, workspace header, cloud-link table, or local Better Auth dependency. Offline local operation, cloud org operation, local worker, remote worker, copy, move, and cloud render are exercised end to end. |
 
+### 8.1 Landed
+
+Two of the first slices are shipped on `main`; both were verified against a
+running daemon, not only a typecheck.
+
+* **Step 2, OSS side — one name for the tenant at the seam. DONE.**
+  `StudioCloudWorkspace` is now `StudioCloudOrganization` (`{id,name,role}`,
+  where `id` is the tenant the calls act in), `WorkspaceArtifact` is
+  `IndexedArtifact`, and every OSS concept, DTO field, route, query parameter,
+  prop and UI string says organization: `GET /api/simforge/cloud/organizations`
+  replaces `/cloud/workspaces`, the `workspaceId` body/query field is
+  `organizationId` on every `/api/simforge/cloud/*` route, the compute proxy
+  takes `x-simforge-organization-id`, and `simforge cloud organizations` /
+  `--org` replace the `workspaces` verb and `--workspace` flag. The platform's
+  deployed desktop surface still enumerates tenants as workspace rows and
+  authorizes scoped desktop requests by `x-simforge-workspace-id`, so exactly
+  one adapter — the block above `cloudRequest` in
+  `studio/app/lib/cloud/connection.ts` — knows those two legacy names and
+  nothing else in the OSS tree mentions a workspace tenant. Deleting that block
+  is part of the platform half of step 2.
+  `setActiveWorkspace`/`POST /cloud/workspaces/active` was deleted rather than
+  renamed: the setter keys on an organization id, the desktop tenant list
+  carries none (platform `DesktopWorkspace` is `{id,name,role}`), so the call
+  could only ever fail. The account page lists organizations and roles instead;
+  selecting an active organization returns with the platform half of step 2.
+* **Step 3, first cut — hosted billing and tenant identity out of the local
+  database. DONE.**
+  `studio/migrations/20260914120000_local_drop_saas_billing_identity.sql` drops
+  `billing_ledger`, `ba_invitation`, `workspace_audit_logs`,
+  `admin_role_assignments` and `admin_impersonation_sessions`, and with them
+  the `credits_balance` columns on `ba_user`/`workspaces` and the
+  default-credit seeding of `0089_billing_ledger_and_default_credits.sql`. No
+  code read any of them. Verified applying from zero on a fresh data root and as
+  an upgrade of an existing one, with the scenario library, the editor and the
+  cloud status route exercised afterwards.
+  Still to do in step 3: the tenant-free baseline itself, the `workspace_id`
+  columns on the core UniScenario tables, `AppContext.workspaceId`, the
+  remaining `public.ba_*`/`workspaces` rows, the cloud link tables and the
+  data-root setting rename.
+
 Steps 1–3 are independently useful before cloud rendering; step 4 is independently
 useful for ordinary cloud jobs; step 5 is independently useful once both homes
 exist. Step 6 is cleanup after the behavioral smoke paths pass, not a compatibility

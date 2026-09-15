@@ -4,7 +4,6 @@ import type {
   ScenarioDatasetDto,
   ScenarioDocumentDto,
   StudioCloudPublishResult,
-  StudioCloudWorkspace,
 } from "@simforge-oss/studio-host";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { execute, queryOne, queryRows } from "@/app/lib/db/data-api";
@@ -22,7 +21,7 @@ import { ensureLocalMap } from "./maps";
  * SimCloud project transfer for the local service.
  *
  * Cloud content becomes a local working copy only by explicit import, and
- * local work reaches a workspace only by explicit publish. Every transferred
+ * local work reaches an organization only by explicit publish. Every transferred
  * document keeps a link naming the upstream document and the exact upstream
  * version (draft version + canonical digest) the local copy last saw; publish
  * fences on that version server-side, so an upstream edit this machine has
@@ -94,7 +93,7 @@ export function transferErrorResponse(error: unknown): NextResponse {
 async function cloudJson<T>(
   path: string,
   init: RequestInit,
-  options: { workspaceId?: string; signal?: AbortSignal },
+  options: { organizationId?: string; signal?: AbortSignal },
   fallbackCode: string,
 ): Promise<T> {
   const response = await cloudRequest(path, init, options);
@@ -102,21 +101,11 @@ async function cloudJson<T>(
   return (await response.json()) as T;
 }
 
-export async function listCloudWorkspaces(signal?: AbortSignal): Promise<StudioCloudWorkspace[]> {
-  const body = await cloudJson<{ workspaces: StudioCloudWorkspace[] }>(
-    "/api/desktop/projects/workspaces",
-    { method: "GET" },
-    { signal },
-    "cloud_workspaces_unavailable",
-  );
-  return body.workspaces;
-}
-
-export async function listCloudDatasets(workspaceId: string, signal?: AbortSignal): Promise<ScenarioDatasetDto[]> {
+export async function listCloudDatasets(organizationId: string, signal?: AbortSignal): Promise<ScenarioDatasetDto[]> {
   const body = await cloudJson<{ datasets: ScenarioDatasetDto[] }>(
     "/api/simforge/datasets",
     { method: "GET" },
-    { workspaceId, signal },
+    { organizationId, signal },
     "cloud_datasets_unavailable",
   );
   return body.datasets;
@@ -147,7 +136,7 @@ type DocumentLinkRow = {
 export type CloudDatasetLink = {
   localDatasetId: string;
   origin: string;
-  remoteWorkspaceId: string;
+  remoteOrganizationId: string;
   remoteDatasetId: string;
   remoteDatasetName: string;
   lastImportedAt: string | null;
@@ -177,7 +166,7 @@ export async function listCloudDatasetLinks(context: AppContext): Promise<CloudD
   return rows.map((row) => ({
     localDatasetId: row.local_dataset_id,
     origin: row.cloud_origin,
-    remoteWorkspaceId: row.remote_workspace_id,
+    remoteOrganizationId: row.remote_workspace_id,
     remoteDatasetId: row.remote_dataset_id,
     remoteDatasetName: row.remote_dataset_name,
     lastImportedAt: row.last_imported_at,
@@ -199,7 +188,7 @@ async function readDatasetLink(context: AppContext, localDatasetId: string) {
 /** The most recently synchronized local working copy of one upstream dataset, if any. */
 async function findLinkedLocalDataset(
   context: AppContext,
-  target: { origin: string; workspaceId: string; datasetId: string },
+  target: { origin: string; organizationId: string; datasetId: string },
 ) {
   return queryOne<DatasetLinkRow>(
     `SELECT l.local_dataset_id, l.cloud_origin, l.remote_workspace_id, l.remote_dataset_id, l.remote_dataset_name,
@@ -214,7 +203,7 @@ async function findLinkedLocalDataset(
     {
       workspace_id: context.workspaceId,
       origin: target.origin,
-      remote_workspace_id: target.workspaceId,
+      remote_workspace_id: target.organizationId,
       remote_dataset_id: target.datasetId,
     },
   );
@@ -225,7 +214,7 @@ async function upsertDatasetLink(
   input: {
     localDatasetId: string;
     origin: string;
-    remoteWorkspaceId: string;
+    remoteOrganizationId: string;
     remoteDatasetId: string;
     remoteDatasetName: string;
     stamp: "imported" | "published";
@@ -251,7 +240,7 @@ async function upsertDatasetLink(
       local_dataset_id: input.localDatasetId,
       workspace_id: context.workspaceId,
       origin: input.origin,
-      remote_workspace_id: input.remoteWorkspaceId,
+      remote_workspace_id: input.remoteOrganizationId,
       remote_dataset_id: input.remoteDatasetId,
       remote_dataset_name: input.remoteDatasetName,
     },
@@ -450,7 +439,7 @@ async function createLocalDatasetForImport(context: AppContext, snapshot: CloudD
  */
 export async function importCloudDataset(
   context: AppContext,
-  source: { workspaceId: string; datasetId: string },
+  source: { organizationId: string; datasetId: string },
   signal?: AbortSignal,
 ): Promise<ScenarioDatasetDto> {
   const status = await getCloudStatus();
@@ -458,7 +447,7 @@ export async function importCloudDataset(
   const response = await cloudRequest(
     `/api/desktop/projects/datasets/${encodeURIComponent(source.datasetId)}`,
     { method: "GET" },
-    { workspaceId: source.workspaceId, signal },
+    { organizationId: source.organizationId, signal },
   );
   if (!response.ok) throw await cloudResponseError(response, "cloud_dataset_unavailable");
   const snapshot = (await response.json()) as CloudDatasetSnapshot;
@@ -468,7 +457,7 @@ export async function importCloudDataset(
 
   const existingLink = await findLinkedLocalDataset(context, {
     origin,
-    workspaceId: source.workspaceId,
+    organizationId: source.organizationId,
     datasetId: source.datasetId,
   });
   const localDataset = existingLink
@@ -519,7 +508,7 @@ export async function importCloudDataset(
   await upsertDatasetLink(context, {
     localDatasetId: target.id,
     origin,
-    remoteWorkspaceId: source.workspaceId,
+    remoteOrganizationId: source.organizationId,
     remoteDatasetId: snapshot.dataset.id,
     remoteDatasetName: snapshot.dataset.name,
     stamp: "imported",
@@ -620,7 +609,7 @@ export type CloudPublishConflict = {
 };
 
 /**
- * Publish a local dataset to a SimCloud workspace, atomically on the server.
+ * Publish a local dataset to a SimCloud organization, atomically on the server.
  *
  * Only documents edited since their last synchronization travel; each is
  * fenced on the upstream draft version this copy last saw, and the server
@@ -632,7 +621,7 @@ export type CloudPublishConflict = {
  */
 export async function publishCloudDataset(
   context: AppContext,
-  input: { datasetId: string; workspaceId: string; remoteDatasetId?: string },
+  input: { datasetId: string; organizationId: string; remoteDatasetId?: string },
   signal?: AbortSignal,
 ): Promise<StudioCloudPublishResult> {
   const status = await getCloudStatus();
@@ -645,7 +634,7 @@ export async function publishCloudDataset(
   const linked =
     link &&
     link.cloud_origin === origin &&
-    link.remote_workspace_id === input.workspaceId &&
+    link.remote_workspace_id === input.organizationId &&
     (input.remoteDatasetId === undefined || input.remoteDatasetId === link.remote_dataset_id)
       ? link
       : null;
@@ -687,7 +676,7 @@ export async function publishCloudDataset(
         documents: payload,
       }),
     },
-    { workspaceId: input.workspaceId, signal },
+    { organizationId: input.organizationId, signal },
   );
   if (!response.ok) {
     const error = await cloudResponseError(response, "cloud_publish_failed");
@@ -711,7 +700,7 @@ export async function publishCloudDataset(
   await upsertDatasetLink(context, {
     localDatasetId: dataset.id,
     origin,
-    remoteWorkspaceId: input.workspaceId,
+    remoteOrganizationId: input.organizationId,
     remoteDatasetId: result.dataset.id,
     remoteDatasetName: result.dataset.name,
     stamp: "published",
@@ -739,7 +728,7 @@ export async function publishCloudDataset(
     });
   }
   return {
-    workspaceId: input.workspaceId,
+    organizationId: input.organizationId,
     datasetId: result.dataset.id,
     documents: result.documents.filter((document) => document.outcome !== "unchanged").length,
     artifacts: 0,

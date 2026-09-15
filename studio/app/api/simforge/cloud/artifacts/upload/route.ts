@@ -5,14 +5,14 @@ import { uploadCloudArtifact } from "@/app/lib/cloud/storage";
 import { readJson, requireScenarioContext } from "@/app/lib/scenario/http";
 
 const UploadSchema = z.strictObject({
-  workspaceId: z.string().trim().min(1).max(128),
+  organizationId: z.string().trim().min(1).max(128),
   artifactId: z.string().trim().min(1).max(128),
 });
 
 /**
- * `POST /api/simforge/cloud/artifacts/upload {workspaceId,artifactId}` ->
- * `{workspaceId, artifactId}` naming the SimCloud artifact. Only bytes the
- * workspace lacks are transferred, and the answer is sent only after SimCloud
+ * `POST /api/simforge/cloud/artifacts/upload {organizationId,artifactId}` ->
+ * `{organizationId, artifactId}` naming the SimCloud artifact. Only bytes the
+ * organization lacks are transferred, and the answer is sent only after SimCloud
  * verified the stored digest; a refused completion surfaces as its own code.
  */
 export async function POST(request: Request) {

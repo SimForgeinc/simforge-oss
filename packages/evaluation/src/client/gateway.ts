@@ -3,10 +3,10 @@
  * plane (`/api/simforge/compute`).
  *
  * The browser portal talks to it same-origin with the session cookie. The
- * desktop app talks to the same routes through its configured cloud origin and
- * must name its workspace explicitly on every scoped write — a desktop write
- * without `X-SimForge-Workspace-Id` is refused with `workspace_required`, by
- * design, so the header is part of this client rather than each caller.
+ * desktop app talks to the same routes through the local service's compute
+ * proxy and names its organization explicitly on every scoped write, so the
+ * `X-SimForge-Organization-Id` header is part of this client rather than each
+ * caller.
  *
  * The gateway never decides authorization, cost or provider. It surfaces the
  * server's refusal verbatim: {@link ComputeApiError} keeps the machine `code`
@@ -107,12 +107,12 @@ export type EvaluationGatewayOptions = {
   /** Route prefix; defaults to {@link COMPUTE_API_PATH}. */
   basePath?: string;
   /** Required for desktop-scope writes; harmless for browser sessions. */
-  workspaceId?: string | null;
+  organizationId?: string | null;
   headers?: Record<string, string>;
   fetchImpl?: typeof fetch;
 };
 
-const WORKSPACE_HEADER = "X-SimForge-Workspace-Id";
+const ORGANIZATION_HEADER = "X-SimForge-Organization-Id";
 
 export function createHttpEvaluationGateway(
   options: EvaluationGatewayOptions = {},
@@ -123,7 +123,7 @@ export function createHttpEvaluationGateway(
   function headers(json: boolean): Record<string, string> {
     const result: Record<string, string> = { accept: "application/json", ...options.headers };
     if (json) result["content-type"] = "application/json";
-    if (options.workspaceId) result[WORKSPACE_HEADER] = options.workspaceId;
+    if (options.organizationId) result[ORGANIZATION_HEADER] = options.organizationId;
     return result;
   }
 

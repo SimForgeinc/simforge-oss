@@ -9,9 +9,10 @@ import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/li
  *
  * The renderer holds no cloud credentials — the local service does — so the
  * shared evaluation UI talks to this prefix and the local service attaches the
- * bearer token. The legacy workspace query is discarded; only an explicit
- * workspace header overrides the session's active organization. Other query
- * parameters, the body and the response status pass through.
+ * bearer token. An explicit organization header names the organization the
+ * call acts in; without one SimCloud resolves the session's active
+ * organization. Other query parameters, the body and the response status pass
+ * through.
  *
  * Uploads are deliberately *not* proxied. Reserve/complete are control-plane
  * calls that come through here, but the bytes go straight from the renderer to
@@ -19,7 +20,7 @@ import { requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/li
  */
 
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "idempotency-key"];
-const WORKSPACE_HEADER = "x-simforge-workspace-id";
+const ORGANIZATION_HEADER = "x-simforge-organization-id";
 
 async function proxy(request: Request, path: string[]): Promise<Response> {
   await connection();
@@ -28,7 +29,6 @@ async function proxy(request: Request, path: string[]): Promise<Response> {
 
   const suffix = path.map((segment) => encodeURIComponent(segment)).join("/");
   const url = new URL(request.url);
-  url.searchParams.delete("workspaceId");
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
@@ -43,7 +43,7 @@ async function proxy(request: Request, path: string[]): Promise<Response> {
       `/api/simforge/compute/${suffix}${url.search}`,
       { method: request.method, headers, body },
       {
-        workspaceId: request.headers.get(WORKSPACE_HEADER) ?? undefined,
+        organizationId: request.headers.get(ORGANIZATION_HEADER) ?? undefined,
         signal: request.signal,
       },
     );

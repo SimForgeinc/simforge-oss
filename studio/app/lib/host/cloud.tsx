@@ -18,7 +18,7 @@ import {
   type StudioCloudProvider,
   type StudioCloudService,
   type StudioCloudStatus,
-  type StudioCloudWorkspace,
+  type StudioCloudOrganization,
 } from "@simforge-oss/studio-host";
 import { studioHost } from "@/app/lib/host";
 
@@ -37,7 +37,7 @@ const CONNECT_POLL_LIMIT_MS = 5 * 60_000;
 /** Stable loader identities: a section that keys an effect on one never reloads because `loading` flipped. */
 const loadAccount = (signal?: AbortSignal) => studioCloud.account(signal);
 const loadInvitations = (signal?: AbortSignal) => studioCloud.listInvitations(signal);
-const loadWorkspaces = (signal?: AbortSignal) => studioCloud.listWorkspaces(signal);
+const loadOrganizations = (signal?: AbortSignal) => studioCloud.listOrganizations(signal);
 
 /**
  * Account actions answer `true` on success. On failure they set `error` with
@@ -70,12 +70,11 @@ export type StudioCloudConnection = {
   acceptInvitation(id: string): Promise<boolean>;
   declineInvitation(id: string): Promise<boolean>;
   acceptInvitationLink(token: string): Promise<boolean>;
-  setActiveWorkspace(organizationId: string): Promise<boolean>;
   disconnect(): Promise<boolean>;
   /** Loaders for the account page; they throw so the page owns its own empty and error states. */
   account(signal?: AbortSignal): Promise<StudioCloudAccount>;
   listInvitations(signal?: AbortSignal): Promise<StudioCloudInvitation[]>;
-  listWorkspaces(signal?: AbortSignal): Promise<StudioCloudWorkspace[]>;
+  listOrganizations(signal?: AbortSignal): Promise<StudioCloudOrganization[]>;
 };
 
 const StudioCloudContext = createContext<StudioCloudConnection | null>(null);
@@ -258,11 +257,10 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
       acceptInvitation: async (id) => (await perform("The invitation could not be accepted.", () => studioCloud.acceptInvitation(id))) !== null,
       declineInvitation: async (id) => (await perform("The invitation could not be declined.", () => studioCloud.declineInvitation(id))) !== null,
       acceptInvitationLink: async (token) => (await perform("The invite link could not be used.", () => studioCloud.acceptInvitationLink(token))) !== null,
-      setActiveWorkspace: (organizationId) => withStatus("The workspace could not be selected.", () => studioCloud.setActiveWorkspace(organizationId)),
       disconnect: () => withStatus("SimCloud could not be signed out.", () => studioCloud.disconnect()),
       account: loadAccount,
       listInvitations: loadInvitations,
-      listWorkspaces: loadWorkspaces,
+      listOrganizations: loadOrganizations,
     }),
     [status, loading, error, accountPanelOpen, refresh, connect, perform, withStatus],
   );

@@ -5,12 +5,12 @@ import { importCloudArtifact } from "@/app/lib/cloud/storage";
 import { readJson, requireScenarioContext } from "@/app/lib/scenario/http";
 
 const ImportSchema = z.strictObject({
-  workspaceId: z.string().trim().min(1).max(128),
+  organizationId: z.string().trim().min(1).max(128),
   artifactId: z.string().trim().min(1).max(128),
 });
 
 /**
- * `POST /api/simforge/cloud/artifacts/import {workspaceId,artifactId}` -> the
+ * `POST /api/simforge/cloud/artifacts/import {organizationId,artifactId}` -> the
  * local `ScenarioArtifactDto` (local download URL). Bytes are hashed while
  * they stream in; 502 `cloud_artifact_digest_mismatch` means nothing was kept.
  */

@@ -106,9 +106,9 @@ const COMMANDS = [
   { name: 'scenario list', summary: 'list scenario documents on the running local host (all datasets or --dataset <id>)' },
   { name: 'scenario show', summary: 'print one scenario document with its authored content' },
   { name: 'scenario freeze', summary: 'freeze the current draft into a revision with an execution package (reuses one when current)' },
-  { name: 'cloud eval capabilities', summary: 'which model families and job kinds the connected SimCloud workspace can run' },
+  { name: 'cloud eval capabilities', summary: 'which model families and job kinds the connected SimCloud organization can run' },
   { name: 'cloud eval submit', summary: 'evaluate a finished render open-loop in SimCloud' },
-  { name: 'cloud eval list', summary: 'list open-loop evaluation jobs in the workspace' },
+  { name: 'cloud eval list', summary: 'list open-loop evaluation jobs in the organization' },
   { name: 'cloud eval status', summary: 'print one evaluation job' },
   { name: 'cloud eval wait', summary: 'block until an evaluation job finishes; non-zero exit when it fails' },
   { name: 'cloud eval artifacts', summary: 'list a finished evaluation\'s metrics and artifacts' },
@@ -143,7 +143,7 @@ const COMMANDS = [
   { name: 'models lock', summary: 'the committed model lock: pinned revisions, per-file digests and upstream code commits' },
   { name: 'schemas', summary: 'the published JSON Schemas — the LLM emission contract' },
   { name: 'cloud sign-in|sign-up|verify-email|resend-code|forgot-password|reset-password|sign-out', summary: 'headless SimCloud account flows: --email (plus --name for sign-up, --code for verify/reset); the password comes from SIMFORGE_CLOUD_PASSWORD, --password-stdin or a no-echo prompt, never from argv' },
-  { name: 'cloud status|connect|workspaces|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
+  { name: 'cloud status|connect|organizations|datasets|artifacts|dataset-import|dataset-publish|artifact-import|artifact-upload|dataset-links|artifact-links', summary: 'use the running local Studio host for authenticated SimCloud operations' },
 ] as const;
 
 

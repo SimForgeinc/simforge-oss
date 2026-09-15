@@ -3,6 +3,7 @@ import { hostname } from "node:os";
 import type {
   StudioCloudAccount,
   StudioCloudInvitation,
+  StudioCloudOrganization,
   StudioCloudProvider,
   StudioCloudStatus,
   StudioCloudUser,
@@ -18,7 +19,7 @@ import { discardResponseBody } from "@/app/lib/cloud/drain";
  * native session (short-lived access token, rotated refresh token), the
  * account it belongs to, and — for the Google/GitHub hop only — the pending
  * PKCE state. Every other account flow (password sign-in, sign-up, email
- * verification, password reset, devices, invitations, workspace choice) is a
+ * verification, password reset, devices, invitations) is a
  * direct call from this module to the Cloud's native desktop API. Tokens live
  * in the OS vault (or the reported session-only vault) and never reach the
  * renderer, receipts, artifacts or logs; the renderer sees
@@ -636,17 +637,6 @@ export async function acceptCloudInvitationLink(token: string, signal?: AbortSig
   return { organizationId: parseOrInvalid(OrganizationResponseSchema, payload, "invitation").organization_id };
 }
 
-export async function setCloudActiveWorkspace(organizationId: string, signal?: AbortSignal): Promise<StudioCloudStatus> {
-  const payload = await cloudAuthRequest("/api/desktop/workspaces/active", {
-    bearer: true,
-    body: { organization_id: organizationId },
-    signal,
-  });
-  const active = parseOrInvalid(ActiveOrganizationResponseSchema, payload, "workspace").active_organization_id;
-  await patchCredential((current) => ({ ...current, activeOrganizationId: active }));
-  return getCloudStatus();
-}
-
 // ── Social hop (Google / GitHub) ──────────────────────────────────────────────
 
 /**
@@ -861,9 +851,47 @@ export async function disconnectCloud(): Promise<StudioCloudStatus> {
   return getCloudStatus();
 }
 
+// ── Legacy workspace wire adapter ─────────────────────────────────────────────
+
+/**
+ * SimCloud as deployed still speaks *workspace* on its desktop surface: it
+ * enumerates tenants as workspace rows (`/api/desktop/projects/workspaces`
+ * answers `{id,name,role}`), and a scoped desktop request must name the tenant
+ * it acts in through `x-simforge-workspace-id`, which the server verifies
+ * against the caller's membership — a desktop write that names none is refused
+ * with `workspace_required`. A workspace row and an organization are 1:1 there
+ * (`workspaces.auth_organization_id`) and the desktop surface exposes no
+ * organization listing at all, so this block is where the legacy name stops:
+ * it presents each tenant as a {@link StudioCloudOrganization} and puts that
+ * organization's wire id back into the legacy header. No other OSS module
+ * knows the word. When the platform resolves organization membership directly
+ * (`docs/engineering/local-cloud-boundary.md` §8 step 2), delete this block and
+ * send `organizationId` under its own name.
+ */
+const LEGACY_WORKSPACE_HEADER = "x-simforge-workspace-id";
+const LEGACY_ORGANIZATION_LIST_PATH = "/api/desktop/projects/workspaces";
+
+const OrganizationsResponseSchema = z.object({
+  workspaces: z.array(z.object({ id: z.string().min(1), name: z.string(), role: z.string() })),
+});
+
+/** The organizations this account may act in, with the membership role the server holds. */
+export async function listCloudOrganizations(signal?: AbortSignal): Promise<StudioCloudOrganization[]> {
+  const response = await cloudRequest(LEGACY_ORGANIZATION_LIST_PATH, { method: "GET" }, { signal });
+  if (!response.ok) {
+    await discardResponseBody(response);
+    throw new CloudConnectionError(
+      "cloud_organizations_unavailable",
+      "SimCloud could not list your organizations.",
+      response.status,
+    );
+  }
+  return parseOrInvalid(OrganizationsResponseSchema, await response.json(), "organizations").workspaces;
+}
+
 function stripCredentialHeaders(headers: Headers) {
   headers.delete("authorization");
-  headers.delete("x-simforge-workspace-id");
+  headers.delete(LEGACY_WORKSPACE_HEADER);
   headers.delete("cookie");
 }
 
@@ -878,7 +906,7 @@ function stripCredentialHeaders(headers: Headers) {
 export async function cloudRequest(
   path: string,
   init: RequestInit = {},
-  options: { workspaceId?: string; signal?: AbortSignal } = {},
+  options: { organizationId?: string; signal?: AbortSignal } = {},
 ): Promise<Response> {
   let credential = await validAccessToken(options.signal);
   const target = resolveCloudPath(path, credential.origin);
@@ -889,7 +917,7 @@ export async function cloudRequest(
     const headers = new Headers(init.headers);
     headers.set("authorization", `Bearer ${token}`);
     headers.set("accept", headers.get("accept") ?? "application/json");
-    if (options.workspaceId) headers.set("x-simforge-workspace-id", options.workspaceId);
+    if (options.organizationId) headers.set(LEGACY_WORKSPACE_HEADER, options.organizationId);
     return followRedirects(target, { ...init, headers }, credential.origin, options.signal);
   };
   let response = await send(credential.accessToken);
