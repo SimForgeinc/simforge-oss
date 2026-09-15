@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { RefObject } from "react";
 import { AppSwitcherGraphicsLevel } from "@/app/components/AppSwitcherGraphicsLevel";
-import { CloudAccountChip } from "@/app/components/cloud/CloudAccountCard";
+import { CloudAccountChip } from "@/app/components/cloud/CloudAccountChip";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import {

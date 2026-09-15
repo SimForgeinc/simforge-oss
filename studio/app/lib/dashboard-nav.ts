@@ -1,14 +1,13 @@
 import {
   Boxes,
   Brain,
-  CloudUpload,
+  Cloud,
   Database,
   FlaskConical,
   Map,
   MonitorCog,
   PackageCheck,
   Settings,
-  UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -25,9 +24,11 @@ export type NavItem = {
 
 /**
  * The product is three pages, and the app switcher is those three tabs. Every
- * other surface — assets, model weights, exports, storage, account, settings —
- * is a utility reached from the switcher's footer, not a page of its own with
- * a card and artwork.
+ * other surface — assets, model weights, exports, SimCloud, settings — is a
+ * utility reached from the switcher's footer, not a page of its own with a
+ * card and artwork. Those utilities render in the switcher's own chrome
+ * (`AppStage`), so opening one feels like staying in the switcher rather than
+ * navigating to a document.
  */
 export const DASHBOARD_APPS: NavItem[] = [
   {
@@ -92,11 +93,13 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     match: (p) => p.startsWith("/dashboard/dataset-export"),
   },
   {
-    href: "/dashboard/cloud-storage",
-    label: "Cloud Storage",
-    description: "Import and publish projects with a SimCloud account",
-    icon: CloudUpload,
-    match: (p) => p.startsWith("/dashboard/cloud-storage"),
+    // One SimCloud surface: the account, what it unlocks, and the explicit
+    // dataset and artifact transfers that used to be a "Cloud Storage" tab.
+    href: "/dashboard/simcloud",
+    label: "SimCloud",
+    description: "Your SimCloud account, and the datasets and artifacts it holds",
+    icon: Cloud,
+    match: (p) => p.startsWith("/dashboard/simcloud"),
   },
   {
     href: "/dashboard/render-settings",
@@ -106,16 +109,9 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     match: (p) => p.startsWith("/dashboard/render-settings"),
   },
   {
-    href: "/dashboard/account",
-    label: "Account",
-    description: "SimCloud profile, password, devices, workspaces and invitations",
-    icon: UserCircle,
-    match: (p) => p.startsWith("/dashboard/account"),
-  },
-  {
     href: "/dashboard/settings",
     label: "Settings",
-    description: "This computer, SimCloud account and storage",
+    description: "This computer, AI providers and storage",
     icon: Settings,
     match: (p) => p.startsWith("/dashboard/settings"),
   },

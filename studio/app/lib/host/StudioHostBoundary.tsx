@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { StudioHostProvider } from "@simforge-oss/studio-ui/host";
-import { CloudAccountSheet } from "@/app/components/cloud/CloudAccountCard";
+import { CloudAccountSheet } from "@/app/components/cloud/CloudAccountChip";
 import { studioHost } from "@/app/lib/host";
 import { StudioCloudProvider } from "@/app/lib/host/cloud";
 
