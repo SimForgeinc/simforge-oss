@@ -170,6 +170,7 @@ export function EvaluationPageClient() {
     ) : (
       <RunRail
         jobs={jobs}
+        listError={jobsError}
         localRuns={localRunList}
         scenarioTitles={scenarioTitles}
         selectedRunId={selection.run ?? null}
@@ -301,7 +302,10 @@ export function EvaluationPageClient() {
 
     if (selection.run) return <RunDetailClient jobId={selection.run} />;
     if (selection.local) return <LocalRunClient runId={selection.local} />;
-    if (jobs === null) {
+    // A failed list is not a loading list: the workspace may have no SimCloud
+    // account at all, and starting a run is still the thing to offer. The
+    // failure itself is on the overlay.
+    if (jobs === null && !jobsError) {
       return (
         <CloudLoadingSurface
           scope="pane"

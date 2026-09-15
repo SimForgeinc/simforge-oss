@@ -43,9 +43,12 @@ export function RunRail({
   onSelectLocalRun,
   onNewPrediction,
   workspacePicker,
+  listError,
 }: {
-  /** Null while the first page of cloud jobs is still loading. */
+  /** Null while the first page of cloud jobs is still loading, or if it failed. */
   jobs: ComputeJob[] | null;
+  /** Why the cloud list is unavailable, when it is. */
+  listError: string | null;
   localRuns: ModelRunRecord[];
   scenarioTitles: ReadonlyMap<string, string>;
   selectedRunId: string | null;
@@ -130,8 +133,18 @@ export function RunRail({
       groups={groups}
       empty={
         <EmptyState
-          title={jobs === null ? "Loading runs…" : "No runs yet"}
-          description="Runs you submit here and from the web portal both appear in this list, for everyone in the workspace."
+          title={
+            listError
+              ? "Cloud runs are unavailable"
+              : jobs === null
+                ? "Loading runs…"
+                : "No runs yet"
+          }
+          description={
+            listError
+              ? `${listError} Runs started on this machine still appear here.`
+              : "Runs you submit here and from the web portal both appear in this list, for everyone in the workspace."
+          }
         />
       }
     />
