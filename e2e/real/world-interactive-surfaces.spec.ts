@@ -19,6 +19,7 @@
  * and this asserts the world host actually paints.
  */
 
+import { createE2eContext, type E2eContext } from "../support/context";
 import { launchBrowserStudio, type StudioSession } from "../support/session";
 import { forcePreserveDrawingBuffer, hitTestCentre, readCanvasFrame } from "../support/surfaces";
 import { expect, test } from "../support/fixtures";
@@ -28,9 +29,18 @@ const WORLD_HOST = '[data-testid="scenario-world-host"]';
 
 test.describe("interactive surfaces actually receive input", () => {
   let studio: StudioSession;
+  let context: E2eContext;
 
-  test.beforeAll(async ({ e2e }) => {
-    studio = await launchBrowserStudio(e2e, {
+  /*
+   * The context is owned here, not taken from the `e2e` fixture: a
+   * test-scoped fixture requested in `beforeAll` is disposed with the first
+   * test, which tears down the data root and the page the remaining tests
+   * are still using. The symptom is an unhelpful `toBeVisible` failure with
+   * `Received: undefined` on a surface that is demonstrably present.
+   */
+  test.beforeAll(async () => {
+    context = await createE2eContext({ name: "real-world" });
+    studio = await launchBrowserStudio(context, {
       route: "/dashboard/scenario",
       // Installed before the first navigation: the world canvas takes its
       // WebGL context during mount, and a context created without
@@ -43,6 +53,7 @@ test.describe("interactive surfaces actually receive input", () => {
 
   test.afterAll(async () => {
     await studio?.close();
+    await context?.dispose();
   });
 
   test("the coverage map is the element under the point a user clicks", async () => {
@@ -51,13 +62,17 @@ test.describe("interactive surfaces actually receive input", () => {
     // Visibility first, then reachability — and the two disagreeing is
     // exactly the defect. Asserting visibility alone is what let this ship.
     const hit = await hitTestCentre(studio.page, COVERAGE_MAP);
-    expect(
-      hit.blockedBy,
-      `an ancestor of the coverage map sets pointer-events: none (${hit.blockedBy})`,
-    ).toBeNull();
+    // `elementFromPoint` is the ground truth and the only thing asserted.
+    // The blocking ancestor is reported for diagnosis, not asserted on: a
+    // wrapper may legitimately set `pointer-events: none` while the map
+    // re-enables it with `auto`, which is exactly the shape of the fix
+    // (`ScenarioDatasetsClient.tsx:732` keeps `divRelative` and adds
+    // `pointer-events-auto` on the map). Asserting the ancestor would fail
+    // on the fixed product; asserting the hit fails only on the broken one.
     expect(
       hit.reachesTarget,
-      `a click at (${hit.x}, ${hit.y}) lands on ${hit.topmost} instead of the coverage map`,
+      `a click at (${hit.x}, ${hit.y}) lands on ${hit.topmost} instead of the coverage map`
+      + (hit.blockedBy === null ? "" : `; nearest pointer-events:none ancestor is ${hit.blockedBy}`),
     ).toBe(true);
     // The map renders through MapLibre, so the element taking the event has
     // to be its canvas; a wrapper receiving it would still not pan or zoom.
@@ -108,19 +123,41 @@ test.describe("interactive surfaces actually receive input", () => {
 });
 
 test.describe("the 3D world paints when a scenario is open", () => {
-  test("the world host's canvas shows a rendered scene", async ({ e2e }) => {
-    const session = await launchBrowserStudio(e2e, {
+  test("the world host's canvas shows a rendered scene", async () => {
+    const context = await createE2eContext({ name: "real-world-3d" });
+    const session = await launchBrowserStudio(context, {
       route: "/dashboard/scenario",
       async beforeNavigate(page) {
         await forcePreserveDrawingBuffer(page);
       },
     });
     try {
+      // The datasets list mounts the 2D coverage map; the 3D world appears
+      // only once a scenario is open for editing, which is the state worth
+      // asserting anyway — a world painting over an empty list would say
+      // nothing about whether a scenario renders.
+      //
+      // Entered by URL rather than by clicking a row: the editing state is
+      // addressable (`?dataset=…&document=…`), so driving it directly makes
+      // the test independent of the list's markup, and the fixture is
+      // created through the product's own first-run endpoint.
+      const maps = await session.api<{ maps?: { mapVersionId?: string }[] }>("/api/simforge/maps");
+      const mapVersionId = maps.maps?.[0]?.mapVersionId;
+      expect(mapVersionId, "an installed map to author against").toBeTruthy();
+      const created = await session.api<{ document?: { id?: string; datasetId?: string } }>(
+        `/api/simforge/maps/${mapVersionId}/documents/default`,
+        { method: "POST" },
+      );
+      const documentId = created.document?.id;
+      const datasetId = created.document?.datasetId;
+      expect(documentId, "a created scenario document").toBeTruthy();
+      await session.goto(`/dashboard/scenario?dataset=${datasetId}&document=${documentId}`);
       const host = session.page.locator(WORLD_HOST);
-      // The datasets list mounts the 3D world only during editing, so this
-      // waits for the surface rather than assuming the landing route has it.
       await expect(host).toBeVisible({ timeout: 300_000 });
-      await session.page.waitForTimeout(6_000);
+      // The 3D world streams its closure before it can draw anything but sky
+      // and ground, so the settle is generous and the assertion is on the
+      // terminal state rather than on a wall-clock guess.
+      await session.page.waitForTimeout(45_000);
       // `readCanvasFrame` throws if the host holds zero or several canvases.
       // That refusal is deliberate: sampling "the first canvas on the page"
       // is what produced a false frozen-scene report, because the page also
@@ -131,6 +168,7 @@ test.describe("the 3D world paints when a scenario is open", () => {
       expect(frame.opaqueFraction, "fraction of the world frame that is opaque").toBeGreaterThan(0.9);
     } finally {
       await session.close();
+      await context.dispose();
     }
   });
 });

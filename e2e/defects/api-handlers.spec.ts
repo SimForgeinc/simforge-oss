@@ -62,15 +62,18 @@ const PLATFORM_PREFIX = "/api/desktop/";
  * None of these was ever deleted — there is no `app/api/simforge/compute`
  * directory and never was, and `studio/next.config.ts` rewrites only
  * `/streams/:path*`, so nothing else serves them.
+ *
+ * `/api/carla-compatibility` and `/api/carla-objects` were on this list and
+ * have been implemented; their entries are gone, which is what the
+ * `resolvedAfterAll` assertion below exists to force.
  */
 const KNOWN_DANGLING: Record<string, string> = {
   "/api/simforge/compute/capabilities":
-    "the Evaluation comparison launcher renders \"Compute unavailable (HTTP 404)\" permanently",
+    "SimCloud's control-plane path, never served by this app; callers reach it through the"
+    + " /api/simforge/cloud/compute proxy",
   "/api/simforge/compute/jobs":
-    "submitting a cloud comparison throws \"compute job rejected (HTTP 404)\"; called same-origin from"
-    + " studio/app/api/evaluation/comparisons/route.ts:162",
-  "/api/carla-compatibility": "loadCarlaCompatibility() always rejects with \"Could not load CARLA compatibility (404)\"",
-  "/api/carla-objects": "loadCatalog() always rejects with \"Could not load CARLA objects (404)\"",
+    "SimCloud's control-plane path, never served by this app; callers reach it through the"
+    + " /api/simforge/cloud/compute proxy",
 };
 
 /** Requests this repository's own App Router is responsible for serving. */
