@@ -1,6 +1,6 @@
 import { discardResponseBody } from "@/app/lib/cloud/drain";
 import { randomBytes } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { revalidateTag } from "next/cache";
 import type { ScenarioMapDescriptorDto, StudioMapEntry } from "@simforge-oss/studio-host";
@@ -123,6 +123,7 @@ function localContext() {
 function installDirectory(mapVersionId: string, profile: MapProfile) {
   return join(MAPS_ROOT, mapVersionId, profile);
 }
+
 
 /** Upstream reads use the account when it is active and the public catalog otherwise. */
 export async function upstreamGet(path: string, signal?: AbortSignal): Promise<Response> {
@@ -284,12 +285,24 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
   for (const descriptor of local) {
     const registered = await getRegisteredMap(descriptor.mapVersionId);
     const access = registered?.access ?? "local";
+    const browserPath = join(installDirectory(descriptor.mapVersionId, "browser"), "3d", "manifest.json");
+    const semanticPath = installDirectory(descriptor.mapVersionId, "semantic");
+    let browserInstalled = false;
+    let semanticInstalled = false;
+    try {
+      await stat(browserPath);
+      browserInstalled = true;
+    } catch {}
+    try {
+      await stat(semanticPath);
+      semanticInstalled = (registered?.semantic.size ?? 0) > 0;
+    } catch {}
     seen.add(descriptor.mapVersionId);
     maps.push({
       ...descriptor,
       access,
       locked: access === "cloud" && !session.active,
-      installed: { browser: true, semantic: (registered?.semantic.size ?? 0) > 0 },
+      installed: { browser: browserInstalled, semantic: semanticInstalled },
       closureBytes: closureBytes.get(descriptor.mapVersionId) ?? null,
     });
   }
