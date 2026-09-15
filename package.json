@@ -20,6 +20,7 @@
     "trace:render": "node scripts/render-trace.mjs",
     "render:qualification": "node scripts/render-qualification.mjs",
     "verify:naming": "node scripts/verify-repository-naming.mjs",
+    "verify:origins": "node scripts/verify-origin-urls.mjs",
     "verify:fresh-sumo": "node scripts/verify-fresh-launch-sumo.mjs",
     "maps:derivatives": "node scripts/build-map-derivatives.mjs",
     "maps:derivatives:smoke": "node scripts/smoke-map-derivative-toolchain.mjs",

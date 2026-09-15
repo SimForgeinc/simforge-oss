@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  HostOrigin,
+  InvalidOriginError,
   LOCAL_HOST_SESSION_COOKIE,
   LOCAL_HOST_TOKEN_ENV,
   localHostSessionToken,
-  receivedUrl,
   secretsEqual,
 } from "@simforge-oss/studio-host/node";
 
@@ -67,8 +68,15 @@ export function proxy(request: NextRequest) {
     const site = request.headers.get("sec-fetch-site");
     // NextURL normalizes the bound interface (and loopback names) to
     // localhost. The browser Origin retains the authority it actually used,
-    // so compare against the authority the request arrived on.
-    const sameOrigin = origin !== null ? origin === receivedUrl(request).origin : site === "same-origin";
+    // so compare against the authority the request arrived on. A `Host` that
+    // is not an authority cannot be the origin of anything and is rejected.
+    let sameOrigin: boolean;
+    try {
+      sameOrigin = origin !== null ? HostOrigin.fromReceivedRequest(request).owns(origin) : site === "same-origin";
+    } catch (error) {
+      if (!(error instanceof InvalidOriginError)) throw error;
+      sameOrigin = false;
+    }
     if (!sameOrigin) return json(403, "local_origin_rejected", "Local mutations must come from the Studio origin.");
   }
   return NextResponse.next();

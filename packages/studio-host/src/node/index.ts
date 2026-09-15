@@ -18,7 +18,17 @@ export {
   waitForLocalHostReady,
   type LocalHostState,
 } from "./local-host-state";
-export { receivedUrl } from "./received-url";
+export {
+  CloudOrigin,
+  HostOrigin,
+  InvalidOriginError,
+  cloudPath,
+  hostPath,
+  type CloudPath,
+  type HostPath,
+  type InvalidOriginCode,
+  type OriginMode,
+} from "../origins";
 export {
   localHostConfig,
   runLocalHost,
